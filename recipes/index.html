@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Рецепты бизнесов — Top King</title>
+  <meta name="description" content="Автоматически обновляемая база рецептов бизнесов Hamster King">
+  <style>
+    :root{color-scheme:dark;--bg:#0e1726;--card:#172438;--line:#34475e;--gold:#ffbd38;--muted:#aebdd1}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#1c2d44,#0e1726 45%);color:#edf3ff;font:15px system-ui,sans-serif;min-height:100vh}
+    main{max-width:1050px;margin:auto;padding:22px}.site-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:22px}.site-tabs a{padding:11px 8px;border:1px solid #3b4c64;border-radius:11px;background:#172336;color:#b9c7da;text-align:center;text-decoration:none;font-weight:750}.site-tabs a.active{border-color:var(--gold);background:#3a2b14;color:#ffe09b}
+    h1{margin:10px 0 5px;font-size:clamp(26px,6vw,40px)}.intro{color:var(--muted);margin:0 0 18px;line-height:1.45}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#132033;border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:16px}.toolbar button{border:0;border-radius:10px;padding:10px 16px;background:var(--gold);color:#181108;font-weight:800;cursor:pointer}.toolbar input{flex:1;min-width:190px;border:1px solid #435873;border-radius:10px;background:#0c1625;color:white;padding:10px;font:inherit}.status{color:var(--muted);margin-left:auto}
+    .groups{display:grid;gap:12px}.recipe{background:linear-gradient(135deg,color-mix(in srgb,var(--rank) 10%,var(--card)),var(--card));border:1px solid var(--line);border-left:5px solid var(--rank);border-radius:16px;overflow:hidden}.recipe summary{cursor:pointer;list-style:none;padding:12px;display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:12px;align-items:center}.recipe summary::-webkit-details-marker{display:none}.result-icon,.component img{width:60px;height:60px;object-fit:contain;border:2px solid var(--rank);border-radius:50%;background:#0b1421}.recipe-name{font-size:17px;font-weight:800;overflow-wrap:anywhere}.recipe-meta,.recipe-bonuses{color:var(--muted);font-size:12px;line-height:1.4}.ways-count{color:#ffe09b;text-align:right;font-weight:750}.ways{display:grid;gap:9px;padding:0 12px 12px}.way{background:#0c1625;border:1px solid #2c3d55;border-radius:12px;padding:10px}.way-title{color:#ffe09b;font-weight:800;margin-bottom:8px}.flow{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:2px}.component{flex:0 0 92px;text-align:center}.component img{width:54px;height:54px;border-color:var(--component-rank)}.component span{display:block;font-size:10px;color:#c3d0e1;overflow-wrap:anywhere}.plus{color:var(--gold);font-size:24px;font-weight:900}.empty,.error{background:#172438;border:1px solid var(--line);border-radius:15px;padding:22px;color:var(--muted)}.error{color:#ff9da6;border-color:#74414b}
+    @media(max-width:560px){main{padding:12px}.site-tabs a{font-size:12px;padding:10px 4px}.recipe summary{grid-template-columns:60px minmax(0,1fr)}.ways-count{grid-column:1/3;text-align:left;border-top:1px solid #ffffff18;padding-top:8px}.status{width:100%;margin-left:0}.result-icon{width:54px;height:54px}}
+  </style>
+</head>
+<body><main>
+  <nav class="site-tabs" aria-label="Разделы сайта"><a href="../">Главная</a><a href="../business-calculator/">Калькулятор бизнеса</a><a class="active" href="./">Рецепты</a></nav>
+  <h1>Рецепты бизнесов</h1>
+  <p class="intro">Общая база пополняется автоматически: когда скрипт Hamster King Mobile находит новый рецепт, он появляется здесь.</p>
+  <div class="toolbar"><button id="refresh" type="button">Обновить</button><input id="search" type="search" placeholder="Поиск по названию или свойству"><span id="status" class="status">Загрузка…</span></div>
+  <div id="groups" class="groups"><div class="empty">Загружаю рецепты…</div></div>
+</main>
+<script>
+const API='https://hk-license.89.125.1.71.sslip.io/api/v1/recipes/public';
+const groupsBox=document.getElementById('groups'),statusBox=document.getElementById('status'),searchBox=document.getElementById('search');
+let recipes=[];
+const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const safeUrl=value=>{try{const url=new URL(String(value||''));return url.protocol==='https:'?url.href:''}catch{return ''}};
+const rank=value=>['B','A','S','S+','S++'][Number(value)]||`R${value??'?'}`;
+const color=value=>/^#[0-9a-f]{3,8}$/i.test(String(value||''))?String(value):'#cbd5e1';
+const label=row=>row.name||row.item_id||'Бизнес';
+const icon=row=>safeUrl(row.icon)?`<img class="result-icon" src="${escapeHtml(safeUrl(row.icon))}" alt="">`:`<span class="result-icon" aria-hidden="true"></span>`;
+function groupRows(rows){const map=new Map;for(const row of rows){const key=String(row.item_id||'');if(!key)continue;if(!map.has(key))map.set(key,{result:row,ways:[]});const group=map.get(key);group.ways.push(row);if((!group.result.icon&&row.icon)||(!(group.result.bonuses||[]).length&&(row.bonuses||[]).length))group.result=row}return [...map.values()]}
+function bonuses(row){const list=Array.isArray(row.bonuses)?row.bonuses:[];return list.length?list.map(item=>`${escapeHtml(item.value||'')} ${escapeHtml(item.caption||item.id||'')}`).join(' · '):'Свойства пока не считаны'}
+function component(row){return `<div class="component" style="--component-rank:${color(row.color)}">${icon(row)}<span>${escapeHtml(label(row))}</span><span>${rank(row.rarity)} · T${escapeHtml(row.tier??'?')}</span></div>`}
+function card(group){const row=group.result;const ways=group.ways.map((way,index)=>{const parts=Array.isArray(way.components)?way.components:[];return `<div class="way"><div class="way-title">Вариант ${index+1}</div><div class="flow">${parts.length?parts.map(component).join('<b class="plus">+</b>'):'Компоненты ещё не считаны'}</div></div>`}).join('');return `<details class="recipe" style="--rank:${color(row.color)}"><summary>${icon(row)}<div><div class="recipe-name">${escapeHtml(label(row))}</div><div class="recipe-meta">${rank(row.rarity)} · T${escapeHtml(row.tier??'?')}</div><div class="recipe-bonuses">${bonuses(row)}</div></div><div class="ways-count">Вариантов: ${group.ways.length}</div></summary><div class="ways">${ways}</div></details>`}
+function render(){const query=searchBox.value.trim().toLowerCase();const groups=groupRows(recipes).filter(group=>!query||JSON.stringify(group).toLowerCase().includes(query));groupsBox.innerHTML=groups.length?groups.map(card).join(''):'<div class="empty">Подходящих рецептов пока нет.</div>';statusBox.textContent=`Рецептов: ${recipes.length} · результатов: ${groups.length}`}
+async function load(){statusBox.textContent='Обновляю…';try{const response=await fetch(API,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();recipes=Array.isArray(data.recipes)?data.recipes:[];render()}catch(error){groupsBox.innerHTML='<div class="error">Не удалось загрузить базу рецептов. Попробуйте обновить страницу позже.</div>';statusBox.textContent='Ошибка загрузки'}}
+document.getElementById('refresh').onclick=load;searchBox.oninput=render;load();setInterval(load,60000);
+</script></body></html>
