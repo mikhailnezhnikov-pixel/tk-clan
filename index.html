@@ -170,7 +170,7 @@
       align-items: center;
       isolation: isolate;
       overflow: hidden;
-      background: #0a0c11 url("assets/home/top-king-clan-bg-v2.jpg") 58% center / cover no-repeat;
+      background: #0a0c11 url("assets/home/top-king-clan-bg-v2.jpg") 60% center / cover no-repeat;
     }
     .hero::before {
       content: "";
@@ -178,7 +178,7 @@
       inset: 0;
       z-index: -2;
       background:
-        linear-gradient(90deg, rgba(4,6,9,.98) 0%, rgba(4,6,9,.88) 29%, rgba(4,6,9,.42) 57%, rgba(4,6,9,.12) 100%),
+        linear-gradient(90deg, rgba(4,6,9,.99) 0%, rgba(4,6,9,.92) 30%, rgba(4,6,9,.58) 47%, rgba(4,6,9,.16) 67%, rgba(4,6,9,.05) 100%),
         linear-gradient(0deg, #07080b 0%, rgba(7,8,11,.72) 13%, transparent 43%);
     }
     .hero::after {
@@ -209,8 +209,8 @@
     .embers i:nth-child(1){left:59%;animation-delay:0s}.embers i:nth-child(2){left:68%;animation-delay:1.6s}.embers i:nth-child(3){left:79%;animation-delay:3.2s}.embers i:nth-child(4){left:88%;animation-delay:4.8s}.embers i:nth-child(5){left:73%;animation-delay:6.2s}
     @keyframes rise { 0%{transform:translateY(0);opacity:0} 15%{opacity:.8} 100%{transform:translate(26px,-75vh);opacity:0} }
 
-    .hero-inner { padding-top: calc(var(--header) + 68px); padding-bottom: 176px; }
-    .hero-copy { width: min(665px, 57%); }
+    .hero-inner { padding-top: calc(var(--header) + 44px); padding-bottom: 164px; }
+    .hero-copy { width: min(590px, 48%); }
     .eyebrow {
       display: inline-flex;
       align-items: center;
@@ -224,13 +224,13 @@
     }
     .eyebrow::before { content: ""; width: 38px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); }
     h1 {
-      max-width: 760px;
+      max-width: 590px;
       margin: 0;
       font-family: Georgia, "Times New Roman", serif;
-      font-size: clamp(58px, 7.15vw, 106px);
+      font-size: clamp(56px, 6vw, 78px);
       font-weight: 700;
-      line-height: .91;
-      letter-spacing: -.058em;
+      line-height: .94;
+      letter-spacing: -.05em;
       text-wrap: balance;
       text-shadow: 0 8px 36px rgba(0,0,0,.52);
     }
@@ -241,8 +241,13 @@
       -webkit-background-clip: text;
       background-clip: text;
     }
-    .lead { max-width: 600px; margin: 27px 0 0; color: #cbd1da; font-size: clamp(17px,1.8vw,21px); line-height: 1.6; }
-    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+    h1 .title-plain {
+      color: #fff;
+      background: none;
+      -webkit-text-fill-color: #fff;
+    }
+    .lead { max-width: 540px; margin: 22px 0 0; color: #cbd1da; font-size: clamp(16px,1.45vw,19px); line-height: 1.55; text-wrap: balance; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 27px; }
     .button {
       min-height: 54px;
       display: inline-flex;
@@ -358,8 +363,9 @@
     @media (max-width: 960px) {
       .desktop-nav { display: none; }
       .menu-button { display: grid; }
-      .hero { background-position: 59% center; }
-      .hero-copy { width: min(650px, 69%); }
+      .hero { background-position: 60% center; }
+      .hero-copy { width: min(560px, 58%); }
+      h1 { font-size: clamp(53px, 7.4vw, 72px); }
       .quick-panel { grid-template-columns: 1fr 1fr 1fr; }
       .quick-description { display: none; }
       .portal-card { grid-column: span 6; }
@@ -387,7 +393,9 @@
       .hero-inner { width: 100%; padding: 410px 16px 260px; }
       .hero-copy { width: 100%; }
       .eyebrow { margin-bottom: 14px; font-size: 10px; letter-spacing: .18em; }
-      h1 { font-size: clamp(48px,15vw,69px); line-height: .93; letter-spacing: -.055em; }
+      h1 { max-width: 100%; font-size: clamp(45px,13.2vw,60px); line-height: .94; letter-spacing: -.05em; }
+      h1 .title-plain { display: inline; }
+      h1 .title-plain::after { content: " "; }
       .lead { margin-top: 18px; font-size: 16px; line-height: 1.52; }
       .hero-actions { margin-top: 23px; }
       .button { flex: 1 1 100%; min-height: 52px; }
@@ -459,7 +467,7 @@
       <div class="shell hero-inner">
         <div class="hero-copy">
           <div class="eyebrow">Официальный сайт клана</div>
-          <h1 id="hero-title">Клан, который <span>живёт победами</span></h1>
+          <h1 id="hero-title"><span class="title-plain">Клан, который</span><span>живёт победами</span></h1>
           <p class="lead">Top King — команда, где личная сила становится общей. Развиваемся, сражаемся и создаём лучшие инструменты для игроков Hamster King.</p>
           <div class="hero-actions">
             <a class="button primary" href="#sections">Открыть разделы <span aria-hidden="true">↓</span></a>
