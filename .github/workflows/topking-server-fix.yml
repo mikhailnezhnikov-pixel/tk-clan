@@ -1,0 +1,75 @@
+name: Fix TopKing Telegram authentication
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare temporary SSH key
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking_fix"
+          chmod 600 "$HOME/.ssh/topking_fix"
+
+      - name: Validate bot and update service
+        shell: bash
+        env:
+          BOT_TOKEN: ${{ secrets.TOPKING_TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$BOT_TOKEN"
+          {
+            printf '%s\n' "$BOT_TOKEN"
+            cat <<'REMOTE'
+          set -euo pipefail
+
+          if [[ ! "$BOT_TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]; then
+            echo 'The supplied value is not a Telegram bot token.' >&2
+            exit 1
+          fi
+
+          bot_json="$(curl -fsS --max-time 15 "https://api.telegram.org/bot${BOT_TOKEN}/getMe")"
+          bot_username="$(python3 -c 'import json,sys; print((json.load(sys.stdin).get("result") or {}).get("username", ""))' <<<"$bot_json")"
+          if [[ "${bot_username,,}" != 'topkingclancabinetbot' ]]; then
+            echo "The token belongs to @${bot_username:-unknown}, not @TopKingClanCabinetBot." >&2
+            exit 1
+          fi
+
+          install -d -m 755 /etc/systemd/system/hamsterking-license.service.d
+          umask 077
+          override="$(mktemp /etc/systemd/system/hamsterking-license.service.d/telegram.conf.XXXXXX)"
+          printf '[Service]\nEnvironment="HK_TELEGRAM_BOT_TOKEN=%s"\nEnvironment="HK_TELEGRAM_BOT_USERNAME=TopKingClanCabinetBot"\n' \
+            "$BOT_TOKEN" > "$override"
+          mv "$override" /etc/systemd/system/hamsterking-license.service.d/telegram.conf
+
+          systemctl daemon-reload
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+
+          configured="$(curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config 2>/dev/null || true)"
+          echo "Telegram bot verified: @${bot_username}"
+          echo "Service status: $(systemctl is-active hamsterking-license.service)"
+          if [ -n "$configured" ]; then
+            python3 -c 'import json,sys; d=json.load(sys.stdin); print("Cabinet config:", {"ok": d.get("ok"), "enabled": d.get("enabled"), "bot_username": d.get("bot_username")})' <<<"$configured"
+          fi
+          REMOTE
+          } | ssh -i "$HOME/.ssh/topking_fix" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'read -r BOT_TOKEN; export BOT_TOKEN; bash -s'
+
+      - name: Remove temporary SSH key
+        if: always()
+        run: rm -f "$HOME/.ssh/topking_fix"
