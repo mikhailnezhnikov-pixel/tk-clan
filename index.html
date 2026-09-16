@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="dark">
   <title>Top King — клан, который живёт победами</title>
   <meta name="description" content="Официальный сайт клана Top King в Hamster King: инструменты, рецепты, калькуляторы и личный кабинет.">
+  <link rel="icon" href="assets/menu/clan.png">
   <style>
     :root {
       color-scheme: dark;
@@ -107,6 +108,11 @@
       color: var(--gold-light);
       background: rgba(232,182,84,.08);
     }
+    .language-switch { display:flex; gap:3px; padding:3px; border:1px solid rgba(255,255,255,.12); border-radius:11px; background:rgba(255,255,255,.05); }
+    .language-switch button { min-width:34px; padding:7px 5px; border:0; border-radius:8px; color:var(--muted); background:transparent; font:800 12px/1 inherit; cursor:pointer; }
+    .language-switch button.active { color:#211604; background:var(--gold-light); }
+    [dir="rtl"] .eyebrow { letter-spacing:0; }
+    .card-icon img,.quick-icon img { width:100%; height:100%; object-fit:cover; border-radius:inherit; }
 
     .menu-button {
       width: 46px;
@@ -360,7 +366,7 @@
     .footer-links { display: flex; flex-wrap: wrap; gap: 18px; }
     .footer-links a { color: #aab1bc; text-decoration: none; }
 
-    @media (max-width: 960px) {
+    @media (max-width: 1120px) {
       .desktop-nav { display: none; }
       .menu-button { display: grid; }
       .hero { background-position: 60% center; }
@@ -369,7 +375,6 @@
       .quick-panel { grid-template-columns: 1fr 1fr 1fr; }
       .quick-description { display: none; }
       .portal-card { grid-column: span 6; }
-      .portal-card:last-child { grid-column: 4 / span 6; }
       .clan-layout { grid-template-columns: 1fr; gap: 46px; }
     }
 
@@ -437,13 +442,15 @@
         <span>TOP KING</span>
       </a>
       <nav class="desktop-nav" aria-label="Основная навигация">
-        <a href="./">Главная</a>
-        <a href="#sections">Разделы</a>
-        <a href="calculators/">Калькуляторы</a>
-        <a href="recipes/">Рецепты</a>
-        <a href="#clan">О клане</a>
-        <a class="nav-login" href="cabinet/">Личный кабинет</a>
+        <a href="./" data-i18n="home">Главная</a>
+        <a href="#sections" data-i18n="sections">Разделы</a>
+        <a href="wars/" data-i18n="wars">Клановые войны</a>
+        <a href="ratings/" data-i18n="ratings">Рейтинг</a>
+        <a href="information/" data-i18n="information">Информация</a>
+        <a href="feedback/" data-i18n="feedback">Обратная связь</a>
+        <a class="nav-login" href="cabinet/" data-i18n="cabinet">Личный кабинет</a>
       </nav>
+      <div class="language-switch" aria-label="Language"><button data-language="ru">RU</button><button data-language="en">EN</button><button data-language="fa">FA</button></div>
       <button class="menu-button" type="button" aria-label="Открыть меню" aria-controls="mobile-menu" aria-expanded="false">
         <span class="menu-icon" aria-hidden="true"></span>
       </button>
@@ -452,12 +459,15 @@
 
   <div class="mobile-menu" id="mobile-menu" aria-hidden="true">
     <nav class="mobile-links" aria-label="Мобильная навигация">
-      <a href="./"><span>Главная</span><span>⌂</span></a>
-      <a href="#sections"><span>Все разделы</span><span>↓</span></a>
-      <a href="calculators/"><span>Калькуляторы</span><span>→</span></a>
-      <a href="recipes/"><span>Игровые рецепты</span><span>→</span></a>
-      <a href="#clan"><span>О клане</span><span>↓</span></a>
-      <a class="mobile-login" href="cabinet/"><span>Личный кабинет</span><span>♛</span></a>
+      <a href="./"><span data-i18n="home">Главная</span><span>⌂</span></a>
+      <a href="#sections"><span data-i18n="sections">Все разделы</span><span>↓</span></a>
+      <a href="calculators/"><span data-i18n="calculators">Калькуляторы</span><span>→</span></a>
+      <a href="recipes/"><span data-i18n="recipes">Игровые рецепты</span><span>→</span></a>
+      <a href="wars/"><span data-i18n="wars">Клановые войны</span><span>→</span></a>
+      <a href="ratings/"><span data-i18n="ratings">Рейтинг</span><span>→</span></a>
+      <a href="information/"><span data-i18n="information">Информация</span><span>→</span></a>
+      <a href="feedback/"><span data-i18n="feedback">Обратная связь</span><span>→</span></a>
+      <a class="mobile-login" href="cabinet/"><span data-i18n="cabinet">Личный кабинет</span><span>♛</span></a>
     </nav>
   </div>
 
@@ -466,30 +476,31 @@
       <div class="embers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
       <div class="shell hero-inner">
         <div class="hero-copy">
-          <div class="eyebrow">Официальный сайт клана</div>
-          <h1 id="hero-title"><span class="title-plain">Клан, который</span><span>живёт победами</span></h1>
-          <p class="lead">Top King — команда, где личная сила становится общей. Развиваемся, сражаемся и создаём лучшие инструменты для игроков Hamster King.</p>
+          <div class="eyebrow" data-i18n="heroEyebrow">Официальный сайт клана</div>
+          <h1 id="hero-title" data-i18n-html="heroTitle"><span class="title-plain">Клан, который</span><span>живёт победами</span></h1>
+          <p class="lead" data-i18n="heroLead">Top King — команда, где личная сила становится общей. Развиваемся, сражаемся и создаём лучшие инструменты для игроков Hamster King.</p>
           <div class="hero-actions">
-            <a class="button primary" href="#sections">Открыть разделы <span aria-hidden="true">↓</span></a>
-            <a class="button" href="https://t.me/Ms_Lika5555" target="_blank" rel="noopener">Вступить в клан <span aria-hidden="true">↗</span></a>
+            <a class="button primary" href="#sections"><span data-i18n="openSections">Открыть разделы</span> <span aria-hidden="true">↓</span></a>
+            <a class="button" href="https://t.me/TopKingClanCabinetBot?start=application" target="_blank" rel="noopener"><span data-i18n="joinClan">Вступить в клан</span> <span aria-hidden="true">↗</span></a>
+            <a class="button" href="https://app.hamsterking.games/app.html" target="_blank" rel="noopener"><span data-i18n="play">Открыть игру</span> <span aria-hidden="true">↗</span></a>
           </div>
         </div>
       </div>
 
       <div class="quick-panel" aria-label="Быстрый доступ">
         <a class="quick-link" href="calculators/">
-          <span class="quick-icon" aria-hidden="true">🧮</span>
-          <span class="quick-copy"><span class="quick-label">Калькуляторы</span><span class="quick-description">Яма, бизнесы и босс</span></span>
+          <span class="quick-icon" aria-hidden="true"><img src="assets/menu/resources.png" alt=""></span>
+          <span class="quick-copy"><span class="quick-label" data-i18n="calculators">Калькуляторы</span><span class="quick-description" data-i18n="calcDesc">Яма, бизнесы и босс</span></span>
           <span class="quick-arrow" aria-hidden="true">→</span>
         </a>
         <a class="quick-link" href="recipes/">
-          <span class="quick-icon" aria-hidden="true">📜</span>
-          <span class="quick-copy"><span class="quick-label">Игровые рецепты</span><span class="quick-description">Актуальная база рецептов</span></span>
+          <span class="quick-icon" aria-hidden="true"><img src="assets/menu/recipes.png" alt=""></span>
+          <span class="quick-copy"><span class="quick-label" data-i18n="recipes">Игровые рецепты</span><span class="quick-description" data-i18n="recipeDesc">Актуальная база рецептов</span></span>
           <span class="quick-arrow" aria-hidden="true">→</span>
         </a>
         <a class="quick-link" href="cabinet/">
-          <span class="quick-icon" aria-hidden="true">♛</span>
-          <span class="quick-copy"><span class="quick-label">Личный кабинет</span><span class="quick-description">Вход через Telegram</span></span>
+          <span class="quick-icon" aria-hidden="true"><img src="assets/menu/clan.png" alt=""></span>
+          <span class="quick-copy"><span class="quick-label" data-i18n="cabinet">Личный кабинет</span><span class="quick-description" data-i18n="cabinetDesc">Вход через Telegram</span></span>
           <span class="quick-arrow" aria-hidden="true">→</span>
         </a>
       </div>
@@ -499,38 +510,65 @@
       <div class="shell">
         <div class="section-head">
           <div>
-            <p class="kicker">Единый портал Top King</p>
-            <h2 id="sections-title">Разделы сайта</h2>
+            <p class="kicker" data-i18n="portalKicker">Единый портал Top King</p>
+            <h2 id="sections-title" data-i18n="portalTitle">Разделы сайта</h2>
           </div>
-          <p class="section-intro">Все игровые инструменты собраны в одном месте. Новые вкладки будут аккуратно добавляться в это меню без перегрузки главной страницы.</p>
+          <p class="section-intro" data-i18n="portalLead">Все игровые инструменты собраны в одном месте.</p>
         </div>
 
         <div class="portal-grid">
           <a class="portal-card" href="calculators/">
             <div>
-              <div class="card-top"><span class="card-icon" aria-hidden="true">🧮</span><span class="card-status">3 инструмента</span></div>
-              <h3>Калькуляторы</h3>
-              <p>Подсчёт очков Ямы, развитие бизнеса и расчёт Турнира боссов.</p>
+              <div class="card-top"><span class="card-icon" aria-hidden="true"><img src="assets/menu/resources.png" alt=""></span><span class="card-status" data-i18n="threeTools">3 инструмента</span></div>
+              <h3 data-i18n="calculators">Калькуляторы</h3>
+              <p data-i18n="calcCard">Подсчёт очков Ямы, развитие бизнеса и расчёт Турнира боссов.</p>
             </div>
-            <span class="card-go"><span>Выбрать калькулятор</span><span aria-hidden="true">→</span></span>
+            <span class="card-go"><span data-i18n="open">Открыть</span><span aria-hidden="true">→</span></span>
           </a>
 
           <a class="portal-card" href="recipes/">
             <div>
-              <div class="card-top"><span class="card-icon" aria-hidden="true">📜</span><span class="card-status">Обновляется</span></div>
-              <h3>Игровые рецепты</h3>
-              <p>Актуальные рецепты Hamster King в удобном формате для компьютера и телефона.</p>
+              <div class="card-top"><span class="card-icon" aria-hidden="true"><img src="assets/menu/recipes.png" alt=""></span><span class="card-status" data-i18n="updates">Обновляется</span></div>
+              <h3 data-i18n="recipes">Игровые рецепты</h3>
+              <p data-i18n="recipeCard">Актуальные рецепты Hamster King в удобном формате для компьютера и телефона.</p>
             </div>
-            <span class="card-go"><span>Перейти к рецептам</span><span aria-hidden="true">→</span></span>
+            <span class="card-go"><span data-i18n="open">Открыть</span><span aria-hidden="true">→</span></span>
           </a>
 
-          <a class="portal-card" href="cabinet/">
+          <a class="portal-card" href="wars/">
             <div>
-              <div class="card-top"><span class="card-icon" aria-hidden="true">♛</span><span class="card-status">Для участников</span></div>
-              <h3>Личный кабинет</h3>
-              <p>Закрытый раздел участника клана с авторизацией через Telegram.</p>
+              <div class="card-top"><span class="card-icon" aria-hidden="true"><img src="assets/menu/clan-war.png" alt=""></span><span class="card-status" data-i18n="liveData">Данные боя</span></div>
+              <h3 data-i18n="wars">Клановые войны</h3>
+              <p data-i18n="warsCard">Общий счёт текущего боя Top King без персонального урона участников.</p>
             </div>
-            <span class="card-go"><span>Войти в кабинет</span><span aria-hidden="true">→</span></span>
+            <span class="card-go"><span data-i18n="open">Открыть</span><span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="portal-card" href="ratings/">
+            <div>
+              <div class="card-top"><span class="card-icon" aria-hidden="true"><img src="assets/menu/businesses.png" alt=""></span><span class="card-status">TOP 100</span></div>
+              <h3 data-i18n="ratings">Рейтинг</h3>
+              <p data-i18n="ratingsCard">Лучшие игроки по силе и влиянию, а также топ кланов и альянсов.</p>
+            </div>
+            <span class="card-go"><span data-i18n="open">Открыть</span><span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="portal-card" href="information/">
+            <div>
+              <div class="card-top"><span class="card-icon" aria-hidden="true"><img src="assets/menu/maps.png" alt=""></span><span class="card-status" data-i18n="guide">Гайд</span></div>
+              <h3 data-i18n="information">Информация</h3>
+              <p data-i18n="infoCard">Справочник по механикам, ресурсам, боям, бизнесам и полезным материалам.</p>
+            </div>
+            <span class="card-go"><span data-i18n="open">Открыть</span><span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="portal-card" href="feedback/">
+            <div>
+              <div class="card-top"><span class="card-icon" aria-hidden="true"><img src="assets/menu/fair.png" alt=""></span><span class="card-status" data-i18n="bot">Telegram-бот</span></div>
+              <h3 data-i18n="feedback">Обратная связь</h3>
+              <p data-i18n="feedbackCard">Пожелания, предложения, вопросы и заявка на вступление в клан.</p>
+            </div>
+            <span class="card-go"><span data-i18n="open">Открыть</span><span aria-hidden="true">→</span></span>
           </a>
         </div>
       </div>
@@ -539,35 +577,35 @@
     <section class="section clan-section" id="clan" aria-labelledby="clan-title">
       <div class="shell clan-layout">
         <div class="clan-copy">
-          <p class="kicker">Сила в команде</p>
-          <h2 id="clan-title">Top King — больше, чем клан</h2>
-          <p class="section-intro">Мы объединяем сильных игроков, делимся знаниями и вместе развиваем альянс. Здесь каждый результат становится частью общей победы.</p>
+          <p class="kicker" data-i18n="clanKicker">Сила в команде</p>
+          <h2 id="clan-title" data-i18n="clanTitle">Top King — больше, чем клан</h2>
+          <p class="section-intro" data-i18n="clanLead">Мы объединяем сильных игроков, делимся знаниями и вместе развиваем альянс. Здесь каждый результат становится частью общей победы.</p>
           <div class="requirements">
-            <h3>Требования к игроку</h3>
+            <h3 data-i18n="requirementsTitle">Требования к игроку</h3>
             <ul class="detail-list">
-              <li><span class="emoji" aria-hidden="true">⚔️</span><span>Сила от 60КК</span></li>
-              <li><span class="emoji" aria-hidden="true">🔥</span><span>Высокая активность</span></li>
-              <li><span class="emoji" aria-hidden="true">🤝</span><span>Командная игра — не на словах</span></li>
-              <li><span class="emoji" aria-hidden="true">↗️</span><span>Желание расти и двигаться вверх вместе с кланом</span></li>
-              <li><span class="emoji" aria-hidden="true">💬</span><span>Быть на связи и участвовать в жизни команды</span></li>
+              <li><span class="emoji" aria-hidden="true">⚔️</span><span data-i18n="requirePower">Сила от 60КК</span></li>
+              <li><span class="emoji" aria-hidden="true">🔥</span><span data-i18n="requireActive">Высокая активность</span></li>
+              <li><span class="emoji" aria-hidden="true">🤝</span><span data-i18n="requireTeam">Командная игра — не на словах</span></li>
+              <li><span class="emoji" aria-hidden="true">↗️</span><span data-i18n="requireGrowth">Желание расти и двигаться вверх вместе с кланом</span></li>
+              <li><span class="emoji" aria-hidden="true">💬</span><span data-i18n="requireContact">Быть на связи и участвовать в жизни команды</span></li>
             </ul>
           </div>
           <div class="clan-actions">
-            <a class="button primary" href="https://t.me/Ms_Lika5555" target="_blank" rel="noopener">Подать заявку <span aria-hidden="true">↗</span></a>
-            <a class="button" href="#sections">Наши инструменты</a>
+            <a class="button primary" href="https://t.me/TopKingClanCabinetBot?start=application" target="_blank" rel="noopener"><span data-i18n="apply">Подать заявку</span> <span aria-hidden="true">↗</span></a>
+            <a class="button" href="#sections" data-i18n="tools">Наши инструменты</a>
           </div>
         </div>
         <div class="stats" aria-label="Показатели клана">
-          <div class="stat"><strong>3B+</strong><span>общая сила клана</span></div>
-          <div class="stat"><strong>200+</strong><span>алмазных карт в базе</span></div>
-          <div class="stat"><strong>1M</strong><span>золота в месяц</span></div>
-          <div class="stat"><strong>1</strong><span>команда и общая цель</span></div>
+          <div class="stat"><strong>3B+</strong><span data-i18n="statPower">общая сила клана</span></div>
+          <div class="stat"><strong>200+</strong><span data-i18n="statCards">алмазных карт в базе</span></div>
+          <div class="stat"><strong>1M</strong><span data-i18n="statGold">золота в месяц</span></div>
+          <div class="stat"><strong>1</strong><span data-i18n="statTeam">команда и общая цель</span></div>
           <div class="offer-panel">
-            <h3>Что даёт Top King</h3>
+            <h3 data-i18n="offerTitle">Что даёт Top King</h3>
             <ul class="detail-list">
-              <li><span class="emoji" aria-hidden="true">💰</span><span>От 305К золота минимум в неделю</span></li>
-              <li><span class="emoji" aria-hidden="true">🏆</span><span>Сильный состав и высокий темп игры</span></li>
-              <li><span class="emoji" aria-hidden="true">🤝</span><span>Команду, где общий результат действительно имеет значение</span></li>
+              <li><span class="emoji" aria-hidden="true">💰</span><span data-i18n="offerGold">От 305К золота минимум в неделю</span></li>
+              <li><span class="emoji" aria-hidden="true">🏆</span><span data-i18n="offerPace">Сильный состав и высокий темп игры</span></li>
+              <li><span class="emoji" aria-hidden="true">🤝</span><span data-i18n="offerTeam">Команду, где общий результат действительно имеет значение</span></li>
             </ul>
           </div>
         </div>
@@ -579,13 +617,22 @@
     <div class="shell footer-inner">
       <span>© Top King · Hamster King</span>
       <nav class="footer-links" aria-label="Навигация в подвале">
-        <a href="calculators/">Калькуляторы</a>
-        <a href="recipes/">Рецепты</a>
-        <a href="cabinet/">Кабинет</a>
+        <a href="calculators/" data-i18n="calculators">Калькуляторы</a>
+        <a href="recipes/" data-i18n="recipes">Рецепты</a>
+        <a href="information/" data-i18n="information">Информация</a>
+        <a href="cabinet/" data-i18n="cabinet">Кабинет</a>
       </nav>
     </div>
   </footer>
 
+  <script>
+    window.TK_PAGE_TRANSLATIONS={
+      ru:{pageTitle:'Top King — клан, который живёт победами',sections:'Разделы',heroEyebrow:'Официальный сайт клана',heroTitle:'<span class="title-plain">Клан, который</span><span>живёт победами</span>',heroLead:'Top King — команда, где личная сила становится общей. Развиваемся, сражаемся и создаём лучшие инструменты для игроков Hamster King.',openSections:'Открыть разделы',joinClan:'Вступить в клан',play:'Открыть игру',calcDesc:'Яма, бизнесы и босс',recipeDesc:'Актуальная база рецептов',cabinetDesc:'Вход через Telegram',portalKicker:'Единый портал Top King',portalTitle:'Разделы сайта',portalLead:'Все игровые инструменты и справочные материалы собраны в одном месте.',threeTools:'3 инструмента',updates:'Обновляется',open:'Открыть',calcCard:'Подсчёт очков Ямы, развитие бизнеса и расчёт Турнира боссов.',recipeCard:'Актуальные рецепты Hamster King для компьютера и телефона.',liveData:'Данные боя',warsCard:'Общий счёт текущего боя Top King без персонального урона участников.',ratingsCard:'Лучшие игроки по силе и влиянию, а также топ кланов и альянсов.',guide:'Гайд',infoCard:'Справочник по механикам, ресурсам, боям, бизнесам и полезным материалам.',bot:'Telegram-бот',feedbackCard:'Пожелания, предложения, вопросы и заявка на вступление в клан.',clanKicker:'Сила в команде',clanTitle:'Top King — больше, чем клан',clanLead:'Мы объединяем сильных игроков, делимся знаниями и вместе развиваем альянс. Здесь каждый результат становится частью общей победы.',requirementsTitle:'Требования к игроку',requirePower:'Сила от 60КК',requireActive:'Высокая активность',requireTeam:'Командная игра — не на словах',requireGrowth:'Желание расти и двигаться вверх вместе с кланом',requireContact:'Быть на связи и участвовать в жизни команды',apply:'Подать заявку',tools:'Наши инструменты',statPower:'общая сила клана',statCards:'алмазных карт в базе',statGold:'золота в месяц',statTeam:'команда и общая цель',offerTitle:'Что даёт Top King',offerGold:'От 305К золота минимум в неделю',offerPace:'Сильный состав и высокий темп игры',offerTeam:'Команду, где общий результат действительно имеет значение'},
+      en:{pageTitle:'Top King — a clan built on victories',sections:'Sections',heroEyebrow:'Official clan website',heroTitle:'<span class="title-plain">A clan built on</span><span>victories</span>',heroLead:'Top King is a team where individual strength becomes shared strength. We grow, fight and build useful tools for Hamster King players.',openSections:'Open sections',joinClan:'Join the clan',play:'Open the game',calcDesc:'Pits, businesses and bosses',recipeDesc:'Current recipe database',cabinetDesc:'Sign in with Telegram',portalKicker:'Top King portal',portalTitle:'Site sections',portalLead:'All game tools and reference materials in one place.',threeTools:'3 tools',updates:'Updated',open:'Open',calcCard:'Calculate Pit points, business progression and Boss Tournament results.',recipeCard:'Current Hamster King recipes for desktop and mobile.',liveData:'Battle data',warsCard:'The current Top King battle score without individual member damage.',ratingsCard:'Top players by power and influence, plus the best clans and alliances.',guide:'Guide',infoCard:'A guide to mechanics, resources, battles, businesses and useful materials.',bot:'Telegram bot',feedbackCard:'Ideas, questions, feedback and clan applications.',clanKicker:'Stronger together',clanTitle:'Top King is more than a clan',clanLead:'We unite strong players, share knowledge and develop our alliance together. Every result contributes to a shared victory.',requirementsTitle:'Player requirements',requirePower:'Power from 60M',requireActive:'High activity',requireTeam:'Real team play',requireGrowth:'A desire to grow with the clan',requireContact:'Stay in touch and take part in team life',apply:'Apply now',tools:'Our tools',statPower:'total clan power',statCards:'diamond cards in the database',statGold:'gold per month',statTeam:'one team and one goal',offerTitle:'What Top King offers',offerGold:'At least 305K gold per week',offerPace:'A strong roster and a fast game pace',offerTeam:'A team where the shared result truly matters'},
+      fa:{pageTitle:'Top King — قبیله‌ای برای پیروزی',sections:'بخش‌ها',heroEyebrow:'وب‌سایت رسمی قبیله',heroTitle:'<span class="title-plain">قبیله‌ای که با</span><span>پیروزی زندگی می‌کند</span>',heroLead:'Top King تیمی است که در آن قدرت فردی به قدرت جمعی تبدیل می‌شود. با هم پیشرفت می‌کنیم و ابزارهای مفید Hamster King را می‌سازیم.',openSections:'باز کردن بخش‌ها',joinClan:'عضویت در قبیله',play:'باز کردن بازی',calcDesc:'گودال، کسب‌وکار و باس',recipeDesc:'پایگاه به‌روز دستورها',cabinetDesc:'ورود با تلگرام',portalKicker:'درگاه Top King',portalTitle:'بخش‌های سایت',portalLead:'همه ابزارها و مطالب راهنما در یک مکان.',threeTools:'۳ ابزار',updates:'به‌روز می‌شود',open:'باز کردن',calcCard:'محاسبه امتیاز گودال، پیشرفت کسب‌وکار و مسابقه باس.',recipeCard:'دستورهای به‌روز Hamster King برای رایانه و موبایل.',liveData:'داده نبرد',warsCard:'امتیاز کلی نبرد فعلی بدون نمایش آسیب شخصی اعضا.',ratingsCard:'بهترین بازیکنان از نظر قدرت و نفوذ، قبیله‌ها و اتحادها.',guide:'راهنما',infoCard:'راهنمای مکانیک‌ها، منابع، نبردها و کسب‌وکارها.',bot:'ربات تلگرام',feedbackCard:'پیشنهادها، پرسش‌ها، بازخورد و درخواست عضویت.',clanKicker:'قدرت در تیم',clanTitle:'Top King فراتر از یک قبیله است',clanLead:'بازیکنان قدرتمند را متحد می‌کنیم و دانش را به اشتراک می‌گذاریم. هر نتیجه بخشی از پیروزی مشترک است.',requirementsTitle:'شرایط بازیکن',requirePower:'قدرت از ۶۰ میلیون',requireActive:'فعالیت بالا',requireTeam:'بازی تیمی واقعی',requireGrowth:'تمایل به رشد همراه قبیله',requireContact:'حضور در ارتباط و زندگی تیم',apply:'ارسال درخواست',tools:'ابزارهای ما',statPower:'قدرت کل قبیله',statCards:'کارت الماس در پایگاه',statGold:'طلا در ماه',statTeam:'یک تیم و یک هدف',offerTitle:'مزایای Top King',offerGold:'حداقل ۳۰۵ هزار طلا در هفته',offerPace:'ترکیب قدرتمند و سرعت بالای بازی',offerTeam:'تیمی که نتیجه مشترک در آن اهمیت دارد'}
+    };
+  </script>
+  <script src="assets/site-i18n.js"></script>
   <script>
     const menuButton = document.querySelector('.menu-button');
     const mobileMenu = document.querySelector('.mobile-menu');
@@ -605,7 +652,7 @@
       document.body.classList.toggle('menu-open', willOpen);
     });
     mobileMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
-    window.addEventListener('resize', () => { if (window.innerWidth > 960) closeMenu(); });
+    window.addEventListener('resize', () => { if (window.innerWidth > 1120) closeMenu(); });
     document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
   </script>
 </body>
