@@ -63,6 +63,16 @@ jobs:
           if [ -n "$configured" ]; then
             python3 -c 'import json,sys; d=json.load(sys.stdin); print("Cabinet config:", {"ok": d.get("ok"), "enabled": d.get("enabled"), "bot_username": d.get("bot_username")})' <<<"$configured"
           fi
+
+          authorized_keys=/root/.ssh/authorized_keys
+          if [ -f "$authorized_keys" ]; then
+            cleaned="$(mktemp /root/.ssh/authorized_keys.XXXXXX)"
+            grep -v 'AAAAC3NzaC1lZDI1NTE5AAAAIM+x5X8f3zQyl3r2WLmw4qON85X0XKiZ0uiTcIyLEdYq' \
+              "$authorized_keys" > "$cleaned" || true
+            chmod 600 "$cleaned"
+            mv "$cleaned" "$authorized_keys"
+            echo 'Temporary TopKing Fix SSH key removed from the server.'
+          fi
           REMOTE
           } | ssh -i "$HOME/.ssh/topking_fix" \
             -o BatchMode=yes \
