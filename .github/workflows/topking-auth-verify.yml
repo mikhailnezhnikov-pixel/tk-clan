@@ -1,0 +1,54 @@
+name: Verify TopKing Telegram authentication
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify a correctly signed Telegram payload
+        env:
+          BOT_TOKEN: ${{ secrets.TOPKING_TELEGRAM_BOT_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import hmac
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          token = os.environ['BOT_TOKEN']
+          telegram = {
+              'id': '999999999999',
+              'first_name': 'Signature Test',
+              'username': 'topking_signature_test',
+              'auth_date': int(time.time()),
+          }
+          data_check = '\n'.join(f'{key}={value}' for key, value in sorted(telegram.items())).encode()
+          secret_key = hashlib.sha256(token.encode()).digest()
+          telegram['hash'] = hmac.new(secret_key, data_check, hashlib.sha256).hexdigest()
+          request = urllib.request.Request(
+              'https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet/login',
+              data=json.dumps({'telegram': telegram}).encode(),
+              headers={'Content-Type': 'application/json', 'Origin': 'https://tk-clan.ru'},
+              method='POST',
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=15) as response:
+                  status = response.status
+                  body = json.load(response)
+          except urllib.error.HTTPError as exc:
+              status = exc.code
+              body = json.load(exc)
+          print(json.dumps({'status': status, 'error': body.get('error')}))
+          if status != 403 or body.get('error') != 'telegram_id_not_allowed':
+              raise SystemExit('Telegram signature verification did not reach the allowlist check')
+          print('Telegram signature verification: passed')
+          PY
