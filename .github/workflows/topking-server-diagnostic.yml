@@ -1,0 +1,65 @@
+name: TopKing server diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare temporary SSH key
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking_fix"
+          chmod 600 "$HOME/.ssh/topking_fix"
+
+      - name: Inspect backend without printing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking_fix" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'bash -s' <<'REMOTE'
+          set -u
+          echo '=== HOST ==='
+          hostname
+          uptime
+
+          echo '=== LIKELY SERVICES ==='
+          systemctl list-units --type=service --all --no-legend 2>/dev/null \
+            | grep -Ei 'hamster|license|cabinet|telegram|bot|uvicorn|gunicorn|docker' \
+            || true
+
+          echo '=== CONTAINERS ==='
+          if command -v docker >/dev/null 2>&1; then
+            docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+          else
+            echo 'docker: not installed'
+          fi
+
+          echo '=== FILES CONTAINING LOGIN ERROR ==='
+          grep -RIl --binary-files=without-match \
+            --exclude='*.log' --exclude='*.sqlite*' --exclude='.env' \
+            -E 'invalid signature|TopKingClanCabinetBot|/api/v1/cabinet' \
+            /opt /srv /var/www /root /etc/systemd/system 2>/dev/null \
+            | head -80 || true
+
+          echo '=== REVERSE PROXY REFERENCES ==='
+          grep -RIl --binary-files=without-match \
+            -E 'hk-license|api/v1/cabinet' /etc/nginx /etc/caddy 2>/dev/null \
+            | head -40 || true
+          REMOTE
+
+      - name: Remove temporary SSH key
+        if: always()
+        run: rm -f "$HOME/.ssh/topking_fix"
