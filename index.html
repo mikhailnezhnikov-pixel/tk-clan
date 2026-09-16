@@ -2,118 +2,573 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080b11">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08090d">
+  <meta name="color-scheme" content="dark">
   <title>Top King — клан, который живёт победами</title>
-  <meta name="description" content="Официальный сайт клана Top King: инструменты, рецепты и развитие игроков Hamster King.">
+  <meta name="description" content="Официальный сайт клана Top King в Hamster King: инструменты, рецепты, калькуляторы и личный кабинет.">
   <style>
-    :root { color-scheme: dark; --ink:#07090d; --gold:#f4c868; --gold-bright:#ffe49a; --muted:#aeb7c5; --line:rgba(244,200,104,.22) }
-    * { box-sizing: border-box }
-    html { scroll-behavior: smooth }
-    body { margin:0; background:var(--ink); color:#f7f4ec; font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif }
-    a { color:inherit }
-    .hero { position:relative; min-height:100svh; overflow:hidden; isolation:isolate; background:#090d14 url("assets/home/top-king-clan-bg.jpg") 54% center/cover no-repeat }
-    .hero::before { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,rgba(4,7,12,.96) 0%,rgba(4,7,12,.80) 27%,rgba(4,7,12,.23) 62%,rgba(4,7,12,.08) 100%),linear-gradient(0deg,#07090d 0%,rgba(7,9,13,.80) 10%,transparent 40%) }
-    .hero::after { content:""; position:absolute; inset:0; z-index:-1; opacity:.42; background:radial-gradient(circle at 72% 30%,rgba(255,194,80,.24),transparent 27%); animation:glow 5s ease-in-out infinite alternate }
-    @keyframes glow { to { opacity:.75; transform:scale(1.03) } }
-    .topbar { width:min(1180px,calc(100% - 40px)); margin:0 auto; padding:24px 0; display:flex; align-items:center; justify-content:space-between; gap:24px }
-    .brand { display:inline-flex; align-items:center; gap:11px; font-weight:900; letter-spacing:.12em; text-decoration:none }
-    .brand-mark { display:grid; place-items:center; width:38px; height:38px; border:1px solid var(--gold); border-radius:50%; color:var(--gold); box-shadow:0 0 28px rgba(244,200,104,.24) }
-    .nav { display:flex; align-items:center; gap:8px }
-    .nav a { padding:10px 14px; border-radius:999px; color:#dce1e9; font-size:14px; font-weight:700; text-decoration:none }
-    .nav a:hover,.nav a:focus-visible { background:rgba(255,255,255,.09); outline:none }
-    .hero-content { width:min(1180px,calc(100% - 40px)); min-height:calc(100svh - 92px); margin:0 auto; padding:7vh 0 15vh; display:flex; align-items:center }
-    .hero-copy { width:min(620px,52vw) }
-    .eyebrow { display:inline-flex; align-items:center; gap:8px; margin-bottom:18px; color:var(--gold-bright); font-size:13px; font-weight:800; letter-spacing:.18em; text-transform:uppercase }
-    .eyebrow::before { content:""; width:34px; height:1px; background:var(--gold) }
-    h1 { max-width:700px; margin:0; font-size:clamp(48px,7.5vw,104px); line-height:.92; letter-spacing:-.055em; text-wrap:balance }
-    h1 span { display:block; color:transparent; background:linear-gradient(110deg,#fff1bd,#e6ad42 60%,#fff0b0); -webkit-background-clip:text; background-clip:text }
-    .lead { max-width:560px; margin:26px 0 0; color:#cbd2dc; font-size:clamp(17px,2vw,21px); line-height:1.55 }
-    .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:34px }
-    .button { min-height:52px; padding:14px 22px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.18); border-radius:12px; background:rgba(10,14,21,.72); color:#fff; font-weight:800; text-decoration:none; backdrop-filter:blur(10px); transition:.2s ease }
-    .button.primary { border-color:var(--gold); background:linear-gradient(135deg,#f2cb70,#bc7924); color:#171006; box-shadow:0 16px 40px rgba(190,121,34,.26) }
-    .button:hover { transform:translateY(-2px) }
-    .scroll-note { position:absolute; left:50%; bottom:25px; translate:-50% 0; color:#bac2cf; font-size:12px; letter-spacing:.12em; text-transform:uppercase; text-decoration:none }
-    .scroll-note::after { content:"↓"; display:block; margin-top:7px; color:var(--gold); font-size:18px; text-align:center }
-    .tools-section { position:relative; padding:86px 20px 100px; background:radial-gradient(circle at 50% 0%,rgba(170,111,31,.12),transparent 32%),#07090d }
-    .section-inner { width:min(1060px,100%); margin:0 auto }
-    .section-kicker { margin:0 0 9px; color:var(--gold); font-size:13px; font-weight:800; letter-spacing:.15em; text-transform:uppercase }
-    h2 { margin:0; font-size:clamp(32px,5vw,52px); letter-spacing:-.035em }
-    .section-intro { max-width:650px; margin:14px 0 34px; color:var(--muted); font-size:17px; line-height:1.6 }
-    .tool-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px }
-    .tool-card { min-height:245px; padding:28px; display:flex; flex-direction:column; justify-content:space-between; border:1px solid var(--line); border-radius:22px; background:linear-gradient(145deg,rgba(24,33,46,.96),rgba(11,16,24,.98)); color:#fff; text-decoration:none; box-shadow:0 28px 70px rgba(0,0,0,.28); transition:.2s ease }
-    .tool-card:hover { transform:translateY(-5px); border-color:rgba(244,200,104,.62) }
-    .tool-icon { font-size:42px }
-    .tool-card h3 { margin:22px 0 9px; font-size:25px }
-    .tool-card p { margin:0; color:var(--muted); line-height:1.55 }
-    .tool-link { margin-top:24px; color:var(--gold-bright); font-weight:800 }
-    footer { padding:26px 20px; border-top:1px solid rgba(255,255,255,.07); color:#858e9b; text-align:center; font-size:13px }
-    @media(max-width:760px) {
-      .topbar { width:min(100% - 28px,1180px); padding:16px 0 }
-      .brand { font-size:14px }
-      .nav a:not(.cabinet-link) { display:none }
-      .nav a { padding:9px 11px; font-size:13px }
-      .hero { min-height:820px; background-position:52% top }
-      .hero::before { background:linear-gradient(0deg,#07090d 2%,rgba(4,7,12,.86) 42%,rgba(4,7,12,.05) 76%),linear-gradient(90deg,rgba(4,7,12,.35),rgba(4,7,12,.05)) }
-      .hero-content { width:min(100% - 34px,1180px); min-height:740px; padding:360px 0 80px; align-items:flex-end }
-      .hero-copy { width:100% }
-      h1 { font-size:clamp(45px,14vw,70px) }
-      .lead { margin-top:18px; font-size:17px }
-      .actions { margin-top:24px }
-      .button { flex:1 1 190px }
-      .scroll-note { display:none }
-      .tools-section { padding:64px 16px 74px }
-      .tool-grid { grid-template-columns:1fr }
-      .tool-card { min-height:220px }
+    :root {
+      color-scheme: dark;
+      --bg: #07080b;
+      --surface: #101319;
+      --surface-2: #171b23;
+      --text: #f8f6ef;
+      --muted: #a9b0bc;
+      --gold: #e8b654;
+      --gold-light: #ffe3a0;
+      --gold-dark: #94631f;
+      --line: rgba(232, 182, 84, .22);
+      --header: 78px;
+      --radius: 24px;
     }
-    @media(prefers-reduced-motion:reduce) { html{scroll-behavior:auto}.hero::after{animation:none}.button,.tool-card{transition:none} }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header) + 18px); }
+    body {
+      margin: 0;
+      min-width: 320px;
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body.menu-open { overflow: hidden; }
+    a { color: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 2px solid var(--gold-light); outline-offset: 4px; }
+
+    .shell { width: min(1200px, calc(100% - 48px)); margin-inline: auto; }
+
+    .site-header {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 50;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: linear-gradient(180deg, rgba(5,7,10,.92), rgba(5,7,10,.72));
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+    }
+    .header-inner {
+      min-height: var(--header);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: .16em;
+      text-decoration: none;
+    }
+    .brand-mark {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,220,135,.72);
+      border-radius: 50%;
+      color: var(--gold-light);
+      background: radial-gradient(circle at 35% 25%, rgba(255,228,157,.18), rgba(232,182,84,.04) 55%, transparent 56%);
+      box-shadow: inset 0 0 18px rgba(232,182,84,.08), 0 0 30px rgba(232,182,84,.14);
+      font-size: 21px;
+    }
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border: 1px solid rgba(232,182,84,.18);
+      border-radius: inherit;
+    }
+
+    .desktop-nav { display: flex; align-items: center; gap: 3px; }
+    .desktop-nav a {
+      padding: 11px 13px;
+      border-radius: 12px;
+      color: #cbd0d8;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: color .2s ease, background .2s ease, transform .2s ease;
+    }
+    .desktop-nav a:hover { color: #fff; background: rgba(255,255,255,.075); transform: translateY(-1px); }
+    .desktop-nav .nav-login {
+      margin-left: 7px;
+      padding-inline: 16px;
+      border: 1px solid rgba(232,182,84,.45);
+      color: var(--gold-light);
+      background: rgba(232,182,84,.08);
+    }
+
+    .menu-button {
+      width: 46px;
+      height: 46px;
+      display: none;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 14px;
+      background: rgba(255,255,255,.06);
+      color: #fff;
+      cursor: pointer;
+    }
+    .menu-icon, .menu-icon::before, .menu-icon::after {
+      width: 19px;
+      height: 2px;
+      display: block;
+      border-radius: 99px;
+      background: currentColor;
+      transition: .22s ease;
+    }
+    .menu-icon { position: relative; }
+    .menu-icon::before, .menu-icon::after { content: ""; position: absolute; left: 0; }
+    .menu-icon::before { top: -6px; }
+    .menu-icon::after { top: 6px; }
+    .menu-button[aria-expanded="true"] .menu-icon { background: transparent; }
+    .menu-button[aria-expanded="true"] .menu-icon::before { top: 0; transform: rotate(45deg); }
+    .menu-button[aria-expanded="true"] .menu-icon::after { top: 0; transform: rotate(-45deg); }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      inset: var(--header) 0 0;
+      z-index: 45;
+      padding: 22px 20px max(28px, env(safe-area-inset-bottom));
+      overflow-y: auto;
+      background: rgba(7,8,11,.98);
+    }
+    .mobile-menu.is-open { display: block; }
+    .mobile-links { display: grid; gap: 9px; }
+    .mobile-links a {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 14px 17px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 17px;
+      background: rgba(255,255,255,.045);
+      font-size: 17px;
+      font-weight: 760;
+      text-decoration: none;
+    }
+    .mobile-links a span:last-child { color: var(--gold); }
+    .mobile-links .mobile-login { margin-top: 7px; border-color: rgba(232,182,84,.38); background: rgba(232,182,84,.09); }
+
+    .hero {
+      position: relative;
+      min-height: max(760px, 100svh);
+      display: flex;
+      align-items: center;
+      isolation: isolate;
+      overflow: hidden;
+      background: #0a0c11 url("assets/home/top-king-clan-bg.jpg") 58% center / cover no-repeat;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background:
+        linear-gradient(90deg, rgba(4,6,9,.98) 0%, rgba(4,6,9,.88) 29%, rgba(4,6,9,.42) 57%, rgba(4,6,9,.12) 100%),
+        linear-gradient(0deg, #07080b 0%, rgba(7,8,11,.72) 13%, transparent 43%);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 77% 25%, rgba(255,193,71,.19), transparent 24%),
+        linear-gradient(115deg, transparent 52%, rgba(255,224,153,.05) 58%, transparent 66%);
+      animation: hero-light 7s ease-in-out infinite alternate;
+    }
+    @keyframes hero-light { to { opacity: .62; transform: scale(1.025); } }
+
+    .embers { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+    .embers i {
+      position: absolute;
+      bottom: -20px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #ffd17c;
+      box-shadow: 0 0 10px #d58a26;
+      opacity: 0;
+      animation: rise 8s linear infinite;
+    }
+    .embers i:nth-child(1){left:59%;animation-delay:0s}.embers i:nth-child(2){left:68%;animation-delay:1.6s}.embers i:nth-child(3){left:79%;animation-delay:3.2s}.embers i:nth-child(4){left:88%;animation-delay:4.8s}.embers i:nth-child(5){left:73%;animation-delay:6.2s}
+    @keyframes rise { 0%{transform:translateY(0);opacity:0} 15%{opacity:.8} 100%{transform:translate(26px,-75vh);opacity:0} }
+
+    .hero-inner { padding-top: calc(var(--header) + 68px); padding-bottom: 176px; }
+    .hero-copy { width: min(665px, 57%); }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      color: var(--gold-light);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: .21em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 38px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); }
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(58px, 7.15vw, 106px);
+      font-weight: 700;
+      line-height: .91;
+      letter-spacing: -.058em;
+      text-wrap: balance;
+      text-shadow: 0 8px 36px rgba(0,0,0,.52);
+    }
+    h1 span {
+      display: block;
+      color: transparent;
+      background: linear-gradient(112deg, #fff3c5 5%, #e6ae46 58%, #fff0b5 95%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .lead { max-width: 600px; margin: 27px 0 0; color: #cbd1da; font-size: clamp(17px,1.8vw,21px); line-height: 1.6; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+    .button {
+      min-height: 54px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 14px 22px;
+      border: 1px solid rgba(255,255,255,.17);
+      border-radius: 14px;
+      color: #fff;
+      background: rgba(8,11,16,.67);
+      backdrop-filter: blur(11px);
+      font-size: 15px;
+      font-weight: 820;
+      text-decoration: none;
+      transition: transform .2s ease, border-color .2s ease, background .2s ease;
+    }
+    .button:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.32); }
+    .button.primary { border-color: #efc86c; color: #191105; background: linear-gradient(135deg,#ffe39b,#d39431); box-shadow: 0 16px 42px rgba(196,128,32,.28); }
+    .button.primary:hover { background: linear-gradient(135deg,#ffecb6,#dda33f); }
+
+    .quick-panel {
+      position: absolute;
+      left: 50%;
+      bottom: 28px;
+      width: min(1200px, calc(100% - 48px));
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      transform: translateX(-50%);
+    }
+    .quick-link {
+      min-height: 112px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 19px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 20px;
+      background: linear-gradient(135deg,rgba(20,24,31,.86),rgba(8,11,16,.76));
+      backdrop-filter: blur(18px) saturate(135%);
+      text-decoration: none;
+      box-shadow: 0 22px 50px rgba(0,0,0,.24);
+      transition: transform .2s ease, border-color .2s ease, background .2s ease;
+    }
+    .quick-link:hover { transform: translateY(-4px); border-color: rgba(232,182,84,.52); background: linear-gradient(135deg,rgba(29,33,41,.92),rgba(12,15,20,.86)); }
+    .quick-icon { width: 47px; height: 47px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 15px; color: var(--gold-light); background: rgba(232,182,84,.08); font-size: 23px; }
+    .quick-copy { min-width: 0; }
+    .quick-label { display: block; margin-bottom: 4px; font-size: 16px; font-weight: 820; }
+    .quick-description { display: block; overflow: hidden; color: var(--muted); font-size: 13px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .quick-arrow { margin-left: auto; color: var(--gold); font-size: 21px; }
+
+    .section { position: relative; padding: 104px 0; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 40px; margin-bottom: 38px; }
+    .kicker { margin: 0 0 10px; color: var(--gold); font-size: 12px; font-weight: 850; letter-spacing: .18em; text-transform: uppercase; }
+    h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(38px,5vw,64px); line-height: 1; letter-spacing: -.045em; }
+    .section-intro { max-width: 520px; margin: 0; color: var(--muted); font-size: 16px; line-height: 1.65; }
+
+    .portal { background: radial-gradient(circle at 50% 0%, rgba(153,98,25,.13), transparent 33%), #07080b; }
+    .portal-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .portal-card {
+      position: relative;
+      min-height: 300px;
+      grid-column: span 4;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      padding: 28px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: var(--radius);
+      color: #fff;
+      background: linear-gradient(145deg,rgba(24,29,38,.96),rgba(11,14,19,.99));
+      box-shadow: 0 30px 80px rgba(0,0,0,.26);
+      text-decoration: none;
+      transition: transform .24s ease, border-color .24s ease;
+    }
+    .portal-card::after { content: ""; position: absolute; right: -70px; top: -80px; width: 210px; height: 210px; border-radius: 50%; background: radial-gradient(circle,rgba(232,182,84,.16),transparent 67%); }
+    .portal-card:hover { transform: translateY(-7px); border-color: rgba(232,182,84,.55); }
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+    .card-icon { width: 58px; height: 58px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 18px; color: var(--gold-light); background: rgba(232,182,84,.08); font-size: 29px; }
+    .card-status { padding: 6px 9px; border: 1px solid rgba(121,219,155,.24); border-radius: 99px; color: #9ee3b5; background: rgba(65,177,103,.08); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .portal-card h3 { margin: 32px 0 9px; font-size: 25px; letter-spacing: -.025em; }
+    .portal-card p { margin: 0; color: var(--muted); line-height: 1.58; }
+    .card-go { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 25px; color: var(--gold-light); font-size: 14px; font-weight: 820; }
+
+    .clan-section { overflow: hidden; border-top: 1px solid rgba(255,255,255,.06); background: #0b0d12; }
+    .clan-layout { display: grid; grid-template-columns: .92fr 1.08fr; gap: 72px; align-items: center; }
+    .clan-copy .section-intro { margin-top: 20px; }
+    .clan-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 29px; }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .stat { min-height: 170px; padding: 25px; border: 1px solid rgba(255,255,255,.08); border-radius: 21px; background: linear-gradient(145deg,rgba(27,31,39,.76),rgba(14,17,22,.9)); }
+    .stat strong { display: block; color: var(--gold-light); font-family: Georgia,serif; font-size: clamp(35px,4vw,52px); line-height: 1; }
+    .stat span { display: block; margin-top: 12px; color: var(--muted); line-height: 1.45; }
+
+    footer { padding: 28px 0 max(28px, env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.07); color: #858d99; background: #07080b; font-size: 13px; }
+    .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 18px; }
+    .footer-links a { color: #aab1bc; text-decoration: none; }
+
+    @media (max-width: 960px) {
+      .desktop-nav { display: none; }
+      .menu-button { display: grid; }
+      .hero { background-position: 59% center; }
+      .hero-copy { width: min(650px, 69%); }
+      .quick-panel { grid-template-columns: 1fr 1fr 1fr; }
+      .quick-description { display: none; }
+      .portal-card { grid-column: span 6; }
+      .portal-card:last-child { grid-column: 4 / span 6; }
+      .clan-layout { grid-template-columns: 1fr; gap: 46px; }
+    }
+
+    @media (max-width: 680px) {
+      :root { --header: 68px; --radius: 20px; }
+      .shell { width: min(100% - 32px, 1200px); }
+      .brand { gap: 9px; font-size: 13px; }
+      .brand-mark { width: 38px; height: 38px; }
+      .menu-button { width: 43px; height: 43px; }
+      .hero {
+        min-height: 840px;
+        align-items: flex-end;
+        background-position: 60% top;
+      }
+      .hero::before {
+        background:
+          linear-gradient(0deg,#07080b 0%,rgba(5,7,10,.96) 28%,rgba(5,7,10,.50) 57%,rgba(5,7,10,.10) 77%),
+          linear-gradient(90deg,rgba(5,7,10,.46),rgba(5,7,10,.03));
+      }
+      .hero::after { background: radial-gradient(circle at 65% 16%,rgba(255,193,71,.15),transparent 28%); }
+      .hero-inner { width: 100%; padding: 410px 16px 260px; }
+      .hero-copy { width: 100%; }
+      .eyebrow { margin-bottom: 14px; font-size: 10px; letter-spacing: .18em; }
+      h1 { font-size: clamp(48px,15vw,69px); line-height: .93; letter-spacing: -.055em; }
+      .lead { margin-top: 18px; font-size: 16px; line-height: 1.52; }
+      .hero-actions { margin-top: 23px; }
+      .button { flex: 1 1 100%; min-height: 52px; }
+      .quick-panel { bottom: 20px; width: calc(100% - 32px); grid-template-columns: 1fr; gap: 8px; }
+      .quick-link { min-height: 64px; padding: 10px 12px; border-radius: 16px; }
+      .quick-icon { width: 42px; height: 42px; border-radius: 13px; font-size: 20px; }
+      .quick-label { margin: 0; font-size: 14px; }
+      .quick-arrow { font-size: 18px; }
+      .section { padding: 72px 0; }
+      .section-head { display: block; margin-bottom: 27px; }
+      .section-intro { margin-top: 15px; font-size: 15px; }
+      h2 { font-size: clamp(38px,12vw,51px); }
+      .portal-grid { grid-template-columns: 1fr; gap: 12px; }
+      .portal-card, .portal-card:last-child { min-height: 260px; grid-column: auto; padding: 22px; }
+      .portal-card h3 { margin-top: 25px; font-size: 23px; }
+      .stats { grid-template-columns: 1fr 1fr; gap: 9px; }
+      .stat { min-height: 145px; padding: 19px; }
+      .stat strong { font-size: 35px; }
+      .stat span { font-size: 13px; }
+      .footer-inner { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media (max-width: 385px) {
+      .brand { letter-spacing: .11em; }
+      .stats { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
   </style>
 </head>
 <body>
-  <header class="hero">
-    <div class="topbar">
-      <a class="brand" href="./" aria-label="Top King, главная"><span class="brand-mark">♛</span> TOP KING</a>
-      <nav class="nav" aria-label="Главная навигация">
-        <a href="#tools">Инструменты</a>
-        <a class="nav-tool" href="business-calculator/">Калькулятор</a>
-        <a class="nav-tool" href="recipes/">Рецепты</a>
-        <a class="nav-tool cabinet-link" href="cabinet/">Личный кабинет</a>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="./" aria-label="Top King — главная">
+        <span class="brand-mark" aria-hidden="true">♛</span>
+        <span>TOP KING</span>
+      </a>
+      <nav class="desktop-nav" aria-label="Основная навигация">
+        <a href="./">Главная</a>
+        <a href="#sections">Разделы</a>
+        <a href="business-calculator/">Калькулятор</a>
+        <a href="recipes/">Рецепты</a>
+        <a href="#clan">О клане</a>
+        <a class="nav-login" href="cabinet/">Личный кабинет</a>
       </nav>
+      <button class="menu-button" type="button" aria-label="Открыть меню" aria-controls="mobile-menu" aria-expanded="false">
+        <span class="menu-icon" aria-hidden="true"></span>
+      </button>
     </div>
-    <div class="hero-content">
-      <div class="hero-copy">
-        <div class="eyebrow">Официальный сайт клана</div>
-        <h1>Клан, который <span>живёт победами</span></h1>
-        <p class="lead">Top King — единая команда, общий путь и инструменты, которые помогают каждому участнику расти сильнее.</p>
-        <div class="actions">
-          <a class="button primary" href="#tools">Открыть инструменты</a>
-          <a class="button" href="recipes/">Посмотреть рецепты</a>
+  </header>
+
+  <div class="mobile-menu" id="mobile-menu" aria-hidden="true">
+    <nav class="mobile-links" aria-label="Мобильная навигация">
+      <a href="./"><span>Главная</span><span>⌂</span></a>
+      <a href="#sections"><span>Все разделы</span><span>↓</span></a>
+      <a href="business-calculator/"><span>Калькулятор бизнеса</span><span>→</span></a>
+      <a href="recipes/"><span>Игровые рецепты</span><span>→</span></a>
+      <a href="#clan"><span>О клане</span><span>↓</span></a>
+      <a class="mobile-login" href="cabinet/"><span>Личный кабинет</span><span>♛</span></a>
+    </nav>
+  </div>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="embers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="shell hero-inner">
+        <div class="hero-copy">
+          <div class="eyebrow">Официальный сайт клана</div>
+          <h1 id="hero-title">Клан, который <span>живёт победами</span></h1>
+          <p class="lead">Top King — команда, где личная сила становится общей. Развиваемся, сражаемся и создаём лучшие инструменты для игроков Hamster King.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="#sections">Открыть разделы <span aria-hidden="true">↓</span></a>
+            <a class="button" href="https://t.me/Pavel98b" target="_blank" rel="noopener">Вступить в клан <span aria-hidden="true">↗</span></a>
+          </div>
         </div>
       </div>
-    </div>
-    <a class="scroll-note" href="#tools">Продолжить</a>
-  </header>
-  <main id="tools" class="tools-section">
-    <div class="section-inner">
-      <p class="section-kicker">Инструменты Top King</p>
-      <h2>Всё необходимое для развития</h2>
-      <p class="section-intro">Считай развитие бизнеса и проверяй актуальные игровые рецепты в отдельных разделах сайта.</p>
-      <div class="tool-grid">
-        <a class="tool-card" href="business-calculator/">
-          <div><span class="tool-icon" aria-hidden="true">🌰</span><h3>Калькулятор бизнеса</h3><p>Показывает весь путь от A до S+ и ресурсы для каждого следующего повышения.</p></div>
-          <span class="tool-link">Рассчитать развитие →</span>
+
+      <div class="quick-panel" aria-label="Быстрый доступ">
+        <a class="quick-link" href="business-calculator/">
+          <span class="quick-icon" aria-hidden="true">🌰</span>
+          <span class="quick-copy"><span class="quick-label">Калькулятор бизнеса</span><span class="quick-description">Путь развития от A до S+</span></span>
+          <span class="quick-arrow" aria-hidden="true">→</span>
         </a>
-        <a class="tool-card" href="recipes/">
-          <div><span class="tool-icon" aria-hidden="true">📜</span><h3>Рецепты</h3><p>Актуальные рецепты из игры, собранные скриптом и автоматически обновляемые на сайте.</p></div>
-          <span class="tool-link">Открыть рецепты →</span>
+        <a class="quick-link" href="recipes/">
+          <span class="quick-icon" aria-hidden="true">📜</span>
+          <span class="quick-copy"><span class="quick-label">Игровые рецепты</span><span class="quick-description">Актуальная база рецептов</span></span>
+          <span class="quick-arrow" aria-hidden="true">→</span>
         </a>
-        <a class="tool-card" href="cabinet/">
-          <div><span class="tool-icon" aria-hidden="true">♛</span><h3>Личный кабинет</h3></div>
-          <span class="tool-link">Войти через Telegram →</span>
+        <a class="quick-link" href="cabinet/">
+          <span class="quick-icon" aria-hidden="true">♛</span>
+          <span class="quick-copy"><span class="quick-label">Личный кабинет</span><span class="quick-description">Вход через Telegram</span></span>
+          <span class="quick-arrow" aria-hidden="true">→</span>
         </a>
       </div>
-    </div>
+    </section>
+
+    <section class="section portal" id="sections" aria-labelledby="sections-title">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Единый портал Top King</p>
+            <h2 id="sections-title">Разделы сайта</h2>
+          </div>
+          <p class="section-intro">Все игровые инструменты собраны в одном месте. Новые вкладки будут аккуратно добавляться в это меню без перегрузки главной страницы.</p>
+        </div>
+
+        <div class="portal-grid">
+          <a class="portal-card" href="business-calculator/">
+            <div>
+              <div class="card-top"><span class="card-icon" aria-hidden="true">🌰</span><span class="card-status">Работает</span></div>
+              <h3>Калькулятор бизнеса</h3>
+              <p>Расчёт ресурсов и полный путь повышения бизнеса от ранга A до S+.</p>
+            </div>
+            <span class="card-go"><span>Открыть калькулятор</span><span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="portal-card" href="recipes/">
+            <div>
+              <div class="card-top"><span class="card-icon" aria-hidden="true">📜</span><span class="card-status">Обновляется</span></div>
+              <h3>Игровые рецепты</h3>
+              <p>Актуальные рецепты Hamster King в удобном формате для компьютера и телефона.</p>
+            </div>
+            <span class="card-go"><span>Перейти к рецептам</span><span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="portal-card" href="cabinet/">
+            <div>
+              <div class="card-top"><span class="card-icon" aria-hidden="true">♛</span><span class="card-status">Для участников</span></div>
+              <h3>Личный кабинет</h3>
+              <p>Закрытый раздел участника клана с авторизацией через Telegram.</p>
+            </div>
+            <span class="card-go"><span>Войти в кабинет</span><span aria-hidden="true">→</span></span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section clan-section" id="clan" aria-labelledby="clan-title">
+      <div class="shell clan-layout">
+        <div class="clan-copy">
+          <p class="kicker">Сила в команде</p>
+          <h2 id="clan-title">Top King — больше, чем клан</h2>
+          <p class="section-intro">Мы объединяем сильных игроков, делимся знаниями и вместе развиваем альянс. Здесь каждый результат становится частью общей победы.</p>
+          <div class="clan-actions">
+            <a class="button primary" href="https://t.me/Pavel98b" target="_blank" rel="noopener">Подать заявку <span aria-hidden="true">↗</span></a>
+            <a class="button" href="#sections">Наши инструменты</a>
+          </div>
+        </div>
+        <div class="stats" aria-label="Показатели клана">
+          <div class="stat"><strong>3B+</strong><span>общая сила клана</span></div>
+          <div class="stat"><strong>200+</strong><span>алмазных карт в базе</span></div>
+          <div class="stat"><strong>1M</strong><span>золота в месяц</span></div>
+          <div class="stat"><strong>1</strong><span>команда и общая цель</span></div>
+        </div>
+      </div>
+    </section>
   </main>
-  <footer>Top King · Hamster King</footer>
+
+  <footer>
+    <div class="shell footer-inner">
+      <span>© Top King · Hamster King</span>
+      <nav class="footer-links" aria-label="Навигация в подвале">
+        <a href="business-calculator/">Калькулятор</a>
+        <a href="recipes/">Рецепты</a>
+        <a href="cabinet/">Кабинет</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    const menuButton = document.querySelector('.menu-button');
+    const mobileMenu = document.querySelector('.mobile-menu');
+    const closeMenu = () => {
+      menuButton.setAttribute('aria-expanded', 'false');
+      menuButton.setAttribute('aria-label', 'Открыть меню');
+      mobileMenu.classList.remove('is-open');
+      mobileMenu.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('menu-open');
+    };
+    menuButton.addEventListener('click', () => {
+      const willOpen = menuButton.getAttribute('aria-expanded') !== 'true';
+      menuButton.setAttribute('aria-expanded', String(willOpen));
+      menuButton.setAttribute('aria-label', willOpen ? 'Закрыть меню' : 'Открыть меню');
+      mobileMenu.classList.toggle('is-open', willOpen);
+      mobileMenu.setAttribute('aria-hidden', String(!willOpen));
+      document.body.classList.toggle('menu-open', willOpen);
+    });
+    mobileMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
+    window.addEventListener('resize', () => { if (window.innerWidth > 960) closeMenu(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+  </script>
 </body>
 </html>
