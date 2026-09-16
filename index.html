@@ -12,8 +12,8 @@
     html { scroll-behavior: smooth }
     body { margin:0; background:var(--ink); color:#f7f4ec; font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif }
     a { color:inherit }
-    .hero { position:relative; min-height:100svh; overflow:hidden; isolation:isolate; background:#090d14 url("assets/home/top-king-hero.png") 62% center/cover no-repeat }
-    .hero::before { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,rgba(4,7,12,.98) 0%,rgba(4,7,12,.88) 24%,rgba(4,7,12,.30) 57%,rgba(4,7,12,.10) 100%),linear-gradient(0deg,#07090d 0%,transparent 26%) }
+    .hero { position:relative; min-height:100svh; overflow:hidden; isolation:isolate; background:#090d14 url("assets/home/top-king-clan-bg.jpg") 54% center/cover no-repeat }
+    .hero::before { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,rgba(4,7,12,.96) 0%,rgba(4,7,12,.80) 27%,rgba(4,7,12,.23) 62%,rgba(4,7,12,.08) 100%),linear-gradient(0deg,#07090d 0%,rgba(7,9,13,.80) 10%,transparent 40%) }
     .hero::after { content:""; position:absolute; inset:0; z-index:-1; opacity:.42; background:radial-gradient(circle at 72% 30%,rgba(255,194,80,.24),transparent 27%); animation:glow 5s ease-in-out infinite alternate }
     @keyframes glow { to { opacity:.75; transform:scale(1.03) } }
     .topbar { width:min(1180px,calc(100% - 40px)); margin:0 auto; padding:24px 0; display:flex; align-items:center; justify-content:space-between; gap:24px }
@@ -40,7 +40,7 @@
     .section-kicker { margin:0 0 9px; color:var(--gold); font-size:13px; font-weight:800; letter-spacing:.15em; text-transform:uppercase }
     h2 { margin:0; font-size:clamp(32px,5vw,52px); letter-spacing:-.035em }
     .section-intro { max-width:650px; margin:14px 0 34px; color:var(--muted); font-size:17px; line-height:1.6 }
-    .tool-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px }
+    .tool-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px }
     .tool-card { min-height:245px; padding:28px; display:flex; flex-direction:column; justify-content:space-between; border:1px solid var(--line); border-radius:22px; background:linear-gradient(145deg,rgba(24,33,46,.96),rgba(11,16,24,.98)); color:#fff; text-decoration:none; box-shadow:0 28px 70px rgba(0,0,0,.28); transition:.2s ease }
     .tool-card:hover { transform:translateY(-5px); border-color:rgba(244,200,104,.62) }
     .tool-icon { font-size:42px }
@@ -51,9 +51,9 @@
     @media(max-width:760px) {
       .topbar { width:min(100% - 28px,1180px); padding:16px 0 }
       .brand { font-size:14px }
-      .nav a:not(.nav-tool) { display:none }
+      .nav a:not(.cabinet-link) { display:none }
       .nav a { padding:9px 11px; font-size:13px }
-      .hero { min-height:820px; background-position:68% top }
+      .hero { min-height:820px; background-position:52% top }
       .hero::before { background:linear-gradient(0deg,#07090d 2%,rgba(4,7,12,.86) 42%,rgba(4,7,12,.05) 76%),linear-gradient(90deg,rgba(4,7,12,.35),rgba(4,7,12,.05)) }
       .hero-content { width:min(100% - 34px,1180px); min-height:740px; padding:360px 0 80px; align-items:flex-end }
       .hero-copy { width:100% }
@@ -77,6 +77,7 @@
         <a href="#tools">Инструменты</a>
         <a class="nav-tool" href="business-calculator/">Калькулятор</a>
         <a class="nav-tool" href="recipes/">Рецепты</a>
+        <a class="nav-tool cabinet-link" href="cabinet/">Личный кабинет</a>
       </nav>
     </div>
     <div class="hero-content">
@@ -105,6 +106,10 @@
         <a class="tool-card" href="recipes/">
           <div><span class="tool-icon" aria-hidden="true">📜</span><h3>Рецепты</h3><p>Актуальные рецепты из игры, собранные скриптом и автоматически обновляемые на сайте.</p></div>
           <span class="tool-link">Открыть рецепты →</span>
+        </a>
+        <a class="tool-card" href="cabinet/">
+          <div><span class="tool-icon" aria-hidden="true">♛</span><h3>Личный кабинет</h3><p>Закрытая информация по прокачке клана, доступ к скрипту и инструкции по установке.</p></div>
+          <span class="tool-link">Войти через Telegram →</span>
         </a>
       </div>
     </div>
