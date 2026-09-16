@@ -333,7 +333,19 @@
     .clan-layout { display: grid; grid-template-columns: .92fr 1.08fr; gap: 72px; align-items: center; }
     .clan-copy .section-intro { margin-top: 20px; }
     .clan-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 29px; }
+    .requirements, .offer-panel {
+      padding: 23px;
+      border: 1px solid rgba(232,182,84,.18);
+      border-radius: 21px;
+      background: linear-gradient(145deg,rgba(30,33,40,.76),rgba(14,17,22,.92));
+    }
+    .requirements { margin-top: 28px; }
+    .requirements h3, .offer-panel h3 { margin: 0 0 16px; color: var(--gold-light); font-size: 17px; letter-spacing: -.01em; }
+    .detail-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+    .detail-list li { display: flex; align-items: flex-start; gap: 11px; color: #d1d5dc; font-size: 14px; line-height: 1.45; }
+    .detail-list .emoji { width: 24px; flex: 0 0 24px; text-align: center; }
     .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .offer-panel { grid-column: 1 / -1; }
     .stat { min-height: 170px; padding: 25px; border: 1px solid rgba(255,255,255,.08); border-radius: 21px; background: linear-gradient(145deg,rgba(27,31,39,.76),rgba(14,17,22,.9)); }
     .stat strong { display: block; color: var(--gold-light); font-family: Georgia,serif; font-size: clamp(35px,4vw,52px); line-height: 1; }
     .stat span { display: block; margin-top: 12px; color: var(--muted); line-height: 1.45; }
@@ -522,6 +534,16 @@
           <p class="kicker">Сила в команде</p>
           <h2 id="clan-title">Top King — больше, чем клан</h2>
           <p class="section-intro">Мы объединяем сильных игроков, делимся знаниями и вместе развиваем альянс. Здесь каждый результат становится частью общей победы.</p>
+          <div class="requirements">
+            <h3>Требования к игроку</h3>
+            <ul class="detail-list">
+              <li><span class="emoji" aria-hidden="true">⚔️</span><span>Сила от 60КК</span></li>
+              <li><span class="emoji" aria-hidden="true">🔥</span><span>Высокая активность</span></li>
+              <li><span class="emoji" aria-hidden="true">🤝</span><span>Командная игра — не на словах</span></li>
+              <li><span class="emoji" aria-hidden="true">↗️</span><span>Желание расти и двигаться вверх вместе с кланом</span></li>
+              <li><span class="emoji" aria-hidden="true">💬</span><span>Быть на связи и участвовать в жизни команды</span></li>
+            </ul>
+          </div>
           <div class="clan-actions">
             <a class="button primary" href="https://t.me/Ms_Lika5555" target="_blank" rel="noopener">Подать заявку <span aria-hidden="true">↗</span></a>
             <a class="button" href="#sections">Наши инструменты</a>
@@ -532,6 +554,14 @@
           <div class="stat"><strong>200+</strong><span>алмазных карт в базе</span></div>
           <div class="stat"><strong>1M</strong><span>золота в месяц</span></div>
           <div class="stat"><strong>1</strong><span>команда и общая цель</span></div>
+          <div class="offer-panel">
+            <h3>Что даёт Top King</h3>
+            <ul class="detail-list">
+              <li><span class="emoji" aria-hidden="true">💰</span><span>От 305К золота минимум в неделю</span></li>
+              <li><span class="emoji" aria-hidden="true">🏆</span><span>Сильный состав и высокий темп игры</span></li>
+              <li><span class="emoji" aria-hidden="true">🤝</span><span>Команду, где общий результат действительно имеет значение</span></li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
