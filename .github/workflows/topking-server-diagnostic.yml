@@ -21,7 +21,7 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking_fix"
           chmod 600 "$HOME/.ssh/topking_fix"
 
-      - name: Inspect backend without printing secrets
+      - name: Inspect Telegram verification without printing secrets
         shell: bash
         run: |
           set -euo pipefail
@@ -35,29 +35,83 @@ jobs:
           hostname
           uptime
 
-          echo '=== LIKELY SERVICES ==='
-          systemctl list-units --type=service --all --no-legend 2>/dev/null \
-            | grep -Ei 'hamster|license|cabinet|telegram|bot|uvicorn|gunicorn|docker' \
-            || true
+          echo '=== SERVICE ==='
+          systemctl is-active hamsterking-license.service || true
+          systemctl show hamsterking-license.service \
+            -p FragmentPath -p WorkingDirectory -p ExecStart --no-pager
 
-          echo '=== CONTAINERS ==='
-          if command -v docker >/dev/null 2>&1; then
-            docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
-          else
-            echo 'docker: not installed'
+          echo '=== PROCESS ENVIRONMENT VARIABLE NAMES ==='
+          main_pid="$(systemctl show hamsterking-license.service -p MainPID --value)"
+          if [ -n "$main_pid" ] && [ "$main_pid" != 0 ]; then
+            tr '\0' '\n' < "/proc/$main_pid/environ" \
+              | sed 's/=.*//' | sort | grep -Ei 'BOT|TELEGRAM|CABINET|AUTH|TOKEN' || true
           fi
 
-          echo '=== FILES CONTAINING LOGIN ERROR ==='
-          grep -RIl --binary-files=without-match \
-            --exclude='*.log' --exclude='*.sqlite*' --exclude='.env' \
-            -E 'invalid signature|TopKingClanCabinetBot|/api/v1/cabinet' \
-            /opt /srv /var/www /root /etc/systemd/system 2>/dev/null \
-            | head -80 || true
+          echo '=== RELEVANT SOURCE (SECRETS REDACTED) ==='
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
 
-          echo '=== REVERSE PROXY REFERENCES ==='
-          grep -RIl --binary-files=without-match \
-            -E 'hk-license|api/v1/cabinet' /etc/nginx /etc/caddy 2>/dev/null \
-            | head -40 || true
+          path = Path('/opt/hamsterking-license/server.py')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          needles = ('invalid signature', 'check_telegram', 'verify_telegram', 'cabinet/login')
+          hits = [i for i, line in enumerate(lines) if any(n.lower() in line.lower() for n in needles)]
+          wanted = set()
+          for hit in hits:
+              wanted.update(range(max(0, hit - 35), min(len(lines), hit + 36)))
+          for i in sorted(wanted):
+              line = lines[i]
+              line = re.sub(
+                  r"(?i)((?:token|secret|password)\s*=\s*)['\"][^'\"]+['\"]",
+                  r"\1'<redacted>'",
+                  line,
+              )
+              print(f'{i + 1:04d}: {line}')
+          PY
+
+          echo '=== CONFIGURED BOT IDENTITY ==='
+          python3 - <<'PY'
+          import json
+          import re
+          import subprocess
+          import urllib.request
+
+          pid = subprocess.check_output(
+              ['systemctl', 'show', 'hamsterking-license.service', '-p', 'MainPID', '--value'],
+              text=True,
+          ).strip()
+          raw = open(f'/proc/{pid}/environ', 'rb').read().split(b'\0')
+          env = {}
+          for item in raw:
+              if b'=' in item:
+                  key, value = item.split(b'=', 1)
+                  env[key.decode(errors='replace')] = value.decode(errors='replace')
+          candidates = [
+              (key, value) for key, value in env.items()
+              if value and re.search(r'(BOT|TELEGRAM).*TOKEN|TOKEN.*(BOT|TELEGRAM)', key, re.I)
+          ]
+          if not candidates:
+              print('No Telegram bot token variable found in the service process environment')
+          for key, token in candidates:
+              try:
+                  with urllib.request.urlopen(
+                      f'https://api.telegram.org/bot{token}/getMe', timeout=10
+                  ) as response:
+                      data = json.load(response)
+                  result = data.get('result') or {}
+                  print(json.dumps({
+                      'variable': key,
+                      'ok': data.get('ok'),
+                      'bot_id': result.get('id'),
+                      'username': result.get('username'),
+                  }, ensure_ascii=False))
+              except Exception as exc:
+                  print(json.dumps({
+                      'variable': key,
+                      'ok': False,
+                      'error_type': type(exc).__name__,
+                  }))
+          PY
           REMOTE
 
       - name: Remove temporary SSH key
