@@ -1,0 +1,98 @@
+name: Fix Moscow full map package
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/fix-moscow-full-map.yml'
+      - 'maps/moscow-20-19/data/p01.txt'
+      - 'maps/moscow-20-19/data/p02.txt'
+      - 'maps/moscow-20-19/data/p03.txt'
+      - 'maps/moscow-20-19/data/p04.txt'
+      - 'maps/moscow-20-19/data/p05.txt'
+      - 'maps/moscow-20-19/data/p06.txt'
+      - 'maps/moscow-20-19/data/p07.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build browser-ready map data
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, gzip, json
+
+          root = Path('maps/moscow-20-19')
+          parts = [root / 'data' / f'p{i:02d}.txt' for i in range(1, 8)]
+          encoded = ''.join(p.read_text('utf-8') for p in parts)
+          packed = base64.b64decode(''.join(encoded.split()), validate=True)
+          raw = gzip.decompress(packed)
+          data = json.loads(raw.decode('utf-8'))
+
+          for key in ('b', 'r', 'l', 'w', 'bc', 'lc'):
+              assert key in data, f'missing key: {key}'
+          assert len(data['b']) >= 220, f"unexpected building count: {len(data['b'])}"
+
+          out = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+          (root / 'data' / 'full-data.json').write_text(out, 'utf-8')
+          print('full-data.json:', len(out), 'bytes; buildings:', len(data['b']))
+          PY
+
+      - name: Vendor MapLibre locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p maps/moscow-20-19/vendor
+          curl -fsSL --retry 3 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css' -o maps/moscow-20-19/vendor/maplibre-gl.css
+          curl -fsSL --retry 3 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js' -o maps/moscow-20-19/vendor/maplibre-gl.js
+          test $(wc -c < maps/moscow-20-19/vendor/maplibre-gl.js) -gt 500000
+
+      - name: Make map use local package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('maps/moscow-20-19/index.html')
+          s = p.read_text('utf-8')
+
+          s = s.replace(
+              'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
+              'vendor/maplibre-gl.css?v=4.7.1'
+          )
+          s = s.replace(
+              'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',
+              'vendor/maplibre-gl.js?v=4.7.1'
+          )
+
+          old = "async function loadData(){const b64=(await Promise.all(PARTS.map(p=>fetch('data/'+p+'?v=full2').then(r=>{if(!r.ok)throw new Error(p);return r.text()})))).join('').replace(/\\s/g,'');const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));const ds=new DecompressionStream('gzip');return JSON.parse(await new Response(new Blob([bin]).stream().pipeThrough(ds)).text())}"
+          new = "async function loadData(){const r=await fetch('data/full-data.json?v=full3',{cache:'no-store'});if(!r.ok)throw new Error('full-data.json '+r.status);return r.json()}"
+          if old not in s:
+              raise SystemExit('old loadData() not found; refusing unsafe patch')
+          s = s.replace(old, new, 1)
+          s = s.replace("const PARTS=['p01.txt','p02.txt','p03.txt','p04.txt','p05.txt','p06.txt','p07.txt'];\n", '')
+          s = s.replace("}catch(e){console.error(e);document.getElementById('loading').textContent='Ошибка загрузки полной карты';}})();", "}catch(e){console.error('Moscow full map:',e);const el=document.getElementById('loading');el.textContent='Ошибка загрузки карты · обновите страницу';}})();")
+          p.write_text(s, 'utf-8')
+          PY
+
+      - name: Commit fixed full map
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add maps/moscow-20-19/index.html maps/moscow-20-19/data/full-data.json maps/moscow-20-19/vendor/maplibre-gl.css maps/moscow-20-19/vendor/maplibre-gl.js
+          if git diff --cached --quiet; then
+            echo 'Moscow map package is already fixed.'
+          else
+            git commit -m 'Fix full Moscow map loading [skip ci]'
+            git push
+          fi
