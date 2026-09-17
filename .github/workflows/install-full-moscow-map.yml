@@ -1,0 +1,36 @@
+name: Install full Moscow map
+
+on:
+  push:
+    paths:
+      - 'maps/moscow-20-19/full-index.html.gz'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install full map
+        shell: bash
+        run: |
+          set -euo pipefail
+          gzip -dc maps/moscow-20-19/full-index.html.gz > maps/moscow-20-19/index.html
+          test $(wc -c < maps/moscow-20-19/index.html) -gt 15000
+          grep -q "const PARTS=\['p01.txt'" maps/moscow-20-19/index.html
+          grep -q "Загрузка полной карты" maps/moscow-20-19/index.html
+      - name: Commit full map
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add maps/moscow-20-19/index.html
+          if git diff --cached --quiet; then
+            echo 'Already installed.'
+          else
+            git commit -m 'Switch Moscow 20:19 to full map [skip ci]'
+            git push
+          fi
