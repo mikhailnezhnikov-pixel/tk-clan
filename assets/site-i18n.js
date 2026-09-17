@@ -50,12 +50,15 @@
   function styleGuideIcon(img,id){img.dataset.originalGuideIcon=id;img.style.width='24px';img.style.height='24px';img.style.objectFit='contain';img.style.verticalAlign='middle';img.style.margin='0 4px'}
   function putGameIconBefore(node,src,label,id){
     if(!node)return;
+    const marker=id||label;
+    if(node.querySelector(`img[data-game-icon="${marker}"]`))return;
     const img=document.createElement('img');
     img.className='inline-icon';
+    img.dataset.gameIcon=marker;
     img.src=src;
     img.alt=label;
     img.title=label;
-    styleGuideIcon(img,id||label);
+    styleGuideIcon(img,marker);
     const text=(node.textContent||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();
     node.textContent='';
     node.append(img,' ',document.createTextNode(text));
@@ -78,9 +81,11 @@
     document.querySelectorAll('#battles .guide-row').forEach(row=>{
       const label=row.querySelector('b');
       if(!label||label.textContent.trim()!=='PVP')return;
+      if(row.querySelector('img[data-game-icon="pvp-arena"]'))return;
       row.textContent='';
       const img=document.createElement('img');
       img.className='inline-icon';
+      img.dataset.gameIcon='pvp-arena';
       img.src=GAME_FRONT+'assets/images/ui/pvp-arena.png';
       img.alt='PVP';
       img.title='PVP';
@@ -115,14 +120,26 @@
   function upgradeInformationSectionIcons(){
     if(!document.getElementById('guide'))return;
     for(const[id,src]of Object.entries(GUIDE_SECTION_ICON_MAP)){
-      const article=document.getElementById(id),h2=article&&article.querySelector('h2');if(!h2)continue;
+      const article=document.getElementById(id),h2=article&&article.querySelector('h2');if(!h2||h2.dataset.gameSectionIcon==='1')continue;
       const raw=(h2.textContent||'').trim();const clean=raw.replace(/^[🎮🗣🚀💪⭐⚔️👑🪙💰🏢🍳📊🗺💡🛠\s]+/u,'').trim()||raw;
-      h2.textContent='';const wrap=document.createElement('span');wrap.style.display='inline-flex';wrap.style.alignItems='center';wrap.style.gap='10px';const icon=document.createElement('img');icon.src=src;icon.alt='';icon.style.width='34px';icon.style.height='34px';icon.style.objectFit='contain';icon.style.flex='0 0 auto';const label=document.createElement('span');label.textContent=clean;wrap.append(icon,label);h2.append(wrap);
+      h2.textContent='';const wrap=document.createElement('span');wrap.style.display='inline-flex';wrap.style.alignItems='center';wrap.style.gap='10px';const icon=document.createElement('img');icon.src=src;icon.alt='';icon.style.width='34px';icon.style.height='34px';icon.style.objectFit='contain';icon.style.flex='0 0 auto';const label=document.createElement('span');label.textContent=clean;wrap.append(icon,label);h2.append(wrap);h2.dataset.gameSectionIcon='1';
     }
+  }
+  function refreshInformationVisuals(){upgradeInformationIcons();upgradeInformationSectionIcons()}
+  function watchInformationGuide(){
+    const guide=document.getElementById('guide');
+    if(!guide||guide.dataset.visualObserver==='1')return;
+    guide.dataset.visualObserver='1';
+    let queued=false;
+    const observer=new MutationObserver(()=>{
+      if(queued)return;
+      queued=true;
+      requestAnimationFrame(()=>{queued=false;refreshInformationVisuals()});
+    });
+    observer.observe(guide,{childList:true,subtree:true});
   }
   function configureHomepage(){const hero=document.querySelector('main .hero');if(!hero)return;hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');const actions=hero.querySelector('.hero-actions');if(actions)actions.innerHTML='<a class="button primary" href="https://app.hamsterking.games/app.html" target="_blank" rel="noopener" data-i18n="play">Начать играть</a>';if(!document.getElementById('tk-home-responsive')){const style=document.createElement('style');style.id='tk-home-responsive';style.textContent=`.hero{background-image:url("assets/home/top-king-clan-hero-approved.jpg")!important;background-position:50% center!important;background-repeat:no-repeat!important;background-color:#07080b!important}.hero-copy{width:min(540px,45%)!important}.hero-actions .button{min-width:190px}@media(max-width:980px) and (min-width:821px){.hero{background-position:53% center!important}.hero-copy{width:min(520px,52%)!important}}@media(max-width:820px) and (min-width:681px){.hero{min-height:900px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding-top:clamp(410px,58vw,465px)!important;padding-bottom:175px!important}.hero-copy{width:min(620px,88%)!important}}@media(max-width:680px){.hero{min-height:920px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding:clamp(250px,68vw,300px) 16px 270px!important}.hero-copy{width:100%!important}.hero-actions{margin-top:22px!important}.hero-actions .button{width:100%;min-width:0;flex:1 1 100%}.quick-panel{bottom:18px!important}}@media(max-width:420px){.hero{min-height:900px!important}.hero-inner{padding-top:250px!important;padding-bottom:262px!important}.hero h1{font-size:clamp(40px,12vw,50px)!important}.hero .lead{font-size:15px!important;line-height:1.48!important}}`;document.head.append(style)}}
   function apply(lang=language){language=supported.includes(lang)?lang:'ru';localStorage.setItem('tk-language',language);const strings=dictionary(language);document.documentElement.lang=language;document.documentElement.dir=language==='fa'?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(node=>{const value=strings[node.dataset.i18n];if(value!=null)node.textContent=value});document.querySelectorAll('[data-i18n-html]').forEach(node=>{const value=strings[node.dataset.i18nHtml];if(value!=null)node.innerHTML=value});document.querySelectorAll('[data-i18n-placeholder]').forEach(node=>{const value=strings[node.dataset.i18nPlaceholder];if(value!=null)node.placeholder=value});document.querySelectorAll('[data-language]').forEach(button=>{const active=button.dataset.language===language;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))});if(strings.pageTitle)document.title=strings.pageTitle;document.dispatchEvent(new CustomEvent('tk-language-change',{detail:{language,strings}}))}
-  function refreshInformationVisuals(){upgradeInformationIcons();upgradeInformationSectionIcons()}
-  function init(){document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>apply(button.dataset.language)));const toggle=document.querySelector('[data-menu-toggle]'),menu=document.querySelector('[data-mobile-nav]');if(toggle&&menu)toggle.addEventListener('click',()=>{const open=!menu.classList.contains('open');menu.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))});replaceVisuals();configureHomepage();apply(language);refreshInformationVisuals();document.addEventListener('tk-language-change',()=>setTimeout(refreshInformationVisuals,0))}
+  function init(){document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>apply(button.dataset.language)));const toggle=document.querySelector('[data-menu-toggle]'),menu=document.querySelector('[data-mobile-nav]');if(toggle&&menu)toggle.addEventListener('click',()=>{const open=!menu.classList.contains('open');menu.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))});replaceVisuals();configureHomepage();apply(language);refreshInformationVisuals();watchInformationGuide();document.addEventListener('tk-language-change',()=>setTimeout(refreshInformationVisuals,0))}
   window.TopKingI18n={apply,get language(){return language},strings:()=>dictionary(language)};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
 })();
