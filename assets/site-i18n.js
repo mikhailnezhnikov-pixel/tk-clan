@@ -1,8 +1,8 @@
 (()=>{
   const CORE={
-    ru:{home:'Главная',calculators:'Калькуляторы',recipes:'Рецепты',wars:'Клановые войны',ratings:'Рейтинг',information:'Информация',feedback:'Обратная связь',cabinet:'Личный кабинет',menu:'Меню',footer:'Top King · Hamster King',loading:'Загрузка…',updated:'Обновлено',noData:'Данных пока нет',error:'Не удалось загрузить данные.'},
-    en:{home:'Home',calculators:'Calculators',recipes:'Recipes',wars:'Clan wars',ratings:'Rankings',information:'Information',feedback:'Feedback',cabinet:'Member area',menu:'Menu',footer:'Top King · Hamster King',loading:'Loading…',updated:'Updated',noData:'No data yet',error:'Could not load data.'},
-    fa:{home:'خانه',calculators:'محاسبه‌گرها',recipes:'دستورها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',information:'اطلاعات',feedback:'بازخورد',cabinet:'پنل اعضا',menu:'منو',footer:'Top King · Hamster King',loading:'در حال بارگذاری…',updated:'به‌روزرسانی',noData:'هنوز داده‌ای وجود ندارد',error:'بارگذاری داده‌ها ممکن نشد.'}
+    ru:{home:'Главная',calculators:'Калькуляторы',recipes:'Рецепты',wars:'Клановые войны',ratings:'Рейтинг',information:'Информация',feedback:'Обратная связь',cabinet:'Личный кабинет',menu:'Меню',footer:'Top King · Hamster King',play:'Начать играть',loading:'Загрузка…',updated:'Обновлено',noData:'Данных пока нет',error:'Не удалось загрузить данные.'},
+    en:{home:'Home',calculators:'Calculators',recipes:'Recipes',wars:'Clan wars',ratings:'Rankings',information:'Information',feedback:'Feedback',cabinet:'Member area',menu:'Menu',footer:'Top King · Hamster King',play:'Play now',loading:'Loading…',updated:'Updated',noData:'No data yet',error:'Could not load data.'},
+    fa:{home:'خانه',calculators:'محاسبه‌گرها',recipes:'دستورها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',information:'اطلاعات',feedback:'بازخورد',cabinet:'پنل اعضا',menu:'منو',footer:'Top King · Hamster King',play:'شروع بازی',loading:'در حال بارگذاری…',updated:'به‌روزرسانی',noData:'هنوز داده‌ای وجود ندارد',error:'بارگذاری داده‌ها ممکن نشد.'}
   };
   const supported=['ru','en','fa'];
   const saved=localStorage.getItem('tk-language');
@@ -37,8 +37,82 @@
     });
     const icon=document.querySelector('link[rel="icon"]');
     if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
-    // Do not override .hero background here. The homepage hero is the explicitly
-    // approved Top King clan-participants artwork set in index.html.
+    // Never override the homepage hero artwork here. It is user-approved and locked.
+  }
+
+  function configureHomepage(){
+    const hero=document.querySelector('main .hero');
+    if(!hero)return;
+
+    const actions=hero.querySelector('.hero-actions');
+    if(actions){
+      actions.innerHTML='<a class="button primary" href="https://app.hamsterking.games/app.html" target="_blank" rel="noopener" data-i18n="play">Начать играть</a>';
+    }
+
+    if(!document.getElementById('tk-home-responsive')){
+      const style=document.createElement('style');
+      style.id='tk-home-responsive';
+      style.textContent=`
+        /* Canonical clan hero: desktop composition keeps the text on the flag/stone side
+           and protects the character group in the centre/right of the approved artwork. */
+        .hero{background-position:50% center!important;}
+        .hero-copy{width:min(540px,45%)!important;}
+        .hero-actions .button{min-width:190px;}
+
+        @media (max-width:980px) and (min-width:821px){
+          .hero{background-position:53% center!important;}
+          .hero-copy{width:min(520px,52%)!important;}
+        }
+
+        /* Tablet portrait: show the complete approved 16:9 artwork as a top scene instead
+           of cropping most clan members with background-size:cover. */
+        @media (max-width:820px) and (min-width:681px){
+          .hero{
+            min-height:900px!important;
+            align-items:flex-start!important;
+            background-size:100% auto!important;
+            background-position:center top!important;
+            background-repeat:no-repeat!important;
+            background-color:#07080b!important;
+          }
+          .hero-inner{
+            width:100%!important;
+            padding-top:clamp(410px,58vw,465px)!important;
+            padding-bottom:175px!important;
+          }
+          .hero-copy{width:min(620px,88%)!important;}
+        }
+
+        /* Phone: preserve the whole clan image at the top, then place copy and controls
+           below it. This avoids the severe horizontal crop caused by cover on portrait screens. */
+        @media (max-width:680px){
+          .hero{
+            min-height:920px!important;
+            align-items:flex-start!important;
+            background-size:100% auto!important;
+            background-position:center top!important;
+            background-repeat:no-repeat!important;
+            background-color:#07080b!important;
+          }
+          .hero-inner{
+            width:100%!important;
+            padding:clamp(250px,68vw,300px) 16px 270px!important;
+          }
+          .hero-copy{width:100%!important;}
+          .hero-actions{margin-top:22px!important;}
+          .hero-actions .button{width:100%;min-width:0;flex:1 1 100%;}
+          .quick-panel{bottom:18px!important;}
+        }
+
+        @media (max-width:420px){
+          .hero{min-height:900px!important;}
+          .hero-inner{padding-top:250px!important;padding-bottom:262px!important;}
+          .hero h1{font-size:clamp(40px,12vw,50px)!important;}
+          .hero .lead{font-size:15px!important;line-height:1.48!important;}
+        }
+      `;
+      document.head.append(style);
+    }
   }
 
   function apply(lang=language){
@@ -56,6 +130,7 @@
     const toggle=document.querySelector('[data-menu-toggle]'),menu=document.querySelector('[data-mobile-nav]');
     if(toggle&&menu)toggle.addEventListener('click',()=>{const open=!menu.classList.contains('open');menu.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))});
     replaceVisuals();
+    configureHomepage();
     apply(language);
   }
   window.TopKingI18n={apply,get language(){return language},strings:()=>dictionary(language)};
