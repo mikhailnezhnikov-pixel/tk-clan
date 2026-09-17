@@ -20,21 +20,25 @@
     information:'assets/images/ui/info-stars.png',
     feedback:'assets/images/ui/telegram-1.png'
   };
+  function fitGameIcon(img){
+    img.style.objectFit='contain';
+    if(img.closest('.card-icon,.quick-icon'))img.style.padding='5px';
+  }
   function replaceVisuals(){
     for(const [section,path] of Object.entries(OFFICIAL_VISUALS)){
       document.querySelectorAll(`a[href*="${section}"] .card-icon img,a[href*="${section}"] .quick-icon img`).forEach(img=>{
         img.src=GAME_FRONT+path;
-        img.style.objectFit='contain';
+        fitGameIcon(img);
       });
     }
     document.querySelectorAll('.brand img').forEach(img=>{
       img.src=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
-      img.style.objectFit='contain';
+      fitGameIcon(img);
     });
     const icon=document.querySelector('link[rel="icon"]');
     if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
-    const hero=document.querySelector('.hero');
-    if(hero)hero.style.backgroundImage=`url("${GAME_FRONT}assets/images/bg/background.jpg")`;
+    // Do not override .hero background here. The homepage hero is the explicitly
+    // approved Top King clan-participants artwork set in index.html.
   }
 
   function apply(lang=language){
