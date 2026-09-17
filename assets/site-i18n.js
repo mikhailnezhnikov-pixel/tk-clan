@@ -22,8 +22,13 @@
     '99':GAME_ART+'quests/qst_clan_daily_mobpit_icon.png',
     '102':GAME_FRONT+'assets/images/ui/boss-fight.png',
     '26':GAME_ART+'currencies/cur_build_icon.png',
+    '27':GAME_ART+'currencies/cur_cap_icon.png',
+    '28':GAME_ART+'shop_lots/icons_card/mf_divider_resources.png',
+    '31':GAME_ART+'items/item_invest_cur_icon.png',
     '33':GAME_ART+'currencies/cur_prem_icon.png',
     '97':GAME_ART+'currencies/cur_prem_icon.png',
+    '104':GAME_ART+'items/item_pit_rat_tokens_icon.png',
+    '123':GAME_ART+'currencies/cur_alliance_icon.png',
     '25':GAME_ART+'currencies/cur_nut_icon.png',
     '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png'
   };
@@ -53,7 +58,7 @@
       if(!/guide-emoji\/98\.png(?:\?.*)?$/.test(original))return;
       img.src=GAME_FRONT+'assets/images/ui/regional-bosses.png';styleGuideIcon(img,'98');
     });
-    // 28, 31, 32, 104, 123, 129, 150 and other unconfirmed IDs intentionally remain local.
+    // 32, 110, 128, 129, 131, 132 and 150 remain local until the user selects an HQ candidate.
   }
   function upgradeInformationSectionIcons(){
     if(!document.getElementById('guide'))return;
