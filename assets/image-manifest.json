@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "policy": "Only approved Hamster King game/site images may be used. Prefer original assets verified through the HAR catalog. New external candidates require user confirmation before placement.",
+  "version": 4,
+  "policy": "Only approved Hamster King game/site images may be used. Prefer original assets verified through the HAR catalog. New external candidates require user confirmation before placement. If uncertain, keep the current icon and present 3 visual candidates plus a fourth option for the user to provide their own.",
   "images": [
     {
       "id": "home-clan-bg-v2",
@@ -47,6 +47,22 @@
       "approved_by_user": true
     },
     {
+      "id": "hk-pit-boss",
+      "source": "https://cdn-prod-art.hwgame.cloud/items/item_boss_pass_ticket_icon.png",
+      "status": "approved-user",
+      "role": ["pit-boss"],
+      "approved_by_user": true,
+      "notes": "User selected candidate 2 on 2026-09-17."
+    },
+    {
+      "id": "hk-gang-pit",
+      "source": "https://cdn-prod-art.hwgame.cloud/items/item_pit_rat_tokens_icon.png",
+      "status": "approved-user",
+      "role": ["gang-pit"],
+      "approved_by_user": true,
+      "notes": "User selected candidate 3 on 2026-09-17."
+    },
+    {
       "id": "hk-area-boss",
       "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/boss-fight.png",
       "status": "approved-har",
@@ -56,9 +72,10 @@
     {
       "id": "hk-regional-boss",
       "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/regional-bosses.png",
-      "status": "approved-har",
+      "status": "approved-user",
       "role": ["regional-boss"],
-      "approved_by_user": true
+      "approved_by_user": true,
+      "notes": "User selected candidate 1 on 2026-09-17."
     },
     {
       "id": "hk-clan-list",
