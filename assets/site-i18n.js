@@ -45,24 +45,29 @@
     clans:GAME_FRONT+'assets/images/ui/clan-list-icon.png',
     resources:GAME_FRONT+'assets/images/ui/inventory.png',
     business:GAME_ART+'currencies/cur_build_icon.png',
+    recipes:GAME_FRONT+'assets/images/ui/collections.png',
+    calculators:GAME_FRONT+'assets/images/ui/diary.png',
     maps:GAME_FRONT+'assets/images/menu/city-1.png'
   };
   function styleGuideIcon(img,id){img.dataset.originalGuideIcon=id;img.style.width='24px';img.style.height='24px';img.style.objectFit='contain';img.style.verticalAlign='middle';img.style.margin='0 4px'}
+  function makeGameIcon(src,label,id){const img=document.createElement('img');img.className='inline-icon';img.dataset.gameIcon=id||label;img.src=src;img.alt=label;img.title=label;styleGuideIcon(img,id||label);return img}
   function putGameIconBefore(node,src,label,id){
     if(!node)return;
     const marker=id||label;
     if(node.querySelector(`img[data-game-icon="${marker}"]`))return;
-    const img=document.createElement('img');
-    img.className='inline-icon';
-    img.dataset.gameIcon=marker;
-    img.src=src;
-    img.alt=label;
-    img.title=label;
-    styleGuideIcon(img,marker);
+    const img=makeGameIcon(src,label,marker);
     const text=(node.textContent||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();
     node.textContent='';
     node.append(img,' ',document.createTextNode(text));
   }
+  function replaceLeadingEmoji(node,src,label,id,emojiPattern){
+    if(!node)return;
+    const marker=id||label;
+    if(node.querySelector(`img[data-game-icon="${marker}"]`))return;
+    node.innerHTML=node.innerHTML.replace(emojiPattern,'');
+    node.prepend(makeGameIcon(src,label,marker),' ');
+  }
+  function stripLeadingEmoji(node,emojiPattern){if(node)node.innerHTML=node.innerHTML.replace(emojiPattern,'')}
   function upgradeInformationIcons(){
     if(!document.getElementById('guide'))return;
     document.querySelectorAll('#guide img.inline-icon').forEach(img=>{
@@ -83,17 +88,20 @@
       if(!label||label.textContent.trim()!=='PVP')return;
       if(row.querySelector('img[data-game-icon="pvp-arena"]'))return;
       row.textContent='';
-      const img=document.createElement('img');
-      img.className='inline-icon';
-      img.dataset.gameIcon='pvp-arena';
-      img.src=GAME_FRONT+'assets/images/ui/pvp-arena.png';
-      img.alt='PVP';
-      img.title='PVP';
-      styleGuideIcon(img,'pvp-arena');
-      const strong=document.createElement('b');
-      strong.textContent='PVP';
-      row.append(img,' ',strong);
+      const strong=document.createElement('b');strong.textContent='PVP';
+      row.append(makeGameIcon(GAME_FRONT+'assets/images/ui/pvp-arena.png','PVP','pvp-arena'),' ',strong);
     });
+
+    const resources=document.getElementById('resources');
+    if(resources){
+      resources.querySelectorAll('.guide-row').forEach(row=>{
+        const text=(row.textContent||'').trim();
+        if(text.includes('Ярмарка')&&text.includes('Менеджеры')&&text.includes('Бизнес-центры')){
+          const img=row.querySelector('img.inline-icon');
+          if(img){img.src=GAME_ART+'items/item_invest_cur_icon.png';img.alt='Инвестиционная монета';img.title='Инвестиционная монета';img.dataset.gameIcon='invest-coin-resource';}
+        }
+      });
+    }
 
     const clans=document.getElementById('clans');
     if(clans){
@@ -105,14 +113,49 @@
           putGameIconBefore(h3,GAME_ART+'items/item_clan_cur_icon.png','Клановая валюта','clan-currency');
         }else if(text.includes('1. Магазин Клана и Общий магазин')){
           putGameIconBefore(h3,GAME_FRONT+'assets/images/menu/shop-1.png','Магазин Клана и Общий магазин','clan-shop');
+        }else if(text.includes('2. Магазин Альянса')){
+          putGameIconBefore(h3,GAME_FRONT+'assets/images/menu/shop-1.png','Магазин Альянса','alliance-shop');
+        }else if(text.includes('3. Магазин')&&text.includes('Трофеи Охоты на крыс')){
+          putGameIconBefore(h3,GAME_ART+'bosses/rats_05_icon.png','Крыса','rat-shop');
         }
       });
       clans.querySelectorAll('p > b').forEach(label=>{
         const text=(label.textContent||'').trim();
         if(text==='Магазин Клана'){
-          putGameIconBefore(label,GAME_FRONT+'assets/images/menu/shop-1.png','Магазин Клана','clan-shop');
+          putGameIconBefore(label,GAME_FRONT+'assets/images/menu/shop-1.png','Магазин Клана','clan-shop-label');
         }else if(text==='Общий магазин Клана'){
           putGameIconBefore(label,GAME_FRONT+'assets/images/menu/shop-1.png','Общий магазин Клана','clan-shop-common');
+        }
+      });
+      clans.querySelectorAll('p').forEach(p=>{
+        const text=(p.textContent||'').trim();
+        if(text.startsWith('💰')&&text.includes('Валюта:')){
+          replaceLeadingEmoji(p,GAME_ART+'items/item_invest_cur_icon.png','Инвестиционная монета','clan-currency-line',/^\s*💰\s*/u);
+        }else if(text.startsWith('💰')&&text.includes('Покупки осуществляются')){
+          replaceLeadingEmoji(p,GAME_ART+'items/item_clan_cur_icon.png','Золото Клана','clan-gold-line',/^\s*💰\s*/u);
+        }else if(text.startsWith('💰')&&text.includes('Альянсовая валюта')){
+          replaceLeadingEmoji(p,GAME_ART+'currencies/cur_alliance_icon.png','Альянсовая валюта','alliance-currency-line',/^\s*💰\s*/u);
+        }else if(text.startsWith('🛒')&&text.includes('Совершать покупки')){
+          replaceLeadingEmoji(p,GAME_FRONT+'assets/images/menu/shop-1.png','Магазин','alliance-buy-line',/^\s*🛒\s*/u);
+        }else if(text.startsWith('⚔️')&&text.includes('Хвосты добываются')){
+          replaceLeadingEmoji(p,GAME_ART+'bosses/rats_05_icon.png','Бой с крысами','rat-fight-line',/^\s*⚔️\s*/u);
+        }
+      });
+    }
+
+    const recipes=document.getElementById('recipes');
+    if(recipes){
+      recipes.querySelectorAll('p').forEach(p=>{
+        const text=(p.textContent||'').trim();
+        if(text.startsWith('🔎')&&text.includes('Поиск рецептов')){
+          stripLeadingEmoji(p,/^\s*🔎\s*/u);
+        }else if(text.startsWith('🏭')&&text.includes('Крафт бизнесов')){
+          replaceLeadingEmoji(p,GAME_ART+'shop_lots/icons_modal/craft_result_model_icon.png','Крафт бизнесов','craft-business',/^\s*🏭\s*/u);
+        }else if(text.startsWith('🔥')&&text.includes('Приоритет сделать')){
+          p.innerHTML=p.innerHTML.replace(/^\s*🔥\s*/u,'');
+          const existing=p.querySelector('img[data-original-guide-icon="110"]');
+          if(existing){existing.remove();existing.dataset.gameIcon='rumor-business';p.prepend(existing,' ')}
+          else replaceLeadingEmoji(p,GAME_ART+'items/item_bsn_r2_tier2_trig_rumor_energy_energy_icon.png','Бизнес на слухи','rumor-business',/^/u);
         }
       });
     }
