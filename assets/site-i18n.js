@@ -9,6 +9,34 @@
   const browser=(navigator.language||'ru').slice(0,2).toLowerCase();
   let language=supported.includes(saved)?saved:(supported.includes(browser)?browser:'ru');
   const dictionary=lang=>Object.assign({},CORE[lang]||CORE.ru,(window.TK_PAGE_TRANSLATIONS||{})[lang]||{});
+
+  const GAME_FRONT='https://cdn-prod-front-dist.hwgame.cloud/';
+  const OFFICIAL_VISUALS={
+    calculators:'assets/images/ui/boss-fight.png',
+    recipes:'assets/images/ui/collections.png',
+    cabinet:'assets/images/ui/clan-members-icon.png',
+    wars:'assets/images/ui/vs.png',
+    ratings:'assets/images/ui/nominations-1.png',
+    information:'assets/images/ui/info-stars.png',
+    feedback:'assets/images/ui/telegram-1.png'
+  };
+  function replaceVisuals(){
+    for(const [section,path] of Object.entries(OFFICIAL_VISUALS)){
+      document.querySelectorAll(`a[href*="${section}"] .card-icon img,a[href*="${section}"] .quick-icon img`).forEach(img=>{
+        img.src=GAME_FRONT+path;
+        img.style.objectFit='contain';
+      });
+    }
+    document.querySelectorAll('.brand img').forEach(img=>{
+      img.src=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
+      img.style.objectFit='contain';
+    });
+    const icon=document.querySelector('link[rel="icon"]');
+    if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
+    const hero=document.querySelector('.hero');
+    if(hero)hero.style.backgroundImage=`url("${GAME_FRONT}assets/images/bg/background.jpg")`;
+  }
+
   function apply(lang=language){
     language=supported.includes(lang)?lang:'ru'; localStorage.setItem('tk-language',language);
     const strings=dictionary(language); document.documentElement.lang=language; document.documentElement.dir=language==='fa'?'rtl':'ltr';
@@ -23,6 +51,7 @@
     document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>apply(button.dataset.language)));
     const toggle=document.querySelector('[data-menu-toggle]'),menu=document.querySelector('[data-mobile-nav]');
     if(toggle&&menu)toggle.addEventListener('click',()=>{const open=!menu.classList.contains('open');menu.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))});
+    replaceVisuals();
     apply(language);
   }
   window.TopKingI18n={apply,get language(){return language},strings:()=>dictionary(language)};
