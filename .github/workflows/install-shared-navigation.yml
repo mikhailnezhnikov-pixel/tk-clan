@@ -1,0 +1,48 @@
+name: Install shared navigation
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/install-shared-navigation.yml'
+      - 'assets/site-nav.js'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inject shared navigation script
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for p in Path('.').rglob('index.html'):
+              rel=p.as_posix()
+              if rel.startswith('.git/') or rel=='maps/moscow-20-19/index.html':
+                  continue
+              s=p.read_text('utf-8')
+              if 'site-nav.js' in s:
+                  continue
+              depth=len(p.parent.parts)
+              prefix='../'*depth
+              tag=f'<script src="{prefix}assets/site-nav.js"></script>'
+              if '</body>' in s:
+                  s=s.replace('</body>',tag+'\n</body>',1)
+                  p.write_text(s,'utf-8')
+          PY
+      - name: Commit navigation normalization
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- '*.html' ':!maps/moscow-20-19/index.html'
+          if git diff --cached --quiet; then
+            echo 'No navigation changes.'
+          else
+            git commit -m 'Normalize site navigation and expose Maps section [skip ci]'
+            git push
+          fi
