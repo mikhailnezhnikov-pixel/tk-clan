@@ -28,9 +28,13 @@
     '33':GAME_ART+'currencies/cur_prem_icon.png',
     '97':GAME_ART+'currencies/cur_prem_icon.png',
     '104':GAME_ART+'items/item_pit_rat_tokens_icon.png',
+    '110':GAME_ART+'items/item_bsn_r2_tier2_trig_rumor_energy_energy_icon.png',
     '123':GAME_ART+'currencies/cur_alliance_icon.png',
     '128':GAME_ART+'bonuses/general_power_bonus_icon.png',
     '129':GAME_ART+'currencies/cur_clan_war_attack_pass_icon.png',
+    '131':GAME_ART+'items/item_bsn_reverse_transfig_t5_icon.png',
+    '132':GAME_ART+'items/item_bsn_reverse_transfig_t8_icon.png',
+    '150':GAME_ART+'items/item_business_dust_icon.png',
     '25':GAME_ART+'currencies/cur_nut_icon.png',
     '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png'
   };
@@ -59,7 +63,6 @@
       if(!/guide-emoji\/98\.png(?:\?.*)?$/.test(original))return;
       img.src=GAME_FRONT+'assets/images/ui/regional-bosses.png';styleGuideIcon(img,'98');
     });
-    // User chose option 4 for IDs 110, 131, 132 and 150: keep their local reference icons unchanged.
   }
   function upgradeInformationSectionIcons(){
     if(!document.getElementById('guide'))return;
