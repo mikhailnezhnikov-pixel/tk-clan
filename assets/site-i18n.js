@@ -9,54 +9,24 @@
   const browser=(navigator.language||'ru').slice(0,2).toLowerCase();
   let language=supported.includes(saved)?saved:(supported.includes(browser)?browser:'ru');
   const dictionary=lang=>Object.assign({},CORE[lang]||CORE.ru,(window.TK_PAGE_TRANSLATIONS||{})[lang]||{});
-
   const GAME_FRONT='https://cdn-prod-front-dist.hwgame.cloud/';
   const GAME_ART='https://cdn-prod-art.hwgame.cloud/';
-  const OFFICIAL_VISUALS={
-    calculators:'assets/images/ui/boss-fight.png',
-    recipes:'assets/images/ui/collections.png',
-    cabinet:'assets/images/ui/clan-members-icon.png',
-    wars:'assets/images/ui/vs.png',
-    ratings:'assets/images/ui/nominations-1.png',
-    information:'assets/images/ui/info-stars.png',
-    feedback:'assets/images/ui/telegram-1.png'
-  };
-  function fitGameIcon(img){
-    img.style.objectFit='contain';
-    if(img.closest('.card-icon,.quick-icon'))img.style.padding='5px';
-  }
-  function replaceVisuals(){
-    for(const [section,path] of Object.entries(OFFICIAL_VISUALS)){
-      document.querySelectorAll(`a[href*="${section}"] .card-icon img,a[href*="${section}"] .quick-icon img`).forEach(img=>{
-        img.src=GAME_FRONT+path;
-        fitGameIcon(img);
-      });
-    }
-    document.querySelectorAll('.brand img').forEach(img=>{
-      img.src=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
-      fitGameIcon(img);
-    });
-    const icon=document.querySelector('link[rel="icon"]');
-    if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
-  }
+  const OFFICIAL_VISUALS={calculators:'assets/images/ui/boss-fight.png',recipes:'assets/images/ui/collections.png',cabinet:'assets/images/ui/clan-members-icon.png',wars:'assets/images/ui/vs.png',ratings:'assets/images/ui/nominations-1.png',information:'assets/images/ui/info-stars.png',feedback:'assets/images/ui/telegram-1.png'};
+  function fitGameIcon(img){img.style.objectFit='contain';if(img.closest('.card-icon,.quick-icon'))img.style.padding='5px'}
+  function replaceVisuals(){for(const[section,path]of Object.entries(OFFICIAL_VISUALS)){document.querySelectorAll(`a[href*="${section}"] .card-icon img,a[href*="${section}"] .quick-icon img`).forEach(img=>{img.src=GAME_FRONT+path;fitGameIcon(img)})}document.querySelectorAll('.brand img').forEach(img=>{img.src=GAME_FRONT+'assets/images/ui/clan-list-icon.png';fitGameIcon(img)});const icon=document.querySelector('link[rel="icon"]');if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png'}
 
-  // Exact HQ counterparts found in the HAR/game asset catalog.
+  // Only exact/high-confidence HQ counterparts are replaced. Unknown IDs stay local.
   const GUIDE_CONFIRMED_ICON_MAP={
-    '101':GAME_FRONT+'assets/images/ui/pit-rewards-rhomb-icon.png',
-    '100':GAME_ART+'items/item_boss_pass_ticket_icon.png',
-    '99':GAME_ART+'items/item_pit_rat_tokens_icon.png',
+    '101':GAME_ART+'quests/qst_clan_daily_pit_icon.png',
+    '100':GAME_ART+'quests/qst_clan_daily_bosspit_icon.png',
+    '99':GAME_ART+'quests/qst_clan_daily_mobpit_icon.png',
     '102':GAME_FRONT+'assets/images/ui/boss-fight.png',
-    '104':GAME_ART+'bosses/rats_05_icon.png',
-    '129':GAME_FRONT+'assets/images/ui/vs.png',
-    '28':GAME_FRONT+'assets/images/ui/favorite-buildings-counter.png',
-    '97':GAME_FRONT+'assets/images/menu/shop-1.png',
-    '25':GAME_FRONT+'assets/images/ui/hamster-ball.png',
-    '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png',
     '26':GAME_ART+'currencies/cur_build_icon.png',
-    '27':GAME_ART+'items/item_invest_cur_icon.png',
-    '33':GAME_ART+'currencies/cur_prem_icon.png'
+    '33':GAME_ART+'currencies/cur_prem_icon.png',
+    '97':GAME_ART+'currencies/cur_prem_icon.png',
+    '25':GAME_ART+'currencies/cur_nut_icon.png',
+    '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png'
   };
-
   const GUIDE_SECTION_ICON_MAP={
     power:GAME_FRONT+'assets/images/ui/hamster-ball.png',
     generals:GAME_ART+'items/item_hball_hgen_beasthelper_g1_ssplus_icon.png',
@@ -66,16 +36,7 @@
     business:GAME_ART+'currencies/cur_build_icon.png',
     maps:GAME_FRONT+'assets/images/menu/city-1.png'
   };
-
-  function styleGuideIcon(img,id){
-    img.dataset.originalGuideIcon=id;
-    img.style.width='24px';
-    img.style.height='24px';
-    img.style.objectFit='contain';
-    img.style.verticalAlign='middle';
-    img.style.margin='0 4px';
-  }
-
+  function styleGuideIcon(img,id){img.dataset.originalGuideIcon=id;img.style.width='24px';img.style.height='24px';img.style.objectFit='contain';img.style.verticalAlign='middle';img.style.margin='0 4px'}
   function upgradeInformationIcons(){
     if(!document.getElementById('guide'))return;
     document.querySelectorAll('#guide img.inline-icon').forEach(img=>{
@@ -84,96 +45,27 @@
       if(!match)return;
       const replacement=GUIDE_CONFIRMED_ICON_MAP[match[1]];
       if(!replacement)return;
-      img.src=replacement;
-      styleGuideIcon(img,match[1]);
+      img.src=replacement;styleGuideIcon(img,match[1]);
     });
-
-    // ID 98 is ambiguous in the legacy guide: only the Battles usage is confirmed
-    // as Regional Boss. The Beasts usage remains untouched until exact HQ match is approved.
-    document.querySelectorAll('#battles img.inline-icon').forEach(img=>{
+    // ID 98: only the Regional Boss / Beasts contexts use the approved original UI asset.
+    document.querySelectorAll('#battles img.inline-icon,#calculators img.inline-icon').forEach(img=>{
       const original=img.getAttribute('src')||'';
       if(!/guide-emoji\/98\.png(?:\?.*)?$/.test(original))return;
-      img.src=GAME_FRONT+'assets/images/ui/regional-bosses.png';
-      styleGuideIcon(img,'98');
+      img.src=GAME_FRONT+'assets/images/ui/regional-bosses.png';styleGuideIcon(img,'98');
     });
-
-    // ID 150 remains as the reference image until an exact HQ counterpart is confirmed.
+    // 28, 31, 32, 104, 123, 129, 150 and other unconfirmed IDs intentionally remain local.
   }
-
   function upgradeInformationSectionIcons(){
     if(!document.getElementById('guide'))return;
-    for(const [id,src] of Object.entries(GUIDE_SECTION_ICON_MAP)){
-      const article=document.getElementById(id);
-      const h2=article&&article.querySelector('h2');
-      if(!h2)continue;
-      const raw=(h2.textContent||'').trim();
-      const clean=raw.replace(/^[🎮🚀💪⭐⚔️👑💰🏢🍳📊🗺🛠\s]+/u,'').trim()||raw;
-      h2.textContent='';
-      const wrap=document.createElement('span');
-      wrap.style.display='inline-flex';
-      wrap.style.alignItems='center';
-      wrap.style.gap='10px';
-      const icon=document.createElement('img');
-      icon.src=src;
-      icon.alt='';
-      icon.style.width='34px';
-      icon.style.height='34px';
-      icon.style.objectFit='contain';
-      icon.style.flex='0 0 auto';
-      const label=document.createElement('span');
-      label.textContent=clean;
-      wrap.append(icon,label);
-      h2.append(wrap);
+    for(const[id,src]of Object.entries(GUIDE_SECTION_ICON_MAP)){
+      const article=document.getElementById(id),h2=article&&article.querySelector('h2');if(!h2)continue;
+      const raw=(h2.textContent||'').trim();const clean=raw.replace(/^[🎮🗣🚀💪⭐⚔️👑🪙💰🏢🍳📊🗺💡🛠\s]+/u,'').trim()||raw;
+      h2.textContent='';const wrap=document.createElement('span');wrap.style.display='inline-flex';wrap.style.alignItems='center';wrap.style.gap='10px';const icon=document.createElement('img');icon.src=src;icon.alt='';icon.style.width='34px';icon.style.height='34px';icon.style.objectFit='contain';icon.style.flex='0 0 auto';const label=document.createElement('span');label.textContent=clean;wrap.append(icon,label);h2.append(wrap);
     }
   }
-
-  function configureHomepage(){
-    const hero=document.querySelector('main .hero');
-    if(!hero)return;
-    hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');
-    const actions=hero.querySelector('.hero-actions');
-    if(actions){
-      actions.innerHTML='<a class="button primary" href="https://app.hamsterking.games/app.html" target="_blank" rel="noopener" data-i18n="play">Начать играть</a>';
-    }
-    if(!document.getElementById('tk-home-responsive')){
-      const style=document.createElement('style');
-      style.id='tk-home-responsive';
-      style.textContent=`
-        .hero{background-image:url("assets/home/top-king-clan-hero-approved.jpg")!important;background-position:50% center!important;background-repeat:no-repeat!important;background-color:#07080b!important;}
-        .hero-copy{width:min(540px,45%)!important}.hero-actions .button{min-width:190px}
-        @media (max-width:980px) and (min-width:821px){.hero{background-position:53% center!important}.hero-copy{width:min(520px,52%)!important}}
-        @media (max-width:820px) and (min-width:681px){.hero{min-height:900px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding-top:clamp(410px,58vw,465px)!important;padding-bottom:175px!important}.hero-copy{width:min(620px,88%)!important}}
-        @media (max-width:680px){.hero{min-height:920px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding:clamp(250px,68vw,300px) 16px 270px!important}.hero-copy{width:100%!important}.hero-actions{margin-top:22px!important}.hero-actions .button{width:100%;min-width:0;flex:1 1 100%}.quick-panel{bottom:18px!important}}
-        @media (max-width:420px){.hero{min-height:900px!important}.hero-inner{padding-top:250px!important;padding-bottom:262px!important}.hero h1{font-size:clamp(40px,12vw,50px)!important}.hero .lead{font-size:15px!important;line-height:1.48!important}}
-      `;
-      document.head.append(style);
-    }
-  }
-
-  function apply(lang=language){
-    language=supported.includes(lang)?lang:'ru'; localStorage.setItem('tk-language',language);
-    const strings=dictionary(language); document.documentElement.lang=language; document.documentElement.dir=language==='fa'?'rtl':'ltr';
-    document.querySelectorAll('[data-i18n]').forEach(node=>{const value=strings[node.dataset.i18n];if(value!=null)node.textContent=value});
-    document.querySelectorAll('[data-i18n-html]').forEach(node=>{const value=strings[node.dataset.i18nHtml];if(value!=null)node.innerHTML=value});
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(node=>{const value=strings[node.dataset.i18nPlaceholder];if(value!=null)node.placeholder=value});
-    document.querySelectorAll('[data-language]').forEach(button=>{const active=button.dataset.language===language;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))});
-    if(strings.pageTitle)document.title=strings.pageTitle;
-    document.dispatchEvent(new CustomEvent('tk-language-change',{detail:{language,strings}}));
-  }
-  function refreshInformationVisuals(){
-    upgradeInformationIcons();
-    upgradeInformationSectionIcons();
-  }
-  function init(){
-    document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>apply(button.dataset.language)));
-    const toggle=document.querySelector('[data-menu-toggle]'),menu=document.querySelector('[data-mobile-nav]');
-    if(toggle&&menu)toggle.addEventListener('click',()=>{const open=!menu.classList.contains('open');menu.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))});
-    replaceVisuals();
-    configureHomepage();
-    apply(language);
-    refreshInformationVisuals();
-    document.addEventListener('tk-language-change',()=>setTimeout(refreshInformationVisuals,0));
-  }
-  window.TopKingI18n={apply,get language(){return language},strings:()=>dictionary(language)};
-  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
+  function configureHomepage(){const hero=document.querySelector('main .hero');if(!hero)return;hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');const actions=hero.querySelector('.hero-actions');if(actions)actions.innerHTML='<a class="button primary" href="https://app.hamsterking.games/app.html" target="_blank" rel="noopener" data-i18n="play">Начать играть</a>';if(!document.getElementById('tk-home-responsive')){const style=document.createElement('style');style.id='tk-home-responsive';style.textContent=`.hero{background-image:url("assets/home/top-king-clan-hero-approved.jpg")!important;background-position:50% center!important;background-repeat:no-repeat!important;background-color:#07080b!important}.hero-copy{width:min(540px,45%)!important}.hero-actions .button{min-width:190px}@media(max-width:980px) and (min-width:821px){.hero{background-position:53% center!important}.hero-copy{width:min(520px,52%)!important}}@media(max-width:820px) and (min-width:681px){.hero{min-height:900px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding-top:clamp(410px,58vw,465px)!important;padding-bottom:175px!important}.hero-copy{width:min(620px,88%)!important}}@media(max-width:680px){.hero{min-height:920px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding:clamp(250px,68vw,300px) 16px 270px!important}.hero-copy{width:100%!important}.hero-actions{margin-top:22px!important}.hero-actions .button{width:100%;min-width:0;flex:1 1 100%}.quick-panel{bottom:18px!important}}@media(max-width:420px){.hero{min-height:900px!important}.hero-inner{padding-top:250px!important;padding-bottom:262px!important}.hero h1{font-size:clamp(40px,12vw,50px)!important}.hero .lead{font-size:15px!important;line-height:1.48!important}}`;document.head.append(style)}}
+  function apply(lang=language){language=supported.includes(lang)?lang:'ru';localStorage.setItem('tk-language',language);const strings=dictionary(language);document.documentElement.lang=language;document.documentElement.dir=language==='fa'?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(node=>{const value=strings[node.dataset.i18n];if(value!=null)node.textContent=value});document.querySelectorAll('[data-i18n-html]').forEach(node=>{const value=strings[node.dataset.i18nHtml];if(value!=null)node.innerHTML=value});document.querySelectorAll('[data-i18n-placeholder]').forEach(node=>{const value=strings[node.dataset.i18nPlaceholder];if(value!=null)node.placeholder=value});document.querySelectorAll('[data-language]').forEach(button=>{const active=button.dataset.language===language;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))});if(strings.pageTitle)document.title=strings.pageTitle;document.dispatchEvent(new CustomEvent('tk-language-change',{detail:{language,strings}}))}
+  function refreshInformationVisuals(){upgradeInformationIcons();upgradeInformationSectionIcons()}
+  function init(){document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>apply(button.dataset.language)));const toggle=document.querySelector('[data-menu-toggle]'),menu=document.querySelector('[data-mobile-nav]');if(toggle&&menu)toggle.addEventListener('click',()=>{const open=!menu.classList.contains('open');menu.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))});replaceVisuals();configureHomepage();apply(language);refreshInformationVisuals();document.addEventListener('tk-language-change',()=>setTimeout(refreshInformationVisuals,0))}
+  window.TopKingI18n={apply,get language(){return language},strings:()=>dictionary(language)};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
 })();
