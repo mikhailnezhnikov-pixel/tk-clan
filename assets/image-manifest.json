@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "policy": "Only approved game/site images may be used. New external candidates require user confirmation before placement.",
+  "version": 2,
+  "policy": "Only approved Hamster King game/site images may be used. Prefer original assets verified through the HAR catalog. New external candidates require user confirmation before placement.",
   "images": [
     {
       "id": "home-clan-bg-v2",
@@ -22,6 +22,125 @@
       "status": "approved-existing",
       "role": ["home-hero"],
       "notes": "Existing site asset."
+    },
+    {
+      "id": "hk-power",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/power.png",
+      "status": "approved-har",
+      "role": ["guide-power"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-fights",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/fights.png",
+      "status": "approved-har",
+      "role": ["guide-battles", "pvp"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-pit-rewards",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/pit-rewards-rhomb-icon.png",
+      "status": "approved-har",
+      "role": ["pit"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-area-boss",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/boss-fight.png",
+      "status": "approved-har",
+      "role": ["area-boss", "calculators"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-regional-boss",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/regional-bosses.png",
+      "status": "approved-har",
+      "role": ["regional-boss"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-clan-list",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png",
+      "status": "approved-har",
+      "role": ["clan", "site-brand"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-clan-vs",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/vs.png",
+      "status": "approved-har",
+      "role": ["clan-war"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-rats",
+      "source": "https://cdn-prod-art.hwgame.cloud/bosses/rats_05_icon.png",
+      "status": "approved-har",
+      "role": ["rat-boss", "clan-rat-battle"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-inventory",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png",
+      "status": "approved-har",
+      "role": ["resources"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-hamsters-menu",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/menu/hamsters-1.png",
+      "status": "approved-har",
+      "role": ["hamsters"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-hamster-ball",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/hamster-ball.png",
+      "status": "approved-har",
+      "role": ["hamster-upgrade"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-shop",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/menu/shop-1.png",
+      "status": "approved-har",
+      "role": ["shop"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-collections",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/collections.png",
+      "status": "approved-har",
+      "role": ["recipes", "collections"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-city",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/menu/city-1.png",
+      "status": "approved-har",
+      "role": ["maps", "city"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-telegram",
+      "source": "https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/telegram-1.png",
+      "status": "approved-har",
+      "role": ["support", "feedback"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-area-boss-battle-pass",
+      "source": "https://cdn-prod-art.hwgame.cloud/battle_passes/icons/bp_personal_area_boss_paid_01_icon.png",
+      "status": "approved-har",
+      "role": ["area-boss-battle-pass"],
+      "approved_by_user": true
+    },
+    {
+      "id": "hk-district-token",
+      "source": "https://cdn-prod-art.hwgame.cloud/items/item_bldg_districts_token_icon.png",
+      "status": "approved-har",
+      "role": ["district-capture"],
+      "approved_by_user": true
     }
   ],
   "candidate_template": {
