@@ -40,6 +40,8 @@
     if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
   }
 
+  // Inline replacements in the restored Information guide.
+  // Anything not listed here stays exactly as the original guide icon.
   const GUIDE_CONFIRMED_ICON_MAP={
     '101':GAME_FRONT+'assets/images/ui/pit-rewards-rhomb-icon.png',
     '100':GAME_ART+'items/item_boss_pass_ticket_icon.png',
@@ -52,6 +54,18 @@
     '25':GAME_FRONT+'assets/images/ui/hamster-ball.png',
     '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png'
   };
+
+  // User-approved section visuals from the 1–9 review.
+  const GUIDE_SECTION_ICON_MAP={
+    power:GAME_FRONT+'assets/images/ui/hamster-ball.png',
+    generals:GAME_ART+'items/item_hball_hgen_beasthelper_g1_ssplus_icon.png',
+    battles:GAME_FRONT+'assets/images/ui/fights.png',
+    clans:GAME_FRONT+'assets/images/ui/clan-list-icon.png',
+    resources:GAME_FRONT+'assets/images/ui/inventory.png',
+    business:'../assets/guide-emoji/26.png',
+    maps:GAME_FRONT+'assets/images/menu/city-1.png'
+  };
+
   function styleGuideIcon(img,id){
     img.dataset.originalGuideIcon=id;
     img.style.width='24px';
@@ -60,6 +74,7 @@
     img.style.verticalAlign='middle';
     img.style.margin='0 4px';
   }
+
   function upgradeInformationIcons(){
     if(!document.getElementById('guide'))return;
     document.querySelectorAll('#guide img.inline-icon').forEach(img=>{
@@ -72,14 +87,44 @@
       styleGuideIcon(img,match[1]);
     });
 
-    // ID 98 is used elsewhere in the old guide too, so only replace it in the Battles block.
-    // User explicitly selected Regional Boss candidate 1.
+    // ID 98 has two meanings in the legacy guide. In Battles it is Regional Boss,
+    // while next to Beasts it remains the user's approved first image.
     document.querySelectorAll('#battles img.inline-icon').forEach(img=>{
       const original=img.getAttribute('src')||'';
       if(!/guide-emoji\/98\.png(?:\?.*)?$/.test(original))return;
       img.src=GAME_FRONT+'assets/images/ui/regional-bosses.png';
       styleGuideIcon(img,'98');
     });
+
+    // IDs 27, 33, 26 and 150 are explicitly user-approved as their original
+    // uploaded/local guide images, so they are intentionally not replaced.
+  }
+
+  function upgradeInformationSectionIcons(){
+    if(!document.getElementById('guide'))return;
+    for(const [id,src] of Object.entries(GUIDE_SECTION_ICON_MAP)){
+      const article=document.getElementById(id);
+      const h2=article&&article.querySelector('h2');
+      if(!h2)continue;
+      const raw=(h2.textContent||'').trim();
+      const clean=raw.replace(/^[🎮🚀💪⭐⚔️👑💰🏢🍳📊🗺🛠\s]+/u,'').trim()||raw;
+      h2.textContent='';
+      const wrap=document.createElement('span');
+      wrap.style.display='inline-flex';
+      wrap.style.alignItems='center';
+      wrap.style.gap='10px';
+      const icon=document.createElement('img');
+      icon.src=src;
+      icon.alt='';
+      icon.style.width='34px';
+      icon.style.height='34px';
+      icon.style.objectFit='contain';
+      icon.style.flex='0 0 auto';
+      const label=document.createElement('span');
+      label.textContent=clean;
+      wrap.append(icon,label);
+      h2.append(wrap);
+    }
   }
 
   function configureHomepage(){
@@ -115,6 +160,10 @@
     if(strings.pageTitle)document.title=strings.pageTitle;
     document.dispatchEvent(new CustomEvent('tk-language-change',{detail:{language,strings}}));
   }
+  function refreshInformationVisuals(){
+    upgradeInformationIcons();
+    upgradeInformationSectionIcons();
+  }
   function init(){
     document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>apply(button.dataset.language)));
     const toggle=document.querySelector('[data-menu-toggle]'),menu=document.querySelector('[data-mobile-nav]');
@@ -122,8 +171,8 @@
     replaceVisuals();
     configureHomepage();
     apply(language);
-    upgradeInformationIcons();
-    document.addEventListener('tk-language-change',()=>setTimeout(upgradeInformationIcons,0));
+    refreshInformationVisuals();
+    document.addEventListener('tk-language-change',()=>setTimeout(refreshInformationVisuals,0));
   }
   window.TopKingI18n={apply,get language(){return language},strings:()=>dictionary(language)};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
