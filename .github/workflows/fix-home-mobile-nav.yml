@@ -1,0 +1,53 @@
+name: Fix homepage mobile navigation
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/fix-home-mobile-nav.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add all sections to homepage mobile menu
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text('utf-8')
+          start = s.index('<div class="mobile-menu" data-mobile-nav>')
+          end = s.index('</div>\n  <main>', start) + len('</div>')
+          new = '''<div class="mobile-menu" data-mobile-nav><nav class="mobile-links">
+            <a href="./"><span>Главная</span><span>→</span></a>
+            <a href="information/"><span>Информация</span><span>→</span></a>
+            <a href="recipes/"><span>Рецепты</span><span>→</span></a>
+            <a href="calculators/"><span>Калькуляторы</span><span>→</span></a>
+            <a href="maps/"><span>Карты</span><span>→</span></a>
+            <a href="wars/"><span>Клановые войны</span><span>→</span></a>
+            <a href="ratings/"><span>Рейтинг</span><span>→</span></a>
+            <a href="feedback/"><span>Обратная связь</span><span>→</span></a>
+            <a class="mobile-login" href="cabinet/"><span>Личный кабинет</span><span>→</span></a>
+          </nav></div>'''
+          s = s[:start] + new + s[end:]
+          p.write_text(s, 'utf-8')
+          PY
+      - name: Commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Already fixed.'
+          else
+            git commit -m 'Show Maps and Ratings in mobile menu [skip ci]'
+            git push
+          fi
