@@ -40,8 +40,7 @@
     if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
   }
 
-  // Inline replacements in the restored Information guide.
-  // Anything not listed here stays exactly as the original guide icon.
+  // Exact HQ counterparts found in the HAR/game asset catalog.
   const GUIDE_CONFIRMED_ICON_MAP={
     '101':GAME_FRONT+'assets/images/ui/pit-rewards-rhomb-icon.png',
     '100':GAME_ART+'items/item_boss_pass_ticket_icon.png',
@@ -52,17 +51,19 @@
     '28':GAME_FRONT+'assets/images/ui/favorite-buildings-counter.png',
     '97':GAME_FRONT+'assets/images/menu/shop-1.png',
     '25':GAME_FRONT+'assets/images/ui/hamster-ball.png',
-    '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png'
+    '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png',
+    '26':GAME_ART+'currencies/cur_build_icon.png',
+    '27':GAME_ART+'items/item_invest_cur_icon.png',
+    '33':GAME_ART+'currencies/cur_prem_icon.png'
   };
 
-  // User-approved section visuals from the 1–9 review.
   const GUIDE_SECTION_ICON_MAP={
     power:GAME_FRONT+'assets/images/ui/hamster-ball.png',
     generals:GAME_ART+'items/item_hball_hgen_beasthelper_g1_ssplus_icon.png',
     battles:GAME_FRONT+'assets/images/ui/fights.png',
     clans:GAME_FRONT+'assets/images/ui/clan-list-icon.png',
     resources:GAME_FRONT+'assets/images/ui/inventory.png',
-    business:'../assets/guide-emoji/26.png',
+    business:GAME_ART+'currencies/cur_build_icon.png',
     maps:GAME_FRONT+'assets/images/menu/city-1.png'
   };
 
@@ -87,8 +88,8 @@
       styleGuideIcon(img,match[1]);
     });
 
-    // ID 98 has two meanings in the legacy guide. In Battles it is Regional Boss,
-    // while next to Beasts it remains the user's approved first image.
+    // ID 98 is ambiguous in the legacy guide: only the Battles usage is confirmed
+    // as Regional Boss. The Beasts usage remains untouched until exact HQ match is approved.
     document.querySelectorAll('#battles img.inline-icon').forEach(img=>{
       const original=img.getAttribute('src')||'';
       if(!/guide-emoji\/98\.png(?:\?.*)?$/.test(original))return;
@@ -96,8 +97,7 @@
       styleGuideIcon(img,'98');
     });
 
-    // IDs 27, 33, 26 and 150 are explicitly user-approved as their original
-    // uploaded/local guide images, so they are intentionally not replaced.
+    // ID 150 remains as the reference image until an exact HQ counterpart is confirmed.
   }
 
   function upgradeInformationSectionIcons(){
