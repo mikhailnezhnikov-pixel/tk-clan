@@ -11,6 +11,7 @@
   const dictionary=lang=>Object.assign({},CORE[lang]||CORE.ru,(window.TK_PAGE_TRANSLATIONS||{})[lang]||{});
 
   const GAME_FRONT='https://cdn-prod-front-dist.hwgame.cloud/';
+  const GAME_ART='https://cdn-prod-art.hwgame.cloud/';
   const OFFICIAL_VISUALS={
     calculators:'assets/images/ui/boss-fight.png',
     recipes:'assets/images/ui/collections.png',
@@ -39,76 +40,52 @@
     if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
   }
 
+  const GUIDE_CONFIRMED_ICON_MAP={
+    '101':GAME_FRONT+'assets/images/ui/pit-rewards-rhomb-icon.png',
+    '102':GAME_FRONT+'assets/images/ui/boss-fight.png',
+    '104':GAME_ART+'bosses/rats_05_icon.png',
+    '129':GAME_FRONT+'assets/images/ui/vs.png',
+    '28':GAME_FRONT+'assets/images/ui/favorite-buildings-counter.png',
+    '97':GAME_FRONT+'assets/images/menu/shop-1.png',
+    '25':GAME_FRONT+'assets/images/ui/hamster-ball.png',
+    '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png'
+  };
+  function upgradeInformationIcons(){
+    if(!document.getElementById('guide'))return;
+    document.querySelectorAll('#guide img.inline-icon').forEach(img=>{
+      const original=img.getAttribute('src')||'';
+      const match=original.match(/guide-emoji\/(\d+)\.png(?:\?.*)?$/);
+      if(!match)return;
+      const replacement=GUIDE_CONFIRMED_ICON_MAP[match[1]];
+      if(!replacement)return;
+      img.dataset.originalGuideIcon=match[1];
+      img.src=replacement;
+      img.style.width='24px';
+      img.style.height='24px';
+      img.style.objectFit='contain';
+      img.style.verticalAlign='middle';
+      img.style.margin='0 4px';
+    });
+  }
+
   function configureHomepage(){
     const hero=document.querySelector('main .hero');
     if(!hero)return;
-
-    // Use a dedicated, cache-busted filename that points to the approved Git blob.
-    // Do not reuse top-king-clan-bg-v2.jpg here because that URL was previously cached
-    // while the binary was temporarily damaged.
     hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');
-
     const actions=hero.querySelector('.hero-actions');
     if(actions){
       actions.innerHTML='<a class="button primary" href="https://app.hamsterking.games/app.html" target="_blank" rel="noopener" data-i18n="play">Начать играть</a>';
     }
-
     if(!document.getElementById('tk-home-responsive')){
       const style=document.createElement('style');
       style.id='tk-home-responsive';
       style.textContent=`
-        .hero{
-          background-image:url("assets/home/top-king-clan-hero-approved.jpg")!important;
-          background-position:50% center!important;
-          background-repeat:no-repeat!important;
-          background-color:#07080b!important;
-        }
-        .hero-copy{width:min(540px,45%)!important;}
-        .hero-actions .button{min-width:190px;}
-
-        @media (max-width:980px) and (min-width:821px){
-          .hero{background-position:53% center!important;}
-          .hero-copy{width:min(520px,52%)!important;}
-        }
-
-        @media (max-width:820px) and (min-width:681px){
-          .hero{
-            min-height:900px!important;
-            align-items:flex-start!important;
-            background-size:100% auto!important;
-            background-position:center top!important;
-          }
-          .hero-inner{
-            width:100%!important;
-            padding-top:clamp(410px,58vw,465px)!important;
-            padding-bottom:175px!important;
-          }
-          .hero-copy{width:min(620px,88%)!important;}
-        }
-
-        @media (max-width:680px){
-          .hero{
-            min-height:920px!important;
-            align-items:flex-start!important;
-            background-size:100% auto!important;
-            background-position:center top!important;
-          }
-          .hero-inner{
-            width:100%!important;
-            padding:clamp(250px,68vw,300px) 16px 270px!important;
-          }
-          .hero-copy{width:100%!important;}
-          .hero-actions{margin-top:22px!important;}
-          .hero-actions .button{width:100%;min-width:0;flex:1 1 100%;}
-          .quick-panel{bottom:18px!important;}
-        }
-
-        @media (max-width:420px){
-          .hero{min-height:900px!important;}
-          .hero-inner{padding-top:250px!important;padding-bottom:262px!important;}
-          .hero h1{font-size:clamp(40px,12vw,50px)!important;}
-          .hero .lead{font-size:15px!important;line-height:1.48!important;}
-        }
+        .hero{background-image:url("assets/home/top-king-clan-hero-approved.jpg")!important;background-position:50% center!important;background-repeat:no-repeat!important;background-color:#07080b!important;}
+        .hero-copy{width:min(540px,45%)!important}.hero-actions .button{min-width:190px}
+        @media (max-width:980px) and (min-width:821px){.hero{background-position:53% center!important}.hero-copy{width:min(520px,52%)!important}}
+        @media (max-width:820px) and (min-width:681px){.hero{min-height:900px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding-top:clamp(410px,58vw,465px)!important;padding-bottom:175px!important}.hero-copy{width:min(620px,88%)!important}}
+        @media (max-width:680px){.hero{min-height:920px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding:clamp(250px,68vw,300px) 16px 270px!important}.hero-copy{width:100%!important}.hero-actions{margin-top:22px!important}.hero-actions .button{width:100%;min-width:0;flex:1 1 100%}.quick-panel{bottom:18px!important}}
+        @media (max-width:420px){.hero{min-height:900px!important}.hero-inner{padding-top:250px!important;padding-bottom:262px!important}.hero h1{font-size:clamp(40px,12vw,50px)!important}.hero .lead{font-size:15px!important;line-height:1.48!important}}
       `;
       document.head.append(style);
     }
@@ -131,6 +108,8 @@
     replaceVisuals();
     configureHomepage();
     apply(language);
+    upgradeInformationIcons();
+    document.addEventListener('tk-language-change',()=>setTimeout(upgradeInformationIcons,0));
   }
   window.TopKingI18n={apply,get language(){return language},strings:()=>dictionary(language)};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
