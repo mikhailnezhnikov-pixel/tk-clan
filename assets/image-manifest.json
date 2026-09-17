@@ -1,13 +1,15 @@
 {
-  "version": 2,
+  "version": 3,
   "policy": "Only approved Hamster King game/site images may be used. Prefer original assets verified through the HAR catalog. New external candidates require user confirmation before placement.",
   "images": [
     {
       "id": "home-clan-bg-v2",
       "path": "assets/home/top-king-clan-bg-v2.jpg",
-      "status": "approved-existing",
-      "role": ["home-background"],
-      "notes": "Existing site asset; keep available unless explicitly replaced."
+      "status": "approved-user-locked",
+      "role": ["home-background", "home-clan-participants-hero"],
+      "approved_by_user": true,
+      "locked": true,
+      "notes": "Explicitly approved by the user as the homepage starting artwork showing clan participants. Do not replace, override, restyle into another image, or swap via runtime script unless the user explicitly asks."
     },
     {
       "id": "home-clan-bg",
