@@ -1,0 +1,70 @@
+name: Import full Moscow 20-19 map
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/import-moscow-map.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  import-map:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download full source map
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p maps/moscow-20-19
+          curl -fL --retry 3 --connect-timeout 20 \
+            -A 'Mozilla/5.0' \
+            'https://kokkaras.com/hk_maps/hk_moscow2019.php' \
+            -o /tmp/moscow.html
+          test $(wc -c < /tmp/moscow.html) -gt 500000
+          grep -q 'const buildingsGeoJSON' /tmp/moscow.html
+          grep -q 'const roadsGeoJSON' /tmp/moscow.html
+          cp /tmp/moscow.html maps/moscow-20-19/index.html
+
+      - name: Adapt dependencies and navigation for Top King
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('maps/moscow-20-19/index.html')
+          s=p.read_text('utf-8')
+          s=s.replace('./MOSCOW 20.19_files/maplibre-gl.css','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css')
+          s=s.replace('./MOSCOW 20.19_files/maplibre-gl.js','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js')
+          s=s.replace('https://kokkaras.com/hk_maps/index.php','../')
+          s=s.replace('<a class="logout-btn" href="https://kokkaras.com/hk_maps/auth.php?action=logout" data-i18n="logout">Выйти</a>','<a class="logout-btn" href="../">← Карты</a>')
+          p.write_text(s,'utf-8')
+          PY
+
+      - name: Validate full map
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'const buildingsGeoJSON' maps/moscow-20-19/index.html
+          grep -q 'const landuseGeoJSON' maps/moscow-20-19/index.html
+          grep -q 'const waterGeoJSON' maps/moscow-20-19/index.html
+          grep -q 'const roadsGeoJSON' maps/moscow-20-19/index.html
+          test $(wc -c < maps/moscow-20-19/index.html) -gt 500000
+
+      - name: Commit full map
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add maps/moscow-20-19/index.html
+          if git diff --cached --quiet; then
+            echo 'No map changes to commit.'
+          else
+            git commit -m 'Import full Moscow 20-19 interactive map [skip ci]'
+            git push
+          fi
