@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "policy": "Only approved game/site images may be used. New external candidates require user confirmation before placement.",
+  "images": [
+    {
+      "id": "home-clan-bg-v2",
+      "path": "assets/home/top-king-clan-bg-v2.jpg",
+      "status": "approved-existing",
+      "role": ["home-background"],
+      "notes": "Existing site asset; keep available unless explicitly replaced."
+    },
+    {
+      "id": "home-clan-bg",
+      "path": "assets/home/top-king-clan-bg.jpg",
+      "status": "approved-existing",
+      "role": ["home-background-alternative"],
+      "notes": "Existing site asset."
+    },
+    {
+      "id": "home-hero",
+      "path": "assets/home/top-king-hero.png",
+      "status": "approved-existing",
+      "role": ["home-hero"],
+      "notes": "Existing site asset."
+    }
+  ],
+  "candidate_template": {
+    "id": "candidate-id",
+    "path": null,
+    "status": "candidate",
+    "role": ["target-site-block"],
+    "source": "official-public-source-or-user-upload",
+    "match_reason": "Why this is believed to be the correct Hamster King image",
+    "approved_by_user": false
+  }
+}
