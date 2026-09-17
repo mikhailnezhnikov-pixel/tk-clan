@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "policy": "Only approved Hamster King game/site images may be used. Prefer original assets verified through the HAR catalog. New external candidates require user confirmation before placement. If uncertain, keep the current icon and present 3 visual candidates plus a fourth option for the user to provide their own.",
   "images": [
     {"id":"home-clan-bg-v2","path":"assets/home/top-king-clan-bg-v2.jpg","status":"approved-user-locked","role":["home-background","home-clan-participants-hero"],"approved_by_user":true,"locked":true},
@@ -28,10 +28,10 @@
     {"id":"guide-general-mechanics-128","source":"https://cdn-prod-art.hwgame.cloud/bonuses/general_power_bonus_icon.png","status":"approved-user-locked","role":["general-mechanics"],"approved_by_user":true,"locked":true,"notes":"User selected candidate 1 on 2026-09-17."},
     {"id":"guide-clan-battle-129","source":"https://cdn-prod-art.hwgame.cloud/currencies/cur_clan_war_attack_pass_icon.png","status":"approved-user-locked","role":["clan-battle"],"approved_by_user":true,"locked":true,"notes":"User selected candidate 2 on 2026-09-17."},
 
-    {"id":"guide-131","path":"assets/guide-emoji/131.png","status":"approved-user-reference","role":["recipe-component-1"],"approved_by_user":true,"locked":true,"notes":"User chose option 4: keep current reference icon until user provides exact HQ original."},
-    {"id":"guide-132","path":"assets/guide-emoji/132.png","status":"approved-user-reference","role":["recipe-component-2"],"approved_by_user":true,"locked":true,"notes":"User chose option 4: keep current reference icon until user provides exact HQ original."},
-    {"id":"guide-150","path":"assets/guide-emoji/150.png","status":"approved-user-reference","role":["recipe-search-currency"],"approved_by_user":true,"locked":true,"notes":"User chose option 4: keep current reference icon until user provides exact HQ original."},
-    {"id":"guide-110","path":"assets/guide-emoji/110.png","status":"approved-user-reference","role":["rumor-business"],"approved_by_user":true,"locked":true,"notes":"User chose option 4: keep current reference icon until user provides exact HQ original."},
+    {"id":"guide-131","source":"https://cdn-prod-art.hwgame.cloud/items/item_bsn_reverse_transfig_t5_icon.png","status":"approved-user-locked","role":["recipe-component-1","reorganization-permit"],"approved_by_user":true,"locked":true,"notes":"Exact HQ source confirmed from game server item mapping; user approved on 2026-09-17."},
+    {"id":"guide-132","source":"https://cdn-prod-art.hwgame.cloud/items/item_bsn_reverse_transfig_t8_icon.png","status":"approved-user-locked","role":["recipe-component-2","general-reorganization-permit"],"approved_by_user":true,"locked":true,"notes":"Exact HQ source confirmed from game server item mapping; user approved on 2026-09-17."},
+    {"id":"guide-150","source":"https://cdn-prod-art.hwgame.cloud/items/item_business_dust_icon.png","status":"approved-user-locked","role":["recipe-search-currency","business-plan-scraps"],"approved_by_user":true,"locked":true,"notes":"Exact HQ source confirmed from game server item mapping; user approved on 2026-09-17."},
+    {"id":"guide-110","source":"https://cdn-prod-art.hwgame.cloud/items/item_bsn_r2_tier2_trig_rumor_energy_energy_icon.png","status":"approved-user-locked","role":["rumor-business","sarafan-bureau"],"approved_by_user":true,"locked":true,"notes":"Exact HQ source for Сарафанное Бюро 4★ confirmed through game localization and /items mapping on 2026-09-17."},
 
     {"id":"guide-resources-section","source":"https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png","status":"approved-user-locked","role":["resources-section"],"approved_by_user":true,"locked":true},
     {"id":"guide-map-city","source":"https://cdn-prod-front-dist.hwgame.cloud/assets/images/menu/city-1.png","status":"approved-user-locked","role":["maps-section","city"],"approved_by_user":true,"locked":true},
