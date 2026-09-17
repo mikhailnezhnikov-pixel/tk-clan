@@ -33,12 +33,11 @@
     document.querySelectorAll('.topbar .brand img').forEach(img=>img.src='https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png');
     document.querySelectorAll('nav.tabs[aria-label="Разделы сайта"]').forEach(n=>n.classList.add('tk-legacy-site-nav'));
   }
-  function wireMenu(){
-    document.querySelectorAll('[data-menu-toggle]').forEach(toggle=>{
+  function wireGeneratedMenu(){
+    document.querySelectorAll('.tk-generated-header [data-menu-toggle]').forEach(toggle=>{
       if(toggle.dataset.tkWired==='1')return;toggle.dataset.tkWired='1';
       toggle.addEventListener('click',()=>{
-        const header=toggle.closest('header')||document;
-        const menu=header.querySelector('[data-mobile-nav]')||document.querySelector('[data-mobile-nav]');if(!menu)return;
+        const header=toggle.closest('header'),menu=header&&header.querySelector('[data-mobile-nav]');if(!menu)return;
         const open=!menu.classList.contains('open');menu.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));document.body.classList.toggle('menu-open',open);
       });
     });
@@ -47,7 +46,7 @@
     ensureTheme();createHeader();normalizeExistingHeader();
     document.querySelectorAll('nav.nav,nav.desktop-nav').forEach(n=>renderContainer(n,false));
     document.querySelectorAll('nav.mobile-nav,.mobile-links').forEach(n=>renderContainer(n,true));
-    wireMenu();
+    wireGeneratedMenu();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
   window.addEventListener('tk-language-change',render);
