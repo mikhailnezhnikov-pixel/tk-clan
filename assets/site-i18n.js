@@ -37,12 +37,16 @@
     });
     const icon=document.querySelector('link[rel="icon"]');
     if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png';
-    // Never override the homepage hero artwork here. It is user-approved and locked.
   }
 
   function configureHomepage(){
     const hero=document.querySelector('main .hero');
     if(!hero)return;
+
+    // Use a dedicated, cache-busted filename that points to the approved Git blob.
+    // Do not reuse top-king-clan-bg-v2.jpg here because that URL was previously cached
+    // while the binary was temporarily damaged.
+    hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');
 
     const actions=hero.querySelector('.hero-actions');
     if(actions){
@@ -53,9 +57,12 @@
       const style=document.createElement('style');
       style.id='tk-home-responsive';
       style.textContent=`
-        /* Canonical clan hero: desktop composition keeps the text on the flag/stone side
-           and protects the character group in the centre/right of the approved artwork. */
-        .hero{background-position:50% center!important;}
+        .hero{
+          background-image:url("assets/home/top-king-clan-hero-approved.jpg")!important;
+          background-position:50% center!important;
+          background-repeat:no-repeat!important;
+          background-color:#07080b!important;
+        }
         .hero-copy{width:min(540px,45%)!important;}
         .hero-actions .button{min-width:190px;}
 
@@ -64,16 +71,12 @@
           .hero-copy{width:min(520px,52%)!important;}
         }
 
-        /* Tablet portrait: show the complete approved 16:9 artwork as a top scene instead
-           of cropping most clan members with background-size:cover. */
         @media (max-width:820px) and (min-width:681px){
           .hero{
             min-height:900px!important;
             align-items:flex-start!important;
             background-size:100% auto!important;
             background-position:center top!important;
-            background-repeat:no-repeat!important;
-            background-color:#07080b!important;
           }
           .hero-inner{
             width:100%!important;
@@ -83,16 +86,12 @@
           .hero-copy{width:min(620px,88%)!important;}
         }
 
-        /* Phone: preserve the whole clan image at the top, then place copy and controls
-           below it. This avoids the severe horizontal crop caused by cover on portrait screens. */
         @media (max-width:680px){
           .hero{
             min-height:920px!important;
             align-items:flex-start!important;
             background-size:100% auto!important;
             background-position:center top!important;
-            background-repeat:no-repeat!important;
-            background-color:#07080b!important;
           }
           .hero-inner{
             width:100%!important;
