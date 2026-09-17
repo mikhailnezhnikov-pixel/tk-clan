@@ -15,7 +15,6 @@
   function fitGameIcon(img){img.style.objectFit='contain';if(img.closest('.card-icon,.quick-icon'))img.style.padding='5px'}
   function replaceVisuals(){for(const[section,path]of Object.entries(OFFICIAL_VISUALS)){document.querySelectorAll(`a[href*="${section}"] .card-icon img,a[href*="${section}"] .quick-icon img`).forEach(img=>{img.src=GAME_FRONT+path;fitGameIcon(img)})}document.querySelectorAll('.brand img').forEach(img=>{img.src=GAME_FRONT+'assets/images/ui/clan-list-icon.png';fitGameIcon(img)});const icon=document.querySelector('link[rel="icon"]');if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png'}
 
-  // Only exact/high-confidence HQ counterparts are replaced. Unknown IDs stay local.
   const GUIDE_CONFIRMED_ICON_MAP={
     '101':GAME_ART+'quests/qst_clan_daily_pit_icon.png',
     '100':GAME_ART+'quests/qst_clan_daily_bosspit_icon.png',
@@ -25,10 +24,13 @@
     '27':GAME_ART+'currencies/cur_cap_icon.png',
     '28':GAME_ART+'shop_lots/icons_card/mf_divider_resources.png',
     '31':GAME_ART+'items/item_invest_cur_icon.png',
+    '32':GAME_ART+'items/item_clan_cur_icon.png',
     '33':GAME_ART+'currencies/cur_prem_icon.png',
     '97':GAME_ART+'currencies/cur_prem_icon.png',
     '104':GAME_ART+'items/item_pit_rat_tokens_icon.png',
     '123':GAME_ART+'currencies/cur_alliance_icon.png',
+    '128':GAME_ART+'bonuses/general_power_bonus_icon.png',
+    '129':GAME_ART+'currencies/cur_clan_war_attack_pass_icon.png',
     '25':GAME_ART+'currencies/cur_nut_icon.png',
     '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png'
   };
@@ -52,13 +54,12 @@
       if(!replacement)return;
       img.src=replacement;styleGuideIcon(img,match[1]);
     });
-    // ID 98: only the Regional Boss / Beasts contexts use the approved original UI asset.
     document.querySelectorAll('#battles img.inline-icon,#calculators img.inline-icon').forEach(img=>{
       const original=img.getAttribute('src')||'';
       if(!/guide-emoji\/98\.png(?:\?.*)?$/.test(original))return;
       img.src=GAME_FRONT+'assets/images/ui/regional-bosses.png';styleGuideIcon(img,'98');
     });
-    // 32, 110, 128, 129, 131, 132 and 150 remain local until the user selects an HQ candidate.
+    // User chose option 4 for IDs 110, 131, 132 and 150: keep their local reference icons unchanged.
   }
   function upgradeInformationSectionIcons(){
     if(!document.getElementById('guide'))return;
