@@ -20,15 +20,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p maps/moscow-20-19
-          curl -fL --retry 3 --connect-timeout 20 \
-            -A 'Mozilla/5.0' \
+          mkdir -p maps/moscow-20-19/vendor
+          curl -fL --compressed --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 120 \
+            -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/142 Safari/537.36' \
             'https://kokkaras.com/hk_maps/hk_moscow2019.php' \
             -o /tmp/moscow.html
-          test $(wc -c < /tmp/moscow.html) -gt 500000
+          test $(wc -c < /tmp/moscow.html) -gt 2000000
           grep -q 'const buildingsGeoJSON' /tmp/moscow.html
           grep -q 'const roadsGeoJSON' /tmp/moscow.html
+          grep -q 'const landuseGeoJSON' /tmp/moscow.html
+          grep -q 'const waterGeoJSON' /tmp/moscow.html
           cp /tmp/moscow.html maps/moscow-20-19/index.html
+
+      - name: Vendor MapLibre locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 5 'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css' \
+            -o maps/moscow-20-19/vendor/maplibre-gl.css
+          curl -fL --retry 5 'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js' \
+            -o maps/moscow-20-19/vendor/maplibre-gl.js
+          test $(wc -c < maps/moscow-20-19/vendor/maplibre-gl.js) -gt 500000
 
       - name: Adapt dependencies and navigation for Top King
         shell: bash
@@ -38,9 +50,17 @@ jobs:
           from pathlib import Path
           p=Path('maps/moscow-20-19/index.html')
           s=p.read_text('utf-8')
-          s=s.replace('./MOSCOW 20.19_files/maplibre-gl.css','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css')
-          s=s.replace('./MOSCOW 20.19_files/maplibre-gl.js','https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js')
-          s=s.replace('https://kokkaras.com/hk_maps/index.php','../')
+          replacements={
+            './MOSCOW 20.19_files/maplibre-gl.css':'vendor/maplibre-gl.css?v=4.7.1',
+            './MOSCOW 20.19_files/maplibre-gl.js':'vendor/maplibre-gl.js?v=4.7.1',
+            'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css':'vendor/maplibre-gl.css?v=4.7.1',
+            'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js':'vendor/maplibre-gl.js?v=4.7.1',
+            'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css':'vendor/maplibre-gl.css?v=4.7.1',
+            'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js':'vendor/maplibre-gl.js?v=4.7.1',
+            'https://kokkaras.com/hk_maps/index.php':'../'
+          }
+          for old,new in replacements.items():
+              s=s.replace(old,new)
           s=s.replace('<a class="logout-btn" href="https://kokkaras.com/hk_maps/auth.php?action=logout" data-i18n="logout">Выйти</a>','<a class="logout-btn" href="../">← Карты</a>')
           p.write_text(s,'utf-8')
           PY
@@ -53,7 +73,8 @@ jobs:
           grep -q 'const landuseGeoJSON' maps/moscow-20-19/index.html
           grep -q 'const waterGeoJSON' maps/moscow-20-19/index.html
           grep -q 'const roadsGeoJSON' maps/moscow-20-19/index.html
-          test $(wc -c < maps/moscow-20-19/index.html) -gt 500000
+          grep -q 'vendor/maplibre-gl.js' maps/moscow-20-19/index.html
+          test $(wc -c < maps/moscow-20-19/index.html) -gt 2000000
 
       - name: Commit full map
         shell: bash
@@ -61,10 +82,10 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add maps/moscow-20-19/index.html
+          git add maps/moscow-20-19/index.html maps/moscow-20-19/vendor/maplibre-gl.css maps/moscow-20-19/vendor/maplibre-gl.js
           if git diff --cached --quiet; then
             echo 'No map changes to commit.'
           else
-            git commit -m 'Import full Moscow 20-19 interactive map [skip ci]'
+            git commit -m 'Restore full Moscow 20-19 map from source [skip ci]'
             git push
           fi
