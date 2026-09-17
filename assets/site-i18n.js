@@ -63,6 +63,20 @@
       if(!/guide-emoji\/98\.png(?:\?.*)?$/.test(original))return;
       img.src=GAME_FRONT+'assets/images/ui/regional-bosses.png';styleGuideIcon(img,'98');
     });
+    document.querySelectorAll('#battles .guide-row').forEach(row=>{
+      const label=row.querySelector('b');
+      if(!label||label.textContent.trim()!=='PVP')return;
+      row.textContent='';
+      const img=document.createElement('img');
+      img.className='inline-icon';
+      img.src=GAME_FRONT+'assets/images/ui/pvp-arena.png';
+      img.alt='PVP';
+      img.title='PVP';
+      styleGuideIcon(img,'pvp-arena');
+      const strong=document.createElement('b');
+      strong.textContent='PVP';
+      row.append(img,' ',strong);
+    });
   }
   function upgradeInformationSectionIcons(){
     if(!document.getElementById('guide'))return;
