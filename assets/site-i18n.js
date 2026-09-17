@@ -42,6 +42,8 @@
 
   const GUIDE_CONFIRMED_ICON_MAP={
     '101':GAME_FRONT+'assets/images/ui/pit-rewards-rhomb-icon.png',
+    '100':GAME_ART+'items/item_boss_pass_ticket_icon.png',
+    '99':GAME_ART+'items/item_pit_rat_tokens_icon.png',
     '102':GAME_FRONT+'assets/images/ui/boss-fight.png',
     '104':GAME_ART+'bosses/rats_05_icon.png',
     '129':GAME_FRONT+'assets/images/ui/vs.png',
@@ -50,6 +52,14 @@
     '25':GAME_FRONT+'assets/images/ui/hamster-ball.png',
     '115':GAME_ART+'battle_passes/icons/bp_personal_area_boss_paid_01_icon.png'
   };
+  function styleGuideIcon(img,id){
+    img.dataset.originalGuideIcon=id;
+    img.style.width='24px';
+    img.style.height='24px';
+    img.style.objectFit='contain';
+    img.style.verticalAlign='middle';
+    img.style.margin='0 4px';
+  }
   function upgradeInformationIcons(){
     if(!document.getElementById('guide'))return;
     document.querySelectorAll('#guide img.inline-icon').forEach(img=>{
@@ -58,13 +68,17 @@
       if(!match)return;
       const replacement=GUIDE_CONFIRMED_ICON_MAP[match[1]];
       if(!replacement)return;
-      img.dataset.originalGuideIcon=match[1];
       img.src=replacement;
-      img.style.width='24px';
-      img.style.height='24px';
-      img.style.objectFit='contain';
-      img.style.verticalAlign='middle';
-      img.style.margin='0 4px';
+      styleGuideIcon(img,match[1]);
+    });
+
+    // ID 98 is used elsewhere in the old guide too, so only replace it in the Battles block.
+    // User explicitly selected Regional Boss candidate 1.
+    document.querySelectorAll('#battles img.inline-icon').forEach(img=>{
+      const original=img.getAttribute('src')||'';
+      if(!/guide-emoji\/98\.png(?:\?.*)?$/.test(original))return;
+      img.src=GAME_FRONT+'assets/images/ui/regional-bosses.png';
+      styleGuideIcon(img,'98');
     });
   }
 
