@@ -48,6 +48,18 @@
     maps:GAME_FRONT+'assets/images/menu/city-1.png'
   };
   function styleGuideIcon(img,id){img.dataset.originalGuideIcon=id;img.style.width='24px';img.style.height='24px';img.style.objectFit='contain';img.style.verticalAlign='middle';img.style.margin='0 4px'}
+  function putGameIconBefore(node,src,label,id){
+    if(!node)return;
+    const img=document.createElement('img');
+    img.className='inline-icon';
+    img.src=src;
+    img.alt=label;
+    img.title=label;
+    styleGuideIcon(img,id||label);
+    const text=(node.textContent||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();
+    node.textContent='';
+    node.append(img,' ',document.createTextNode(text));
+  }
   function upgradeInformationIcons(){
     if(!document.getElementById('guide'))return;
     document.querySelectorAll('#guide img.inline-icon').forEach(img=>{
@@ -77,6 +89,28 @@
       strong.textContent='PVP';
       row.append(img,' ',strong);
     });
+
+    const clans=document.getElementById('clans');
+    if(clans){
+      clans.querySelectorAll('h3').forEach(h3=>{
+        const text=(h3.textContent||'').trim();
+        if(text.includes('Клановые войны')){
+          putGameIconBefore(h3,GAME_FRONT+'assets/images/ui/war-shields.png','Клановые войны','clan-wars');
+        }else if(text.includes('КЛАНОВАЯ ВАЛЮТА И МАГАЗИНЫ')){
+          putGameIconBefore(h3,GAME_ART+'items/item_clan_cur_icon.png','Клановая валюта','clan-currency');
+        }else if(text.includes('1. Магазин Клана и Общий магазин')){
+          putGameIconBefore(h3,GAME_FRONT+'assets/images/menu/shop-1.png','Магазин Клана и Общий магазин','clan-shop');
+        }
+      });
+      clans.querySelectorAll('p > b').forEach(label=>{
+        const text=(label.textContent||'').trim();
+        if(text==='Магазин Клана'){
+          putGameIconBefore(label,GAME_FRONT+'assets/images/menu/shop-1.png','Магазин Клана','clan-shop');
+        }else if(text==='Общий магазин Клана'){
+          putGameIconBefore(label,GAME_FRONT+'assets/images/menu/shop-1.png','Общий магазин Клана','clan-shop-common');
+        }
+      });
+    }
   }
   function upgradeInformationSectionIcons(){
     if(!document.getElementById('guide'))return;
