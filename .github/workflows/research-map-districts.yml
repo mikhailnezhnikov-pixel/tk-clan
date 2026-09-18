@@ -1,0 +1,55 @@
+name: Research map districts
+
+on:
+  push:
+    paths:
+      - '.github/workflows/research-map-districts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reverse geocode cluster centers
+        run: |
+          python3 - <<'PY'
+          import json,time,urllib.request,urllib.parse
+          clusters = {
+            "New York":[[-74.007558,40.798174,355],[-73.888761,40.809787,282],[-73.890348,40.728141,183],[-73.865535,40.869169,161]],
+            "Lagos":[[3.2204,6.676477,263],[3.282064,6.469404,121],[3.143992,6.418597,101],[3.352494,6.709955,54],[3.074272,6.532381,8],[3.265963,6.782038,8],[3.254666,6.603945,8],[3.07544,6.659255,8],[3.30164,6.802417,8]],
+            "Boston / Newton":[[-71.194213,42.307359,432],[-71.09813,42.263734,96]],
+            "St. Petersburg":[[30.286598,59.942563,291],[30.443123,59.95314,226]],
+            "Moscow":[[37.62902,55.742701,346],[37.746377,55.682943,54],[37.526346,55.845502,21]],
+            "London":[[-0.043937,51.375759,92],[0.102267,51.400711,16],[-0.330594,51.437018,16],[-0.027907,51.581488,10],[-0.015202,51.517144,10],[-0.054111,51.661174,9],[0.202523,51.403816,8],[-0.17817,51.68993,8],[0.158249,51.713515,8],[0.271483,51.474196,8],[0.133694,51.564571,8],[-0.470255,51.63756,7],[0.113802,51.491372,6],[-0.259132,51.331308,5]],
+            "Tokyo":[[139.771325,35.703354,53],[139.918033,35.649151,20]],
+            "Los Angeles":[[-118.496543,34.079613,51],[-118.551678,34.14376,14]],
+            "Auckland":[[174.620546,-36.829741,9]],
+            "Washington, D.C.":[[-76.964092,38.836965,8]]
+          }
+          out=[]
+          for city, rows in clusters.items():
+            for lon,lat,count in rows:
+              q=urllib.parse.urlencode({"format":"jsonv2","lat":lat,"lon":lon,"zoom":16,"addressdetails":1,"accept-language":"en,ru"})
+              url="https://nominatim.openstreetmap.org/reverse?"+q
+              req=urllib.request.Request(url,headers={"User-Agent":"TopKingDistrictResearch/1.0 (tk-clan.ru)"})
+              try:
+                with urllib.request.urlopen(req,timeout=30) as r:
+                  j=json.load(r)
+                a=j.get("address",{})
+                out.append({"group":city,"count":count,"center":[lon,lat],"display_name":j.get("display_name"),"address":a})
+              except Exception as e:
+                out.append({"group":city,"count":count,"center":[lon,lat],"error":repr(e)})
+              time.sleep(1.15)
+          with open("maps/generated/district-research.json","w",encoding="utf-8") as f:
+            json.dump(out,f,ensure_ascii=False,indent=2)
+          PY
+      - name: Commit district research
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add maps/generated/district-research.json
+          git diff --cached --quiet || (git commit -m "Research districts for linked map clusters [skip ci]" && git push)
