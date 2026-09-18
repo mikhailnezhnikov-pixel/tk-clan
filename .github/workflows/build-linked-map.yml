@@ -1,0 +1,239 @@
+name: Build linked Hamster King map
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'maps/generated/source-pack.b64'
+      - '.github/workflows/build-linked-map.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build geometry package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,gzip,json,urllib.request,urllib.parse,time,math,re,unicodedata
+
+          root=Path('maps/generated')
+          packed=(root/'source-pack.b64').read_text().strip()
+          src=json.loads(gzip.decompress(base64.b64decode(packed)))
+          ids=src['ids']; blocked=set(src.get('blocked',[]))
+          ways=[x[3:] for x in ids if x.startswith('way')]
+          rels=[x[8:] for x in ids if x.startswith('relation')]
+
+          endpoints=[
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter'
+          ]
+
+          def post(query):
+            payload=urllib.parse.urlencode({'data':query}).encode()
+            last=None
+            for attempt in range(8):
+              ep=endpoints[attempt%len(endpoints)]
+              try:
+                req=urllib.request.Request(ep,data=payload,headers={
+                  'User-Agent':'TopKingMapBuilder/1.0 (tk-clan.ru)',
+                  'Accept':'application/json'
+                })
+                with urllib.request.urlopen(req,timeout=180) as r:
+                  return json.load(r)
+              except Exception as e:
+                last=e
+                print('overpass retry',attempt+1,repr(e))
+                time.sleep(min(8+attempt*5,35))
+            raise last
+
+          elements=[]
+          batch=220
+          maxn=max(len(ways),len(rels))
+          for i in range(0,maxn,batch):
+            w=ways[i:i+batch]; rr=rels[i:i+batch]
+            q='[out:json][timeout:160];('
+            if w: q+='way(id:'+','.join(w)+');'
+            if rr: q+='relation(id:'+','.join(rr)+');'
+            q+=');out geom;'
+            data=post(q)
+            elements.extend(data.get('elements',[]))
+            print('batch',i//batch+1,'elements',len(data.get('elements',[])))
+            time.sleep(1.2)
+
+          wanted=set(ids)
+          features=[]
+          minx=miny=1e9; maxx=maxy=-1e9
+
+          def take_geom(g):
+            nonlocal_dummy=None
+            pts=[]
+            for p in g or []:
+              if 'lon' in p and 'lat' in p:
+                lon=round(float(p['lon']),6); lat=round(float(p['lat']),6)
+                pts.append([lon,lat])
+            return pts
+
+          seen=set()
+          for el in elements:
+            typ=el.get('type'); eid=el.get('id')
+            key=('way' if typ=='way' else 'relation')+str(eid)
+            if key not in wanted or key in seen: continue
+            seen.add(key)
+            rings=[]
+            if typ=='way':
+              g=take_geom(el.get('geometry'))
+              if len(g)>=2: rings=[g]
+            elif typ=='relation':
+              for m in el.get('members',[]):
+                g=take_geom(m.get('geometry'))
+                if len(g)>=2: rings.append(g)
+            if not rings: continue
+            for ring in rings:
+              for lon,lat in ring:
+                minx=min(minx,lon);maxx=max(maxx,lon);miny=min(miny,lat);maxy=max(maxy,lat)
+            features.append({'i':key,'s':0 if key in blocked else 1,'g':rings})
+
+          if not features:
+            raise SystemExit('No OSM geometries retrieved')
+
+          center=[(minx+maxx)/2,(miny+maxy)/2]
+          city='LINKED CITY'; country=''
+          try:
+            u='https://nominatim.openstreetmap.org/reverse?'+urllib.parse.urlencode({
+              'format':'jsonv2','lat':center[1],'lon':center[0],
+              'zoom':10,'addressdetails':1,'accept-language':'en'
+            })
+            req=urllib.request.Request(u,headers={'User-Agent':'TopKingMapBuilder/1.0 (tk-clan.ru)'})
+            with urllib.request.urlopen(req,timeout=30) as r:
+              rev=json.load(r)
+            a=rev.get('address',{})
+            city=a.get('city') or a.get('town') or a.get('municipality') or a.get('county') or 'LINKED CITY'
+            country=(a.get('country_code') or '').upper()
+          except Exception as e:
+            print('reverse geocode failed',repr(e))
+
+          def slugify(s):
+            x=unicodedata.normalize('NFKD',s).encode('ascii','ignore').decode().lower()
+            x=re.sub(r'[^a-z0-9]+','-',x).strip('-')
+            return x or 'linked-city'
+
+          def flag(cc):
+            if len(cc)!=2:return '🌐'
+            return ''.join(chr(127397+ord(c)) for c in cc)
+
+          slug=slugify(city)
+          outdir=Path('maps')/slug
+          outdir.mkdir(parents=True,exist_ok=True)
+
+          obj={
+            'name':city,'country':country,'flag':flag(country),
+            'bounds':[minx,miny,maxx,maxy],'center':center,
+            'total_requested':len(ids),'geometries':len(features),
+            'ok':sum(1 for f in features if f['s']==1),
+            'nodata':sum(1 for f in features if f['s']==0),
+            'features':features
+          }
+          (outdir/'data.json').write_text(json.dumps(obj,separators=(',',':'),ensure_ascii=False),'utf-8')
+
+          html=r'''<!doctype html><html lang="ru"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+          <meta name="theme-color" content="#07080b"><title>__CITY__ — Hamster King · Top King</title>
+          <link rel="stylesheet" href="../generated/vendor/leaflet.css">
+          <style>
+          *{box-sizing:border-box}html,body,#map{margin:0;width:100%;height:100%;background:#11151b}
+          body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#fff}
+          #hud{position:fixed;z-index:800;left:12px;top:12px;width:265px;max-width:calc(100vw - 24px);padding:14px;border:1px solid rgba(232,182,84,.42);border-radius:16px;background:rgba(8,10,14,.94);box-shadow:0 18px 50px rgba(0,0,0,.42);backdrop-filter:blur(14px)}
+          .title{display:flex;align-items:center;gap:8px;margin:0 0 5px;font-weight:900}.sub{color:#aeb5c0;font-size:12px;margin-bottom:12px}
+          .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 0;font-size:13px}.row label{display:flex;gap:8px;align-items:center}.n{color:#ffe3a0;font-weight:900}
+          .btns{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px}.btns button,.back{min-height:38px;border:1px solid rgba(232,182,84,.34);border-radius:10px;background:rgba(232,182,84,.07);color:#ffe3a0;font-weight:800;text-decoration:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+          #loading{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:#11151b;color:#ffe3a0;font-weight:800}.hide{display:none!important}
+          .leaflet-control-attribution{font-size:9px!important}
+          @media(max-width:640px){#hud{left:9px;top:9px;width:235px;padding:11px}.title{font-size:14px}.sub{font-size:11px}.row{font-size:12px}.btns button,.back{min-height:34px;font-size:12px}}
+          </style></head><body><div id="map"></div><div id="loading">Загрузка карты…</div>
+          <aside id="hud"><div class="title">__FLAG__ __CITY__</div><div class="sub">Игровые здания Hamster King</div>
+          <div class="row"><label><input id="ok" type="checkbox" checked> Есть данные игры</label><span class="n" id="okn">—</span></div>
+          <div class="row"><label><input id="nd" type="checkbox" checked> Без данных / 409</label><span class="n" id="ndn">—</span></div>
+          <div class="row"><span>Геометрий на карте</span><span class="n" id="gn">—</span></div>
+          <div class="btns"><button id="fit">Показать всё</button><a class="back" href="../">← Карты</a></div></aside>
+          <script src="../generated/vendor/leaflet.js"></script><script>
+          const loading=document.getElementById('loading'); let map,layer,data;
+          async function boot(){
+            const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),20000);
+            try{
+              const r=await fetch('data.json?v=1',{cache:'no-store',signal:ctl.signal});if(!r.ok)throw new Error('data '+r.status);data=await r.json();clearTimeout(to);
+              document.getElementById('okn').textContent=data.ok;document.getElementById('ndn').textContent=data.nodata;document.getElementById('gn').textContent=data.geometries;
+              map=L.map('map',{preferCanvas:true,zoomControl:true,minZoom:10,maxZoom:20});
+              L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap contributors'}).addTo(map);
+              draw();fit();loading.classList.add('hide');
+            }catch(e){console.error(e);loading.textContent='Не удалось загрузить карту · обновите страницу'}
+          }
+          function draw(){
+            if(layer)layer.remove(); const showOk=document.getElementById('ok').checked,showNd=document.getElementById('nd').checked;
+            layer=L.layerGroup().addTo(map); const renderer=L.canvas({padding:.5});
+            for(const f of data.features){if((f.s&&!showOk)||(!f.s&&!showNd))continue;for(const ring of f.g){if(ring.length<2)continue;
+              const ll=ring.map(p=>[p[1],p[0]]),closed=ring.length>3&&ring[0][0]===ring[ring.length-1][0]&&ring[0][1]===ring[ring.length-1][1];
+              const style=f.s?{color:'#f2c86d',weight:1,fillColor:'#c69339',fillOpacity:.38,renderer}:{color:'#858b96',weight:1,fillColor:'#4b515c',fillOpacity:.20,renderer};
+              const o=closed?L.polygon(ll,style):L.polyline(ll,style);o.bindTooltip(f.i,{sticky:true});o.addTo(layer);
+            }}
+          }
+          function fit(){if(!data)return;const b=data.bounds;map.fitBounds([[b[1],b[0]],[b[3],b[2]]],{padding:[24,24]})}
+          document.getElementById('ok').onchange=draw;document.getElementById('nd').onchange=draw;document.getElementById('fit').onclick=fit;boot();
+          </script></body></html>'''
+          html=html.replace('__CITY__',city).replace('__CITY__',city).replace('__FLAG__',flag(country))
+          (outdir/'index.html').write_text(html,'utf-8')
+
+          gen=Path('maps/generated')
+          (gen/'meta.json').write_text(json.dumps({'city':city,'slug':slug,'country':country,'flag':flag(country),'count':len(features)},ensure_ascii=False),'utf-8')
+          print('city',city,'slug',slug,'features',len(features),'bounds',[minx,miny,maxx,maxy])
+          PY
+
+      - name: Vendor Leaflet locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p maps/generated/vendor/images
+          curl -fsSL --retry 4 https://unpkg.com/leaflet@1.9.4/dist/leaflet.css -o maps/generated/vendor/leaflet.css
+          curl -fsSL --retry 4 https://unpkg.com/leaflet@1.9.4/dist/leaflet.js -o maps/generated/vendor/leaflet.js
+          curl -fsSL --retry 4 https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png -o maps/generated/vendor/images/marker-icon.png || true
+          curl -fsSL --retry 4 https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png -o maps/generated/vendor/images/marker-shadow.png || true
+
+      - name: Add generated city to maps index
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+          meta=json.loads(Path('maps/generated/meta.json').read_text('utf-8'))
+          p=Path('maps/index.html'); s=p.read_text('utf-8')
+          card=f'''<!-- AUTO-GENERATED-LINKED-MAP -->
+          <article class="card map-card"><h2 class="map-title"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/menu/city-1.png" alt="">{meta["flag"]} {meta["city"].upper()} <span class="interactive-badge">ИНТЕРАКТИВНАЯ</span></h2><div class="map-links"><a class="map-link" href="./{meta["slug"]}/"><span class="map-time">Игровые здания</span><span class="map-open">Открыть карту →</span></a></div><p class="map-note">{meta["count"]} геометрий из связанного списка way/relation.</p></article>
+          <!-- /AUTO-GENERATED-LINKED-MAP -->'''
+          pat=re.compile(r'<!-- AUTO-GENERATED-LINKED-MAP -->.*?<!-- /AUTO-GENERATED-LINKED-MAP -->',re.S)
+          if pat.search(s): s=pat.sub(card,s)
+          else: s=s.replace('<div class="maps-grid">','<div class="maps-grid">\n      '+card,1)
+          p.write_text(s,'utf-8')
+          PY
+
+      - name: Commit generated map
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add maps
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Build linked interactive city map [skip ci]"
+            git push
+          fi
