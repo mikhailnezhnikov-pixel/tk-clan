@@ -1,0 +1,799 @@
+[
+  {
+    "group": "New York",
+    "count": 355,
+    "center": [
+      -74.007558,
+      40.798174
+    ],
+    "display_name": "74th Street, Hudson Heights, North Bergen, Hudson County, New Jersey, 07047, United States",
+    "address": {
+      "road": "74th Street",
+      "hamlet": "Hudson Heights",
+      "town": "North Bergen",
+      "county": "Hudson County",
+      "state": "New Jersey",
+      "ISO3166-2-lvl4": "US-NJ",
+      "postcode": "07047",
+      "country": "United States",
+      "country_code": "us"
+    }
+  },
+  {
+    "group": "New York",
+    "count": 282,
+    "center": [
+      -73.888761,
+      40.809787
+    ],
+    "display_name": "Oak Point Avenue, Hunts Point, The Bronx, Bronx County, New York, 10474, United States",
+    "address": {
+      "road": "Oak Point Avenue",
+      "neighbourhood": "Hunts Point",
+      "suburb": "The Bronx",
+      "county": "Bronx County",
+      "city": "New York",
+      "state": "New York",
+      "ISO3166-2-lvl4": "US-NY",
+      "postcode": "10474",
+      "country": "United States",
+      "country_code": "us"
+    }
+  },
+  {
+    "group": "New York",
+    "count": 183,
+    "center": [
+      -73.890348,
+      40.728141
+    ],
+    "display_name": "57th Avenue, Queens, Queens County, New York, 11378, United States",
+    "address": {
+      "road": "57th Avenue",
+      "suburb": "Queens",
+      "county": "Queens County",
+      "city": "New York",
+      "state": "New York",
+      "ISO3166-2-lvl4": "US-NY",
+      "postcode": "11378",
+      "country": "United States",
+      "country_code": "us"
+    }
+  },
+  {
+    "group": "New York",
+    "count": 161,
+    "center": [
+      -73.865535,
+      40.869169
+    ],
+    "display_name": "Williamsbridge Road, The Bronx, Bronx County, New York, 10467, United States",
+    "address": {
+      "road": "Williamsbridge Road",
+      "suburb": "The Bronx",
+      "county": "Bronx County",
+      "city": "New York",
+      "state": "New York",
+      "ISO3166-2-lvl4": "US-NY",
+      "postcode": "10467",
+      "country": "United States",
+      "country_code": "us"
+    }
+  },
+  {
+    "group": "Lagos",
+    "count": 263,
+    "center": [
+      3.2204,
+      6.676477
+    ],
+    "display_name": "Ota, Ado Odo/Ota, Ogun State, 112224, Nigeria",
+    "address": {
+      "town": "Ota",
+      "county": "Ado Odo/Ota",
+      "state": "Ogun State",
+      "ISO3166-2-lvl4": "NG-OG",
+      "postcode": "112224",
+      "country": "Nigeria",
+      "country_code": "ng"
+    }
+  },
+  {
+    "group": "Lagos",
+    "count": 121,
+    "center": [
+      3.282064,
+      6.469404
+    ],
+    "display_name": "22 Road, Festac, Amuwo Odofin, Lagos State, 102102, Nigeria",
+    "address": {
+      "road": "22 Road",
+      "town": "Festac",
+      "county": "Amuwo Odofin",
+      "state": "Lagos State",
+      "ISO3166-2-lvl4": "NG-LA",
+      "postcode": "102102",
+      "country": "Nigeria",
+      "country_code": "ng"
+    }
+  },
+  {
+    "group": "Lagos",
+    "count": 101,
+    "center": [
+      3.143992,
+      6.418597
+    ],
+    "display_name": "Irewe, Ojo, Lagos State, Nigeria",
+    "address": {
+      "village": "Irewe",
+      "county": "Ojo",
+      "state": "Lagos State",
+      "ISO3166-2-lvl4": "NG-LA",
+      "country": "Nigeria",
+      "country_code": "ng"
+    }
+  },
+  {
+    "group": "Lagos",
+    "count": 54,
+    "center": [
+      3.352494,
+      6.709955
+    ],
+    "display_name": "Matogbun, Ifo, Ogun State, Nigeria",
+    "address": {
+      "village": "Matogbun",
+      "county": "Ifo",
+      "state": "Ogun State",
+      "ISO3166-2-lvl4": "NG-OG",
+      "country": "Nigeria",
+      "country_code": "ng"
+    }
+  },
+  {
+    "group": "Lagos",
+    "count": 8,
+    "center": [
+      3.074272,
+      6.532381
+    ],
+    "display_name": "Agbara, Ado Odo/Ota, Ogun State, Nigeria",
+    "address": {
+      "town": "Agbara",
+      "county": "Ado Odo/Ota",
+      "state": "Ogun State",
+      "ISO3166-2-lvl4": "NG-OG",
+      "country": "Nigeria",
+      "country_code": "ng"
+    }
+  },
+  {
+    "group": "Lagos",
+    "count": 8,
+    "center": [
+      3.265963,
+      6.782038
+    ],
+    "display_name": "Ifo, Ogun State, Nigeria",
+    "address": {
+      "county": "Ifo",
+      "state": "Ogun State",
+      "ISO3166-2-lvl4": "NG-OG",
+      "country": "Nigeria",
+      "country_code": "ng"
+    }
+  },
+  {
+    "group": "Lagos",
+    "count": 8,
+    "center": [
+      3.254666,
+      6.603945
+    ],
+    "display_name": "Ayobo, Alimosho, Lagos State, 100276, Nigeria",
+    "address": {
+      "suburb": "Ayobo",
+      "county": "Alimosho",
+      "state": "Lagos State",
+      "ISO3166-2-lvl4": "NG-LA",
+      "postcode": "100276",
+      "country": "Nigeria",
+      "country_code": "ng"
+    }
+  },
+  {
+    "group": "Lagos",
+    "count": 8,
+    "center": [
+      3.07544,
+      6.659255
+    ],
+    "display_name": "Ado Odo/Ota, Ogun State, Nigeria",
+    "address": {
+      "county": "Ado Odo/Ota",
+      "state": "Ogun State",
+      "ISO3166-2-lvl4": "NG-OG",
+      "country": "Nigeria",
+      "country_code": "ng"
+    }
+  },
+  {
+    "group": "Lagos",
+    "count": 8,
+    "center": [
+      3.30164,
+      6.802417
+    ],
+    "display_name": "Layemi, Ifo, Ogun State, Nigeria",
+    "address": {
+      "village": "Layemi",
+      "county": "Ifo",
+      "state": "Ogun State",
+      "ISO3166-2-lvl4": "NG-OG",
+      "country": "Nigeria",
+      "country_code": "ng"
+    }
+  },
+  {
+    "group": "Boston / Newton",
+    "count": 432,
+    "center": [
+      -71.194213,
+      42.307359
+    ],
+    "display_name": "Country Club Road, Oak Hill, Newton, Middlesex County, Massachusetts, 02459, United States",
+    "address": {
+      "road": "Country Club Road",
+      "village": "Oak Hill",
+      "city": "Newton",
+      "county": "Middlesex County",
+      "state": "Massachusetts",
+      "ISO3166-2-lvl4": "US-MA",
+      "postcode": "02459",
+      "country": "United States",
+      "country_code": "us"
+    }
+  },
+  {
+    "group": "Boston / Newton",
+    "count": 96,
+    "center": [
+      -71.09813,
+      42.263734
+    ],
+    "display_name": "Mattakeeset Street, Mattapan, Boston, Suffolk County, Massachusetts, 02126, United States",
+    "address": {
+      "road": "Mattakeeset Street",
+      "suburb": "Mattapan",
+      "city": "Boston",
+      "county": "Suffolk County",
+      "state": "Massachusetts",
+      "ISO3166-2-lvl4": "US-MA",
+      "postcode": "02126",
+      "country": "United States",
+      "country_code": "us"
+    }
+  },
+  {
+    "group": "St. Petersburg",
+    "count": 291,
+    "center": [
+      30.286598,
+      59.942563
+    ],
+    "display_name": "2-3-я линии В.О., округ № 7, Saint Petersburg, Northwestern Federal District, 190004, Russia",
+    "address": {
+      "road": "2-3-я линии В.О.",
+      "city_district": "округ № 7",
+      "city": "Saint Petersburg",
+      "state": "Saint Petersburg",
+      "ISO3166-2-lvl4": "RU-SPE",
+      "region": "Northwestern Federal District",
+      "postcode": "190004",
+      "country": "Russia",
+      "country_code": "ru"
+    }
+  },
+  {
+    "group": "St. Petersburg",
+    "count": 226,
+    "center": [
+      30.443123,
+      59.95314
+    ],
+    "display_name": "Большая Пороховская улица, Bolshaya Okhta, округ Большая Охта, Saint Petersburg, Northwestern Federal District, 195248, Russia",
+    "address": {
+      "road": "Большая Пороховская улица",
+      "suburb": "Bolshaya Okhta",
+      "city_district": "округ Большая Охта",
+      "city": "Saint Petersburg",
+      "state": "Saint Petersburg",
+      "ISO3166-2-lvl4": "RU-SPE",
+      "region": "Northwestern Federal District",
+      "postcode": "195248",
+      "country": "Russia",
+      "country_code": "ru"
+    }
+  },
+  {
+    "group": "Moscow",
+    "count": 346,
+    "center": [
+      37.62902,
+      55.742701
+    ],
+    "display_name": "Pyatnitskaya Street, Zamoskvorechye District, Moscow, Central Federal District, 115035, Russia",
+    "address": {
+      "road": "Pyatnitskaya Street",
+      "suburb": "Zamoskvorechye District",
+      "city": "Moscow",
+      "state": "Moscow",
+      "ISO3166-2-lvl4": "RU-MOW",
+      "region": "Central Federal District",
+      "postcode": "115035",
+      "country": "Russia",
+      "country_code": "ru"
+    }
+  },
+  {
+    "group": "Moscow",
+    "count": 54,
+    "center": [
+      37.746377,
+      55.682943
+    ],
+    "display_name": "Кубанская улица, Lyublino District, Moscow, Central Federal District, 109338, Russia",
+    "address": {
+      "road": "Кубанская улица",
+      "suburb": "Lyublino District",
+      "city": "Moscow",
+      "state": "Moscow",
+      "ISO3166-2-lvl4": "RU-MOW",
+      "region": "Central Federal District",
+      "postcode": "109338",
+      "country": "Russia",
+      "country_code": "ru"
+    }
+  },
+  {
+    "group": "Moscow",
+    "count": 21,
+    "center": [
+      37.526346,
+      55.845502
+    ],
+    "display_name": "2-й Лихачёвский переулок, Golovinsky District, Moscow, Central Federal District, 125438, Russia",
+    "address": {
+      "road": "2-й Лихачёвский переулок",
+      "suburb": "Golovinsky District",
+      "city": "Moscow",
+      "state": "Moscow",
+      "ISO3166-2-lvl4": "RU-MOW",
+      "region": "Central Federal District",
+      "postcode": "125438",
+      "country": "Russia",
+      "country_code": "ru"
+    }
+  },
+  {
+    "group": "London",
+    "count": 92,
+    "center": [
+      -0.043937,
+      51.375759
+    ],
+    "display_name": "Wickham Road, Shirley, London Borough of Croydon, Greater London, England, CR0 8BH, United Kingdom",
+    "address": {
+      "road": "Wickham Road",
+      "suburb": "Shirley",
+      "city_district": "London Borough of Croydon",
+      "ISO3166-2-lvl8": "GB-CRY",
+      "city": "Greater London",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "CR0 8BH",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 16,
+    "center": [
+      0.102267,
+      51.400711
+    ],
+    "display_name": "Petersham Drive, Leesons, St Paul's Cray, London Borough of Bromley, Greater London, England, BR5 2PY, United Kingdom",
+    "address": {
+      "road": "Petersham Drive",
+      "quarter": "Leesons",
+      "suburb": "St Paul's Cray",
+      "city_district": "London Borough of Bromley",
+      "ISO3166-2-lvl8": "GB-BRY",
+      "city": "Greater London",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "BR5 2PY",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 16,
+    "center": [
+      -0.330594,
+      51.437018
+    ],
+    "display_name": "Strawberry Vale, Strawberry Hill, London Borough of Richmond upon Thames, Greater London, England, TW1 4SE, United Kingdom",
+    "address": {
+      "road": "Strawberry Vale",
+      "suburb": "Strawberry Hill",
+      "city_district": "London Borough of Richmond upon Thames",
+      "ISO3166-2-lvl8": "GB-RIC",
+      "city": "Greater London",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "TW1 4SE",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 10,
+    "center": [
+      -0.027907,
+      51.581488
+    ],
+    "display_name": "Gosport Road, Leyton, London Borough of Waltham Forest, Greater London, England, E17 7LU, United Kingdom",
+    "address": {
+      "road": "Gosport Road",
+      "suburb": "Leyton",
+      "city_district": "London Borough of Waltham Forest",
+      "ISO3166-2-lvl8": "GB-WFT",
+      "city": "Greater London",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "E17 7LU",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 10,
+    "center": [
+      -0.015202,
+      51.517144
+    ],
+    "display_name": "Fawe Street, Bromley-by-Bow, Poplar, London Borough of Tower Hamlets, Greater London, England, E14 6FE, United Kingdom",
+    "address": {
+      "road": "Fawe Street",
+      "quarter": "Bromley-by-Bow",
+      "suburb": "Poplar",
+      "borough": "London Borough of Tower Hamlets",
+      "ISO3166-2-lvl8": "GB-TWH",
+      "city": "Greater London",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "E14 6FE",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 9,
+    "center": [
+      -0.054111,
+      51.661174
+    ],
+    "display_name": "Monroe Crescent, Enfield Highway, Southbury, London Borough of Enfield, Greater London, England, EN1 4HT, United Kingdom",
+    "address": {
+      "road": "Monroe Crescent",
+      "quarter": "Enfield Highway",
+      "suburb": "Southbury",
+      "city_district": "London Borough of Enfield",
+      "ISO3166-2-lvl8": "GB-ENF",
+      "city": "Greater London",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "EN1 4HT",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 8,
+    "center": [
+      0.202523,
+      51.403816
+    ],
+    "display_name": "Swanley Village Road, Christchurch, Swanley, Swanley Village, Sevenoaks, Kent, England, BR8 7NL, United Kingdom",
+    "address": {
+      "road": "Swanley Village Road",
+      "suburb": "Christchurch",
+      "village": "Swanley Village",
+      "town": "Sevenoaks",
+      "county": "Kent",
+      "ISO3166-2-lvl6": "GB-KEN",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "BR8 7NL",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 8,
+    "center": [
+      -0.17817,
+      51.68993
+    ],
+    "display_name": "Whaley Road, Oakmere, Potters Bar, Hertsmere, Hertfordshire, England, EN6 2RA, United Kingdom",
+    "address": {
+      "road": "Whaley Road",
+      "neighbourhood": "Oakmere",
+      "town": "Potters Bar",
+      "city": "Hertsmere",
+      "county": "Hertfordshire",
+      "ISO3166-2-lvl6": "GB-HRT",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "EN6 2RA",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 8,
+    "center": [
+      0.158249,
+      51.713515
+    ],
+    "display_name": "Blenheim Way, North Weald Bassett, Coopersale, Epping Forest, Essex, England, CM16 6HT, United Kingdom",
+    "address": {
+      "road": "Blenheim Way",
+      "village": "North Weald Bassett",
+      "city": "Epping Forest",
+      "municipality": "Essex",
+      "ISO3166-2-lvl6": "GB-ESS",
+      "county": "Essex",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "CM16 6HT",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 8,
+    "center": [
+      0.271483,
+      51.474196
+    ],
+    "display_name": "Breach Road, Bridge View Industrial Estate, West Thurrock, South Ockendon, Thurrock, Essex, England, RM20 3NR, United Kingdom",
+    "address": {
+      "road": "Breach Road",
+      "industrial": "Bridge View Industrial Estate",
+      "suburb": "West Thurrock",
+      "town": "South Ockendon",
+      "municipality": "Thurrock",
+      "ISO3166-2-lvl6": "GB-THR",
+      "county": "Essex",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "RM20 3NR",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 8,
+    "center": [
+      0.133694,
+      51.564571
+    ],
+    "display_name": "Kemp Road, Becontree Heath, London Borough of Barking and Dagenham, Greater London, England, RM8 1SL, United Kingdom",
+    "address": {
+      "road": "Kemp Road",
+      "suburb": "Becontree Heath",
+      "city_district": "London Borough of Barking and Dagenham",
+      "ISO3166-2-lvl8": "GB-BDG",
+      "city": "Greater London",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "RM8 1SL",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 7,
+    "center": [
+      -0.470255,
+      51.63756
+    ],
+    "display_name": "Bury Meadows, The Cedars Estate, Batchworth, Rickmansworth, Three Rivers, Hertfordshire, England, WD3 1DR, United Kingdom",
+    "address": {
+      "road": "Bury Meadows",
+      "suburb": "The Cedars Estate",
+      "town": "Rickmansworth",
+      "city": "Three Rivers",
+      "county": "Hertfordshire",
+      "ISO3166-2-lvl6": "GB-HRT",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "WD3 1DR",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 6,
+    "center": [
+      0.113802,
+      51.491372
+    ],
+    "display_name": "Mottisfont Road, Abbey Wood, Royal Borough of Greenwich, Greater London, England, SE2 9LW, United Kingdom",
+    "address": {
+      "road": "Mottisfont Road",
+      "suburb": "Abbey Wood",
+      "city_district": "Royal Borough of Greenwich",
+      "ISO3166-2-lvl8": "GB-GRE",
+      "city": "Greater London",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "SE2 9LW",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "London",
+    "count": 5,
+    "center": [
+      -0.259132,
+      51.331308
+    ],
+    "display_name": "Grove Road, Epsom, Epsom and Ewell, Surrey, England, KT17 4DE, United Kingdom",
+    "address": {
+      "road": "Grove Road",
+      "town": "Epsom",
+      "city": "Epsom and Ewell",
+      "county": "Surrey",
+      "ISO3166-2-lvl6": "GB-SRY",
+      "state": "England",
+      "ISO3166-2-lvl4": "GB-ENG",
+      "postcode": "KT17 4DE",
+      "country": "United Kingdom",
+      "country_code": "gb"
+    }
+  },
+  {
+    "group": "Tokyo",
+    "count": 53,
+    "center": [
+      139.771325,
+      35.703354
+    ],
+    "display_name": "Soto-Kanda 6, Soto-Kanda, Chiyoda, Tokyo, 101-0021, Japan",
+    "address": {
+      "neighbourhood": "Soto-Kanda 6",
+      "quarter": "Soto-Kanda",
+      "city": "Chiyoda",
+      "ISO3166-2-lvl4": "JP-13",
+      "postcode": "101-0021",
+      "country": "Japan",
+      "country_code": "jp"
+    }
+  },
+  {
+    "group": "Tokyo",
+    "count": 20,
+    "center": [
+      139.918033,
+      35.649151
+    ],
+    "display_name": "Irifune 4, Irifune, Urayasu, Chiba Prefecture, 279-8550, Japan",
+    "address": {
+      "neighbourhood": "Irifune 4",
+      "quarter": "Irifune",
+      "city": "Urayasu",
+      "province": "Chiba Prefecture",
+      "ISO3166-2-lvl4": "JP-12",
+      "postcode": "279-8550",
+      "country": "Japan",
+      "country_code": "jp"
+    }
+  },
+  {
+    "group": "Los Angeles",
+    "count": 51,
+    "center": [
+      -118.496543,
+      34.079613
+    ],
+    "display_name": "Chalon Road, Brentwood Country Estates, Los Angeles, Los Angeles County, California, 90049, United States",
+    "address": {
+      "road": "Chalon Road",
+      "residential": "Brentwood Country Estates",
+      "city": "Los Angeles",
+      "county": "Los Angeles County",
+      "state": "California",
+      "ISO3166-2-lvl4": "US-CA",
+      "postcode": "90049",
+      "country": "United States",
+      "country_code": "us"
+    }
+  },
+  {
+    "group": "Los Angeles",
+    "count": 14,
+    "center": [
+      -118.551678,
+      34.14376
+    ],
+    "display_name": "Dorlon Drive, Tarzana Neighborhood Council District, Los Angeles, Los Angeles County, California, 91356, United States",
+    "address": {
+      "road": "Dorlon Drive",
+      "suburb": "Tarzana Neighborhood Council District",
+      "city": "Los Angeles",
+      "county": "Los Angeles County",
+      "state": "California",
+      "ISO3166-2-lvl4": "US-CA",
+      "postcode": "91356",
+      "country": "United States",
+      "country_code": "us"
+    }
+  },
+  {
+    "group": "Auckland",
+    "count": 9,
+    "center": [
+      174.620546,
+      -36.829741
+    ],
+    "display_name": "Luxor Place, Kōwhai Ridge, Massey East, Massey, Henderson-Massey, Auckland, 0814, New Zealand",
+    "address": {
+      "road": "Luxor Place",
+      "neighbourhood": "Kōwhai Ridge",
+      "quarter": "Massey East",
+      "suburb": "Massey",
+      "city": "Henderson-Massey",
+      "state": "Auckland",
+      "ISO3166-2-lvl4": "NZ-AUK",
+      "postcode": "0814",
+      "country": "New Zealand",
+      "country_code": "nz"
+    }
+  },
+  {
+    "group": "Washington, D.C.",
+    "count": 8,
+    "center": [
+      -76.964092,
+      38.836965
+    ],
+    "display_name": "Catskill Street, Hillcrest Heights, Prince George's County, Maryland, 20748, United States",
+    "address": {
+      "road": "Catskill Street",
+      "town": "Hillcrest Heights",
+      "county": "Prince George's County",
+      "state": "Maryland",
+      "ISO3166-2-lvl4": "US-MD",
+      "postcode": "20748",
+      "country": "United States",
+      "country_code": "us"
+    }
+  }
+]
