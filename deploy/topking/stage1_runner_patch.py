@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 p = Path('/tmp/HamsterKingMobile.user.js')
 s = p.read_text(encoding='utf-8')
@@ -34,8 +35,8 @@ if marker not in s:
 core_start = s.index("  async function apiJsonCore(")
 core_end = s.index(marker, core_start)
 core = s[core_start:core_end]
-core = core.replace('apiJson(', 'apiJsonCore(')
-if 'apiJson(' in core:
+core = re.sub(r'\\bapiJson\\s*\\(', 'apiJsonCore(', core)
+if re.search(r'\\bapiJson\\s*\\(', core):
     raise SystemExit('apiJsonCore still contains public apiJson retry calls')
 s = s[:core_start] + core + s[core_end:]
 
