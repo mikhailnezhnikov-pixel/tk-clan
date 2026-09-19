@@ -184,6 +184,21 @@
   function configureHomepage(){
     const hero=document.querySelector('main .hero');if(!hero)return;
     hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');
+
+    // Homepage fallback: even if an older cached HTML shell is served,
+    // the third quick card must be public Game news, not Member area.
+    const quickCabinet=[...hero.querySelectorAll('.quick-panel .quick-link')].find(link=>{
+      const href=String(link.getAttribute('href')||'');
+      return /(?:^|\/)cabinet\/?(?:$|[?#])/.test(href)||!!link.querySelector('[data-i18n="cabinet"]');
+    });
+    if(quickCabinet){
+      quickCabinet.href='news/';
+      quickCabinet.innerHTML='<span class="quick-icon"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt=""></span>'+
+        '<span class="quick-copy"><span class="quick-label" data-i18n="announcements">Новости игры</span>'+
+        '<span class="quick-description" data-i18n="newsDesc">Официальные обновления и события</span></span>'+
+        '<span class="quick-arrow">→</span>';
+    }
+
     const actions=hero.querySelector('.hero-actions');
     if(actions)actions.innerHTML='<a class="button primary" href="https://app.hamsterking.games/app.html" target="_blank" rel="noopener" data-i18n="play">Начать играть</a>';
     if(!document.getElementById('tk-home-responsive')){
@@ -199,6 +214,41 @@
         }
         .hero-copy{width:min(540px,45%)!important}
         .hero-actions .button{min-width:190px}
+        @media(min-width:981px){
+          .hero{
+            background-attachment:fixed!important;
+          }
+          .hero::before{
+            background:
+              linear-gradient(90deg,rgba(4,6,9,.99) 0%,rgba(4,6,9,.92) 30%,rgba(4,6,9,.58) 47%,rgba(4,6,9,.16) 67%,rgba(4,6,9,.05) 100%),
+              linear-gradient(180deg,rgba(7,8,11,0) 48%,rgba(7,8,11,.10) 60%,rgba(7,8,11,.38) 74%,rgba(7,8,11,.78) 89%,#07080b 100%)!important;
+          }
+          .hero::after{
+            background:
+              radial-gradient(circle at 77% 25%,rgba(255,193,71,.19),transparent 24%),
+              linear-gradient(180deg,transparent 48%,rgba(7,8,11,.04) 60%,rgba(7,8,11,.28) 78%,rgba(7,8,11,.78) 94%,#07080b 100%)!important;
+          }
+          #sections{
+            overflow:hidden!important;
+            background:
+              radial-gradient(ellipse at 50% 0%,rgba(232,182,84,.055),transparent 28%),
+              #07080b!important;
+          }
+          #sections::before{
+            content:""!important;
+            position:absolute!important;
+            inset:0 0 auto 0!important;
+            height:230px!important;
+            z-index:0!important;
+            pointer-events:none!important;
+            background:
+              linear-gradient(180deg,rgba(7,8,11,.18) 0%,rgba(7,8,11,.55) 38%,rgba(7,8,11,.90) 74%,#07080b 100%),
+              url("assets/home/top-king-clan-hero-approved.jpg") 58% center / cover fixed no-repeat!important;
+            opacity:.82!important;
+          }
+          #sections>.shell{position:relative!important;z-index:1!important}
+          #sections .section-head{margin-bottom:34px!important}
+        }
         @media(max-width:980px) and (min-width:681px){
           .hero{background-position:56% center!important}
           .hero-copy{width:min(540px,54%)!important}
