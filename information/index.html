@@ -25,5 +25,5 @@ const FALLBACK={en:[['game','🎮 Game','The full canonical guide is currently m
 function rows(){return DATA[TopKingI18n.language]||FALLBACK[TopKingI18n.language]||DATA.ru}
 function renderGuide(){const r=rows();document.getElementById('toc').innerHTML=r.map(([id,title])=>`<a href="#${id}">${title.replace(/^[^\p{L}\p{N}]+/u,'')}</a>`).join('');document.getElementById('guide').innerHTML=r.map(([id,title,body])=>`<article id="${id}" class="card full guide-section"><h2>${title}</h2><div>${body}</div></article>`).join('')}
 document.addEventListener('tk-language-change',renderGuide);renderGuide();
-</script><script src="../assets/site-nav.js?v=20260920-7"></script>
+</script><script src="../assets/site-nav.js?v=20260920-8"></script>
 </body></html>
