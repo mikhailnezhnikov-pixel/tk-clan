@@ -32,6 +32,8 @@ jobs:
             grep -n -E "CREATE TABLE IF NOT EXISTS.*clan|clan_.*snapshot|participant|contributor" "$f" | head -180 || true
             echo "=== CABINET ROUTES ==="
             grep -n -A90 -B15 "/api/v1/cabinet/dashboard" "$f" | head -150 || true
+            echo "=== CABINET POST ROUTES ==="
+            grep -n -A220 -B20 "def do_POST" "$f" | head -300 || true
           '
       - name: Cleanup
         if: always()
