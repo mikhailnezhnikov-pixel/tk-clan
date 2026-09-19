@@ -35,7 +35,7 @@ jobs:
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          grep -q '^// @version      1.12.0$' /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.11.0$' /tmp/HamsterKingMobile.user.js
           ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
           ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
 
