@@ -16,7 +16,7 @@
   'use strict';
   const BUILD_VERSION = typeof GM_info !== 'undefined' && GM_info?.script?.version
     ? String(GM_info.script.version)
-    : '1.16.8';
+    : '1.17.0';
   const previousRuntime = window.__HK_MOBILE_RUNTIME__;
   if (previousRuntime?.active) {
     try { previousRuntime.open?.(); } catch (_) {}
