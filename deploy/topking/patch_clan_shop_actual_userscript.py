@@ -9,7 +9,7 @@ if MARKER in s:
     print("CLAN_SHOP_USERSCRIPT_ALREADY_PATCHED")
     raise SystemExit(0)
 
- s_version, n_version = re.subn(r"^// @version\\s+\\S+.*$", "// @version      1.17.0", s, count=1, flags=re.M)
+s_version, n_version = re.subn(r"^// @version\s+\S+.*$", "// @version      1.17.0", s, count=1, flags=re.M)
 if n_version != 1:
     raise SystemExit("userscript version metadata missing")
 s = s_version
