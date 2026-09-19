@@ -1,2 +1,2 @@
-probe=2026-09-19T14:31:00Z
-purpose=stage2-migration-diagnostic
+probe=2026-09-19T14:34:00Z
+purpose=stage2c-fixed-full-chain
