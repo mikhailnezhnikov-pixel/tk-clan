@@ -1,5 +1,6 @@
 # Deploy trigger: actual Clan Shop telemetry v1
 # TopKing 1.17.2 deploy retry after service diagnostics hardening
+# Public data V4 deploy trigger
 from pathlib import Path
 import re
 import runpy
