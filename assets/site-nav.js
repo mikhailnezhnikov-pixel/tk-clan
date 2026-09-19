@@ -77,6 +77,49 @@
     document.head.appendChild(style);
   }
 
+  function ensureCabinetTabGroups(){
+    if(current()!=='cabinet')return;
+    const tabs=document.querySelector('.cab-tabs');
+    if(!tabs)return;
+    if(tabs.querySelector('[data-cab-group="main"]')&&tabs.querySelector('[data-cab-group="sections"]'))return;
+    const specs=[
+      {name:'main',label:'Основное',keys:['overview','stats','clan-shop']},
+      {name:'sections',label:'Разделы',keys:['announcements','maps','install']}
+    ];
+    const byKey=new Map([...tabs.querySelectorAll('[data-cab-tab]')].map(button=>[button.dataset.cabTab,button]));
+    if(!specs.some(group=>group.keys.some(key=>byKey.has(key))))return;
+    tabs.textContent='';
+    for(const spec of specs){
+      const group=document.createElement('div');
+      group.className='cab-tab-group';
+      group.dataset.cabGroup=spec.name;
+      const label=document.createElement('span');
+      label.className='cab-tab-group-label';
+      label.textContent=spec.label;
+      group.appendChild(label);
+      for(const key of spec.keys){
+        const button=byKey.get(key);
+        if(button)group.appendChild(button);
+      }
+      if(group.querySelector('[data-cab-tab]'))tabs.appendChild(group);
+    }
+    tabs.classList.add('tk-cab-tabs-grouped');
+    if(!document.getElementById('tk-cabinet-group-fallback-style')){
+      const style=document.createElement('style');
+      style.id='tk-cabinet-group-fallback-style';
+      style.textContent=`
+        .cab-tabs.tk-cab-tabs-grouped{display:grid!important;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)!important;gap:8px!important;overflow:visible!important}
+        .cab-tabs.tk-cab-tabs-grouped .cab-tab-group{min-width:0;display:flex;align-items:center;gap:5px;padding:3px;border:1px solid rgba(255,255,255,.055);border-radius:13px;background:rgba(255,255,255,.018)}
+        .cab-tabs.tk-cab-tabs-grouped .cab-tab-group-label{flex:0 0 auto;padding:0 7px;color:#727c89;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+        @media(max-width:760px){
+          .cab-tabs.tk-cab-tabs-grouped{grid-template-columns:1fr!important;gap:7px!important}
+          .cab-tabs.tk-cab-tabs-grouped .cab-tab-group{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;overflow:visible;padding:5px}
+          .cab-tabs.tk-cab-tabs-grouped .cab-tab-group-label{grid-column:1/-1;padding:0 3px 2px;background:transparent;font-size:9px}
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
   function createHeader(){
     if(current()==='home'||document.querySelector('.topbar,.site-header'))return;
     const header=document.createElement('header');header.className='topbar tk-generated-header';
@@ -165,7 +208,7 @@
     }
   }
   function render(){
-    ensureTheme();ensureNavStyles();createHeader();normalizeExistingHeader();
+    ensureTheme();ensureNavStyles();createHeader();normalizeExistingHeader();ensureCabinetTabGroups();
     document.querySelectorAll('nav.nav,nav.desktop-nav').forEach(n=>renderContainer(n,false));
     document.querySelectorAll('nav.mobile-nav,.mobile-links').forEach(n=>renderContainer(n,true));
     portalMobileMenus();
