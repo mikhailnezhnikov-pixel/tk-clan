@@ -1,0 +1,37 @@
+name: Export telegram bot handler
+
+on:
+  push:
+    paths:
+      - '.github/workflows/export-telegram-handler.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Fetch safe handler excerpt
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            sed -n "1828,2030p" /opt/hamsterking-license/server.py
+          ' > handler.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: telegram-handler
+          path: handler.txt
+          retention-days: 1
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" handler.txt
