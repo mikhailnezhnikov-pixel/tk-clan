@@ -1,2 +1,2 @@
-capture=2026-09-20T03:25:00+09:00
-scope=regular-fair-schema-live-1172
+capture=2026-09-20T03:32:00+09:00
+scope=regular-fair-nav-alias-live-1172
