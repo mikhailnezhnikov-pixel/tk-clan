@@ -29,19 +29,29 @@ jobs:
               s=p.read_text('utf-8')
               depth=len(p.parent.parts)
               prefix='../'*depth
+              home_href=prefix or './'
+              crest=f'{prefix}assets/brand/topking-clan-crest.png'
+
+              brand=f'<a class="brand" href="{home_href}" aria-label="Top King"><img class="tk-clan-crest" src="{crest}" alt="Top King"></a>'
+              s=re.sub(r'<a class="brand"[^>]*>.*?</a>',brand,s,count=1,flags=re.S)
+
+              s=re.sub(r'\s*<link[^>]+rel=["\'](?:shortcut )?icon["\'][^>]*>','',s,flags=re.I)
+              s=re.sub(r'\s*<link[^>]+rel=["\']apple-touch-icon["\'][^>]*>','',s,flags=re.I)
+              icons=f'  <link rel="icon" type="image/png" href="{crest}">\n  <link rel="apple-touch-icon" href="{crest}">\n'
+              if '</head>' in s:
+                  s=s.replace('</head>',icons+'</head>',1)
+
               tag=f'<script src="{prefix}assets/site-nav.js?v={nav_version}"></script>'
               if 'site-nav.js' in s:
-                  updated=re.sub(
+                  s=re.sub(
                       r'<script src="(?:\.\./)*assets/site-nav\.js(?:\?v=[^"]*)?"></script>',
                       tag,
                       s
                   )
-                  if updated!=s:
-                      p.write_text(updated,'utf-8')
-                  continue
-              if '</body>' in s:
+              elif '</body>' in s:
                   s=s.replace('</body>',tag+'\n</body>',1)
-                  p.write_text(s,'utf-8')
+
+              p.write_text(s,'utf-8')
           PY
       - name: Commit navigation normalization
         shell: bash
