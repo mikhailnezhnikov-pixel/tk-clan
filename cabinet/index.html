@@ -266,7 +266,13 @@
     .clanshop-requests-admin{margin:16px 0;padding:15px 16px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.025)}
     .clanshop-requests-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px}
     .clanshop-request-count{flex:0 0 auto;color:#ffe0a0;font-size:12px;font-weight:900}
+    .clanshop-requests-admin .clanshop-table{min-width:0;table-layout:fixed}
+    .clanshop-requests-admin .clanshop-table th:first-child,
+    .clanshop-requests-admin .clanshop-table td:first-child{width:44%}
+    .clanshop-requests-admin .clanshop-table th:last-child,
+    .clanshop-requests-admin .clanshop-table td:last-child{width:56%}
     .clanshop-request-cell{display:flex;align-items:center;justify-content:center;gap:8px;min-width:120px}
+    .clanshop-request-label{display:inline-flex;align-items:center;gap:5px;color:#cbd2da;font-size:12px;font-weight:750;white-space:nowrap}
     .clanshop-request-add{display:inline-flex;align-items:center;justify-content:center;min-width:82px;padding:6px 8px;border:1px solid rgba(232,182,84,.38);border-radius:9px;background:rgba(232,182,84,.08);color:#ffe0a0;font-size:11px;font-weight:900;cursor:pointer}
     .clanshop-request-add:disabled{border-color:rgba(255,255,255,.09);background:rgba(255,255,255,.025);color:#68717c;cursor:default}
     .clanshop-final-title{margin:18px 0 9px;color:#fff;font-size:18px}
@@ -308,6 +314,11 @@
       .clanshop-request-controls{grid-template-columns:1fr}
       .clanshop-requests-head{display:block}
       .clanshop-request-count{display:block;margin-top:6px}
+      .clanshop-requests-admin .clanshop-table th,
+      .clanshop-requests-admin .clanshop-table td{padding:9px 7px}
+      .clanshop-request-cell{min-width:0;justify-content:flex-start;flex-wrap:wrap;gap:6px}
+      .clanshop-request-cell .clanshop-qty{font-size:14px;min-width:30px}
+      .clanshop-request-add{min-width:76px;padding:6px 7px}
       .clanshop-history-head{display:block}
       .clanshop-periods{margin-top:10px}
       .clanshop-history-summary{grid-template-columns:1fr}
@@ -1365,7 +1376,7 @@
           const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong></div>';
           const qty=Number(row.request_splus_businesses||0);
           const accepted=Number(row.splus_businesses||0)===qty;
-          const requestCell='<div class="clanshop-request-cell"><span class="clanshop-qty">'+qty+'</span>'+
+          const requestCell='<div class="clanshop-request-cell"><span class="clanshop-request-label">Запрос: <b class="clanshop-qty">'+qty+'</b></span>'+
             '<button class="clanshop-request-add" type="button" data-clanshop-accept="splus_businesses" data-player-key="'+safe(row.player_key)+'" '+(accepted?'disabled':'')+'>'+
             (accepted?'✓ Добавлено':'+ Добавить')+'</button></div>';
           return '<tr><td>'+player+'</td><td>'+requestCell+'</td></tr>';
@@ -2270,7 +2281,7 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/cabinet-i18n.js?v=20260920-7"></script>
+<script src="../assets/cabinet-i18n.js?v=20260920-8"></script>
 <script src="../assets/site-nav.js?v=20260919-9"></script>
 </body>
 </html>
