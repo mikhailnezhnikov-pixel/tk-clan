@@ -374,11 +374,10 @@
       .login-visual{min-height:190px;padding:20px}
       .login-visual:before{background-size:118px auto;background-position:center 18%}
       .login-visual h3{font-size:25px}
-      .cab-tabs{top:calc(var(--header) + 7px);grid-template-columns:1fr;gap:5px;padding:5px;margin-bottom:14px;border-radius:14px;overflow:visible}
-      .cab-tab-group{width:100%;overflow-x:auto;scrollbar-width:none}
-      .cab-tab-group::-webkit-scrollbar{display:none}
-      .cab-tab-group-label{position:sticky;left:0;z-index:2;padding:0 7px;background:#0c1017}
-      .cab-tab{flex:1 0 auto;min-width:92px;min-height:40px;padding:8px 10px;font-size:12px;white-space:nowrap}
+      .cab-tabs{top:calc(var(--header) + 7px);grid-template-columns:1fr;gap:7px;padding:6px;margin-bottom:14px;border-radius:14px;overflow:visible}
+      .cab-tab-group{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;overflow:visible;padding:5px}
+      .cab-tab-group-label{grid-column:1/-1;padding:0 3px 2px;background:transparent;font-size:9px}
+      .cab-tab{min-width:0;min-height:40px;padding:8px 6px;font-size:11px;white-space:normal;line-height:1.15}
       .accountline{flex-direction:column}
       .account-main h2{font-size:24px}
       .access-badge{order:-1}
