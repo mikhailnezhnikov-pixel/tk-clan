@@ -108,7 +108,36 @@ jobs:
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/topking-live-after-deploy.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/topking-live-after-deploy.js
           node --check /tmp/topking-live-after-deploy.js
-          grep -q '^// @version      1.15.0 /tmp/topking-live-after-deploy.js
+          grep -q '^// @version      1.15.0          grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /tmp/topking-live-after-deploy.js
+          grep -q "GROWTH_HAMSTER_BUDGET_ID.*cur_cap" /tmp/topking-live-after-deploy.js
+          grep -q "GROWTH_GENERAL_BUDGET_ID.*item_pit_token" /tmp/topking-live-after-deploy.js
+
+          mkdir -p audit
+          live_sha="$(sha256sum /tmp/topking-live-after-deploy.js | awk '{print $1}')"
+          {
+            echo "version=1.15.0"
+            echo "revision=stage1-20260919-r4"
+            echo "hamsters=cur_cap"
+            echo "generals=item_pit_token"
+            echo "sha256=$live_sha"
+            echo "verified_by=deploy-topking-1150"
+          } > audit/hk-stage1-live-status.txt
+
+          grep -nE -C 10 'const hkRunner|AbortController|waitIfPaused|stopRequested|pitRunning|fairRunning|fairStop|recipeRunning|recipeStop|moduleMutationBusy|const hkStateStore|hkStateStore\.|async function apiJsonCore|async function apiJson\(' /tmp/topking-live-after-deploy.js > audit/hk-stage1-live-snippets.txt || true
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage1-live-status.txt audit/hk-stage1-live-snippets.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Verify live TopKing 1.15.0 Stage 1 r4"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/topking-1150.sha256 /tmp/topking-live-after-deploy.js
+ /tmp/topking-live-after-deploy.js
           grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /tmp/topking-live-after-deploy.js
           grep -q "GROWTH_HAMSTER_BUDGET_ID.*cur_cap" /tmp/topking-live-after-deploy.js
           grep -q "GROWTH_GENERAL_BUDGET_ID.*item_pit_token" /tmp/topking-live-after-deploy.js
