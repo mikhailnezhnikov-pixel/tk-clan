@@ -1,5 +1,9 @@
 version=1.15.0
 revision=stage1-20260919-r4
+stage2a=missing
+stage2b=missing
+stage2c=missing
+stage2d=missing
 hamsters=cur_cap
 generals=item_pit_token
 growth_guards=strict
