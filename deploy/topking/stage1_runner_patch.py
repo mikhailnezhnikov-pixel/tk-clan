@@ -184,9 +184,11 @@ gate = r'''
 gate_start_token = "\n  const HK_READ_ONLY_POST_PATHS = new Set(["
 rev_start_token = "\n  const HK_MUTATION_GATE_REV = "
 marker_pos = s.index(marker, core_start)
-gate_start = s.find(rev_start_token, core_end, marker_pos)
+# Recompute from core_start after rewriting, because replacing apiJson(...) with
+# apiJsonCore(...) changes offsets in an existing 1.15.0 file.
+gate_start = s.find(rev_start_token, core_start, marker_pos)
 if gate_start < 0:
-    gate_start = s.find(gate_start_token, core_end, marker_pos)
+    gate_start = s.find(gate_start_token, core_start, marker_pos)
 
 if gate_start >= 0:
     s = s[:gate_start] + "\n" + gate + s[marker_pos:]
