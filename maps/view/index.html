@@ -3,12 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#080b11">
+<meta name="theme-color" content="#423F42">
 <title>HK Map — Top King</title>
 <link rel="icon" href="https://cdn-prod-front-dist.hwgame.cloud/assets/images/menu/city-1.png">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="../moscow-20-19/vendor/maplibre-gl.css?v=4.7.1">
 <style>
-*{box-sizing:border-box}html,body,#map{margin:0;width:100%;height:100%;background:#0b0e14}body{font-family:Inter,Arial,sans-serif;color:#eef2f7;overflow:hidden}.leaflet-container{background:#11161f;font:inherit}#map{position:fixed;inset:0}.hud{position:fixed;z-index:1000;top:12px;left:12px;width:min(330px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:14px;border:1px solid rgba(232,182,84,.38);border-radius:16px;background:rgba(8,11,17,.94);box-shadow:0 10px 34px rgba(0,0,0,.45);backdrop-filter:blur(9px)}.head{display:flex;align-items:flex-start;gap:10px}.head-main{min-width:0;flex:1}.eyebrow{margin:0 0 4px;color:#d4ab55;font-size:11px;font-weight:900;letter-spacing:.12em}.title{margin:0;color:#fff;font-size:20px;line-height:1.15;overflow-wrap:anywhere}.status{margin:6px 0 0;color:#9ea7b4;font-size:12px}.back{display:grid;place-items:center;flex:0 0 36px;height:36px;border:1px solid rgba(255,255,255,.12);border-radius:11px;color:#f2d184;text-decoration:none;background:rgba(255,255,255,.035);font-weight:900}.filters{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:13px}.filter{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid rgba(255,255,255,.085);border-radius:11px;background:rgba(255,255,255,.025);cursor:pointer}.filter span{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800}.filter input{width:17px;height:17px;accent-color:#d9ab4d}.dot{width:9px;height:9px;border-radius:999px;box-shadow:0 0 0 1px rgba(255,255,255,.25)}.count{color:#aab2be;font-size:11px;font-weight:800}.tools{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.tools button{min-height:35px;border:1px solid rgba(232,182,84,.32);border-radius:10px;background:rgba(232,182,84,.065);color:#edd18d;font-weight:850;cursor:pointer}.legend{margin-top:9px;color:#8f98a5;font-size:11px;line-height:1.45}.error{position:fixed;z-index:1100;inset:0;display:grid;place-items:center;padding:24px;background:#080b11;text-align:center}.error-card{max-width:520px;padding:24px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#10151e}.error h1{margin:0 0 8px;font-size:25px}.error p{margin:0;color:#aab2be;line-height:1.55}.error a{display:inline-block;margin-top:16px;color:#e8b654}.hidden{display:none!important}.leaflet-control-attribution{background:rgba(8,11,17,.78)!important;color:#9099a5!important}.leaflet-control-attribution a{color:#d5b86d!important}@media(max-width:600px){.hud{top:8px;left:8px;width:calc(100vw - 16px);max-height:48dvh;padding:11px}.filters{grid-template-columns:repeat(3,1fr)}.filter{padding:8px}.filter span{font-size:11px}.title{font-size:18px}}
+*{box-sizing:border-box}html,body,#map{margin:0;width:100%;height:100%;background:#423F42}
+body{font-family:Inter,Arial,sans-serif;color:#eef2f7;overflow:hidden}
+#map{position:fixed;inset:0}
+.hud{position:fixed;z-index:20;top:12px;left:12px;width:min(330px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:14px;border:1px solid rgba(232,182,84,.38);border-radius:16px;background:rgba(8,11,17,.94);box-shadow:0 10px 34px rgba(0,0,0,.45);backdrop-filter:blur(9px)}
+.head{display:flex;align-items:flex-start;gap:10px}.head-main{min-width:0;flex:1}.eyebrow{margin:0 0 4px;color:#d4ab55;font-size:11px;font-weight:900;letter-spacing:.12em}.title{margin:0;color:#fff;font-size:20px;line-height:1.15;overflow-wrap:anywhere}.status{margin:6px 0 0;color:#9ea7b4;font-size:12px}.back{display:grid;place-items:center;flex:0 0 36px;height:36px;border:1px solid rgba(255,255,255,.12);border-radius:11px;color:#f2d184;text-decoration:none;background:rgba(255,255,255,.035);font-weight:900}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:13px}.filter{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid rgba(255,255,255,.085);border-radius:11px;background:rgba(255,255,255,.025);cursor:pointer}.filter span{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800}.filter input{width:17px;height:17px;accent-color:#d9ab4d}.dot{width:9px;height:9px;border-radius:999px;box-shadow:0 0 0 1px rgba(255,255,255,.25)}.count{color:#aab2be;font-size:11px;font-weight:800}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.tools button{min-height:35px;border:1px solid rgba(232,182,84,.32);border-radius:10px;background:rgba(232,182,84,.065);color:#edd18d;font-weight:850;cursor:pointer}.legend{margin-top:9px;color:#8f98a5;font-size:11px;line-height:1.45}
+.error{position:fixed;z-index:40;inset:0;display:grid;place-items:center;padding:24px;background:#080b11;text-align:center}.error-card{max-width:520px;padding:24px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#10151e}.error h1{margin:0 0 8px;font-size:25px}.error p{margin:0;color:#aab2be;line-height:1.55}.error a{display:inline-block;margin-top:16px;color:#e8b654}.hidden{display:none!important}
+.maplibregl-ctrl-group{background:rgba(17,10,2,.93)!important;border:1px solid #8b6b2d!important}.maplibregl-ctrl-group button{background-color:transparent!important}.maplibregl-ctrl-icon{filter:invert(91%) sepia(28%) saturate(708%) hue-rotate(351deg) brightness(104%) contrast(94%)}
+@media(max-width:600px){.hud{top:8px;left:8px;width:calc(100vw - 16px);max-height:48dvh;padding:11px}.filters{grid-template-columns:repeat(2,1fr)}.filter{padding:8px}.filter span{font-size:11px}.title{font-size:18px}}
 </style>
 </head>
 <body>
@@ -16,25 +25,113 @@
 <section id="hud" class="hud">
   <div class="head"><div class="head-main"><p class="eyebrow">TOP KING · HK MAP</p><h1 id="title" class="title">Карта</h1><p id="status" class="status">Загрузка…</p></div><a id="back" class="back" href="../" aria-label="Назад">←</a></div>
   <div id="filters" class="filters"></div>
-  <div class="tools"><button id="show-all" type="button">Показать всё</button><button id="fit" type="button">Вся карта</button></div>
-  <div class="legend">Инвестиционные здания отмечены светлым ободком. В закрытом режиме данные карты доступны только участникам с разрешением на раздел «Карты».</div>
+  <div class="tools"><button id="show-all" type="button">Подсветить всё</button><button id="fit" type="button">Вся карта</button></div>
+  <div id="legend" class="legend">Цвет здания — исходный цвет карты. Кристаллы включают подсветку поверх здания.</div>
 </section>
 <section id="error" class="error hidden"><div class="error-card"><h1 id="error-title">Карта недоступна</h1><p id="error-text"></p><a href="../">← Вернуться к картам</a></div></section>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="../moscow-20-19/vendor/maplibre-gl.js?v=4.7.1"></script>
 <script>
 const API='https://hk-license.89.125.1.71.sslip.io/api/v1',TOKEN_KEY='tk_clan_cabinet_session',key=new URLSearchParams(location.search).get('key')||'';
-const colors={'-1':'#7e8794',0:'#7e8794',1:'#78bdf2',2:'#7bd99a',3:'#e0c05a',4:'#ef8c48',5:'#df5af0'},visible=new Set([-1,0,1,2,3,4,5]);
-let mapData=null,markerRows=[];
-const map=L.map('map',{zoomControl:true,preferCanvas:true,minZoom:2,maxZoom:20}),layer=L.layerGroup().addTo(map),renderer=L.canvas({padding:.4});
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+const CRYSTALS=['NULL','0','1','2','3','4','5'];
+const LABELS={'NULL':'Не исслед.','0':'0 крист.','1':'1 крист.','2':'2 крист.','3':'3 крист.','4':'4 крист.','5':'5 крист.'};
+const DOTS={'NULL':'#8b8b80','0':'#ff5c5c','1':'#ffd84a','2':'#ff9a3d','3':'#c238ff','4':'#35e875','5':'#55d7ff'};
+let map=null,payload=null,mode='points',selected=new Set(),fitBoundsValue=null;
 function fail(title,text){document.getElementById('error-title').textContent=title;document.getElementById('error-text').textContent=text;document.getElementById('error').classList.remove('hidden')}
-async function fetchData(){if(!/^hk_[a-z0-9]+$/.test(key))throw new Error('invalid_key');const token=localStorage.getItem(TOKEN_KEY)||'';if(token){const r=await fetch(API+'/cabinet/maps/data?key='+encodeURIComponent(key),{headers:{Authorization:'Bearer '+token},cache:'no-store'});if(r.ok)return{data:await r.json(),mode:'private'};if(![401,403,404].includes(r.status))throw new Error('private_'+r.status)}const r=await fetch(API+'/public/maps/data?key='+encodeURIComponent(key),{cache:'no-store'});if(r.ok)return{data:await r.json(),mode:'public'};if([403,404].includes(r.status))throw new Error('not_available');throw new Error('public_'+r.status)}
+async function fetchData(){
+  if(!/^hk_[a-z0-9]+$/.test(key))throw new Error('invalid_key');
+  const token=localStorage.getItem(TOKEN_KEY)||'';
+  if(token){
+    const r=await fetch(API+'/cabinet/maps/data?key='+encodeURIComponent(key),{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+    if(r.ok)return{data:await r.json(),mode:'private'};
+    if(![401,403,404].includes(r.status))throw new Error('private_'+r.status);
+  }
+  const r=await fetch(API+'/public/maps/data?key='+encodeURIComponent(key),{cache:'no-store'});
+  if(r.ok)return{data:await r.json(),mode:'public'};
+  if([403,404].includes(r.status))throw new Error('not_available');
+  throw new Error('public_'+r.status);
+}
+function newMap(style){
+  if(map){map.remove();map=null}
+  map=new maplibregl.Map({container:'map',style,center:[0,0],zoom:2,pitch:0,bearing:0,minZoom:2,maxZoom:20,maxPitch:0,dragRotate:false,touchPitch:false,antialias:true});
+  map.addControl(new maplibregl.NavigationControl({showCompass:false,showZoom:true,visualizePitch:false}),'top-right');
+  map.dragRotate.disable();map.touchZoomRotate.disableRotation();
+  return map;
+}
+function baseStyle(background='#423F42'){return{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':background}}]}}
+function crystalFilter(){
+  const values=[...selected];
+  return values.length?['in',['get','crystals_key'],['literal',values]]:['==',['get','crystals_key'],'__none__'];
+}
+function refreshFullHighlight(){
+  if(!map||!map.getLayer('buildings-highlight'))return;
+  const filter=crystalFilter();
+  ['buildings-highlight-glow','buildings-highlight','buildings-outline'].forEach(id=>map.getLayer(id)&&map.setFilter(id,filter));
+  if(map.getLayer('buildings-point-highlight'))map.setFilter('buildings-point-highlight',['all',['==',['geometry-type'],'Point'],filter]);
+}
+function buildFullFilters(full){
+  const counts=Object.fromEntries(CRYSTALS.map(v=>[v,0]));
+  for(const f of full.buildings?.features||[]){
+    const p=f?.properties||{}; if(!p.is_game)continue;
+    const k=String(p.crystals_key??'NULL'); if(k in counts)counts[k]++;
+  }
+  selected.clear();
+  document.getElementById('filters').innerHTML=CRYSTALS.map(v=>'<label class="filter"><span><input type="checkbox" value="'+v+'"><i class="dot" style="background:'+DOTS[v]+'"></i>'+LABELS[v]+'</span><b class="count">'+(counts[v]||0).toLocaleString('ru-RU')+'</b></label>').join('');
+  document.querySelectorAll('#filters input').forEach(input=>input.addEventListener('change',()=>{input.checked?selected.add(input.value):selected.delete(input.value);refreshFullHighlight()}));
+}
+function installStripePattern(){
+  const c=document.createElement('canvas');c.width=8;c.height=8;const x=c.getContext('2d');x.clearRect(0,0,8,8);x.strokeStyle='rgba(0,0,0,.42)';x.lineWidth=1;x.lineCap='butt';x.beginPath();x.moveTo(-4,8);x.lineTo(8,-4);x.moveTo(0,12);x.lineTo(12,0);x.stroke();
+  if(!map.hasImage('hk-selected-stripes'))map.addImage('hk-selected-stripes',x.getImageData(0,0,8,8));
+}
+function renderFull(full){
+  mode='full';buildFullFilters(full);
+  document.getElementById('legend').textContent='Цвет здания — исходный цвет карты. Галочки подсвечивают здания по кристаллам.';
+  fitBoundsValue=full.bounds;
+  const m=newMap(baseStyle('#423F42'));
+  m.on('load',()=>{
+    installStripePattern();
+    m.addSource('landuse',{type:'geojson',data:full.landuse});
+    m.addSource('water',{type:'geojson',data:full.water});
+    m.addSource('roads',{type:'geojson',data:full.roads});
+    m.addSource('buildings',{type:'geojson',data:full.buildings});
+    m.addLayer({id:'landuse',type:'fill',source:'landuse',paint:{'fill-color':['get','color'],'fill-opacity':.88}});
+    m.addLayer({id:'water',type:'fill',source:'water',paint:{'fill-color':'#243C56','fill-opacity':.96}});
+    m.addLayer({id:'roads-shadow',type:'line',source:'roads',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1F1E1F','line-width':['+',['get','width'],4.8],'line-opacity':.95}});
+    m.addLayer({id:'roads-main',type:'line',source:'roads',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#5F616D','line-width':['get','width'],'line-opacity':.96}});
+    m.addLayer({id:'buildings-base',type:'fill',source:'buildings',paint:{'fill-color':['get','base_color'],'fill-opacity':.95}});
+    m.addLayer({id:'buildings-edge-shadow',type:'line',source:'buildings',paint:{'line-color':'#342f32','line-width':['interpolate',['linear'],['zoom'],14,.35,16,.55,18,.85,20,1.15],'line-opacity':.78}});
+    m.addLayer({id:'buildings-edge-light',type:'line',source:'buildings',paint:{'line-color':'#7b7469','line-width':['interpolate',['linear'],['zoom'],14,.15,16,.25,18,.38,20,.55],'line-opacity':.28}});
+    m.addLayer({id:'buildings-highlight-glow',type:'fill',source:'buildings',filter:crystalFilter(),paint:{'fill-color':'#000','fill-opacity':.04}});
+    m.addLayer({id:'buildings-highlight',type:'fill',source:'buildings',filter:crystalFilter(),paint:{'fill-pattern':'hk-selected-stripes','fill-opacity':.55}});
+    m.addLayer({id:'buildings-outline',type:'line',source:'buildings',filter:crystalFilter(),paint:{'line-color':'#fff4be','line-width':['interpolate',['linear'],['zoom'],14,1.1,16,1.45,18,1.9,20,2.3],'line-opacity':.95}});
+    m.addLayer({id:'buildings-point-base',type:'circle',source:'buildings',filter:['==',['geometry-type'],'Point'],paint:{'circle-radius':['interpolate',['linear'],['zoom'],14,4,16,5,18,7,20,9],'circle-color':['get','base_color'],'circle-opacity':.95,'circle-stroke-color':'#342f32','circle-stroke-width':1}});
+    m.addLayer({id:'buildings-point-highlight',type:'circle',source:'buildings',filter:['all',['==',['geometry-type'],'Point'],crystalFilter()],paint:{'circle-radius':['interpolate',['linear'],['zoom'],14,6,16,8,18,11,20,14],'circle-color':'#000','circle-opacity':.05,'circle-stroke-color':'#fff4be','circle-stroke-width':['interpolate',['linear'],['zoom'],14,1.4,16,1.8,18,2.4,20,3],'circle-stroke-opacity':.95}});
+    if(Array.isArray(full.bounds)&&full.bounds.length===2)m.fitBounds(full.bounds,{padding:35,duration:0});
+    else if(Array.isArray(full.center))m.jumpTo({center:full.center,zoom:16.5});
+    const game=(full.buildings?.features||[]).filter(f=>f?.properties?.is_game).length;
+    document.getElementById('status').textContent=game.toLocaleString('ru-RU')+' игровых зданий · полный контурный режим';
+  });
+}
 function decodePoints(flat){let lng=0,lat=0;const out=[];for(let i=0;i+2<(flat||[]).length;i+=3){lng+=Number(flat[i])||0;lat+=Number(flat[i+1])||0;const flag=Number(flat[i+2]);const investment=flag>=7;const crystals=investment?flag-8:flag;out.push([lng/1e5,lat/1e5,crystals,investment])}return out}
-function buildFilters(){const counts={0:0,1:0,2:0,3:0,4:0,5:0};for(const p of mapData.points||[]){const n=Number(p[2]);if(n>=0&&n<=5)counts[n]=(counts[n]||0)+1}document.getElementById('filters').innerHTML=[0,1,2,3,4,5].map(n=>'<label class="filter"><span><input type="checkbox" value="'+n+'" checked><i class="dot" style="background:'+colors[n]+'"></i>'+n+' крист.</span><b class="count">'+(counts[n]||0).toLocaleString('ru-RU')+'</b></label>').join('');document.querySelectorAll('#filters input').forEach(input=>input.addEventListener('change',()=>{const n=Number(input.value);input.checked?visible.add(n):visible.delete(n);renderPoints(false)}))}
-function renderPoints(fit=true){layer.clearLayers();markerRows=[];const bounds=[];for(const p of mapData.points||[]){const[lon,lat,crystals,investment]=p;if(!visible.has(Number(crystals)))continue;const marker=L.circleMarker([lat,lon],{radius:investment?6.5:5,color:investment?'#fff0b2':'rgba(8,11,17,.88)',weight:investment?2.2:1.1,fillColor:colors[crystals]||'#9ca3af',fillOpacity:.9,renderer}).bindTooltip((investment?'Investment · ':'')+(crystals<0?'кристаллы не указаны':crystals+' крист.'),{direction:'top',opacity:.92});marker.addTo(layer);markerRows.push(marker);bounds.push([lat,lon])}document.getElementById('status').textContent=(mapData.points||[]).length.toLocaleString('ru-RU')+' отмеченных зданий · показано '+markerRows.length.toLocaleString('ru-RU');if(fit&&bounds.length)map.fitBounds(bounds,{padding:[24,24],maxZoom:16})}
-(async()=>{try{const result=await fetchData();const payload=result.data||{},meta=payload.map||{};mapData={...meta,points:decodePoints(payload.points||[])};const title=[meta.city,meta.grid].filter(Boolean).join(' ')||key;document.title=title+' — Top King';document.getElementById('title').textContent=title;document.getElementById('back').href=result.mode==='private'?'../../cabinet/':'../';buildFilters();renderPoints(true)}catch(e){console.error(e);if(e.message==='not_available')fail('Карта закрыта','Эта карта ещё не опубликована или у вашей учётной записи нет доступа к закрытому разделу карт.');else if(e.message==='invalid_key')fail('Неверная ссылка','В ссылке отсутствует корректный идентификатор карты.');else fail('Не удалось загрузить карту','Сервер карты временно недоступен. Попробуйте обновить страницу позже.')}})();
-document.getElementById('show-all').onclick=()=>{visible.clear();[-1,0,1,2,3,4,5].forEach(n=>visible.add(n));document.querySelectorAll('#filters input').forEach(x=>x.checked=true);renderPoints(false)};
-document.getElementById('fit').onclick=()=>renderPoints(true);
+function renderPoints(data){
+  mode='points';document.getElementById('legend').textContent='Для этой карты пока загружены только точки. Полный контурный пакет ещё не подключён.';
+  const pts=decodePoints(data.points||[]),counts={'NULL':0,'0':0,'1':0,'2':0,'3':0,'4':0,'5':0};pts.forEach(p=>{const k=p[2]<0?'NULL':String(p[2]);if(k in counts)counts[k]++});
+  selected=new Set(CRYSTALS);
+  document.getElementById('filters').innerHTML=CRYSTALS.map(v=>'<label class="filter"><span><input type="checkbox" value="'+v+'" checked><i class="dot" style="background:'+DOTS[v]+'"></i>'+LABELS[v]+'</span><b class="count">'+(counts[v]||0).toLocaleString('ru-RU')+'</b></label>').join('');
+  const features=pts.map((p,i)=>({type:'Feature',id:i,geometry:{type:'Point',coordinates:[p[0],p[1]]},properties:{crystals:p[2],crystals_key:p[2]<0?'NULL':String(p[2]),investment:p[3]}}));
+  const style={version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap'},points:{type:'geojson',data:{type:'FeatureCollection',features}}},layers:[{id:'osm',type:'raster',source:'osm'},{id:'points',type:'circle',source:'points',paint:{'circle-radius':['case',['get','investment'],6.5,5],'circle-color':['match',['get','crystals'],-1,'#7e8794',0,'#7e8794',1,'#78bdf2',2,'#7bd99a',3,'#e0c05a',4,'#ef8c48',5,'#df5af0','#9ca3af'],'circle-stroke-color':['case',['get','investment'],'#fff0b2','rgba(8,11,17,.88)'],'circle-stroke-width':['case',['get','investment'],2.2,1.1],'circle-opacity':.9}}]};
+  const m=newMap(style);
+  const update=()=>{if(!m.getLayer('points'))return;const vals=[...selected];m.setFilter('points',vals.length?['in',['get','crystals_key'],['literal',vals]]:['==',['get','crystals_key'],'__none__'])};
+  document.querySelectorAll('#filters input').forEach(input=>input.addEventListener('change',()=>{input.checked?selected.add(input.value):selected.delete(input.value);update()}));
+  m.on('load',()=>{if(features.length){const xs=features.map(f=>f.geometry.coordinates[0]),ys=features.map(f=>f.geometry.coordinates[1]);fitBoundsValue=[[Math.min(...xs),Math.min(...ys)],[Math.max(...xs),Math.max(...ys)]];m.fitBounds(fitBoundsValue,{padding:24,maxZoom:16,duration:0})}document.getElementById('status').textContent=features.length.toLocaleString('ru-RU')+' отмеченных зданий · точечный режим'});
+}
+(async()=>{try{
+  const result=await fetchData();payload=result.data||{};const meta=payload.map||{};
+  const title=[meta.city,meta.grid].filter(Boolean).join(' ')||payload.full?.title||key;
+  document.title=title+' — Top King';document.getElementById('title').textContent=title;document.getElementById('back').href=result.mode==='private'?'../../cabinet/':'../';
+  if(payload.render==='full'&&payload.full)renderFull(payload.full);else renderPoints(payload);
+}catch(e){console.error(e);if(e.message==='not_available')fail('Карта закрыта','Эта карта ещё не опубликована или у вашей учётной записи нет доступа к закрытому разделу карт.');else if(e.message==='invalid_key')fail('Неверная ссылка','В ссылке отсутствует корректный идентификатор карты.');else fail('Не удалось загрузить карту','Сервер карты временно недоступен. Попробуйте обновить страницу позже.')}})();
+document.getElementById('show-all').onclick=()=>{if(mode==='full'){const all=selected.size===CRYSTALS.length;selected=all?new Set():new Set(CRYSTALS);document.querySelectorAll('#filters input').forEach(x=>x.checked=!all);refreshFullHighlight()}else{selected=new Set(CRYSTALS);document.querySelectorAll('#filters input').forEach(x=>x.checked=true);if(map?.getLayer('points'))map.setFilter('points',['in',['get','crystals_key'],['literal',CRYSTALS]])}};
+document.getElementById('fit').onclick=()=>{if(map&&fitBoundsValue)map.fitBounds(fitBoundsValue,{padding:35,duration:250})};
 </script>
 </body>
 </html>
