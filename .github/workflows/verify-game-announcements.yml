@@ -24,23 +24,9 @@ jobs:
       - name: Verify live feed parser
         run: |
           set -euo pipefail
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
-            cd /opt/hamsterking-license
-            python3 - <<'"'"'PY'"'"'
-import importlib.util
-spec=importlib.util.spec_from_file_location("hk_server","/opt/hamsterking-license/server.py")
-mod=importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mod)
-data=mod.game_announcements_payload(force=True)
-items=data.get("items") or []
-print("GAME_ANNOUNCEMENTS_OK", bool(data.get("ok")), "items="+str(len(items)), "stale="+str(bool(data.get("stale"))))
-if items:
-    first=items[0]
-    print("LATEST_POST", first.get("id"), (first.get("text") or "")[:100].replace("\n"," "))
-if not data.get("ok") or not items:
-    raise SystemExit(1)
-PY
-          '
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "cd /opt/hamsterking-license && python3 -c \"import importlib.util; spec=importlib.util.spec_from_file_location('hk_server','/opt/hamsterking-license/server.py'); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); data=mod.game_announcements_payload(force=True); items=data.get('items') or []; print('GAME_ANNOUNCEMENTS_OK', bool(data.get('ok')), 'items='+str(len(items)), 'stale='+str(bool(data.get('stale')))); print('LATEST_POST', items[0].get('id') if items else 'none', ((items[0].get('text') or '')[:100].replace(chr(10),' ') if items else '')); raise SystemExit(0 if data.get('ok') and items else 1)\""
+
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking"
