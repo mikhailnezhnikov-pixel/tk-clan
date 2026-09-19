@@ -25,6 +25,8 @@ jobs:
         run: |
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             f=/opt/hamsterking-license/HamsterKingMobile.user.js
+            echo "=== API BASE CONSTANTS ==="
+            grep -n -E "API_BASE|LICENSE.*BASE|CLAN_SKILLS_API_BASE" "$f" | head -80 || true
             echo "=== LICENSED SERVER JSON ==="
             n=$(grep -n "function licensedServerJson\|async function licensedServerJson" "$f" | head -1 | cut -d: -f1 || true)
             [ -n "$n" ] && sed -n "${n},$((n+90))p" "$f" || true
