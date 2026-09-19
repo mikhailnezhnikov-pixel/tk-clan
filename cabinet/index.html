@@ -750,11 +750,12 @@
     clanInfo=data.clan||{};
     clanPlayers=Array.isArray(clanInfo.players)?clanInfo.players:[];
     $('clan-title').textContent=clanInfo.key?'Клан '+clanInfo.key:'Последние данные';
-    $('participants').textContent=clanInfo.participants||clanPlayers.length||0;
+    const currentClanSnapshot=clanSnapshot();
+    $('participants').textContent=currentClanSnapshot.participants_count||currentClanSnapshot.participantsCount||clanInfo.participants||clanPlayers.length||0;
     const liveBlocks=structuredClanBlocks();
     const accumulatedTotal=liveBlocks.reduce((sum,block)=>sum+block.branches.reduce((branchSum,branch)=>branchSum+Number(branch.total||0),0),0);
     $('total-levels').textContent=formatNumber(accumulatedTotal||clanInfo.total_levels||clanPlayers.reduce((sum,p)=>sum+Number(p.total||0),0));
-    $('week').textContent=clanInfo.week||'—';
+    $('week').textContent=currentClanSnapshot.week_key||currentClanSnapshot.weekKey||clanInfo.week||'—';
     renderPlayerStats();
   }
 
