@@ -155,7 +155,17 @@ jobs:
           PY
 
           cat > /tmp/verify-hk-map.py <<'PY'
-          import sys
+          import json, os, sqlite3, subprocess, sys, urllib.request
+          pid=subprocess.check_output(
+              ['systemctl','show','hamsterking-license.service','-p','MainPID','--value'],
+              text=True
+          ).strip()
+          for item in open(f'/proc/{pid}/environ','rb').read().split(bytes([0])):
+              if b'=' not in item:
+                  continue
+              k,v=item.split(b'=',1)
+              os.environ[k.decode('utf-8','ignore')]=v.decode('utf-8','ignore')
+
           sys.path.insert(0, '/opt/hamsterking-license')
           import server
           maps=server._load_private_hk_maps()
@@ -176,6 +186,23 @@ jobs:
           if response.get('render') != 'full':
               raise SystemExit('New York API is not using full rendering')
           print('FULL_MAP_DATA_OK', len(buildings), game, len(full['roads']['features']), len(full['landuse']['features']))
+
+          with sqlite3.connect('/var/lib/hamsterking-license/licenses.db') as db:
+              row=db.execute("""SELECT telegram_id FROM clan_members
+                                WHERE active=1 AND maps_manage=1
+                                ORDER BY updated_at DESC LIMIT 1""").fetchone()
+          if not row:
+              raise SystemExit('no map manager for HTTP verification')
+          token=server.cabinet_token(str(row[0]))
+          req=urllib.request.Request(
+              'http://127.0.0.1:3188/api/v1/cabinet/maps/data?key=hk_newyork2332',
+              headers={'Authorization':'Bearer '+token,'Origin':'https://tk-clan.ru'}
+          )
+          with urllib.request.urlopen(req,timeout=15) as r:
+              http=json.load(r)
+          print('HTTP_PRIVATE_MAP_RENDER',http.get('render'),bool(http.get('full')),http.get('point_count'))
+          if http.get('render')!='full' or not http.get('full'):
+              raise SystemExit('HTTP private map route is still returning point mode')
           PY
 
       - name: Deploy backend and connect all Open links
