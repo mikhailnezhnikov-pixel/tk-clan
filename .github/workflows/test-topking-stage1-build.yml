@@ -1,0 +1,78 @@
+name: Test TopKing Stage 1 Build Only
+
+on:
+  push:
+    paths:
+      - '.github/workflows/test-topking-stage1-build.yml'
+      - 'deploy/topking/stage1_runner_patch.py'
+      - 'deploy/topking/test_stage1_mutation_gate.js'
+      - 'deploy/topking/test_stage1_patch_fixture.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: test-topking-stage1-build
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live 1.14.4 read only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+
+      - name: Test Stage 1 build and record result
+        run: |
+          set +e
+          : > /tmp/stage1-build.log
+          python3 deploy/topking/test_stage1_patch_fixture.py >>/tmp/stage1-build.log 2>&1
+          fixture_status=$?
+          if [ "$fixture_status" -eq 0 ]; then fixture=passed; else fixture=failed; fi
+
+          python3 deploy/topking/stage1_runner_patch.py >>/tmp/stage1-build.log 2>&1
+          patch_status=$?
+          if [ "$patch_status" -eq 0 ]; then patch=passed; else patch=failed; fi
+
+          node --check /tmp/HamsterKingMobile.user.js >>/tmp/stage1-build.log 2>&1
+          syntax_status=$?
+          if [ "$syntax_status" -eq 0 ]; then syntax=ok; else syntax=bad; fi
+
+          mkdir -p audit
+          {
+            echo "fixture=$fixture"
+            echo "patch=$patch"
+            echo "syntax=$syntax"
+            echo "source_version=$(grep -m1 '^// @version' /tmp/HamsterKingMobile.user.js | sed 's/^\/\/ @version[[:space:]]*//')"
+            echo "--- log tail ---"
+            tail -n 40 /tmp/stage1-build.log
+          } > audit/hk-stage1-build-test.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage1-build-test.txt
+          git commit -m "Record Stage 1 build-only test" || true
+          git pull --rebase origin main || true
+          git push origin HEAD:main || true
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/stage1-build.log
