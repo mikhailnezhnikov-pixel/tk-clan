@@ -4,7 +4,31 @@ import sys
 path = Path(sys.argv[1])
 s = path.read_text()
 MARKER = "TELEGRAM_APPLICATION_TOPIC_V1"
-if MARKER in s:
+GROUP_SILENCE_MARKER = "TELEGRAM_GROUP_SILENCE_V2"
+
+if MARKER in s and GROUP_SILENCE_MARKER not in s:
+    anchor = '''        return
+
+    if text.startswith("/start"):
+'''
+    replacement = '''        return
+
+    # TELEGRAM_GROUP_SILENCE_V2
+    # Group/forum messages must never start or continue a user flow.
+    # The only supported group command is /setapplications above.
+    if chat.get("type") in ("group", "supergroup", "channel"):
+        return
+
+    if text.startswith("/start"):
+'''
+    if anchor not in s:
+        raise SystemExit("group silence anchor missing")
+    s = s.replace(anchor, replacement, 1)
+    path.write_text(s)
+    print("TELEGRAM_GROUP_SILENCE_PATCH_OK")
+    raise SystemExit(0)
+
+if MARKER in s and GROUP_SILENCE_MARKER in s:
     print("TELEGRAM_APPLICATION_TOPIC_ALREADY_PRESENT")
     raise SystemExit(0)
 
