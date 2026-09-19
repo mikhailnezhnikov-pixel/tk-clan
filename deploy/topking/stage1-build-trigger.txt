@@ -1,0 +1,2 @@
+trigger=2026-09-19T14:15Z
+reason=strict-growth-guards-and-no-progress
