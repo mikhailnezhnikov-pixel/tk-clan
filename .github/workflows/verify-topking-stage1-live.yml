@@ -85,26 +85,39 @@ jobs:
           cp /tmp/topking-live.js /tmp/HamsterKingMobile.user.js
           set +e
           : > /tmp/hk-migration-build.log
-          stage2a=not-run; stage2b=not-run; stage2c=not-run; stage2d=not-run; migration_syntax=not-run
-          python3 deploy/topking/stage2_runner_patch.py >>/tmp/hk-migration-build.log 2>&1
-          migration_code=$?
-          if [ "$migration_code" = "0" ]; then stage2a=passed; else stage2a=failed; fi
-          if [ "$migration_code" = "0" ]; then
-            python3 deploy/topking/stage2b_runner_patch.py >>/tmp/hk-migration-build.log 2>&1
+          stage2a=not-run; stage2b=not-run; stage2c=not-run; stage2d=not-run; stage2e=not-run; stage2f=not-run; migration_syntax=not-run
+          migration_code=0
+
+          if grep -q '^// @version      1.16.3$' /tmp/HamsterKingMobile.user.js && \
+             grep -Fq "HK_STAGE2_RUNNER_REV = 'stage2a-20260919-r1'" /tmp/HamsterKingMobile.user.js && \
+             grep -Fq "HK_STAGE2B_RUNNER_REV = 'stage2b-20260919-r1'" /tmp/HamsterKingMobile.user.js && \
+             grep -Fq "HK_STAGE2_STATE_REV = 'stage2c-state-20260919-r1'" /tmp/HamsterKingMobile.user.js && \
+             grep -Fq "HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1'" /tmp/HamsterKingMobile.user.js; then
+            stage2a=already-live
+            stage2b=already-live
+            stage2c=already-live
+            stage2d=already-live
+          else
+            python3 deploy/topking/stage2_runner_patch.py >>/tmp/hk-migration-build.log 2>&1
             migration_code=$?
-            if [ "$migration_code" = "0" ]; then stage2b=passed; else stage2b=failed; fi
+            if [ "$migration_code" = "0" ]; then stage2a=passed; else stage2a=failed; fi
+            if [ "$migration_code" = "0" ]; then
+              python3 deploy/topking/stage2b_runner_patch.py >>/tmp/hk-migration-build.log 2>&1
+              migration_code=$?
+              if [ "$migration_code" = "0" ]; then stage2b=passed; else stage2b=failed; fi
+            fi
+            if [ "$migration_code" = "0" ]; then
+              python3 deploy/topking/stage2c_state_patch.py >>/tmp/hk-migration-build.log 2>&1
+              migration_code=$?
+              if [ "$migration_code" = "0" ]; then stage2c=passed; else stage2c=failed; fi
+            fi
+            if [ "$migration_code" = "0" ]; then
+              python3 deploy/topking/stage2d_resource_business_patch.py >>/tmp/hk-migration-build.log 2>&1
+              migration_code=$?
+              if [ "$migration_code" = "0" ]; then stage2d=passed; else stage2d=failed; fi
+            fi
           fi
-          if [ "$migration_code" = "0" ]; then
-            python3 deploy/topking/stage2c_state_patch.py >>/tmp/hk-migration-build.log 2>&1
-            migration_code=$?
-            if [ "$migration_code" = "0" ]; then stage2c=passed; else stage2c=failed; fi
-          fi
-          if [ "$migration_code" = "0" ]; then
-            python3 deploy/topking/stage2d_resource_business_patch.py >>/tmp/hk-migration-build.log 2>&1
-            migration_code=$?
-            if [ "$migration_code" = "0" ]; then stage2d=passed; else stage2d=failed; fi
-          fi
-          stage2e=not-run; stage2f=not-run
+
           if [ "$migration_code" = "0" ]; then
             python3 deploy/topking/stage2e_maps_patch.py >>/tmp/hk-migration-build.log 2>&1
             migration_code=$?
