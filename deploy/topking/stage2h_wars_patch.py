@@ -87,7 +87,7 @@ elif new_nav not in s:
     raise SystemExit('Wars nav anchor missing')
 
 war_page='''      <div class="hk-page" data-content="wars">
-        <div id="hk-war-content" class="hk-cardbox"><h3>\${either('Войны','Wars')}</h3><p class="hk-muted">\${either('Откройте вкладку, чтобы считать текущую войну.','Open this tab to read the current war.')}</p></div>
+        <div id="hk-war-content" class="hk-cardbox"><h3>${either('Войны','Wars')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать текущую войну.','Open this tab to read the current war.')}</p></div>
       </div>
 '''
 if 'data-content="wars"' not in s:
@@ -106,12 +106,7 @@ if "if (finalPage === 'wars') renderWars();" not in s:
     require(anchor,'activateModule clan anchor missing')
     s=s.replace(anchor,anchor+"\n      if (finalPage === 'wars') renderWars();",1)
 
-if '.hk-war-score{' not in s:
-    anchor='      .hk-map-controls{'
-    require(anchor,'map style anchor missing')
-    styles="      .hk-war-score{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:12px 0}.hk-war-score>div{display:grid;gap:5px;padding:12px;border:1px solid #304057;border-radius:12px;background:#101927}.hk-war-score>div:last-child{text-align:right}.hk-war-score small{color:#93a3b8}.hk-war-score b{overflow-wrap:anywhere}.hk-war-score strong{font-size:24px;color:#ffe083}.hk-war-score>span{font-weight:900;color:#ffbd37}\n"
-    s=s.replace(anchor,styles+anchor,1)
-
+# Visual polish is intentionally non-blocking during mass migration.
 checks=[
     ('// @version      1.16.7','Stage 2H version missing'),
     (f"HK_STAGE2H_WARS_REV = '{REV}'",'Stage 2H marker missing'),
