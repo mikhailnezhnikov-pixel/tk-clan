@@ -23,12 +23,12 @@ body{font-family:Inter,Arial,sans-serif;color:#eef2f7;overflow:hidden}
 <body>
 <div id="map"></div>
 <section id="hud" class="hud">
-  <div class="head"><div class="head-main"><p class="eyebrow">TOP KING · HK MAP</p><h1 id="title" class="title">Карта</h1><p id="status" class="status">Загрузка…</p></div><a id="back" class="back" href="../" aria-label="Назад">←</a></div>
+  <div class="head"><div class="head-main"><p class="eyebrow">TOP KING · HK MAP</p><h1 id="title" class="title">Карта</h1><p id="status" class="status">Загрузка…</p></div><a id="back" class="back" href="../../cabinet/?tab=maps" aria-label="Назад к картам">←</a></div>
   <div id="filters" class="filters"></div>
   <div class="tools"><button id="show-all" type="button">Подсветить всё</button><button id="fit" type="button">Вся карта</button></div>
   <div id="legend" class="legend">Цвет здания — исходный цвет карты. Кристаллы включают подсветку поверх здания.</div>
 </section>
-<section id="error" class="error hidden"><div class="error-card"><h1 id="error-title">Карта недоступна</h1><p id="error-text"></p><a href="../">← Вернуться к картам</a></div></section>
+<section id="error" class="error hidden"><div class="error-card"><h1 id="error-title">Карта недоступна</h1><p id="error-text"></p><a href="../../cabinet/?tab=maps">← Вернуться к картам</a></div></section>
 <script src="../moscow-20-19/vendor/maplibre-gl.js?v=4.7.1"></script>
 <script>
 const API='https://hk-license.89.125.1.71.sslip.io/api/v1',TOKEN_KEY='tk_clan_cabinet_session',key=new URLSearchParams(location.search).get('key')||'';
@@ -127,7 +127,7 @@ function renderPoints(data){
 (async()=>{try{
   const result=await fetchData();payload=result.data||{};const meta=payload.map||{};
   const title=[meta.city,meta.grid].filter(Boolean).join(' ')||payload.full?.title||key;
-  document.title=title+' — Top King';document.getElementById('title').textContent=title;document.getElementById('back').href=result.mode==='private'?'../../cabinet/':'../';
+  document.title=title+' — Top King';document.getElementById('title').textContent=title;document.getElementById('back').href=result.mode==='private'?'../../cabinet/?tab=maps':'../';
   if(payload.render==='full'&&payload.full)renderFull(payload.full);else renderPoints(payload);
 }catch(e){console.error(e);if(e.message==='not_available')fail('Карта закрыта','Эта карта ещё не опубликована или у вашей учётной записи нет доступа к закрытому разделу карт.');else if(e.message==='invalid_key')fail('Неверная ссылка','В ссылке отсутствует корректный идентификатор карты.');else fail('Не удалось загрузить карту','Сервер карты временно недоступен. Попробуйте обновить страницу позже.')}})();
 document.getElementById('show-all').onclick=()=>{if(mode==='full'){const all=selected.size===CRYSTALS.length;selected=all?new Set():new Set(CRYSTALS);document.querySelectorAll('#filters input').forEach(x=>x.checked=!all);refreshFullHighlight()}else{selected=new Set(CRYSTALS);document.querySelectorAll('#filters input').forEach(x=>x.checked=true);if(map?.getLayer('points'))map.setFilter('points',['in',['get','crystals_key'],['literal',CRYSTALS]])}};
