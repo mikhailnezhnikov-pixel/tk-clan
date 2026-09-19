@@ -1,0 +1,1585 @@
+# Current live Fair schema anchors
+
+===== function normalizeFairCatalog( =====
+
+        (parts.some(part => part.kind === 'currencies') || parts.some(part => part.id === 'item_invest_cur')));
+    });
+    const families = new Set(costParts(state.fair_reroll_cost).filter(p => p.kind === 'items').map(p => itemFamily(p.id)));
+    const overrides = {fair_event_hw:['item_event_hw_cur'], fair_event_nyear:['item_event_nyear_cur']};
+    (overrides[state.id] || []).forEach(value => families.add(value));
+    return fairCatalog.filter(row => liveSlotLotIds.has(row.lotId) ||
+      costParts(row.cost).some(p => p.kind === 'items' && families.has(itemFamily(p.id))));
+  }
+
+  function userVisibleFair(state) {
+    if (!state) return false;
+    const id = String(state.id || '').toLowerCase();
+    // fair_event_base is reused by the game for the currently running event.
+    // New clients may instead expose a named state (for example an autumn
+    // fair). Match that state through its live reroll currency/slots so future
+    // event names do not require another hard-coded fair id.
+    if (id === 'fair_default' || id === 'fair_event_base') return true;
+    const code = captureActiveEventCode();
+    if (!code) return false;
+    const markers = [id,
+      ...costParts(state.fair_reroll_cost).map(part => part.id),
+      ...(state.fair_slots || []).map(slot => String(slot?.shop_lot_id || ''))
+    ].map(value => String(value || '').toLowerCase());
+    return markers.some(value => value.includes(`event_${code}`) || value.includes(`_${code}_`) || value.endsWith(`_${code}`));
+  }
+
+  function visibleFairStates(documentValue = fairDocument || playerDocument) {
+    return fairStates(documentValue).filter(state => userVisibleFair(state) && fairRowsForState(state).length);
+  }
+
+  function mediaUrl(value, itemId = '') {
+    const raw = String(value || '');
+    if (/^https?:\/\//.test(raw)) return raw;
+    if (raw) return `https://cdn-prod-art.hwgame.cloud/${raw.replace(/^\/+/, '')}`;
+    return itemId ? `${ASSET_BASE}/${itemId}_icon.png` : '';
+  }
+
+  function paymentIcon(part) {
+    if (!part?.id) return '';
+    const folder = part.kind === 'currencies' ? 'currencies' : 'items';
+    return `https://cdn-prod-art.hwgame.cloud/${folder}/${part.id}_icon.png`;
+  }
+
+  function paymentLabel(id) {
+    const known = language === 'en'
+      ? {cur_gold:'Gold', cur_cap:'Caps', cur_prem:'Diamonds', item_invest_cur:'Invest coins', item_event_hw_cur:'Halloween', item_event_nyear_cur:'New Year', item_event_autumn_cur:'Autumn Leaves', item_event_autumn_cur_pb:'Golden Leaves'}
+      : {cur_gold:'Золото', cur_cap:'Крышки', cur_prem:'Алмазы', item_invest_cur:'Инвест-монеты', item_event_hw_cur:'Хэллоуин', item_event_nyear_cur:'Новый год', item_event_autumn_cur:'Осенние листья', item_event_autumn_cur_pb:'Золотые листья'};
+    return known[id] || String(id || '').replace(/^item_/, '').replace(/^cur_/, '').replace(/_/g, ' ');
+  }
+
+  function fairIconHtml(url, className = 'hk-fair-icon') {
+    return `<img class="${className}" src="${escapeHtml(url)}" alt="" onerror="this.style.visibility='hidden'">`;
+  }
+
+  function shopLotIconHtml(row) {
+    if (!row) return '';
+    const urls = [...new Set([row.icon, ...iconUrls(row.rewardId)].filter(Boolean))];
+    const first = urls.shift() || '';
+    const quantity = Math.max(0, Number(row.rewardQuantity || 0));
+    return `<span class="hk-today-lot-visual"><img class="hk-today-lot-image" src="${escapeHtml(first)}" data-fallbacks="${escapeHtml(JSON.stringify(urls))}" alt=""><small>${quantity ? `×${quantity.toLocaleString(locale())}` : ''}</small></span>`;
+  }
+
+  function normalizeFairCatalog(documentValue) {
+    return (documentValue?.shop_lots || []).flatMap(lot => {
+      const view = lot?.lot_view || {};
+      const content = (view.content_view || [])[0];
+      const parts = costParts(lot?.cost);
+      if (String(view.type || '').toLowerCase() !== 'fair' || lot.external_cost || !content || !parts.length || parts.some(p => p.quantity <= 0)) return [];
+      const rewardId = String(content.id || '');
+      return [{lotId:String(lot.id || ''), name:String(view.name || rewardId || lot.id), rewardId,
+        rewardQuantity:Math.trunc(Number(content.quantity || 0)), cost:lot.cost || {}, safe:safeFairPurchase(lot.cost), premium:premiumPurchase(lot.cost),
+        icon:mediaUrl(view.icon_card || view.icon || content.icon_card || content.icon, rewardId)}];
+    });
+  }
+
+  async function gameRetryDelay(ms){
+    const delay=Math.max(0,Number(ms)||0), signal=hkRunner.running?hkRunner.signal:null;
+    if(!delay)return;
+    if(!signal){await sleep(delay);return;}
+    if(signal.aborted)throw new DOMException('Aborted','AbortError');
+    await new Promise((resolve,reject)=>{let timer=null;const abort=()=>{if(timer)clearTimeout(timer);signal.removeEventListener('abort',abort);reject(new DOMException('Aborted','AbortError'));};timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},delay);signal.addEventListener('abort',abort,{once:true});});
+  }
+
+  async function gameFetchText(request,url,init={},timeoutMs=18000){
+    const controller=new AbortController(), runnerSignal=hkRunner.running?hkRunner.signal:null;
+    let timedOut=false, timer=null, detach=null;
+    if(runnerSignal){
+      const abort=()=>controller.abort('runner');
+      if(runnerSignal.aborted)abort();else{runnerSignal.addEventListener('abort',abort,{once:true});detach=()=>runnerSignal.removeEventListener('abort',abort);}
+    }
+    timer=setTimeout(()=>{timedOut=true;controller.abort('timeout');},Math.max(1000,Number(timeoutMs)||18000));
+    try{
+      const response=await request(url,{...init,signal:controller.signal});
+      const text=await response.text();
+      return{response,text};
+    }catch(error){
+      if(runnerSignal?.aborted)throw new DOMException('Aborted','AbortError');
+      if(timedOut){const timeoutError=new Error(either('Тайм-аут запроса к игре','Game request timed out'));timeoutError.name='HKNetworkTimeout';throw timeoutError;}
+      throw error;
+    }finally{if(timer)clearTimeout(timer);try{detach?.();}catch(_){}}
+  }
+
+  async function apiJsonCore(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3) {
+    const maxRetries = retryNetwork === true ? GAME_REQUEST_RETRY_DELAYS_MS.length : retryNetwork === false ? 0 : Math.max(0, Math.trunc(Number(retryNetwork) || 0));
+    let authRetryLeft = retryAuthorization ? 1 : 0;
+    let attempt = 0, lockAttempt = 0;
+    while (true) {
+      const authorized = await ensureGameAuthorization(false, `api:${path}`);
+      if (!apiBase || !authorized || !apiHeaders.Authorization) throw new Error('Нет подключения к игре. Обновите страницу.');
+      const request = nativeNetworkFetch || window.fetch.bind(window);
+      const started = performance.now();
+      let response,text;
+      try {
+        ({response,text}=await gameFetchText(request,`${apiBase}${path}`,{method,headers:{...apiHeaders},body:body == null ? undefined : JSON.stringify(body)},18000));
+      } catch (error) {
+        if(error?.name==='AbortError'||hkRunner.signal?.aborted)throw error;
+        recordDiagnostic('game-request-network-error',{path,method,attempt:attempt+1,error:error?.message || error});
+        if (attempt < maxRetries) {
+          const delay = GAME_REQUEST_RETRY_DELAYS_MS[Math.min(attempt, GAME_REQUEST_RETRY_DELAYS_MS.length - 1)] || 6000;
+          attempt += 1; await gameRetryDelay(delay); continue;
+        }
+        setHealth('game', false, error?.name==='HKNetworkTimeout'?'тайм-аут':'ошибка сети');
+        throw new Error(`${path}: ${error?.message || error}`);
+      }
+      let value; try { value = JSON.parse(text); } catch (_) { value = null; }
+      recordDiagnostic('game-request',{path,method,status:response.status,attempt:attempt+1,durationMs:Math.round(performance.now()-started)});
+      if ((response.status === 401 || response.status === 403) && authRetryLeft > 0) {
+        authRetryLeft -= 1;
+        const refreshed = await ensureGameAuthorization(true, `http-${response.status}:${path}`);
+        if (refreshed) { attempt = 0; continue; }
+      }
+      const lockedText=String(value?.description||value?.message||text||'').toLowerCase();
+      const playerLocked=/player state is locked|state is locked by (?:other|another) request|player.*locked.*request/.test(lockedText);
+      if(playerLocked&&lockAttempt<3){
+        const delay=[650,1400,3000][lockAttempt++]||3000;
+        recordDiagnostic('game-request-player-locked',{path,method,status:response.status,lockAttempt,delay});
+        await gameRetryDelay(delay);continue;
+      }
+      const transient = response.status === 408 || response.status === 425 || response.status === 429 || response.status >= 500;
+      if (transient && attempt < maxRetries) {
+        const delay = GAME_REQUEST_RETRY_DELAYS_MS[Math.min(attempt, GAME_REQUEST_RETRY_DELAYS_MS.length - 1)] || 6000;
+        attempt += 1; await gameRetryDelay(delay); continue;
+      }
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) setHealth('auth', false, 'сессия истекла');
+        setHealth('game', false, `HTTP ${response.status}`);
+        const error=new Error(value?.description || value?.message || `HTTP ${response.status}: ${text.slice(0,160)}`);
+        error.name='HKGameApiError'; error.httpStatus=response.status; error.apiData=value; error.apiPath=path;
+        throw error;
+      }
+      if (!value || typeof value !== 'object') throw new Error('Сервер вернул некорректный ответ');
+      setHealth('game', true, 'игра отвечает');
+      setHealth('auth', true, 'авторизация активна');
+      if (path === '/player/me') {
+        const partial = !!(body && Array.isArray(body.arguments));
+        if (partial) hkStateStore.merge(value, 'api:player/me-partial'); else { hkStateStore.replace(value, 'api:player/me'); value = hkStateStore.snapshot || value; }
+        playerDocument = hkStateStore.snapshot || value || playerDocument;
+      } else if (hkIsMutationRequest(path, method)) {
+        hkStateStore.merge(value, `api:${path}`);
+        playerDocument = hkStateStore.snapshot || playerDocument;
+      }
+      hkGameBridge.noteMutation(path, method);
+      return value;
+    }
+  }
+
+  const HK_MUTATION_GATE_REV = 'stage1-20260919-r4';
+
+  const HK_READ_ONLY_POST_PATHS = new Set([
+    '/player/me',
+    '/player/hamster/lvlUp/view',
+    '/player/building',
+    '/shop/view',
+    '/business/values',
+    '/business_items',
+    '/cities',
+    '/client_config',
+    '/events',
+    '/items',
+    '/leaderboard',
+    '/premium',
+    '/bonuses/view',
+    '/alliance/list',
+    '/clan/skill_lines/stats',
+  ]);
+
+  function hkNormalizedApiPath(path) {
+    const value = String(path || '');
+    const q = value.indexOf('?');
+    return q >= 0 ? value.slice(0, q) : value;
+  }
+
+  function hkIsMutationRequest(path, method = 'GET') {
+    const verb = String(method || 'GET').toUpperCase();
+    if (verb === 'GET' || verb === 'HEAD' || verb === 'OPTIONS') return false;
+    return !HK_READ_ONLY_POST_PATHS.has(hkNormalizedApiPath(path));
+  }
+
+  const hkMutationGate = (() => {
+    let tail = Promise.resolve();
+    let sequence = 0;
+    let active = null;
+    const state = {
+      pending: 0,
+      completed: 0,
+      failed: 0,
+      lastPath: '',
+      activePath: ''
+    };
+
+    const safeDiagnostic = (kind, payload) => {
+      try { recordDiagnostic(kind, payload); } catch (_) {}
+    };
+
+    const run = async (path, task) => {
+      const id = ++sequence;
+      const normalizedPath = hkNormalizedApiPath(path);
+      state.pending += 1;
+
+      let release;
+      const turn = new Promise(resolve => { release = resolve; });
+      const previous = tail;
+      tail = turn;
+
+      await previous.catch(() => {});
+      state.pending = Math.max(0, state.pending - 1);
+      state.activePath = normalizedPath;
+      state.lastPath = normalizedPath;
+      active = { id, path: normalizedPath, startedAt: Date.now() };
+      safeDiagnostic('mutation-start', { id, path: normalizedPath, pending: state.pending });
+
+      try {
+        // Serialization is neutral: module-specific Pause/Stop stays in the
+        // calling runner. A paused Growth task must not freeze unrelated modules.
+        // Internal apiJsonCore retries remain inside this same queue turn.
+        const value = await task();
+        state.completed += 1;
+        safeDiagnostic('mutation-finish', {
+          id,
+          path: normalizedPath,
+          durationMs: Date.now() - active.startedAt
+        });
+        return value;
+      } catch (error) {
+        state.failed += 1;
+        safe
+
+===== async function loadFair() =====
+
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
+    }else{
+      const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
+      const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
+      const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
+        '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong></div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong></div></div>'+
+        '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
+    }
+    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
+  }
+
+  async function refreshWars(force=false) {
+    if(!requireLicense())return null;
+    try{
+      const result=await readPublicWar();
+      warSnapshot=result?.war||null;
+      warLastReadAt=Date.now();
+      renderWars();
+      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
+      return warSnapshot;
+    }catch(error){
+      log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
+      renderWars();
+      return null;
+    }
+  }
+
+  async function readPublicRatings() {
+    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
+    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
+      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
+      catch (_) {}
+    }
+    try {
+      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
+      Object.assign(ratings, normalizeAllianceRatings(value));
+    } catch (_) {}
+    return ratings;
+  }
+
+  async function collectPublicSnapshot(force = false) {
+    if (publicSnapshotPromise || !licenseState.allowed || !licenseState.token || !apiHeaders.Authorization) return publicSnapshotPromise;
+    if (!force && Date.now() - lastPublicSnapshot < PUBLIC_SNAPSHOT_INTERVAL_MS) return null;
+    publicSnapshotPromise = (async () => {
+      try {
+        const [warResult, ratings] = await Promise.all([readPublicWar(), readPublicRatings()]);
+        const payload = {ratings}; if (warResult.read) payload.war = warResult.war;
+        if (!warResult.read && !Object.keys(ratings).length) return;
+        await publicSnapshotServerJson(payload); lastPublicSnapshot = Date.now();
+      } catch (error) { console.warn('[HK] public snapshot failed', error); }
+      finally { publicSnapshotPromise = null; }
+    })();
+    return publicSnapshotPromise;
+  }
+
+  async function loadFair() {
+    if (!requireLicense()) return;
+    try {
+      log('Считываю ярмарки…');
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const visibleFairs = visibleFairStates();
+      if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
+      selectedFairLots.clear();
+      selectedFairSlotRules.clear();
+      renderFair();
+      log(`Ярмарка считана: ${visibleFairs.length} разделов, ${fairCatalog.length} лотов`, 'ok');
+    } catch (error) { log(`Ошибка ярмарки: ${error.message}`, 'bad'); }
+  }
+
+  function costVisual(cost, multiplier = 1) {
+    const parts = costParts(cost);
+    if (!parts.length) return '<span>0</span>';
+    return parts.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${(part.quantity * multiplier).toLocaleString(locale())}</b>`).join('');
+  }
+
+  function addProjectedCost(target, part, multiplier = 1) {
+    if (!part?.id) return;
+    const key = `${part.kind}|${part.id}`;
+    const current = target.get(key) || {...part, quantity:0};
+    current.quantity += Math.max(0, Number(part.quantity || 0)) * Math.max(0, Number(multiplier || 0));
+    target.set(key, current);
+  }
+
+  function walletForecastHtml(parts) {
+    const values = [...parts.values()].filter(part => part?.id).sort((a, b) => a.id.localeCompare(b.id));
+    if (!values.length) return '';
+    return `<div class="hk-wallet-forecast">${values.map(part => {
+      const balance = walletAmount(part.id);
+      const spend = Math.max(0, Number(part.quantity || 0));
+      const known = balance !== null;
+      return `<div class="hk-wallet-row">
+        <span class="hk-wallet-currency">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${escapeHtml(paymentLabel(part.id))}</b></span>
+        <span>${tr('balance')}: <b>${known ? balance.toLocaleString(locale()) : '—'}</b> · ${either('Макс. возможный расход','Maximum possible spend')}: <b>${spend.toLocaleString(locale())}</b></span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function fairProjectedCosts() {
+    const totals = new Map();
+    const state = fairState(selectedFairId);
+    const rows = fairRowsForState(state);
+    const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
+    const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
+    const rerollLimit = Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0));
+    const relevantRows = selectedRows.length ? selectedRows : rows;
+    const maximumLots = new Map();
+    for (const row of relevantRows) for (const part of costParts(row.cost)) {
+      const key = `${part.kind}|${part.id}`;
+      const current = maximumLots.get(key);
+      if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
+    }
+    for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
+    for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollLimit);
+    return totals;
+  }
+
+  function renderFair() {
+    if (!fairTypes || !fairLots) return;
+    if (!fairCatalog.length) {
+      fairTypes.innerHTML = `<p class="hk-muted">${tr('readFirst')}</p>`;
+      fairLots.innerHTML = '';
+      const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
+      updateFairControls(); return;
+    }
+    const states = visibleFairStates();
+    fairTypes.innerHTML = states.map(state => {
+      const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
+      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
+        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
+    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
+    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
+      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
+    });
+    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
+    const allRows = fairRowsForState(fairState(selectedFairId));
+    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
+    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
+    const currencyBar = root?.querySelector('#hk-fair-currencies');
+    if (currencyBar) {
+      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
+        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
+        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
+      }).join('');
+      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
+    }
+    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
+      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
+    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
+      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('blocked')}</small>`}</button>`).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
+    fairLots.querySelectorAll('[data-lot]').forEach(button => button.onclick = () => {
+      const row = fairCatalog.find(value => value.lotId === button.dataset.lot);
+      if (!row?.safe) { log(either('Этот лот заблокирован: неизвестная валюта', 'This lot is blocked: unknown currency'), 'warn'); return; }
+      if (selectedFairLots.has(row.lotId)) {
+        selectedFairLots.delete(row.lotId);
+        selectedFairSlotRules.delete(row.lotId);
+      } else {
+        selectedFairLots.add(row.lotId);
+        const options = fairSlotOptions();
+        selectedFairSlotRules.set(row.lotId, {regular:options.some(value => !value.vip), vip:options.some(value => value.vip)});
+      }
+      renderFair();
+    });
+    renderFairSlotRules();
+    updateFairControls();
+  }
+
+  function fairSlotOptions(state = fairState(selectedFairId)) {
+    const fairConfigs = shopViewDocument?.fairs || shopViewDocument?.fair || [];
+    const config = (Array.isArray(fairConfigs) ? fairConfigs : []).find(value => String(value?.id) === String(state?.id));
+    const metaById = new Map((config?.fair_slots || []).map(slot => [String(slot?.id), slot]));
+    return [...(state?.fair_slots || [])]
+      .sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0))
+      .map((slot, index) => ({slot, index, key:String(index), vip:Boolean(slot?.is_vip || metaById.get(String(slot?.id))?.is_vip)}));
+  }
+
+  function renderFairSlotRules() {
+    if (!fairSlotRules) return;
+    const slots = fairSlotOptions();
+    if (!selectedFairLots.size || !slots.length) {
+      fairSlotRules.innerHTML = '';
+      fairSlotRules.style.display = 'none';
+      return;
+    }
+    fairSlotRules.style.display = '';
+    const hasRegular = slots.some(value => !value.vip);
+    const hasVip = slots.some(value => value.vip);
+    for (const lotId of selectedFairLots) {
+      if (!selectedFairSlotRules.has(lotId)) selectedFairSlotRules.set(lotId, {regular:hasRegular, vip:hasVip});
+    }
+    fairSlotRules.innerHTML = `<h3>${tr('allowedCells')}</h3><p class="hk-muted">${tr('selectCellsHint')}</p>` +
+      [...selectedFairLots].map(lotId => {
+        const row = fairCatalog.find(value => value.lotId === lotId);
+        const allowed = selectedFairSlotRules.get(lotId) || {regular:hasRegular, vip:hasVip};
+        return `<div class="hk-slot-rule"><div class="hk-slot-product">${fairIconHtml(row?.icon || '', 'hk-price-icon')}<b>×${Number(row?.rewardQuantity || 0).toLocaleString(locale())}</b></div>
+          <div class="hk-slot-buttons"><button class="${allowed.regular ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="regular" ${hasRegular ? '' : 'disabled'}>${tr('regularSlots')}: ${tr(allowed.regular ? 'yes' : 'no')}</button>
+          <button class="vip ${allowed.vip ? 's
+
+===== async function runFair() =====
+
+    selectedFairLots = new Set((preset.lots || []).map(String).filter(id => available.has(id)));
+    selectedFairSlotRules.clear();
+    const options = fairSlotOptions();
+    for (const lotId of selectedFairLots) {
+      const groups = preset.slotGroups?.[lotId];
+      if (groups && typeof groups === 'object') {
+        selectedFairSlotRules.set(lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)});
+      } else {
+        const oldCells = new Set(Array.isArray(preset.slotRules?.[lotId]) ? preset.slotRules[lotId].map(String) : options.map(value => value.key));
+        selectedFairSlotRules.set(lotId, {
+          regular:options.some(value => !value.vip && oldCells.has(value.key)),
+          vip:options.some(value => value.vip && oldCells.has(value.key))
+        });
+      }
+    }
+    selectedFairCurrency = String(preset.currency || '');
+    const buy = root?.querySelector('#hk-fair-buy-limit'); if (buy) buy.value = Math.max(1, Number(preset.buyLimit || 1));
+    const reroll = root?.querySelector('#hk-fair-reroll-limit'); if (reroll) reroll.value = Math.max(0, Number(preset.rerollLimit || 0));
+    const premium = root?.querySelector('#hk-fair-premium-reroll'); if (premium) premium.checked = Boolean(preset.premiumReroll);
+    selectedFairBonusLots = new Set(Array.isArray(preset.bonusLots) ? preset.bonusLots.map(Number).filter(value => [5,10,30].includes(value)) : [5,10,30]);
+    renderFair();
+    const exact=root?.querySelector('#hk-fair-exact-lots'); if(exact) exact.value=['0','3','6','9'].includes(String(preset.exactLots)) ? String(preset.exactLots) : '0';
+    renderFairBonusChoices();
+    refreshFairPresets(name);
+    log(tr('settingLoaded', {name}), 'ok');
+  }
+
+  function deleteFairPreset() {
+    const name = fairPresetSelect?.value;
+    if (!name || !confirm(tr('deleteSetting', {name}))) return;
+    const all = fairPresets(); delete all[name]; save({fairPresets:all}); refreshFairPresets();
+  }
+
+  function costDocumentFromParts(parts) {
+    const result = {items:[], currencies:[]};
+    for (const part of parts || []) if (part?.id && part.quantity > 0) result[part.kind === 'currencies' ? 'currencies' : 'items'].push({id:part.id, quantity:part.quantity});
+    return result;
+  }
+
+  async function executeFairPurchase(row, slot, allowPremium = false) {
+    // Event fairs have their own currency/amount controls in this tab. Do not
+    // let the global daily budget reject the whole event run because one of
+    // the selected variants costs diamonds. The normal fair remains covered
+    // by the unified budget.
+    if (!isEventFairState(fairState(selectedFairId))) {
+      const decision = budgetDecision(row.cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+      if (!decision.allowed) throw new Error(decision.problems.join('; '));
+    }
+    const beforeDoc = playerDocument;
+    const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, beforeDoc)]));
+    fairDocument = await apiJson('/shop/buy', 'POST', {shop_lot_id:row.lotId, payment_type:'INTERNAL', fair_id:selectedFairId, slot_id:slot.id, lotName:row.name, lotDescription:''});
+    updateWalletFromResponse(fairDocument, row.cost);
+    for (const part of costParts(row.cost)) appendExpense({section:'fair', lotId:row.lotId, name:gameText(row.name) || row.name,
+      currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'purchased'});
+  }
+
+  async function runFair() {
+    if (!requireLicense() || fairRunning || !selectedFairLots.size) return;
+    if ([...selectedFairLots].some(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return !(rule?.regular || rule?.vip);
+    })) {
+      alert(tr('noCells')); return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
+        return;
+      }
+    } catch (error) {
+      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
+        return;
+      }
+    } catch (error) {
+      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    const buyLimit = Math.max(1, Number(root.querySelector('#hk-fair-buy-limit').value || 1));
+    const rerollLimit = Math.max(0, Number(root.querySelector('#hk-fair-reroll-limit').value || 0));
+    const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
+    const combo = fairComboSettings();
+    let state = fairState(selectedFairId);
+    if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
+    const cost = costParts(state?.fair_reroll_cost)[0];
+    const worst = cost ? `${cost.quantity * rerollLimit} ${cost.id}` : '0';
+    const maximumCrystalLotCost = fairCatalog.filter(row => selectedFairLots.has(row.lotId))
+      .flatMap(row => costParts(row.cost)).filter(part => part.kind === 'currencies' && part.id === 'cur_prem')
+      .reduce((maximum, part) => Math.max(maximum, part.quantity), 0) * buyLimit;
+    const crystalNotice = maximumCrystalLotCost
+      ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`)
+      : '';
+    if (!confirm(language === 'en'
+      ? `Start searching for selected lots?\n\nTotal purchases: ${buyLimit}\nMaximum rerolls: ${rerollLimit}\nMaximum reroll cost: ${worst}${crystalNotice}`
+      : `Запустить поиск выбранных лотов?\n\nВсего покупок: ${buyLimit}\nМаксимум прокруток: ${rerollLimit}\nМаксимальная цена прокруток: ${worst}${crystalNotice}`)) return;
+    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+    hkRunner.start({title:either('Ярмарка','Fair'),total:buyLimit,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    fairRunning = true; fairStop = false; updateFairControls();
+    let bought = 0, bonusBought = 0, rerolls = 0, authRetries = 0;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      while (!fairStop && bought < buyLimit) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep(either('Поиск и покупка лотов','Searching and buying lots'), bought, buyLimit);
+        if (combo.exactLots && buyLimit - bought < 3) {
+          log(either(`Остаток лимита ${buyLimit - bought}: для комбинации требуется минимум 3 покупки.`, `Remaining limit ${buyLimit - bought}: a combination requires at least 3 purchases.`), 'warn');
+          break;
+        }
+        state = fairState(selectedFairId);
+        if (!state) throw new Error('Выбранная ярмарка больше недоступна');
+        let purchased = false;
+        const options = fairSlotOptions(state);
+        const targets = options.filter(({slot, vip, index}) => {
+          // A combination spans all nine main cells: six regular and three
+          // VIP. Encrypted bonus cells start after them and never count toward
+          // the 3/6/9 group itself.
+          if (index >= 9 || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) return false;
+          const groups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+          return !groups || (vip ? groups.vip : groups.regular);
+        });
+        const maximumGroup = combo.exactLots
+          ? Math.floor(Math.min(combo.exactLots, buyLimit - bought) / 3) * 3
+          : 0;
+        const matchedTargets = maximumGroup ? targets.slice(0, maximumGroup) : [];
+        const groupSize = Math.floor(matchedTargets.length / 3) * 3;
+        const purchaseTargets = matchedTargets.slice(0, groupSize);
+        if (combo.exactLots && groupSize >= 3) {
+          const totalCosts = new Map();
+          for (const {slot} of purchaseTargets) {
+            const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+            for (const part of costParts(row?.cost)) totalCosts.set(part.id, (totalCosts.get(part.id) || 0) + part.quantity);
+          }
+          const insufficient = [...totalCosts].filter(([id, amount]) => {
+            const balance = walletAmount(id, playerDocument);
+            return balance === null || balance < amount;
+          }).map(([id, amount]) => {
+            const balance = walletAmount(id, playerDocument);
+            return `${paymentLabel(id)}: ${balance === null ? either('остаток не определён','balance is unknown') : `${balance.toLocaleString(locale())} / ${amount.toLocaleString(locale())}`}`;
+          });
+          if (insufficient.length) {
+            log(either(`Комбинация ${purchaseTargets.length} не выкуплена — не хватает средств: ${insufficient.join('; ')}`,
+              `Combination ${purchaseTargets.length} was not purchased — insufficient funds: ${insufficient.join('; ')}`), 'warn');
+          } else {
+            for (const {slot} of purchaseTargets) {
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              if (!row?.safe) continue;
+              log(`Лоты ${purchaseTargets.length}: покупка…`);
+              await executeFairPurchase(row, slot, allowPremium);
+              bought++; purchased = true; authRetries = 0;
+            }
+            // The last /shop/buy response may still contain the previous set
+            // of encrypted cells. Refresh once after the completed group so
+            // newly opened bonus slots are visible before we try to buy them.
+            playerDocument = await apiJson('/player/me', 'POST');
+            fairDocument = playerDocument;
+            state = fairState(selectedFairId);
+            const collars = fairSlotOptions(state).filter(({slot,index}) => {
+              if (index < 9 || index >= 9 + groupSize / 3 || slot.is_bought) return false;
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              return selectedFairBonusLots.has(Number(row?.rewardQuantity || 0));
+            });
+            for (const {slot} of collars) {
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              if (!row?.safe) continue;
+              log(`Открытый слот ${Number(slot.id) + 1}: покупка…`);
+              await executeFairPurchase(row, slot, allowPremium);
+              bonusBought++; purchased = true; authRetries = 0;
+            }
+          }
+        }
+        if (!combo.exactLots) for (const {slot, vip} of options) {
+          if (fairStop || bought >= buyLimit || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) continue;
+          const allowedGroups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+          if (allowedGroups && !(vip ? allowedGroups.vip : allowedGroups.regular)) continue;
+          const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+          if (!row?.safe) continue;
+          log(`Лот найден. Покупка ${bought + 1}/${buyLimit}…`);
+          try {
+            await executeFairPurchase(row, slot, allowPremium);
+            bought++; purchased = true; authRetries = 0; log(`Куплено ${bou
+
+===== function fairProjectedCosts( =====
+
+    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
+      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
+      catch (_) {}
+    }
+    try {
+      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
+      Object.assign(ratings, normalizeAllianceRatings(value));
+    } catch (_) {}
+    return ratings;
+  }
+
+  async function collectPublicSnapshot(force = false) {
+    if (publicSnapshotPromise || !licenseState.allowed || !licenseState.token || !apiHeaders.Authorization) return publicSnapshotPromise;
+    if (!force && Date.now() - lastPublicSnapshot < PUBLIC_SNAPSHOT_INTERVAL_MS) return null;
+    publicSnapshotPromise = (async () => {
+      try {
+        const [warResult, ratings] = await Promise.all([readPublicWar(), readPublicRatings()]);
+        const payload = {ratings}; if (warResult.read) payload.war = warResult.war;
+        if (!warResult.read && !Object.keys(ratings).length) return;
+        await publicSnapshotServerJson(payload); lastPublicSnapshot = Date.now();
+      } catch (error) { console.warn('[HK] public snapshot failed', error); }
+      finally { publicSnapshotPromise = null; }
+    })();
+    return publicSnapshotPromise;
+  }
+
+  async function loadFair() {
+    if (!requireLicense()) return;
+    try {
+      log('Считываю ярмарки…');
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const visibleFairs = visibleFairStates();
+      if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
+      selectedFairLots.clear();
+      selectedFairSlotRules.clear();
+      renderFair();
+      log(`Ярмарка считана: ${visibleFairs.length} разделов, ${fairCatalog.length} лотов`, 'ok');
+    } catch (error) { log(`Ошибка ярмарки: ${error.message}`, 'bad'); }
+  }
+
+  function costVisual(cost, multiplier = 1) {
+    const parts = costParts(cost);
+    if (!parts.length) return '<span>0</span>';
+    return parts.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${(part.quantity * multiplier).toLocaleString(locale())}</b>`).join('');
+  }
+
+  function addProjectedCost(target, part, multiplier = 1) {
+    if (!part?.id) return;
+    const key = `${part.kind}|${part.id}`;
+    const current = target.get(key) || {...part, quantity:0};
+    current.quantity += Math.max(0, Number(part.quantity || 0)) * Math.max(0, Number(multiplier || 0));
+    target.set(key, current);
+  }
+
+  function walletForecastHtml(parts) {
+    const values = [...parts.values()].filter(part => part?.id).sort((a, b) => a.id.localeCompare(b.id));
+    if (!values.length) return '';
+    return `<div class="hk-wallet-forecast">${values.map(part => {
+      const balance = walletAmount(part.id);
+      const spend = Math.max(0, Number(part.quantity || 0));
+      const known = balance !== null;
+      return `<div class="hk-wallet-row">
+        <span class="hk-wallet-currency">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${escapeHtml(paymentLabel(part.id))}</b></span>
+        <span>${tr('balance')}: <b>${known ? balance.toLocaleString(locale()) : '—'}</b> · ${either('Макс. возможный расход','Maximum possible spend')}: <b>${spend.toLocaleString(locale())}</b></span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function fairProjectedCosts() {
+    const totals = new Map();
+    const state = fairState(selectedFairId);
+    const rows = fairRowsForState(state);
+    const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
+    const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
+    const rerollLimit = Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0));
+    const relevantRows = selectedRows.length ? selectedRows : rows;
+    const maximumLots = new Map();
+    for (const row of relevantRows) for (const part of costParts(row.cost)) {
+      const key = `${part.kind}|${part.id}`;
+      const current = maximumLots.get(key);
+      if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
+    }
+    for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
+    for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollLimit);
+    return totals;
+  }
+
+  function renderFair() {
+    if (!fairTypes || !fairLots) return;
+    if (!fairCatalog.length) {
+      fairTypes.innerHTML = `<p class="hk-muted">${tr('readFirst')}</p>`;
+      fairLots.innerHTML = '';
+      const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
+      updateFairControls(); return;
+    }
+    const states = visibleFairStates();
+    fairTypes.innerHTML = states.map(state => {
+      const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
+      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
+        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
+    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
+    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
+      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
+    });
+    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
+    const allRows = fairRowsForState(fairState(selectedFairId));
+    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
+    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
+    const currencyBar = root?.querySelector('#hk-fair-currencies');
+    if (currencyBar) {
+      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
+        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
+        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
+      }).join('');
+      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
+    }
+    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
+      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
+    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
+      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('blocked')}</small>`}</button>`).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
+    fairLots.querySelectorAll('[data-lot]').forEach(button => button.onclick = () => {
+      const row = fairCatalog.find(value => value.lotId === button.dataset.lot);
+      if (!row?.safe) { log(either('Этот лот заблокирован: неизвестная валюта', 'This lot is blocked: unknown currency'), 'warn'); return; }
+      if (selectedFairLots.has(row.lotId)) {
+        selectedFairLots.delete(row.lotId);
+        selectedFairSlotRules.delete(row.lotId);
+      } else {
+        selectedFairLots.add(row.lotId);
+        const options = fairSlotOptions();
+        selectedFairSlotRules.set(row.lotId, {regular:options.some(value => !value.vip), vip:options.some(value => value.vip)});
+      }
+      renderFair();
+    });
+    renderFairSlotRules();
+    updateFairControls();
+  }
+
+  function fairSlotOptions(state = fairState(selectedFairId)) {
+    const fairConfigs = shopViewDocument?.fairs || shopViewDocument?.fair || [];
+    const config = (Array.isArray(fairConfigs) ? fairConfigs : []).find(value => String(value?.id) === String(state?.id));
+    const metaById = new Map((config?.fair_slots || []).map(slot => [String(slot?.id), slot]));
+    return [...(state?.fair_slots || [])]
+      .sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0))
+      .map((slot, index) => ({slot, index, key:String(index), vip:Boolean(slot?.is_vip || metaById.get(String(slot?.id))?.is_vip)}));
+  }
+
+  function renderFairSlotRules() {
+    if (!fairSlotRules) return;
+    const slots = fairSlotOptions();
+    if (!selectedFairLots.size || !slots.length) {
+      fairSlotRules.innerHTML = '';
+      fairSlotRules.style.display = 'none';
+      return;
+    }
+    fairSlotRules.style.display = '';
+    const hasRegular = slots.some(value => !value.vip);
+    const hasVip = slots.some(value => value.vip);
+    for (const lotId of selectedFairLots) {
+      if (!selectedFairSlotRules.has(lotId)) selectedFairSlotRules.set(lotId, {regular:hasRegular, vip:hasVip});
+    }
+    fairSlotRules.innerHTML = `<h3>${tr('allowedCells')}</h3><p class="hk-muted">${tr('selectCellsHint')}</p>` +
+      [...selectedFairLots].map(lotId => {
+        const row = fairCatalog.find(value => value.lotId === lotId);
+        const allowed = selectedFairSlotRules.get(lotId) || {regular:hasRegular, vip:hasVip};
+        return `<div class="hk-slot-rule"><div class="hk-slot-product">${fairIconHtml(row?.icon || '', 'hk-price-icon')}<b>×${Number(row?.rewardQuantity || 0).toLocaleString(locale())}</b></div>
+          <div class="hk-slot-buttons"><button class="${allowed.regular ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="regular" ${hasRegular ? '' : 'disabled'}>${tr('regularSlots')}: ${tr(allowed.regular ? 'yes' : 'no')}</button>
+          <button class="vip ${allowed.vip ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="vip" ${hasVip ? '' : 'disabled'}>♛ ${tr('vipSlots')}: ${tr(allowed.vip ? 'yes' : 'no')}</button></div></div>`;
+      }).join('');
+    fairSlotRules.querySelectorAll('[data-rule-lot]').forEach(button => button.onclick = () => {
+      const allowed = selectedFairSlotRules.get(button.dataset.ruleLot) || {regular:hasRegular, vip:hasVip};
+      allowed[button.dataset.ruleGroup] = !allowed[button.dataset.ruleGroup];
+      selectedFairSlotRules.set(button.dataset.ruleLot, allowed);
+      renderFairSlotRules(); updateFairControls();
+    });
+  }
+
+  function updateFairControls() {
+    const selected = root?.querySelector('#hk-fair-selected');
+    if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
+    const start = root?.querySelector('#hk-fair-start');
+    const rulesValid = [...selectedFairLots].every(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
+    });
+    if (start) start.disabled = fairRunning || !selectedFairId || !selectedFairLots.size || !rulesValid;
+    const stop = root?.querySelector('#hk-fair-stop');
+    if (stop) stop.disabled = !fairRunning;
+  }
+
+  function fairComboSettings() {
+    return {
+      exactLots:Math.max(0, Number(root?.querySelector('#hk-fair-exact-lots')?.value || 0))
+    };
+  }
+
+  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
+    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
+  }
+
+  function renderFairBonusChoices() {
+    const box = root?.querySelector('#hk-fair-bonus-lots'); if (!box) return;
+    const available = new Set(availableFairBonusLots());
+    box.innerHTML = `<span>${tr('fairBonusLots')}</span><div>${[5,10,30].map(quantity =>
+      `<label class="hk-check ${available.has(quantity) ? 'available' : 'unavailable'}"><input type="checkbox" data-fair-bonus="${quantity}" ${selectedFairBonusLots.has(quantity) ? 'checked' : ''} ${available.has(quantity) ? '' : 'disabled'}><b>×${quantity}</b></label>`).join('')}</div>`;
+    box.querySelectorAll('
+
+===== function recipeState( =====
+
+      const source = bonusById.get(String(value?.bonus_id || '')) || {};
+      const view = source.view || {};
+      if (!source.id && !value?.bonus_id) return [];
+      return [{id:String(source.id || value.bonus_id), caption:gameText(view.caption || source.id || value.bonus_id), value:String(view.value || ''), icon:mediaUrl(view.icon || '')}];
+    });
+    const quality = recipeQuality(item.rarity_level);
+    const idTier = String(itemId || '').match(/^item_bsn_r\d+t(\d+)(?:_|$)/);
+    return {
+      name:gameText(item.name || itemId), description:gameText(item.desc || ''), icon:mediaUrl(item.icon || '', itemId),
+      rarity:Number.isFinite(Number(business.rarity)) ? Number(business.rarity) : null,
+      quality:quality.quality, color:recipeLotColor(item) || quality.color, color_name:quality.colorName, pluses:quality.pluses,
+      // Recipe quality is authoritative: yellow is T5 and orange is T6.
+      // The technical tN fragment is only a fallback for items without
+      // quality metadata and must not override the visible game color.
+      tier:recipeTierFromQuality(quality) ?? (idTier ? visibleBusinessTier(idTier[1]) : null), bonuses
+    };
+  }
+
+  function currentRecipeDisplay(row) {
+    const meta = recipeMetadata(String(row?.item_id || ''));
+    return {...row,
+      rarity:meta.rarity ?? row?.rarity,
+      tier:meta.tier ?? row?.tier,
+      quality:meta.quality ?? row?.quality,
+      color:meta.color || row?.color || recipeQuality(row?.quality).color,
+      color_name:meta.color_name || row?.color_name,
+      pluses:meta.pluses ?? row?.pluses,
+      name:meta.name || row?.name,
+      description:meta.description || row?.description,
+      icon:meta.icon || row?.icon,
+      bonuses:meta.bonuses?.length ? meta.bonuses : (row?.bonuses || [])};
+  }
+
+  async function ensureRecipeMetadata() {
+    const requests = [];
+    if (!itemCatalogDocument) requests.push(apiJson('/items', 'GET').then(value => itemCatalogDocument = Array.isArray(value) ? value : []));
+    if (!businessCatalogDocument) requests.push(apiJson('/business_items', 'GET').then(value => businessCatalogDocument = value?.businesses || []));
+    if (!bonusCatalogDocument) requests.push(apiJson('/bonuses/view', 'GET').then(value => bonusCatalogDocument = Array.isArray(value) ? value : []));
+    if (!eventCatalogDocument) requests.push(apiJson('/events', 'GET').then(value => eventCatalogDocument = Array.isArray(value) ? value : []));
+    if (!clientConfigDocument) requests.push(apiJson('/client_config', 'GET').then(value => clientConfigDocument = value));
+    if (!premiumDocument) requests.push(apiJson('/premium', 'GET').then(value => premiumDocument = value || {}));
+    if (!localizationDocument) requests.push(apiJson(`/localization/${language}`, 'GET').then(value => localizationDocument = value));
+    await Promise.allSettled(requests);
+  }
+
+  function businessPlanFromLot(planId, slotOrder = 0) {
+    const id = String(planId || '');
+    if (!id.startsWith('mf_craftlot_')) return null;
+    const itemId = id.slice('mf_craftlot_'.length);
+    const match = itemId.match(/^item_bsn_r(\d+)t(\d+)(?:_|$)/);
+    const meta = recipeMetadata(itemId);
+    return {plan_id:id, item_id:itemId, rarity:meta.rarity ?? (match ? Number(match[1]) : null), tier:meta.tier ?? (match ? visibleBusinessTier(match[2]) : null),
+      quality:meta.quality, color:meta.color, color_name:meta.color_name, pluses:meta.pluses, name:meta.name,
+      description:meta.description, icon:meta.icon, bonuses:meta.bonuses, components:[], slot_order:Number(slotOrder || 0)};
+  }
+
+  function recipeState(documentValue = fairDocument || playerDocument) {
+    let states = fairStates(documentValue);
+    let state = recipeFairId ? states.find(value => String(value.id) === String(recipeFairId)) : null;
+    state ||= states.find(value => (value.fair_slots || []).some(slot => String(slot?.shop_lot_id || '').startsWith('mf_craftlot_')));
+    if (!state && documentValue !== playerDocument) {
+      states = fairStates(playerDocument);
+      state = recipeFairId ? states.find(value => String(value.id) === String(recipeFairId)) : null;
+      state ||= states.find(value => (value.fair_slots || []).some(slot => String(slot?.shop_lot_id || '').startsWith('mf_craftlot_')));
+    }
+    if (state && String(state.id) !== recipeFairId) {
+      recipeFairId = String(state.id); save({recipeFairId});
+    }
+    return state;
+  }
+
+  function plansFromRecipeState(state) {
+    const sequence = [];
+    for (const [index, slot] of (state?.fair_slots || []).entries()) {
+      const plan = businessPlanFromLot(slot?.shop_lot_id, index);
+      if (plan) sequence.push(plan);
+    }
+    if (!sequence.length) return [];
+    const primary = sequence[0];
+    const components = sequence.slice(1).map((row, index) => ({...row, component_order:index + 1}));
+    const signature = [primary.item_id, ...components.map(row => row.item_id)].join('|');
+    let hash = 2166136261;
+    for (let index = 0; index < signature.length; index++) {
+      hash ^= signature.charCodeAt(index); hash = Math.imul(hash, 16777619);
+    }
+    return [{...primary, plan_id:`recipe_${(hash >>> 0).toString(16).padStart(8,'0')}`, components, slot_order:0}];
+  }
+
+  async function submitRecipePlans(plans) {
+    if (!plans.length) return {added:0,total:communityRecipes.length};
+    const result = await recipeServerJson('/submit', {plans});
+    log(result.added
+      ? either(`В общую базу добавлено новых планов: ${result.added}`, `New plans added to the shared database: ${result.added}`)
+      : either('Все выпавшие планы уже есть в базе — дубли не засчитаны', 'All observed plans already exist — duplicates ignored'), result.added ? 'ok' : 'warn');
+    return result;
+  }
+
+  async function loadRecipes() {
+    if (!requireLicense()) return;
+    try {
+      log(either('Считываю каталог бизнес-планов…', 'Reading the business-plan catalog…'));
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      await ensureRecipeMetadata();
+      const state = recipeState();
+      if (!state) throw new Error(either('Откройте в игре «Проектное бюро» → «Каталог» и повторите считывание.', 'Open Project Bureau → Catalog in the game and read again.'));
+      currentRecipePlans = plansFromRecipeState(state);
+      try { await submitRecipePlans(currentRecipePlans); } catch (error) { log(`${either('Общая база недоступна', 'Shared database unavailable')}: ${error.message}`, 'warn'); }
+      renderRecipes();
+      log(either(`Каталог считан: планов ${currentRecipePlans.length}`, `Catalog loaded: ${currentRecipePlans.length} plans`), 'ok');
+    } catch (error) { log(`${either('Ошибка рецептов', 'Recipe error')}: ${error.message}`, 'bad'); }
+  }
+
+  function renderRecipes() {
+    if (!recipeCards || !recipeSummary) return;
+    const state = recipeState();
+    if (!state) {
+      recipeCards.innerHTML = `<p class="hk-muted">${tr('recipeReadFirst')}</p>`;
+      recipeSummary.textContent = tr('uniqueRecipes',{n:0});
+      const run = root?.querySelector('#hk-recipe-run'); if (run) run.disabled = true;
+      return;
+    }
+    currentRecipePlans = plansFromRecipeState(state);
+    recipeCards.innerHTML = currentRecipePlans.map(recipePlanHtml).join('') ||
+      `<p class="hk-muted">${either('Сейчас все ячейки каталога пусты', 'All catalog slots are currently empty')}</p>`;
+    installIconFallbacks(recipeCards);
+    bindRecipeDetails(recipeCards, currentRecipePlans);
+    const attempts = Math.max(1, Math.trunc(Number(root?.querySelector('#hk-recipe-attempts')?.value || 1)));
+    recipeSummary.innerHTML = `<b>${tr('currentRecipePlans')}: ${currentRecipePlans.length}</b><br><small>${tr('recipeCost')}: ${costVisual(state.fair_reroll_cost)} · ${tr('maxCost')}: ${scaledCostVisual(state.fair_reroll_cost,attempts)}</small>`;
+    const run = root?.querySelector('#hk-recipe-run'); if (run) run.disabled = recipeRunning;
+    const stop = root?.querySelector('#hk-recipe-stop'); if (stop) stop.disabled = !recipeRunning;
+  }
+
+  async function runRecipes() {
+    if (!requireLicense() || recipeRunning || !recipeState()) return;
+    const attempts = Math.max(1, Math.min(100, Math.trunc(Number(root.querySelector('#hk-recipe-attempts').value || 1))));
+    let state;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      state = recipeState();
+    } catch (error) {
+      log(either('Не удалось обновить каталог перед прокруткой','Could not refresh the catalog before rerolling') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    if (!state) { log(either('Каталог бизнес-планов недоступен','Business-plan catalog is unavailable'),'warn'); return; }
+    if (!safeReroll(state.fair_reroll_cost, false)) { alert(either('Прокрутка заблокирована: неизвестная или платная валюта.', 'Reroll blocked: unknown or premium currency.')); return; }
+    if (!confirm(either(`Прокрутить каталог бизнес-планов ${attempts} раз?\n\n${tr('maxCost')}: ${clean(root.querySelector('#hk-recipe-summary').textContent)}`,
+      `Reroll the business-plan catalog ${attempts} times?\n\n${tr('maxCost')}: ${clean(root.querySelector('#hk-recipe-summary').textContent)}`))) return;
+    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+    hkRunner.start({title:either('Рецепты','Recipes'),total:attempts,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    recipeRunning = true; recipeStop = false; renderRecipes();
+    let completed = 0;
+    try {
+      try { await submitRecipePlans(plansFromRecipeState(state)); } catch (_) {}
+      for (let index = 0; index < attempts && !recipeStop; index++) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep(either('Прокрутка каталога','Catalog reroll'), completed, attempts);
+        log(either(`Прокрутка каталога ${index + 1}/${attempts}…`, `Catalog reroll ${index + 1}/${attempts}…`));
+        state = recipeState(fairDocument || playerDocument);
+        if (!state) throw new Error(either('Каталог бизнес-планов больше недоступен','Business-plan catalog is no longer available'));
+        if (!safeReroll(state.fair_reroll_cost, false)) throw new Error(either('Цена прокрутки изменилась и стала небезопасной','Reroll cost changed and became unsafe'));
+        const recipeDecision = budgetDecision(state.fair_reroll_cost, 'recipes', 1, playerDocument);
+        if (!recipeDecision.allowed) throw new Error(recipeDecision.problems.join('; '));
+        const recipeCost = state.fair_reroll_cost;
+        const recipeBefore = new Map(costParts(recipeCost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+        fairDocument = await apiJson('/fair/reroll', 'POST', {fair_id:recipeFairId});
+        updateWalletFromResponse(fairDocument, recipeCost);
+        for (const part of costParts(recipeCost)) appendExpense({section:'recipes', lotId:`recipe-reroll:${recipeFairId}`, name:either('Прокрутка каталога рецептов','Recipe catalog reroll'), currencyId:part.id, amount:part.quantity, balanceBefore:recipeBefore.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'rerolled'});
+        state = recipeState(fairDocument);
+        if (!state) throw new Error(either('Сервер не вернул каталог бизнес-планов', 'The server did not return the business-plan catalog'));
+        currentRecipePlans = plansFromRecipeState(state);
+        completed++;
+        try { await submitRecipePlans(currentRecipePlans); }
+        catch (error) { log(`${either('Общая база недоступна', 'Shared database unavailable')}: ${error.message}`, 'warn'); }
+        renderRecipes();
+        await gameRetryDelay(550);
+      }
+      log(either(`Прокрутка завершена: ${completed}`, `Rerolls completed: ${completed}`), 'ok');
+      await hkAuthoritativePlayerRead('recipes-complete');
+      hkRunner.finish(either('Прокрутка завершена','Rerolls completed'));
+    } catch (error) {
+      if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Прокрутка остановлена','Reroll stopped'),'warn'); }
+      else { hkRunner.fail(error); log(either('Прокрутка остановлена','Reroll stopped') + ': ' + (error?.message || error), 'bad'); }
+    }
+    finally { recipeRunning = false; recipeStop = false; renderRecipes(); }
+  }
+
+  async function loadCommunityRecipes() {
+    if (!requireLicense()) return;
+    try {
+      await ensureRecipeMetadata();
+      const result = await recipeServ
+
+===== fair_id =====
+
+    const preset = fairPresets()[name];
+    if (!preset) return;
+    if (!fairCatalog.length) {
+      alert(either('Сначала нажмите «Считать ярмарку»', 'Press “Read fair” first'));
+      refreshFairPresets(); return;
+    }
+    if (fairStates().some(state => String(state.id) === String(preset.fairId))) selectedFairId = String(preset.fairId);
+    const available = new Set(fairRowsForState(fairState(selectedFairId)).map(row => row.lotId));
+    selectedFairLots = new Set((preset.lots || []).map(String).filter(id => available.has(id)));
+    selectedFairSlotRules.clear();
+    const options = fairSlotOptions();
+    for (const lotId of selectedFairLots) {
+      const groups = preset.slotGroups?.[lotId];
+      if (groups && typeof groups === 'object') {
+        selectedFairSlotRules.set(lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)});
+      } else {
+        const oldCells = new Set(Array.isArray(preset.slotRules?.[lotId]) ? preset.slotRules[lotId].map(String) : options.map(value => value.key));
+        selectedFairSlotRules.set(lotId, {
+          regular:options.some(value => !value.vip && oldCells.has(value.key)),
+          vip:options.some(value => value.vip && oldCells.has(value.key))
+        });
+      }
+    }
+    selectedFairCurrency = String(preset.currency || '');
+    const buy = root?.querySelector('#hk-fair-buy-limit'); if (buy) buy.value = Math.max(1, Number(preset.buyLimit || 1));
+    const reroll = root?.querySelector('#hk-fair-reroll-limit'); if (reroll) reroll.value = Math.max(0, Number(preset.rerollLimit || 0));
+    const premium = root?.querySelector('#hk-fair-premium-reroll'); if (premium) premium.checked = Boolean(preset.premiumReroll);
+    selectedFairBonusLots = new Set(Array.isArray(preset.bonusLots) ? preset.bonusLots.map(Number).filter(value => [5,10,30].includes(value)) : [5,10,30]);
+    renderFair();
+    const exact=root?.querySelector('#hk-fair-exact-lots'); if(exact) exact.value=['0','3','6','9'].includes(String(preset.exactLots)) ? String(preset.exactLots) : '0';
+    renderFairBonusChoices();
+    refreshFairPresets(name);
+    log(tr('settingLoaded', {name}), 'ok');
+  }
+
+  function deleteFairPreset() {
+    const name = fairPresetSelect?.value;
+    if (!name || !confirm(tr('deleteSetting', {name}))) return;
+    const all = fairPresets(); delete all[name]; save({fairPresets:all}); refreshFairPresets();
+  }
+
+  function costDocumentFromParts(parts) {
+    const result = {items:[], currencies:[]};
+    for (const part of parts || []) if (part?.id && part.quantity > 0) result[part.kind === 'currencies' ? 'currencies' : 'items'].push({id:part.id, quantity:part.quantity});
+    return result;
+  }
+
+  async function executeFairPurchase(row, slot, allowPremium = false) {
+    // Event fairs have their own currency/amount controls in this tab. Do not
+    // let the global daily budget reject the whole event run because one of
+    // the selected variants costs diamonds. The normal fair remains covered
+    // by the unified budget.
+    if (!isEventFairState(fairState(selectedFairId))) {
+      const decision = budgetDecision(row.cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+      if (!decision.allowed) throw new Error(decision.problems.join('; '));
+    }
+    const beforeDoc = playerDocument;
+    const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, beforeDoc)]));
+    fairDocument = await apiJson('/shop/buy', 'POST', {shop_lot_id:row.lotId, payment_type:'INTERNAL', fair_id:selectedFairId, slot_id:slot.id, lotName:row.name, lotDescription:''});
+    updateWalletFromResponse(fairDocument, row.cost);
+    for (const part of costParts(row.cost)) appendExpense({section:'fair', lotId:row.lotId, name:gameText(row.name) || row.name,
+      currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'purchased'});
+  }
+
+  async function runFair() {
+    if (!requireLicense() || fairRunning || !selectedFairLots.size) return;
+    if ([...selectedFairLots].some(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return !(rule?.regular || rule?.vip);
+    })) {
+      alert(tr('noCells')); return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
+        return;
+      }
+    } catch (error) {
+      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
+        return;
+      }
+    } catch (error) {
+      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    const buyLimit = Math.max(1, Number(root.querySelector('#hk-fair-buy-limit').value || 1));
+    const rerollLimit = Math.max(0, Number(root.querySelector('#hk-fair-reroll-limit').value || 0));
+    const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
+    const combo = fairComboSettings();
+    let state = fairState(selectedFairId);
+    if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
+    const cost = costParts(state?.fair_reroll_cost)[0];
+    const worst = cost ? `${cost.quantity * rerollLimit} ${cost.id}` : '0';
+    const maximumCrystalLotCost = fairCatalog.filter(row => selectedFairLots.has(row.lotId))
+      .flatMap(row => costParts(row.cost)).filter(part => part.kind === 'currencies' && part.id === 'cur_prem')
+      .reduce((maximum, part) => Math.max(maximum, part.quantity), 0) * buyLimit;
+    const crystalNotice = maximumCrystalLotCost
+      ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`)
+      : '';
+    if (!confirm(language === 'en'
+      ? `Start searching for selected lots?\n\nTotal purchases: ${buyLimit}\nMaximum rerolls: ${rerollLimit}\nMaximum reroll cost: ${worst}${crystalNotice}`
+      : `Запустить поиск выбранных лотов?\n\nВсего покупок: ${buyLimit}\nМаксимум прокруток: ${rerollLimit}\nМаксимальная цена прокруток: ${worst}${crystalNotice}`)) return;
+    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+    hkRunner.start({title:either('Ярмарка','Fair'),total:buyLimit,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    fairRunning = true; fairStop = false; updateFairControls();
+    let bought = 0, bonusBought = 0, rerolls = 0, authRetries = 0;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      while (!fairStop && bought < buyLimit) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep(either('Поиск и покупка лотов','Searching and buying lots'), bought, buyLimit);
+        if (combo.exactLots && buyLimit - bought < 3) {
+          log(either(`Остаток лимита ${buyLimit - bought}: для комбинации требуется минимум 3 покупки.`, `Remaining limit ${buyLimit - bought}: a combination requires at least 3 purchases.`), 'warn');
+          break;
+        }
+        state = fairState(selectedFairId);
+        if (!state) throw new Error('Выбранная ярмарка больше недоступна');
+        let purchased = false;
+        const options = fairSlotOptions(state);
+        const targets = options.filter(({slot, vip, index}) => {
+          // A combination spans all nine main cells: six regular and three
+          // VIP. Encrypted bonus cells start after them and never count toward
+          // the 3/6/9 group itself.
+          if (index >= 9 || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) return false;
+          const groups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+          return !groups || (vip ? groups.vip : groups.regular);
+        });
+        const maximumGroup = combo.exactLots
+          ? Math.floor(Math.min(combo.exactLots, buyLimit - bought) / 3) * 3
+          : 0;
+        const matchedTargets = maximumGroup ? targets.slice(0, maximumGroup) : [];
+        const groupSize = Math.floor(matchedTargets.length / 3) * 3;
+        const purchaseTargets = matchedTargets.slice(0, groupSize);
+        if (combo.exactLots && groupSize >= 3) {
+          const totalCosts = new Map();
+          for (const {slot} of purchaseTargets) {
+            const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+            for (const part of costParts(row?.cost)) totalCosts.set(part.id, (totalCosts.get(part.id) || 0) + part.quantity);
+          }
+          const insufficient = [...totalCosts].filter(([id, amount]) => {
+            const balance = walletAmount(id, playerDocument);
+            return balance === null || balance < amount;
+          }).map(([id, amount]) => {
+            const balance = walletAmount(id, playerDocument);
+            return `${paymentLabel(id)}: ${balance === null ? either('остаток не определён','balance is unknown') : `${balance.toLocaleString(locale())} / ${amount.toLocaleString(locale())}`}`;
+          });
+          if (insufficient.length) {
+            log(either(`Комбинация ${purchaseTargets.length} не выкуплена — не хватает средств: ${insufficient.join('; ')}`,
+              `Combination ${purchaseTargets.length} was not purchased — insufficient funds: ${insufficient.join('; ')}`), 'warn');
+          } else {
+            for (const {slot} of purchaseTargets) {
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              if (!row?.safe) continue;
+              log(`Лоты ${purchaseTargets.length}: покупка…`);
+              await executeFairPurchase(row, slot, allowPremium);
+              bought++; purchased = true; authRetries = 0;
+            }
+            // The last /shop/buy response may still contain the previous set
+            // of encrypted cells. Refresh once after the completed group so
+            // newly opened bonus slots are visible before we try to buy them.
+            playerDocument = await apiJson('/player/me', 'POST');
+            fairDocument = playerDocument;
+            state = fairState(selectedFairId);
+            const collars = fairSlotOptions(state).filter(({slot,index}) => {
+              if (index < 9 || index >= 9 + groupSize / 3 || slot.is_bought) return false;
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              return selectedFairBonusLots.has(Number(row?.rewardQuantity || 0));
+            });
+            for (const {slot} of collars) {
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              if (!row?.safe) continue;
+              log(`Открытый слот ${Number(slot.id) + 1}: покупка…`);
+              await executeFairPurchase(row, slot, allowPremium);
+              bonusBought++; purchased = true; authRetries = 0;
+            }
+          }
+        }
+        if (!combo.exactLots) for (const {slot, vip} of options) {
+          if (fairStop || bought >= buyLimit || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) continue;
+          const allowedGroups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+
+
+===== fair_type =====
+NOT FOUND
+
+===== /fair/ =====
+
+              `Combination ${purchaseTargets.length} was not purchased — insufficient funds: ${insufficient.join('; ')}`), 'warn');
+          } else {
+            for (const {slot} of purchaseTargets) {
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              if (!row?.safe) continue;
+              log(`Лоты ${purchaseTargets.length}: покупка…`);
+              await executeFairPurchase(row, slot, allowPremium);
+              bought++; purchased = true; authRetries = 0;
+            }
+            // The last /shop/buy response may still contain the previous set
+            // of encrypted cells. Refresh once after the completed group so
+            // newly opened bonus slots are visible before we try to buy them.
+            playerDocument = await apiJson('/player/me', 'POST');
+            fairDocument = playerDocument;
+            state = fairState(selectedFairId);
+            const collars = fairSlotOptions(state).filter(({slot,index}) => {
+              if (index < 9 || index >= 9 + groupSize / 3 || slot.is_bought) return false;
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              return selectedFairBonusLots.has(Number(row?.rewardQuantity || 0));
+            });
+            for (const {slot} of collars) {
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              if (!row?.safe) continue;
+              log(`Открытый слот ${Number(slot.id) + 1}: покупка…`);
+              await executeFairPurchase(row, slot, allowPremium);
+              bonusBought++; purchased = true; authRetries = 0;
+            }
+          }
+        }
+        if (!combo.exactLots) for (const {slot, vip} of options) {
+          if (fairStop || bought >= buyLimit || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) continue;
+          const allowedGroups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+          if (allowedGroups && !(vip ? allowedGroups.vip : allowedGroups.regular)) continue;
+          const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+          if (!row?.safe) continue;
+          log(`Лот найден. Покупка ${bought + 1}/${buyLimit}…`);
+          try {
+            await executeFairPurchase(row, slot, allowPremium);
+            bought++; purchased = true; authRetries = 0; log(`Куплено ${bought}/${buyLimit}`, 'ok');
+          } catch (error) {
+            if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+            throw error;
+          }
+        }
+        if (purchased) continue;
+        if (rerolls >= rerollLimit) { log(`Достигнут лимит прокруток: ${rerollLimit}`, 'warn'); break; }
+        if (!safeReroll(state.fair_reroll_cost, allowPremium)) throw new Error('Цена прокрутки изменилась и стала небезопасной');
+        log(`Лота нет. Прокрутка ${rerolls + 1}/${rerollLimit}…`);
+        try {
+          if (!isEventFairState(state)) {
+            const rerollDecision = budgetDecision(state.fair_reroll_cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+            if (!rerollDecision.allowed) throw new Error(rerollDecision.problems.join('; '));
+          }
+          const before = new Map(costParts(state.fair_reroll_cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+          const rerollCost = state.fair_reroll_cost;
+          fairDocument = await apiJson('/fair/reroll', 'POST', {fair_id:selectedFairId});
+          updateWalletFromResponse(fairDocument, rerollCost);
+          for (const part of costParts(state.fair_reroll_cost)) appendExpense({section:'fair', lotId:`reroll:${selectedFairId}`, name:either('Прокрутка ярмарки','Fair reroll'),
+            currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'rerolled'});
+          rerolls++; authRetries = 0;
+        }
+        catch (error) {
+          if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+          throw error;
+        }
+        await gameRetryDelay(550);
+      }
+      playerDocument = await hkAuthoritativePlayerRead('fair-complete');
+      fairDocument = playerDocument;
+      hkRunner.finish(either('Ярмарка завершена','Fair completed'));
+      log(`Ярмарка завершена: выбранных покупок ${bought}, бонусных ${bonusBought}, прокруток ${rerolls}`, 'ok');
+    } catch (error) {
+      if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Ярмарка остановлена','Fair stopped'),'warn'); }
+      else { hkRunner.fail(error); log(`Аварийная остановка ярмарки: ${error.message}`, 'bad'); }
+    } finally { fairRunning = false; fairStop = false; renderFair(); }
+  }
+
+  function ordinaryShopGroup(lot) {
+    const lotId = String(lot?.id || '').toLowerCase();
+    // Each Resources card has one visible base lot plus three real hidden
+    // package commands (_10, _50 and _100). They are separate shop_lot_id
+    // values, not a quantity parameter on the base purchase.
+    if (/^mf_shoplot_itempack_[1-5](?:_(?:10|50|100))?$/.test(lotId)) return 'resources';
+    // Renovation contains the ten individual materials (two materials per tier).
+    // The combined mf_shoplot_pit_remort_all pack is intentionally excluded.
+    if (/^mf_shoplot_pit_remort_(?:beams|nails)_[1-5]$/.test(lotId)) return 'renovation';
+    // Invest Deals contains the two daily building-helper offers only.
+    if (/^mf_shoplot_building_helpers_offer_0[12]$/.test(lotId)) return 'invest';
+    return '';
+  }
+
+  function quantitySelectOptions(maximum, selected) {
+    const max = Math.max(0, Math.trunc(Number(maximum || 0)));
+    const current = Math.min(max, Math.max(0, Math.trunc(Number(selected || 0))));
+    const values = new Set([0, current, max]);
+    for (let value = 1; value <= Math.min(max, 20); value++) values.add(value);
+    for (const value of [25, 50, 100, 250, 500]) if (value <= max) values.add(value);
+    return [...values].sort((a, b) => a - b).map(value => `<option value="${value}" ${value === current ? 'selected' : ''}>${value}</option>`).join('');
+  }
+
+  function captureActiveEventCode() {
+    let code = '';
+    const activeIcon = document.querySelector('.picture-counter.special-counter img[src*="/special_events/icons/timer_event_"]');
+    const iconMatch = String(activeIcon?.getAttribute('src') || '').match(/timer_event_([^/?]+?)_icon(?:\.|\?)/i);
+    if (iconMatch?.[1]) code = iconMatch[1].toLowerCase();
+    // On a first installation the player may already be inside the current
+    // event page. Use its visible cards only until the map icon has supplied
+    // and persisted the authoritative current event code.
+    if (!code && !activeEventCode) {
+      const visibleCard = [...document.querySelectorAll('[data-lot-id^="mf_shoplot_"]')].find(element =>
+        visible(element) && /^mf_shoplot_(?:daily_|finite_|infinite_)?event_[^_]+_/i.test(String(element.getAttribute('data-lot-id') || '')));
+      const cardMatch = String(visibleCard?.getAttribute('data-lot-id') || '').match(/^mf_shoplot_(?:daily_|finite_|infinite_)?event_([^_]+)_/i);
+      if (cardMatch?.[1]) code = cardMatch[1].toLowerCase();
+    }
+    if (code && code !== activeEventCode) {
+      activeEventCode = code;
+      save({activeEventCode:code});
+      if (shopViewDocument) {
+        shopRows = normalizeRegularShop();
+        if (root && selectedShopSection === 'regular') renderShop();
+      }
+    }
+    return activeEventCode;
+  }
+
+  function normalizeRegularShop(shopDocument = shopViewDocument, playerDoc = playerDocument) {
+    const currentEventCode = captureActiveEventCode();
+    const limits = new Map();
+    const playerLimits = playerDoc?.shop_lot_limits || playerDoc?.player?.shop_lot_limits || [];
+    for (const item of playerLimits) limits.set(String(item?.shop_lot_id || ''), Math.max(0, Number(item?.number_of_purchase || 0)));
+    const shopLots = shopDocument?.shop_lots || [];
+    const lotsById = new Map(shopLots.map(lot => [String(lot?.id || ''), lot]));
+    return shopLots.flatMap(lot => {
+      const rawView = lot?.lot_view || {};
+      const lotId = String(lot.id || '');
+      const currentEventLot = Boolean(currentEventCode) &&
+        lotId.toLowerCase().includes(`_event_${currentEventCode}_`);
+      const resourceMatch = lotId.match(/^(mf_shoplot_itempack_[1-5])(?:_(10|50|100))?$/i);
+      const resourceBaseLot = resourceMatch ? lotsById.get(resourceMatch[1]) : null;
+      const resourceBaseView = resourceBaseLot?.lot_view || {};
+      const declaredMultiplier = Boolean(resourceMatch?.[2]) &&
+        (resourceBaseView.multiplier_lots || []).map(String).includes(lotId);
+      // Hidden multiplier lots contain only their resulting package quantity.
+      // Reuse the visible parent card for its name/icon/content, while keeping
+      // the child's own lot ID, cost and package quantity for the purchase.
+      if (resourceMatch?.[2] && !declaredMultiplier) return [];
+      const view = declaredMultiplier ? resourceBaseView : rawView;
+      if (String(view.type || '').toLowerCase() === 'fair' || lot.external_cost) return [];
+      const lotLimits = lot.limit || [];
+      // The standard Resources and Renovation cards have no daily purchase
+      // limit in the game. Keep only our explicitly allow-listed ordinary
+      // lots when a server-side limit is absent.
+      const unlimited = !lotLimits.length && (Boolean(ordinaryShopGroup(lot)) || currentEventLot);
+      if (!lotLimits.length && !unlimited) return [];
+      const playerLimit = lotLimits.find(value => String(value?.type || '').toUpperCase() === 'PLAYER');
+      const sharedLimit = lotLimits.find(value => ['CLAN','GLOBAL'].includes(String(value?.type || '').toUpperCase()));
+      const remainingValues = [];
+      if (playerLimit) remainingValues.push(Math.max(0, Number(playerLimit.limit || 0) + Number(playerLimit.bonus || 0) - (limits.get(String(lot.id || '')) || 0)));
+      if (sharedLimit) remainingValues.push(Math.max(0, Number(sharedLimit.limit || 0) + Number(sharedLimit.bonus || 0) - Number(sharedLimit.value || 0)));
+      if (!remainingValues.length && !unlimited) return [];
+      const bought = limits.get(lotId) || 0;
+      const remaining = unlimited ? SHOP_UNLIMITED_RUN_MAX : Math.min(...remainingValues);
+      const parts = costParts(lot.cost);
+      const content = (view.content_view || [])[0] || {};
+      const rewardId = String(content.id || '');
+      const rewardQuantity = resourceMatch
+        ? Math.max(0, Number(rawView.quantity || view.quantity || 0))
+        : Math.max(0, Number(content.quantity || view.quantity || 0));
+      const tab = String(view.tab || 'default').toLowerCase();
+      // The shop catalog and the player's limit list both retain past events.
+      // Include every internal lot of the active event: the updated game uses
+      // daily_event, finite_event, event and infinite_event prefixes together.
+      // If the current event cannot be identified, fail closed and show none.
+      const section = ['clan','clan_2'].includes(tab) ? 'clan' : currentEventLot ? 'regular' : 'ordinary';
+      const group = section === 'ordinary' ? ordinaryShopGroup(lot) : '';
+      const clanGroup = section === 'clan' ? (sharedLimit ? 'shared' : 'personal') : '';
+      if (section === 'ordinary' && !group) return [];
+      const premium = premiumPurchase(lot.cost);
+      const safe = parts.length > 0 && parts.every(part => part.quantity > 0 &&
+        (part.kind === 'items' ? part.id.startsWith('item_') :
+          ['cur_gold', 'cur_cap'].includes(part.id) || (section === 'clan' && part.id === 'cur_prem')));
+      return [{lotId, name:String(view.name || rewardId || lotId), rewardId,
+        rewardQuantity, resourceTier:resourceMatch ? Number(resourceMatch[1].slice(-1)) : 0,
+        cost:lot.cost || {}, safe, affordable:canAffordCost(lot.cost || {}, playerDoc), premium, group,
+        bought, maximum:bought + remaining, remaining, unlimited, section, clanGroup,
+        sharedPurchased:sharedLimit ? Math.max(0, Number(sharedLimit.value || 0)) : 0,
+        sharedMaximum:sharedLimit ? Math.max(0, Number(sharedLimit.limit || 0) + Number(sharedLimit.bonus || 0)) : 0,
+        icon:mediaUrl(view.icon_card || view.icon || content.icon_card || content.icon, rewardId)}];
+    }).sort((a, b) => Number(b.r
+
+===== ordinary =====
+
+      stop:'Остановить', exportCsv:'Скачать силу уровней CSV', refreshGame:'Обновить игру', waiting:'Ожидание подключения…',
+      savedSets:'Сохранённые наборы', saveNew:'Сохранить новый', delete:'Удалить', removeAll:'Достать: все тиры',
+      emptySlots:'Пустые слоты', removeTier:'Достать: T{n}', selectAll:'Выбрать все', insertAll:'Вставить: все тиры',
+      insertTier:'Вставить: T{n}', loadFair:'Обновить ярмарку', chooseFair:'Выберите ярмарку', readFirst:'Сначала считайте данные',
+      searchLot:'Поиск лота', choosePurchases:'Выберите покупки', selectedLots:'Выбрано лотов: {n}', totalPurchases:'Всего покупок',
+      maxRerolls:'Макс. прокруток', allowDiamonds:'Разрешить алмазы на прокрутки и покупки', findBuy:'Найти и выкупить',
+      fairWarning:'Лоты за кристаллы отмечены 💎. Перед запуском показывается максимальный расход.', version:'Версия {v}',
+      connectedSlots:'Подключено · слотов {n}', chooseBuildingSlots:'Выбрать слоты в зданиях', insertFromStock:'Вставить со склада',
+      emptySlot:'Пустой слот', influence:'Влияние {n}', inStock:'На складе {n}', noBusinesses:'Нет бизнесов этого тира',
+      buildingSlot:'Здание {building} · слот {slot}', selectedPlan:'Выбрано: слотов {remove} · вставить {insert}', execute:'Выполнить перестановку',
+      businessRegular:'Обычная перестановка', businessOptimizer:'Оптимизатор', optimizer:'Умный оптимизатор', optimizerGoal:'Цель', optimizerPit:'Сила в Яме', optimizerIncome:'Пассивный доход', optimizerEnergy:'Энергия', optimizerBuildings:'Лимит зданий', optimizerRemoveTiers:'Какие тиры можно достать', optimizerInsertTiers:'Какие тиры можно вставить', optimizerReplaceable:'Какие установленные бизнесы можно заменять', optimizerReplaceHint:'Снятая галочка защищает все экземпляры этого бизнеса', optimizerStockAllowed:'Какие складские бизнесы можно вставить', optimizerStockHint:'Выбор доступен вручную для всех тиров', optimizerCalculate:'Рассчитать лучший состав', optimizerApply:'Перенести в план', optimizerRestore:'Вернуть сохранённую схему', optimizerNoPlan:'Сначала считайте бизнесы и рассчитайте состав.', optimizerChanges:'Замен: {n}', optimizerManagers:'Менеджеры: {busy}/{max}', optimizerSafe:'Проверка пройдена', optimizerBlocked:'Запуск заблокирован', optimizerBefore:'Было', optimizerAfter:'Станет', optimizerDifference:'Изменение бонусов',
+      bonusAnalyzer:'Анализатор бонусов', bonusSources:'Источники бонусов', bonusDuplicates:'одинаковых источников: {n}', bonusActiveCopies:'активно: {active} / лимит: {limit}', bonusNoLimit:'лимит не указан', bonusBestNext:'Лучший следующий бизнес', bonusNoCandidate:'Подходящего бизнеса на складе нет', bonusLimited:'Лимит активных экземпляров уже достигнут', bonusZeroEffect:'Эффект не распознан',
+      all:'Все', blocked:'заблокировано', noLots:'Лоты не найдены', noFairs:'Нет ярмарок с доступными лотами',
+      allowedCells:'Разрешённые слоты', cell:'Ячейка {n}', selectCellsHint:'Выберите, из каких групп слотов разрешён выкуп',
+      regularSlots:'Обычные', vipSlots:'VIP', yes:'ДА', no:'НЕТ', noCells:'Для выбранного товара отключены и обычные, и VIP-слоты', fairSavedSettings:'Сохранённые настройки',
+      fairExactLots:'Искать комбинации до', fairBonusLots:'Выкупить бонусные лоты',
+      saveSetting:'Сохранить настройку', updateSetting:'Обновить', settingName:'Название настройки:', settingSaved:'Настройка «{name}» сохранена',
+      settingLoaded:'Настройка «{name}» загружена', deleteSetting:'Удалить настройку «{name}»?',
+      regularShop:'Регулярный магазин', ordinaryShop:'Обычный магазин', clanShop:'Магазин клана', readShop:'Обновить магазин', selectAvailable:'Выбрать доступные', shopReadFirst:'Сначала считайте магазин',
+      remaining:'Осталось {n}', unlimited:'Без лимита', boughtOut:'Выкуплено', selectedPurchases:'Выбрано покупок: {n}', maxCost:'Максимальная стоимость',
+      balance:'Баланс', willSpend:'Расход', balanceAfter:'Останется',
+      buySelected:'Выкупить выбранное', shopWarning:'Лоты за кристаллы доступны только в ярмарке и магазине клана и отмечены 💎. Внешняя оплата заблокирована.',
+      resourcesShop:'Ресурсы', renovationShop:'Реновация', investShop:'Инвест-сделки', personalLots:'Личные лоты', sharedLots:'Общие лоты', quantity:'Количество',
+      recipeSpin:'Каталог', recipeDatabase:'Общая база', projectBureau:'Проектное бюро', readRecipes:'Обновить каталог', recipeAttempts:'Количество прокруток',
+      spinRecipes:'Прокрутить каталог', currentRecipePlans:'Сейчас в каталоге', recipeCost:'Цена одной прокрутки',
+      loadRecipeDatabase:'Обновить общую базу', uniqueRecipes:'Уникальных бизнес-планов: {n}', uniqueRecipeResults:'Итоговых бизнесов: {results} · рецептов: {plans}', recipeWays:'Вариантов получения: {n}', recipeReadFirst:'Сначала считайте каталог',
+      recipeDatabaseEmpty:'В общей базе пока нет бизнес-планов', recipeSharedHint:'Каждый увиденный бизнес-план добавляется в общую базу один раз. Повторные выпадения не засчитываются.',
+      readBureau:'Считать бизнесы', bureauSize:'Бизнесов в проекте', bureauAttempts:'Количество созданий', bureauSelected:'Выбрано бизнесов: {n} / {max}',
+      createBusinessPlan:'Создать бизнес-план', bureauHint:'Действия Проектного бюро не добавляются в общую базу и не сохраняются.',
+      bureauTier:'Тир бизнеса', bureauAllTiers:'Все тиры', mapIndex:'Исследованные карты', readMapIndex:'Обновить индекс', scanMyMaps:'Исследовать мои районы',
+      donation:'Пожертвование', mapSearch:'Город, район или координаты', mapOpen:'Открыть', mapProgress:'Прогресс', mapRating:'Рейтинг', mapBuildings:'Здания', mapUnexplored:'Не исследовано', mapRooms:'Алмазные комнаты',
+      myMaps:'Мои карты', uploadedMaps:'Загруженные карты', scanAccountMaps:'Считать карты аккаунта', refreshUploadedMaps:'Обновить загруженные карты'
+    },
+    en: {
+      daily:'Today', pit:'Pit', businesses:'Businesses', clan:'Clan', fair:'Fair', shop:'Shop', recipes:'Recipes', maps:'Maps', navToday:'Today', navBattles:'Battles', navCity:'City', navBusiness:'Business', navGrowth:'Growth', navTrade:'Trade', navClan:'Clan', navTodayHint:'tasks and rewards', navBattlesHint:'pits and battles', navCityHint:'maps and buildings', navBusinessHint:'cards and recipes', navGrowthHint:'hamsters and generals', navTradeHint:'fair and shop', navClanHint:'skills and wars', checkingLicense:'Checking license…',
+      dailyTasks:'Today', dailyRefresh:'Check only', dailyRun:'Run selected', dailyAdRun:'Watch available ad', dailyClear:'Clear log', dailyOverall:'Overall progress', dailyCurrent:'Current stage', dailyAds:'Ads', dailyClan:'Clan purchases', dailyInvest:'Investment offers', dailyReady:'Ready to start', dailyNoShop:'Open the in-game shop first, then tap “Check only”.',
+      dailyBalances:'Balances', dailyStores:'Available purchases', dailyFreeActions:'Free actions', dailyRegularActions:'Regular shop', dailyOrdinaryActions:'Standard shop', dailyClanActions:'Personal clan lots', dailyInvestActions:'Invest deals', dailyPit:'Pit status', pitNormal:'Normal Pit', pitBoss:'Boss Pit', pitGang:'Gang Pit', pitAvailableNow:'available now', pitLimit:'limit', pitDiamondTopUp:'diamond top-up', pitMultipleReady:'already divisible by 5', pitOpenOnce:'Open this Pit section once', pitRun:'Run', pitUseMoves:'Use moves', pitMovePlan:'Optimal', pitNoMoves:'not selected', dailyConsigliere:'Consigliere', dailyPlan:'Execution plan', dailyBudget:'Unified budget', dailyReserve:'Minimum balance', dailyLimit:'Daily limit', weeklyLimit:'Weekly limit', spentToday:'Spent today', spentWeek:'Spent this week', allowPremium:'Allow diamonds', exportSettings:'Export settings', importSettings:'Restore settings', noLimit:'No limit', selectedActions:'Selected actions: {n}', exactPlan:'Review the exact spending plan before running.',
+      targetRound:'Reach round', delay:'Delay, seconds', activationTokens:'Activation tokens', pitCollectOnly:'Collect data only — never click battle', pitForecast:'Forecast to target', pitObserved:'Saved levels: {n}', pitPredictedPower:'Predicted power at round {round}: {power}', pitTokenBudget:'Maximum allowed spend: {n} tokens', pitComparison:'This run: round {before} → {after}, power {powerBefore} → {powerAfter}', pitPowerTable:'Saved level powers', restoreTokens:'Recovery tokens',
+      allowTokens:'Allow tokens', round:'Round', startBattle:'Start auto battle', stop:'Stop', exportCsv:'Download level power CSV',
+      refreshGame:'Refresh game', waiting:'Waiting for connection…', savedSets:'Saved sets', saveNew:'Save new', delete:'Delete',
+      removeAll:'Remove: all tiers', emptySlots:'Empty slots', removeTier:'Remove: T{n}', selectAll:'Select all',
+      insertAll:'Insert: all tiers', insertTier:'Insert: T{n}', loadFair:'Refresh fair', chooseFair:'Choose a fair',
+      readFirst:'Read the data first', searchLot:'Search lots', choosePurchases:'Choose purchases', selectedLots:'Selected lots: {n}',
+      totalPurchases:'Total purchases', maxRerolls:'Max rerolls', allowDiamonds:'Allow diamonds for rerolls and purchases',
+      findBuy:'Find and buy', fairWarning:'Crystal lots are marked 💎. The maximum cost is shown before starting.',
+      version:'Version {v}', connectedSlots:'Connected · slots {n}', chooseBuildingSlots:'Choose building slots', insertFromStock:'Insert from stock',
+      emptySlot:'Empty slot', influence:'Influence {n}', inStock:'In stock {n}', noBusinesses:'No businesses of this tier',
+      buildingSlot:'Building {building} · slot {slot}', selectedPlan:'Selected: slots {remove} · insert {insert}', execute:'Run rearrangement',
+      businessRegular:'Manual rearrangement', businessOptimizer:'Optimizer', optimizer:'Smart optimizer', optimizerGoal:'Goal', optimizerPit:'Pit power', optimizerIncome:'Passive income', optimizerEnergy:'Energy', optimizerBuildings:'Building limit', optimizerRemoveTiers:'Tiers allowed to be removed', optimizerInsertTiers:'Tiers allowed to be inserted', optimizerReplaceable:'Installed businesses allowed to be replaced', optimizerReplaceHint:'Clear a checkbox to protect every copy of that business', optimizerStockAllowed:'Stock businesses allowed to be inserted', optimizerStockHint:'Every tier remains manually selectable', optimizerCalculate:'Calculate best setup', optimizerApply:'Move to plan', optimizerRestore:'Restore saved setup', optimizerNoPlan:'Read businesses and calculate a setup first.', optimizerChanges:'Replacements: {n}', optimizerManagers:'Managers: {busy}/{max}', optimizerSafe:'Safety check passed', optimizerBlocked:'Start is blocked', optimizerBefore:'Before', optimizerAfter:'After', optimizerDifference:'Bonus changes',
+      bonusAnalyzer:'Bonus analyzer', bonusSources:'Bonus sources', bonusDuplicates:'matching sources: {n}', bonusActiveCopies:'active: {active} / limit: {limit}', bonusNoLimit:'limit not specified', bonusBestNext:'Best next business', bonusNoCandidate:'No suitable business in stock', bonusLimited:'Active-copy limit reached', bonusZeroEffect:'Effect was not recognized',
+      all:'All', blocked:'blocked', noLots:'No lots found', noFairs:'No fairs with available lots',
+      allowedCells:'Allowed slots', cell:'Cell {n}', selectCellsHint:'Choose which slot groups are allowed for purchases',
+      regularSlots:'Regular', vipSlots:'VIP', yes:'YES', no:'NO', noCells:'Both regular and VIP slots are disabled for a selected item', fairSavedSettings:'Saved settings', saveSetting:'Save setting',
+      fairExactLots:'Search combinations up to', fairBonusLots:'Buy bonus lots',
+      updateSetting:'Update', settingName:'Setting name:', settingSaved:'Setting “{name}” saved', settingLoaded:'Setting “{name}” loaded',
+      deleteSetting:'Delete setting “{name}”?', regularShop:'Regular shop', ordinaryShop:'Standard shop', clanShop:'Clan shop', readShop:'Refresh shop', selectAvailable:'Select available',
+      shopReadFirst:'Read the shop first', remaining:'Remaining {n}', unlimited:'Unlimited', boughtOut:'Purchased', selectedPurchases:'Selected purchases: {n}',
+      balance:'Balance', willSpend:'Spend', balanceAfter:'Remaining',
+      maxCost:'Maximum cost', buySelected:'Buy selected', shopWarning:'Crystal lots are available only in the fair and clan shop and are marked 💎. External payments are blocked.',
+      resourcesShop:'Resources', renovationShop:'Renovation', investShop:'Invest deals', personalLots:'Personal lots', sharedLots:'Shared lots', quantity:'Quantity',
+      recipeSpin:'Catalog', recipeDatabase:'Shared database', projectBureau:'Project Bureau', readRecipes:'Refresh catalog', recipeAttempts:'Reroll count',
+      spinRec
+
+===== regular =====
+
+      targetRound:'Дойти до раунда', delay:'Пауза, секунд', activationTokens:'Жетоны на активацию', pitCollectOnly:'Только собирать данные — не нажимать бой', pitForecast:'Прогноз до цели', pitObserved:'Сохранено уровней: {n}', pitPredictedPower:'Прогноз силы на раунде {round}: {power}', pitTokenBudget:'Максимальный разрешённый расход: {n} жетонов', pitComparison:'За запуск: раунд {before} → {after}, сила {powerBefore} → {powerAfter}', pitPowerTable:'Сохранённая сила уровней',
+      restoreTokens:'Жетоны на восстановление', allowTokens:'Разрешить жетоны', round:'Раунд', startBattle:'Запустить автобой',
+      stop:'Остановить', exportCsv:'Скачать силу уровней CSV', refreshGame:'Обновить игру', waiting:'Ожидание подключения…',
+      savedSets:'Сохранённые наборы', saveNew:'Сохранить новый', delete:'Удалить', removeAll:'Достать: все тиры',
+      emptySlots:'Пустые слоты', removeTier:'Достать: T{n}', selectAll:'Выбрать все', insertAll:'Вставить: все тиры',
+      insertTier:'Вставить: T{n}', loadFair:'Обновить ярмарку', chooseFair:'Выберите ярмарку', readFirst:'Сначала считайте данные',
+      searchLot:'Поиск лота', choosePurchases:'Выберите покупки', selectedLots:'Выбрано лотов: {n}', totalPurchases:'Всего покупок',
+      maxRerolls:'Макс. прокруток', allowDiamonds:'Разрешить алмазы на прокрутки и покупки', findBuy:'Найти и выкупить',
+      fairWarning:'Лоты за кристаллы отмечены 💎. Перед запуском показывается максимальный расход.', version:'Версия {v}',
+      connectedSlots:'Подключено · слотов {n}', chooseBuildingSlots:'Выбрать слоты в зданиях', insertFromStock:'Вставить со склада',
+      emptySlot:'Пустой слот', influence:'Влияние {n}', inStock:'На складе {n}', noBusinesses:'Нет бизнесов этого тира',
+      buildingSlot:'Здание {building} · слот {slot}', selectedPlan:'Выбрано: слотов {remove} · вставить {insert}', execute:'Выполнить перестановку',
+      businessRegular:'Обычная перестановка', businessOptimizer:'Оптимизатор', optimizer:'Умный оптимизатор', optimizerGoal:'Цель', optimizerPit:'Сила в Яме', optimizerIncome:'Пассивный доход', optimizerEnergy:'Энергия', optimizerBuildings:'Лимит зданий', optimizerRemoveTiers:'Какие тиры можно достать', optimizerInsertTiers:'Какие тиры можно вставить', optimizerReplaceable:'Какие установленные бизнесы можно заменять', optimizerReplaceHint:'Снятая галочка защищает все экземпляры этого бизнеса', optimizerStockAllowed:'Какие складские бизнесы можно вставить', optimizerStockHint:'Выбор доступен вручную для всех тиров', optimizerCalculate:'Рассчитать лучший состав', optimizerApply:'Перенести в план', optimizerRestore:'Вернуть сохранённую схему', optimizerNoPlan:'Сначала считайте бизнесы и рассчитайте состав.', optimizerChanges:'Замен: {n}', optimizerManagers:'Менеджеры: {busy}/{max}', optimizerSafe:'Проверка пройдена', optimizerBlocked:'Запуск заблокирован', optimizerBefore:'Было', optimizerAfter:'Станет', optimizerDifference:'Изменение бонусов',
+      bonusAnalyzer:'Анализатор бонусов', bonusSources:'Источники бонусов', bonusDuplicates:'одинаковых источников: {n}', bonusActiveCopies:'активно: {active} / лимит: {limit}', bonusNoLimit:'лимит не указан', bonusBestNext:'Лучший следующий бизнес', bonusNoCandidate:'Подходящего бизнеса на складе нет', bonusLimited:'Лимит активных экземпляров уже достигнут', bonusZeroEffect:'Эффект не распознан',
+      all:'Все', blocked:'заблокировано', noLots:'Лоты не найдены', noFairs:'Нет ярмарок с доступными лотами',
+      allowedCells:'Разрешённые слоты', cell:'Ячейка {n}', selectCellsHint:'Выберите, из каких групп слотов разрешён выкуп',
+      regularSlots:'Обычные', vipSlots:'VIP', yes:'ДА', no:'НЕТ', noCells:'Для выбранного товара отключены и обычные, и VIP-слоты', fairSavedSettings:'Сохранённые настройки',
+      fairExactLots:'Искать комбинации до', fairBonusLots:'Выкупить бонусные лоты',
+      saveSetting:'Сохранить настройку', updateSetting:'Обновить', settingName:'Название настройки:', settingSaved:'Настройка «{name}» сохранена',
+      settingLoaded:'Настройка «{name}» загружена', deleteSetting:'Удалить настройку «{name}»?',
+      regularShop:'Регулярный магазин', ordinaryShop:'Обычный магазин', clanShop:'Магазин клана', readShop:'Обновить магазин', selectAvailable:'Выбрать доступные', shopReadFirst:'Сначала считайте магазин',
+      remaining:'Осталось {n}', unlimited:'Без лимита', boughtOut:'Выкуплено', selectedPurchases:'Выбрано покупок: {n}', maxCost:'Максимальная стоимость',
+      balance:'Баланс', willSpend:'Расход', balanceAfter:'Останется',
+      buySelected:'Выкупить выбранное', shopWarning:'Лоты за кристаллы доступны только в ярмарке и магазине клана и отмечены 💎. Внешняя оплата заблокирована.',
+      resourcesShop:'Ресурсы', renovationShop:'Реновация', investShop:'Инвест-сделки', personalLots:'Личные лоты', sharedLots:'Общие лоты', quantity:'Количество',
+      recipeSpin:'Каталог', recipeDatabase:'Общая база', projectBureau:'Проектное бюро', readRecipes:'Обновить каталог', recipeAttempts:'Количество прокруток',
+      spinRecipes:'Прокрутить каталог', currentRecipePlans:'Сейчас в каталоге', recipeCost:'Цена одной прокрутки',
+      loadRecipeDatabase:'Обновить общую базу', uniqueRecipes:'Уникальных бизнес-планов: {n}', uniqueRecipeResults:'Итоговых бизнесов: {results} · рецептов: {plans}', recipeWays:'Вариантов получения: {n}', recipeReadFirst:'Сначала считайте каталог',
+      recipeDatabaseEmpty:'В общей базе пока нет бизнес-планов', recipeSharedHint:'Каждый увиденный бизнес-план добавляется в общую базу один раз. Повторные выпадения не засчитываются.',
+      readBureau:'Считать бизнесы', bureauSize:'Бизнесов в проекте', bureauAttempts:'Количество созданий', bureauSelected:'Выбрано бизнесов: {n} / {max}',
+      createBusinessPlan:'Создать бизнес-план', bureauHint:'Действия Проектного бюро не добавляются в общую базу и не сохраняются.',
+      bureauTier:'Тир бизнеса', bureauAllTiers:'Все тиры', mapIndex:'Исследованные карты', readMapIndex:'Обновить индекс', scanMyMaps:'Исследовать мои районы',
+      donation:'Пожертвование', mapSearch:'Город, район или координаты', mapOpen:'Открыть', mapProgress:'Прогресс', mapRating:'Рейтинг', mapBuildings:'Здания', mapUnexplored:'Не исследовано', mapRooms:'Алмазные комнаты',
+      myMaps:'Мои карты', uploadedMaps:'Загруженные карты', scanAccountMaps:'Считать карты аккаунта', refreshUploadedMaps:'Обновить загруженные карты'
+    },
+    en: {
+      daily:'Today', pit:'Pit', businesses:'Businesses', clan:'Clan', fair:'Fair', shop:'Shop', recipes:'Recipes', maps:'Maps', navToday:'Today', navBattles:'Battles', navCity:'City', navBusiness:'Business', navGrowth:'Growth', navTrade:'Trade', navClan:'Clan', navTodayHint:'tasks and rewards', navBattlesHint:'pits and battles', navCityHint:'maps and buildings', navBusinessHint:'cards and recipes', navGrowthHint:'hamsters and generals', navTradeHint:'fair and shop', navClanHint:'skills and wars', checkingLicense:'Checking license…',
+      dailyTasks:'Today', dailyRefresh:'Check only', dailyRun:'Run selected', dailyAdRun:'Watch available ad', dailyClear:'Clear log', dailyOverall:'Overall progress', dailyCurrent:'Current stage', dailyAds:'Ads', dailyClan:'Clan purchases', dailyInvest:'Investment offers', dailyReady:'Ready to start', dailyNoShop:'Open the in-game shop first, then tap “Check only”.',
+      dailyBalances:'Balances', dailyStores:'Available purchases', dailyFreeActions:'Free actions', dailyRegularActions:'Regular shop', dailyOrdinaryActions:'Standard shop', dailyClanActions:'Personal clan lots', dailyInvestActions:'Invest deals', dailyPit:'Pit status', pitNormal:'Normal Pit', pitBoss:'Boss Pit', pitGang:'Gang Pit', pitAvailableNow:'available now', pitLimit:'limit', pitDiamondTopUp:'diamond top-up', pitMultipleReady:'already divisible by 5', pitOpenOnce:'Open this Pit section once', pitRun:'Run', pitUseMoves:'Use moves', pitMovePlan:'Optimal', pitNoMoves:'not selected', dailyConsigliere:'Consigliere', dailyPlan:'Execution plan', dailyBudget:'Unified budget', dailyReserve:'Minimum balance', dailyLimit:'Daily limit', weeklyLimit:'Weekly limit', spentToday:'Spent today', spentWeek:'Spent this week', allowPremium:'Allow diamonds', exportSettings:'Export settings', importSettings:'Restore settings', noLimit:'No limit', selectedActions:'Selected actions: {n}', exactPlan:'Review the exact spending plan before running.',
+      targetRound:'Reach round', delay:'Delay, seconds', activationTokens:'Activation tokens', pitCollectOnly:'Collect data only — never click battle', pitForecast:'Forecast to target', pitObserved:'Saved levels: {n}', pitPredictedPower:'Predicted power at round {round}: {power}', pitTokenBudget:'Maximum allowed spend: {n} tokens', pitComparison:'This run: round {before} → {after}, power {powerBefore} → {powerAfter}', pitPowerTable:'Saved level powers', restoreTokens:'Recovery tokens',
+      allowTokens:'Allow tokens', round:'Round', startBattle:'Start auto battle', stop:'Stop', exportCsv:'Download level power CSV',
+      refreshGame:'Refresh game', waiting:'Waiting for connection…', savedSets:'Saved sets', saveNew:'Save new', delete:'Delete',
+      removeAll:'Remove: all tiers', emptySlots:'Empty slots', removeTier:'Remove: T{n}', selectAll:'Select all',
+      insertAll:'Insert: all tiers', insertTier:'Insert: T{n}', loadFair:'Refresh fair', chooseFair:'Choose a fair',
+      readFirst:'Read the data first', searchLot:'Search lots', choosePurchases:'Choose purchases', selectedLots:'Selected lots: {n}',
+      totalPurchases:'Total purchases', maxRerolls:'Max rerolls', allowDiamonds:'Allow diamonds for rerolls and purchases',
+      findBuy:'Find and buy', fairWarning:'Crystal lots are marked 💎. The maximum cost is shown before starting.',
+      version:'Version {v}', connectedSlots:'Connected · slots {n}', chooseBuildingSlots:'Choose building slots', insertFromStock:'Insert from stock',
+      emptySlot:'Empty slot', influence:'Influence {n}', inStock:'In stock {n}', noBusinesses:'No businesses of this tier',
+      buildingSlot:'Building {building} · slot {slot}', selectedPlan:'Selected: slots {remove} · insert {insert}', execute:'Run rearrangement',
+      businessRegular:'Manual rearrangement', businessOptimizer:'Optimizer', optimizer:'Smart optimizer', optimizerGoal:'Goal', optimizerPit:'Pit power', optimizerIncome:'Passive income', optimizerEnergy:'Energy', optimizerBuildings:'Building limit', optimizerRemoveTiers:'Tiers allowed to be removed', optimizerInsertTiers:'Tiers allowed to be inserted', optimizerReplaceable:'Installed businesses allowed to be replaced', optimizerReplaceHint:'Clear a checkbox to protect every copy of that business', optimizerStockAllowed:'Stock businesses allowed to be inserted', optimizerStockHint:'Every tier remains manually selectable', optimizerCalculate:'Calculate best setup', optimizerApply:'Move to plan', optimizerRestore:'Restore saved setup', optimizerNoPlan:'Read businesses and calculate a setup first.', optimizerChanges:'Replacements: {n}', optimizerManagers:'Managers: {busy}/{max}', optimizerSafe:'Safety check passed', optimizerBlocked:'Start is blocked', optimizerBefore:'Before', optimizerAfter:'After', optimizerDifference:'Bonus changes',
+      bonusAnalyzer:'Bonus analyzer', bonusSources:'Bonus sources', bonusDuplicates:'matching sources: {n}', bonusActiveCopies:'active: {active} / limit: {limit}', bonusNoLimit:'limit not specified', bonusBestNext:'Best next business', bonusNoCandidate:'No suitable business in stock', bonusLimited:'Active-copy limit reached', bonusZeroEffect:'Effect was not recognized',
+      all:'All', blocked:'blocked', noLots:'No lots found', noFairs:'No fairs with available lots',
+      allowedCells:'Allowed slots', cell:'Cell {n}', selectCellsHint:'Choose which slot groups are allowed for purchases',
+      regularSlots:'Regular', vipSlots:'VIP', yes:'YES', no:'NO', noCells:'Both regular and VIP slots are disabled for a selected item', fairSavedSettings:'Saved settings', saveSetting:'Save setting',
+      fairExactLots:'Search combinations up to', fairBonusLots:'Buy bonus lots',
+      updateSetting:'Update', settingName:'Setting name:', settingSaved:'Setting “{name}” saved', settingLoaded:'Setting “{name}” loaded',
+      deleteSetting:'Delete setting “{name}”?', regularShop:'Regular shop', ordinaryShop:'Standard shop', clanShop:'Clan shop', readShop:'Refresh shop', selectAvailable:'Select available',
+      shopReadFirst:'Read the shop first', remaining:'Remaining {n}', unlimited:'Unlimited', boughtOut:'Purchased', selectedPurchases:'Selected purchases: {n}',
+      balance:'Balance', willSpend:'Spend', bala
