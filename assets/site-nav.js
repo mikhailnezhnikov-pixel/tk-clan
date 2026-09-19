@@ -1,10 +1,15 @@
 (()=>{
   const labels={
-    ru:{home:'Главная',information:'Гайд по игре',recipes:'Рецепты',calculators:'Калькуляторы',maps:'Карты',wars:'Клановые войны',ratings:'Рейтинг',feedback:'Обратная связь',cabinet:'Личный кабинет'},
-    en:{home:'Home',information:'Game guide',recipes:'Recipes',calculators:'Calculators',maps:'Maps',wars:'Clan wars',ratings:'Rankings',feedback:'Feedback',cabinet:'Member area'},
-    fa:{home:'خانه',information:'راهنمای بازی',recipes:'دستورها',calculators:'محاسبه‌گرها',maps:'نقشه‌ها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',feedback:'بازخورد',cabinet:'پنل اعضا'}
+    ru:{home:'Главная',information:'Гайд по игре',announcements:'Новости игры',recipes:'Рецепты',calculators:'Калькуляторы',maps:'Карты',wars:'Клановые войны',ratings:'Рейтинг',feedback:'Обратная связь',cabinet:'Личный кабинет',game:'Игра',clan:'Клан',contact:'Связь'},
+    en:{home:'Home',information:'Game guide',announcements:'Game news',recipes:'Recipes',calculators:'Calculators',maps:'Maps',wars:'Clan wars',ratings:'Rankings',feedback:'Feedback',cabinet:'Member area',game:'Game',clan:'Clan',contact:'Contact'},
+    fa:{home:'خانه',information:'راهنمای بازی',announcements:'اخبار بازی',recipes:'دستورها',calculators:'محاسبه‌گرها',maps:'نقشه‌ها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',feedback:'بازخورد',cabinet:'پنل اعضا',game:'بازی',clan:'قبیله',contact:'ارتباط'}
   };
-  const items=[['home',''],['information','information/'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/'],['wars','wars/'],['ratings','ratings/'],['feedback','feedback/'],['cabinet','cabinet/']];
+  const items=[['home',''],['information','information/'],['announcements','cabinet/?tab=announcements'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/'],['wars','wars/'],['ratings','ratings/'],['feedback','feedback/'],['cabinet','cabinet/']];
+  const desktopGroups=[
+    {label:'game',items:[['information','information/'],['announcements','cabinet/?tab=announcements'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/']]},
+    {label:'clan',items:[['wars','wars/'],['ratings','ratings/']]},
+    {label:'contact',items:[['feedback','feedback/']]}
+  ];
   function lang(){const v=localStorage.getItem('tk-language');return labels[v]?v:'ru'}
   function parts(){return location.pathname.split('/').filter(Boolean)}
   function current(){const p=parts();return p[0]||'home'}
@@ -22,7 +27,30 @@
     if(key==='cabinet')a.classList.add(mobile?'mobile-login':'nav-login');
     return a;
   }
-  function renderContainer(node,mobile=false){if(!node)return;node.textContent='';for(const [key,path] of items)node.appendChild(anchor(key,path,mobile))}
+  function renderContainer(node,mobile=false){
+    if(!node)return;
+    node.textContent='';
+    if(mobile){
+      for(const [key,path] of items)node.appendChild(anchor(key,path,true));
+      return;
+    }
+    node.appendChild(anchor('home','',false));
+    for(const group of desktopGroups){
+      const wrap=document.createElement('div');wrap.className='nav-group';
+      const button=document.createElement('button');button.type='button';button.className='nav-group-toggle';
+      button.textContent=labels[lang()][group.label]+' ▾';
+      button.setAttribute('aria-expanded','false');
+      const menu=document.createElement('div');menu.className='nav-group-menu';
+      for(const [key,path] of group.items){
+        const a=anchor(key,path,false);
+        if(a.classList.contains('active'))button.classList.add('active');
+        menu.appendChild(a);
+      }
+      wrap.append(button,menu);
+      node.appendChild(wrap);
+    }
+    node.appendChild(anchor('cabinet','cabinet/',false));
+  }
   function createHeader(){
     if(current()==='home'||document.querySelector('.topbar,.site-header'))return;
     const header=document.createElement('header');header.className='topbar tk-generated-header';
@@ -47,6 +75,39 @@
     if(menu)menu.classList.remove('open');
     document.body.classList.remove('menu-open');
   }
+  function wireDesktopGroups(){
+    document.querySelectorAll('.nav-group').forEach(group=>{
+      if(group.dataset.tkWired==='1')return;
+      group.dataset.tkWired='1';
+      const toggle=group.querySelector('.nav-group-toggle');
+      const close=()=>{group.classList.remove('open');toggle?.setAttribute('aria-expanded','false')};
+      toggle?.addEventListener('click',event=>{
+        event.preventDefault();
+        event.stopPropagation();
+        const next=!group.classList.contains('open');
+        document.querySelectorAll('.nav-group.open').forEach(other=>{
+          if(other!==group){
+            other.classList.remove('open');
+            other.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded','false');
+          }
+        });
+        group.classList.toggle('open',next);
+        toggle.setAttribute('aria-expanded',String(next));
+      });
+      group.addEventListener('mouseleave',close);
+    });
+    if(document.documentElement.dataset.tkDesktopNavClose!=='1'){
+      document.documentElement.dataset.tkDesktopNavClose='1';
+      document.addEventListener('click',event=>{
+        if(event.target.closest('.nav-group'))return;
+        document.querySelectorAll('.nav-group.open').forEach(group=>{
+          group.classList.remove('open');
+          group.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded','false');
+        });
+      });
+    }
+  }
+
   function wireGeneratedMenu(){
     document.querySelectorAll('[data-menu-toggle]').forEach(toggle=>{
       if(toggle.dataset.tkWired==='1')return;toggle.dataset.tkWired='1';
@@ -82,6 +143,7 @@
     document.querySelectorAll('nav.nav,nav.desktop-nav').forEach(n=>renderContainer(n,false));
     document.querySelectorAll('nav.mobile-nav,.mobile-links').forEach(n=>renderContainer(n,true));
     portalMobileMenus();
+    wireDesktopGroups();
     wireGeneratedMenu();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
