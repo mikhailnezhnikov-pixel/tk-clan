@@ -8,6 +8,8 @@ on:
       - 'deploy/maps/server-map-data.patch.gz.b64'
       - 'deploy/maps/server-map-data-v3.patch.gz.b64'
       - 'deploy/maps/server-map-owner-access.patch.gz.b64'
+      - 'deploy/maps/server-full-map.patch.gz.b64'
+      - 'deploy/maps/full/hk_newyork2332.cms.b64.part*'
   workflow_dispatch:
 
 permissions:
@@ -77,6 +79,31 @@ jobs:
             echo PRIVATE_MAP_PAYLOAD_OK
           '
 
+      - name: Deploy encrypted full New York geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          parts=(deploy/maps/full/hk_newyork2332.cms.b64.part*)
+          test "${#parts[@]}" -eq 7
+          cat "${parts[@]}" | base64 -d > /tmp/hk_newyork2332.full.cms
+          test -s /tmp/hk_newyork2332.full.cms
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/hk_newyork2332.full.cms root@89.125.1.71:/tmp/hk_newyork2332.full.cms
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            openssl cms -decrypt -binary -inform DER \
+              -in /tmp/hk_newyork2332.full.cms \
+              -recip /opt/hamsterking-license/private-maps/upload-cert.pem \
+              -inkey /opt/hamsterking-license/private-maps/upload-key.pem \
+              -out /tmp/hk_newyork2332.full.json.gz
+            gzip -t /tmp/hk_newyork2332.full.json.gz
+            install -d -m 700 /opt/hamsterking-license/private-maps/full
+            install -m 0600 /tmp/hk_newyork2332.full.json.gz \
+              /opt/hamsterking-license/private-maps/full/hk_newyork2332.full.json.gz
+            rm -f /tmp/hk_newyork2332.full.cms /tmp/hk_newyork2332.full.json.gz
+            echo FULL_NEWYORK_PAYLOAD_OK
+          '
+
       - name: Build backend with private map-data endpoints
         shell: bash
         run: |
@@ -99,6 +126,13 @@ jobs:
             patch --fuzz=0 /tmp/server.py < /tmp/server-map-owner-access.patch
           fi
 
+          if ! grep -q 'FULL_HK_MAPS_DIR' /tmp/server.py; then
+            base64 -d deploy/maps/server-full-map.patch.gz.b64 | gzip -d > /tmp/server-full-map.patch
+            patch --batch --forward --fuzz=0 /tmp/server.py < /tmp/server-full-map.patch
+          fi
+
+          grep -q 'def load_full_hk_map' /tmp/server.py
+          grep -q '"render": "full"' /tmp/server.py
           python3 -m py_compile /tmp/server.py
 
           cat > /tmp/set-hk-map-open.py <<'PY'
@@ -157,6 +191,17 @@ jobs:
           if len(data.get('points') or []) < 1000:
               raise SystemExit('new york map point count too small')
           print('MAP_DATA_OK', len(maps), data['title'], len(data['points']))
+          full=server.load_full_hk_map('hk_newyork2332')
+          if not full:
+              raise SystemExit('full New York geometry missing')
+          buildings=full['buildings']['features']
+          game=sum(1 for row in buildings if row.get('properties',{}).get('is_game'))
+          if len(buildings) != 4329 or game != 2574:
+              raise SystemExit(f'full New York mismatch buildings={len(buildings)} game={game}')
+          response=server.hk_map_data('hk_newyork2332', member={'maps_access':0,'maps_manage':1})
+          if response.get('render') != 'full':
+              raise SystemExit('New York API is not using full rendering')
+          print('FULL_MAP_DATA_OK', len(buildings), game, len(full['roads']['features']), len(full['landuse']['features']))
           PY
 
       - name: Deploy backend and connect all Open links
@@ -193,4 +238,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/hk-maps-payload.cms /tmp/server.py /tmp/server-map-data.patch /tmp/server-map-data-v3.patch /tmp/server-map-owner-access.patch /tmp/set-hk-map-open.py /tmp/verify-hk-map.py /tmp/grant-hk-map-owner.py
+        run: rm -f "$HOME/.ssh/topking" /tmp/hk-maps-payload.cms /tmp/hk_newyork2332.full.cms /tmp/server.py /tmp/server-map-data.patch /tmp/server-map-data-v3.patch /tmp/server-map-owner-access.patch /tmp/server-full-map.patch /tmp/set-hk-map-open.py /tmp/verify-hk-map.py /tmp/grant-hk-map-owner.py
