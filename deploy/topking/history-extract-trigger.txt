@@ -1,0 +1,2 @@
+extract=2026-09-19T14:45:00Z
+purpose=planned-module-source-discovery
