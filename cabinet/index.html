@@ -559,7 +559,6 @@
         </div>
         <div class="cab-tab-group" data-cab-group="sections">
           <span class="cab-tab-group-label">Разделы</span>
-          <button class="cab-tab" type="button" data-cab-tab="announcements">Новости игры</button>
           <button class="cab-tab" type="button" data-cab-tab="maps" hidden>Карты</button>
           <button class="cab-tab" type="button" data-cab-tab="install">Установка</button>
         </div>
@@ -669,24 +668,6 @@
           </div>
         </article>
       </section>
-
-
-      <section class="cab-panel" data-cab-panel="announcements" hidden>
-        <article class="card cab-card wide ann-card">
-          <div class="ann-head">
-            <div>
-              <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Hamster King Announcement</div>
-              <h2>Новости игры</h2>
-              <p class="stats-sub">Официальные публикации из Telegram-канала Hamster King. Новые сообщения отображаются сверху.</p>
-            </div>
-            <a class="ann-source" href="https://t.me/hamsterking_game" target="_blank" rel="noopener">Открыть канал</a>
-          </div>
-          <p id="announcements-message" class="message" role="status" aria-live="polite"></p>
-          <div id="announcements-stale" class="ann-stale hidden">Telegram временно недоступен — показана последняя сохранённая версия ленты.</div>
-          <div id="announcements-list" class="ann-list"></div>
-        </article>
-      </section>
-
 
       <section class="cab-panel" data-cab-panel="clan-shop" hidden>
         <article class="card cab-card wide clanshop-card">
@@ -2184,7 +2165,6 @@
       if(requested==='maps'&&currentMapsAccess)setCabTab('maps',false);
       else if(requested==='players')setCabTab('players',false);
       else if(requested==='clan-shop')setCabTab('clan-shop',false);
-      else if(requested==='announcements')setCabTab('announcements',false);
     }
   }
 
