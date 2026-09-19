@@ -76,6 +76,54 @@ if 'function growthBestGeneral' in s:
 require(strict_hamster, 'strict hamster Caps cost guard missing')
 require(strict_general, 'strict general Pit Token cost guard missing')
 
+# Two consecutive successful responses without an actual level change stop the
+# optimizer instead of letting a stale/partial response spin a long safety loop.
+if 'GROWTH_NO_PROGRESS_LIMIT' not in s:
+    no_progress_anchor = "  function growthBestGeneral(state,blocked,budget,mode='x1',weightValue=1){"
+    if no_progress_anchor not in s:
+        raise SystemExit('Growth General selector anchor missing')
+    s = s.replace(no_progress_anchor, "  const GROWTH_NO_PROGRESS_LIMIT = 2;\n\n" + no_progress_anchor, 1)
+
+if 'async function growthRunGeneralsCore' in s:
+    old_general_state = "budget={limit,spent:0},blocked=new Set();let safety=0;"
+    new_general_state = "budget={limit,spent:0},blocked=new Set();let safety=0,noProgress=0;"
+    if old_general_state in s:
+        s = s.replace(old_general_state, new_general_state, 1)
+    elif new_general_state not in s:
+        raise SystemExit('General no-progress state anchor missing')
+
+    old_general_after = "const after=Number(live?.level??before),weighted="
+    new_general_after = (
+        "const after=Number(live?.level??before);"
+        "if(after<=before){noProgress+=1;recordDiagnostic('growth-general-no-progress',{id:best.id,before,after,count:noProgress});"
+        "if(noProgress>=GROWTH_NO_PROGRESS_LIMIT){blocked.add(best.id);break;}}else noProgress=0;"
+        "const weighted="
+    )
+    if old_general_after in s:
+        s = s.replace(old_general_after, new_general_after, 1)
+    elif "growth-general-no-progress" not in s:
+        raise SystemExit('General no-progress result anchor missing')
+
+if 'async function growthRunLevelsCore' in s:
+    old_hamster_state = "async function growthRunLevelsCore(state,budget,weightValue=1){\n    const blocked=new Set();let safety=0;"
+    new_hamster_state = "async function growthRunLevelsCore(state,budget,weightValue=1){\n    const blocked=new Set();let safety=0,noProgress=0;"
+    if old_hamster_state in s:
+        s = s.replace(old_hamster_state, new_hamster_state, 1)
+    elif new_hamster_state not in s:
+        raise SystemExit('Hamster no-progress state anchor missing')
+
+    old_hamster_after = "const after=Number(live?.level??current),actualGain="
+    new_hamster_after = (
+        "const after=Number(live?.level??current);"
+        "if(after<=current){noProgress+=1;recordDiagnostic('growth-hamster-no-progress',{id:best.id,before:current,after,count:noProgress});"
+        "if(noProgress>=GROWTH_NO_PROGRESS_LIMIT){blocked.add(best.id);break;}}else noProgress=0;"
+        "const actualGain="
+    )
+    if old_hamster_after in s:
+        s = s.replace(old_hamster_after, new_hamster_after, 1)
+    elif "growth-hamster-no-progress" not in s:
+        raise SystemExit('Hamster no-progress result anchor missing')
+
 if is_1144:
     s = s.replace('// @version      1.14.4', '// @version      1.15.0', 1)
     s = s.replace(": '1.14.4';", ": '1.15.0';", 1)
