@@ -1251,8 +1251,7 @@
         const requests=participants.filter(row=>Number(row.request_splus_businesses||0)>0);
         if($('clanshop-request-count'))$('clanshop-request-count').textContent=requests.length+' заявок';
         requestsBody.innerHTML=requests.map(row=>{
-          const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong>'+
-            (row.player_id?'<small>ID: '+safe(row.player_id)+'</small>':'')+'</div>';
+          const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong></div>';
           const qty=Number(row.request_splus_businesses||0);
           const accepted=Number(row.splus_businesses||0)===qty;
           const requestCell='<div class="clanshop-request-cell"><span class="clanshop-qty">'+qty+'</span>'+
@@ -1264,8 +1263,7 @@
     }
 
     body.innerHTML=filtered.map(row=>{
-      const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong>'+
-        (row.player_id?'<small>ID: '+safe(row.player_id)+'</small>':'')+'</div>';
+      const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong></div>';
       if(data.can_manage){
         return '<tr data-clanshop-player="'+safe(row.player_key)+'">'+
           '<td>'+player+'</td>'+
@@ -1343,8 +1341,7 @@
     players.forEach(row=>{
       const total=row.idol_orbs+row.splus_businesses;
       html.push('<tr class="clanshop-history-player" data-clanshop-history-player="'+safe(row.player_key)+'">'+
-        '<td><div class="clanshop-player"><strong>'+safe(row.nickname)+'</strong>'+
-        (row.player_id?'<small>ID: '+safe(row.player_id)+'</small>':'')+'</div></td>'+
+        '<td><div class="clanshop-player"><strong>'+safe(row.nickname)+'</strong></div></td>'+
         '<td>'+row.idol_orbs+'</td><td>'+row.splus_businesses+'</td><td><b>'+total+'</b></td></tr>');
       if(clanShopHistoryOpenPlayer===row.player_key){
         const weeks=[...row.weeks].sort((a,b)=>String(b.week_start).localeCompare(String(a.week_start)));
