@@ -1,31 +1,52 @@
 TopKing live verification summary
 date=2026-09-20
 live_version=1.17.1
-capture_blob=263631e60fa9b7428f0880be67b06fee86a9fc75
+capture_blob=25c29d0ebca81fc1141aa366549f38df04f85b66
 
+migration_core:
 login_gate=PASS
 today=PASS
 pit=PASS
+business=PASS
+growth_hamsters=PASS
+growth_generals=PASS
+fair=PASS
+shop=PASS
 recipes=PASS
 project_bureau=PASS
 resource_buildings=PASS
 maps_research=PASS
+buildings=PASS_READ_ONLY
+explore=PASS
 clan_skills=PASS
 rumors=PASS
 wars=PASS_READ_ONLY
-buildings=PASS_READ_ONLY
-explore=PASS
-fair=PASS
-shop=PASS
 
-safety:
-- Native Hamster King login completes before TopKing runtime mounts.
-- Mutation gate serializes irreversible game writes and disables network retries for mutation calls.
-- Project Bureau refreshes live inventory/costs, applies projected and per-craft budget checks, journals spend, then performs authoritative player refresh.
-- Resource Buildings rebuild selected rows from fresh state, apply projected and per-request budget checks, journal spend, then perform authoritative player refresh.
-- Fair and Shop refresh live player/catalog state before execution and retain Runner Pause/Stop checks.
-- Irreversible game purchases/exchanges were not fired merely for verification; live code paths and server deployment/round-trip were verified instead.
+business_safety:
+runner=yes
+pause=yes
+stop_abort=yes
+slot_poll_pause=yes
+manager_release_pause=yes
+authoritative_player_refresh=yes
 
-deploy_run=35458028394
-postdeploy_capture_run=35458060369
-fair_shop_capture_run=35458097592
+growth_safety:
+fresh_player_state_before_run=yes
+shared_runner=yes
+pause_stop_checkpoint=yes
+mutation_gate=yes
+hamster_budget=cur_cap
+general_budget=item_pit_token
+hamster_level_retry_disabled=yes
+hamster_rarity_retry_disabled=yes
+state_store_merge=yes
+
+remaining_planned_new_modules=5
+remaining_modules:
+- Bosses
+- Neighborhoods
+- Auto routines
+- Regular Fair
+- Rat Hunt
+
+note=These five are new planned modules, not missing pieces of the old working migration.
