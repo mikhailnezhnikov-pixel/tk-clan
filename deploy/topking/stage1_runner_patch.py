@@ -1,5 +1,11 @@
 from pathlib import Path
 import re
+import subprocess
+
+test_path = Path(__file__).with_name('test_stage1_mutation_gate.js')
+if not test_path.exists():
+    raise SystemExit('Stage 1 mutation gate regression test missing')
+subprocess.run(['node', str(test_path)], check=True)
 
 p = Path('/tmp/HamsterKingMobile.user.js')
 s = p.read_text(encoding='utf-8')
