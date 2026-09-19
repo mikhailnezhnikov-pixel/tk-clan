@@ -60,6 +60,7 @@ jobs:
           grep -q 'CLAN_SHOP_HISTORY_V4' /tmp/server.py
           grep -q 'GAME_ANNOUNCEMENTS_V1' /tmp/server.py
           grep -q 'GAME_ANNOUNCEMENTS_PUBLIC_V2' /tmp/server.py
+          grep -q 'GAME_ANNOUNCEMENTS_PUBLIC_V3' /tmp/server.py
           grep -q 'CLAN_SHOP_ACTUAL_FACTS_V5' /tmp/server.py
           ! grep -q 'CLAN_SHOP_TEST_HISTORY_RESET_V1' /tmp/server.py
           python3 -m py_compile /tmp/server.py
@@ -87,6 +88,7 @@ jobs:
             grep -q "CLAN_SHOP_HISTORY_V4" /opt/hamsterking-license/server.py
             grep -q "GAME_ANNOUNCEMENTS_V1" /opt/hamsterking-license/server.py
             grep -q "GAME_ANNOUNCEMENTS_PUBLIC_V2" /opt/hamsterking-license/server.py
+            grep -q "GAME_ANNOUNCEMENTS_PUBLIC_V3" /opt/hamsterking-license/server.py
             grep -q "CLAN_SHOP_ACTUAL_FACTS_V5" /opt/hamsterking-license/server.py
             ! grep -q "CLAN_SHOP_TEST_HISTORY_RESET_V1" /opt/hamsterking-license/server.py
             echo TELEGRAM_APPLICATION_TOPIC_BACKEND_OK
