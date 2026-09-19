@@ -1,6 +1,7 @@
 # Deploy trigger: actual Clan Shop telemetry v1
 from pathlib import Path
 import re
+from patch_today_live_1170 import apply_today_hotfix
 
 p=Path("/tmp/HamsterKingMobile.user.js")
 s=p.read_text()
@@ -23,8 +24,9 @@ def sync_version(text):
 
 s = sync_version(s)
 if MARKER in s:
+    s = apply_today_hotfix(s)
     p.write_text(s)
-    print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED")
+    print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_AND_TODAY_HOTFIXED")
     raise SystemExit(0)
 
 anchor="  const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';\n"
@@ -100,5 +102,6 @@ if old not in s:
     raise SystemExit("buy completion anchor missing")
 s=s.replace(old,new,1)
 
+s = apply_today_hotfix(s)
 p.write_text(s)
 print("CLAN_SHOP_USERSCRIPT_PATCH_OK")
