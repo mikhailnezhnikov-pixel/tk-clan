@@ -1,0 +1,83 @@
+name: Deploy Clan Shop actual purchase telemetry
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_clan_shop_actual_userscript.py'
+      - '.github/workflows/deploy-clan-shop-facts-userscript.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-topking-userscript-facts
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Patch live userscript
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_clan_shop_actual_userscript.py
+          grep -q '^// @version      1.17.0$' /tmp/HamsterKingMobile.user.js
+          grep -q 'HK_CLAN_SHOP_ACTUAL_FACTS_V1' /tmp/HamsterKingMobile.user.js
+          grep -q '/clan-shop-facts/submit' /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Deploy userscript
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            node --check /tmp/HamsterKingMobile.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.0\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+            systemctl daemon-reload
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+            grep -q "^// @version      1.17.0$" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -q "HK_CLAN_SHOP_ACTUAL_FACTS_V1" /opt/hamsterking-license/HamsterKingMobile.user.js
+            node --check /opt/hamsterking-license/HamsterKingMobile.user.js
+          '
+
+      - name: Verify service
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            ok=0
+            for i in 1 2 3 4 5 6 7 8; do
+              if curl -fsS --max-time 3 http://127.0.0.1:8787/health >/tmp/hk-health.json 2>/dev/null || \
+                 curl -fsS --max-time 3 http://127.0.0.1:3188/health >/tmp/hk-health.json 2>/dev/null; then
+                cat /tmp/hk-health.json
+                ok=1
+                break
+              fi
+              sleep 1
+            done
+            test "$ok" -eq 1
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js
