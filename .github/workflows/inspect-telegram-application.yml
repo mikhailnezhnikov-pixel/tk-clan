@@ -29,8 +29,10 @@ jobs:
             f=/opt/hamsterking-license/server.py
             echo "=== TELEGRAM CONSTANT NAMES ==="
             grep -n -E "TELEGRAM_[A-Z_]+|BOT_[A-Z_]+|message_thread_id" "$f" | sed -E "s/(TOKEN|SECRET)[^=]*=.*/\1=<redacted>/" | head -120 || true
-            echo "=== APPLICATION REFS ==="
-            grep -n -E "application|feedback|sendMessage|getUpdates|telegram" "$f" | head -220 || true
+            echo "=== APPLICATION FIELDS ==="
+            grep -n -A40 -B10 "^APPLICATION_FIELDS" "$f" || true
+            echo "=== APPLICATION FLOW ==="
+            grep -n -A180 -B20 "^def telegram_summary" "$f" | head -240 || true
           '
 
       - name: Cleanup
