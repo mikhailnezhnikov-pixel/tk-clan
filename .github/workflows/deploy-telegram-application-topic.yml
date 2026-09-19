@@ -12,7 +12,6 @@ on:
       - 'deploy/topking/patch_clan_shop_business_requests_only.py'
       - 'deploy/topking/patch_clan_shop_history.py'
       - 'deploy/topking/patch_game_announcements.py'
-      - 'deploy/topking/remove_clan_shop_test_history_reset.py'
       - '.github/workflows/deploy-telegram-application-topic.yml'
 
 permissions:
@@ -46,7 +45,6 @@ jobs:
           python3 deploy/topking/patch_clan_shop_business_requests_only.py /tmp/server.py
           python3 deploy/topking/patch_clan_shop_history.py /tmp/server.py
           python3 deploy/topking/patch_game_announcements.py /tmp/server.py
-          python3 deploy/topking/remove_clan_shop_test_history_reset.py /tmp/server.py
           grep -q 'TELEGRAM_APPLICATION_TOPIC_V1' /tmp/server.py
           grep -q '/setapplications' /tmp/server.py
           grep -q 'message_thread_id' /tmp/server.py
