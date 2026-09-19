@@ -89,7 +89,9 @@ def main():
         validate(second)
 
         if first != second:
-            raise AssertionError('Stage 1 patch is not idempotent on existing 1.15.0')
+            import difflib
+            diff = ''.join(difflib.unified_diff(first.splitlines(True), second.splitlines(True), fromfile='first', tofile='second'))
+            raise AssertionError('Stage 1 patch is not idempotent on existing 1.15.0\n' + diff[:12000])
 
         print('STAGE1_PATCH_FIXTURE_TEST_OK')
     finally:
