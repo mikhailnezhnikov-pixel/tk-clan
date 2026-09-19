@@ -52,6 +52,10 @@ jobs:
             base64 -d deploy/topking/userscript-1.9.9.patch.gz.b64 | gzip -d > /tmp/hk-history/userscript-1.9.9.patch.txt
           fi
 
+          if [ -f deploy/topking/server-no-rumors.patch.gz.b64 ]; then
+            base64 -d deploy/topking/server-no-rumors.patch.gz.b64 | gzip -d > /tmp/hk-history/server-no-rumors.patch.txt
+          fi
+
           {
             echo "# Historical userscript migration source index"
             echo
@@ -65,6 +69,14 @@ jobs:
               grep -nEi -C 45 'runDailyRumors|dailyRumorRoute|RUMOR_API_BASE|rumors/search|слух' /tmp/hk-history/userscript-1.9.9.patch.txt || true
             fi
           } > audit/hk-historical-rumors-source.txt
+
+          {
+            echo "# Server Rumors code removed by 1.9.9"
+            echo
+            if [ -f /tmp/hk-history/server-no-rumors.patch.txt ]; then
+              grep -nEi -C 55 'rumor|/api/v1/rumors|admin/rumors|Маршрут слухов' /tmp/hk-history/server-no-rumors.patch.txt || true
+            fi
+          } > audit/hk-historical-rumors-server-source.txt
 
           {
             echo "# Historical feature references"
@@ -82,7 +94,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-historical-source-index.txt audit/hk-historical-rumors-source.txt audit/hk-historical-feature-references.txt
+          git add audit/hk-historical-source-index.txt audit/hk-historical-rumors-source.txt audit/hk-historical-rumors-server-source.txt audit/hk-historical-feature-references.txt
           if ! git diff --cached --quiet; then
             git commit -m "Extract historical userscript migration sources"
             git pull --rebase origin main
