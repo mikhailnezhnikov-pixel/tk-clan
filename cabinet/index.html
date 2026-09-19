@@ -192,16 +192,40 @@
     .hkmap-reward span{display:block;color:var(--muted);font-size:11px}
     .hkmap-reward b{display:block;margin-top:4px;color:#9ee3b5;font-size:20px}
     .hkmap-note{margin:12px 0 0;color:var(--muted);font-size:12px}
-    .hkmap-access-admin{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1.3fr);gap:16px;margin:18px 0;padding:17px;border:1px solid rgba(232,182,84,.20);border-radius:16px;background:rgba(232,182,84,.045)}
-    .hkmap-access-admin h3{margin:0 0 6px;color:#fff;font-size:18px}
+    .hkmap-access-admin{display:block;margin:18px 0;padding:0;border:1px solid rgba(232,182,84,.20);border-radius:16px;background:rgba(232,182,84,.045);overflow:hidden}
+    .hkmap-access-admin>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 17px;cursor:pointer;user-select:none}
+    .hkmap-access-admin>summary::-webkit-details-marker{display:none}
+    .hkmap-access-admin[open]>summary{border-bottom:1px solid rgba(255,255,255,.07)}
+    .hkmap-access-admin h3{margin:0 0 5px;color:#fff;font-size:18px}
     .hkmap-access-admin p{margin:0}
-    .hkmap-members{display:grid;gap:7px}
-    .hkmap-member{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(8,11,16,.42)}
+    .hkmap-access-summary{flex:0 0 auto;color:#d8b766;font-size:12px;font-weight:850}
+    .hkmap-access-body{padding:14px 16px 16px}
+    .hkmap-access-help{margin:0 0 12px!important;color:var(--muted);font-size:12px;line-height:1.5}
+    .hkmap-members{display:grid;gap:8px}
+    .hkmap-member{display:block;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(8,11,16,.42);overflow:hidden}
+    .hkmap-member>summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:11px 12px;cursor:pointer}
+    .hkmap-member>summary::-webkit-details-marker{display:none}
+    .hkmap-member[open]>summary{border-bottom:1px solid rgba(255,255,255,.07)}
     .hkmap-member strong{display:block;overflow-wrap:anywhere}
     .hkmap-member small{display:block;margin-top:2px;color:var(--muted)}
+    .hkmap-access-count{color:#c7a75f;font-size:11px;font-weight:800;white-space:nowrap}
+    .hkmap-chevron{color:#c7a75f;transition:transform .18s ease}
+    .hkmap-member[open]>summary .hkmap-chevron,.hkmap-city[open]>summary .hkmap-chevron{transform:rotate(180deg)}
+    .hkmap-member-tree{display:grid;gap:7px;padding:10px}
+    .hkmap-city{border:1px solid rgba(255,255,255,.075);border-radius:11px;background:rgba(255,255,255,.02);overflow:hidden}
+    .hkmap-city>summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:9px 10px;cursor:pointer}
+    .hkmap-city>summary::-webkit-details-marker{display:none}
+    .hkmap-city[open]>summary{border-bottom:1px solid rgba(255,255,255,.06)}
+    .hkmap-city-name{min-width:0}
+    .hkmap-city-name strong{white-space:normal}
+    .hkmap-city-name small{margin-top:1px}
     .hkmap-toggle{display:inline-flex;align-items:center;gap:7px;color:#dce2e9;font-size:12px;font-weight:800;white-space:nowrap}
     .hkmap-toggle input{width:18px;height:18px;accent-color:#d6a33d}
     .hkmap-toggle input:disabled{opacity:.45}
+    .hkmap-map-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;padding:9px}
+    .hkmap-map-item{display:flex;align-items:center;gap:8px;padding:8px 9px;border:1px solid rgba(255,255,255,.06);border-radius:9px;background:rgba(7,10,15,.45);color:#d7dde6;font-size:12px;cursor:pointer}
+    .hkmap-map-item input{width:17px;height:17px;accent-color:#d6a33d}
+    .hkmap-manager-note{padding:10px 12px;color:#9ee3b5;font-size:12px;font-weight:800}
     .hkmap-published{display:inline-flex;padding:4px 7px;border-radius:999px;background:rgba(65,177,103,.10);color:#9ee3b5;font-size:11px;font-weight:850}
     .hkmap-private{color:#707986;font-size:11px;font-weight:750}
     @media(max-width:680px){
@@ -213,8 +237,10 @@
       .hkmap-tools{align-items:stretch;flex-direction:column}
       .hkmap-tools input{width:100%}
       .hkmap-detail-box{grid-template-columns:1fr}
-      .hkmap-access-admin{grid-template-columns:1fr}
-      .hkmap-member{grid-template-columns:1fr}
+      .hkmap-access-admin>summary{align-items:flex-start}
+      .hkmap-member>summary,.hkmap-city>summary{grid-template-columns:minmax(0,1fr) auto}
+      .hkmap-member>summary .hkmap-chevron,.hkmap-city>summary .hkmap-chevron{display:none}
+      .hkmap-map-list{grid-template-columns:1fr 1fr}
     }
 
     .hidden{display:none!important}
@@ -540,13 +566,19 @@
             <div class="hkmap-mini"><span>Open подключено</span><b id="hkmap-ready">0</b></div>
           </div>
 
-          <div id="hkmap-access-admin" class="hkmap-access-admin hidden">
-            <div>
-              <h3>Доступ к разделу карт</h3>
-              <p class="muted">Раздел скрыт от остальных участников. Здесь можно разрешить просмотр конкретным участникам кабинета.</p>
+          <details id="hkmap-access-admin" class="hkmap-access-admin hidden">
+            <summary>
+              <div>
+                <h3>Доступ пользователей к картам</h3>
+                <p class="muted">Список по умолчанию свернут. Откройте его только когда нужно изменить права.</p>
+              </div>
+              <span id="hkmap-access-summary" class="hkmap-access-summary">Настроить</span>
+            </summary>
+            <div class="hkmap-access-body">
+              <p class="hkmap-access-help">Сначала выберите участника, затем город. Галочка города открывает весь город. Если раскрыть город, можно выдать или снять доступ к каждой карте отдельно. Управляющие картами всегда имеют доступ ко всем картам.</p>
+              <div id="hkmap-members" class="hkmap-members"></div>
             </div>
-            <div id="hkmap-members" class="hkmap-members"></div>
-          </div>
+          </details>
 
           <div class="hkmap-tools">
             <input id="hkmap-search" type="search" autocomplete="off" placeholder="Поиск города или координат, например New York 23:32">
@@ -688,6 +720,7 @@
   let hkMapsCanManage=false;
   let hkMapsLoaded=false;
   let currentMapsAccess=false;
+  let initialCabTabApplied=false;
 
   function hkMapsData(){
     return hkMaps;
@@ -698,20 +731,88 @@
     return map[key]??'';
   }
 
+  function hkMapsByCity(){
+    const grouped=new Map();
+    hkMaps.forEach(map=>{
+      const city=String(map.city||'Без города');
+      if(!grouped.has(city))grouped.set(city,[]);
+      grouped.get(city).push(map);
+    });
+    grouped.forEach(maps=>maps.sort((a,b)=>String(a.grid).localeCompare(String(b.grid),'en',{numeric:true})));
+    return [...grouped.entries()].sort((a,b)=>a[0].localeCompare(b[0],'en',{numeric:true}));
+  }
+
+  function hkMemberRuleState(member,map){
+    const rules=member.map_rules||{};
+    const cityRules=new Set(Array.isArray(rules.cities)?rules.cities:[]);
+    const mapRules=rules.maps&&typeof rules.maps==='object'?rules.maps:{};
+    if(Object.prototype.hasOwnProperty.call(mapRules,map.key))return !!mapRules[map.key];
+    return cityRules.has(map.city);
+  }
+
+  function renderMemberCityMaps(details){
+    if(!details||details.dataset.rendered==='1')return;
+    const telegramId=details.dataset.telegramId||'';
+    const city=details.dataset.city||'';
+    const member=hkMapsMembers.find(x=>String(x.telegram_id)===telegramId);
+    const list=details.querySelector('.hkmap-map-list');
+    if(!member||!list)return;
+    const maps=hkMaps.filter(x=>String(x.city)===city).sort((a,b)=>String(a.grid).localeCompare(String(b.grid),'en',{numeric:true}));
+    list.innerHTML=maps.map(map=>{
+      const checked=hkMemberRuleState(member,map);
+      return '<label class="hkmap-map-item"><input type="checkbox" data-hkmap-member-map="'+safe(telegramId)+'" data-map-key="'+safe(map.key)+'" '+(checked?'checked ':'')+'><span>'+safe(map.grid)+'</span></label>';
+    }).join('')||'<div class="muted">В этом городе нет карт.</div>';
+    details.dataset.rendered='1';
+  }
+
   function renderMapsMembers(){
-    const box=$('hkmap-access-admin'),list=$('hkmap-members');
+    const box=$('hkmap-access-admin'),list=$('hkmap-members'),summary=$('hkmap-access-summary');
     if(!box||!list)return;
     box.classList.toggle('hidden',!hkMapsCanManage);
     if(!hkMapsCanManage){list.innerHTML='';return}
+    if(summary)summary.textContent=hkMapsMembers.length+' участников';
+    const cities=hkMapsByCity();
     list.innerHTML=hkMapsMembers.map(member=>{
       const name=member.first_name||member.username||member.note||'Участник';
       const suffix=member.username?'@'+member.username:(member.note||'');
       const locked=!!member.maps_manage;
-      return '<div class="hkmap-member">'+
-        '<div><strong>'+safe(name)+'</strong><small>'+safe(suffix)+(locked?' · управление картами':'')+'</small></div>'+
-        '<label class="hkmap-toggle"><input type="checkbox" data-hkmap-member-access="'+safe(member.telegram_id)+'" '+(member.maps_access?'checked ':'')+(locked?'disabled ':'')+'> Доступ</label>'+
-      '</div>';
+      const rules=member.map_rules||{};
+      const cityRules=new Set(Array.isArray(rules.cities)?rules.cities:[]);
+      const allowedMaps=hkMaps.filter(map=>hkMemberRuleState(member,map)).length;
+      const allowedCities=cities.filter(([city,maps])=>maps.some(map=>hkMemberRuleState(member,map))).length;
+      if(locked){
+        return '<details class="hkmap-member"><summary>'+
+          '<div><strong>'+safe(name)+'</strong><small>'+safe(suffix)+' · управление картами</small></div>'+
+          '<span class="hkmap-access-count">все города · все карты</span><span class="hkmap-chevron">⌄</span>'+
+          '</summary><div class="hkmap-manager-note">Управляющий картами автоматически имеет доступ ко всем картам. Отдельные разрешения для него не требуются.</div></details>';
+      }
+      const cityHtml=cities.map(([city,maps])=>{
+        const cityGranted=cityRules.has(city);
+        const effective=maps.filter(map=>hkMemberRuleState(member,map)).length;
+        return '<details class="hkmap-city" data-telegram-id="'+safe(member.telegram_id)+'" data-city="'+safe(city)+'">'+
+          '<summary>'+
+            '<div class="hkmap-city-name"><strong>'+safe(city)+'</strong><small>'+effective+' из '+maps.length+' карт</small></div>'+
+            '<label class="hkmap-toggle" data-hkmap-access-control><input type="checkbox" data-hkmap-member-city="'+safe(member.telegram_id)+'" data-city="'+safe(city)+'" '+(cityGranted?'checked ':'')+'> Весь город</label>'+
+            '<span class="hkmap-chevron">⌄</span>'+
+          '</summary><div class="hkmap-map-list"></div></details>';
+      }).join('');
+      return '<details class="hkmap-member"><summary>'+
+        '<div><strong>'+safe(name)+'</strong><small>'+safe(suffix)+'</small></div>'+
+        '<span class="hkmap-access-count">'+allowedCities+' гор. · '+allowedMaps+' карт</span><span class="hkmap-chevron">⌄</span>'+
+        '</summary><div class="hkmap-member-tree">'+cityHtml+'</div></details>';
     }).join('')||'<div class="muted">Нет участников для настройки.</div>';
+
+    list.querySelectorAll('.hkmap-city').forEach(details=>{
+      details.addEventListener('toggle',()=>{if(details.open)renderMemberCityMaps(details)});
+    });
+    list.querySelectorAll('[data-hkmap-member-city]').forEach(input=>{
+      const member=hkMapsMembers.find(x=>String(x.telegram_id)===String(input.dataset.hkmapMemberCity));
+      const city=String(input.dataset.city||'');
+      const maps=hkMaps.filter(x=>String(x.city)===city);
+      const effective=member?maps.filter(map=>hkMemberRuleState(member,map)).length:0;
+      if(!input.checked&&effective>0)input.indeterminate=true;
+      if(input.checked&&effective<maps.length)input.indeterminate=true;
+    });
   }
 
   async function loadMapsIndex(force=false){
@@ -803,6 +904,7 @@
   }
 
   document.addEventListener('click',event=>{
+    if(event.target.closest('[data-hkmap-access-control]'))event.stopPropagation();
     const sort=event.target.closest('[data-hkmap-sort]');
     if(sort){
       const key=sort.dataset.hkmapSort;
@@ -833,30 +935,60 @@
       }finally{publish.disabled=false}
       return;
     }
-    const memberAccess=event.target.closest('[data-hkmap-member-access]');
-    if(memberAccess){
-      const checked=memberAccess.checked;
-      memberAccess.disabled=true;
+    const cityAccess=event.target.closest('[data-hkmap-member-city]');
+    if(cityAccess){
+      const checked=cityAccess.checked;
+      cityAccess.disabled=true;
       try{
-        await request('/maps/member-access',{method:'POST',body:JSON.stringify({telegram_id:memberAccess.dataset.hkmapMemberAccess,allowed:checked})});
-        setMessage('hkmap-message',checked?'Доступ участнику открыт.':'Доступ участнику закрыт.','good');
+        await request('/maps/access-scope',{method:'POST',body:JSON.stringify({
+          telegram_id:cityAccess.dataset.hkmapMemberCity,
+          scope_type:'city',
+          scope_value:cityAccess.dataset.city,
+          allowed:checked
+        })});
+        setMessage('hkmap-message',checked?'Доступ к городу выдан.':'Доступ к городу снят.','good');
         await loadMapsIndex(true);
       }catch{
-        memberAccess.checked=!checked;
-        setMessage('hkmap-message','Не удалось изменить доступ участника.','bad');
-      }finally{memberAccess.disabled=false}
+        cityAccess.checked=!checked;
+        setMessage('hkmap-message','Не удалось изменить доступ к городу.','bad');
+      }finally{cityAccess.disabled=false}
+      return;
+    }
+    const mapAccess=event.target.closest('[data-hkmap-member-map]');
+    if(mapAccess){
+      const checked=mapAccess.checked;
+      mapAccess.disabled=true;
+      try{
+        await request('/maps/access-scope',{method:'POST',body:JSON.stringify({
+          telegram_id:mapAccess.dataset.hkmapMemberMap,
+          scope_type:'map',
+          scope_value:mapAccess.dataset.mapKey,
+          allowed:checked
+        })});
+        setMessage('hkmap-message',checked?'Доступ к карте выдан.':'Доступ к карте снят.','good');
+        await loadMapsIndex(true);
+      }catch{
+        mapAccess.checked=!checked;
+        setMessage('hkmap-message','Не удалось изменить доступ к карте.','bad');
+      }finally{mapAccess.disabled=false}
     }
   });
 
   $('hkmap-search')?.addEventListener('input',renderMapsIndex);
 
 
-  function setCabTab(name){
+  function setCabTab(name,syncUrl=true){
     document.querySelectorAll('[data-cab-tab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.cabTab===name));
     document.querySelectorAll('[data-cab-panel]').forEach(panel=>panel.hidden=panel.dataset.cabPanel!==name);
+    if(syncUrl){
+      const url=new URL(location.href);
+      if(name==='overview')url.searchParams.delete('tab');
+      else url.searchParams.set('tab',name);
+      history.replaceState(null,'',url);
+    }
     if(name==='players')renderPlayerStats();
     if(name==='maps'){
-      if(!currentMapsAccess){setCabTab('overview');return}
+      if(!currentMapsAccess){setCabTab('overview',syncUrl);return}
       loadMapsIndex();
     }
   }
@@ -1326,7 +1458,7 @@
     $('dashboard').classList.remove('hidden');
 
     const m=data.member||{};
-    currentMapsAccess=!!m.maps_access;
+    currentMapsAccess=!!(m.maps_access||m.maps_manage);
     const mapsTab=document.querySelector('[data-cab-tab="maps"]');
     if(mapsTab)mapsTab.hidden=!currentMapsAccess;
     if(!currentMapsAccess){
@@ -1353,6 +1485,12 @@
     $('total-levels').textContent=formatNumber(accumulatedTotal||clanInfo.total_levels||clanPlayers.reduce((sum,p)=>sum+Number(p.total||0),0));
     $('week').textContent=currentClanSnapshot.week_key||currentClanSnapshot.weekKey||clanInfo.week||'—';
     renderPlayerStats();
+    if(!initialCabTabApplied){
+      initialCabTabApplied=true;
+      const requested=new URL(location.href).searchParams.get('tab');
+      if(requested==='maps'&&currentMapsAccess)setCabTab('maps',false);
+      else if(requested==='players')setCabTab('players',false);
+    }
   }
 
   async function loadDashboard(){
