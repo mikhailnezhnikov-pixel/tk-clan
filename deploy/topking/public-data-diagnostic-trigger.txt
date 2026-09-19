@@ -1,2 +1,3 @@
 diagnose public war/alliance data
 retry with service port fallback
+inspect alliance detail route from live app bundle
