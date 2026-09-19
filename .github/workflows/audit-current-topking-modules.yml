@@ -1,0 +1,273 @@
+name: Audit Current TopKing Modules
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/module-audit-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: audit-current-topking-modules
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live userscript read only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          sha256sum /tmp/HamsterKingMobile.user.js > /tmp/hk-live.sha256
+
+      - name: Audit remaining modules
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, re
+
+          source = Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          sha = hashlib.sha256(source.encode()).hexdigest()
+          version = re.search(r'^// @version\s+([^\s]+)', source, re.M)
+          version = version.group(1) if version else 'unknown'
+
+          def has(x): return x in source
+          def block(start, end=None, span=14000):
+              p = source.find(start)
+              if p < 0: return 'NOT FOUND'
+              if end:
+                  q = source.find(end, p + len(start))
+                  if q > p: return source[p:q]
+              return source[p:min(len(source), p + span)]
+
+          ro_start = source.find("  const HK_READ_ONLY_POST_PATHS = new Set([")
+          ro_end = source.find("\n  ]);", ro_start) if ro_start >= 0 else -1
+          ro = source[ro_start:ro_end] if ro_start >= 0 and ro_end > ro_start else ''
+
+          modules = {
+            'recipes': {
+              'block': block('  async function runRecipes() {', '  async function loadCommunityRecipes('),
+              'checks': [
+                ('function', has('async function runRecipes()')),
+                ('runner', has("title:either('Рецепты','Recipes')")),
+                ('pause', 'await hkRunner.waitIfPaused();' in block('  async function runRecipes() {', '  async function loadCommunityRecipes(')),
+                ('stop', has("hkRunner.stop('recipes')")),
+                ('endpoint', has("apiJson('/fair/reroll', 'POST'")),
+                ('budget', has("budgetDecision(state.fair_reroll_cost, 'recipes'")),
+              ],
+            },
+            'bureau': {
+              'block': block('  async function runProjectBureau() {', '  function refreshBusinessData('),
+              'checks': [
+                ('function', has('async function runProjectBureau()')),
+                ('runner', has("title:either('Проектное бюро','Project Bureau')")),
+                ('pause', 'await hkRunner.waitIfPaused();' in block('  async function runProjectBureau() {', '  function refreshBusinessData(')),
+                ('endpoint', has("apiJson('/player/business/recipe/craft', 'POST'")),
+                ('budget', has("budgetDecision(liveBureauCost, 'bureau'")),
+                ('fresh_cost', has('const liveBureauCost = bureauCost();')),
+              ],
+            },
+            'resources': {
+              'block': block('  async function runResourceEvents(rows) {', '  function dailyLabel('),
+              'checks': [
+                ('function', has('async function runResourceEvents(rows)')),
+                ('endpoint', has("apiJson('/player/event','POST'")),
+                ('not_readonly', "'/player/event'" not in ro),
+                ('budget', has("budgetDecision(row.cost, 'resources'")),
+                ('no_network_retry', has("apiJson('/player/event','POST'") and '},true,0);' in block('  async function runResourceEvents(rows) {', '  function dailyLabel(')),
+                ('fresh_rows', has('const freshEvents = allResourceEvents();')),
+              ],
+            },
+            'maps_research': {
+              'block': block('  async function submitOwnedMapAreas(all = true) {', '  async function loadMapIndex('),
+              'checks': [
+                ('function', has('async function submitOwnedMapAreas(all = true)')),
+                ('runner', has("title:either('Исследование районов','District research')")),
+                ('pause', 'await hkRunner.waitIfPaused();' in block('  async function submitOwnedMapAreas(all = true) {', '  async function loadMapIndex(')),
+                ('abort_delay', has('await gameRetryDelay(180);')),
+                ('map_api', has('MAP_API_BASE')),
+              ],
+            },
+            'clan_skills': {
+              'block': block('  async function scanClanSkills(automatic = false) {', '  async function maybeAutoScanClanSkills()'),
+              'checks': [
+                ('function', has('async function scanClanSkills(automatic = false)')),
+                ('runner', has("title:either('Навыки клана','Clan skills')")),
+                ('pause', 'await hkRunner.waitIfPaused();' in block('  async function scanClanSkills(automatic = false) {', '  async function maybeAutoScanClanSkills()')),
+                ('server_api', has('CLAN_SKILLS_API_BASE')),
+              ],
+            },
+            'rumors': {
+              'block': block('  async function runDailyRumors(', '  async function playRewardedAdInPageWorld'),
+              'checks': [
+                ('function', has('async function runDailyRumors(')),
+                ('route', has('RUMOR_API_BASE')),
+                ('mutation', has("apiJson('/rumors/search','POST'")),
+                ('today_dispatch', has("action.kind === 'rumors'")),
+              ],
+            },
+            'wars': {
+              'block': block('  function renderWars()', '  function buildingRooms('),
+              'checks': [
+                ('page', has('data-content="wars"')),
+                ('render', has('renderWars')),
+                ('active_battles', has('active-battles') or has('active_battles')),
+                ('read_only_mode', True),
+              ],
+            },
+            'buildings': {
+              'block': block('  async function readBuildingStudy(', '  function exploreOwnedAreas()'),
+              'checks': [
+                ('function', has('async function readBuildingStudy(')),
+                ('endpoint', has("const path='/player/building?building_id='")),
+                ('readonly_endpoint', "'/player/building'" in ro),
+                ('runner', has("title:either('Здание','Building')")),
+              ],
+            },
+            'explore': {
+              'block': block('  function exploreOwnedAreas()', '  const NAV_GROUPS'),
+              'checks': [
+                ('refresh', has('async function refreshExplore(')),
+                ('research_wired', has('await submitOwnedMapAreas(true);')),
+                ('game_area', has('/game_area/')),
+                ('page', has('data-content="explore"')),
+              ],
+            },
+          }
+
+          marker_checks = {
+            'stage2b': "HK_STAGE2B_RUNNER_REV = 'stage2b-20260919-r1'",
+            'stage2e_maps': "HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1'",
+            'stage2f_clan': "HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1'",
+            'stage2g_rumors': "HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1'",
+            'stage2h_wars': "HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1'",
+            'stage2i_buildings': "HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1'",
+            'stage3d_recipes_bureau': "HK_STAGE3D_RECIPES_BUREAU_REV = 'stage3d-recipes-bureau-verify-20260920-r1'",
+            'stage3e_resources': "HK_STAGE3E_RESOURCES_REV = 'stage3e-resources-verify-20260920-r1'",
+          }
+
+          lines = [
+            f'version={version}',
+            f'sha256={sha}',
+            'syntax=ok',
+            f"hamster_caps={'PASS' if has("GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'") else 'FAIL'}",
+            f"general_pit_tokens={'PASS' if has("GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'") else 'FAIL'}",
+            f"player_event_not_readonly={'PASS' if "'/player/event'" not in ro else 'FAIL'}",
+            f"player_building_readonly={'PASS' if "'/player/building'" in ro else 'FAIL'}",
+          ]
+          for name, marker in marker_checks.items():
+              lines.append(f'marker.{name}=' + ('PASS' if marker in source else 'FAIL'))
+          for name, info in modules.items():
+              failed = [label for label, ok in info['checks'] if not ok]
+              lines.append(f"module.{name}=" + ('PASS' if not failed else 'FAIL:' + ','.join(failed)))
+
+          Path('audit/hk-current-module-status.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+          out = ['# Current live remaining-module source audit', '', *lines, '']
+          for name, info in modules.items():
+              out += [f'===== {name} =====', info['block'], '']
+          Path('audit/hk-current-modules-source.txt').write_text('\n'.join(out), encoding='utf-8')
+          PY
+
+      - name: Commit audit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            # Regenerate audit after reset using the already fetched live userscript.
+            python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, re
+          source=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          sha=hashlib.sha256(source.encode()).hexdigest()
+          version=(re.search(r'^// @version\s+([^\s]+)',source,re.M) or [None,'unknown'])[1]
+          def has(x): return x in source
+          def block(start,end=None,span=14000):
+              p=source.find(start)
+              if p<0:return 'NOT FOUND'
+              if end:
+                  q=source.find(end,p+len(start))
+                  if q>p:return source[p:q]
+              return source[p:min(len(source),p+span)]
+          rs=source.find("  const HK_READ_ONLY_POST_PATHS = new Set(["); re_=source.find("\n  ]);",rs) if rs>=0 else -1
+          ro=source[rs:re_] if rs>=0 and re_>rs else ''
+          defs=[
+            ('recipes','  async function runRecipes() {','  async function loadCommunityRecipes('),
+            ('bureau','  async function runProjectBureau() {','  function refreshBusinessData('),
+            ('resources','  async function runResourceEvents(rows) {','  function dailyLabel('),
+            ('maps_research','  async function submitOwnedMapAreas(all = true) {','  async function loadMapIndex('),
+            ('clan_skills','  async function scanClanSkills(automatic = false) {','  async function maybeAutoScanClanSkills()'),
+            ('rumors','  async function runDailyRumors(','  async function playRewardedAdInPageWorld'),
+            ('wars','  function renderWars()','  function buildingRooms('),
+            ('buildings','  async function readBuildingStudy(','  function exploreOwnedAreas()'),
+            ('explore','  function exploreOwnedAreas()','  const NAV_GROUPS'),
+          ]
+          module_checks={
+            'recipes':[has('async function runRecipes()'),has("title:either('Рецепты','Recipes')"),has("hkRunner.stop('recipes')"),has("apiJson('/fair/reroll', 'POST'")),has("budgetDecision(state.fair_reroll_cost, 'recipes'"))],
+            'bureau':[has('async function runProjectBureau()'),has("title:either('Проектное бюро','Project Bureau')"),has("apiJson('/player/business/recipe/craft', 'POST'")),has("budgetDecision(liveBureauCost, 'bureau'")),has('const liveBureauCost = bureauCost();')],
+            'resources':[has('async function runResourceEvents(rows)'),has("apiJson('/player/event','POST'"),"'/player/event'" not in ro,has("budgetDecision(row.cost, 'resources'")),has('const freshEvents = allResourceEvents();')],
+            'maps_research':[has('async function submitOwnedMapAreas(all = true)'),has("title:either('Исследование районов','District research')"),has('await gameRetryDelay(180);'),has('MAP_API_BASE')],
+            'clan_skills':[has('async function scanClanSkills(automatic = false)'),has("title:either('Навыки клана','Clan skills')"),has('CLAN_SKILLS_API_BASE')],
+            'rumors':[has('async function runDailyRumors('),has('RUMOR_API_BASE'),has("apiJson('/rumors/search','POST'"),has("action.kind === 'rumors'")],
+            'wars':[has('data-content="wars"'),has('renderWars')],
+            'buildings':[has('async function readBuildingStudy('),has("const path='/player/building?building_id='"),"'/player/building'" in ro,has("title:either('Здание','Building')")],
+            'explore':[has('async function refreshExplore('),has('await submitOwnedMapAreas(true);'),has('/game_area/'),has('data-content="explore"')],
+          }
+          markers={
+            'stage2b':"HK_STAGE2B_RUNNER_REV = 'stage2b-20260919-r1'",
+            'stage2e_maps':"HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1'",
+            'stage2f_clan':"HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1'",
+            'stage2g_rumors':"HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1'",
+            'stage2h_wars':"HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1'",
+            'stage2i_buildings':"HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1'",
+            'stage3d_recipes_bureau':"HK_STAGE3D_RECIPES_BUREAU_REV = 'stage3d-recipes-bureau-verify-20260920-r1'",
+            'stage3e_resources':"HK_STAGE3E_RESOURCES_REV = 'stage3e-resources-verify-20260920-r1'",
+          }
+          lines=[f'version={version}',f'sha256={sha}','syntax=ok',
+                 f"hamster_caps={'PASS' if has("GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'") else 'FAIL'}",
+                 f"general_pit_tokens={'PASS' if has("GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'") else 'FAIL'}",
+                 f"player_event_not_readonly={'PASS' if "'/player/event'" not in ro else 'FAIL'}",
+                 f"player_building_readonly={'PASS' if "'/player/building'" in ro else 'FAIL'}"]
+          lines += [f'marker.{k}=' + ('PASS' if v in source else 'FAIL') for k,v in markers.items()]
+          for k,vals in module_checks.items(): lines.append(f'module.{k}=' + ('PASS' if all(vals) else 'FAIL'))
+          Path('audit/hk-current-module-status.txt').write_text('\n'.join(lines)+'\n',encoding='utf-8')
+          out=['# Current live remaining-module source audit','',*lines,'']
+          for name,start,end in defs: out += [f'===== {name} =====',block(start,end),'']
+          Path('audit/hk-current-modules-source.txt').write_text('\n'.join(out),encoding='utf-8')
+          PY
+            git add audit/hk-current-module-status.txt audit/hk-current-modules-source.txt
+            if git diff --cached --quiet; then pushed=1; break; fi
+            git commit -m "Audit current live TopKing remaining modules"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = "1"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/hk-live.sha256
