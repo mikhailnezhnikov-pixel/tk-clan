@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - 'deploy/topking/patch_telegram_application_topic.py'
+      - 'deploy/topking/patch_application_i18n.py'
+      - 'deploy/topking/patch_feedback_topic.py'
+      - 'deploy/topking/patch_clan_shop.py'
       - '.github/workflows/deploy-telegram-application-topic.yml'
 
 permissions:
@@ -31,9 +34,12 @@ jobs:
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
           python3 deploy/topking/patch_telegram_application_topic.py /tmp/server.py
+          python3 deploy/topking/patch_clan_shop.py /tmp/server.py
           grep -q 'TELEGRAM_APPLICATION_TOPIC_V1' /tmp/server.py
           grep -q '/setapplications' /tmp/server.py
           grep -q 'message_thread_id' /tmp/server.py
+          grep -q 'CLAN_SHOP_V1' /tmp/server.py
+          grep -q '/setclanshop' /tmp/server.py
           python3 -m py_compile /tmp/server.py
 
       - name: Deploy backend
@@ -51,6 +57,8 @@ jobs:
             systemctl is-active --quiet hamsterking-license.service
             grep -q "TELEGRAM_APPLICATION_TOPIC_V1" /opt/hamsterking-license/server.py
             grep -q "/setapplications" /opt/hamsterking-license/server.py
+            grep -q "CLAN_SHOP_V1" /opt/hamsterking-license/server.py
+            grep -q "/setclanshop" /opt/hamsterking-license/server.py
             echo TELEGRAM_APPLICATION_TOPIC_BACKEND_OK
             ok=0
             for i in 1 2 3 4 5 6 7 8 9 10; do
