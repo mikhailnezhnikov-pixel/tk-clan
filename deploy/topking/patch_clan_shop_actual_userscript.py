@@ -33,6 +33,10 @@ def apply_public_war_alliance_v3_file_patch():
     _run_optional_patch("patch_public_war_alliance_v3_userscript.py", "HK_PUBLIC_WAR_ALLIANCE_V3")
 
 
+def apply_public_war_alliance_v4_file_patch():
+    _run_optional_patch("patch_public_war_alliance_v4_userscript.py", "HK_PUBLIC_WAR_ALLIANCE_V4")
+
+
 def apply_alliance_ratings_patch(text):
     marker="HK_ALLIANCE_RATINGS_V1"
     interval="    setInterval(() => collectPublicSnapshot(), PUBLIC_SNAPSHOT_INTERVAL_MS);"
@@ -339,7 +343,7 @@ if MARKER in s:
     s = apply_auto_routines_hotfix(s)
     p.write_text(s)
     apply_alliance_v2_file_patch()
-    apply_public_war_alliance_v3_file_patch()
+    apply_public_war_alliance_v4_file_patch()
     print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_TODAY_LOGIN_AND_1171")
     raise SystemExit(0)
 
@@ -427,5 +431,5 @@ s = apply_regular_fair_hotfix(s)
 s = apply_auto_routines_hotfix(s)
 p.write_text(s)
 apply_alliance_v2_file_patch()
-apply_public_war_alliance_v3_file_patch()
+apply_public_war_alliance_v4_file_patch()
 print("CLAN_SHOP_USERSCRIPT_PATCH_OK_WITH_LOGIN_GATE_AND_1171")
