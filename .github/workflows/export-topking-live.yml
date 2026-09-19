@@ -6,6 +6,7 @@ name: Export TopKing bookmarklet sources
 # verify live 1.12.0
 # inspect live after 1.13 precheck
 # diagnose current live before 1.13
+# verify live 1.13.0
 
 on:
   push:
