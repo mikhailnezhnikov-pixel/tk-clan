@@ -1,0 +1,47 @@
+name: Check latest cabinet map access
+
+on:
+  push:
+    paths:
+      - '.github/workflows/check-latest-map-access.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH key
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Check latest login access
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 - <<'"'"'PY'"'"'
+          import sqlite3, time
+          db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
+          row=db.execute("select coalesce(maps_access,0),coalesce(maps_manage,0),coalesce(last_login,0) from clan_members where active=1 order by cast(coalesce(last_login,0) as integer) desc limit 1").fetchone()
+          if not row:
+              raise SystemExit("NO_ACTIVE_MEMBERS")
+          access,manage,last_login=row
+          try:
+              age=max(0,int(time.time())-int(float(last_login or 0)))
+          except Exception:
+              age=-1
+          print("LATEST_HAS_MAPS_ACCESS="+str(int(bool(access))))
+          print("LATEST_HAS_MAPS_MANAGE="+str(int(bool(manage))))
+          print("LATEST_LOGIN_AGE_SEC="+str(age))
+          PY'
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
