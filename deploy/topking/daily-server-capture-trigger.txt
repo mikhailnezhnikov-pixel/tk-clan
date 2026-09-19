@@ -1,2 +1,2 @@
-capture=2026-09-20T01:39:00+09:00
-scope=today-live-1170-post-stage3a-r2
+capture=2026-09-20T01:42:00+09:00
+scope=today-live-1170-post-stage3a-r3
