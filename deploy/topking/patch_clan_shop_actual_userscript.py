@@ -1,4 +1,5 @@
 # Deploy trigger: actual Clan Shop telemetry v1
+# TopKing 1.17.2 deploy retry after service diagnostics hardening
 from pathlib import Path
 import re
 from patch_today_live_1170 import apply_today_hotfix
