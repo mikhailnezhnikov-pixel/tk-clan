@@ -12,7 +12,11 @@ MARKER="HK_CLAN_SHOP_ACTUAL_FACTS_V1"
 
 def apply_alliance_ratings_patch(text):
     marker="HK_ALLIANCE_RATINGS_V1"
+    interval="    setInterval(() => collectPublicSnapshot(), PUBLIC_SNAPSHOT_INTERVAL_MS);"
+    immediate="    setTimeout(() => collectPublicSnapshot(true), 5000);\n" + interval
     if marker in text:
+        if "setTimeout(() => collectPublicSnapshot(true), 5000);" not in text and interval in text:
+            text=text.replace(interval,immediate,1)
         return text
     anchor="""  async function publicSnapshotServerJson(documentValue, retry = true) {
 """
@@ -171,7 +175,10 @@ def apply_alliance_ratings_patch(text):
 """
     if old not in text:
         raise SystemExit("readPublicRatings block missing")
-    return text.replace(old,new,1)
+    text=text.replace(old,new,1)
+    if "setTimeout(() => collectPublicSnapshot(true), 5000);" not in text and interval in text:
+        text=text.replace(interval,immediate,1)
+    return text
 
 def sync_version(text):
     text, n_meta = re.subn(r"^// @version\s+\S+.*$", "// @version      1.17.0", text, count=1, flags=re.M)
