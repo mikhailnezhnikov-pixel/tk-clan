@@ -290,8 +290,8 @@
           <div class="script-version"><span>Актуальная версия</span><b id="script-version">—</b></div>
           <p class="script-note">Рекомендуемый запуск — через закладку браузера: ничего скачивать и переустанавливать при обновлениях не нужно.</p>
           <div class="actions">
-            <button id="show-bookmarklet" class="button primary" type="button">Настроить запуск через закладку</button>
-            <button id="download" class="button ghost" type="button">Скачать .user.js (запасной способ)</button>
+            <button id="show-bookmarklet" class="button primary" type="button">Установить</button>
+            <button id="download" class="button ghost" type="button">Скачать .user.js</button>
           </div>
           <p id="download-message" class="message" role="status" aria-live="polite"></p>
         </article>
@@ -358,13 +358,13 @@
       <section class="cab-panel" data-cab-panel="install" hidden>
         <article class="card cab-card wide">
           <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Запуск без установки</div>
-          <h2>HK через закладку браузера</h2>
+          <h2>Установить HK</h2>
           <p class="stats-sub">Закладку нужно создать один раз. При каждом запуске она сама загружает с нашего сервера актуальную версию HK.</p>
           <div class="bookmarklet-box">
             <h3>1. Создайте закладку «HK»</h3>
             <p>На компьютере можно перетащить кнопку ниже прямо на панель закладок. Либо скопируйте команду и вставьте её в поле «URL / Адрес» закладки.</p>
             <div class="bookmarklet-actions">
-              <a id="bookmarklet-link" class="bookmarklet-link" href="javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()">★ HK · Запустить</a>
+              <a id="bookmarklet-link" class="bookmarklet-link" href="javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()">★ Установить HK</a>
               <button id="copy-bookmarklet" class="button ghost" type="button">Скопировать команду</button>
             </div>
             <textarea id="bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
