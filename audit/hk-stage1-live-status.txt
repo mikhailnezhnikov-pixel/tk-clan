@@ -1,0 +1,8 @@
+version=1.15.0
+revision=stage1-20260919-r4
+hamsters=cur_cap
+generals=item_pit_token
+growth_guards=strict
+no_progress_limit=2
+sha256=ff0f1dc6e3b90b9153a2bed17081ac4429e7e365b1e57c5ba81f081f3c16d3d4
+verified_by=deploy-topking-1150
