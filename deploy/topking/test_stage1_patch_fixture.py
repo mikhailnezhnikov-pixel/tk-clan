@@ -20,7 +20,14 @@ FIXTURE = r"""// ==UserScript==
   function growthSafeCost(cost){ return costParts(cost).every(row=>row.id&&row.quantity>0&&!['cur_prem','cur_hard'].includes(row.id)); }
   function growthHamsterCostSafe(cost){ return growthSafeCost(cost)&&growthPitCost(cost)===0; }
   function growthHamsterLevelCostSafe(cost){ return growthHamsterCostSafe(cost)&&growthCapCost(cost)>0; }
-  function growthBestGeneral(state,blocked,budget,mode='x1',weightValue=1){ return null; }
+  function growthCanAfford(cost,state){ return true; }
+  function growthBestGeneral(state,blocked,budget,mode='x1',weightValue=1){
+    const general={nextLevelUp:{costs:{parts:[{kind:'items',id:GROWTH_GENERAL_BUDGET_ID,quantity:1}]}},nearest10LevelUp:{costs:{parts:[{kind:'items',id:GROWTH_GENERAL_BUDGET_ID,quantity:10}]}}};
+    let actionType=null,preview=general.nextLevelUp,costs=preview.costs||{};
+    if(mode==='fast10'&&general?.nearest10LevelUp){const fast=general.nearest10LevelUp.costs||{};if(growthCanAfford(fast,state)&&budget.spent+growthPitCost(fast)<=budget.limit){actionType='fast10';preview=general.nearest10LevelUp;costs=fast;}}
+    const pit=growthPitCost(costs);if(pit<=0||!growthCanAfford(costs,state)||budget.spent+pit>budget.limit)continue;
+    return {actionType,pit,costs};
+  }
   function growthRunGeneralsCore() {}
   function growthRunPriorityCopiesCore() {}
   function growthRunLevelsCore() {}
@@ -50,10 +57,11 @@ def run_patch():
     completed = subprocess.run(
         [sys.executable, str(PATCH)],
         cwd=ROOT,
-        check=True,
         capture_output=True,
         text=True,
     )
+    if completed.returncode != 0:
+        raise AssertionError('patcher failed:\n' + completed.stdout + completed.stderr)
     if 'STAGE1_MUTATION_GATE_TEST_OK' not in completed.stdout:
         raise AssertionError('mutation gate regression test did not run inside patcher')
 
