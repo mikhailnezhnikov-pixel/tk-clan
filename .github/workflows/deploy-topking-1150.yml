@@ -45,7 +45,7 @@ jobs:
           mkdir -p audit
           {
             grep -m1 '^// @version' /tmp/HamsterKingMobile.user.js || true
-            grep -nE -C 12 'const hkRunner|AbortController|waitIfPaused|stopRequested|pitRunning|fairRunning|fairStop|shopRunning|recipeRunning|recipeStop|bureauRunning|moduleMutationBusy|const hkStateStore|hkStateStore\.|async function apiJsonCore|async function apiJson\(' /tmp/HamsterKingMobile.user.js || true
+            grep -nE -C 14 'const hkRunner|AbortController|waitIfPaused|stopRequested|pitRunning|fairRunning|fairStop|shopRunning|recipeRunning|recipeStop|bureauRunning|moduleMutationBusy|const hkStateStore|hkStateStore\.|async function apiJsonCore|async function apiJson\(|async function runFair|async function buyRegularShop|async function runRecipes|async function runBureau|hk-pit-start|hk-pit-stop|hk-fair-start|hk-fair-stop|hk-shop-buy|hk-recipe-run|hk-recipe-stop|hk-bureau' /tmp/HamsterKingMobile.user.js || true
           } > audit/hk-live-runner-before-stage2.txt
 
           git config user.name "github-actions[bot]"
