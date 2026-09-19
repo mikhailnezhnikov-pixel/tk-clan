@@ -87,3 +87,14 @@ Do not mark the global runner migration complete until these are implemented and
 10. Live-server verification after deployment: version, syntax, currency invariants, service health and a real read-only check.
 
 Until those items are verified, 1.14.4 remains the known-good baseline.
+## 2026-09-19 follow-up
+
+- Read-only live probe confirmed the production userscript is still **1.14.4** and syntactically valid.
+- Live Growth resource IDs are correct: Hamsters = `cur_cap`, Generals = `item_pit_token`.
+- Stage 1 patcher was corrected to emit real newlines in the inserted mutation-gate block.
+- Stage 1 now hardens the verified 1.14.4 Growth source so Hamster mutation costs may use only `cur_cap`, while General level-up costs may use only `item_pit_token`.
+- Stage 1 now adds a two-response no-progress stop guard for General and Hamster level loops.
+- Stage 2A fixture passed: Pit + Fair Runner migration.
+- Stage 2B fixture passed: Shop + Recipes + Project Bureau Runner migration.
+- Stage 2A/2B remain deploy-disabled until Stage 1 1.15.0-r4 is built from the real live source and round-trip verified on production.
+
