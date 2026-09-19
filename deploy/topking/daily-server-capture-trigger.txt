@@ -1,3 +1,2 @@
-capture=2026-09-19T15:08:00Z
-version=1.16.5
-purpose=rumors-migration
+capture=2026-09-20T00:56:00+09:00
+scope=today-live-1168
