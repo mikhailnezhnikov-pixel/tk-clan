@@ -4,7 +4,7 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.2
+// @version      1.17.3
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
 // @release-note Hotfix версии bookmarklet: metadata и runtime version синхронизированы; аудит валют и live-state сохранён.
 // @match        https://app.hamsterking.games/*
@@ -16,7 +16,7 @@
   'use strict';
   const BUILD_VERSION = typeof GM_info !== 'undefined' && GM_info?.script?.version
     ? String(GM_info.script.version)
-    : '1.17.2';
+    : '1.17.3';
   const previousRuntime = window.__HK_MOBILE_RUNTIME__;
   if (previousRuntime?.active) {
     try { previousRuntime.open?.(); } catch (_) {}
@@ -2431,7 +2431,7 @@
       {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
-      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{page:'fair-regular',ru:'Обычная ярмарка',en:'Regular Fair'}]},
       {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
     ];
     const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
@@ -2543,7 +2543,7 @@
       <div class="hk-page" data-content="growth">
         <div class="hk-cardbox"><h3>${either('Развитие','Growth')}</h3><p class="hk-muted">${either('Живое состояние аккаунта загружается автоматически. Открытие вкладки ничего не покупает и не прокачивает.','Live account state loads automatically. Opening the tab never buys or upgrades anything.')}</p><div data-growth-summary></div></div>
         <div class="hk-cardbox"><h3>${either('Что выполнять','What to run')}</h3><div class="hk-growth-options">
-          <label class="hk-growth-check"><span><b>${either('Подготовка','Preparation')}</b><small>${either('Контракты → шары → коробки','Contracts → balls → boxes')}</small></span><input
+          <label class="hk-growth-check"><span><b>${either('Подготовка','Preparation')}</b><small>${either('Контракты → шары → коробки','Contracts → balls → boxes')}</small></span
 
 ===== data-content="daily" =====
 
@@ -2557,7 +2557,7 @@
       {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
-      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{page:'fair-regular',ru:'Обычная ярмарка',en:'Regular Fair'}]},
       {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
     ];
     const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
@@ -2694,18 +2694,19 @@
 
 ===== root.querySelector('#hk-daily-refresh') =====
 
-      const box=root.querySelector('#hk-subnav');
-      box.innerHTML=group.modules.map(module=>`<button class="${module.page===activePage?'active ':''}${module.planned?'planned':''}" ${module.page?`data-module="${module.page}"`:''} ${module.planned?'disabled':''} data-nav-ru="${escapeHtml(module.ru)}" data-nav-en="${escapeHtml(module.en)}">${escapeHtml(language==='en'?module.en:module.ru)}${module.planned?` · ${either('скоро','soon')}`:''}</button>`).join('');
       box.querySelectorAll('[data-module]:not([disabled])').forEach(button=>button.onclick=()=>activateModule(button.dataset.module,true));
     };
     const activateModule = (page,persist=true) => {
-      const target=root.querySelector(`[data-content="${page}"]`) || root.querySelector('[data-content="daily"]');
+      const regularFairAlias = page === 'fair-regular';
+      const contentPage = regularFairAlias ? 'fair' : page;
+      const target=root.querySelector(`[data-content="${contentPage}"]`) || root.querySelector('[data-content="daily"]');
       const finalPage=target.dataset.content;
-      const group=groupForPage(finalPage);
+      const navPage=regularFairAlias ? 'fair-regular' : finalPage;
+      const group=groupForPage(navPage);
       root.querySelectorAll('.hk-tab').forEach(button=>button.classList.toggle('active',button.dataset.group===group.id));
       root.querySelectorAll('.hk-page').forEach(section=>section.classList.toggle('active',section===target));
-      renderGroupSubnav(group.id,finalPage);
-      if(persist) save({navGroup:group.id,navModule:finalPage});
+      renderGroupSubnav(group.id,navPage);
+      if(persist) save({navGroup:group.id,navModule:navPage});
       if (finalPage === 'maps') renderMapIndex();
       if (finalPage === 'business') { renderBusinessLists(); renderBusinessOptimizerFilters(); }
       if (finalPage === 'daily') renderDailyTasks();
@@ -2715,7 +2716,16 @@
       if (finalPage === 'clan') renderClanSkills();
       if (finalPage === 'wars') renderWars();
       if (finalPage === 'bosses') renderBosses();
-      if (finalPage === 'fair') renderFair();
+      if (finalPage === 'fair') {
+        fairViewMode = regularFairAlias ? 'regular' : 'all';
+        if (regularFairAlias) {
+          selectedFairId = 'fair_default';
+          selectedFairLots.clear();
+          selectedFairSlotRules.clear();
+          selectedFairCurrency = '';
+        }
+        renderFair();
+      }
       if (finalPage === 'shop') renderShop();
       if (finalPage === 'recipes') renderRecipes();
       if (finalPage.startsWith('growth')) { renderGrowth(); growthAutoOpen(finalPage); }
@@ -2727,7 +2737,7 @@
       activateModule(preferred,true);
     });
     const remembered=clean(load().navModule||'daily');
-    activateModule(root.querySelector(`[data-content="${remembered}"]`)?remembered:'daily',false);
+    activateModule(remembered === 'fair-regular' || root.querySelector(`[data-content="${remembered}"]`) ? remembered : 'daily',false);
     const activateBusinessPane = (paneName, persist = true) => {
       const pane = paneName === 'optimizer' ? 'optimizer' : 'regular';
       root.querySelectorAll('[data-business-tab]').forEach(button => button.classList.toggle('active', button.dataset.businessTab === pane));
@@ -3602,6 +3612,7 @@
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -3951,8 +3962,7 @@
   }
 
   function updateLicenseUI() {
-    setHealth('license', !!licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : (licenseState.checked ? licenseState.reason : 'ожидание'));
-    if (!panel)
+    setHealth('license', !!licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : (licenseState.
 
 ===== const HK_STAGE2E_RUNNER_REV =====
 
@@ -4076,6 +4086,7 @@
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -4428,9 +4439,7 @@
     setHealth('license', !!licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : (licenseState.checked ? licenseState.reason : 'ожидание'));
     if (!panel) return;
     const gate = root.querySelector('#hk-license-gate');
-    const updateBox = root.querySelector('#hk-update-banner');
-    const update = licenseState.update;
-    if (updateBox 
+    const updateBox = root.querySelector('#hk-update-banner'
 
 ===== const HK_STAGE2F_RUNNER_REV =====
 
@@ -4552,6 +4561,7 @@
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -4906,8 +4916,7 @@
     const gate = root.querySelector('#hk-license-gate');
     const updateBox = root.querySelector('#hk-update-banner');
     const update = licenseState.update;
-    if (updateBox && update?.available && update?.download_url) {
-      const 
+    if (updateBox
 
 ===== const HK_STAGE2G_RUMORS_REV =====
 
@@ -5027,6 +5036,7 @@
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -5382,8 +5392,7 @@
     const updateBox = root.querySelector('#hk-update-banner');
     const update = licenseState.update;
     if (updateBox && update?.available && update?.download_url) {
-      const latest=escapeHtml(update.latest_version || '?');
-      updat
+      const
 
 ===== const HK_STAGE2H_WARS_REV =====
 
@@ -5502,6 +5511,7 @@
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -5858,8 +5868,7 @@
     const update = licenseState.update;
     if (updateBox && update?.available && update?.download_url) {
       const latest=escapeHtml(update.latest_version || '?');
-      updateBox.style.display='block';
-      updateBox.className=`hk-upda
+      update
 
 ===== const HK_STAGE2I_BUILDINGS_REV =====
 
@@ -5977,6 +5986,7 @@
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -6334,8 +6344,7 @@
     if (updateBox && update?.available && update?.download_url) {
       const latest=escapeHtml(update.latest_version || '?');
       updateBox.style.display='block';
-      updateBox.className=`hk-update${update.required ? ' required' : ''}`;
-      updateBox.
+      updateBox.className=`hk-u
 
 ===== const HK_STAGE3D_RECIPES_BUREAU_REV =====
 NOT FOUND
@@ -8585,16 +8594,281 @@ NOT FOUND
     }
   }
 
-  async function readPublicRatings() {
-    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
-    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
-      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
-      catch (_) {}
+  // HK_ALLIANCE_RATINGS_V2
+  // Alliance totals are built from the clans that belong to each alliance.
+  // Defense/defence ("Оборона" in the game) comes from the alliance/clan list;
+  // clan power and influence are joined by clan name from the game's clan leaderboards.
+  let discoveredClanPowerLeaderboardType = '';
+
+  function allianceNameKey(value) {
+    return String(value || '').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+  }
+
+  function allianceObjectName(value) {
+    if(!value||typeof value!=='object')return '';
+    const node=value.alliance||value.alliance_info||value.allianceInfo||value;
+    return firstText(
+      node?.name,node?.title,node?.alliance_name,node?.allianceName,
+      value.alliance_name,value.allianceName,value.name,value.title
+    );
+  }
+
+  function clanObjectName(value) {
+    if(!value||typeof value!=='object')return '';
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    return firstText(
+      node?.name,node?.title,node?.clan_name,node?.clanName,
+      value.clan_name,value.clanName,value.name,value.title
+    );
+  }
+
+  function clanObjectId(value) {
+    if(!value||typeof value!=='object')return '';
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    return firstText(
+      node?.clan_id,node?.clanId,node?.id,node?.uuid,
+      value.clan_id,value.clanId,value.id,value.uuid
+    );
+  }
+
+  function clanMemberCount(value) {
+    if(!value||typeof value!=='object')return null;
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    return metricFromObject(node,[
+      'members_count','membersCount','member_count','memberCount',
+      'players_count','playersCount','participants_count','participantsCount',
+      'members','participants'
+    ]) ?? metricFromObject(value,[
+      'members_count','membersCount','member_count','memberCount',
+      'players_count','playersCount','participants_count','participantsCount'
+    ]);
+  }
+
+  function directClanMetric(value,kind) {
+    if(!value||typeof value!=='object')return null;
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    const keys=ALLIANCE_RATING_METRICS[kind]||[];
+    return metricFromObject(node,keys) ?? metricFromObject(value,keys);
+  }
+
+  function likelyClanArray(list) {
+    if(!Array.isArray(list)||!list.length||list.length>20)return false;
+    let named=0,clanish=0;
+    for(const item of list.slice(0,8)){
+      if(!item||typeof item!=='object')continue;
+      if(clanObjectName(item))named+=1;
+      const keys=new Set([
+        ...Object.keys(item),
+        ...Object.keys(item.clan||item.clan_info||item.clanInfo||{})
+      ].map(String));
+      if(
+        item.clan||item.clan_info||item.clanInfo||
+        keys.has('clan_id')||keys.has('clanId')||
+        keys.has('defense')||keys.has('defence')||
+        keys.has('defense_points')||keys.has('defence_points')||
+        keys.has('player_level')||keys.has('hamsters_power')||
+        keys.has('members_count')||keys.has('membersCount')
+      )clanish+=1;
     }
-    try {
-      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
-      Object.assign(ratings, normalizeAllianceRatings(value));
-    } catch (_) {}
+    return named>0 && (clanish>0 || named===list.length);
+  }
+
+  function allianceClanRows(value) {
+    if(!value||typeof value!=='object')return [];
+    const sources=[value.alliance||null,value.alliance_info||null,value.allianceInfo||null,value].filter(Boolean);
+    const preferred=[
+      'clans','alliance_clans','allianceClans','clan_list','clanList',
+      'member_clans','memberClans','participants'
+    ];
+    for(const source of sources){
+      for(const key of preferred){
+        const list=source?.[key];
+        if(likelyClanArray(list))return list;
+      }
+    }
+    for(const source of sources){
+      for(const child of Object.values(source||{})){
+        if(likelyClanArray(child))return child;
+      }
+    }
+    const singles=[];
+    for(const source of sources){
+      for(const key of ['core_clan','coreClan','leader_clan','leaderClan','clan']){
+        const row=source?.[key];
+        if(row&&typeof row==='object'&&clanObjectName(row))singles.push(row);
+      }
+    }
+    return singles;
+  }
+
+  function allianceRecords(documentValue) {
+    const output=[],seen=new Set();
+    for(const value of deepObjects(documentValue)){
+      if(!value||typeof value!=='object')continue;
+      const name=allianceObjectName(value);
+      const clans=allianceClanRows(value);
+      if(!name||!clans.length)continue;
+      const parsedClans=[];
+      const clanSeen=new Set();
+      for(const raw of clans){
+        const clanName=clanObjectName(raw);
+        if(!clanName)continue;
+        const clanKey=allianceNameKey(clanName);
+        if(!clanKey||clanSeen.has(clanKey))continue;
+        clanSeen.add(clanKey);
+        parsedClans.push({
+          name:clanName,
+          key:clanKey,
+          id:clanObjectId(raw),
+          members:clanMemberCount(raw),
+          power:directClanMetric(raw,'alliance_power'),
+          influence:directClanMetric(raw,'alliance_influence'),
+          defense:directClanMetric(raw,'alliance_defense')
+        });
+      }
+      if(!parsedClans.length)continue;
+      const key=allianceNameKey(name);
+      if(!key||seen.has(key))continue;
+      seen.add(key);
+      output.push({
+        name,key,clans:parsedClans,
+        power:metricFromObject(value.alliance||value,ALLIANCE_RATING_METRICS.alliance_power),
+        influence:metricFromObject(value.alliance||value,ALLIANCE_RATING_METRICS.alliance_influence),
+        defense:metricFromObject(value.alliance||value,ALLIANCE_RATING_METRICS.alliance_defense)
+      });
+    }
+    return output;
+  }
+
+  function clanMetricRows(documentValue,kind) {
+    const arrays=leaderboardArrays(documentValue);
+    for(const list of arrays){
+      const rows=list.map((row,index)=>{
+        if(!row||typeof row!=='object')return null;
+        const entity=row.clan||row.clan_info||row.clanInfo||row;
+        const name=clanObjectName(row);
+        if(!name)return null;
+        const rank=Math.trunc(firstFinite(row.rank,row.place,row.position,entity.rank)||index+1);
+        let value=null;
+        if(kind==='power'){
+          value=metricFromObject(entity,ALLIANCE_RATING_METRICS.alliance_power)
+            ?? metricFromObject(row,ALLIANCE_RATING_METRICS.alliance_power)
+            ?? finiteMetric(row.value) ?? finiteMetric(row.score);
+        }else{
+          value=metricFromObject(entity,ALLIANCE_RATING_METRICS.alliance_influence)
+            ?? metricFromObject(row,ALLIANCE_RATING_METRICS.alliance_influence)
+            ?? finiteMetric(row.value) ?? finiteMetric(row.score);
+        }
+        return rank>=1&&value!==null?{rank,name,value}:null;
+      }).filter(Boolean);
+      if(rows.length)return rows.slice(0,200);
+    }
+    return [];
+  }
+
+  function clanRowsMap(rows) {
+    return new Map((Array.isArray(rows)?rows:[])
+      .filter(row=>row&&row.name&&Number.isFinite(Number(row.value)))
+      .map(row=>[allianceNameKey(row.name),Number(row.value)]));
+  }
+
+  async function readClanPowerRows() {
+    const candidates=discoveredClanPowerLeaderboardType
+      ? [discoveredClanPowerLeaderboardType]
+      : ['clan_hamsters_power_lb','clan_hamster_power_lb','clan_power_lb','clans_hamsters_power_lb'];
+    for(const leaderboard_type of candidates){
+      try{
+        const value=await apiJson('/leaderboard','POST',{leaderboard_type},true,1);
+        const rows=clanMetricRows(value,'power');
+        if(rows.length){
+          discoveredClanPowerLeaderboardType=leaderboard_type;
+          return rows;
+        }
+      }catch(_){}
+    }
+    return [];
+  }
+
+  function completeAllianceSum(alliance,metric,map) {
+    const direct=finiteMetric(alliance?.[metric]);
+    if(direct!==null&&direct>0)return direct;
+    let total=0,covered=0;
+    for(const clan of alliance.clans||[]){
+      let value=finiteMetric(clan?.[metric]);
+      if((value===null||value<=0)&&map)value=finiteMetric(map.get(clan.key));
+      if(value===null||value<0)continue;
+      total+=value;covered+=1;
+    }
+    // Never publish a partial total. A missing clan must not silently reduce
+    // an alliance's power/influence/defense.
+    return covered===(alliance.clans||[]).length&&covered>0?total:null;
+  }
+
+  function buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows) {
+    const alliances=allianceRecords(allianceDocument);
+    const influenceMap=clanRowsMap(clanInfluenceRows);
+    const powerMap=clanRowsMap(clanPowerRows);
+    const totals=alliances.map(alliance=>({
+      name:alliance.name,
+      clans:alliance.clans.length,
+      members:alliance.clans.reduce((sum,row)=>sum+(Number(row.members)||0),0),
+      alliance_power:completeAllianceSum(alliance,'power',powerMap),
+      alliance_influence:completeAllianceSum(alliance,'influence',influenceMap),
+      alliance_defense:completeAllianceSum(alliance,'defense',null)
+    }));
+    const result={};
+    for(const kind of ['alliance_power','alliance_influence','alliance_defense']){
+      const rows=totals
+        .filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+        .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name))
+        .slice(0,100)
+        .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+      if(rows.length)result[kind]=rows;
+    }
+    try{
+      recordDiagnostic('alliance-rating-v2',{
+        alliances:alliances.length,
+        power:result.alliance_power?.length||0,
+        influence:result.alliance_influence?.length||0,
+        defense:result.alliance_defense?.length||0,
+        powerLeaderboard:discoveredClanPowerLeaderboardType||''
+      });
+    }catch(_){}
+    return result;
+  }
+
+  async function readPublicRatings() {
+    const ratings={};
+    let clanInfluenceRows=[];
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'player_level_lb'},true,1);
+      const rows=normalizePublicRanking(value,'influence');
+      if(rows.length)ratings.influence=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'hamsters_power_lb'},true,1);
+      const rows=normalizePublicRanking(value,'power');
+      if(rows.length)ratings.power=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'clan_player_level_lb'},true,1);
+      clanInfluenceRows=clanMetricRows(value,'influence');
+      const publicRows=normalizePublicRanking(value,'clans');
+      if(publicRows.length)ratings.clans=publicRows;
+    }catch(_){}
+
+    try{
+      const [allianceDocument,clanPowerRows]=await Promise.all([
+        apiJson('/alliance/list','GET',null,true,1),
+        readClanPowerRows()
+      ]);
+      Object.assign(ratings,buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows));
+    }catch(error){
+      try{recordDiagnostic('alliance-rating-v2-error',{message:error?.message||String(error)});}catch(_){}
+    }
     return ratings;
   }
 
@@ -8621,7 +8895,7 @@ NOT FOUND
       fairDocument = playerDocument;
       shopViewDocument = await apiJson('/shop/view', 'GET');
       fairCatalog = normalizeFairCatalog(shopViewDocument);
-      const visibleFairs = visibleFairStates();
+      const visibleFairs = fairStatesForView();
       if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
       selectedFairLots.clear();
       selectedFairSlotRules.clear();
@@ -8685,175 +8959,10 @@ NOT FOUND
       const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
       updateFairControls(); return;
     }
-    const states = visibleFairStates();
+    const states = fairStatesForView();
     fairTypes.innerHTML = states.map(state => {
       const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
-      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
-        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
-    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
-    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
-      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
-    });
-    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
-    const allRows = fairRowsForState(fairState(selectedFairId));
-    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
-    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
-    const currencyBar = root?.querySelector('#hk-fair-currencies');
-    if (currencyBar) {
-      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
-        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
-        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
-      }).join('');
-      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
-    }
-    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
-      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
-    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
-      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('blocked')}</small>`}</button>`).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
-    fairLots.querySelectorAll('[data-lot]').forEach(button => button.onclick = () => {
-      const row = fairCatalog.find(value => value.lotId === button.dataset.lot);
-      if (!row?.safe) { log(either('Этот лот заблокирован: неизвестная валюта', 'This lot is blocked: unknown currency'), 'warn'); return; }
-      if (selectedFairLots.has(row.lotId)) {
-        selectedFairLots.delete(row.lotId);
-        selectedFairSlotRules.delete(row.lotId);
-      } else {
-        selectedFairLots.add(row.lotId);
-        const options = fairSlotOptions();
-        selectedFairSlotRules.set(row.lotId, {regular:options.some(value => !value.vip), vip:options.some(value => value.vip)});
-      }
-      renderFair();
-    });
-    renderFairSlotRules();
-    updateFairControls();
-  }
-
-  function fairSlotOptions(state = fairState(selectedFairId)) {
-    const fairConfigs = shopViewDocument?.fairs || shopViewDocument?.fair || [];
-    const config = (Array.isArray(fairConfigs) ? fairConfigs : []).find(value => String(value?.id) === String(state?.id));
-    const metaById = new Map((config?.fair_slots || []).map(slot => [String(slot?.id), slot]));
-    return [...(state?.fair_slots || [])]
-      .sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0))
-      .map((slot, index) => ({slot, index, key:String(index), vip:Boolean(slot?.is_vip || metaById.get(String(slot?.id))?.is_vip)}));
-  }
-
-  function renderFairSlotRules() {
-    if (!fairSlotRules) return;
-    const slots = fairSlotOptions();
-    if (!selectedFairLots.size || !slots.length) {
-      fairSlotRules.innerHTML = '';
-      fairSlotRules.style.display = 'none';
-      return;
-    }
-    fairSlotRules.style.display = '';
-    const hasRegular = slots.some(value => !value.vip);
-    const hasVip = slots.some(value => value.vip);
-    for (const lotId of selectedFairLots) {
-      if (!selectedFairSlotRules.has(lotId)) selectedFairSlotRules.set(lotId, {regular:hasRegular, vip:hasVip});
-    }
-    fairSlotRules.innerHTML = `<h3>${tr('allowedCells')}</h3><p class="hk-muted">${tr('selectCellsHint')}</p>` +
-      [...selectedFairLots].map(lotId => {
-        const row = fairCatalog.find(value => value.lotId === lotId);
-        const allowed = selectedFairSlotRules.get(lotId) || {regular:hasRegular, vip:hasVip};
-        return `<div class="hk-slot-rule"><div class="hk-slot-product">${fairIconHtml(row?.icon || '', 'hk-price-icon')}<b>×${Number(row?.rewardQuantity || 0).toLocaleString(locale())}</b></div>
-          <div class="hk-slot-buttons"><button class="${allowed.regular ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="regular" ${hasRegular ? '' : 'disabled'}>${tr('regularSlots')}: ${tr(allowed.regular ? 'yes' : 'no')}</button>
-          <button class="vip ${allowed.vip ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="vip" ${hasVip ? '' : 'disabled'}>♛ ${tr('vipSlots')}: ${tr(allowed.vip ? 'yes' : 'no')}</button></div></div>`;
-      }).join('');
-    fairSlotRules.querySelectorAll('[data-rule-lot]').forEach(button => button.onclick = () => {
-      const allowed = selectedFairSlotRules.get(button.dataset.ruleLot) || {regular:hasRegular, vip:hasVip};
-      allowed[button.dataset.ruleGroup] = !allowed[button.dataset.ruleGroup];
-      selectedFairSlotRules.set(button.dataset.ruleLot, allowed);
-      renderFairSlotRules(); updateFairControls();
-    });
-  }
-
-  function updateFairControls() {
-    const selected = root?.querySelector('#hk-fair-selected');
-    if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
-    const start = root?.querySelector('#hk-fair-start');
-    const rulesValid = [...selectedFairLots].every(lotId => {
-      const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
-    });
-    if (start) start.disabled = fairRunning || !selectedFairId || !selectedFairLots.size || !rulesValid;
-    const stop = root?.querySelector('#hk-fair-stop');
-    if (stop) stop.disabled = !fairRunning;
-  }
-
-  function fairComboSettings() {
-    return {
-      exactLots:Math.max(0, Number(root?.querySelector('#hk-fair-exact-lots')?.value || 0))
-    };
-  }
-
-  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
-    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
-  }
-
-  function renderFairBonusChoices() {
-    const box = root?.querySelector('#hk-fair-bonus-lots'); if (!box) return;
-    const available = new Set(availableFairBonusLots());
-    box.innerHTML = `<span>${tr('fairBonusLots')}</span><div>${[5,10,30].map(quantity =>
-      `<label class="hk-check ${available.has(quantity) ? 'available' : 'unavailable'}"><input type="checkbox" data-fair-bonus="${quantity}" ${selectedFairBonusLots.has(quantity) ? 'checked' : ''} ${available.has(quantity) ? '' : 'disabled'}><b>×${quantity}</b></label>`).join('')}</div>`;
-    box.querySelectorAll('[data-fair-bonus]').forEach(input => input.onchange = () => {
-      const quantity = Number(input.dataset.fairBonus);
-      if (input.checked) selectedFairBonusLots.add(quantity); else selectedFairBonusLots.delete(quantity);
-    });
-  }
-
-  function fairPresets() {
-    const value = load().fairPresets;
-    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  }
-
-  function refreshFairPresets(selectName = '') {
-    if (!fairPresetSelect) return;
-    const names = Object.keys(fairPresets()).sort((a, b) => a.localeCompare(b, locale()));
-    fairPresetSelect.innerHTML = `<option value="">${tr('fairSavedSettings')}</option>` +
-      names.map(name => `<option value="${escapeHtml(name)}" ${name === selectName ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
-  }
-
-  function fairPresetSnapshot() {
-    return {
-      fairId:selectedFairId,
-      lots:[...selectedFairLots],
-      slotGroups:Object.fromEntries([...selectedFairSlotRules].map(([lotId, groups]) => [lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)}])),
-      currency:selectedFairCurrency,
-      exactLots:fairComboSettings().exactLots, bonusLots:[...selectedFairBonusLots],
-      buyLimit:Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1)),
-      rerollLimit:Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0)),
-      premiumReroll:Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)
-    };
-  }
-
-  function saveFairPreset(existingName = '') {
-    if (!selectedFairId || !selectedFairLots.size) {
-      alert(either('Сначала выберите ярмарку и хотя бы один товар', 'Choose a fair and at least one item first')); return;
-    }
-    const name = existingName || prompt(tr('settingName'));
-    if (!name?.trim()) return;
-    const normalized = name.trim();
-    const all = fairPresets();
-    all[normalized] = fairPresetSnapshot();
-    save({fairPresets:all});
-    refreshFairPresets(normalized);
-    log(tr('settingSaved', {name:normalized}), 'ok');
-  }
-
-  function loadFairPreset(name) {
-    const preset = fairPresets()[name];
-    if (!preset) return;
-    if (!fairCatalog.length) {
-      alert(either('Сначала нажмите «Считать ярмарку»', 'Press “Read fair” first'));
-      refreshFairPresets(); return;
-    }
-    if (fairStates().some(state => String(state.id) === String(preset.fairId))) selectedFairId = String(preset.fairId);
-    const available = new Set(fairRowsForState(fairState(selectedFairId)).map(row => row.lotId));
-    selectedFairLots = new Set((preset.lots || []).map(String).filter(id => available.has(id)));
-    selectedFairSlotRules.clear();
-    const options = fairSlotOptions();
-    for (const lotId of selectedFairLots) {
-      const groups = preset.slotGroups?.[lotId];
-      if (groups && typeof groups === 'object') {
-        selectedFairSlotRules.set(lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)});
+      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(stat
 
 ===== async function readBuildingStudy( =====
 
@@ -9600,48 +9709,79 @@ NOT FOUND
 
 ===== function fairProjectedCosts( =====
 
-    const box=root?.querySelector('#hk-war-content');
-    if(!box)return;
-    const war=warSnapshot;
-    if(!war){
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
-    }else{
-      const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
-      const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
-      const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
-        '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong></div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong></div></div>'+
-        '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
+      if(value===null||value<0)continue;
+      total+=value;covered+=1;
     }
-    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
+    // Never publish a partial total. A missing clan must not silently reduce
+    // an alliance's power/influence/defense.
+    return covered===(alliance.clans||[]).length&&covered>0?total:null;
   }
 
-  async function refreshWars(force=false) {
-    if(!requireLicense())return null;
-    try{
-      const result=await readPublicWar();
-      warSnapshot=result?.war||null;
-      warLastReadAt=Date.now();
-      renderWars();
-      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
-      return warSnapshot;
-    }catch(error){
-      log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
-      renderWars();
-      return null;
+  function buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows) {
+    const alliances=allianceRecords(allianceDocument);
+    const influenceMap=clanRowsMap(clanInfluenceRows);
+    const powerMap=clanRowsMap(clanPowerRows);
+    const totals=alliances.map(alliance=>({
+      name:alliance.name,
+      clans:alliance.clans.length,
+      members:alliance.clans.reduce((sum,row)=>sum+(Number(row.members)||0),0),
+      alliance_power:completeAllianceSum(alliance,'power',powerMap),
+      alliance_influence:completeAllianceSum(alliance,'influence',influenceMap),
+      alliance_defense:completeAllianceSum(alliance,'defense',null)
+    }));
+    const result={};
+    for(const kind of ['alliance_power','alliance_influence','alliance_defense']){
+      const rows=totals
+        .filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+        .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name))
+        .slice(0,100)
+        .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+      if(rows.length)result[kind]=rows;
     }
+    try{
+      recordDiagnostic('alliance-rating-v2',{
+        alliances:alliances.length,
+        power:result.alliance_power?.length||0,
+        influence:result.alliance_influence?.length||0,
+        defense:result.alliance_defense?.length||0,
+        powerLeaderboard:discoveredClanPowerLeaderboardType||''
+      });
+    }catch(_){}
+    return result;
   }
 
   async function readPublicRatings() {
-    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
-    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
-      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
-      catch (_) {}
+    const ratings={};
+    let clanInfluenceRows=[];
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'player_level_lb'},true,1);
+      const rows=normalizePublicRanking(value,'influence');
+      if(rows.length)ratings.influence=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'hamsters_power_lb'},true,1);
+      const rows=normalizePublicRanking(value,'power');
+      if(rows.length)ratings.power=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'clan_player_level_lb'},true,1);
+      clanInfluenceRows=clanMetricRows(value,'influence');
+      const publicRows=normalizePublicRanking(value,'clans');
+      if(publicRows.length)ratings.clans=publicRows;
+    }catch(_){}
+
+    try{
+      const [allianceDocument,clanPowerRows]=await Promise.all([
+        apiJson('/alliance/list','GET',null,true,1),
+        readClanPowerRows()
+      ]);
+      Object.assign(ratings,buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows));
+    }catch(error){
+      try{recordDiagnostic('alliance-rating-v2-error',{message:error?.message||String(error)});}catch(_){}
     }
-    try {
-      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
-      Object.assign(ratings, normalizeAllianceRatings(value));
-    } catch (_) {}
     return ratings;
   }
 
@@ -9668,7 +9808,7 @@ NOT FOUND
       fairDocument = playerDocument;
       shopViewDocument = await apiJson('/shop/view', 'GET');
       fairCatalog = normalizeFairCatalog(shopViewDocument);
-      const visibleFairs = visibleFairStates();
+      const visibleFairs = fairStatesForView();
       if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
       selectedFairLots.clear();
       selectedFairSlotRules.clear();
@@ -9732,7 +9872,7 @@ NOT FOUND
       const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
       updateFairControls(); return;
     }
-    const states = visibleFairStates();
+    const states = fairStatesForView();
     fairTypes.innerHTML = states.map(state => {
       const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
       return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
@@ -10741,62 +10881,132 @@ NOT FOUND
 
 ===== async function loadFair() =====
 
-      function bossRowSummary(v){const f=[[either('Уровень','Level'),v?.level??v?.boss_level??v?.tier],[either('Здоровье','Health'),v?.health??v?.hp??v?.current_health],[either('Макс. здоровье','Max health'),v?.max_health??v?.max_hp],[either('Урон','Damage'),v?.damage??v?.player_damage??v?.total_damage],[either('Попытки','Attempts'),v?.attempts??v?.tries??v?.battle_count],[either('Статус','Status'),v?.status??v?.state]].filter(([,x])=>x!==undefined&&x!==null&&String(x)!=='');return f.map(([k,x])=>'<span><small>'+escapeHtml(k)+'</small><b>'+escapeHtml(typeof x==='number'?Number(x).toLocaleString(locale()):String(x))+'</b></span>').join('');}
-      function renderBosses(){
-        const box=root?.querySelector('#hk-boss-content'); if(!box)return; const rows=bossStateRows(),profile=pitForecastProfile('boss');
-        const body=rows.length?rows.map(({kind,index,row})=>'<article class="hk-boss-row"><div><b>'+escapeHtml(bossRowLabel(row,index))+'</b><small>'+escapeHtml(kind)+'</small></div><div class="hk-boss-stats">'+bossRowSummary(row)+'</div></article>').join(''):'<p class="hk-muted">'+either('Сейчас нет активных данных регионального босса.','There is no active regional boss data right now.')+'</p>';
-        box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Боссы','Bosses')+'</h3><small>'+either('Игровое состояние боссов и Ямы боссов','Game boss state and Boss Pit data')+'</small></div><button id="hk-boss-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><div class="hk-boss-pit"><span><small>'+either('Яма боссов — уровень','Boss Pit level')+'</small><b>'+(Number(profile?.localLevel||0)||'—')+'</b></span><span><small>'+either('Сила','Power')+'</small><b>'+(Number(profile?.playerPower||0)?Number(profile.playerPower).toLocaleString(locale()):'—')+'</b></span></div>'+body+'<p class="hk-muted">'+(bossLastReadAt?either('Обновлено','Updated')+': '+new Date(bossLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):either('Нажмите «Обновить».','Press Refresh.'))+'</p>';
-        box.querySelector('#hk-boss-refresh')?.addEventListener('click',()=>void refreshBosses(true));
-      }
-      async function refreshBosses(force=false){
-        if(!requireLicense())return null;
-        try{playerDocument=await apiJson('/player/me','POST');bossSnapshot=hkStateStore.snapshot||playerDocument;bossLastReadAt=Date.now();renderBosses();if(force)log(either('Данные боссов обновлены','Boss data refreshed'),'ok');return bossSnapshot;}
-        catch(error){log(either('Ошибка чтения боссов','Boss read error')+': '+(error?.message||error),'warn');renderBosses();return null;}
-      }
-    
-      function renderWars() {
-    const box=root?.querySelector('#hk-war-content');
-    if(!box)return;
-    const war=warSnapshot;
-    if(!war){
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
-    }else{
-      const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
-      const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
-      const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
-        '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong></div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong></div></div>'+
-        '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
+      const rows=list.map((row,index)=>{
+        if(!row||typeof row!=='object')return null;
+        const entity=row.clan||row.clan_info||row.clanInfo||row;
+        const name=clanObjectName(row);
+        if(!name)return null;
+        const rank=Math.trunc(firstFinite(row.rank,row.place,row.position,entity.rank)||index+1);
+        let value=null;
+        if(kind==='power'){
+          value=metricFromObject(entity,ALLIANCE_RATING_METRICS.alliance_power)
+            ?? metricFromObject(row,ALLIANCE_RATING_METRICS.alliance_power)
+            ?? finiteMetric(row.value) ?? finiteMetric(row.score);
+        }else{
+          value=metricFromObject(entity,ALLIANCE_RATING_METRICS.alliance_influence)
+            ?? metricFromObject(row,ALLIANCE_RATING_METRICS.alliance_influence)
+            ?? finiteMetric(row.value) ?? finiteMetric(row.score);
+        }
+        return rank>=1&&value!==null?{rank,name,value}:null;
+      }).filter(Boolean);
+      if(rows.length)return rows.slice(0,200);
     }
-    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
+    return [];
   }
 
-  async function refreshWars(force=false) {
-    if(!requireLicense())return null;
-    try{
-      const result=await readPublicWar();
-      warSnapshot=result?.war||null;
-      warLastReadAt=Date.now();
-      renderWars();
-      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
-      return warSnapshot;
-    }catch(error){
-      log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
-      renderWars();
-      return null;
+  function clanRowsMap(rows) {
+    return new Map((Array.isArray(rows)?rows:[])
+      .filter(row=>row&&row.name&&Number.isFinite(Number(row.value)))
+      .map(row=>[allianceNameKey(row.name),Number(row.value)]));
+  }
+
+  async function readClanPowerRows() {
+    const candidates=discoveredClanPowerLeaderboardType
+      ? [discoveredClanPowerLeaderboardType]
+      : ['clan_hamsters_power_lb','clan_hamster_power_lb','clan_power_lb','clans_hamsters_power_lb'];
+    for(const leaderboard_type of candidates){
+      try{
+        const value=await apiJson('/leaderboard','POST',{leaderboard_type},true,1);
+        const rows=clanMetricRows(value,'power');
+        if(rows.length){
+          discoveredClanPowerLeaderboardType=leaderboard_type;
+          return rows;
+        }
+      }catch(_){}
     }
+    return [];
+  }
+
+  function completeAllianceSum(alliance,metric,map) {
+    const direct=finiteMetric(alliance?.[metric]);
+    if(direct!==null&&direct>0)return direct;
+    let total=0,covered=0;
+    for(const clan of alliance.clans||[]){
+      let value=finiteMetric(clan?.[metric]);
+      if((value===null||value<=0)&&map)value=finiteMetric(map.get(clan.key));
+      if(value===null||value<0)continue;
+      total+=value;covered+=1;
+    }
+    // Never publish a partial total. A missing clan must not silently reduce
+    // an alliance's power/influence/defense.
+    return covered===(alliance.clans||[]).length&&covered>0?total:null;
+  }
+
+  function buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows) {
+    const alliances=allianceRecords(allianceDocument);
+    const influenceMap=clanRowsMap(clanInfluenceRows);
+    const powerMap=clanRowsMap(clanPowerRows);
+    const totals=alliances.map(alliance=>({
+      name:alliance.name,
+      clans:alliance.clans.length,
+      members:alliance.clans.reduce((sum,row)=>sum+(Number(row.members)||0),0),
+      alliance_power:completeAllianceSum(alliance,'power',powerMap),
+      alliance_influence:completeAllianceSum(alliance,'influence',influenceMap),
+      alliance_defense:completeAllianceSum(alliance,'defense',null)
+    }));
+    const result={};
+    for(const kind of ['alliance_power','alliance_influence','alliance_defense']){
+      const rows=totals
+        .filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+        .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name))
+        .slice(0,100)
+        .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+      if(rows.length)result[kind]=rows;
+    }
+    try{
+      recordDiagnostic('alliance-rating-v2',{
+        alliances:alliances.length,
+        power:result.alliance_power?.length||0,
+        influence:result.alliance_influence?.length||0,
+        defense:result.alliance_defense?.length||0,
+        powerLeaderboard:discoveredClanPowerLeaderboardType||''
+      });
+    }catch(_){}
+    return result;
   }
 
   async function readPublicRatings() {
-    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
-    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
-      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
-      catch (_) {}
+    const ratings={};
+    let clanInfluenceRows=[];
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'player_level_lb'},true,1);
+      const rows=normalizePublicRanking(value,'influence');
+      if(rows.length)ratings.influence=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'hamsters_power_lb'},true,1);
+      const rows=normalizePublicRanking(value,'power');
+      if(rows.length)ratings.power=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'clan_player_level_lb'},true,1);
+      clanInfluenceRows=clanMetricRows(value,'influence');
+      const publicRows=normalizePublicRanking(value,'clans');
+      if(publicRows.length)ratings.clans=publicRows;
+    }catch(_){}
+
+    try{
+      const [allianceDocument,clanPowerRows]=await Promise.all([
+        apiJson('/alliance/list','GET',null,true,1),
+        readClanPowerRows()
+      ]);
+      Object.assign(ratings,buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows));
+    }catch(error){
+      try{recordDiagnostic('alliance-rating-v2-error',{message:error?.message||String(error)});}catch(_){}
     }
-    try {
-      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
-      Object.assign(ratings, normalizeAllianceRatings(value));
-    } catch (_) {}
     return ratings;
   }
 
@@ -10823,7 +11033,7 @@ NOT FOUND
       fairDocument = playerDocument;
       shopViewDocument = await apiJson('/shop/view', 'GET');
       fairCatalog = normalizeFairCatalog(shopViewDocument);
-      const visibleFairs = visibleFairStates();
+      const visibleFairs = fairStatesForView();
       if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
       selectedFairLots.clear();
       selectedFairSlotRules.clear();
@@ -10887,7 +11097,7 @@ NOT FOUND
       const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
       updateFairControls(); return;
     }
-    const states = visibleFairStates();
+    const states = fairStatesForView();
     fairTypes.innerHTML = states.map(state => {
       const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
       return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
@@ -11894,7 +12104,7 @@ NOT FOUND
       {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
-      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{page:'fair-regular',ru:'Обычная ярмарка',en:'Regular Fair'}]},
       {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
     ];
     const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
@@ -12160,16 +12370,281 @@ NOT FOUND
     }
   }
 
-  async function readPublicRatings() {
-    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
-    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
-      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
-      catch (_) {}
+  // HK_ALLIANCE_RATINGS_V2
+  // Alliance totals are built from the clans that belong to each alliance.
+  // Defense/defence ("Оборона" in the game) comes from the alliance/clan list;
+  // clan power and influence are joined by clan name from the game's clan leaderboards.
+  let discoveredClanPowerLeaderboardType = '';
+
+  function allianceNameKey(value) {
+    return String(value || '').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+  }
+
+  function allianceObjectName(value) {
+    if(!value||typeof value!=='object')return '';
+    const node=value.alliance||value.alliance_info||value.allianceInfo||value;
+    return firstText(
+      node?.name,node?.title,node?.alliance_name,node?.allianceName,
+      value.alliance_name,value.allianceName,value.name,value.title
+    );
+  }
+
+  function clanObjectName(value) {
+    if(!value||typeof value!=='object')return '';
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    return firstText(
+      node?.name,node?.title,node?.clan_name,node?.clanName,
+      value.clan_name,value.clanName,value.name,value.title
+    );
+  }
+
+  function clanObjectId(value) {
+    if(!value||typeof value!=='object')return '';
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    return firstText(
+      node?.clan_id,node?.clanId,node?.id,node?.uuid,
+      value.clan_id,value.clanId,value.id,value.uuid
+    );
+  }
+
+  function clanMemberCount(value) {
+    if(!value||typeof value!=='object')return null;
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    return metricFromObject(node,[
+      'members_count','membersCount','member_count','memberCount',
+      'players_count','playersCount','participants_count','participantsCount',
+      'members','participants'
+    ]) ?? metricFromObject(value,[
+      'members_count','membersCount','member_count','memberCount',
+      'players_count','playersCount','participants_count','participantsCount'
+    ]);
+  }
+
+  function directClanMetric(value,kind) {
+    if(!value||typeof value!=='object')return null;
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    const keys=ALLIANCE_RATING_METRICS[kind]||[];
+    return metricFromObject(node,keys) ?? metricFromObject(value,keys);
+  }
+
+  function likelyClanArray(list) {
+    if(!Array.isArray(list)||!list.length||list.length>20)return false;
+    let named=0,clanish=0;
+    for(const item of list.slice(0,8)){
+      if(!item||typeof item!=='object')continue;
+      if(clanObjectName(item))named+=1;
+      const keys=new Set([
+        ...Object.keys(item),
+        ...Object.keys(item.clan||item.clan_info||item.clanInfo||{})
+      ].map(String));
+      if(
+        item.clan||item.clan_info||item.clanInfo||
+        keys.has('clan_id')||keys.has('clanId')||
+        keys.has('defense')||keys.has('defence')||
+        keys.has('defense_points')||keys.has('defence_points')||
+        keys.has('player_level')||keys.has('hamsters_power')||
+        keys.has('members_count')||keys.has('membersCount')
+      )clanish+=1;
     }
-    try {
-      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
-      Object.assign(ratings, normalizeAllianceRatings(value));
-    } catch (_) {}
+    return named>0 && (clanish>0 || named===list.length);
+  }
+
+  function allianceClanRows(value) {
+    if(!value||typeof value!=='object')return [];
+    const sources=[value.alliance||null,value.alliance_info||null,value.allianceInfo||null,value].filter(Boolean);
+    const preferred=[
+      'clans','alliance_clans','allianceClans','clan_list','clanList',
+      'member_clans','memberClans','participants'
+    ];
+    for(const source of sources){
+      for(const key of preferred){
+        const list=source?.[key];
+        if(likelyClanArray(list))return list;
+      }
+    }
+    for(const source of sources){
+      for(const child of Object.values(source||{})){
+        if(likelyClanArray(child))return child;
+      }
+    }
+    const singles=[];
+    for(const source of sources){
+      for(const key of ['core_clan','coreClan','leader_clan','leaderClan','clan']){
+        const row=source?.[key];
+        if(row&&typeof row==='object'&&clanObjectName(row))singles.push(row);
+      }
+    }
+    return singles;
+  }
+
+  function allianceRecords(documentValue) {
+    const output=[],seen=new Set();
+    for(const value of deepObjects(documentValue)){
+      if(!value||typeof value!=='object')continue;
+      const name=allianceObjectName(value);
+      const clans=allianceClanRows(value);
+      if(!name||!clans.length)continue;
+      const parsedClans=[];
+      const clanSeen=new Set();
+      for(const raw of clans){
+        const clanName=clanObjectName(raw);
+        if(!clanName)continue;
+        const clanKey=allianceNameKey(clanName);
+        if(!clanKey||clanSeen.has(clanKey))continue;
+        clanSeen.add(clanKey);
+        parsedClans.push({
+          name:clanName,
+          key:clanKey,
+          id:clanObjectId(raw),
+          members:clanMemberCount(raw),
+          power:directClanMetric(raw,'alliance_power'),
+          influence:directClanMetric(raw,'alliance_influence'),
+          defense:directClanMetric(raw,'alliance_defense')
+        });
+      }
+      if(!parsedClans.length)continue;
+      const key=allianceNameKey(name);
+      if(!key||seen.has(key))continue;
+      seen.add(key);
+      output.push({
+        name,key,clans:parsedClans,
+        power:metricFromObject(value.alliance||value,ALLIANCE_RATING_METRICS.alliance_power),
+        influence:metricFromObject(value.alliance||value,ALLIANCE_RATING_METRICS.alliance_influence),
+        defense:metricFromObject(value.alliance||value,ALLIANCE_RATING_METRICS.alliance_defense)
+      });
+    }
+    return output;
+  }
+
+  function clanMetricRows(documentValue,kind) {
+    const arrays=leaderboardArrays(documentValue);
+    for(const list of arrays){
+      const rows=list.map((row,index)=>{
+        if(!row||typeof row!=='object')return null;
+        const entity=row.clan||row.clan_info||row.clanInfo||row;
+        const name=clanObjectName(row);
+        if(!name)return null;
+        const rank=Math.trunc(firstFinite(row.rank,row.place,row.position,entity.rank)||index+1);
+        let value=null;
+        if(kind==='power'){
+          value=metricFromObject(entity,ALLIANCE_RATING_METRICS.alliance_power)
+            ?? metricFromObject(row,ALLIANCE_RATING_METRICS.alliance_power)
+            ?? finiteMetric(row.value) ?? finiteMetric(row.score);
+        }else{
+          value=metricFromObject(entity,ALLIANCE_RATING_METRICS.alliance_influence)
+            ?? metricFromObject(row,ALLIANCE_RATING_METRICS.alliance_influence)
+            ?? finiteMetric(row.value) ?? finiteMetric(row.score);
+        }
+        return rank>=1&&value!==null?{rank,name,value}:null;
+      }).filter(Boolean);
+      if(rows.length)return rows.slice(0,200);
+    }
+    return [];
+  }
+
+  function clanRowsMap(rows) {
+    return new Map((Array.isArray(rows)?rows:[])
+      .filter(row=>row&&row.name&&Number.isFinite(Number(row.value)))
+      .map(row=>[allianceNameKey(row.name),Number(row.value)]));
+  }
+
+  async function readClanPowerRows() {
+    const candidates=discoveredClanPowerLeaderboardType
+      ? [discoveredClanPowerLeaderboardType]
+      : ['clan_hamsters_power_lb','clan_hamster_power_lb','clan_power_lb','clans_hamsters_power_lb'];
+    for(const leaderboard_type of candidates){
+      try{
+        const value=await apiJson('/leaderboard','POST',{leaderboard_type},true,1);
+        const rows=clanMetricRows(value,'power');
+        if(rows.length){
+          discoveredClanPowerLeaderboardType=leaderboard_type;
+          return rows;
+        }
+      }catch(_){}
+    }
+    return [];
+  }
+
+  function completeAllianceSum(alliance,metric,map) {
+    const direct=finiteMetric(alliance?.[metric]);
+    if(direct!==null&&direct>0)return direct;
+    let total=0,covered=0;
+    for(const clan of alliance.clans||[]){
+      let value=finiteMetric(clan?.[metric]);
+      if((value===null||value<=0)&&map)value=finiteMetric(map.get(clan.key));
+      if(value===null||value<0)continue;
+      total+=value;covered+=1;
+    }
+    // Never publish a partial total. A missing clan must not silently reduce
+    // an alliance's power/influence/defense.
+    return covered===(alliance.clans||[]).length&&covered>0?total:null;
+  }
+
+  function buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows) {
+    const alliances=allianceRecords(allianceDocument);
+    const influenceMap=clanRowsMap(clanInfluenceRows);
+    const powerMap=clanRowsMap(clanPowerRows);
+    const totals=alliances.map(alliance=>({
+      name:alliance.name,
+      clans:alliance.clans.length,
+      members:alliance.clans.reduce((sum,row)=>sum+(Number(row.members)||0),0),
+      alliance_power:completeAllianceSum(alliance,'power',powerMap),
+      alliance_influence:completeAllianceSum(alliance,'influence',influenceMap),
+      alliance_defense:completeAllianceSum(alliance,'defense',null)
+    }));
+    const result={};
+    for(const kind of ['alliance_power','alliance_influence','alliance_defense']){
+      const rows=totals
+        .filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+        .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name))
+        .slice(0,100)
+        .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+      if(rows.length)result[kind]=rows;
+    }
+    try{
+      recordDiagnostic('alliance-rating-v2',{
+        alliances:alliances.length,
+        power:result.alliance_power?.length||0,
+        influence:result.alliance_influence?.length||0,
+        defense:result.alliance_defense?.length||0,
+        powerLeaderboard:discoveredClanPowerLeaderboardType||''
+      });
+    }catch(_){}
+    return result;
+  }
+
+  async function readPublicRatings() {
+    const ratings={};
+    let clanInfluenceRows=[];
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'player_level_lb'},true,1);
+      const rows=normalizePublicRanking(value,'influence');
+      if(rows.length)ratings.influence=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'hamsters_power_lb'},true,1);
+      const rows=normalizePublicRanking(value,'power');
+      if(rows.length)ratings.power=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'clan_player_level_lb'},true,1);
+      clanInfluenceRows=clanMetricRows(value,'influence');
+      const publicRows=normalizePublicRanking(value,'clans');
+      if(publicRows.length)ratings.clans=publicRows;
+    }catch(_){}
+
+    try{
+      const [allianceDocument,clanPowerRows]=await Promise.all([
+        apiJson('/alliance/list','GET',null,true,1),
+        readClanPowerRows()
+      ]);
+      Object.assign(ratings,buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows));
+    }catch(error){
+      try{recordDiagnostic('alliance-rating-v2-error',{message:error?.message||String(error)});}catch(_){}
+    }
     return ratings;
   }
 
@@ -12196,7 +12671,7 @@ NOT FOUND
       fairDocument = playerDocument;
       shopViewDocument = await apiJson('/shop/view', 'GET');
       fairCatalog = normalizeFairCatalog(shopViewDocument);
-      const visibleFairs = visibleFairStates();
+      const visibleFairs = fairStatesForView();
       if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
       selectedFairLots.clear();
       selectedFairSlotRules.clear();
@@ -12257,171 +12732,7 @@ NOT FOUND
     if (!fairCatalog.length) {
       fairTypes.innerHTML = `<p class="hk-muted">${tr('readFirst')}</p>`;
       fairLots.innerHTML = '';
-      const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
-      updateFairControls(); return;
-    }
-    const states = visibleFairStates();
-    fairTypes.innerHTML = states.map(state => {
-      const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
-      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
-        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
-    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
-    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
-      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
-    });
-    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
-    const allRows = fairRowsForState(fairState(selectedFairId));
-    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
-    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
-    const currencyBar = root?.querySelector('#hk-fair-currencies');
-    if (currencyBar) {
-      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
-        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
-        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
-      }).join('');
-      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
-    }
-    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
-      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
-    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
-      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('blocked')}</small>`}</button>`).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
-    fairLots.querySelectorAll('[data-lot]').forEach(button => button.onclick = () => {
-      const row = fairCatalog.find(value => value.lotId === button.dataset.lot);
-      if (!row?.safe) { log(either('Этот лот заблокирован: неизвестная валюта', 'This lot is blocked: unknown currency'), 'warn'); return; }
-      if (selectedFairLots.has(row.lotId)) {
-        selectedFairLots.delete(row.lotId);
-        selectedFairSlotRules.delete(row.lotId);
-      } else {
-        selectedFairLots.add(row.lotId);
-        const options = fairSlotOptions();
-        selectedFairSlotRules.set(row.lotId, {regular:options.some(value => !value.vip), vip:options.some(value => value.vip)});
-      }
-      renderFair();
-    });
-    renderFairSlotRules();
-    updateFairControls();
-  }
-
-  function fairSlotOptions(state = fairState(selectedFairId)) {
-    const fairConfigs = shopViewDocument?.fairs || shopViewDocument?.fair || [];
-    const config = (Array.isArray(fairConfigs) ? fairConfigs : []).find(value => String(value?.id) === String(state?.id));
-    const metaById = new Map((config?.fair_slots || []).map(slot => [String(slot?.id), slot]));
-    return [...(state?.fair_slots || [])]
-      .sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0))
-      .map((slot, index) => ({slot, index, key:String(index), vip:Boolean(slot?.is_vip || metaById.get(String(slot?.id))?.is_vip)}));
-  }
-
-  function renderFairSlotRules() {
-    if (!fairSlotRules) return;
-    const slots = fairSlotOptions();
-    if (!selectedFairLots.size || !slots.length) {
-      fairSlotRules.innerHTML = '';
-      fairSlotRules.style.display = 'none';
-      return;
-    }
-    fairSlotRules.style.display = '';
-    const hasRegular = slots.some(value => !value.vip);
-    const hasVip = slots.some(value => value.vip);
-    for (const lotId of selectedFairLots) {
-      if (!selectedFairSlotRules.has(lotId)) selectedFairSlotRules.set(lotId, {regular:hasRegular, vip:hasVip});
-    }
-    fairSlotRules.innerHTML = `<h3>${tr('allowedCells')}</h3><p class="hk-muted">${tr('selectCellsHint')}</p>` +
-      [...selectedFairLots].map(lotId => {
-        const row = fairCatalog.find(value => value.lotId === lotId);
-        const allowed = selectedFairSlotRules.get(lotId) || {regular:hasRegular, vip:hasVip};
-        return `<div class="hk-slot-rule"><div class="hk-slot-product">${fairIconHtml(row?.icon || '', 'hk-price-icon')}<b>×${Number(row?.rewardQuantity || 0).toLocaleString(locale())}</b></div>
-          <div class="hk-slot-buttons"><button class="${allowed.regular ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="regular" ${hasRegular ? '' : 'disabled'}>${tr('regularSlots')}: ${tr(allowed.regular ? 'yes' : 'no')}</button>
-          <button class="vip ${allowed.vip ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="vip" ${hasVip ? '' : 'disabled'}>♛ ${tr('vipSlots')}: ${tr(allowed.vip ? 'yes' : 'no')}</button></div></div>`;
-      }).join('');
-    fairSlotRules.querySelectorAll('[data-rule-lot]').forEach(button => button.onclick = () => {
-      const allowed = selectedFairSlotRules.get(button.dataset.ruleLot) || {regular:hasRegular, vip:hasVip};
-      allowed[button.dataset.ruleGroup] = !allowed[button.dataset.ruleGroup];
-      selectedFairSlotRules.set(button.dataset.ruleLot, allowed);
-      renderFairSlotRules(); updateFairControls();
-    });
-  }
-
-  function updateFairControls() {
-    const selected = root?.querySelector('#hk-fair-selected');
-    if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
-    const start = root?.querySelector('#hk-fair-start');
-    const rulesValid = [...selectedFairLots].every(lotId => {
-      const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
-    });
-    if (start) start.disabled = fairRunning || !selectedFairId || !selectedFairLots.size || !rulesValid;
-    const stop = root?.querySelector('#hk-fair-stop');
-    if (stop) stop.disabled = !fairRunning;
-  }
-
-  function fairComboSettings() {
-    return {
-      exactLots:Math.max(0, Number(root?.querySelector('#hk-fair-exact-lots')?.value || 0))
-    };
-  }
-
-  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
-    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
-  }
-
-  function renderFairBonusChoices() {
-    const box = root?.querySelector('#hk-fair-bonus-lots'); if (!box) return;
-    const available = new Set(availableFairBonusLots());
-    box.innerHTML = `<span>${tr('fairBonusLots')}</span><div>${[5,10,30].map(quantity =>
-      `<label class="hk-check ${available.has(quantity) ? 'available' : 'unavailable'}"><input type="checkbox" data-fair-bonus="${quantity}" ${selectedFairBonusLots.has(quantity) ? 'checked' : ''} ${available.has(quantity) ? '' : 'disabled'}><b>×${quantity}</b></label>`).join('')}</div>`;
-    box.querySelectorAll('[data-fair-bonus]').forEach(input => input.onchange = () => {
-      const quantity = Number(input.dataset.fairBonus);
-      if (input.checked) selectedFairBonusLots.add(quantity); else selectedFairBonusLots.delete(quantity);
-    });
-  }
-
-  function fairPresets() {
-    const value = load().fairPresets;
-    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  }
-
-  function refreshFairPresets(selectName = '') {
-    if (!fairPresetSelect) return;
-    const names = Object.keys(fairPresets()).sort((a, b) => a.localeCompare(b, locale()));
-    fairPresetSelect.innerHTML = `<option value="">${tr('fairSavedSettings')}</option>` +
-      names.map(name => `<option value="${escapeHtml(name)}" ${name === selectName ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
-  }
-
-  function fairPresetSnapshot() {
-    return {
-      fairId:selectedFairId,
-      lots:[...selectedFairLots],
-      slotGroups:Object.fromEntries([...selectedFairSlotRules].map(([lotId, groups]) => [lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)}])),
-      currency:selectedFairCurrency,
-      exactLots:fairComboSettings().exactLots, bonusLots:[...selectedFairBonusLots],
-      buyLimit:Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1)),
-      rerollLimit:Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0)),
-      premiumReroll:Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)
-    };
-  }
-
-  function saveFairPreset(existingName = '') {
-    if (!selectedFairId || !selectedFairLots.size) {
-      alert(either('Сначала выберите ярмарку и хотя бы один товар', 'Choose a fair and at least one item first')); return;
-    }
-    const name = existingName || prompt(tr('settingName'));
-    if (!name?.trim()) return;
-    const normalized = name.trim();
-    const all = fairPresets();
-    all[normalized] = fairPresetSnapshot();
-    save({fairPresets:all});
-    refreshFairPresets(normalized);
-    log(tr('settingSaved', {name:normalized}), 'ok');
-  }
-
-  function loadFairPreset(name) {
-    const preset = fairPresets()[name];
-    if (!preset) return;
-    if (!fairCatalog.length) {
-      alert(either('Сначала нажмите «Считать ярмарку»', 'Press “Read fair” first'));
-      refreshFairPresets(); return;
-    }
-    if (fairStates().some(state => String(state.id) === String(preset.fairId))) selectedFairId = String(preset.fairId);
-    const availabl
+      const currencyBar = root?
 
 ===== function bossStateRows( =====
 
@@ -12616,16 +12927,281 @@ NOT FOUND
     }
   }
 
-  async function readPublicRatings() {
-    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
-    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
-      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
-      catch (_) {}
+  // HK_ALLIANCE_RATINGS_V2
+  // Alliance totals are built from the clans that belong to each alliance.
+  // Defense/defence ("Оборона" in the game) comes from the alliance/clan list;
+  // clan power and influence are joined by clan name from the game's clan leaderboards.
+  let discoveredClanPowerLeaderboardType = '';
+
+  function allianceNameKey(value) {
+    return String(value || '').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+  }
+
+  function allianceObjectName(value) {
+    if(!value||typeof value!=='object')return '';
+    const node=value.alliance||value.alliance_info||value.allianceInfo||value;
+    return firstText(
+      node?.name,node?.title,node?.alliance_name,node?.allianceName,
+      value.alliance_name,value.allianceName,value.name,value.title
+    );
+  }
+
+  function clanObjectName(value) {
+    if(!value||typeof value!=='object')return '';
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    return firstText(
+      node?.name,node?.title,node?.clan_name,node?.clanName,
+      value.clan_name,value.clanName,value.name,value.title
+    );
+  }
+
+  function clanObjectId(value) {
+    if(!value||typeof value!=='object')return '';
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    return firstText(
+      node?.clan_id,node?.clanId,node?.id,node?.uuid,
+      value.clan_id,value.clanId,value.id,value.uuid
+    );
+  }
+
+  function clanMemberCount(value) {
+    if(!value||typeof value!=='object')return null;
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    return metricFromObject(node,[
+      'members_count','membersCount','member_count','memberCount',
+      'players_count','playersCount','participants_count','participantsCount',
+      'members','participants'
+    ]) ?? metricFromObject(value,[
+      'members_count','membersCount','member_count','memberCount',
+      'players_count','playersCount','participants_count','participantsCount'
+    ]);
+  }
+
+  function directClanMetric(value,kind) {
+    if(!value||typeof value!=='object')return null;
+    const node=value.clan||value.clan_info||value.clanInfo||value;
+    const keys=ALLIANCE_RATING_METRICS[kind]||[];
+    return metricFromObject(node,keys) ?? metricFromObject(value,keys);
+  }
+
+  function likelyClanArray(list) {
+    if(!Array.isArray(list)||!list.length||list.length>20)return false;
+    let named=0,clanish=0;
+    for(const item of list.slice(0,8)){
+      if(!item||typeof item!=='object')continue;
+      if(clanObjectName(item))named+=1;
+      const keys=new Set([
+        ...Object.keys(item),
+        ...Object.keys(item.clan||item.clan_info||item.clanInfo||{})
+      ].map(String));
+      if(
+        item.clan||item.clan_info||item.clanInfo||
+        keys.has('clan_id')||keys.has('clanId')||
+        keys.has('defense')||keys.has('defence')||
+        keys.has('defense_points')||keys.has('defence_points')||
+        keys.has('player_level')||keys.has('hamsters_power')||
+        keys.has('members_count')||keys.has('membersCount')
+      )clanish+=1;
     }
-    try {
-      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
-      Object.assign(ratings, normalizeAllianceRatings(value));
-    } catch (_) {}
+    return named>0 && (clanish>0 || named===list.length);
+  }
+
+  function allianceClanRows(value) {
+    if(!value||typeof value!=='object')return [];
+    const sources=[value.alliance||null,value.alliance_info||null,value.allianceInfo||null,value].filter(Boolean);
+    const preferred=[
+      'clans','alliance_clans','allianceClans','clan_list','clanList',
+      'member_clans','memberClans','participants'
+    ];
+    for(const source of sources){
+      for(const key of preferred){
+        const list=source?.[key];
+        if(likelyClanArray(list))return list;
+      }
+    }
+    for(const source of sources){
+      for(const child of Object.values(source||{})){
+        if(likelyClanArray(child))return child;
+      }
+    }
+    const singles=[];
+    for(const source of sources){
+      for(const key of ['core_clan','coreClan','leader_clan','leaderClan','clan']){
+        const row=source?.[key];
+        if(row&&typeof row==='object'&&clanObjectName(row))singles.push(row);
+      }
+    }
+    return singles;
+  }
+
+  function allianceRecords(documentValue) {
+    const output=[],seen=new Set();
+    for(const value of deepObjects(documentValue)){
+      if(!value||typeof value!=='object')continue;
+      const name=allianceObjectName(value);
+      const clans=allianceClanRows(value);
+      if(!name||!clans.length)continue;
+      const parsedClans=[];
+      const clanSeen=new Set();
+      for(const raw of clans){
+        const clanName=clanObjectName(raw);
+        if(!clanName)continue;
+        const clanKey=allianceNameKey(clanName);
+        if(!clanKey||clanSeen.has(clanKey))continue;
+        clanSeen.add(clanKey);
+        parsedClans.push({
+          name:clanName,
+          key:clanKey,
+          id:clanObjectId(raw),
+          members:clanMemberCount(raw),
+          power:directClanMetric(raw,'alliance_power'),
+          influence:directClanMetric(raw,'alliance_influence'),
+          defense:directClanMetric(raw,'alliance_defense')
+        });
+      }
+      if(!parsedClans.length)continue;
+      const key=allianceNameKey(name);
+      if(!key||seen.has(key))continue;
+      seen.add(key);
+      output.push({
+        name,key,clans:parsedClans,
+        power:metricFromObject(value.alliance||value,ALLIANCE_RATING_METRICS.alliance_power),
+        influence:metricFromObject(value.alliance||value,ALLIANCE_RATING_METRICS.alliance_influence),
+        defense:metricFromObject(value.alliance||value,ALLIANCE_RATING_METRICS.alliance_defense)
+      });
+    }
+    return output;
+  }
+
+  function clanMetricRows(documentValue,kind) {
+    const arrays=leaderboardArrays(documentValue);
+    for(const list of arrays){
+      const rows=list.map((row,index)=>{
+        if(!row||typeof row!=='object')return null;
+        const entity=row.clan||row.clan_info||row.clanInfo||row;
+        const name=clanObjectName(row);
+        if(!name)return null;
+        const rank=Math.trunc(firstFinite(row.rank,row.place,row.position,entity.rank)||index+1);
+        let value=null;
+        if(kind==='power'){
+          value=metricFromObject(entity,ALLIANCE_RATING_METRICS.alliance_power)
+            ?? metricFromObject(row,ALLIANCE_RATING_METRICS.alliance_power)
+            ?? finiteMetric(row.value) ?? finiteMetric(row.score);
+        }else{
+          value=metricFromObject(entity,ALLIANCE_RATING_METRICS.alliance_influence)
+            ?? metricFromObject(row,ALLIANCE_RATING_METRICS.alliance_influence)
+            ?? finiteMetric(row.value) ?? finiteMetric(row.score);
+        }
+        return rank>=1&&value!==null?{rank,name,value}:null;
+      }).filter(Boolean);
+      if(rows.length)return rows.slice(0,200);
+    }
+    return [];
+  }
+
+  function clanRowsMap(rows) {
+    return new Map((Array.isArray(rows)?rows:[])
+      .filter(row=>row&&row.name&&Number.isFinite(Number(row.value)))
+      .map(row=>[allianceNameKey(row.name),Number(row.value)]));
+  }
+
+  async function readClanPowerRows() {
+    const candidates=discoveredClanPowerLeaderboardType
+      ? [discoveredClanPowerLeaderboardType]
+      : ['clan_hamsters_power_lb','clan_hamster_power_lb','clan_power_lb','clans_hamsters_power_lb'];
+    for(const leaderboard_type of candidates){
+      try{
+        const value=await apiJson('/leaderboard','POST',{leaderboard_type},true,1);
+        const rows=clanMetricRows(value,'power');
+        if(rows.length){
+          discoveredClanPowerLeaderboardType=leaderboard_type;
+          return rows;
+        }
+      }catch(_){}
+    }
+    return [];
+  }
+
+  function completeAllianceSum(alliance,metric,map) {
+    const direct=finiteMetric(alliance?.[metric]);
+    if(direct!==null&&direct>0)return direct;
+    let total=0,covered=0;
+    for(const clan of alliance.clans||[]){
+      let value=finiteMetric(clan?.[metric]);
+      if((value===null||value<=0)&&map)value=finiteMetric(map.get(clan.key));
+      if(value===null||value<0)continue;
+      total+=value;covered+=1;
+    }
+    // Never publish a partial total. A missing clan must not silently reduce
+    // an alliance's power/influence/defense.
+    return covered===(alliance.clans||[]).length&&covered>0?total:null;
+  }
+
+  function buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows) {
+    const alliances=allianceRecords(allianceDocument);
+    const influenceMap=clanRowsMap(clanInfluenceRows);
+    const powerMap=clanRowsMap(clanPowerRows);
+    const totals=alliances.map(alliance=>({
+      name:alliance.name,
+      clans:alliance.clans.length,
+      members:alliance.clans.reduce((sum,row)=>sum+(Number(row.members)||0),0),
+      alliance_power:completeAllianceSum(alliance,'power',powerMap),
+      alliance_influence:completeAllianceSum(alliance,'influence',influenceMap),
+      alliance_defense:completeAllianceSum(alliance,'defense',null)
+    }));
+    const result={};
+    for(const kind of ['alliance_power','alliance_influence','alliance_defense']){
+      const rows=totals
+        .filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+        .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name))
+        .slice(0,100)
+        .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+      if(rows.length)result[kind]=rows;
+    }
+    try{
+      recordDiagnostic('alliance-rating-v2',{
+        alliances:alliances.length,
+        power:result.alliance_power?.length||0,
+        influence:result.alliance_influence?.length||0,
+        defense:result.alliance_defense?.length||0,
+        powerLeaderboard:discoveredClanPowerLeaderboardType||''
+      });
+    }catch(_){}
+    return result;
+  }
+
+  async function readPublicRatings() {
+    const ratings={};
+    let clanInfluenceRows=[];
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'player_level_lb'},true,1);
+      const rows=normalizePublicRanking(value,'influence');
+      if(rows.length)ratings.influence=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'hamsters_power_lb'},true,1);
+      const rows=normalizePublicRanking(value,'power');
+      if(rows.length)ratings.power=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'clan_player_level_lb'},true,1);
+      clanInfluenceRows=clanMetricRows(value,'influence');
+      const publicRows=normalizePublicRanking(value,'clans');
+      if(publicRows.length)ratings.clans=publicRows;
+    }catch(_){}
+
+    try{
+      const [allianceDocument,clanPowerRows]=await Promise.all([
+        apiJson('/alliance/list','GET',null,true,1),
+        readClanPowerRows()
+      ]);
+      Object.assign(ratings,buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows));
+    }catch(error){
+      try{recordDiagnostic('alliance-rating-v2-error',{message:error?.message||String(error)});}catch(_){}
+    }
     return ratings;
   }
 
@@ -12652,176 +13228,12 @@ NOT FOUND
       fairDocument = playerDocument;
       shopViewDocument = await apiJson('/shop/view', 'GET');
       fairCatalog = normalizeFairCatalog(shopViewDocument);
-      const visibleFairs = visibleFairStates();
+      const visibleFairs = fairStatesForView();
       if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
       selectedFairLots.clear();
       selectedFairSlotRules.clear();
       renderFair();
-      log(`Ярмарка считана: ${visibleFairs.length} разделов, ${fairCatalog.length} лотов`, 'ok');
-    } catch (error) { log(`Ошибка ярмарки: ${error.message}`, 'bad'); }
-  }
-
-  function costVisual(cost, multiplier = 1) {
-    const parts = costParts(cost);
-    if (!parts.length) return '<span>0</span>';
-    return parts.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${(part.quantity * multiplier).toLocaleString(locale())}</b>`).join('');
-  }
-
-  function addProjectedCost(target, part, multiplier = 1) {
-    if (!part?.id) return;
-    const key = `${part.kind}|${part.id}`;
-    const current = target.get(key) || {...part, quantity:0};
-    current.quantity += Math.max(0, Number(part.quantity || 0)) * Math.max(0, Number(multiplier || 0));
-    target.set(key, current);
-  }
-
-  function walletForecastHtml(parts) {
-    const values = [...parts.values()].filter(part => part?.id).sort((a, b) => a.id.localeCompare(b.id));
-    if (!values.length) return '';
-    return `<div class="hk-wallet-forecast">${values.map(part => {
-      const balance = walletAmount(part.id);
-      const spend = Math.max(0, Number(part.quantity || 0));
-      const known = balance !== null;
-      return `<div class="hk-wallet-row">
-        <span class="hk-wallet-currency">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${escapeHtml(paymentLabel(part.id))}</b></span>
-        <span>${tr('balance')}: <b>${known ? balance.toLocaleString(locale()) : '—'}</b> · ${either('Макс. возможный расход','Maximum possible spend')}: <b>${spend.toLocaleString(locale())}</b></span>
-      </div>`;
-    }).join('')}</div>`;
-  }
-
-  function fairProjectedCosts() {
-    const totals = new Map();
-    const state = fairState(selectedFairId);
-    const rows = fairRowsForState(state);
-    const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
-    const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
-    const rerollLimit = Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0));
-    const relevantRows = selectedRows.length ? selectedRows : rows;
-    const maximumLots = new Map();
-    for (const row of relevantRows) for (const part of costParts(row.cost)) {
-      const key = `${part.kind}|${part.id}`;
-      const current = maximumLots.get(key);
-      if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
-    }
-    for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
-    for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollLimit);
-    return totals;
-  }
-
-  function renderFair() {
-    if (!fairTypes || !fairLots) return;
-    if (!fairCatalog.length) {
-      fairTypes.innerHTML = `<p class="hk-muted">${tr('readFirst')}</p>`;
-      fairLots.innerHTML = '';
-      const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
-      updateFairControls(); return;
-    }
-    const states = visibleFairStates();
-    fairTypes.innerHTML = states.map(state => {
-      const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
-      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
-        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
-    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
-    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
-      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
-    });
-    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
-    const allRows = fairRowsForState(fairState(selectedFairId));
-    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
-    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
-    const currencyBar = root?.querySelector('#hk-fair-currencies');
-    if (currencyBar) {
-      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
-        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
-        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
-      }).join('');
-      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
-    }
-    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
-      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
-    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
-      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('blocked')}</small>`}</button>`).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
-    fairLots.querySelectorAll('[data-lot]').forEach(button => button.onclick = () => {
-      const row = fairCatalog.find(value => value.lotId === button.dataset.lot);
-      if (!row?.safe) { log(either('Этот лот заблокирован: неизвестная валюта', 'This lot is blocked: unknown currency'), 'warn'); return; }
-      if (selectedFairLots.has(row.lotId)) {
-        selectedFairLots.delete(row.lotId);
-        selectedFairSlotRules.delete(row.lotId);
-      } else {
-        selectedFairLots.add(row.lotId);
-        const options = fairSlotOptions();
-        selectedFairSlotRules.set(row.lotId, {regular:options.some(value => !value.vip), vip:options.some(value => value.vip)});
-      }
-      renderFair();
-    });
-    renderFairSlotRules();
-    updateFairControls();
-  }
-
-  function fairSlotOptions(state = fairState(selectedFairId)) {
-    const fairConfigs = shopViewDocument?.fairs || shopViewDocument?.fair || [];
-    const config = (Array.isArray(fairConfigs) ? fairConfigs : []).find(value => String(value?.id) === String(state?.id));
-    const metaById = new Map((config?.fair_slots || []).map(slot => [String(slot?.id), slot]));
-    return [...(state?.fair_slots || [])]
-      .sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0))
-      .map((slot, index) => ({slot, index, key:String(index), vip:Boolean(slot?.is_vip || metaById.get(String(slot?.id))?.is_vip)}));
-  }
-
-  function renderFairSlotRules() {
-    if (!fairSlotRules) return;
-    const slots = fairSlotOptions();
-    if (!selectedFairLots.size || !slots.length) {
-      fairSlotRules.innerHTML = '';
-      fairSlotRules.style.display = 'none';
-      return;
-    }
-    fairSlotRules.style.display = '';
-    const hasRegular = slots.some(value => !value.vip);
-    const hasVip = slots.some(value => value.vip);
-    for (const lotId of selectedFairLots) {
-      if (!selectedFairSlotRules.has(lotId)) selectedFairSlotRules.set(lotId, {regular:hasRegular, vip:hasVip});
-    }
-    fairSlotRules.innerHTML = `<h3>${tr('allowedCells')}</h3><p class="hk-muted">${tr('selectCellsHint')}</p>` +
-      [...selectedFairLots].map(lotId => {
-        const row = fairCatalog.find(value => value.lotId === lotId);
-        const allowed = selectedFairSlotRules.get(lotId) || {regular:hasRegular, vip:hasVip};
-        return `<div class="hk-slot-rule"><div class="hk-slot-product">${fairIconHtml(row?.icon || '', 'hk-price-icon')}<b>×${Number(row?.rewardQuantity || 0).toLocaleString(locale())}</b></div>
-          <div class="hk-slot-buttons"><button class="${allowed.regular ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="regular" ${hasRegular ? '' : 'disabled'}>${tr('regularSlots')}: ${tr(allowed.regular ? 'yes' : 'no')}</button>
-          <button class="vip ${allowed.vip ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="vip" ${hasVip ? '' : 'disabled'}>♛ ${tr('vipSlots')}: ${tr(allowed.vip ? 'yes' : 'no')}</button></div></div>`;
-      }).join('');
-    fairSlotRules.querySelectorAll('[data-rule-lot]').forEach(button => button.onclick = () => {
-      const allowed = selectedFairSlotRules.get(button.dataset.ruleLot) || {regular:hasRegular, vip:hasVip};
-      allowed[button.dataset.ruleGroup] = !allowed[button.dataset.ruleGroup];
-      selectedFairSlotRules.set(button.dataset.ruleLot, allowed);
-      renderFairSlotRules(); updateFairControls();
-    });
-  }
-
-  function updateFairControls() {
-    const selected = root?.querySelector('#hk-fair-selected');
-    if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
-    const start = root?.querySelector('#hk-fair-start');
-    const rulesValid = [...selectedFairLots].every(lotId => {
-      const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
-    });
-    if (start) start.disabled = fairRunning || !selectedFairId || !selectedFairLots.size || !rulesValid;
-    const stop = root?.querySelector('#hk-fair-stop');
-    if (stop) stop.disabled = !fairRunning;
-  }
-
-  function fairComboSettings() {
-    return {
-      exactLots:Math.max(0, Number(root?.querySelector('#hk-fair-exact-lots')?.value || 0))
-    };
-  }
-
-  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
-    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
-  }
-
-  function renderFairBonusChoices() {
-    const box = root?.querySelector('#hk-fair-bonus-lots'); if (!box) return;
-    const available = new Set(availa
+      log(`Ярмарка считана: ${
 
 ===== HK_STAGE2J_BOSSES_REV =====
 
@@ -12937,6 +13349,7 @@ NOT FOUND
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -13295,11 +13708,10 @@ NOT FOUND
       const latest=escapeHtml(update.latest_version || '?');
       updateBox.style.display='block';
       updateBox.className=`hk-update${update.required ? ' required' : ''}`;
-      updateBox.innerHTML=`<b>${either('Доступно обновление','Update available')} ${latest}</b>${u
+      updateBox.innerHTML=`<b>${eithe
 
 ===== GROWTH_GENERAL_BUDGET_ID =====
 
-                finally {
                   const after = Number(current?.hamsterCollection?.unitsCount);
                   refreshHamsterCollection(before,after);
                   settle(true);
@@ -13366,6 +13778,7 @@ NOT FOUND
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -13765,8 +14178,6 @@ NOT FOUND
 
 ===== GROWTH_HAMSTER_BUDGET_ID =====
 
-                try { return originalUpdate.apply(this,args); }
-                finally {
                   const after = Number(current?.hamsterCollection?.unitsCount);
                   refreshHamsterCollection(before,after);
                   settle(true);
@@ -13833,6 +14244,7 @@ NOT FOUND
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;

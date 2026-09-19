@@ -2,14 +2,13 @@
 
 ===== function normalizeFairCatalog( =====
 
-        (parts.some(part => part.kind === 'currencies') || parts.some(part => part.id === 'item_invest_cur')));
-    });
-    const families = new Set(costParts(state.fair_reroll_cost).filter(p => p.kind === 'items').map(p => itemFamily(p.id)));
     const overrides = {fair_event_hw:['item_event_hw_cur'], fair_event_nyear:['item_event_nyear_cur']};
     (overrides[state.id] || []).forEach(value => families.add(value));
     return fairCatalog.filter(row => liveSlotLotIds.has(row.lotId) ||
       costParts(row.cost).some(p => p.kind === 'items' && families.has(itemFamily(p.id))));
   }
+
+  let fairViewMode = 'all';
 
   function userVisibleFair(state) {
     if (!state) return false;
@@ -30,6 +29,12 @@
 
   function visibleFairStates(documentValue = fairDocument || playerDocument) {
     return fairStates(documentValue).filter(state => userVisibleFair(state) && fairRowsForState(state).length);
+  }
+
+  function fairStatesForView(documentValue = fairDocument || playerDocument) {
+    const states = visibleFairStates(documentValue);
+    if (fairViewMode === 'regular') return states.filter(state => String(state?.id || '') === 'fair_default');
+    return states;
   }
 
   function mediaUrl(value, itemId = '') {
@@ -251,44 +256,71 @@
 
 ===== async function loadFair() =====
 
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
-    }else{
-      const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
-      const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
-      const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
-        '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong></div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong></div></div>'+
-        '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
+  function buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows) {
+    const alliances=allianceRecords(allianceDocument);
+    const influenceMap=clanRowsMap(clanInfluenceRows);
+    const powerMap=clanRowsMap(clanPowerRows);
+    const totals=alliances.map(alliance=>({
+      name:alliance.name,
+      clans:alliance.clans.length,
+      members:alliance.clans.reduce((sum,row)=>sum+(Number(row.members)||0),0),
+      alliance_power:completeAllianceSum(alliance,'power',powerMap),
+      alliance_influence:completeAllianceSum(alliance,'influence',influenceMap),
+      alliance_defense:completeAllianceSum(alliance,'defense',null)
+    }));
+    const result={};
+    for(const kind of ['alliance_power','alliance_influence','alliance_defense']){
+      const rows=totals
+        .filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+        .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name))
+        .slice(0,100)
+        .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+      if(rows.length)result[kind]=rows;
     }
-    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
-  }
-
-  async function refreshWars(force=false) {
-    if(!requireLicense())return null;
     try{
-      const result=await readPublicWar();
-      warSnapshot=result?.war||null;
-      warLastReadAt=Date.now();
-      renderWars();
-      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
-      return warSnapshot;
-    }catch(error){
-      log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
-      renderWars();
-      return null;
-    }
+      recordDiagnostic('alliance-rating-v2',{
+        alliances:alliances.length,
+        power:result.alliance_power?.length||0,
+        influence:result.alliance_influence?.length||0,
+        defense:result.alliance_defense?.length||0,
+        powerLeaderboard:discoveredClanPowerLeaderboardType||''
+      });
+    }catch(_){}
+    return result;
   }
 
   async function readPublicRatings() {
-    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
-    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
-      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
-      catch (_) {}
+    const ratings={};
+    let clanInfluenceRows=[];
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'player_level_lb'},true,1);
+      const rows=normalizePublicRanking(value,'influence');
+      if(rows.length)ratings.influence=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'hamsters_power_lb'},true,1);
+      const rows=normalizePublicRanking(value,'power');
+      if(rows.length)ratings.power=rows;
+    }catch(_){}
+
+    try{
+      const value=await apiJson('/leaderboard','POST',{leaderboard_type:'clan_player_level_lb'},true,1);
+      clanInfluenceRows=clanMetricRows(value,'influence');
+      const publicRows=normalizePublicRanking(value,'clans');
+      if(publicRows.length)ratings.clans=publicRows;
+    }catch(_){}
+
+    try{
+      const [allianceDocument,clanPowerRows]=await Promise.all([
+        apiJson('/alliance/list','GET',null,true,1),
+        readClanPowerRows()
+      ]);
+      Object.assign(ratings,buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows));
+    }catch(error){
+      try{recordDiagnostic('alliance-rating-v2-error',{message:error?.message||String(error)});}catch(_){}
     }
-    try {
-      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
-      Object.assign(ratings, normalizeAllianceRatings(value));
-    } catch (_) {}
     return ratings;
   }
 
@@ -315,7 +347,7 @@
       fairDocument = playerDocument;
       shopViewDocument = await apiJson('/shop/view', 'GET');
       fairCatalog = normalizeFairCatalog(shopViewDocument);
-      const visibleFairs = visibleFairStates();
+      const visibleFairs = fairStatesForView();
       if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
       selectedFairLots.clear();
       selectedFairSlotRules.clear();
@@ -379,7 +411,7 @@
       const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
       updateFairControls(); return;
     }
-    const states = visibleFairStates();
+    const states = fairStatesForView();
     fairTypes.innerHTML = states.map(state => {
       const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
       return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
@@ -654,14 +686,18 @@
 
 ===== function fairProjectedCosts( =====
 
-    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
-      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
-      catch (_) {}
+      if(publicRows.length)ratings.clans=publicRows;
+    }catch(_){}
+
+    try{
+      const [allianceDocument,clanPowerRows]=await Promise.all([
+        apiJson('/alliance/list','GET',null,true,1),
+        readClanPowerRows()
+      ]);
+      Object.assign(ratings,buildAllianceRatings(allianceDocument,clanInfluenceRows,clanPowerRows));
+    }catch(error){
+      try{recordDiagnostic('alliance-rating-v2-error',{message:error?.message||String(error)});}catch(_){}
     }
-    try {
-      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
-      Object.assign(ratings, normalizeAllianceRatings(value));
-    } catch (_) {}
     return ratings;
   }
 
@@ -688,7 +724,7 @@
       fairDocument = playerDocument;
       shopViewDocument = await apiJson('/shop/view', 'GET');
       fairCatalog = normalizeFairCatalog(shopViewDocument);
-      const visibleFairs = visibleFairStates();
+      const visibleFairs = fairStatesForView();
       if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
       selectedFairLots.clear();
       selectedFairSlotRules.clear();
@@ -752,7 +788,7 @@
       const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
       updateFairControls(); return;
     }
-    const states = visibleFairStates();
+    const states = fairStatesForView();
     fairTypes.innerHTML = states.map(state => {
       const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
       return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
@@ -1596,7 +1632,7 @@ NOT FOUND
       {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
-      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{page:'fair-regular',ru:'Обычная ярмарка',en:'Regular Fair'}]},
       {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
     ];
     const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
@@ -1688,13 +1724,16 @@ NOT FOUND
       box.querySelectorAll('[data-module]:not([disabled])').forEach(button=>button.onclick=()=>activateModule(button.dataset.module,true));
     };
     const activateModule = (page,persist=true) => {
-      const target=root.querySelector(`[data-content="${page}"]`) || root.querySelector('[data-content="daily"]');
+      const regularFairAlias = page === 'fair-regular';
+      const contentPage = regularFairAlias ? 'fair' : page;
+      const target=root.querySelector(`[data-content="${contentPage}"]`) || root.querySelector('[data-content="daily"]');
       const finalPage=target.dataset.content;
-      const group=groupForPage(finalPage);
+      const navPage=regularFairAlias ? 'fair-regular' : finalPage;
+      const group=groupForPage(navPage);
       root.querySelectorAll('.hk-tab').forEach(button=>button.classList.toggle('active',button.dataset.group===group.id));
       root.querySelectorAll('.hk-page').forEach(section=>section.classList.toggle('active',section===target));
-      renderGroupSubnav(group.id,finalPage);
-      if(persist) save({navGroup:group.id,navModule:finalPage});
+      renderGroupSubnav(group.id,navPage);
+      if(persist) save({navGroup:group.id,navModule:navPage});
       if (finalPage === 'maps') renderMapIndex();
       if (finalPage === 'business') { renderBusinessLists(); renderBusinessOptimizerFilters(); }
       if (finalPage === 'daily') renderDailyTasks();
@@ -1704,7 +1743,16 @@ NOT FOUND
       if (finalPage === 'clan') renderClanSkills();
       if (finalPage === 'wars') renderWars();
       if (finalPage === 'bosses') renderBosses();
-      if (finalPage === 'fair') renderFair();
+      if (finalPage === 'fair') {
+        fairViewMode = regularFairAlias ? 'regular' : 'all';
+        if (regularFairAlias) {
+          selectedFairId = 'fair_default';
+          selectedFairLots.clear();
+          selectedFairSlotRules.clear();
+          selectedFairCurrency = '';
+        }
+        renderFair();
+      }
       if (finalPage === 'shop') renderShop();
       if (finalPage === 'recipes') renderRecipes();
       if (finalPage.startsWith('growth')) { renderGrowth(); growthAutoOpen(finalPage); }
@@ -1716,7 +1764,7 @@ NOT FOUND
       activateModule(preferred,true);
     });
     const remembered=clean(load().navModule||'daily');
-    activateModule(root.querySelector(`[data-content="${remembered}"]`)?remembered:'daily',false);
+    activateModule(remembered === 'fair-regular' || root.querySelector(`[data-content="${remembered}"]`) ? remembered : 'daily',false);
     const activateBusinessPane = (paneName, persist = true) => {
       const pane = paneName === 'optimizer' ? 'optimizer' : 'regular';
       root.querySelectorAll('[data-business-tab]').forEach(button => button.classList.toggle('active', button.dataset.businessTab === pane));
@@ -1815,12 +1863,4 @@ NOT FOUND
     root.querySelector('#hk-insert-tier').onchange = renderBusinessLists;
     root.querySelector('#hk-select-remove').onclick = () => {
       preparedBusinessPlan = null; preparedBusinessPlanSource = '';
-      const filter = Number(root.querySelector('#hk-remove-tier').value || 0);
-      layout.filter(row => filter === 0 ? true : filter === -1 ? !row.businessId : !!row.businessId && tier(row.businessId) === filter)
-        .forEach(row => selectedSlots.add(row.key));
-      renderBusinessLists();
-    };
-    root.querySelector('#hk-save-preset').onclick = savePreset;
-    root.querySelector('#hk-delete-preset').onclick = deletePreset;
-    root.querySelector('#hk-fair-load').onclick = () => refreshModuleLive('fair',{force:true});
-    root.querySelector('#h
+      const filter = Number(root.querySelector('#hk-remove-
