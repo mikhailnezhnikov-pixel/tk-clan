@@ -107,8 +107,53 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cat > /tmp/verify-map-viewer.py <<'PY'
+          import json, sqlite3, sys, urllib.request
+          sys.path.insert(0, "/opt/hamsterking-license")
+          import server
+
+          db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
+          db.row_factory=sqlite3.Row
+          manager=db.execute("""
+              SELECT telegram_id,maps_access,maps_manage
+              FROM clan_members
+              WHERE active=1 AND maps_manage=1
+              ORDER BY updated_at DESC LIMIT 1
+          """).fetchone()
+          maprow=db.execute("""
+              SELECT c.map_key
+              FROM hk_maps_catalog c
+              JOIN hk_map_points p ON p.map_key=c.map_key
+              ORDER BY c.map_key LIMIT 1
+          """).fetchone()
+          assert manager and maprow, "manager or map data missing"
+
+          # Core rule: management rights imply viewing rights.
+          direct=server.hk_map_data(
+              maprow["map_key"],
+              member={"maps_access": 0, "maps_manage": 1},
+          )
+          assert direct.get("ok"), "manager override failed"
+
+          token=server.cabinet_token(str(manager["telegram_id"]))
+          req=urllib.request.Request(
+              "http://127.0.0.1:3188/api/v1/cabinet/maps/data?key="+maprow["map_key"],
+              headers={
+                  "Authorization": "Bearer "+token,
+                  "Origin": "https://tk-clan.ru",
+              },
+          )
+          with urllib.request.urlopen(req, timeout=10) as response:
+              payload=json.load(response)
+          assert payload.get("ok"), "private viewer route failed"
+          assert payload.get("map",{}).get("key")==maprow["map_key"], "wrong map returned"
+          print("PRIVATE_MANAGER_MAP_OK", maprow["map_key"], payload.get("point_count",0))
+          PY
+
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             live/server.py root@89.125.1.71:/tmp/hamsterking-server.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/verify-map-viewer.py root@89.125.1.71:/tmp/verify-map-viewer.py
           if [ -f /tmp/hk-maps-index.json ]; then
             scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
               /tmp/hk-maps-index.json root@89.125.1.71:/tmp/hk-maps-index.json
@@ -131,7 +176,8 @@ jobs:
               echo;
               curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/public/maps || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/public/maps;
               echo;
-              python3 -c "import sys; sys.path.insert(0,'/opt/hamsterking-license'); import server; import sqlite3; db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db'); db.row_factory=sqlite3.Row; m=db.execute('select map_key from hk_maps_catalog order by map_key limit 1').fetchone(); mgr=db.execute('select maps_access,maps_manage from clan_members where active=1 and maps_manage=1 limit 1').fetchone(); assert m and mgr; d=server.hk_map_data(m['map_key'], member=dict(mgr)); assert d.get('ok') and d.get('point_count',0)>=0; print('PRIVATE_MANAGER_MAP_OK',m['map_key'],d.get('point_count',0))";
+              python3 /tmp/verify-map-viewer.py;
+              rm -f /tmp/verify-map-viewer.py;
               echo MAPS_BACKEND_DEPLOY_OK'
 
       - name: Upload sources
@@ -143,4 +189,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/server-maps-access.patch /tmp/hk-maps-index.json
+        run: rm -f "$HOME/.ssh/topking" /tmp/server-maps-access.patch /tmp/hk-maps-index.json /tmp/verify-map-viewer.py
