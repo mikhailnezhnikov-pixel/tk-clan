@@ -104,6 +104,17 @@ jobs:
             migration_code=$?
             if [ "$migration_code" = "0" ]; then stage2d=passed; else stage2d=failed; fi
           fi
+          stage2e=not-run; stage2f=not-run
+          if [ "$migration_code" = "0" ]; then
+            python3 deploy/topking/stage2e_maps_patch.py >>/tmp/hk-migration-build.log 2>&1
+            migration_code=$?
+            if [ "$migration_code" = "0" ]; then stage2e=passed; else stage2e=failed; fi
+          fi
+          if [ "$migration_code" = "0" ]; then
+            python3 deploy/topking/stage2f_clan_patch.py >>/tmp/hk-migration-build.log 2>&1
+            migration_code=$?
+            if [ "$migration_code" = "0" ]; then stage2f=passed; else stage2f=failed; fi
+          fi
           if [ "$migration_code" = "0" ]; then
             node --check /tmp/HamsterKingMobile.user.js >>/tmp/hk-migration-build.log 2>&1
             migration_code=$?
@@ -114,12 +125,14 @@ jobs:
             echo "stage2b=$stage2b"
             echo "stage2c=$stage2c"
             echo "stage2d=$stage2d"
+            echo "stage2e=$stage2e"
+            echo "stage2f=$stage2f"
             echo "syntax=$migration_syntax"
             echo "result_code=$migration_code"
             echo "built=$(grep -m1 '^// @version' /tmp/HamsterKingMobile.user.js || true)"
             echo "--- log tail ---"
-            tail -n 80 /tmp/hk-migration-build.log
-          } > /tmp/hk-1163-diagnostic.txt
+            tail -n 100 /tmp/hk-migration-build.log
+          } > /tmp/hk-1165-diagnostic.txt
           set -e
 
           git config user.name "github-actions[bot]"
@@ -133,8 +146,8 @@ jobs:
             cp /tmp/hk-growth-live-source.txt audit/hk-growth-live-source.txt
             cp /tmp/hk-resource-business-live-source.txt audit/hk-resource-business-live-source.txt
             cp /tmp/hk-remaining-live-source.txt audit/hk-remaining-live-source.txt
-            cp /tmp/hk-1163-diagnostic.txt audit/hk-1163-diagnostic.txt
-            git add audit/hk-stage1-live-probe.txt audit/hk-growth-live-source.txt audit/hk-resource-business-live-source.txt audit/hk-remaining-live-source.txt audit/hk-1163-diagnostic.txt
+            cp /tmp/hk-1165-diagnostic.txt audit/hk-1165-diagnostic.txt
+            git add audit/hk-stage1-live-probe.txt audit/hk-growth-live-source.txt audit/hk-resource-business-live-source.txt audit/hk-remaining-live-source.txt audit/hk-1165-diagnostic.txt
             if git diff --cached --quiet; then pushed=1; break; fi
             git commit -m "Probe current TopKing Stage 1 live"
             if git push origin HEAD:main; then pushed=1; break; fi
@@ -144,4 +157,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/topking-live.js /tmp/HamsterKingMobile.user.js /tmp/hk-stage1-live-probe.txt /tmp/hk-growth-live-source.txt /tmp/hk-resource-business-live-source.txt /tmp/hk-remaining-live-source.txt /tmp/hk-1163-diagnostic.txt /tmp/hk-migration-build.log
+        run: rm -f "$HOME/.ssh/topking" /tmp/topking-live.js /tmp/HamsterKingMobile.user.js /tmp/hk-stage1-live-probe.txt /tmp/hk-growth-live-source.txt /tmp/hk-resource-business-live-source.txt /tmp/hk-remaining-live-source.txt /tmp/hk-1165-diagnostic.txt /tmp/hk-migration-build.log
