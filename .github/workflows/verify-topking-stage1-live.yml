@@ -82,6 +82,46 @@ jobs:
           grep -nE -C 45 'mapScanning|submitOwnedMapAreas|loadMapIndex|mapServerJson|mapDetail|gamearea|district|regional_boss|boss|war|clanSkillScanning|clanSkillRefreshing|rumors|reminder|WebSocket|websocket|socket|realtime|battle' \
             /tmp/topking-live.js > /tmp/hk-remaining-live-source.txt || true
 
+          cp /tmp/topking-live.js /tmp/HamsterKingMobile.user.js
+          set +e
+          : > /tmp/hk-migration-build.log
+          stage2a=not-run; stage2b=not-run; stage2c=not-run; stage2d=not-run; migration_syntax=not-run
+          python3 deploy/topking/stage2_runner_patch.py >>/tmp/hk-migration-build.log 2>&1
+          migration_code=$?
+          if [ "$migration_code" = "0" ]; then stage2a=passed; else stage2a=failed; fi
+          if [ "$migration_code" = "0" ]; then
+            python3 deploy/topking/stage2b_runner_patch.py >>/tmp/hk-migration-build.log 2>&1
+            migration_code=$?
+            if [ "$migration_code" = "0" ]; then stage2b=passed; else stage2b=failed; fi
+          fi
+          if [ "$migration_code" = "0" ]; then
+            python3 deploy/topking/stage2c_state_patch.py >>/tmp/hk-migration-build.log 2>&1
+            migration_code=$?
+            if [ "$migration_code" = "0" ]; then stage2c=passed; else stage2c=failed; fi
+          fi
+          if [ "$migration_code" = "0" ]; then
+            python3 deploy/topking/stage2d_resource_business_patch.py >>/tmp/hk-migration-build.log 2>&1
+            migration_code=$?
+            if [ "$migration_code" = "0" ]; then stage2d=passed; else stage2d=failed; fi
+          fi
+          if [ "$migration_code" = "0" ]; then
+            node --check /tmp/HamsterKingMobile.user.js >>/tmp/hk-migration-build.log 2>&1
+            migration_code=$?
+            if [ "$migration_code" = "0" ]; then migration_syntax=ok; else migration_syntax=bad; fi
+          fi
+          {
+            echo "stage2a=$stage2a"
+            echo "stage2b=$stage2b"
+            echo "stage2c=$stage2c"
+            echo "stage2d=$stage2d"
+            echo "syntax=$migration_syntax"
+            echo "result_code=$migration_code"
+            echo "built=$(grep -m1 '^// @version' /tmp/HamsterKingMobile.user.js || true)"
+            echo "--- log tail ---"
+            tail -n 80 /tmp/hk-migration-build.log
+          } > /tmp/hk-1163-diagnostic.txt
+          set -e
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           pushed=0
@@ -93,7 +133,8 @@ jobs:
             cp /tmp/hk-growth-live-source.txt audit/hk-growth-live-source.txt
             cp /tmp/hk-resource-business-live-source.txt audit/hk-resource-business-live-source.txt
             cp /tmp/hk-remaining-live-source.txt audit/hk-remaining-live-source.txt
-            git add audit/hk-stage1-live-probe.txt audit/hk-growth-live-source.txt audit/hk-resource-business-live-source.txt audit/hk-remaining-live-source.txt
+            cp /tmp/hk-1163-diagnostic.txt audit/hk-1163-diagnostic.txt
+            git add audit/hk-stage1-live-probe.txt audit/hk-growth-live-source.txt audit/hk-resource-business-live-source.txt audit/hk-remaining-live-source.txt audit/hk-1163-diagnostic.txt
             if git diff --cached --quiet; then pushed=1; break; fi
             git commit -m "Probe current TopKing Stage 1 live"
             if git push origin HEAD:main; then pushed=1; break; fi
@@ -103,4 +144,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/topking-live.js /tmp/hk-stage1-live-probe.txt /tmp/hk-growth-live-source.txt /tmp/hk-resource-business-live-source.txt /tmp/hk-remaining-live-source.txt
+        run: rm -f "$HOME/.ssh/topking" /tmp/topking-live.js /tmp/HamsterKingMobile.user.js /tmp/hk-stage1-live-probe.txt /tmp/hk-growth-live-source.txt /tmp/hk-resource-business-live-source.txt /tmp/hk-remaining-live-source.txt /tmp/hk-1163-diagnostic.txt /tmp/hk-migration-build.log
