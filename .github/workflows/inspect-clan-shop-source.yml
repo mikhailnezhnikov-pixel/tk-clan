@@ -35,6 +35,63 @@ jobs:
             echo "=== CABINET POST ROUTES ==="
             grep -n -A220 -B20 "def do_POST" "$f" | head -300 || true
           '
+      - name: Verify live Clan Shop API
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            python3 - <<'"'"'PY'"'"'
+import json, os, sqlite3, subprocess, sys, urllib.request
+
+pid=subprocess.check_output(
+    ["systemctl","show","hamsterking-license.service","-p","MainPID","--value"],
+    text=True
+).strip()
+for item in open(f"/proc/{pid}/environ","rb").read().split(bytes([0])):
+    if b"=" in item:
+        k,v=item.split(b"=",1)
+        os.environ[k.decode("utf-8","ignore")]=v.decode("utf-8","ignore")
+
+sys.path.insert(0,"/opt/hamsterking-license")
+import server
+
+with sqlite3.connect("/var/lib/hamsterking-license/licenses.db") as db:
+    row=db.execute("""SELECT telegram_id FROM clan_members
+                      WHERE active=1 AND maps_manage=1
+                      ORDER BY updated_at DESC LIMIT 1""").fetchone()
+if not row:
+    raise SystemExit("no manager available")
+token=server.cabinet_token(str(row[0]))
+
+last=None
+for port in (8787,3188):
+    req=urllib.request.Request(
+        f"http://127.0.0.1:{port}/api/v1/cabinet/clan-shop",
+        headers={"Authorization":"Bearer "+token,"Origin":"https://tk-clan.ru"}
+    )
+    try:
+        with urllib.request.urlopen(req,timeout=10) as response:
+            data=json.load(response)
+        break
+    except Exception as exc:
+        last=exc
+else:
+    raise last
+
+assert data.get("ok") is True
+assert data.get("can_manage") is True
+assert data["limits"]["idol_orbs"] == 14
+assert data["limits"]["splus_businesses"] == 30
+assert data["limits"]["per_player"] == 3
+assert data["window"]["timezone"] == "GMT+9"
+print("CLAN_SHOP_HTTP_OK",
+      "participants="+str(len(data.get("participants") or [])),
+      "week="+str(data["window"]["week_start"]),
+      "idols="+str(data["totals"]["idol_orbs"]),
+      "businesses="+str(data["totals"]["splus_businesses"]),
+      "topic="+str(bool(data.get("topic_configured"))))
+PY
+          '
+
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking"
