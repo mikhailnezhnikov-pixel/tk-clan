@@ -33,7 +33,7 @@ old_merge = (
     "        const partial = !!(body && Array.isArray(body.arguments));\n"
     "        if (partial) hkStateStore.merge(value, 'api:player/me-partial'); else { hkStateStore.replace(value, 'api:player/me'); value = hkStateStore.snapshot || value; }\n"
     "      } else if (method !== 'GET' && (value.player || value.currencies || value.items || value.data?.player)) {\n"
-    "        hkStateStore.merge(value, " + BT + "api:\${path}" + BT + ");\n"
+    "        hkStateStore.merge(value, " + BT + "api:${path}" + BT + ");\n"
     "      }\n"
     "      hkGameBridge.noteMutation(path, method);\n"
 )
@@ -43,7 +43,7 @@ new_merge = (
     "        if (partial) hkStateStore.merge(value, 'api:player/me-partial'); else { hkStateStore.replace(value, 'api:player/me'); value = hkStateStore.snapshot || value; }\n"
     "        playerDocument = hkStateStore.snapshot || value || playerDocument;\n"
     "      } else if (hkIsMutationRequest(path, method)) {\n"
-    "        hkStateStore.merge(value, " + BT + "api:\${path}" + BT + ");\n"
+    "        hkStateStore.merge(value, " + BT + "api:${path}" + BT + ");\n"
     "        playerDocument = hkStateStore.snapshot || playerDocument;\n"
     "      }\n"
     "      hkGameBridge.noteMutation(path, method);\n"
