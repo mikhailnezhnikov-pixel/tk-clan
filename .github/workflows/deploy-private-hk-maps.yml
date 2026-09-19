@@ -105,8 +105,22 @@ jobs:
             patch --batch --forward --fuzz=0 /tmp/server.py < /tmp/server-full-map.patch
           fi
 
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/server.py')
+          s=p.read_text()
+          old='self.send_cabinet_json(HTTPStatus.OK, private_hk_map_data(key))'
+          new='self.send_cabinet_json(HTTPStatus.OK, hk_map_data(key, member=member))'
+          if old in s:
+              s=s.replace(old,new)
+          if new not in s:
+              raise SystemExit('private map HTTP route was not updated')
+          p.write_text(s)
+          PY
+
           grep -q 'def load_full_hk_map' /tmp/server.py
           grep -q '"render": "full"' /tmp/server.py
+          grep -q 'hk_map_data(key, member=member)' /tmp/server.py
           python3 -m py_compile /tmp/server.py
 
           cat > /tmp/set-hk-map-open.py <<'PY'
