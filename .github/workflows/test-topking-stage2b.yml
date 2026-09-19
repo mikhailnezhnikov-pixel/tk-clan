@@ -1,0 +1,54 @@
+name: Test TopKing Stage 2B Runner Migration
+
+on:
+  push:
+    paths:
+      - '.github/workflows/test-topking-stage2b.yml'
+      - 'deploy/topking/stage2_runner_patch.py'
+      - 'deploy/topking/stage2b_runner_patch.py'
+      - 'deploy/topking/test_stage2_runner_fixture.py'
+      - 'deploy/topking/test_stage2b_runner_fixture.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: test-topking-stage2b
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Stage 2B chained fixture twice
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/test_stage2b_runner_fixture.py
+
+      - name: Record passing fixture
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          {
+            echo "stage=2B"
+            echo "revision=stage2b-20260919-r1"
+            echo "modules=shop,recipes,bureau"
+            echo "requires=stage2a-20260919-r1"
+            echo "fixture=passed"
+            echo "deploy=not-enabled"
+          } > audit/hk-stage2b-test-status.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2b-test-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Verify Stage 2B Shop Recipes and Bureau fixture"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
