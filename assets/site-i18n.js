@@ -1,8 +1,8 @@
 (()=>{
   const CORE={
-    ru:{home:'Главная',calculators:'Калькуляторы',recipes:'Рецепты',wars:'Клановые войны',ratings:'Рейтинг',information:'Гайд по игре',feedback:'Обратная связь',cabinet:'Личный кабинет',menu:'Меню',footer:'Top King · Hamster King',play:'Начать играть',loading:'Загрузка…',updated:'Обновлено',noData:'Данных пока нет',error:'Не удалось загрузить данные.'},
-    en:{home:'Home',calculators:'Calculators',recipes:'Recipes',wars:'Clan wars',ratings:'Rankings',information:'Game guide',feedback:'Feedback',cabinet:'Member area',menu:'Menu',footer:'Top King · Hamster King',play:'Play now',loading:'Loading…',updated:'Updated',noData:'No data yet',error:'Could not load data.'},
-    fa:{home:'خانه',calculators:'محاسبه‌گرها',recipes:'دستورها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',information:'راهنمای بازی',feedback:'بازخورد',cabinet:'پنل اعضا',menu:'منو',footer:'Top King · Hamster King',play:'شروع بازی',loading:'در حال بارگذاری…',updated:'به‌روزرسانی',noData:'هنوز داده‌ای وجود ندارد',error:'بارگذاری داده‌ها ممکن نشد.'}
+    ru:{home:'Главная',calculators:'Калькуляторы',recipes:'Рецепты',wars:'Клановые войны',ratings:'Рейтинг',information:'Гайд по игре',announcements:'Новости игры',newsCard:'Официальные новости Hamster King, обновления, события и патчноуты.',newsBadge:'Новости',feedback:'Обратная связь',cabinet:'Личный кабинет',menu:'Меню',footer:'Top King · Hamster King',play:'Начать играть',loading:'Загрузка…',updated:'Обновлено',noData:'Данных пока нет',error:'Не удалось загрузить данные.'},
+    en:{home:'Home',calculators:'Calculators',recipes:'Recipes',wars:'Clan wars',ratings:'Rankings',information:'Game guide',announcements:'Game news',newsCard:'Official Hamster King news, updates, events and patch notes.',newsBadge:'News',feedback:'Feedback',cabinet:'Member area',menu:'Menu',footer:'Top King · Hamster King',play:'Play now',loading:'Loading…',updated:'Updated',noData:'No data yet',error:'Could not load data.'},
+    fa:{home:'خانه',calculators:'محاسبه‌گرها',recipes:'دستورها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',information:'راهنمای بازی',announcements:'اخبار بازی',newsCard:'اخبار رسمی Hamster King، به‌روزرسانی‌ها، رویدادها و یادداشت‌های نسخه.',newsBadge:'اخبار',feedback:'بازخورد',cabinet:'پنل اعضا',menu:'منو',footer:'Top King · Hamster King',play:'شروع بازی',loading:'در حال بارگذاری…',updated:'به‌روزرسانی',noData:'هنوز داده‌ای وجود ندارد',error:'بارگذاری داده‌ها ممکن نشد.'}
   };
   const supported=['ru','en','fa'];
   const saved=localStorage.getItem('tk-language');
@@ -11,7 +11,7 @@
   const dictionary=lang=>Object.assign({},CORE[lang]||CORE.ru,(window.TK_PAGE_TRANSLATIONS||{})[lang]||{});
   const GAME_FRONT='https://cdn-prod-front-dist.hwgame.cloud/';
   const GAME_ART='https://cdn-prod-art.hwgame.cloud/';
-  const OFFICIAL_VISUALS={calculators:'assets/images/ui/boss-fight.png',recipes:'assets/images/ui/collections.png',cabinet:'assets/images/ui/clan-members-icon.png',wars:'assets/images/ui/vs.png',ratings:'assets/images/ui/nominations-1.png',information:'assets/images/ui/info-stars.png',feedback:'assets/images/ui/telegram-1.png'};
+  const OFFICIAL_VISUALS={calculators:'assets/images/ui/boss-fight.png',recipes:'assets/images/ui/collections.png',cabinet:'assets/images/ui/clan-members-icon.png',wars:'assets/images/ui/vs.png',ratings:'assets/images/ui/nominations-1.png',information:'assets/images/ui/info-stars.png',announcements:'assets/images/ui/info-stars.png',feedback:'assets/images/ui/telegram-1.png'};
   function fitGameIcon(img){img.style.objectFit='contain';if(img.closest('.card-icon,.quick-icon'))img.style.padding='5px'}
   function replaceVisuals(){for(const[section,path]of Object.entries(OFFICIAL_VISUALS)){document.querySelectorAll(`a[href*="${section}"] .card-icon img,a[href*="${section}"] .quick-icon img`).forEach(img=>{img.src=GAME_FRONT+path;fitGameIcon(img)})}document.querySelectorAll('.brand img').forEach(img=>{img.src=GAME_FRONT+'assets/images/ui/clan-list-icon.png';fitGameIcon(img)});const icon=document.querySelector('link[rel="icon"]');if(icon)icon.href=GAME_FRONT+'assets/images/ui/clan-list-icon.png'}
 
