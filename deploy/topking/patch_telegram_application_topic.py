@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import runpy
 
 path = Path(sys.argv[1])
 s = path.read_text()
@@ -29,6 +30,7 @@ if MARKER in s and GROUP_SILENCE_MARKER not in s:
     raise SystemExit(0)
 
 if MARKER in s and GROUP_SILENCE_MARKER in s:
+    runpy.run_path(str(Path(__file__).with_name("patch_application_i18n.py")), run_name="__main__")
     print("TELEGRAM_APPLICATION_TOPIC_ALREADY_PRESENT")
     raise SystemExit(0)
 
@@ -218,4 +220,5 @@ if old_context not in s:
 s = s.replace(old_context, new_context, 1)
 
 path.write_text(s)
+runpy.run_path(str(Path(__file__).with_name("patch_application_i18n.py")), run_name="__main__")
 print("TELEGRAM_APPLICATION_TOPIC_PATCH_OK")
