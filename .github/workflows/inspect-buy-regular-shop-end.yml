@@ -1,0 +1,32 @@
+name: Inspect buyRegularShop end
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-buy-regular-shop-end.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect
+        run: |
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            f=/opt/hamsterking-license/HamsterKingMobile.user.js
+            n=$(grep -n "async function buyRegularShop" "$f" | head -1 | cut -d: -f1)
+            sed -n "${n},$((n+180))p" "$f"
+          '
+      - if: always()
+        run: rm -f "$HOME/.ssh/topking"
