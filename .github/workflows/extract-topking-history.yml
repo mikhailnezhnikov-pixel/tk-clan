@@ -1,0 +1,90 @@
+name: Extract Historical Userscript Migration Sources
+
+on:
+  push:
+    paths:
+      - '.github/workflows/extract-topking-history.yml'
+      - 'deploy/topking/history-extract-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extract-topking-history
+  cancel-in-progress: true
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract searchable historical patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hk-history audit
+          : > /tmp/hk-history/index.txt
+
+          for file in deploy/topking/userscript-*.patch.gz.b64; do
+            [ -f "$file" ] || continue
+            name="$(basename "$file" .gz.b64)"
+            if base64 -d "$file" | gzip -d > "/tmp/hk-history/$name.txt" 2>/dev/null; then
+              echo "$file -> $name.txt" >> /tmp/hk-history/index.txt
+            fi
+          done
+
+          for file in deploy/topking/userscript-*.patch.b64; do
+            [ -f "$file" ] || continue
+            name="$(basename "$file" .b64)"
+            if base64 -d "$file" > "/tmp/hk-history/$name.txt" 2>/dev/null; then
+              echo "$file -> $name.txt" >> /tmp/hk-history/index.txt
+            fi
+          done
+
+          # Explicitly decode the 1.9.9 patch because it removes the working
+          # 1.9.8 Rumors module that we want as migration source.
+          if [ -f deploy/topking/userscript-1.9.9.patch.gz.b64 ]; then
+            base64 -d deploy/topking/userscript-1.9.9.patch.gz.b64 | gzip -d > /tmp/hk-history/userscript-1.9.9.patch.txt
+          fi
+
+          {
+            echo "# Historical userscript migration source index"
+            echo
+            cat /tmp/hk-history/index.txt
+          } > audit/hk-historical-source-index.txt
+
+          {
+            echo "# Rumors code removed by 1.9.9"
+            echo
+            if [ -f /tmp/hk-history/userscript-1.9.9.patch.txt ]; then
+              grep -nEi -C 45 'runDailyRumors|dailyRumorRoute|RUMOR_API_BASE|rumors/search|слух' /tmp/hk-history/userscript-1.9.9.patch.txt || true
+            fi
+          } > audit/hk-historical-rumors-source.txt
+
+          {
+            echo "# Historical feature references"
+            echo
+            for f in /tmp/hk-history/*.txt; do
+              echo
+              echo "===== $(basename "$f") ====="
+              grep -nEi -C 12 'regional[_ -]?boss|boss_battle|clan[_ -]?war|war[_ -]?battle|building[_ -]?event|open[_ -]?building|explore|rumor|reminder|websocket|socket|realtime|rat[_ -]?hunt|кры[сс]|босс|войн|исследован|здани' "$f" || true
+            done
+          } > audit/hk-historical-feature-references.txt
+
+      - name: Commit extracted references
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-historical-source-index.txt audit/hk-historical-rumors-source.txt audit/hk-historical-feature-references.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Extract historical userscript migration sources"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
