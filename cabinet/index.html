@@ -256,6 +256,20 @@
     .clanshop-select{min-width:76px;padding:7px 9px;border:1px solid rgba(232,182,84,.25);border-radius:9px;background:#0b1017;color:#fff;font-weight:850;text-align:center}
     .clanshop-qty{display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.045);font-weight:850}
     .clanshop-note{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+    .clanshop-request-card{margin:14px 0;padding:15px 16px;border:1px solid rgba(232,182,84,.20);border-radius:14px;background:rgba(232,182,84,.045)}
+    .clanshop-request-card h3,.clanshop-requests-admin h3{margin:0 0 5px;color:#fff;font-size:18px}
+    .clanshop-request-card p,.clanshop-requests-admin p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+    .clanshop-request-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .clanshop-request-control{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid rgba(255,255,255,.07);border-radius:11px;background:rgba(7,10,15,.40)}
+    .clanshop-request-control span{font-size:13px;font-weight:800;color:#e9edf2}
+    .clanshop-request-status{margin-top:10px!important;font-size:12px!important}
+    .clanshop-requests-admin{margin:16px 0;padding:15px 16px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.025)}
+    .clanshop-requests-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px}
+    .clanshop-request-count{flex:0 0 auto;color:#ffe0a0;font-size:12px;font-weight:900}
+    .clanshop-request-cell{display:flex;align-items:center;justify-content:center;gap:8px;min-width:120px}
+    .clanshop-request-add{display:inline-flex;align-items:center;justify-content:center;min-width:82px;padding:6px 8px;border:1px solid rgba(232,182,84,.38);border-radius:9px;background:rgba(232,182,84,.08);color:#ffe0a0;font-size:11px;font-weight:900;cursor:pointer}
+    .clanshop-request-add:disabled{border-color:rgba(255,255,255,.09);background:rgba(255,255,255,.025);color:#68717c;cursor:default}
+    .clanshop-final-title{margin:18px 0 9px;color:#fff;font-size:18px}
     @media(max-width:680px){
       .hkmap-card{padding:20px}
       .hkmap-head{display:block}
@@ -274,6 +288,9 @@
       .clanshop-tools{align-items:stretch;flex-direction:column}
       .clanshop-tools input{width:100%}
       .clanshop-actions{justify-content:space-between}
+      .clanshop-request-controls{grid-template-columns:1fr}
+      .clanshop-requests-head{display:block}
+      .clanshop-request-count{display:block;margin-top:6px}
     }
 
     .hidden{display:none!important}
@@ -590,7 +607,7 @@
             <div>
               <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Clan Shop</div>
               <h2>Покупки на следующую неделю</h2>
-              <p class="stats-sub">Список формируется до воскресенья 21:00 GMT+9. Значение 0 в публикацию не попадает; заполнять весь лимит не обязательно.</p>
+              <p class="stats-sub">Список формируется до воскресенья 21:00 по Москве (GMT+3). Значение 0 в публикацию не попадает; заполнять весь лимит не обязательно.</p>
             </div>
           </div>
 
@@ -604,6 +621,38 @@
             <div id="clanshop-business-box" class="clanshop-limit"><span>Бизнесы S+</span><b><span id="clanshop-businesses">0</span> / 30</b></div>
           </div>
 
+          <section id="clanshop-my-request" class="clanshop-request-card">
+            <h3>Моя заявка</h3>
+            <p>До воскресенья 21:00 МСК укажите, сколько вы хотели бы купить. Это пожелание, а не подтверждённая покупка: итог утверждает ответственный.</p>
+            <div id="clanshop-my-request-controls" class="clanshop-request-controls">
+              <label class="clanshop-request-control"><span>Шары идолов</span><select id="clanshop-my-idols" class="clanshop-select" data-clanshop-request-field="idol_orbs"></select></label>
+              <label class="clanshop-request-control"><span>Бизнесы S+</span><select id="clanshop-my-businesses" class="clanshop-select" data-clanshop-request-field="splus_businesses"></select></label>
+            </div>
+            <p id="clanshop-my-request-status" class="clanshop-request-status"></p>
+          </section>
+
+          <section id="clanshop-requests-admin" class="clanshop-requests-admin hidden">
+            <div class="clanshop-requests-head">
+              <div>
+                <h3>Заявки игроков</h3>
+                <p>Нажмите «+ Добавить», чтобы перенести запрошенное количество в итоговый список. После этого количество можно изменить вручную ниже.</p>
+              </div>
+              <span id="clanshop-request-count" class="clanshop-request-count">0 заявок</span>
+            </div>
+            <div class="clanshop-table-wrap">
+              <table class="clanshop-table">
+                <thead>
+                  <tr>
+                    <th>Участник</th>
+                    <th>Шары идолов</th>
+                    <th>Бизнесы S+</th>
+                  </tr>
+                </thead>
+                <tbody id="clanshop-requests-body"></tbody>
+              </table>
+            </div>
+          </section>
+
           <div class="clanshop-tools">
             <input id="clanshop-search" type="search" autocomplete="off" placeholder="Поиск участника">
             <div id="clanshop-manager-actions" class="clanshop-actions hidden">
@@ -615,6 +664,7 @@
           <div id="clanshop-topic-warning" class="clanshop-topic-warning hidden"></div>
           <p id="clanshop-message" class="message" role="status" aria-live="polite"></p>
 
+          <h3 class="clanshop-final-title">Итоговый список</h3>
           <div class="clanshop-table-wrap">
             <table class="clanshop-table">
               <thead>
