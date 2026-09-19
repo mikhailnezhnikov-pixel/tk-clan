@@ -623,7 +623,7 @@
 
           <section id="clanshop-my-request" class="clanshop-request-card">
             <h3>Моя заявка</h3>
-            <p>До воскресенья 21:00 МСК укажите, сколько вы хотели бы купить. Это пожелание, а не подтверждённая покупка: итог утверждает ответственный.</p>
+            <p>До воскресенья 21:00 МСК укажите, сколько вы хотели бы купить. Это заявка на покупку; её можно изменить до дедлайна.</p>
             <div id="clanshop-my-request-controls" class="clanshop-request-controls">
               <label class="clanshop-request-control"><span>Шары идолов</span><select id="clanshop-my-idols" class="clanshop-select" data-clanshop-request-field="idol_orbs"></select></label>
               <label class="clanshop-request-control"><span>Бизнесы S+</span><select id="clanshop-my-businesses" class="clanshop-select" data-clanshop-request-field="splus_businesses"></select></label>
@@ -664,20 +664,22 @@
           <div id="clanshop-topic-warning" class="clanshop-topic-warning hidden"></div>
           <p id="clanshop-message" class="message" role="status" aria-live="polite"></p>
 
-          <h3 class="clanshop-final-title">Итоговый список</h3>
-          <div class="clanshop-table-wrap">
-            <table class="clanshop-table">
-              <thead>
-                <tr>
-                  <th>Участник</th>
-                  <th>Шары идолов</th>
-                  <th>Бизнесы S+</th>
-                </tr>
-              </thead>
-              <tbody id="clanshop-body"></tbody>
-            </table>
-          </div>
-          <p class="clanshop-note">Для каждого участника можно поставить от 1 до 3 единиц каждого типа. Ноль означает «не покупать». Общий недельный лимит: 14 шаров идолов и 30 бизнесов S+.</p>
+          <section id="clanshop-final-admin" class="hidden">
+            <h3 class="clanshop-final-title">Итоговый список</h3>
+            <div class="clanshop-table-wrap">
+              <table class="clanshop-table">
+                <thead>
+                  <tr>
+                    <th>Участник</th>
+                    <th>Шары идолов</th>
+                    <th>Бизнесы S+</th>
+                  </tr>
+                </thead>
+                <tbody id="clanshop-body"></tbody>
+              </table>
+            </div>
+            <p class="clanshop-note">Для каждого участника можно поставить от 1 до 3 единиц каждого типа. Ноль означает «не покупать». Общий недельный лимит: 14 шаров идолов и 30 бизнесов S+.</p>
+          </section>
         </article>
       </section>
 
@@ -1143,6 +1145,7 @@
 
     const actions=$('clanshop-manager-actions');
     actions?.classList.toggle('hidden',!data.can_manage);
+    $('clanshop-final-admin')?.classList.toggle('hidden',!data.can_manage);
     if($('clanshop-published'))$('clanshop-published').textContent=clanShopPublishedLabel(data.published_at);
 
     const topicWarning=$('clanshop-topic-warning');
@@ -1210,20 +1213,19 @@
       }
     }
 
-    body.innerHTML=filtered.map(row=>{
-      const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong>'+
-        (row.player_id?'<small>ID: '+safe(row.player_id)+'</small>':'')+'</div>';
-      if(data.can_manage){
+    if(data.can_manage){
+      body.innerHTML=filtered.map(row=>{
+        const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong>'+
+          (row.player_id?'<small>ID: '+safe(row.player_id)+'</small>':'')+'</div>';
         return '<tr data-clanshop-player="'+safe(row.player_key)+'">'+
           '<td>'+player+'</td>'+
           '<td><select class="clanshop-select" data-clanshop-field="idol_orbs" data-player-key="'+safe(row.player_key)+'">'+clanShopOptionList(row.idol_orbs)+'</select></td>'+
           '<td><select class="clanshop-select" data-clanshop-field="splus_businesses" data-player-key="'+safe(row.player_key)+'">'+clanShopOptionList(row.splus_businesses)+'</select></td>'+
         '</tr>';
-      }
-      return '<tr><td>'+player+'</td>'+
-        '<td><span class="clanshop-qty">'+Number(row.idol_orbs||0)+'</span></td>'+
-        '<td><span class="clanshop-qty">'+Number(row.splus_businesses||0)+'</span></td></tr>';
-    }).join('')||'<tr><td colspan="3" class="muted">Участники клана пока не загружены.</td></tr>';
+      }).join('')||'<tr><td colspan="3" class="muted">Участники клана пока не загружены.</td></tr>';
+    }else{
+      body.innerHTML='';
+    }
   }
 
   async function loadClanShop(force=false){
@@ -1994,7 +1996,7 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/cabinet-i18n.js?v=20260920-2"></script>
+<script src="../assets/cabinet-i18n.js?v=20260920-3"></script>
 <script src="../assets/site-nav.js?v=20260919-9"></script>
 </body>
 </html>
