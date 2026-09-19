@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080b11">
+<title>HK Map — Top King</title>
+<link rel="icon" href="https://cdn-prod-front-dist.hwgame.cloud/assets/images/menu/city-1.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+*{box-sizing:border-box}html,body,#map{margin:0;width:100%;height:100%;background:#0b0e14}body{font-family:Inter,Arial,sans-serif;color:#eef2f7;overflow:hidden}.leaflet-container{background:#11161f;font:inherit}#map{position:fixed;inset:0}.hud{position:fixed;z-index:1000;top:12px;left:12px;width:min(330px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:14px;border:1px solid rgba(232,182,84,.38);border-radius:16px;background:rgba(8,11,17,.94);box-shadow:0 10px 34px rgba(0,0,0,.45);backdrop-filter:blur(9px)}.head{display:flex;align-items:flex-start;gap:10px}.head-main{min-width:0;flex:1}.eyebrow{margin:0 0 4px;color:#d4ab55;font-size:11px;font-weight:900;letter-spacing:.12em}.title{margin:0;color:#fff;font-size:20px;line-height:1.15;overflow-wrap:anywhere}.status{margin:6px 0 0;color:#9ea7b4;font-size:12px}.back{display:grid;place-items:center;flex:0 0 36px;height:36px;border:1px solid rgba(255,255,255,.12);border-radius:11px;color:#f2d184;text-decoration:none;background:rgba(255,255,255,.035);font-weight:900}.filters{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:13px}.filter{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid rgba(255,255,255,.085);border-radius:11px;background:rgba(255,255,255,.025);cursor:pointer}.filter span{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800}.filter input{width:17px;height:17px;accent-color:#d9ab4d}.dot{width:9px;height:9px;border-radius:999px;box-shadow:0 0 0 1px rgba(255,255,255,.25)}.count{color:#aab2be;font-size:11px;font-weight:800}.tools{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.tools button{min-height:35px;border:1px solid rgba(232,182,84,.32);border-radius:10px;background:rgba(232,182,84,.065);color:#edd18d;font-weight:850;cursor:pointer}.legend{margin-top:9px;color:#8f98a5;font-size:11px;line-height:1.45}.error{position:fixed;z-index:1100;inset:0;display:grid;place-items:center;padding:24px;background:#080b11;text-align:center}.error-card{max-width:520px;padding:24px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#10151e}.error h1{margin:0 0 8px;font-size:25px}.error p{margin:0;color:#aab2be;line-height:1.55}.error a{display:inline-block;margin-top:16px;color:#e8b654}.hidden{display:none!important}.leaflet-control-attribution{background:rgba(8,11,17,.78)!important;color:#9099a5!important}.leaflet-control-attribution a{color:#d5b86d!important}@media(max-width:600px){.hud{top:8px;left:8px;width:calc(100vw - 16px);max-height:48dvh;padding:11px}.filters{grid-template-columns:repeat(3,1fr)}.filter{padding:8px}.filter span{font-size:11px}.title{font-size:18px}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<section id="hud" class="hud">
+  <div class="head"><div class="head-main"><p class="eyebrow">TOP KING · HK MAP</p><h1 id="title" class="title">Карта</h1><p id="status" class="status">Загрузка…</p></div><a id="back" class="back" href="../" aria-label="Назад">←</a></div>
+  <div id="filters" class="filters"></div>
+  <div class="tools"><button id="show-all" type="button">Показать всё</button><button id="fit" type="button">Вся карта</button></div>
+  <div class="legend">Инвестиционные здания отмечены светлым ободком. В закрытом режиме данные карты доступны только участникам с разрешением на раздел «Карты».</div>
+</section>
+<section id="error" class="error hidden"><div class="error-card"><h1 id="error-title">Карта недоступна</h1><p id="error-text"></p><a href="../">← Вернуться к картам</a></div></section>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+const API='https://hk-license.89.125.1.71.sslip.io/api/v1',TOKEN_KEY='tk_clan_cabinet_session',key=new URLSearchParams(location.search).get('key')||'';
+const colors={0:'#7e8794',1:'#78bdf2',2:'#7bd99a',3:'#e0c05a',4:'#ef8c48',5:'#df5af0'},visible=new Set([0,1,2,3,4,5]);
+let mapData=null,markerRows=[];
+const map=L.map('map',{zoomControl:true,preferCanvas:true,minZoom:2,maxZoom:20}),layer=L.layerGroup().addTo(map),renderer=L.canvas({padding:.4});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+function fail(title,text){document.getElementById('error-title').textContent=title;document.getElementById('error-text').textContent=text;document.getElementById('error').classList.remove('hidden')}
+async function fetchData(){if(!/^hk_[a-z0-9]+$/.test(key))throw new Error('invalid_key');const token=localStorage.getItem(TOKEN_KEY)||'';if(token){const r=await fetch(API+'/cabinet/maps/data?key='+encodeURIComponent(key),{headers:{Authorization:'Bearer '+token},cache:'no-store'});if(r.ok)return{data:await r.json(),mode:'private'};if(![401,403,404].includes(r.status))throw new Error('private_'+r.status)}const r=await fetch(API+'/public/maps/data?key='+encodeURIComponent(key),{cache:'no-store'});if(r.ok)return{data:await r.json(),mode:'public'};if([403,404].includes(r.status))throw new Error('not_available');throw new Error('public_'+r.status)}
+function buildFilters(){const counts={0:0,1:0,2:0,3:0,4:0,5:0};for(const p of mapData.points||[])counts[p[2]]=(counts[p[2]]||0)+1;document.getElementById('filters').innerHTML=[0,1,2,3,4,5].map(n=>'<label class="filter"><span><input type="checkbox" value="'+n+'" checked><i class="dot" style="background:'+colors[n]+'"></i>'+n+' крист.</span><b class="count">'+(counts[n]||0).toLocaleString('ru-RU')+'</b></label>').join('');document.querySelectorAll('#filters input').forEach(input=>input.addEventListener('change',()=>{const n=Number(input.value);input.checked?visible.add(n):visible.delete(n);renderPoints(false)}))}
+function renderPoints(fit=true){layer.clearLayers();markerRows=[];const bounds=[];for(const p of mapData.points||[]){const[lon,lat,crystals,investment]=p;if(!visible.has(Number(crystals)))continue;const marker=L.circleMarker([lat,lon],{radius:investment?6.5:5,color:investment?'#fff0b2':'rgba(8,11,17,.88)',weight:investment?2.2:1.1,fillColor:colors[crystals]||'#9ca3af',fillOpacity:.9,renderer}).bindTooltip((investment?'Investment · ':'')+crystals+' крист.',{direction:'top',opacity:.92});marker.addTo(layer);markerRows.push(marker);bounds.push([lat,lon])}document.getElementById('status').textContent=(mapData.points||[]).length.toLocaleString('ru-RU')+' зданий с исследованными событиями · показано '+markerRows.length.toLocaleString('ru-RU');if(fit&&bounds.length)map.fitBounds(bounds,{padding:[24,24],maxZoom:16})}
+(async()=>{try{const result=await fetchData();mapData=result.data;document.title=(mapData.title||'HK Map')+' — Top King';document.getElementById('title').textContent=mapData.title||key;document.getElementById('back').href=result.mode==='private'?'../../cabinet/':'../';buildFilters();renderPoints(true)}catch(e){console.error(e);if(e.message==='not_available')fail('Карта закрыта','Эта карта ещё не опубликована или у вашей учётной записи нет доступа к закрытому разделу карт.');else if(e.message==='invalid_key')fail('Неверная ссылка','В ссылке отсутствует корректный идентификатор карты.');else fail('Не удалось загрузить карту','Сервер карты временно недоступен. Попробуйте обновить страницу позже.')}})();
+document.getElementById('show-all').onclick=()=>{visible.clear();[0,1,2,3,4,5].forEach(n=>visible.add(n));document.querySelectorAll('#filters input').forEach(x=>x.checked=true);renderPoints(false)};
+document.getElementById('fit').onclick=()=>renderPoints(true);
+</script>
+</body>
+</html>
