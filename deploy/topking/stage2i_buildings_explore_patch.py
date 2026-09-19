@@ -14,8 +14,8 @@ require("HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1'",'Stage 2H missing')
 require('async function acceptBuildingStudy(', 'preserved building-study handler missing')
 require('function buildingRooms(', 'building room reader missing')
 require('async function submitOwnedMapAreas(', 'preserved Explore/map scan missing')
-require("apiJson(\`/game_area/${areaId}\`, 'GET')", 'game area reader missing')
-require("apiJson(\`/game_area/${areaId}/buildings\`, 'GET')", 'game area building reader missing')
+require("apiJson(`/game_area/${areaId}`, 'GET')", 'game area reader missing')
+require("apiJson(`/game_area/${areaId}/buildings`, 'GET')", 'game area building reader missing')
 
 if f"HK_STAGE2I_BUILDINGS_REV = '{REV}'" not in s:
     s=s.replace('// @version      1.16.7','// @version      1.16.8',1)
