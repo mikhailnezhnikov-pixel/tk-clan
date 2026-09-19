@@ -179,6 +179,8 @@ gate = r'''
     );
   }
 '''
+gate = gate.strip('\\n')
+gate_block = "\\n" + gate + "\\n"
 
 # Replace an older Stage 1 gate in-place, or insert it into the verified 1.14.4 base.
 gate_start_token = "\n  const HK_READ_ONLY_POST_PATHS = new Set(["
@@ -191,9 +193,9 @@ if gate_start < 0:
     gate_start = s.find(gate_start_token, core_start, marker_pos)
 
 if gate_start >= 0:
-    s = s[:gate_start] + "\n" + gate + s[marker_pos:]
+    s = s[:gate_start] + gate_block + s[marker_pos:]
 else:
-    s = s[:marker_pos] + "\n" + gate + s[marker_pos:]
+    s = s[:marker_pos] + gate_block + s[marker_pos:]
 
 runtime_marker = "  runtime.runner = hkRunner;"
 if runtime_marker not in s:
