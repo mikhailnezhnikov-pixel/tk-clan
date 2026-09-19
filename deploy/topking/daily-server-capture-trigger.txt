@@ -1,2 +1,2 @@
-capture=2026-09-20T03:12:00+09:00
-scope=bosses-live-1172-server-state
+capture=2026-09-20T03:25:00+09:00
+scope=regular-fair-schema-live-1172
