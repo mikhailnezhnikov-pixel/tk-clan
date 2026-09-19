@@ -87,6 +87,11 @@ jobs:
             curl -fsSL --max-time 25 "$url" -o "/tmp/hk-app/$n.js" || continue
           done </tmp/hk-app/scripts.txt
           curl -fsSL --max-time 30 https://cdn-prod-front-dist.hwgame.cloud/assets/app_2017.js -o /tmp/hk-app/app_2017.js
+          echo "=== ALLIANCE KEY TERMS ==="
+          grep -o '.\{0,280\}alliance_id.\{0,700\}' /tmp/hk-app/app_2017.js | head -20 || true
+          grep -o '.\{0,280\}defense_points.\{0,700\}' /tmp/hk-app/app_2017.js | head -20 || true
+          grep -o '.\{0,280\}hamsters_power.\{0,700\}' /tmp/hk-app/app_2017.js | head -20 || true
+          grep -o '.\{0,280\}player_level.\{0,700\}' /tmp/hk-app/app_2017.js | head -20 || true
           echo "=== ALLIANCE ROUTE STRINGS ==="
           python3 - <<'PY'
           import pathlib,re
