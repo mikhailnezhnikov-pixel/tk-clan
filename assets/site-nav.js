@@ -4,9 +4,9 @@
     en:{home:'Home',information:'Game guide',announcements:'Game news',recipes:'Recipes',calculators:'Calculators',maps:'Maps',wars:'Clan wars',ratings:'Rankings',feedback:'Feedback',cabinet:'Member area',game:'Game',clan:'Clan',contact:'Contact'},
     fa:{home:'خانه',information:'راهنمای بازی',announcements:'اخبار بازی',recipes:'دستورها',calculators:'محاسبه‌گرها',maps:'نقشه‌ها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',feedback:'بازخورد',cabinet:'پنل اعضا',game:'بازی',clan:'قبیله',contact:'ارتباط'}
   };
-  const items=[['home',''],['information','information/'],['announcements','cabinet/?tab=announcements'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/'],['wars','wars/'],['ratings','ratings/'],['feedback','feedback/'],['cabinet','cabinet/']];
+  const items=[['home',''],['information','information/'],['announcements','news/'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/'],['wars','wars/'],['ratings','ratings/'],['feedback','feedback/'],['cabinet','cabinet/']];
   const desktopGroups=[
-    {label:'game',items:[['information','information/'],['announcements','cabinet/?tab=announcements'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/']]},
+    {label:'game',items:[['information','information/'],['announcements','news/'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/']]},
     {label:'clan',items:[['wars','wars/'],['ratings','ratings/']]},
     {label:'contact',items:[['feedback','feedback/']]}
   ];
@@ -25,9 +25,9 @@
     const a=document.createElement('a');a.href=href(path);a.dataset.siteNav=key;a.textContent=labels[lang()][key];
     const tab=new URLSearchParams(location.search).get('tab')||'';
     const active=key==='announcements'
-      ? current()==='cabinet'&&tab==='announcements'
+      ? current()==='news'
       : key==='cabinet'
-        ? current()==='cabinet'&&tab!=='announcements'
+        ? current()==='cabinet'
         : current()===key||(key==='home'&&current()==='home');
     if(active)a.classList.add('active');
     if(key==='cabinet')a.classList.add(mobile?'mobile-login':'nav-login');
@@ -107,7 +107,7 @@
     if(tabs.querySelector('[data-cab-group="main"]')&&tabs.querySelector('[data-cab-group="sections"]'))return;
     const specs=[
       {name:'main',label:'Основное',keys:['overview','stats','clan-shop']},
-      {name:'sections',label:'Разделы',keys:['announcements','maps','install']}
+      {name:'sections',label:'Разделы',keys:['maps','install']}
     ];
     const byKey=new Map([...tabs.querySelectorAll('[data-cab-tab]')].map(button=>[button.dataset.cabTab,button]));
     if(!specs.some(group=>group.keys.some(key=>byKey.has(key))))return;
