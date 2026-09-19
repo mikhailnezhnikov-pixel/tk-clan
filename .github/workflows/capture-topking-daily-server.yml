@@ -78,7 +78,7 @@ jobs:
               "async function runDailyRumors(",
               "function renderWars()",
               "async function readBuildingStudy(",
-              "async function refreshExplore(",
+              "async function refreshExplore(","pointer-events","#hk-launch","panel = document.createElement","root = document.createElement","function bootstrapLateGameConnection()","function ensureGameAuthorization","function createFreshGameAuthorization","function installNetworkCapture()","function renderUI()",
           ]
           out = ["# Current live Daily / Today migration anchors", ""]
           for needle in needles:
