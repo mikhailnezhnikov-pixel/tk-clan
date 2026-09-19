@@ -55,13 +55,15 @@ jobs:
           points=sum(len(row[1])//3 for row in rows)
           if points != 26378:
               raise SystemExit(f'expected 26378 points, found {points}')
-          with gzip.open('/tmp/hk-map-points.json.gz','wt',encoding='utf-8',compresslevel=9) as f:
-              json.dump(rows,f,separators=(',',':'),ensure_ascii=False)
+          with gzip.open('/tmp/hk-map-points.json.gz','wt',encoding='utf-8',compresslevel=9) as out:
+              json.dump(rows,out,separators=(',',':'),ensure_ascii=False)
           print({'maps':len(rows),'points':points})
           PY
 
       - name: Fetch and patch live backend
         shell: bash
+        env:
+          MAP_ROUTES_B64: ICAgICAgICBlbGlmIHBhdGggPT0gIi9hcGkvdjEvY2FiaW5ldC9tYXBzL2RhdGEiOgogICAgICAgICAgICBvcmlnaW4gPSBzZWxmLmhlYWRlcnMuZ2V0KCJPcmlnaW4iLCAiIikKICAgICAgICAgICAgaWYgb3JpZ2luIG5vdCBpbiBDQUJJTkVUX09SSUdJTlM6CiAgICAgICAgICAgICAgICBzZWxmLnNlbmRfY2FiaW5ldF9qc29uKEhUVFBTdGF0dXMuRk9SQklEREVOLCB7ImVycm9yIjogIm9yaWdpbl9ub3RfYWxsb3dlZCJ9KTsgcmV0dXJuCiAgICAgICAgICAgIG1lbWJlciA9IHNlbGYuY2FiaW5ldF9tZW1iZXIoKQogICAgICAgICAgICBpZiBub3QgbWVtYmVyOgogICAgICAgICAgICAgICAgc2VsZi5zZW5kX2NhYmluZXRfanNvbihIVFRQU3RhdHVzLlVOQVVUSE9SSVpFRCwgeyJlcnJvciI6ICJ1bmF1dGhvcml6ZWQifSk7IHJldHVybgogICAgICAgICAgICBtYXBfa2V5ID0gcGFyc2VfcXMocGFyc2VkLnF1ZXJ5KS5nZXQoImtleSIsIFsiIl0pWy0xXQogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICBzZWxmLnNlbmRfY2FiaW5ldF9qc29uKEhUVFBTdGF0dXMuT0ssIGhrX21hcF9kYXRhKG1hcF9rZXksIG1lbWJlcj1tZW1iZXIpKQogICAgICAgICAgICBleGNlcHQgUGVybWlzc2lvbkVycm9yOgogICAgICAgICAgICAgICAgc2VsZi5zZW5kX2NhYmluZXRfanNvbihIVFRQU3RhdHVzLkZPUkJJRERFTiwgeyJlcnJvciI6ICJtYXBzX2FjY2Vzc19kZW5pZWQifSkKICAgICAgICAgICAgZXhjZXB0IChMb29rdXBFcnJvciwgVmFsdWVFcnJvcik6CiAgICAgICAgICAgICAgICBzZWxmLnNlbmRfY2FiaW5ldF9qc29uKEhUVFBTdGF0dXMuTk9UX0ZPVU5ELCB7ImVycm9yIjogIm1hcF9ub3RfZm91bmQifSkKICAgICAgICBlbGlmIHBhdGggPT0gIi9hcGkvdjEvcHVibGljL21hcHMvZGF0YSI6CiAgICAgICAgICAgIG9yaWdpbiA9IHNlbGYuaGVhZGVycy5nZXQoIk9yaWdpbiIsICIiKQogICAgICAgICAgICBpZiBvcmlnaW4gYW5kIG9yaWdpbiBub3QgaW4gUFVCTElDX1JFQ0lQRV9PUklHSU5TOgogICAgICAgICAgICAgICAgc2VsZi5zZW5kX3B1YmxpY19qc29uKEhUVFBTdGF0dXMuRk9SQklEREVOLCB7ImVycm9yIjogIm9yaWdpbl9ub3RfYWxsb3dlZCJ9KTsgcmV0dXJuCiAgICAgICAgICAgIGlmIG5vdCByYXRlX2FsbG93ZWQoZiJwdWJsaWMtbWFwLWRhdGE6e3NlbGYuY2xpZW50X2lwKCl9IiwgMTIwLCA2MCk6CiAgICAgICAgICAgICAgICBzZWxmLnNlbmRfcHVibGljX2pzb24oSFRUUFN0YXR1cy5UT09fTUFOWV9SRVFVRVNUUywgeyJlcnJvciI6ICJyYXRlX2xpbWl0ZWQifSk7IHJldHVybgogICAgICAgICAgICBtYXBfa2V5ID0gcGFyc2VfcXMocGFyc2VkLnF1ZXJ5KS5nZXQoImtleSIsIFsiIl0pWy0xXQogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICBzZWxmLnNlbmRfcHVibGljX2pzb24oSFRUUFN0YXR1cy5PSywgaGtfbWFwX2RhdGEobWFwX2tleSwgcHVibGljPVRydWUpKQogICAgICAgICAgICBleGNlcHQgKExvb2t1cEVycm9yLCBWYWx1ZUVycm9yKToKICAgICAgICAgICAgICAgIHNlbGYuc2VuZF9wdWJsaWNfanNvbihIVFRQU3RhdHVzLk5PVF9GT1VORCwgeyJlcnJvciI6ICJtYXBfbm90X2ZvdW5kIn0pCg==
         run: |
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
@@ -72,9 +74,8 @@ jobs:
             patch --batch --forward /tmp/server.py < /tmp/server-map-points.patch || true
           fi
 
-          # The main server is being developed in parallel. Insert only the two
-          # GET routes if the surrounding handler moved since the patch was made.
           python3 - <<'PY'
+          import base64, os
           from pathlib import Path
           path=Path('/tmp/server.py')
           text=path.read_text()
@@ -82,32 +83,7 @@ jobs:
               anchor='        elif path == "/api/v1/public/maps":\n'
               if anchor not in text:
                   raise SystemExit('public maps route anchor not found')
-              routes='''        elif path == "/api/v1/cabinet/maps/data":
-            origin = self.headers.get("Origin", "")
-            if origin not in CABINET_ORIGINS:
-                self.send_cabinet_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"}); return
-            member = self.cabinet_member()
-            if not member:
-                self.send_cabinet_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"}); return
-            map_key = parse_qs(parsed.query).get("key", [""])[-1]
-            try:
-                self.send_cabinet_json(HTTPStatus.OK, hk_map_data(map_key, member=member))
-            except PermissionError:
-                self.send_cabinet_json(HTTPStatus.FORBIDDEN, {"error": "maps_access_denied"})
-            except (LookupError, ValueError):
-                self.send_cabinet_json(HTTPStatus.NOT_FOUND, {"error": "map_not_found"})
-        elif path == "/api/v1/public/maps/data":
-            origin = self.headers.get("Origin", "")
-            if origin and origin not in PUBLIC_RECIPE_ORIGINS:
-                self.send_public_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"}); return
-            if not rate_allowed(f"public-map-data:{self.client_ip()}", 120, 60):
-                self.send_public_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "rate_limited"}); return
-            map_key = parse_qs(parsed.query).get("key", [""])[-1]
-            try:
-                self.send_public_json(HTTPStatus.OK, hk_map_data(map_key, public=True))
-            except (LookupError, ValueError):
-                self.send_public_json(HTTPStatus.NOT_FOUND, {"error": "map_not_found"})
-'''
+              routes=base64.b64decode(os.environ['MAP_ROUTES_B64']).decode()
               text=text.replace(anchor,routes+anchor,1)
               path.write_text(text)
           PY
@@ -137,8 +113,8 @@ jobs:
               systemctl is-active --quiet hamsterking-license.service;
               sleep 2;
               python3 /opt/hamsterking-license/server.py --import-hk-map-points /tmp/hk-map-points.json.gz | tee /tmp/hk-map-import-result.txt;
-              grep -q ""accepted": 235" /tmp/hk-map-import-result.txt;
-              grep -q ""points": 26378" /tmp/hk-map-import-result.txt;
+              grep -q "\"accepted\": 235" /tmp/hk-map-import-result.txt;
+              grep -q "\"points\": 26378" /tmp/hk-map-import-result.txt;
               rm -f /tmp/hk-map-points.json.gz /tmp/hk-map-import-result.txt;
               curl -fsS --max-time 10 http://127.0.0.1:3188/health;
               echo;
