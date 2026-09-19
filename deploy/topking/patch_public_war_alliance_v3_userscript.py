@@ -142,15 +142,9 @@ alliance_code=r'''  function allianceV3ListRows(documentValue) {
         const index=cursor++;
         const alliance=alliances[index];
         try{
-          const value=await apiJson('/alliance/members','GET',null,true,1,{alliance_id:alliance.id});
+          const value=await apiJson('/alliance/members?alliance_id='+encodeURIComponent(alliance.id),'GET',null,true,1);
           results.set(alliance.id,allianceV3MemberClans(value));
-        }catch(_){
-          // apiJson does not expose a separate params argument; retry with query string.
-          try{
-            const value=await apiJson('/alliance/members?alliance_id='+encodeURIComponent(alliance.id),'GET',null,true,1);
-            results.set(alliance.id,allianceV3MemberClans(value));
-          }catch(__){}
-        }
+        }catch(_){}
       }
     });
     await Promise.all(workers);
