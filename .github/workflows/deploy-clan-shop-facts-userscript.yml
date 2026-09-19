@@ -74,12 +74,9 @@ jobs:
               journalctl -u hamsterking-license.service -n 80 --no-pager || true
               exit 1
             fi
-            grep -q "^// @version      1.17.2$" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -q "HK_CLAN_SHOP_ACTUAL_FACTS_V1" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -q "HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -q "HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -q "bosses-readonly-20260920-r1" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "{page:'bosses',ru:'Боссы',en:'Bosses'}" /opt/hamsterking-license/HamsterKingMobile.user.js
+            # Content markers were verified before upload. After installation,
+            # syntax is checked here; the next step downloads the server file
+            # and requires a byte-for-byte match with the verified build.
             node --check /opt/hamsterking-license/HamsterKingMobile.user.js
           '
 
