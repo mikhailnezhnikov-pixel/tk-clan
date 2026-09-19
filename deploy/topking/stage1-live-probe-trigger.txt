@@ -1,2 +1,2 @@
-probe=2026-09-19T14:15:00Z
-purpose=resource-business-capture
+trigger=2026-09-19T14:32Z
+reason=resolve-stage2-deploy-race
