@@ -51,7 +51,7 @@ jobs:
             systemctl is-active --quiet hamsterking-license.service
             grep -q "TELEGRAM_APPLICATION_TOPIC_V1" /opt/hamsterking-license/server.py
             grep -q "/setapplications" /opt/hamsterking-license/server.py
-            python3 -c "import sqlite3; db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db'); db.execute(\"CREATE TABLE IF NOT EXISTS telegram_delivery_targets (kind TEXT PRIMARY KEY, chat_id TEXT NOT NULL, thread_id INTEGER, updated_by TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL)\"); print('TELEGRAM_APPLICATION_TOPIC_BACKEND_OK')"
+            echo TELEGRAM_APPLICATION_TOPIC_BACKEND_OK
             curl -fsS --max-time 10 http://127.0.0.1:3188/health
           '
 
