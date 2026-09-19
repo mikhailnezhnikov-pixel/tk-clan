@@ -314,6 +314,31 @@
       .clanshop-history-week{grid-template-columns:1fr}
     }
 
+    .ann-card{overflow:hidden}
+    .ann-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:15px}
+    .ann-head h2{margin:5px 0 6px;font-size:30px}
+    .ann-head p{margin:0}
+    .ann-source{flex:0 0 auto;display:inline-flex;align-items:center;padding:7px 10px;border:1px solid rgba(232,182,84,.25);border-radius:9px;color:#ffe0a0;text-decoration:none;font-size:12px;font-weight:850;background:rgba(232,182,84,.06)}
+    .ann-list{display:grid;gap:12px}
+    .ann-item{border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.025);overflow:hidden}
+    .ann-item-main{padding:15px 16px}
+    .ann-item-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px;color:var(--muted);font-size:11px}
+    .ann-item-title{margin:0 0 8px;color:#fff;font-size:17px;line-height:1.35}
+    .ann-item-text{margin:0;color:#dce2e9;white-space:pre-wrap;line-height:1.5;font-size:13px;overflow-wrap:anywhere}
+    .ann-item-image{display:block;width:100%;max-height:360px;object-fit:cover;border-bottom:1px solid rgba(255,255,255,.08);background:#090c11}
+    .ann-expand{margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:10px}
+    .ann-expand summary{cursor:pointer;color:#d8b766;font-size:12px;font-weight:850;user-select:none}
+    .ann-expand summary::-webkit-details-marker{display:none}
+    .ann-expand .ann-item-text{margin-top:10px}
+    .ann-open{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;border:1px solid rgba(255,255,255,.09);border-radius:8px;color:#c7a75f;text-decoration:none;font-weight:800;white-space:nowrap}
+    .ann-empty{padding:20px;border:1px dashed rgba(255,255,255,.10);border-radius:13px;color:var(--muted);text-align:center}
+    .ann-stale{margin:0 0 12px;padding:9px 11px;border:1px solid rgba(232,182,84,.20);border-radius:10px;background:rgba(232,182,84,.06);color:#d9c991;font-size:12px}
+    @media(max-width:680px){
+      .ann-head{display:block}
+      .ann-source{margin-top:10px}
+      .ann-item-meta{align-items:flex-start}
+    }
+
     .hidden{display:none!important}
 
     @media(max-width:900px){
@@ -512,6 +537,7 @@
         <button class="cab-tab active" type="button" data-cab-tab="overview">Обзор</button>
         <button class="cab-tab" type="button" data-cab-tab="players">Статистика игроков</button>
         <button class="cab-tab" type="button" data-cab-tab="maps" hidden>Карты</button>
+        <button class="cab-tab" type="button" data-cab-tab="announcements">Новости игры</button>
         <button class="cab-tab" type="button" data-cab-tab="clan-shop">Clan Shop</button>
         <button class="cab-tab" type="button" data-cab-tab="install">Установка</button>
       </nav>
@@ -618,6 +644,23 @@
               </section>
             </div>
           </div>
+        </article>
+      </section>
+
+
+      <section class="cab-panel" data-cab-panel="announcements" hidden>
+        <article class="card cab-card wide ann-card">
+          <div class="ann-head">
+            <div>
+              <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Hamster King Announcement</div>
+              <h2>Новости игры</h2>
+              <p class="stats-sub">Официальные публикации из Telegram-канала Hamster King. Новые сообщения отображаются сверху.</p>
+            </div>
+            <a class="ann-source" href="https://t.me/hamsterking_game" target="_blank" rel="noopener">Открыть канал</a>
+          </div>
+          <p id="announcements-message" class="message" role="status" aria-live="polite"></p>
+          <div id="announcements-stale" class="ann-stale hidden">Telegram временно недоступен — показана последняя сохранённая версия ленты.</div>
+          <div id="announcements-list" class="ann-list"></div>
         </article>
       </section>
 
@@ -916,6 +959,8 @@
   let clanShopHistoryLoaded=false;
   let clanShopHistoryPeriod='week';
   let clanShopHistoryOpenPlayer='';
+  let announcementsData=[];
+  let announcementsLoaded=false;
 
   function hkMapsData(){
     return hkMaps;
@@ -1170,6 +1215,72 @@
   });
 
   $('hkmap-search')?.addEventListener('input',renderMapsIndex);
+
+
+  function announcementDate(value){
+    if(!value)return '';
+    try{
+      return new Date(value).toLocaleString('ru-RU',{
+        day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'
+      });
+    }catch{return ''}
+  }
+
+  function announcementTitle(text){
+    const lines=String(text||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    const first=lines[0]||'Hamster King Announcement';
+    return first.length>140?first.slice(0,137)+'…':first;
+  }
+
+  function announcementBodyWithoutTitle(text){
+    const raw=String(text||'').trim();
+    const lines=raw.split('\n');
+    const firstIndex=lines.findIndex(line=>line.trim());
+    if(firstIndex<0)return '';
+    return lines.slice(firstIndex+1).join('\n').trim()||raw;
+  }
+
+  function renderAnnouncements(){
+    const list=$('announcements-list');
+    if(!list)return;
+    const items=Array.isArray(announcementsData)?announcementsData:[];
+    list.innerHTML=items.map(item=>{
+      const text=String(item.text||'').trim();
+      const title=announcementTitle(text);
+      const body=announcementBodyWithoutTitle(text);
+      const long=body.length>700;
+      const preview=long?body.slice(0,700).trimEnd()+'…':body;
+      const image=item.image_url
+        ?'<img class="ann-item-image" src="'+safe(item.image_url)+'" alt="" loading="lazy" referrerpolicy="no-referrer">'
+        :'';
+      const expanded=long
+        ?'<details class="ann-expand"><summary>Читать полностью</summary><p class="ann-item-text">'+safe(body)+'</p></details>'
+        :'';
+      return '<article class="ann-item">'+image+'<div class="ann-item-main">'+
+        '<div class="ann-item-meta"><span>'+safe(announcementDate(item.datetime))+'</span>'+
+        '<a class="ann-open" href="'+safe(item.url||'https://t.me/hamsterking_game')+'" target="_blank" rel="noopener">Telegram ↗</a></div>'+
+        '<h3 class="ann-item-title">'+safe(title)+'</h3>'+
+        '<p class="ann-item-text">'+safe(preview)+'</p>'+expanded+
+        '</div></article>';
+    }).join('')||'<div class="ann-empty">Публикации пока не загрузились.</div>';
+  }
+
+  async function loadAnnouncements(force=false){
+    if(announcementsLoaded&&!force){renderAnnouncements();return}
+    setMessage('announcements-message','Загружаю новости игры…');
+    try{
+      const data=await request('/announcements');
+      announcementsData=Array.isArray(data.items)?data.items:[];
+      announcementsLoaded=true;
+      renderAnnouncements();
+      $('announcements-stale')?.classList.toggle('hidden',!data.stale);
+      setMessage('announcements-message');
+    }catch{
+      setMessage('announcements-message','Не удалось загрузить новости из Telegram.','bad');
+      const list=$('announcements-list');
+      if(list&&!announcementsLoaded)list.innerHTML='<div class="ann-empty">Лента временно недоступна. Попробуйте открыть вкладку позже.</div>';
+    }
+  }
 
 
   function clanShopOptionList(selected){
@@ -1520,6 +1631,7 @@
       history.replaceState(null,'',url);
     }
     if(name==='players')renderPlayerStats();
+    if(name==='announcements')loadAnnouncements();
     if(name==='maps'){
       if(!currentMapsAccess){setCabTab('overview',syncUrl);return}
       loadMapsIndex();
@@ -2025,6 +2137,7 @@
       if(requested==='maps'&&currentMapsAccess)setCabTab('maps',false);
       else if(requested==='players')setCabTab('players',false);
       else if(requested==='clan-shop')setCabTab('clan-shop',false);
+      else if(requested==='announcements')setCabTab('announcements',false);
     }
   }
 
@@ -2157,7 +2270,7 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/cabinet-i18n.js?v=20260920-5"></script>
+<script src="../assets/cabinet-i18n.js?v=20260920-6"></script>
 <script src="../assets/site-nav.js?v=20260919-9"></script>
 </body>
 </html>
