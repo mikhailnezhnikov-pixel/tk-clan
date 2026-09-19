@@ -127,12 +127,23 @@ jobs:
                   env[k.decode('utf-8','ignore')]=v.decode('utf-8','ignore')
           admin=env.get('HK_TELEGRAM_ADMIN_CHAT_ID','').strip()
           changed=0
-          if re.fullmatch(r'[1-9][0-9]{4,19}', admin):
-              with sqlite3.connect(DB) as db:
+          method='none'
+          with sqlite3.connect(DB) as db:
+              if re.fullmatch(r'[1-9][0-9]{4,19}', admin):
                   cur=db.execute("UPDATE clan_members SET maps_access=1,maps_manage=1,updated_at=strftime('%s','now') WHERE telegram_id=? AND active=1",(admin,))
                   changed=cur.rowcount
-                  db.commit()
-          print('ADMIN_MAP_OWNER_CONFIGURED', 1 if changed else 0)
+                  if changed:
+                      method='telegram_admin'
+              if not changed:
+                  role_rows=db.execute("""SELECT telegram_id FROM clan_members
+                                          WHERE active=1 AND lower(trim(note)) IN
+                                          ('owner','admin','владелец','админ','владелец клана')""").fetchall()
+                  if len(role_rows)==1:
+                      db.execute("UPDATE clan_members SET maps_access=1,maps_manage=1,updated_at=strftime('%s','now') WHERE telegram_id=?",(role_rows[0][0],))
+                      changed=1
+                      method='owner_role'
+              db.commit()
+          print('ADMIN_MAP_OWNER_CONFIGURED', 1 if changed else 0, method)
           PY
 
           cat > /tmp/verify-hk-map.py <<'PY'
