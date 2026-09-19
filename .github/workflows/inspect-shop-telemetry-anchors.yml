@@ -1,0 +1,36 @@
+name: Inspect shop telemetry anchors
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-shop-telemetry-anchors.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect
+        run: |
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            f=/opt/hamsterking-license/HamsterKingMobile.user.js
+            echo "=== LICENSED SERVER JSON ==="
+            n=$(grep -n "function licensedServerJson\|async function licensedServerJson" "$f" | head -1 | cut -d: -f1 || true)
+            [ -n "$n" ] && sed -n "${n},$((n+90))p" "$f" || true
+            echo "=== NORMALIZE REGULAR SHOP ==="
+            n=$(grep -n "function normalizeRegularShop" "$f" | head -1 | cut -d: -f1 || true)
+            [ -n "$n" ] && sed -n "${n},$((n+180))p" "$f" || true
+          '
+      - if: always()
+        run: rm -f "$HOME/.ssh/topking"
