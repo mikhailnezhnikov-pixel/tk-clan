@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07080b">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src https://hk-license.89.125.1.71.sslip.io; object-src 'none'; base-uri 'self'">
+  <title>Новости игры — Top King</title>
+  <meta name="description" content="Официальные новости Hamster King на сайте Top King.">
+  <link rel="stylesheet" href="../assets/public.css?v=20260920-4">
+  <link rel="icon" href="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png">
+  <style>
+    .news-head{padding-bottom:28px}
+    .news-head .lead{max-width:760px}
+    .news-content{padding-top:6px}
+    .news-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
+    .news-source{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 13px;border:1px solid rgba(232,182,84,.38);border-radius:12px;color:var(--gold-light);background:rgba(232,182,84,.07);font-size:12px;font-weight:850;text-decoration:none}
+    .news-message{min-height:22px;color:var(--muted);font-size:13px}
+    .news-message.bad{color:#f0a5a5}
+    .news-stale{margin-bottom:14px;padding:11px 13px;border:1px solid rgba(232,182,84,.24);border-radius:12px;color:#e8cf93;background:rgba(232,182,84,.06);font-size:12px}
+    .news-stale.hidden{display:none}
+    .news-list{display:grid;gap:18px}
+    .news-card{overflow:hidden;border:1px solid rgba(255,255,255,.09);border-radius:22px;background:linear-gradient(145deg,rgba(19,23,30,.94),rgba(10,13,18,.96));box-shadow:0 18px 50px rgba(0,0,0,.22)}
+    .news-media{display:flex;align-items:center;justify-content:center;min-height:80px;padding:0;background:#080b10;border-bottom:1px solid rgba(255,255,255,.07)}
+    .news-media img{display:block;width:auto;height:auto;max-width:100%;max-height:620px;object-fit:contain;image-rendering:auto}
+    .news-main{padding:22px}
+    .news-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px;color:var(--muted);font-size:11px}
+    .news-title{margin:0;color:#fff;font-size:clamp(20px,2.4vw,28px);line-height:1.25;overflow-wrap:anywhere}
+    .news-text{margin:14px 0 0;color:#dce2e9;white-space:pre-wrap;line-height:1.62;font-size:14px;overflow-wrap:anywhere}
+    .news-locale-note{margin-top:14px;padding:13px 14px;border:1px solid rgba(232,182,84,.20);border-radius:13px;color:#ead7a6;background:rgba(232,182,84,.05);line-height:1.5;font-size:13px}
+    .news-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+    .news-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 12px;border:1px solid rgba(255,255,255,.13);border-radius:11px;color:#e7ebf0;background:rgba(255,255,255,.04);font-size:12px;font-weight:850;text-decoration:none}
+    .news-link.primary{border-color:rgba(232,182,84,.48);color:#1b1205;background:linear-gradient(135deg,#ffe3a0,#d79b36)}
+    .news-empty{padding:24px;border:1px solid rgba(255,255,255,.08);border-radius:18px;color:var(--muted);background:rgba(255,255,255,.025)}
+    @media(max-width:680px){
+      .news-toolbar{align-items:flex-start;flex-direction:column}
+      .news-source{width:100%}
+      .news-main{padding:17px}
+      .news-meta{align-items:flex-start;flex-direction:column}
+      .news-media img{max-height:430px}
+      .news-links{display:grid;grid-template-columns:1fr}
+      .news-link{width:100%}
+    }
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="brand" href="../"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png" alt=""><span>TOP KING</span></a>
+    <nav class="nav" aria-label="Основная навигация"></nav>
+    <div class="languages"><button data-language="ru">RU</button><button data-language="en">EN</button><button data-language="fa">FA</button></div>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Меню">☰</button>
+  </div>
+  <nav class="mobile-nav" data-mobile-nav></nav>
+</header>
+
+<main>
+  <header class="shell page-head news-head">
+    <p class="eyebrow" data-i18n="eyebrow">HAMSTER KING ANNOUNCEMENT</p>
+    <h1 data-i18n="title">Новости игры</h1>
+    <p class="lead" data-i18n="lead">Официальные публикации Hamster King. Русские версии из Telegraph сохраняются прямо из оригинального поста.</p>
+  </header>
+
+  <section class="section news-content">
+    <div class="shell">
+      <div class="news-toolbar">
+        <p id="news-message" class="news-message" role="status" aria-live="polite"></p>
+        <a class="news-source" href="https://t.me/hamsterking_game" target="_blank" rel="noopener" data-i18n="openChannel">Открыть официальный канал</a>
+      </div>
+      <div id="news-stale" class="news-stale hidden" data-i18n="stale">Telegram временно недоступен — показана последняя сохранённая версия.</div>
+      <div id="news-list" class="news-list"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer"><div class="shell footer-row"><span>Top King · Hamster King</span><a href="../feedback/" data-i18n="feedback">Обратная связь</a></div></footer>
+
+<script>
+window.TK_PAGE_TRANSLATIONS={
+  ru:{
+    pageTitle:'Новости игры — Top King',
+    eyebrow:'HAMSTER KING ANNOUNCEMENT',
+    title:'Новости игры',
+    lead:'Официальные публикации Hamster King. Русские версии из Telegraph сохраняются прямо из оригинального поста.',
+    openChannel:'Открыть официальный канал',
+    loadingNews:'Загружаю новости игры…',
+    loadError:'Не удалось загрузить новости. Попробуйте позже.',
+    emptyNews:'Публикации пока не загрузились.',
+    stale:'Telegram временно недоступен — показана последняя сохранённая версия.',
+    telegram:'Оригинал в Telegram',
+    officialRu:'Русская версия — Telegraph',
+    officialLocale:'Официальная версия',
+    ruAvailable:'Для этой публикации есть официальная русская версия. Английский текст здесь не дублируется — откройте русскую публикацию в Telegraph.',
+    ruMissing:'Для этой публикации отдельная русская версия в оригинальном посте не приложена. Откройте исходный пост в Telegram.',
+    feedback:'Обратная связь'
+  },
+  en:{
+    pageTitle:'Game news — Top King',
+    eyebrow:'HAMSTER KING ANNOUNCEMENT',
+    title:'Game news',
+    lead:'Official Hamster King announcements with the original Telegram and Telegraph links preserved.',
+    openChannel:'Open official channel',
+    loadingNews:'Loading game news…',
+    loadError:'Could not load the news feed. Please try again later.',
+    emptyNews:'No announcements have loaded yet.',
+    stale:'Telegram is temporarily unavailable — showing the last cached feed.',
+    telegram:'Original on Telegram',
+    officialRu:'Russian version — Telegraph',
+    officialLocale:'Official version',
+    ruAvailable:'An official localized version is available.',
+    ruMissing:'No separate localized version was attached to the original post.',
+    feedback:'Feedback'
+  },
+  fa:{
+    pageTitle:'اخبار بازی — Top King',
+    eyebrow:'HAMSTER KING ANNOUNCEMENT',
+    title:'اخبار بازی',
+    lead:'اطلاعیه‌های رسمی Hamster King با لینک‌های اصلی Telegram و Telegraph.',
+    openChannel:'باز کردن کانال رسمی',
+    loadingNews:'در حال بارگذاری اخبار بازی…',
+    loadError:'بارگذاری اخبار ممکن نشد. بعداً دوباره تلاش کنید.',
+    emptyNews:'هنوز خبری بارگذاری نشده است.',
+    stale:'تلگرام موقتاً در دسترس نیست — آخرین نسخه ذخیره‌شده نمایش داده می‌شود.',
+    telegram:'نسخه اصلی در تلگرام',
+    officialRu:'نسخه روسی — Telegraph',
+    officialLocale:'نسخه رسمی',
+    ruAvailable:'برای این خبر نسخه رسمی جداگانه‌ای وجود دارد.',
+    ruMissing:'برای این خبر نسخه فارسی جداگانه‌ای در پست اصلی منتشر نشده است. متن انگلیسی به‌جای ترجمه نمایش داده نمی‌شود؛ نسخه اصلی را در تلگرام باز کنید.',
+    feedback:'بازخورد'
+  }
+};
+</script>
+
+<script>
+(()=>{
+  const API='https://hk-license.89.125.1.71.sslip.io/api/v1/announcements';
+  const $=id=>document.getElementById(id);
+  const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let dataItems=[];
+  let stale=false;
+
+  function lang(){
+    const value=localStorage.getItem('tk-language');
+    return ['ru','en','fa'].includes(value)?value:'ru';
+  }
+  function strings(){
+    const l=lang();
+    return (window.TK_PAGE_TRANSLATIONS&&window.TK_PAGE_TRANSLATIONS[l])||window.TK_PAGE_TRANSLATIONS.ru;
+  }
+  function dateText(value){
+    if(!value)return '';
+    try{
+      const l=lang();
+      const locale=l==='fa'?'fa-IR':(l==='en'?'en-GB':'ru-RU');
+      return new Date(value).toLocaleString(locale,{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    }catch{return ''}
+  }
+  function splitText(text){
+    const lines=String(text||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    const title=lines.shift()||'Hamster King Announcement';
+    return {title:title.length>180?title.slice(0,177)+'…':title,body:lines.join('\n\n').trim()};
+  }
+  function isCyrillic(text){return /[А-Яа-яЁё]/.test(String(text||''))}
+  function findLocalizedLink(item,target){
+    const links=Array.isArray(item.links)?item.links:[];
+    const candidates=links.filter(x=>/^https?:\/\/telegra\.ph\//i.test(String(x.url||'')));
+    if(target==='ru'){
+      return candidates.find(x=>/(рус|russian|ru\b)/i.test(String(x.label||'')))||null;
+    }
+    if(target==='fa'){
+      return candidates.find(x=>/(فارسی|farsi|persian|fa\b)/i.test(String(x.label||'')))||null;
+    }
+    return candidates.find(x=>/(english|англ|en\b)/i.test(String(x.label||'')))||null;
+  }
+  function telegraphLinks(item){
+    const seen=new Set();
+    return (Array.isArray(item.links)?item.links:[]).filter(link=>{
+      const url=String(link.url||'');
+      if(!/^https?:\/\/telegra\.ph\//i.test(url)||seen.has(url))return false;
+      seen.add(url);return true;
+    });
+  }
+  function render(){
+    const list=$('news-list');if(!list)return;
+    const l=lang(),s=strings();
+    list.innerHTML=dataItems.map(item=>{
+      const raw=String(item.text||'').trim();
+      const parts=splitText(raw);
+      const localized=findLocalizedLink(item,l);
+      let title=parts.title,bodyHtml='';
+      if(l==='en'){
+        const body=parts.body.length>1200?parts.body.slice(0,1200).trimEnd()+'…':parts.body;
+        bodyHtml=body?'<p class="news-text">'+safe(body)+'</p>':'';
+      }else if(l==='ru'){
+        if(isCyrillic(raw)){
+          const body=parts.body.length>1200?parts.body.slice(0,1200).trimEnd()+'…':parts.body;
+          bodyHtml=body?'<p class="news-text">'+safe(body)+'</p>':'';
+        }else if(localized){
+          title='Официальная новость Hamster King';
+          bodyHtml='<div class="news-locale-note">'+safe(s.ruAvailable)+'</div>';
+        }else{
+          title='Официальная новость Hamster King';
+          bodyHtml='<div class="news-locale-note">'+safe(s.ruMissing)+'</div>';
+        }
+      }else{
+        title='خبر رسمی Hamster King';
+        bodyHtml='<div class="news-locale-note">'+safe(localized?s.ruAvailable:s.ruMissing)+'</div>';
+      }
+
+      const image=item.image_url
+        ?'<div class="news-media"><img src="'+safe(item.image_url)+'" alt="" loading="lazy" referrerpolicy="no-referrer"></div>'
+        :'';
+
+      const links=[];
+      if(localized){
+        const label=l==='ru'?s.officialRu:s.officialLocale;
+        links.push('<a class="news-link primary" href="'+safe(localized.url)+'" target="_blank" rel="noopener">'+safe(label)+'</a>');
+      }
+      if(l==='en'){
+        telegraphLinks(item).slice(0,3).forEach(link=>{
+          links.push('<a class="news-link" href="'+safe(link.url)+'" target="_blank" rel="noopener">'+safe(link.label||'Telegraph')+'</a>');
+        });
+      }
+      links.push('<a class="news-link" href="'+safe(item.url||'https://t.me/hamsterking_game')+'" target="_blank" rel="noopener">'+safe(s.telegram)+'</a>');
+
+      return '<article class="news-card">'+image+'<div class="news-main">'+
+        '<div class="news-meta"><span>'+safe(dateText(item.datetime))+'</span><span>#'+safe(item.id||'')+'</span></div>'+
+        '<h2 class="news-title">'+safe(title)+'</h2>'+bodyHtml+
+        '<div class="news-links">'+links.join('')+'</div>'+
+        '</div></article>';
+    }).join('')||'<div class="news-empty">'+safe(s.emptyNews)+'</div>';
+    $('news-stale').classList.toggle('hidden',!stale);
+  }
+
+  async function load(){
+    $('news-message').textContent=strings().loadingNews;
+    try{
+      const response=await fetch(API,{cache:'no-store'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'request_failed');
+      dataItems=Array.isArray(data.items)?data.items:[];
+      stale=!!data.stale;
+      $('news-message').textContent='';
+      render();
+    }catch{
+      $('news-message').textContent=strings().loadError;
+      $('news-message').classList.add('bad');
+      render();
+    }
+  }
+  document.addEventListener('tk-language-change',()=>{render();});
+  load();
+})();
+</script>
+<script src="../assets/site-i18n.js?v=20260920-4"></script>
+<script src="../assets/site-nav.js?v=20260920-4"></script>
+</body>
+</html>
