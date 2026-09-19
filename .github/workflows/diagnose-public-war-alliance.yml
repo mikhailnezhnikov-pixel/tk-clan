@@ -52,6 +52,10 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/hk-app
           curl -fsSL --max-time 20 https://app.hamsterking.games/ -o /tmp/hk-app/index.html
+          echo "=== APP HTML PREVIEW ==="
+          sed -n '1,40p' /tmp/hk-app/index.html || true
+          echo "=== SCRIPT SRCS ==="
+          grep -o 'src="[^"]*"' /tmp/hk-app/index.html | head -40 || true
           python3 - <<'PY'
           import re, html, pathlib, urllib.parse
           text=pathlib.Path('/tmp/hk-app/index.html').read_text('utf-8','replace')
