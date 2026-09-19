@@ -1,0 +1,41 @@
+name: Inspect scoped map access backend
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-scoped-map-access.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inspect live map access code
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            echo "=== cabinet_member ==="
+            grep -n -A55 -B8 "^    def cabinet_member" /opt/hamsterking-license/server.py || true
+            echo "=== cabinet_maps ==="
+            grep -n -A120 -B15 "^def cabinet_maps" /opt/hamsterking-license/server.py || true
+            echo "=== hk_map_data ==="
+            grep -n -A110 -B20 "^def hk_map_data" /opt/hamsterking-license/server.py || true
+            echo "=== map routes ==="
+            grep -n -A75 -B25 "/api/v1/cabinet/maps" /opt/hamsterking-license/server.py | head -260 || true
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
