@@ -181,12 +181,12 @@ def apply_alliance_ratings_patch(text):
     return text
 
 def sync_version(text):
-    text, n_meta = re.subn(r"^// @version\s+\S+.*$", "// @version      1.17.0", text, count=1, flags=re.M)
+    text, n_meta = re.subn(r"^// @version\s+\S+.*$", "// @version      1.17.1", text, count=1, flags=re.M)
     if n_meta != 1:
         raise SystemExit("userscript version metadata missing")
     text, n_fallback = re.subn(
         r"(const BUILD_VERSION = typeof GM_info.*?\n\s*: )'[^']+';",
-        r"\1'1.17.0';",
+        r"\1'1.17.1';",
         text,
         count=1,
         flags=re.S,
@@ -199,8 +199,10 @@ s = sync_version(s)
 if MARKER in s:
     s = apply_alliance_ratings_patch(s)
     s = apply_today_hotfix(s)
-    s = apply_login_gate(s)
-    s = apply_bureau_resources_hotfix(s)
+    if 'HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1' not in s:
+        s = apply_login_gate(s)
+    if 'HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1' not in s:
+        s = apply_bureau_resources_hotfix(s)
     p.write_text(s)
     print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_TODAY_LOGIN_AND_1171")
     raise SystemExit(0)
@@ -280,7 +282,9 @@ s=s.replace(old,new,1)
 
 s = apply_alliance_ratings_patch(s)
 s = apply_today_hotfix(s)
-s = apply_login_gate(s)
-s = apply_bureau_resources_hotfix(s)
+if 'HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1' not in s:
+    s = apply_login_gate(s)
+if 'HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1' not in s:
+    s = apply_bureau_resources_hotfix(s)
 p.write_text(s)
 print("CLAN_SHOP_USERSCRIPT_PATCH_OK_WITH_LOGIN_GATE_AND_1171")
