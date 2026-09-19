@@ -9,6 +9,7 @@ on:
       - 'deploy/maps/server-map-data-v3.patch.gz.b64'
       - 'deploy/maps/server-map-owner-access.patch.gz.b64'
       - 'deploy/maps/server-full-map.patch.gz.b64'
+      - 'deploy/maps/patch-scoped-access.py'
   workflow_dispatch:
 
 permissions:
@@ -117,6 +118,9 @@ jobs:
               raise SystemExit('private map HTTP route was not updated')
           p.write_text(s)
           PY
+
+          python3 deploy/maps/patch-scoped-access.py /tmp/server.py
+          grep -q 'SCOPED_HK_MAP_ACCESS_V1' /tmp/server.py
 
           grep -q 'def load_full_hk_map' /tmp/server.py
           grep -q '"render": "full"' /tmp/server.py
