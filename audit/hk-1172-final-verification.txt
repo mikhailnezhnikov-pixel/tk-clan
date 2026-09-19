@@ -1,0 +1,61 @@
+TopKing live verification summary
+date=2026-09-20
+live_version=1.17.2
+deploy_run=35458712167
+deploy_status=PASS
+round_trip_byte_equality=PASS
+service_health=PASS
+
+migration_core:
+login_gate=PASS
+today=PASS
+pit=PASS
+business=PASS
+growth_hamsters=PASS
+growth_generals=PASS
+fair=PASS
+shop=PASS
+recipes=PASS
+project_bureau=PASS
+resource_buildings=PASS
+maps_research=PASS
+buildings=PASS_READ_ONLY
+explore=PASS
+clan_skills=PASS
+rumors=PASS
+wars=PASS_READ_ONLY
+bosses=PASS_READ_ONLY
+
+business_safety:
+runner=yes
+pause=yes
+stop_abort=yes
+slot_poll_pause=yes
+manager_release_pause=yes
+authoritative_player_refresh=yes
+
+growth_safety:
+fresh_player_state_before_run=yes
+shared_runner=yes
+pause_stop_checkpoint=yes
+mutation_gate=yes
+hamster_budget=cur_cap
+general_budget=item_pit_token
+hamster_level_retry_disabled=yes
+hamster_rarity_retry_disabled=yes
+state_store_merge=yes
+
+bosses_safety:
+mode=read_only
+source=/player/me
+combat_mutations=no
+boss_pit_state=yes
+
+remaining_planned_new_modules=4
+remaining_modules:
+- Neighborhoods
+- Auto routines
+- Regular Fair (engine exists as fair_default; separate UI entry pending)
+- Rat Hunt
+
+note=Old working-script migration is complete. Remaining items are new modules.
