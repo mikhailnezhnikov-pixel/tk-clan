@@ -82,6 +82,10 @@ gate = r'''
       activePath: ''
     };
 
+    const safeDiagnostic = (kind, payload) => {
+      try { recordDiagnostic(kind, payload); } catch (_) {}
+    };
+
     const run = async (path, task) => {
       const id = ++sequence;
       const normalizedPath = hkNormalizedApiPath(path);
@@ -97,15 +101,15 @@ gate = r'''
       state.activePath = normalizedPath;
       state.lastPath = normalizedPath;
       active = { id, path: normalizedPath, startedAt: Date.now() };
-      recordDiagnostic('mutation-start', { id, path: normalizedPath, pending: state.pending });
+      safeDiagnostic('mutation-start', { id, path: normalizedPath, pending: state.pending });
 
       try {
-        // Pause only before starting a new mutation. Internal apiJsonCore retries
-        // never re-enter this gate and therefore cannot deadlock behind themselves.
-        if (hkRunner.running) await hkRunner.waitIfPaused();
+        // The queue serializes mutations only. Pause/Stop stays owned by the
+        // calling module/runner, so pausing Growth cannot freeze unrelated modules.
+        // Internal apiJsonCore retries remain in this same queue turn.
         const value = await task();
         state.completed += 1;
-        recordDiagnostic('mutation-finish', {
+        safeDiagnostic('mutation-finish', {
           id,
           path: normalizedPath,
           durationMs: Date.now() - active.startedAt
@@ -113,7 +117,7 @@ gate = r'''
         return value;
       } catch (error) {
         state.failed += 1;
-        recordDiagnostic('mutation-error', {
+        safeDiagnostic('mutation-error', {
           id,
           path: normalizedPath,
           error: error?.message || String(error)
@@ -163,6 +167,7 @@ checks = [
     ('runtime.mutationGate = hkMutationGate', 'runtime gate diagnostics missing'),
     ('HKNetworkTimeout', 'network timeout protection lost'),
     ('GROWTH_NO_PROGRESS_LIMIT', 'Growth no-progress protection lost'),
+    ('const safeDiagnostic', 'non-fatal mutation diagnostics missing'),
 ]
 for needle, message in checks:
     if needle not in s:
