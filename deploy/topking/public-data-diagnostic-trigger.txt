@@ -8,3 +8,4 @@ inspect alliance metric field contexts
 focused bundle inspector run
 inspect clan metric mapping for alliance totals
 post-v3 public snapshot check
+check public snapshot after V4 live deploy
