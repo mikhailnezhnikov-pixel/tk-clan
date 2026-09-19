@@ -3,10 +3,7 @@ name: Test TopKing Stage 1 Build Only
 on:
   push:
     paths:
-      - '.github/workflows/test-topking-stage1-build.yml'
-      - 'deploy/topking/stage1_runner_patch.py'
-      - 'deploy/topking/test_stage1_mutation_gate.js'
-      - 'deploy/topking/test_stage1_patch_fixture.py'
+      - 'deploy/topking/stage1-build-trigger.txt'
   workflow_dispatch:
 
 permissions:
