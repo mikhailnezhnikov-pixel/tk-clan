@@ -21,7 +21,9 @@ jobs:
           curl -fL --compressed --retry 3 --connect-timeout 20 --max-time 120 \
             -A 'Mozilla/5.0' "$url" -o /tmp/map.html
           echo "BYTES=$(wc -c < /tmp/map.html)"
-          for token in 'const buildingsGeoJSON' 'const roadsGeoJSON' 'const landuseGeoJSON' 'const waterGeoJSON'; do
-            grep -q "$token" /tmp/map.html
-            echo "FOUND=$token"
-          done
+          echo "TITLE=$(grep -o '<title>[^<]*' /tmp/map.html | head -1 | sed 's/<title>//' || true)"
+          echo "HAS_LOGIN=$(grep -ciE 'login|auth|вход|авториза' /tmp/map.html || true)"
+          echo "HAS_BUILDINGS=$(grep -c 'buildingsGeoJSON' /tmp/map.html || true)"
+          echo "HAS_MAPLIBRE=$(grep -ci 'maplibre' /tmp/map.html || true)"
+          echo "PHP_LINKS:"
+          grep -oE 'href="[^"]+\.php[^"]*"' /tmp/map.html | head -20 || true
