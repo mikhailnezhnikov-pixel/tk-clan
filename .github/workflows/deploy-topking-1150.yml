@@ -1,10 +1,15 @@
 name: Deploy TopKing 1.15.0 Stage 1 Runner
 
+concurrency:
+  group: deploy-topking-1150
+  cancel-in-progress: true
+
 on:
   push:
     paths:
       - '.github/workflows/deploy-topking-1150.yml'
       - 'deploy/topking/stage1_runner_patch.py'
+      - 'deploy/topking/test_stage1_mutation_gate.js'
   workflow_dispatch:
 
 permissions:
