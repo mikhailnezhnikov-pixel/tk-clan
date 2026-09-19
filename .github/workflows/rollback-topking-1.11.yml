@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   rollback:
@@ -26,15 +27,20 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Fetch live 1.12.0 and reverse patch
+      - name: Restore verified 1.11.0 artifact
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          grep -q '@version      1.12.0' /tmp/HamsterKingMobile.user.js
-          base64 -d deploy/topking/userscript-1.12.0.patch.part00.b64 | gzip -d > /tmp/userscript-1.12.0.patch
-          patch -R --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.12.0.patch
+          curl -fL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/mikhailnezhnikov-pixel/tk-clan/actions/artifacts/10581482716/zip \
+            -o /tmp/topking-1.11.0.zip
+          mkdir -p /tmp/topking-1.11.0
+          unzip -q /tmp/topking-1.11.0.zip -d /tmp/topking-1.11.0
+          cp /tmp/topking-1.11.0/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           grep -q '@version      1.11.0' /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
           ! grep -q 'growthRunHamsters' /tmp/HamsterKingMobile.user.js
@@ -58,4 +64,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript-1.12.0.patch
+        run: rm -rf "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/topking-1.11.0 /tmp/topking-1.11.0.zip
