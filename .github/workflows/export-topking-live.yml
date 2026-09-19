@@ -1,4 +1,4 @@
-name: Export preserved TopKing 1.9.6
+name: Export TopKing bookmarklet sources
 
 on:
   push:
@@ -25,20 +25,24 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Export preserved source
+      - name: Export live backend and userscript
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p preserved
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js.bak.20260919-061430             preserved/HamsterKingMobile_v1.9.6_preserved.user.js
-          grep -m1 '^// @version' preserved/HamsterKingMobile_v1.9.6_preserved.user.js
-          sha256sum preserved/HamsterKingMobile_v1.9.6_preserved.user.js
+          mkdir -p live
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py live/server.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js live/HamsterKingMobile.user.js
+          grep -m1 '^// @version' live/HamsterKingMobile.user.js
+          python3 -m py_compile live/server.py
+          node --check live/HamsterKingMobile.user.js
 
-      - name: Upload preserved source
+      - name: Upload sources
         uses: actions/upload-artifact@v4
         with:
-          name: topking-preserved-1-9-6
-          path: preserved/
+          name: topking-bookmarklet-live
+          path: live/
           retention-days: 1
 
       - name: Cleanup
