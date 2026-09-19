@@ -44,12 +44,29 @@ s = s.replace(old_schema, new_schema, 1)
 old_window = '''    tz = _dt.timezone(_dt.timedelta(hours=9))
     now_value = int(now_ts if now_ts is not None else utc_now())
     local_now = _dt.datetime.fromtimestamp(now_value, _dt.timezone.utc).astimezone(tz)
+    days_until_sunday = (6 - local_now.weekday()) % 7
+    deadline_date = local_now.date() + _dt.timedelta(days=days_until_sunday)
+    deadline = _dt.datetime.combine(deadline_date, _dt.time(21, 0), tzinfo=tz)
+    if local_now >= deadline:
+        deadline += _dt.timedelta(days=7)
+    week_start_date = deadline.date() + _dt.timedelta(days=1)
+    week_end_date = week_start_date + _dt.timedelta(days=6)
 '''
 new_window = '''    # CLAN_SHOP_REQUESTS_V2
-    # Clan Shop week closes Sunday at 21:00 Moscow time (UTC+3).
+    # Requests close Sunday at 21:00 Moscow time (UTC+3).
+    # Between Sunday 21:00 and midnight the just-closed list still points
+    # to the Monday that starts in a few hours; a new cycle begins Monday.
     tz = _dt.timezone(_dt.timedelta(hours=3))
     now_value = int(now_ts if now_ts is not None else utc_now())
     local_now = _dt.datetime.fromtimestamp(now_value, _dt.timezone.utc).astimezone(tz)
+    if local_now.weekday() == 6 and local_now.time() >= _dt.time(21, 0):
+        deadline_date = local_now.date()
+    else:
+        days_until_sunday = (6 - local_now.weekday()) % 7
+        deadline_date = local_now.date() + _dt.timedelta(days=days_until_sunday)
+    deadline = _dt.datetime.combine(deadline_date, _dt.time(21, 0), tzinfo=tz)
+    week_start_date = deadline.date() + _dt.timedelta(days=1)
+    week_end_date = week_start_date + _dt.timedelta(days=6)
 '''
 if old_window not in s:
     raise SystemExit("clan shop timezone anchor missing")
