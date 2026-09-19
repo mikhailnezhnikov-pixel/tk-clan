@@ -33,100 +33,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SSH="ssh -i $HOME/.ssh/topking -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new"
-          SCP="scp -i $HOME/.ssh/topking -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new"
-
-          $SCP root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          grep -q '^// @version      1.9.7
-          grep -q 'Общий вклад участников' /tmp/HamsterKingMobile.user.js
-          grep -q 'hk-clan-branch' /tmp/HamsterKingMobile.user.js
-          grep -q 'hk-clan-line' /tmp/HamsterKingMobile.user.js
-          grep -q 'clanCanonicalSnapshot' /tmp/HamsterKingMobile.user.js
-          grep -q 'lastAutomaticClanScan' /tmp/HamsterKingMobile.user.js
-          node --check /tmp/HamsterKingMobile.user.js
-
-      - name: Activate userscript 1.9.8
-        shell: bash
-        run: |
-          set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js \
+            /tmp/HamsterKingMobile.user.js
 
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71 'set -euo pipefail;
-              stamp="$(date +%Y%m%d-%H%M%S)";
-              cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
-              grep -q "submit_clan_full_snapshot" /opt/hamsterking-license/server.py;
-              grep -q "^// @version      1.9.8$" /tmp/HamsterKingMobile.user.js;
-              install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
-              install -d -m 755 /etc/systemd/system/hamsterking-license.service.d;
-              printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.9.8\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
-              systemctl daemon-reload;
-              systemctl restart hamsterking-license.service;
-              systemctl is-active --quiet hamsterking-license.service;
-              sleep 2;
-              (curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config);
-              echo;
-              echo DEPLOY_OK;
-              grep -m1 "^// @version" /opt/hamsterking-license/HamsterKingMobile.user.js'
-
-      - name: Cleanup
-        if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript.patch
- /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.9.7$' /tmp/HamsterKingMobile.user.js
           base64 -d deploy/topking/userscript-1.9.8.patch.gz.b64 | gzip -d > /tmp/userscript.patch
           patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript.patch
 
-          grep -q '^// @version      1.9.8
+          grep -q '^// @version      1.9.8$' /tmp/HamsterKingMobile.user.js
           grep -q 'Общий вклад участников' /tmp/HamsterKingMobile.user.js
-          grep -q 'hk-clan-branch' /tmp/HamsterKingMobile.user.js
-          grep -q 'hk-clan-line' /tmp/HamsterKingMobile.user.js
           grep -q 'clanCanonicalSnapshot' /tmp/HamsterKingMobile.user.js
-          grep -q 'lastAutomaticClanScan' /tmp/HamsterKingMobile.user.js
+          grep -q 'bootstrapLateGameConnection' /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
 
-      - name: Activate userscript 1.9.8
+      - name: Deploy userscript 1.9.8
         shell: bash
         run: |
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
-
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71 'set -euo pipefail;
-              stamp="$(date +%Y%m%d-%H%M%S)";
-              cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
-              grep -q "submit_clan_full_snapshot" /opt/hamsterking-license/server.py;
-              grep -q "^// @version      1.9.8$" /tmp/HamsterKingMobile.user.js;
-              install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
-              install -d -m 755 /etc/systemd/system/hamsterking-license.service.d;
-              printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.9.8\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
-              systemctl daemon-reload;
-              systemctl restart hamsterking-license.service;
-              systemctl is-active --quiet hamsterking-license.service;
-              sleep 2;
-              (curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config);
-              echo;
-              echo DEPLOY_OK;
-              grep -m1 "^// @version" /opt/hamsterking-license/HamsterKingMobile.user.js'
-
-      - name: Cleanup
-        if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript.patch
- /tmp/HamsterKingMobile.user.js
-          grep -q 'Общий вклад участников' /tmp/HamsterKingMobile.user.js
-          grep -q 'hk-clan-branch' /tmp/HamsterKingMobile.user.js
-          grep -q 'hk-clan-line' /tmp/HamsterKingMobile.user.js
-          grep -q 'clanCanonicalSnapshot' /tmp/HamsterKingMobile.user.js
-          grep -q 'lastAutomaticClanScan' /tmp/HamsterKingMobile.user.js
-          node --check /tmp/HamsterKingMobile.user.js
-
-      - name: Activate userscript 1.9.8
-        shell: bash
-        run: |
-          set -euo pipefail
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+            /tmp/HamsterKingMobile.user.js \
+            root@89.125.1.71:/tmp/HamsterKingMobile.user.js
 
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71 'set -euo pipefail;
