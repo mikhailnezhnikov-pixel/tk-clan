@@ -1,0 +1,995 @@
+// @version      1.14.4
+284-    return text;
+285-  }
+286-
+287-  let settings = {
+288-    target: 200,
+289-    interval: 1.2,
+290-    allowTokens: true,
+291-    activationLimit: 1,
+292-    restoreLimit: 5,
+293-    collectOnly: false,
+294-    ...load().settings
+295-  };
+296:  let pitRunning = false;
+297-  let activationSpent = 0;
+298-  let restoreSpent = 0;
+299-  let pitRunStart = null;
+300-  let playerDocument = null;
+301-  let apiBase = '';
+302-  let apiHeaders = {};
+303-  let layout = [];
+304-  let inventory = [];
+305-  let selectedSlots = new Set();
+306-  let selectedStock = new Map();
+307-  let businessBusy = false;
+308-  let optimizerResult = null;
+--
+327-  let bonusCatalogDocument = null;
+328-  let eventCatalogDocument = null;
+329-  let clientConfigDocument = null;
+330-  let premiumDocument = null;
+331-  let localizationDocument = null;
+332-  let activeEventCode = clean(load().activeEventCode || '').toLowerCase();
+333-  let fairCatalog = [];
+334-  let selectedFairId = '';
+335-  let selectedFairLots = new Set();
+336-  let selectedFairSlotRules = new Map(); // lot id -> {regular:boolean, vip:boolean}
+337-  let selectedFairCurrency = '';
+338-  let selectedFairBonusLots = new Set([5, 10, 30]);
+339:  let fairRunning = false;
+340:  let fairStop = false;
+341-  let shopRows = [];
+342-  let selectedShopLots = new Set();
+343-  let selectedShopCounts = new Map();
+344-  let selectedShopSection = 'regular';
+345-  let selectedShopGroup = 'resources';
+346:  let shopRunning = false;
+347-  let recipeFairId = load().recipeFairId || '';
+348-  let currentRecipePlans = [];
+349:  let recipeRunning = false;
+350:  let recipeStop = false;
+351-  let communityRecipes = [];
+352-  let bureauCosts = [];
+353-  let bureauInventory = [];
+354-  let selectedBureauInputs = new Map();
+355-  let bureauSize = 2;
+356-  let bureauTier = 0;
+357:  let bureauRunning = false;
+358-  let mapRows = [];
+359-  let mapSource = 'mine';
+360-  let mapDetail = null;
+361-  let mapGeometry = null;
+362-  let mapZoom = 1;
+363-  let mapPanX = 0;
+364-  let mapPanY = 0;
+365-  let mapPointerMoved = false;
+366-  let mapBuildingAreas = new Map();
+367-  let mapScanning = false;
+368-  let dailyShopRows = [];
+369-  let dailyRunning = false;
+--
+392-    playerFactions:['id','faction_id'], playerHamsters:['hamster_id','id'], player_hamster_generals:['hamster_id','id'],
+393-    player_counters:['id','counter_id']
+394-  };
+395-  const HK_STATE_REPLACE_ARRAYS = new Set(['shop_lot_limits','fair','hamsteresses','player_hamsteresses_skill_line','hamsteresses_quest_slots','favorite_building_slots','player_bosses','player_battle_pass_rewards','auth_methods','offers','triggers']);
+396-  const HK_STATE_REPLACE_VALUES = new Set(['advertisement','areas','bonuses','boss_battle','clan','daily_rewards','gameArea','gamearea_recommendation','idler','pit','pit2','pit_generals','pit_pve','player_regional_bosses','quests','referals','rumors']);
+397-  function hkMergeRowsByFields(existing,incoming,fields){
+398-    if(!Array.isArray(incoming)) return Array.isArray(existing)?existing:[];
+399-    const result=(Array.isArray(existing)?existing:[]).map(row=>row&&typeof row==='object'?{...row}:row), positions=new Map();
+400-    for(let i=0;i<result.length;i++) for(const field of fields){const value=result[i]?.[field];if(value!==undefined&&value!==null){positions.set(`${field}:${value}`,i);break;}}
+401-    for(const row of incoming){if(!row||typeof row!=='object')continue;let key='';for(const field of fields){const value=row[field];if(value!==undefined&&value!==null){key=`${field}:${value}`;break;}}if(!key)continue;if(positions.has(key)){const i=positions.get(key);result[i]={...result[i],...row};}else{positions.set(key,result.length);result.push({...row});}}
+402-    return result;
+403-  }
+404:  const hkStateStore = (() => {
+405-    let snapshot = null, updatedAt = 0, revision = 0, fieldTimestamps = Object.create(null);
+406-    const listeners = new Set();
+407-    const clone = value => { if(value==null)return value; try{return structuredClone(value);}catch(_){try{return JSON.parse(JSON.stringify(value));}catch(_){return value;}} };
+408-    const notify = (reason='update',changed=new Set()) => { revision+=1;const event={reason,revision,updatedAt,snapshot,changed};for(const listener of [...listeners]){try{listener(event);}catch(_){}} };
+409-    const applyOne = (state,data,full=false,changed=new Set()) => {
+410-      if(!state||!data||typeof data!=='object') return changed;
+411-      const rawTs=Number(data.timestamp||0), incomingTs=Math.max(0,Number.isFinite(rawTs)?(rawTs>0&&rawTs<1e12?rawTs*1000:rawTs):0);
+412-      const canApply=key=>!incomingTs||!fieldTimestamps[key]||fieldTimestamps[key]<=incomingTs;
+413-      const stamp=key=>{if(incomingTs)fieldTimestamps[key]=incomingTs;changed.add(key);};
+414-      const replaceArray=(key,value)=>{if(!canApply(key)||!Array.isArray(value))return;state[key]=value.map(row=>row&&typeof row==='object'?{...row}:row);stamp(key);};
+415-      const mergeRows=(key,value,fields)=>{if(!canApply(key)||!Array.isArray(value))return;state[key]=hkMergeRowsByFields(state[key],value,fields);stamp(key);};
+416-      if(data.player&&typeof data.player==='object'&&canApply('player')){state.player=state.player&&typeof state.player==='object'?{...state.player,...data.player}:{...data.player};stamp('player');}
+--
+455-      },
+456-      merge(value,reason='partial'){
+457-        if(!value||typeof value!=='object')return snapshot;
+458-        if(!snapshot)snapshot={};const changed=new Set();for(const source of candidates(value))applyOne(snapshot,source,false,changed);if(changed.size){updatedAt=Date.now();notify(reason,changed);}return snapshot;
+459-      },
+460-      syncFromPlayerDocument(reason='legacy-sync'){if(playerDocument)this.replace(playerDocument,reason);return snapshot;},
+461-      subscribe(listener){if(typeof listener!=='function')return()=>{};listeners.add(listener);return()=>listeners.delete(listener);},
+462-      exportSummary(){return{revision,updatedAt,hasSnapshot:!!snapshot,playerId:playerIdentity(snapshot?.player||{}),fields:Object.keys(snapshot||{}).length};},
+463-      clone
+464-    };
+465-  })();
+466-
+467:  const hkRunner = (() => {
+468-    const state = {status:'idle', title:'', step:'', done:0, total:0, startedAt:0, error:'', pausable:true, stoppable:true};
+469-    let abortController = null;
+470-    let pauseResolvers = [];
+471-    const emit = () => renderRunnerState();
+472-    const settlePaused = () => { const rows=pauseResolvers.splice(0); rows.forEach(resolve=>resolve()); };
+473-    return {
+474-      state,
+475-      get signal(){ return abortController?.signal || null; },
+476-      get running(){ return state.status === 'running' || state.status === 'paused' || state.status === 'stopping'; },
+477-      start({title='', total=0, step='', pausable=true, stoppable=true}={}) {
+478-        if (this.running) throw new Error(either('Уже выполняется другая задача','Another task is already running'));
+479:        abortController = new AbortController();
+480-        Object.assign(state,{status:'running',title:String(title||either('Выполнение','Execution')),step:String(step||''),done:0,total:Math.max(0,Number(total)||0),startedAt:Date.now(),error:'',pausable:!!pausable,stoppable:!!stoppable});
+481-        recordDiagnostic('runner-start',{title:state.title,total:state.total}); emit(); return state;
+482-      },
+483-      setStep(step, done=state.done, total=state.total) { state.step=String(step||''); state.done=Math.max(0,Number(done)||0); state.total=Math.max(0,Number(total)||0); emit(); return state; },
+484-      advance(step='') { state.done=Math.min(state.total||state.done+1,state.done+1); if(step)state.step=String(step); emit(); return state; },
+485-      pause() { if(state.status!=='running'||!state.pausable)return false; state.status='paused'; recordDiagnostic('runner-pause',{title:state.title}); emit(); return true; },
+486-      resume() { if(state.status!=='paused')return false; state.status='running'; settlePaused(); recordDiagnostic('runner-resume',{title:state.title}); emit(); return true; },
+487:      async waitIfPaused() { while(state.status==='paused') await new Promise(resolve=>pauseResolvers.push(resolve)); if(abortController?.signal.aborted) throw new DOMException('Aborted','AbortError'); },
+488-      stop(reason='user') { if(!this.running||!state.stoppable)return false; state.status='stopping'; abortController?.abort(reason); settlePaused(); recordDiagnostic('runner-stop',{title:state.title,reason}); emit(); return true; },
+489-      finish(step='') { if(step)state.step=String(step); state.status='done'; if(state.total)state.done=state.total; recordDiagnostic('runner-finish',{title:state.title}); emit(); setTimeout(()=>{if(state.status==='done'){state.status='idle';emit();}},1800); },
+490-      fail(error) { state.status='error'; state.error=String(error?.message||error||either('Ошибка','Error')); recordDiagnostic('runner-error',{title:state.title,error:state.error}); emit(); },
+491-      reset() { abortController=null; settlePaused(); Object.assign(state,{status:'idle',title:'',step:'',done:0,total:0,startedAt:0,error:'',pausable:true,stoppable:true}); emit(); }
+492-    };
+493-  })();
+494-
+495-  // Optional bridge back into the game's own React state. HK never depends on
+496-  // this bridge for API actions: when the game changes its internal React
+497-  // structure the helper keeps working and only the instant native UI refresh
+498-  // is skipped. Mutations are batched and one native player refresh is issued
+499-  // at safe boundaries instead of trying to edit React stores manually.
+--
+646-      const route = String(path || '').split('?')[0];
+647-      if (['GET','HEAD','OPTIONS'].includes(verb) || route === '/player/me' || route === '/rumors/search' || route === '/regional_boss/battle_state') return;
+648-      dirty = true;
+649-      recordDiagnostic('game-bridge-dirty',{path:route,method:verb});
+650-      if (!hkRunner.running) schedule(180);
+651-    };
+652-    const summary = () => ({ready:ready(),dirty,flushing,lastDiscoveryAt,lastFlushAt,discoveries,flushes,failures,hasGeneralViewStore:!!generalViewStore});
+653-    return {discover,flush,schedule,noteMutation,summary,get ready(){return ready();},get dirty(){return dirty;}};
+654-  })();
+655-
+656-  // Runner completion is the safest place to refresh the game's visible React
+657-  // state after a batch. Individual requests only mark the bridge dirty.
+658:  const hkRunnerFinishBase = hkRunner.finish.bind(hkRunner);
+659-  hkRunner.finish = step => { hkRunnerFinishBase(step); if (hkGameBridge.dirty) void hkGameBridge.flush(true); };
+660:  const hkRunnerFailBase = hkRunner.fail.bind(hkRunner);
+661-  hkRunner.fail = error => { hkRunnerFailBase(error); if (hkGameBridge.dirty) hkGameBridge.schedule(250); };
+662-
+663-  runtime.stateStore = hkStateStore;
+664-  runtime.runner = hkRunner;
+665-  runtime.gameBridge = hkGameBridge;
+666-  let clanSkillScanning = false;
+667-  let clanSkillRefreshing = false;
+668-  let resourceBuildings = [];
+669-  let resourceBusy = false;
+670-  let resourceRepeatCount = Math.max(1, Math.min(10, Math.trunc(Number(load().resourceRepeatCount || 1))));
+671-  let resourceMaximumMode = false;
+672-  let resourceSelectedKind = String(load().resourceSelectedKind || 'nut');
+--
+957-    if (!captureAuthorization(url, headers)) return;
+958-    // /player/me with `arguments` returns only the requested sections. Keep
+959-    // the rest of the last full response (advertisement, currencies, pits,
+960-    // etc.) instead of replacing it with that partial document.
+961-    setHealth('game', true, 'данные игрока получены');
+962-    setHealth('auth', true, 'игровая сессия активна');
+963-    playerDocument = partial && playerDocument ? {
+964-      ...playerDocument,
+965-      ...documentValue,
+966-      ...(playerDocument.player || documentValue.player ? {player:{...(playerDocument.player || {}), ...(documentValue.player || {})}} : {}),
+967-      ...(playerDocument.data || documentValue.data ? {data:{...(playerDocument.data || {}), ...(documentValue.data || {})}} : {})
+968-    } : documentValue;
+969:    if (partial) hkStateStore.merge(documentValue, 'player/me-partial');
+970:    else hkStateStore.replace(playerDocument, 'player/me');
+971:    playerDocument = hkStateStore.snapshot || playerDocument;
+972-    refreshBusinessData();
+973-    const player = playerDocument.player || {};
+974-    log(`Подключено${player.nickname ? `: ${player.nickname}` : ''}`);
+975-    // Checking access is required to unlock the panel. This does not scan
+976-    // districts or submit any map data; those actions remain manual.
+977-    checkLicense(player);
+978-    // Never scan or upload map areas automatically. The player must explicitly
+979-    // press "Считать карты аккаунта" in the Maps tab for that operation.
+980-  }
+981-
+982-  function getDeviceId() {
+983-    const stored = load().deviceId;
+--
+1016-        alert(`${heading}${notes ? `\n\n${notes}` : ''}\n\n${instruction}`);
+1017-        window.open(String(update.download_url),'_blank','noopener');
+1018-      };
+1019-    } else if (updateBox) {
+1020-      updateBox.style.display='none'; updateBox.innerHTML='';
+1021-    }
+1022-    if (licenseState.allowed) {
+1023-      panel.classList.remove('hk-locked');
+1024-      if (gate) { gate.className = 'hk-license ok'; gate.textContent = `${localizeMessage('Доступ разрешён')} · ID: ${licenseState.playerId}`; }
+1025-    } else {
+1026-      panel.classList.add('hk-locked');
+1027-      if (gate) { gate.className = `hk-license ${licenseState.checked ? 'bad' : ''}`; gate.innerHTML = `${escapeHtml(localizeMessage(licenseState.reason))}${licenseState.playerId ? `<br><b>ID: ${escapeHtml(licenseState.playerId)}</b><br><small>${escapeHtml(localizeMessage('Добавьте этот ID в панели владельца'))}</small>` : ''}`; }
+1028:      pitRunning = false; fairStop = true;
+1029-    }
+1030-    updateWatermark();
+1031-  }
+1032-
+1033-  function watermarkCode() {
+1034-    const stored = clean(load().watermarkCode);
+1035-    if (/^[A-Z0-9]{6}$/.test(stored)) return stored;
+1036-    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+1037-    const bytes = new Uint8Array(6); crypto.getRandomValues(bytes);
+1038-    const code = [...bytes].map(value => alphabet[value % alphabet.length]).join('');
+1039-    save({watermarkCode:code});
+1040-    return code;
+--
+1532-      }
+1533-    }
+1534-    localStorage.setItem(STORE, JSON.stringify({...load(), pitRuntimeLevels:runtime}));
+1535-  }
+1536-
+1537-  function isGameApiRequest(url){
+1538-    try{const target=new URL(String(url||''),location.href),origins=new Set([new URL(GAME_API_FALLBACK).origin]);if(apiBase)origins.add(new URL(apiBase).origin);return origins.has(target.origin);}catch(_){return false;}
+1539-  }
+1540-  function acceptSharedGameResponse(url,documentValue){
+1541-    if(!documentValue||typeof documentValue!=='object'||!isGameApiRequest(url))return;
+1542-    let path='';try{path=new URL(String(url||''),location.href).pathname;}catch(_){}
+1543-    if(path==='/player/me')return;
+1544:    const before=hkStateStore.revision,merged=hkStateStore.merge(documentValue,`game-ui:${path||'response'}`);
+1545:    if(hkStateStore.revision!==before&&merged){playerDocument=merged;try{refreshBusinessData();}catch(_){}}
+1546-  }
+1547-
+1548-  function installNetworkCapture() {
+1549-    if (networkCaptureInstalled) return;
+1550-    if (typeof window.fetch !== 'function' || !window.XMLHttpRequest) throw new Error('Игровая сеть ещё не готова');
+1551-    const nativeFetch = window.fetch.bind(window);
+1552-    nativeNetworkFetch = nativeFetch;
+1553-    window.fetch = async function(input, init) {
+1554-      const url = typeof input === 'string' ? input : input?.url;
+1555-      const requestHeaders = {...headersToObject(input?.headers), ...headersToObject(init?.headers)};
+1556-      captureAuthorization(url, requestHeaders);
+1557-      const response = await nativeFetch(input, init);
+--
+2218-          ? either(`Примерно до уровня ${target}: 🐾 ∞`,`Estimated to level ${target}: 🐾 ∞`)
+2219-          : either(`Примерно до уровня ${target}: 🐾 ${total.tokens} · с уровня ${total.from}`,`Estimated to level ${target}: 🐾 ${total.tokens} · from level ${total.from}`);
+2220-      const targetChance = chance === null ? '' : ` · ${either('шанс боя','battle chance')}: ${pitChanceLabel(chance)} · ${pitRestoreLabel(paws)}`;
+2221-      return `<div><b>${label}</b><small>${either(`Сила уровня ${target}`,`Level ${target} power`)}</small><strong>${displayedPower}</strong><small>${totalText}${targetChance}</small></div>`;
+2222-    }).join('');
+2223-    const table = levels.slice(-40).reverse().map(level=>`<tr><th>${level}</th>${['normal','boss','gang'].map(type=>{const row=lookup[type].get(level);return `<td>${pitPowerCell(type,level,Number(row?.enemy_power))}</td>`;}).join('')}</tr>`).join('');
+2224-    box.innerHTML = `<h4>${tr('pitForecast')}</h4><div class="hk-pit-targets">${targets}</div><p>${either('Расчёт: обычная Яма — итоговая сила лучшего картеля из предпросмотра боя, включая генералов, текущую эффективность и всю поддержку; Яма боссов — итоговая сила всех картелей из личного предпросмотра; Яма банд — восемь индивидуальных пар с их фактической силой, эффективностью и поддержкой, общий успех требует минимум 5 побед из 8. Проценты рассчитываются индивидуально. Один жетон восстановления даёт 5 дополнительных попыток.','Calculation: Normal Pit uses the best cartel final power from the local preview, including generals, current efficiency and all support; Boss Pit uses the local preview final power of all cartels; Gang Pit uses eight individual matchups with their actual power, efficiency and support, and requires at least 5 wins out of 8. Chances are calculated individually. One recovery token gives five extra attempts.')}</p><p>${tr('pitTokenBudget',{n:Number(settings.activationLimit||0)+Number(settings.restoreLimit||0)})}</p>${comparison}${table?`<details ${pitPowerTableOpen?'open':''}><summary>${tr('pitPowerTable')}</summary><div class="hk-pit-table-wrap"><table><thead><tr><th>${either('Уровень','Level')}</th><th>${tr('pitNormal')}</th><th>${tr('pitBoss')}</th><th>${tr('pitGang')}</th></tr></thead><tbody>${table}</tbody></table></div></details>`:''}`;
+2225-    const details = box.querySelector('details');
+2226-    if (details) details.addEventListener('toggle',()=>{ pitPowerTableOpen=details.open; });
+2227-  }
+2228-
+2229-  async function pitLoop() {
+2230:    while (pitRunning) {
+2231-      const state = pitState();
+2232-      rememberPower(state);
+2233-      updatePitStatus(state);
+2234-      if (state.round !== null && state.round >= settings.target) {
+2235:        pitRunning = false; log(`Цель достигнута: раунд ${state.round}`, 'ok'); break;
+2236-      }
+2237-      if (settings.collectOnly) {
+2238-        await sleep(Math.max(700, settings.interval * 1000));
+2239-        continue;
+2240-      }
+2241-      let acted = false;
+2242-      if (state.restoreModal) {
+2243-        if (!settings.allowTokens || restoreSpent >= settings.restoreLimit) {
+2244:          pitRunning = false; log('Остановка: достигнут лимит жетонов восстановления', 'warn'); break;
+2245-        }
+2246-        acted = clickRestoreToken();
+2247-        if (acted) { restoreSpent++; log(`Восстановление жетоном ${restoreSpent}/${settings.restoreLimit}`); }
+2248-      } else if (state.controls.some(text => /^(Восстановить|Restore)$/i.test(text))) {
+2249-        if (!settings.allowTokens || restoreSpent >= settings.restoreLimit) {
+2250:          pitRunning = false; log('Требуется восстановление, но расход жетонов запрещён', 'warn'); break;
+2251-        }
+2252-        acted = clickText(/^(Восстановить|Restore)$/i);
+2253-      } else if (state.controls.some(text => /Сражаться\s+До конца|Fight\s+to\s+end/i.test(text))) {
+2254-        acted = clickText(/Сражаться\s+До конца|Fight\s+to\s+end/i);
+2255-      } else if (state.controls.some(text => /Сражаться|Fight/i.test(text))) {
+2256-        const fast = [...document.querySelectorAll('button.event-offer__auto')].find(visible);
+2257-        if (fast) { fast.click(); acted = true; log('Ускорение боя включено'); }
+2258-        else acted = clickText(/Сражаться|Fight/i, /До конца|to end/i);
+2259-      } else if (state.controls.some(text => /Оплатить|Pay/i.test(text)) || /Оплатить вход|Pay entry/i.test(document.body?.innerText || '')) {
+2260-        if (!settings.allowTokens || activationSpent >= settings.activationLimit) {
+2261:          pitRunning = false; log('Остановка: достигнут лимит жетонов активации', 'warn'); break;
+2262-        }
+2263-        if (state.controls.some(text => /Оплатить|Pay/i.test(text))) clickText(/Оплатить|Pay/i);
+2264-        await sleep(400);
+2265-        acted = await clickEntranceToken();
+2266-        if (acted) { activationSpent++; log(`Активация жетоном ${activationSpent}/${settings.activationLimit}`); }
+2267-      } else if (/жетон|token/i.test(document.body?.innerText || '')) {
+2268-        if (settings.allowTokens && activationSpent < settings.activationLimit) {
+2269-          acted = await clickEntranceToken();
+2270-          if (acted) { activationSpent++; log(`Активация жетоном ${activationSpent}/${settings.activationLimit}`); }
+2271-        }
+2272-      }
+2273-      await sleep(Math.max(700, settings.interval * 1000));
+--
+2278-
+2279-  function updatePitStatus(state = pitState()) {
+2280-    const element = document.querySelector('#hk-pit-live');
+2281-    if (element) element.textContent = language === 'en'
+2282-      ? `Round: ${state.round ?? '—'} · activations ${activationSpent}/${settings.activationLimit} · recoveries ${restoreSpent}/${settings.restoreLimit}`
+2283-      : `Раунд: ${state.round ?? '—'} · активации ${activationSpent}/${settings.activationLimit} · восстановления ${restoreSpent}/${settings.restoreLimit}`;
+2284-    renderPitForecast(state);
+2285-  }
+2286-
+2287-  function updatePitButtons() {
+2288-    const start = document.querySelector('#hk-pit-start');
+2289-    const stop = document.querySelector('#hk-pit-stop');
+2290:    if (start) start.disabled = pitRunning;
+2291:    if (stop) stop.disabled = !pitRunning;
+2292-  }
+2293-
+2294-  function findBuildings(value) {
+2295-    if (Array.isArray(value)) { for (const child of value) { const found = findBuildings(child); if (found) return found; } }
+2296-    else if (value && typeof value === 'object') {
+2297-      if (Array.isArray(value.business_building)) return value.business_building;
+2298-      for (const child of Object.values(value)) { const found = findBuildings(child); if (found) return found; }
+2299-    }
+2300-    return null;
+2301-  }
+2302-
+2303-  function normalizeLayout(documentValue) {
+--
+2590-    });
+2591-  }
+2592-
+2593-  async function gameRetryDelay(ms){
+2594-    const delay=Math.max(0,Number(ms)||0), signal=hkRunner.running?hkRunner.signal:null;
+2595-    if(!delay)return;
+2596-    if(!signal){await sleep(delay);return;}
+2597-    if(signal.aborted)throw new DOMException('Aborted','AbortError');
+2598-    await new Promise((resolve,reject)=>{let timer=null;const abort=()=>{if(timer)clearTimeout(timer);signal.removeEventListener('abort',abort);reject(new DOMException('Aborted','AbortError'));};timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},delay);signal.addEventListener('abort',abort,{once:true});});
+2599-  }
+2600-
+2601-  async function gameFetchText(request,url,init={},timeoutMs=18000){
+2602:    const controller=new AbortController(), runnerSignal=hkRunner.running?hkRunner.signal:null;
+2603-    let timedOut=false, timer=null, detach=null;
+2604-    if(runnerSignal){
+2605-      const abort=()=>controller.abort('runner');
+2606-      if(runnerSignal.aborted)abort();else{runnerSignal.addEventListener('abort',abort,{once:true});detach=()=>runnerSignal.removeEventListener('abort',abort);}
+2607-    }
+2608-    timer=setTimeout(()=>{timedOut=true;controller.abort('timeout');},Math.max(1000,Number(timeoutMs)||18000));
+2609-    try{
+2610-      const response=await request(url,{...init,signal:controller.signal});
+2611-      const text=await response.text();
+2612-      return{response,text};
+2613-    }catch(error){
+2614-      if(runnerSignal?.aborted)throw new DOMException('Aborted','AbortError');
+2615-      if(timedOut){const timeoutError=new Error(either('Тайм-аут запроса к игре','Game request timed out'));timeoutError.name='HKNetworkTimeout';throw timeoutError;}
+2616-      throw error;
+2617-    }finally{if(timer)clearTimeout(timer);try{detach?.();}catch(_){}}
+2618-  }
+2619-
+2620:  async function apiJson(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3) {
+2621-    const maxRetries = retryNetwork === true ? GAME_REQUEST_RETRY_DELAYS_MS.length : retryNetwork === false ? 0 : Math.max(0, Math.trunc(Number(retryNetwork) || 0));
+2622-    let authRetryLeft = retryAuthorization ? 1 : 0;
+2623-    let attempt = 0, lockAttempt = 0;
+2624-    while (true) {
+2625-      const authorized = await ensureGameAuthorization(false, `api:${path}`);
+2626-      if (!apiBase || !authorized || !apiHeaders.Authorization) throw new Error('Нет подключения к игре. Обновите страницу.');
+2627-      const request = nativeNetworkFetch || window.fetch.bind(window);
+2628-      const started = performance.now();
+2629-      let response,text;
+2630-      try {
+2631-        ({response,text}=await gameFetchText(request,`${apiBase}${path}`,{method,headers:{...apiHeaders},body:body == null ? undefined : JSON.stringify(body)},18000));
+2632-      } catch (error) {
+--
+2661-      if (!response.ok) {
+2662-        if (response.status === 401 || response.status === 403) setHealth('auth', false, 'сессия истекла');
+2663-        setHealth('game', false, `HTTP ${response.status}`);
+2664-        const error=new Error(value?.description || value?.message || `HTTP ${response.status}: ${text.slice(0,160)}`);
+2665-        error.name='HKGameApiError'; error.httpStatus=response.status; error.apiData=value; error.apiPath=path;
+2666-        throw error;
+2667-      }
+2668-      if (!value || typeof value !== 'object') throw new Error('Сервер вернул некорректный ответ');
+2669-      setHealth('game', true, 'игра отвечает');
+2670-      setHealth('auth', true, 'авторизация активна');
+2671-      if (path === '/player/me') {
+2672-        const partial = !!(body && Array.isArray(body.arguments));
+2673:        if (partial) hkStateStore.merge(value, 'api:player/me-partial'); else { hkStateStore.replace(value, 'api:player/me'); value = hkStateStore.snapshot || value; }
+2674-      } else if (method !== 'GET' && (value.player || value.currencies || value.items || value.data?.player)) {
+2675:        hkStateStore.merge(value, `api:${path}`);
+2676-      }
+2677-      hkGameBridge.noteMutation(path, method);
+2678-      return value;
+2679-    }
+2680-  }
+2681-
+2682-  function deepObjects(value, depth = 0, output = []) {
+2683-    if (depth > 6 || value == null) return output;
+2684-    if (Array.isArray(value)) { for (const item of value) deepObjects(item, depth + 1, output); return output; }
+2685-    if (typeof value !== 'object') return output;
+2686-    output.push(value);
+2687-    for (const child of Object.values(value)) if (child && typeof child === 'object') deepObjects(child, depth + 1, output);
+--
+2936-      selectedFairSlotRules.set(button.dataset.ruleLot, allowed);
+2937-      renderFairSlotRules(); updateFairControls();
+2938-    });
+2939-  }
+2940-
+2941-  function updateFairControls() {
+2942-    const selected = root?.querySelector('#hk-fair-selected');
+2943-    if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
+2944-    const start = root?.querySelector('#hk-fair-start');
+2945-    const rulesValid = [...selectedFairLots].every(lotId => {
+2946-      const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
+2947-    });
+2948:    if (start) start.disabled = fairRunning || !selectedFairId || !selectedFairLots.size || !rulesValid;
+2949-    const stop = root?.querySelector('#hk-fair-stop');
+2950:    if (stop) stop.disabled = !fairRunning;
+2951-  }
+2952-
+2953-  function fairComboSettings() {
+2954-    return {
+2955-      exactLots:Math.max(0, Number(root?.querySelector('#hk-fair-exact-lots')?.value || 0))
+2956-    };
+2957-  }
+2958-
+2959-  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
+2960-    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
+2961-  }
+2962-
+--
+3067-      const decision = budgetDecision(row.cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+3068-      if (!decision.allowed) throw new Error(decision.problems.join('; '));
+3069-    }
+3070-    const beforeDoc = playerDocument;
+3071-    const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, beforeDoc)]));
+3072-    fairDocument = await apiJson('/shop/buy', 'POST', {shop_lot_id:row.lotId, payment_type:'INTERNAL', fair_id:selectedFairId, slot_id:slot.id, lotName:row.name, lotDescription:''});
+3073-    updateWalletFromResponse(fairDocument, row.cost);
+3074-    for (const part of costParts(row.cost)) appendExpense({section:'fair', lotId:row.lotId, name:gameText(row.name) || row.name,
+3075-      currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'purchased'});
+3076-  }
+3077-
+3078-  async function runFair() {
+3079:    if (!requireLicense() || fairRunning || !selectedFairLots.size) return;
+3080-    if ([...selectedFairLots].some(lotId => {
+3081-      const rule = selectedFairSlotRules.get(lotId); return !(rule?.regular || rule?.vip);
+3082-    })) {
+3083-      alert(tr('noCells')); return;
+3084-    }
+3085-    const buyLimit = Math.max(1, Number(root.querySelector('#hk-fair-buy-limit').value || 1));
+3086-    const rerollLimit = Math.max(0, Number(root.querySelector('#hk-fair-reroll-limit').value || 0));
+3087-    const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
+3088-    const combo = fairComboSettings();
+3089-    let state = fairState(selectedFairId);
+3090-    if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
+3091-    const cost = costParts(state?.fair_reroll_cost)[0];
+3092-    const worst = cost ? `${cost.quantity * rerollLimit} ${cost.id}` : '0';
+3093-    const maximumCrystalLotCost = fairCatalog.filter(row => selectedFairLots.has(row.lotId))
+3094-      .flatMap(row => costParts(row.cost)).filter(part => part.kind === 'currencies' && part.id === 'cur_prem')
+3095-      .reduce((maximum, part) => Math.max(maximum, part.quantity), 0) * buyLimit;
+3096-    const crystalNotice = maximumCrystalLotCost
+3097-      ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`)
+3098-      : '';
+3099-    if (!confirm(language === 'en'
+3100-      ? `Start searching for selected lots?\n\nTotal purchases: ${buyLimit}\nMaximum rerolls: ${rerollLimit}\nMaximum reroll cost: ${worst}${crystalNotice}`
+3101-      : `Запустить поиск выбранных лотов?\n\nВсего покупок: ${buyLimit}\nМаксимум прокруток: ${rerollLimit}\nМаксимальная цена прокруток: ${worst}${crystalNotice}`)) return;
+3102:    fairRunning = true; fairStop = false; updateFairControls();
+3103-    let bought = 0, bonusBought = 0, rerolls = 0, authRetries = 0;
+3104-    try {
+3105-      playerDocument = await apiJson('/player/me', 'POST');
+3106-      fairDocument = playerDocument;
+3107:      while (!fairStop && bought < buyLimit) {
+3108-        if (combo.exactLots && buyLimit - bought < 3) {
+3109-          log(either(`Остаток лимита ${buyLimit - bought}: для комбинации требуется минимум 3 покупки.`, `Remaining limit ${buyLimit - bought}: a combination requires at least 3 purchases.`), 'warn');
+3110-          break;
+3111-        }
+3112-        state = fairState(selectedFairId);
+3113-        if (!state) throw new Error('Выбранная ярмарка больше недоступна');
+3114-        let purchased = false;
+3115-        const options = fairSlotOptions(state);
+3116-        const targets = options.filter(({slot, vip, index}) => {
+3117-          // A combination spans all nine main cells: six regular and three
+3118-          // VIP. Encrypted bonus cells start after them and never count toward
+3119-          // the 3/6/9 group itself.
+--
+3163-              return selectedFairBonusLots.has(Number(row?.rewardQuantity || 0));
+3164-            });
+3165-            for (const {slot} of collars) {
+3166-              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+3167-              if (!row?.safe) continue;
+3168-              log(`Открытый слот ${Number(slot.id) + 1}: покупка…`);
+3169-              await executeFairPurchase(row, slot, allowPremium);
+3170-              bonusBought++; purchased = true; authRetries = 0;
+3171-            }
+3172-          }
+3173-        }
+3174-        if (!combo.exactLots) for (const {slot, vip} of options) {
+3175:          if (fairStop || bought >= buyLimit || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) continue;
+3176-          const allowedGroups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+3177-          if (allowedGroups && !(vip ? allowedGroups.vip : allowedGroups.regular)) continue;
+3178-          const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+3179-          if (!row?.safe) continue;
+3180-          log(`Лот найден. Покупка ${bought + 1}/${buyLimit}…`);
+3181-          try {
+3182-            await executeFairPurchase(row, slot, allowPremium);
+3183-            bought++; purchased = true; authRetries = 0; log(`Куплено ${bought}/${buyLimit}`, 'ok');
+3184-          } catch (error) {
+3185-            if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+3186-            throw error;
+3187-          }
+--
+3202-          for (const part of costParts(state.fair_reroll_cost)) appendExpense({section:'fair', lotId:`reroll:${selectedFairId}`, name:either('Прокрутка ярмарки','Fair reroll'),
+3203-            currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'rerolled'});
+3204-          rerolls++; authRetries = 0;
+3205-        }
+3206-        catch (error) {
+3207-          if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+3208-          throw error;
+3209-        }
+3210-        await sleep(550);
+3211-      }
+3212-      log(`Ярмарка завершена: выбранных покупок ${bought}, бонусных ${bonusBought}, прокруток ${rerolls}`, 'ok');
+3213-    } catch (error) { log(`Аварийная остановка ярмарки: ${error.message}`, 'bad'); }
+3214:    finally { fairRunning = false; fairStop = false; renderFair(); }
+3215-  }
+3216-
+3217-  function ordinaryShopGroup(lot) {
+3218-    const lotId = String(lot?.id || '').toLowerCase();
+3219-    // Each Resources card has one visible base lot plus three real hidden
+3220-    // package commands (_10, _50 and _100). They are separate shop_lot_id
+3221-    // values, not a quantity parameter on the base purchase.
+3222-    if (/^mf_shoplot_itempack_[1-5](?:_(?:10|50|100))?$/.test(lotId)) return 'resources';
+3223-    // Renovation contains the ten individual materials (two materials per tier).
+3224-    // The combined mf_shoplot_pit_remort_all pack is intentionally excluded.
+3225-    if (/^mf_shoplot_pit_remort_(?:beams|nails)_[1-5]$/.test(lotId)) return 'renovation';
+3226-    // Invest Deals contains the two daily building-helper offers only.
+--
+3440-      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+3441-      renderShop();
+3442-    });
+3443-    const selected = visibleRows.filter(row => selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
+3444-      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+3445-    const purchaseCount = selected.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
+3446-    const totals = new Map();
+3447-    for (const row of visibleRows) for (const part of costParts(row.cost)) addProjectedCost(totals, part, 0);
+3448-    for (const {row, count} of selected) for (const part of costParts(row.cost)) addProjectedCost(totals, part, count);
+3449-    const spending = [...totals.values()].filter(part => part.quantity > 0);
+3450-    const totalVisual = spending.length ? spending.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${part.quantity.toLocaleString(locale())}</b>`).join(' ') : '0';
+3451-    shopSummary.innerHTML = `<b>${tr('selectedPurchases',{n:purchaseCount})}</b><br><small>${tr('maxCost')}: ${totalVisual}</small>${walletForecastHtml(totals)}`;
+3452:    const buy = root?.querySelector('#hk-shop-buy'); if (buy) buy.disabled = shopRunning || !purchaseCount;
+3453-  }
+3454-
+3455-  async function buyRegularShop() {
+3456:    if (!requireLicense() || shopRunning) return;
+3457-    const plan = shopRows.filter(row => row.section === selectedShopSection &&
+3458-      (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
+3459-      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+3460-    if (!plan.length) return;
+3461-    const count = plan.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
+3462-    const budgetSection = selectedShopSection === 'clan' ? 'clan' : 'shop';
+3463-    const projectedProblems = plan.flatMap(item => budgetDecision(item.row.cost, budgetSection, item.count, playerDocument).problems);
+3464-    if (projectedProblems.length) {
+3465-      alert(`${either('Покупка заблокирована единым бюджетом','Purchase blocked by unified budget')}:\n\n${[...new Set(projectedProblems)].join('\n')}`);
+3466-      return;
+3467-    }
+3468-    const crystalCost = plan.reduce((sum, item) => sum + costParts(item.row.cost)
+3469-      .filter(part => part.kind === 'currencies' && part.id === 'cur_prem').reduce((value, part) => value + part.quantity * item.count, 0), 0);
+3470-    if (!confirm(language === 'en'
+3471-      ? `Buy ${count} selected items?${crystalCost ? `\n\nCrystal cost: ${crystalCost.toLocaleString(locale())} 💎` : ''}\n\nPurchases are irreversible. External payments are blocked.`
+3472-      : `Выкупить выбранные товары: ${count}?${crystalCost ? `\n\nСтоимость: ${crystalCost.toLocaleString(locale())} 💎` : ''}\n\nПокупки необратимы. Внешняя оплата заблокирована.`)) return;
+3473:    shopRunning = true; renderShop();
+3474-    let completed = 0;
+3475-    try {
+3476-      playerDocument = await apiJson('/player/me', 'POST');
+3477-      for (const {row, count:rowCount} of plan) {
+3478-        const requestCount = Math.min(rowCount, row.remaining, SHOP_UNLIMITED_RUN_MAX);
+3479-        const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+3480-        const requestBody = {shop_lot_id:row.lotId, payment_type:'INTERNAL', lotName:row.name, lotDescription:''};
+3481-        let purchasedRow = 0;
+3482-        try {
+3483-          if (isRenovationBatch(row)) {
+3484-            const decision = budgetDecision(row.cost, budgetSection, requestCount, playerDocument);
+3485-            if (!decision.allowed) throw new Error(decision.problems.join('; '));
+--
+3510-          }
+3511-        } finally {
+3512-          if (purchasedRow) for (const part of costParts(row.cost)) appendExpense({section:budgetSection, lotId:row.lotId, name:gameText(row.name) || row.name,
+3513-            currencyId:part.id, amount:part.quantity * purchasedRow, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:`purchased ${purchasedRow}/${requestCount}`});
+3514-        }
+3515-      }
+3516-      selectedShopLots.clear();
+3517-      selectedShopCounts.clear();
+3518-      log(either(`Покупки завершены: ${completed}`, `Purchases completed: ${completed}`), 'ok');
+3519-    } catch (error) {
+3520-      log(`${either('Остановка магазина', 'Shop stopped')}: ${error.message}`, 'bad');
+3521-    } finally {
+3522:      shopRunning = false;
+3523-      shopRows = normalizeRegularShop();
+3524-      renderShop();
+3525-    }
+3526-  }
+3527-
+3528-  function dailyLabel(row) {
+3529-    return clean(`${gameText(row?.name || '')} ${row?.name || ''} ${row?.rewardId || ''}`).toLowerCase();
+3530-  }
+3531-
+3532-  function dailyRecruitLot(row) {
+3533-    const label = dailyLabel(row);
+3534-    return /пополнени[ея]\s+рекрут|recruit\s+(?:replenishment|refill)|replenish(?:ment)?\s+recruit|нов(?:ые|ых)\s+рекрут|new\s+recruits?|салаг|rookies?/.test(label);
+--
+4315-    if (blocked.length) {
+4316-      alert(either('План заблокирован настройками бюджета','Plan blocked by budget settings') + ':\n\n' + blocked.join('\n'));
+4317-      return;
+4318-    }
+4319-    if (!confirm(dailyConfirmationText(actions))) return;
+4320-    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+4321-    hkRunner.start({title:either('Сегодня','Today'),total:actions.length,step:either('Подготовка плана','Preparing plan')});
+4322-    dailyRunning = true; renderDailyTasks();
+4323-    let completed = 0, skipped = 0;
+4324-    try {
+4325-      for (const action of actions) {
+4326-        if (hkRunner.signal?.aborted) break;
+4327:        await hkRunner.waitIfPaused();
+4328-        hkRunner.setStep(action.label, completed + skipped, actions.length);
+4329-        try {
+4330-          log(`${either('Выполняю','Running')}: ${action.label}`);
+4331-          if (action.kind === 'advertisement') await runDailyAd(true);
+4332-          else if (action.kind === 'pit') await executeDailyPit(action);
+4333-          else if (action.kind === 'purchase') await executeDailyPurchase(action);
+4334-          completed++;
+4335-        } catch (error) {
+4336-          skipped++;
+4337-          if (action.kind === 'purchase') for (const part of costParts(action.cost)) appendExpense({section:action.section, lotId:action.row?.lotId,
+4338-            name:action.label, currencyId:part.id, amount:part.quantity * Math.max(1, Number(action.count || 1)), status:'failed', result:error.message});
+4339-          log(`${either('Пропущено','Skipped')} «${action.label}»: ${error.message}`, 'warn');
+--
+4920-      recipeCards.innerHTML = `<p class="hk-muted">${tr('recipeReadFirst')}</p>`;
+4921-      recipeSummary.textContent = tr('uniqueRecipes',{n:0});
+4922-      const run = root?.querySelector('#hk-recipe-run'); if (run) run.disabled = true;
+4923-      return;
+4924-    }
+4925-    currentRecipePlans = plansFromRecipeState(state);
+4926-    recipeCards.innerHTML = currentRecipePlans.map(recipePlanHtml).join('') ||
+4927-      `<p class="hk-muted">${either('Сейчас все ячейки каталога пусты', 'All catalog slots are currently empty')}</p>`;
+4928-    installIconFallbacks(recipeCards);
+4929-    bindRecipeDetails(recipeCards, currentRecipePlans);
+4930-    const attempts = Math.max(1, Math.trunc(Number(root?.querySelector('#hk-recipe-attempts')?.value || 1)));
+4931-    recipeSummary.innerHTML = `<b>${tr('currentRecipePlans')}: ${currentRecipePlans.length}</b><br><small>${tr('recipeCost')}: ${costVisual(state.fair_reroll_cost)} · ${tr('maxCost')}: ${scaledCostVisual(state.fair_reroll_cost,attempts)}</small>`;
+4932:    const run = root?.querySelector('#hk-recipe-run'); if (run) run.disabled = recipeRunning;
+4933:    const stop = root?.querySelector('#hk-recipe-stop'); if (stop) stop.disabled = !recipeRunning;
+4934-  }
+4935-
+4936-  async function runRecipes() {
+4937:    if (!requireLicense() || recipeRunning || !recipeState()) return;
+4938-    const attempts = Math.max(1, Math.min(100, Math.trunc(Number(root.querySelector('#hk-recipe-attempts').value || 1))));
+4939-    let state = recipeState();
+4940-    if (!safeReroll(state.fair_reroll_cost, false)) { alert(either('Прокрутка заблокирована: неизвестная или платная валюта.', 'Reroll blocked: unknown or premium currency.')); return; }
+4941-    if (!confirm(either(`Прокрутить каталог бизнес-планов ${attempts} раз?\n\n${tr('maxCost')}: ${clean(root.querySelector('#hk-recipe-summary').textContent)}`,
+4942-      `Reroll the business-plan catalog ${attempts} times?\n\n${tr('maxCost')}: ${clean(root.querySelector('#hk-recipe-summary').textContent)}`))) return;
+4943:    recipeRunning = true; recipeStop = false; renderRecipes();
+4944-    let completed = 0;
+4945-    try {
+4946-      try { await submitRecipePlans(plansFromRecipeState(state)); } catch (_) {}
+4947:      for (let index = 0; index < attempts && !recipeStop; index++) {
+4948-        log(either(`Прокрутка каталога ${index + 1}/${attempts}…`, `Catalog reroll ${index + 1}/${attempts}…`));
+4949-        fairDocument = await apiJson('/fair/reroll', 'POST', {fair_id:recipeFairId});
+4950-        state = recipeState(fairDocument);
+4951-        if (!state) throw new Error(either('Сервер не вернул каталог бизнес-планов', 'The server did not return the business-plan catalog'));
+4952-        currentRecipePlans = plansFromRecipeState(state);
+4953-        completed++;
+4954-        try { await submitRecipePlans(currentRecipePlans); }
+4955-        catch (error) { log(`${either('Общая база недоступна', 'Shared database unavailable')}: ${error.message}`, 'warn'); }
+4956-        renderRecipes();
+4957-        await sleep(550);
+4958-      }
+4959-      log(either(`Прокрутка завершена: ${completed}`, `Rerolls completed: ${completed}`), 'ok');
+4960-    } catch (error) { log(`${either('Прокрутка остановлена', 'Reroll stopped')}: ${error.message}`, 'bad'); }
+4961:    finally { recipeRunning = false; recipeStop = false; renderRecipes(); }
+4962-  }
+4963-
+4964-  async function loadCommunityRecipes() {
+4965-    if (!requireLicense()) return;
+4966-    try {
+4967-      await ensureRecipeMetadata();
+4968-      const result = await recipeServerJson('/list');
+4969-      communityRecipes = Array.isArray(result.recipes) ? result.recipes : [];
+4970-      renderCommunityRecipes();
+4971-      log(tr('uniqueRecipes',{n:communityRecipes.length}), 'ok');
+4972-    } catch (error) { log(`${either('Ошибка общей базы', 'Shared database error')}: ${error.message}`, 'bad'); }
+4973-  }
+--
+5118-    installIconFallbacks(bureauCards);
+5119-    bureauCards.querySelectorAll('[data-bureau-input]').forEach(input => input.onchange = () => {
+5120-      const id = input.dataset.bureauInput;
+5121-      const stock = bureauInventory.find(row => row.businessId === id)?.quantity || 0;
+5122-      const without = [...selectedBureauInputs].reduce((sum,[key,value]) => sum + (key === id ? 0 : Number(value || 0)), 0);
+5123-      const count = Math.min(stock, Math.max(0, bureauSize - without), Math.max(0, Math.trunc(Number(input.value || 0))));
+5124-      count ? selectedBureauInputs.set(id,count) : selectedBureauInputs.delete(id);
+5125-      renderProjectBureau();
+5126-    });
+5127-    const selectedCount = [...selectedBureauInputs.values()].reduce((sum,value) => sum + Number(value || 0), 0);
+5128-    const attempts = Math.max(1, Math.trunc(Number(root?.querySelector('#hk-bureau-attempts')?.value || 1)));
+5129-    bureauSummary.innerHTML = `<b>${tr('bureauSelected',{n:selectedCount,max:bureauSize})}</b><br><small>${tr('maxCost')}: ${scaledCostVisual(bureauCost(),attempts)}</small>`;
+5130:    const run = root?.querySelector('#hk-bureau-run'); if (run) run.disabled = bureauRunning || selectedCount !== bureauSize;
+5131-  }
+5132-
+5133-  async function runProjectBureau() {
+5134:    if (!requireLicense() || bureauRunning) return;
+5135-    const inputs = [...selectedBureauInputs].flatMap(([id,count]) => Array(Math.max(0,Number(count || 0))).fill(id));
+5136-    if (inputs.length !== bureauSize) return;
+5137-    const attempts = Math.max(1, Math.min(100, Math.trunc(Number(root.querySelector('#hk-bureau-attempts').value || 1))));
+5138-    const available = new Map(bureauInventory.map(row => [row.businessId,row.quantity]));
+5139-    if ([...selectedBureauInputs].some(([id,count]) => Number(count) * attempts > (available.get(id) || 0))) {
+5140-      alert(either('На складе недостаточно выбранных бизнесов для такого количества созданий.', 'Not enough selected businesses in stock for this creation count.')); return;
+5141-    }
+5142-    if (!confirm(either(`Создать бизнес-планы: ${attempts}?\n\n${tr('maxCost')}: ${scaledCostVisual(bureauCost(),attempts).replace(/<[^>]+>/g,' ')}`,
+5143-      `Create business plans: ${attempts}?\n\n${tr('maxCost')}: ${scaledCostVisual(bureauCost(),attempts).replace(/<[^>]+>/g,' ')}`))) return;
+5144:    bureauRunning = true; renderProjectBureau();
+5145-    let completed = 0;
+5146-    try {
+5147-      for (let index = 0; index < attempts; index++) {
+5148-        log(either(`Создаю бизнес-план ${index + 1}/${attempts}…`, `Creating business plan ${index + 1}/${attempts}…`));
+5149-        playerDocument = await apiJson('/player/business/recipe/craft', 'POST', {businesses:inputs});
+5150-        completed++;
+5151-        await sleep(450);
+5152-      }
+5153-      playerDocument = await apiJson('/player/me', 'POST');
+5154-      bureauInventory = normalizeInventory(playerDocument);
+5155-      selectedBureauInputs.clear();
+5156-      log(either(`Создано бизнес-планов: ${completed}`, `Business plans created: ${completed}`), 'ok');
+5157-    } catch (error) { log(`${either('Проектное бюро остановлено', 'Project Bureau stopped')}: ${error.message}`, 'bad'); }
+5158:    finally { bureauRunning = false; renderProjectBureau(); }
+5159-  }
+5160-
+5161-  function refreshBusinessData() {
+5162-    if (!playerDocument) return;
+5163-    layout = normalizeLayout(playerDocument)
+5164-      .filter(row => row.timer == null || Number(row.timer) === 0)
+5165-      .filter(row => row.businessId ? row.status === 'ACTIVE' : ['INACTIVE', '', null].includes(row.status));
+5166-    inventory = normalizeInventory(playerDocument);
+5167-    selectedSlots = new Set([...selectedSlots].filter(key => layout.some(row => row.key === key)));
+5168-    // Empty active slots are destinations, not businesses to remove. They must
+5169-    // always increase insertion capacity even when a tier filter hides them.
+5170-    if (!preparedBusinessPlan) for (const row of layout) if (!row.businessId) selectedSlots.add(row.key);
+--
+6381-      excludeCurrentEventHamsters:saved.excludeCurrentEventHamsters===true,
+6382-      copyPriority:growthNormalizePriority(saved.copyPriority)
+6383-    };
+6384-  }
+6385-
+6386-  function saveGrowthSettings(patch={}){
+6387-    const next={...growthSettings(),...patch};
+6388-    next.copyPriority=growthNormalizePriority(next.copyPriority);
+6389-    save({growth:next});
+6390-    return next;
+6391-  }
+6392-
+6393:  function growthContainers(documentValue=growthState||hkStateStore.snapshot||playerDocument){
+6394-    const rows=[documentValue,documentValue?.player,documentValue?.result,documentValue?.data,documentValue?.data?.player].filter(value=>value&&typeof value==='object');
+6395-    return [...new Set(rows)];
+6396-  }
+6397:  function growthArray(key,documentValue=growthState||hkStateStore.snapshot||playerDocument){ for(const value of growthContainers(documentValue)) if(Array.isArray(value?.[key])) return value[key]; return []; }
+6398:  function growthResource(id,state=growthState||hkStateStore.snapshot||playerDocument){ return Math.max(0,Number(walletAmount(id,state)||0)); }
+6399:  function growthInventoryMap(state=growthState||hkStateStore.snapshot||playerDocument){ const map=new Map(); for(const row of growthArray('items',state)){const id=String(row?.item_id||row?.id||'');if(id)map.set(id,Math.max(0,Math.floor(Number(row?.quantity||0))));} return map; }
+6400-  function growthCapCost(cost){ return costParts(cost).filter(row=>row.kind==='currencies'&&row.id===GROWTH_HAMSTER_BUDGET_ID).reduce((sum,row)=>sum+Math.max(0,row.quantity),0); }
+6401-  function growthCostText(cost){
+6402-    const parts=costParts(cost).filter(row=>row.id&&row.quantity>0);
+6403-    return parts.length?parts.map(row=>`${Math.trunc(row.quantity).toLocaleString(locale())} ${paymentLabel(row.id)}`).join(' + '):either('без расхода','no cost');
+6404-  }
+6405-  function growthPitCost(cost){ return costParts(cost).filter(row=>row.kind==='items'&&row.id===GROWTH_GENERAL_BUDGET_ID).reduce((sum,row)=>sum+Math.max(0,row.quantity),0); }
+6406-  function growthSafeCost(cost){ return costParts(cost).every(row=>row.id&&row.quantity>0&&!['cur_prem','cur_hard'].includes(row.id)); }
+6407-  function growthHamsterCostSafe(cost){ return growthSafeCost(cost)&&growthPitCost(cost)===0; }
+6408-  function growthHamsterLevelCostSafe(cost){ return growthHamsterCostSafe(cost)&&growthCapCost(cost)>0; }
+6409:  function growthCanAfford(cost,state=growthState||hkStateStore.snapshot||playerDocument){ return growthSafeCost(cost)&&costParts(cost).every(row=>growthResource(row.id,state)>=row.quantity); }
+6410-  function growthHasClanCost(cost){const value=cost?.clan_currency_cost;return Array.isArray(value)?value.length>0:(value&&typeof value==='object'?Object.keys(value).length>0:!!value);}
+6411-  function growthGeneralFragmentCost(itemId){const id=String(itemId||'').toLowerCase();return id.includes('hgen')&&(id.includes('fragment')||id.includes('fragmet'));}
+6412:  function growthTotalPower(state=growthState||hkStateStore.snapshot||playerDocument){ return growthArray('playerFactions',state).reduce((sum,row)=>sum+Number(row?.power||0),0); }
+6413-  function growthHamsterById(state,id){return growthArray('playerHamsters',state).find(row=>String(row?.hamster_id||'')===String(id))||null;}
+6414-  function growthGeneralById(state,id){return growthArray('player_hamster_generals',state).find(row=>String(row?.hamster_id||'')===String(id))||null;}
+6415-
+6416-  function growthStateFrom(value,reason='growth',full=true){
+6417:    if(value&&typeof value==='object') full?hkStateStore.replace(value,reason):hkStateStore.merge(value,reason);
+6418:    growthState=hkStateStore.snapshot||value||growthState||playerDocument;
+6419-    if(growthState) playerDocument=growthState;
+6420-    return growthState;
+6421-  }
+6422-  function growthResponseArray(data,key){ for(const value of growthContainers(data)) if(Array.isArray(value?.[key])) return value[key]; return null; }
+6423-  function growthMergeMutation(data,reason='growth-mutation'){
+6424:    if(data&&typeof data==='object') hkStateStore.merge(data,reason);
+6425:    growthState=hkStateStore.snapshot||growthState||data;
+6426-    if(growthState) playerDocument=growthState;
+6427-    return growthState;
+6428-  }
+6429-  function growthFindNamed(data,name,id){
+6430-    if(Array.isArray(data)){for(const value of data){const found=growthFindNamed(value,name,id);if(found)return found;}return null;}
+6431-    if(!data||typeof data!=='object')return null;
+6432-    if(Array.isArray(data[name])){const found=data[name].find(row=>String(row?.hamster_id||row?.id||'')===String(id));if(found)return found;}
+6433-    for(const value of Object.values(data)){if(value&&typeof value==='object'){const found=growthFindNamed(value,name,id);if(found)return found;}}
+6434-    return null;
+6435-  }
+6436-  function growthResponseHas(data,key){ return !!growthResponseArray(data,key); }
+6437-  function growthResponseHasResource(data,id){
+--
+6456-      debitWallet({[bucket]:[{id:part.id,quantity:part.quantity}]},1,state);
+6457-    }
+6458-  }
+6459-  function growthStateError(error){const status=Number(error?.httpStatus||0),text=String(error?.apiData?.description||error?.apiData?.message||error?.message||'').toLowerCase();return [400,409].includes(status)&&(['not enough','insufficient','currency','currencies','item','items','shard','balance','cost','mismatch','not available','cannot afford','already','invalid state'].some(x=>text.includes(x))||status===409);}
+6460-
+6461-  function growthDisplayName(id){
+6462-    const key=String(id||''),meta=growthStaticHamsterMeta(key)||growthStaticItemMeta(key),nameKey=String(meta?.name||'');
+6463-    if(nameKey){const localized=gameText(nameKey);if(localized&&localized!==nameKey.replace(/_/g,' '))return localized;}
+6464-    return key.replace(/^item_hball_hgen_/,'').replace(/^item_h_ball_/,'').replace(/^item_hball_/,'').replace(/^item_hamsters_ball_/,'').replace(/^item_/,'').replace(/^cur_/,'').replace(/_/g,' ');
+6465-  }
+6466-
+6467-  function growthAbortCheck(){if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');}
+6468:  async function growthCheckpoint(step=''){await hkRunner.waitIfPaused();growthAbortCheck();if(step)hkRunner.setStep(step);}
+6469-
+6470-  async function growthStaticJson(path){
+6471-    const request=nativeNetworkFetch||window.fetch.bind(window);
+6472-    const {response,text}=await gameFetchText(request,`${GROWTH_STATIC_API}/${path}`,{cache:'no-store'},15000);
+6473-    if(!response.ok)throw new Error(`${path}: HTTP ${response.status}`);
+6474-    try{return JSON.parse(text);}catch(_){throw new Error(`${path}: invalid JSON`);}
+6475-  }
+6476-  async function growthEnsureStatic(){
+6477-    const jobs=[];
+6478-    if(!growthItemsDocument) jobs.push(growthStaticJson('items').then(data=>{growthItemsDocument=Array.isArray(data)?data:(data?.items||[]);if(!itemCatalogDocument&&growthItemsDocument.length)itemCatalogDocument=growthItemsDocument;}).catch(async()=>{const data=await apiJson('/items','GET');growthItemsDocument=Array.isArray(data)?data:(data?.items||[]);if(!itemCatalogDocument&&growthItemsDocument.length)itemCatalogDocument=growthItemsDocument;}));
+6479-    if(!growthHamstersStaticDocument) jobs.push(growthStaticJson('hamsters/view').then(data=>growthHamstersStaticDocument=data));
+6480-    if(!localizationDocument) jobs.push(apiJson(`/localization/${language}`,'GET').then(data=>localizationDocument=data).catch(()=>null));
+--
+6519-    log(either('Состояние изменилось — автоматически перечитываю аккаунт…','State changed — automatically refreshing the account…'),'warn');
+6520-    const fresh=await growthLoadLive({force:true,loadShop:true,loadConfig:false,silent:true});
+6521-    recordDiagnostic('growth-state-recovery',{reason,ok:!!fresh});
+6522-    return fresh||growthState;
+6523-  }
+6524-
+6525-  function growthHamsterMaxLevel(hamster){return Math.max(GROWTH_HAMSTER_BASE_MAX_LEVEL,GROWTH_HAMSTER_BASE_MAX_LEVEL+Math.max(0,Math.floor(Number(hamster?.add_bonus_max_level||0))));}
+6526-  function growthAccountHamsterMaxLevel(state=growthState){let max=GROWTH_HAMSTER_BASE_MAX_LEVEL;for(const hamster of growthArray('playerHamsters',state))max=Math.max(max,growthHamsterMaxLevel(hamster));return max;}
+6527-  function growthCopyPair(hamster){return [Number(hamster?.quantity||0),Number(hamster?.nextUpgrade?.shardsQuantity||0)];}
+6528-  function growthCopyCandidates(state,priority){const index=new Map(priority.map((pair,i)=>[`${pair[0]}/${pair[1]}`,i]));return growthArray('playerHamsters',state).filter(h=>{const pair=growthCopyPair(h);return h?.hamster_id&&h?.nextUpgrade&&index.has(`${pair[0]}/${pair[1]}`);}).sort((a,b)=>index.get(growthCopyPair(a).join('/'))-index.get(growthCopyPair(b).join('/'))||String(a.hamster_id).localeCompare(String(b.hamster_id)));}
+6529-
+6530-  function growthSummaryMarkup(){
+6531:    const state=growthState||hkStateStore.snapshot||playerDocument, hamsters=growthArray('playerHamsters',state), generals=growthArray('player_hamster_generals',state), settings=growthSettings();
+6532-    const caps=growthResource(GROWTH_HAMSTER_BUDGET_ID,state),nuts=growthResource('cur_nut',state),pit=growthResource(GROWTH_GENERAL_BUDGET_ID,state),max=growthAccountHamsterMaxLevel(state),copyTargets=growthCopyCandidates(state,settings.copyPriority).filter(h=>{const [owned,required]=growthCopyPair(h);return required>owned;}).length;
+6533-    const live=growthMenuLoading?either('Считываю…','Loading…'):(growthLastLoadedAt?new Date(growthLastLoadedAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit',second:'2-digit'}):either('ожидание','waiting'));
+6534-    return `<div class="hk-growth-live"><span>● ${either('LIVE','LIVE')} · ${escapeHtml(live)}</span><small>${either('Состояние обновляется автоматически при открытии вкладки и перед запуском.','State refreshes automatically when opening a tab and before a run.')}</small></div><div class="hk-growth-stats"><div><small>${either('Хомяки','Hamsters')}</small><b>${hamsters.length.toLocaleString(locale())}</b></div><div><small>${either('Генералы','Generals')}</small><b>${generals.length.toLocaleString(locale())}</b></div><div><small>${either('Крышки','Caps')}</small><b>${Math.round(caps).toLocaleString(locale())}</b></div><div><small>${either('Орехи','Nuts')}</small><b>${Math.round(nuts).toLocaleString(locale())}</b></div><div><small>${either('Pit Tokens','Pit Tokens')}</small><b>${Math.round(pit).toLocaleString(locale())}</b></div><div><small>${either('AUTO max ур.','AUTO max lvl')}</small><b>${max}</b></div><div><small>${either('Целей копий','Copy targets')}</small><b>${copyTargets}</b></div></div>`;
+6535-  }
+6536-
+6537-  function growthPriorityMarkup(settings=growthSettings()){
+6538-    if(!settings.copyPriority.length)return `<div class="hk-muted">${either('Приоритет пуст. Нажмите «Сбросить».','Priority is empty. Press Reset.')}</div>`;
+6539-    return settings.copyPriority.map((pair,index)=>`<div class="hk-growth-priority" data-growth-priority-index="${index}"><b>${pair[0]} / ${pair[1]}</b><span>${either('копий / нужно для редкости','owned / required for rarity')}</span><div><button class="hk-secondary" data-growth-priority-move="up" ${index===0?'disabled':''}>↑</button><button class="hk-secondary" data-growth-priority-move="down" ${index===settings.copyPriority.length-1?'disabled':''}>↓</button><button class="hk-danger" data-growth-priority-remove>−</button></div></div>`).join('');
+6540-  }
+6541-  function growthPlanText(settings=growthSettings()){
+6542-    const prep=settings.runPreparation?[settings.buyGeneralContracts?either('контракты','contracts'):'',settings.openAllBalls?either('шары','balls'):'',settings.openAllBoxes?either('коробки','boxes'):''].filter(Boolean).join(' → '):either('выкл.','off');
+6543-    const general=settings.runGenerals?`${settings.generalPitPercent}% Pit · ${settings.generalLevelUpMode==='fast10'?'×10':'×1'} · ${either('вес Ямы','Pit weight')} ${settings.generalMobsterPitWeight===1?'—':`×${settings.generalMobsterPitWeight}`}`:either('выкл.','off');
+--
+6793-  }
+6794-
+6795-  function growthMovePriority(index,direction){const settings=growthSettings(),rows=growthClonePriority(settings.copyPriority),to=index+(direction==='up'?-1:1);if(index<0||to<0||index>=rows.length||to>=rows.length)return;[rows[index],rows[to]]=[rows[to],rows[index]];saveGrowthSettings({copyPriority:rows});renderGrowth();}
+6796-  function growthRemovePriority(index){const settings=growthSettings(),rows=growthClonePriority(settings.copyPriority);if(index<0||index>=rows.length)return;rows.splice(index,1);saveGrowthSettings({copyPriority:rows});renderGrowth();}
+6797-  function growthResetPriority(){saveGrowthSettings({copyPriority:growthClonePriority(GROWTH_COPY_PRIORITY_DEFAULT)});renderGrowth();}
+6798-
+6799-  let growthRenderTimer = null;
+6800-  function scheduleGrowthRender(){
+6801-    if(!root?.querySelector('.hk-page.active[data-content^="growth"]'))return;
+6802-    if(growthRenderTimer)return;
+6803-    growthRenderTimer=setTimeout(()=>{growthRenderTimer=null;renderGrowth();},hkRunner.running?180:40);
+6804-  }
+6805:  hkStateStore.subscribe(event=>{
+6806-    if(!event?.snapshot)return;growthState=event.snapshot;scheduleGrowthRender();
+6807-  });
+6808-
+6809-  function applyLanguage() {
+6810-    if (!root) return;
+6811-    root.querySelectorAll('[data-i18n]').forEach(element => { element.textContent = tr(element.dataset.i18n); });
+6812-    root.querySelectorAll('[data-i18n-placeholder]').forEach(element => { element.placeholder = tr(element.dataset.i18nPlaceholder); });
+6813-    root.querySelectorAll('[data-nav-ru][data-nav-en]').forEach(element => {
+6814-      const label = language === 'en' ? element.dataset.navEn : element.dataset.navRu;
+6815-      const target = element.querySelector('.hk-tab-label');
+6816-      if (target) target.textContent = label; else if (!element.classList.contains('planned')) element.textContent = label;
+6817-      element.title = label; element.setAttribute('aria-label', label);
+--
+6950-    const restoreInsideViewport = () => place(load().fabPosition || snapshot());
+6951-    window.addEventListener('resize', restoreInsideViewport);
+6952-    window.addEventListener('orientationchange', restoreInsideViewport);
+6953-    fab.addEventListener('keydown', event => {
+6954-      if (event.key !== 'Enter' && event.key !== ' ') return;
+6955-      panel.classList.add('open'); updateWatermark(); event.preventDefault();
+6956-    });
+6957-    window.addEventListener('resize', () => place(load().fabPosition), {passive:true});
+6958-  }
+6959-
+6960-  const MODULE_LIVE_TTL_MS = 12000;
+6961-  const moduleLiveState = new Map();
+6962:  function moduleMutationBusy(){return !!(hkRunner.running||pitRunning||businessBusy||fairRunning||shopRunning||recipeRunning||bureauRunning||resourceBusy||mapScanning||dailyRunning||clanSkillScanning||growthBusy);}
+6963-  async function refreshModuleLive(page, {force=false} = {}) {
+6964-    const key = String(page || '');
+6965-    if (!key || key.startsWith('growth')) return null;
+6966:    if(moduleMutationBusy()){recordDiagnostic('module-live-read-deferred',{page:key});return null;}
+6967-    const existing = moduleLiveState.get(key) || {at:0,promise:null};
+6968-    if (existing.promise) return existing.promise;
+6969-    if (!force && Date.now() - Number(existing.at || 0) < MODULE_LIVE_TTL_MS) return null;
+6970-    let liveReadOk=false;
+6971-    const task = (async () => {
+6972-      try {
+6973-        if (!licenseState.allowed) {
+6974-          const connected = await bootstrapLateGameConnection();
+6975-          if (!connected || !playerDocument) return null;
+6976-          await checkLicense(playerDocument.player || {}, true);
+6977-          if (!licenseState.allowed) return null;
+6978-        }
+--
+7353-    root.querySelector('#hk-daily-run').onclick = runDailySelected;
+7354-    root.querySelector('#hk-daily-clear').onclick = () => { if (logBox) logBox.innerHTML = ''; if (statusLine) statusLine.textContent = tr('dailyReady'); };
+7355-    root.querySelector('#hk-pit-start').onclick = () => {
+7356-      if (!requireLicense()) return;
+7357-      settings = {
+7358-        target: Math.max(1, Number(root.querySelector('#hk-target').value || 1)),
+7359-        interval: Math.max(.7, Number(root.querySelector('#hk-interval').value || 1.2)),
+7360-        activationLimit: Math.max(0, Number(root.querySelector('#hk-activation-limit').value || 0)),
+7361-        restoreLimit: Math.max(0, Number(root.querySelector('#hk-restore-limit').value || 0)),
+7362-        allowTokens: root.querySelector('#hk-allow-tokens').checked,
+7363-        collectOnly: root.querySelector('#hk-pit-collect-only').checked
+7364-      };
+7365:      save({settings}); activationSpent = 0; restoreSpent = 0; pitRunStart = (() => { const state=pitState(); return {round:state.round,power:pitPowerValue(state)}; })(); pitRunning = true; updatePitButtons(); log(settings.collectOnly ? either('Запущен безопасный сбор данных Ямы без боя','Started safe Pit data collection without battle') : `Автобой запущен до раунда ${settings.target}`); pitLoop();
+7366-    };
+7367:    root.querySelector('#hk-pit-stop').onclick = () => { pitRunning = false; updatePitButtons(); log('Автобой остановлен'); };
+7368-    root.querySelector('#hk-export').onclick = exportPowers;
+7369-    root.querySelector('#hk-refresh-game').onclick = () => location.reload();
+7370-    root.querySelector('#hk-optimizer-calculate').onclick = calculateBusinessOptimizer;
+7371-    root.querySelector('#hk-optimizer-restore').onclick = prepareOriginalBusinessRestore;
+7372-    root.querySelector('#hk-remove-tier').onchange = renderBusinessLists;
+7373-    root.querySelector('#hk-insert-tier').onchange = renderBusinessLists;
+7374-    root.querySelector('#hk-select-remove').onclick = () => {
+7375-      preparedBusinessPlan = null; preparedBusinessPlanSource = '';
+7376-      const filter = Number(root.querySelector('#hk-remove-tier').value || 0);
+7377-      layout.filter(row => filter === 0 ? true : filter === -1 ? !row.businessId : !!row.businessId && tier(row.businessId) === filter)
+7378-        .forEach(row => selectedSlots.add(row.key));
+7379-      renderBusinessLists();
+--
+7382-    root.querySelector('#hk-delete-preset').onclick = deletePreset;
+7383-    root.querySelector('#hk-fair-load').onclick = () => refreshModuleLive('fair',{force:true});
+7384-    root.querySelector('#hk-fair-save-preset').onclick = () => saveFairPreset();
+7385-    root.querySelector('#hk-fair-update-preset').onclick = () => fairPresetSelect?.value ? saveFairPreset(fairPresetSelect.value) : saveFairPreset();
+7386-    root.querySelector('#hk-fair-delete-preset').onclick = deleteFairPreset;
+7387-    fairPresetSelect.onchange = () => loadFairPreset(fairPresetSelect.value);
+7388-    root.querySelector('#hk-fair-search').oninput = renderFair;
+7389-    const exactFairLots = root.querySelector('#hk-fair-exact-lots');
+7390-    exactFairLots.oninput = exactFairLots.onchange = () => { renderFairBonusChoices(); updateFairControls(); };
+7391-    root.querySelector('#hk-fair-buy-limit').oninput = updateFairControls;
+7392-    root.querySelector('#hk-fair-reroll-limit').oninput = updateFairControls;
+7393-    root.querySelector('#hk-fair-start').onclick = runFair;
+7394:    root.querySelector('#hk-fair-stop').onclick = () => { fairStop = true; log('Останавливаю ярмарку после текущего запроса…', 'warn'); };
+7395-    renderFairBonusChoices();
+7396-    root.querySelector('#hk-shop-load').onclick = () => refreshModuleLive('shop',{force:true});
+7397-    root.querySelector('#hk-shop-buy').onclick = buyRegularShop;
+7398-    root.querySelector('#hk-shop-select').onclick = () => {
+7399-      selectedShopLots.clear();
+7400-      selectedShopCounts.clear();
+7401-      shopRows.filter(row => row.section === selectedShopSection &&
+7402-        (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && row.safe && row.remaining > 0)
+7403-        .forEach(row => { selectedShopLots.add(row.lotId); selectedShopCounts.set(row.lotId, defaultShopPurchaseCount(row)); });
+7404-      renderShop();
+7405-    };
+7406-    root.querySelectorAll('[data-shop-section]').forEach(button => button.onclick = () => {
+--
+7419-      renderShop();
+7420-    });
+7421-    root.querySelectorAll('[data-recipe-pane]').forEach(button => button.onclick = () => {
+7422-      root.querySelectorAll('[data-recipe-pane]').forEach(element => element.classList.toggle('active', element === button));
+7423-      root.querySelectorAll('[data-recipe-content]').forEach(element => element.classList.toggle('active', element.dataset.recipeContent === button.dataset.recipePane));
+7424-      if(button.dataset.recipePane==='spin')void refreshModuleLive('recipes',{force:true});
+7425-      if(button.dataset.recipePane==='database')void loadCommunityRecipes();
+7426-      if(button.dataset.recipePane==='bureau')void loadProjectBureau();
+7427-    });
+7428-    root.querySelector('#hk-recipe-load').onclick = () => refreshModuleLive('recipes',{force:true});
+7429-    root.querySelector('#hk-recipe-attempts').oninput = renderRecipes;
+7430-    root.querySelector('#hk-recipe-run').onclick = runRecipes;
+7431:    root.querySelector('#hk-recipe-stop').onclick = () => { recipeStop = true; log(either('Останавливаю после текущей прокрутки…', 'Stopping after the current reroll…'), 'warn'); };
+7432-    root.querySelector('#hk-recipe-db-load').onclick = loadCommunityRecipes;
+7433-    root.querySelector('#hk-bureau-load').onclick = loadProjectBureau;
+7434-    root.querySelector('#hk-bureau-tier').onchange = event => { bureauTier = Number(event.target.value || 0); renderProjectBureau(); };
+7435-    root.querySelector('#hk-bureau-attempts').oninput = renderProjectBureau;
+7436-    root.querySelector('#hk-bureau-run').onclick = runProjectBureau;
+7437-    root.querySelector('#hk-map-load').onclick = () => loadMapIndex(false);
+7438-    root.querySelector('#hk-map-scan').onclick = () => submitOwnedMapAreas(true);
+7439-    root.querySelectorAll('[data-map-source]').forEach(button => button.onclick = () => setMapSource(button.dataset.mapSource));
+7440-    root.querySelector('#hk-map-search').oninput = renderMapIndex;
+7441-    root.querySelector('#hk-map-sort').onchange = renderMapIndex;
+7442-    root.querySelector('#hk-map-back').onclick = renderMapIndex;
+7443-    root.querySelector('#hk-map-zoom-out').onclick = () => changeMapZoom(mapZoom / 1.4);
