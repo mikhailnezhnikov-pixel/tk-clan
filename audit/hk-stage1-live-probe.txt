@@ -1,0 +1,6 @@
+version=1.14.4
+revision=missing
+hamsters=cur_cap
+generals=item_pit_token
+syntax=ok
+sha256=8a7212469cb8598cc3b6b16f523c9aeae2ba33ae91fce3439e920283d2f63abf
