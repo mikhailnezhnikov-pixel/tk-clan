@@ -1,4 +1,5 @@
 from pathlib import Path
+# deploy-retry: round-trip server verification
 
 def apply_hotfix(text):
     s=text
