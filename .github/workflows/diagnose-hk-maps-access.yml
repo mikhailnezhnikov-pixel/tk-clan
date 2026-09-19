@@ -1,0 +1,48 @@
+name: Diagnose HK maps access
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diagnose-hk-maps-access.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH key
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inspect access state
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 - <<'"'"'PY'"'"'
+          import sqlite3
+          DB="/var/lib/hamsterking-license/licenses.db"
+          with sqlite3.connect(DB) as db:
+              total=db.execute("select count(*) from clan_members where active=1").fetchone()[0]
+              access=db.execute("select count(*) from clan_members where active=1 and coalesce(maps_access,0)=1").fetchone()[0]
+              manage=db.execute("select count(*) from clan_members where active=1 and coalesce(maps_manage,0)=1").fetchone()[0]
+              print(f"ACTIVE_MEMBERS={total}")
+              print(f"MAPS_ACCESS={access}")
+              print(f"MAPS_MANAGE={manage}")
+              tables=[r[0] for r in db.execute("select name from sqlite_master where type='"'"'table'"'"' order by name")]
+              for t in tables:
+                  if "session" in t.lower() or "member" in t.lower():
+                      cols=[r[1] for r in db.execute(f"pragma table_info({t})")]
+                      print("TABLE",t,"COLUMNS",",".join(cols))
+          PY'
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
