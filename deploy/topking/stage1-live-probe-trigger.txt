@@ -1,2 +1,2 @@
-probe=2026-09-19T14:34:00Z
-purpose=stage2c-fixed-full-chain
+probe=2026-09-19T14:41:00Z
+purpose=full-stage2-a-through-f
