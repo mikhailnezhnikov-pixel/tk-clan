@@ -158,6 +158,51 @@
     .guide-step ol{margin:0;padding-left:20px;color:#cbd1da}
     .guide-step li+li{margin-top:8px}
 
+
+    /* HK Maps Index */
+    .hkmap-card{padding:26px}
+    .hkmap-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+    .hkmap-head h2{margin:0;color:#fff;font-size:30px}
+    .hkmap-head .stats-sub{margin-top:8px}
+    .hkmap-mini-stats{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:9px;margin-top:18px}
+    .hkmap-mini{padding:13px 14px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(8,11,16,.46)}
+    .hkmap-mini span{display:block;color:var(--muted);font-size:11px}
+    .hkmap-mini b{display:block;margin-top:4px;color:var(--gold-light);font-size:20px}
+    .hkmap-tools{display:flex;align-items:center;gap:10px;margin:16px 0 12px}
+    .hkmap-tools input{width:min(460px,100%);min-width:0}
+    .hkmap-count{color:var(--muted);font-size:12px;white-space:nowrap}
+    .hkmap-table-wrap{overflow:auto;max-height:68vh;border:1px solid rgba(255,255,255,.09);border-radius:16px;background:rgba(8,11,16,.48)}
+    .hkmap-table{width:100%;min-width:1250px;border-collapse:collapse;font-variant-numeric:tabular-nums}
+    .hkmap-table th,.hkmap-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.065);text-align:right;white-space:nowrap;font-size:12px}
+    .hkmap-table th{position:sticky;top:0;z-index:2;background:#0d1118;color:#c7a75f;cursor:pointer;user-select:none}
+    .hkmap-table th:first-child,.hkmap-table td:first-child{text-align:left}
+    .hkmap-table th[data-sort-direction="asc"]:after{content:" ▲";color:#ffe0a0}
+    .hkmap-table th[data-sort-direction="desc"]:after{content:" ▼";color:#ffe0a0}
+    .hkmap-row{cursor:pointer}
+    .hkmap-row:hover td{background:rgba(255,255,255,.025)}
+    .hkmap-row.is-open td{background:rgba(232,182,84,.07)}
+    .hkmap-progress{display:inline-flex;align-items:center;justify-content:center;min-width:58px;padding:4px 7px;border-radius:999px;background:rgba(232,182,84,.10);color:#ead08d;font-weight:850}
+    .hkmap-progress.ready{background:rgba(65,177,103,.10);color:#98e2b0}
+    .hkmap-open{display:inline-flex;align-items:center;justify-content:center;min-width:58px;padding:5px 9px;border:1px solid rgba(232,182,84,.42);border-radius:9px;color:#ffe0a0;background:rgba(232,182,84,.08);font-weight:900;text-decoration:none}
+    .hkmap-open:hover{background:rgba(232,182,84,.14)}
+    .hkmap-open.is-disabled{border-color:rgba(255,255,255,.09);color:#656d78;background:rgba(255,255,255,.025);cursor:not-allowed}
+    .hkmap-detail td{padding:0!important;background:#080b10}
+    .hkmap-detail-box{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px}
+    .hkmap-reward{padding:13px 14px;border:1px solid rgba(232,182,84,.18);border-radius:13px;background:rgba(232,182,84,.045)}
+    .hkmap-reward span{display:block;color:var(--muted);font-size:11px}
+    .hkmap-reward b{display:block;margin-top:4px;color:#9ee3b5;font-size:20px}
+    .hkmap-note{margin:12px 0 0;color:var(--muted);font-size:12px}
+    @media(max-width:680px){
+      .hkmap-card{padding:20px}
+      .hkmap-head{display:block}
+      .hkmap-head h2{font-size:26px}
+      .hkmap-mini-stats{grid-template-columns:1fr 1fr}
+      .hkmap-mini:last-child{grid-column:1/-1}
+      .hkmap-tools{align-items:stretch;flex-direction:column}
+      .hkmap-tools input{width:100%}
+      .hkmap-detail-box{grid-template-columns:1fr}
+    }
+
     .hidden{display:none!important}
 
     @media(max-width:900px){
@@ -355,6 +400,7 @@
       <nav class="cab-tabs" aria-label="Разделы личного кабинета">
         <button class="cab-tab active" type="button" data-cab-tab="overview">Обзор</button>
         <button class="cab-tab" type="button" data-cab-tab="players">Статистика игроков</button>
+        <button class="cab-tab" type="button" data-cab-tab="maps">Карты</button>
         <button class="cab-tab" type="button" data-cab-tab="install">Установка</button>
       </nav>
 
@@ -463,6 +509,58 @@
         </article>
       </section>
 
+
+      <section class="cab-panel" data-cab-panel="maps" hidden>
+        <article class="card cab-card wide hkmap-card">
+          <div class="hkmap-head">
+            <div>
+              <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/menu/city-1.png" alt="">HK Maps</div>
+              <h2>HK Maps Index</h2>
+              <p class="stats-sub">Индекс исследованных районов: здания, события с кристаллами, прогресс исследования и Score. По умолчанию лучшие карты находятся сверху.</p>
+            </div>
+          </div>
+
+          <div class="hkmap-mini-stats">
+            <div class="hkmap-mini"><span>Карт в индексе</span><b id="hkmap-total">235</b></div>
+            <div class="hkmap-mini"><span>Городов</span><b id="hkmap-cities">0</b></div>
+            <div class="hkmap-mini"><span>Open подключено</span><b id="hkmap-ready">0</b></div>
+          </div>
+
+          <div class="hkmap-tools">
+            <input id="hkmap-search" type="search" autocomplete="off" placeholder="Поиск города или координат, например New York 23:32">
+            <span id="hkmap-count" class="hkmap-count"></span>
+          </div>
+
+          <div class="hkmap-table-wrap">
+            <table class="hkmap-table">
+              <thead>
+                <tr>
+                  <th data-hkmap-sort="city">City</th>
+                  <th data-hkmap-sort="grid">Y:X</th>
+                  <th data-hkmap-sort="invest">Invest</th>
+                  <th data-hkmap-sort="buildings">Buildings</th>
+                  <th data-hkmap-sort="unknown">Unknown</th>
+                  <th data-hkmap-sort="c0">0</th>
+                  <th data-hkmap-sort="c1">1</th>
+                  <th data-hkmap-sort="c2">2</th>
+                  <th data-hkmap-sort="c3">3</th>
+                  <th data-hkmap-sort="c4">4</th>
+                  <th data-hkmap-sort="c5">5</th>
+                  <th data-hkmap-sort="eventBuildings">Buildings with events</th>
+                  <th data-hkmap-sort="totalEvents">Total crystal events</th>
+                  <th data-hkmap-sort="progress">Progress</th>
+                  <th data-hkmap-sort="score" data-sort-direction="desc">Score</th>
+                  <th>Map</th>
+                </tr>
+              </thead>
+              <tbody id="hkmap-body"></tbody>
+            </table>
+          </div>
+
+          <p class="hkmap-note">Нажмите строку карты, чтобы увидеть максимальную награду. Кнопки Open подключаются к нашим локальным картам через отдельный реестр — после завершения текущей выгрузки менять сам индекс уже не потребуется.</p>
+        </article>
+      </section>
+
       <section class="cab-panel" data-cab-panel="install" hidden>
         <article class="card cab-card wide">
           <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Установка HK</div>
@@ -529,6 +627,8 @@
   </div>
 </footer>
 
+<script src="./hk-maps-index.js?v=20260919-1"></script>
+<script src="./hk-maps-open.js?v=20260919-1"></script>
 <script>
   const API='https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet';
   const TOKEN_KEY='tk_clan_cabinet_session';
@@ -558,10 +658,104 @@
     el.classList.toggle('good',kind==='good');
   }
 
+
+  let hkMapsSort={key:'score',dir:-1};
+  let hkMapOpenKey='';
+
+  function hkMapsData(){
+    return Array.isArray(window.HK_MAPS_INDEX)?window.HK_MAPS_INDEX:[];
+  }
+
+  function hkMapSortValue(map,key){
+    if(/^c[0-5]$/.test(key))return Number(map.crystals[Number(key.slice(1))]||0);
+    return map[key]??'';
+  }
+
+  function renderMapsIndex(){
+    const body=$('hkmap-body');
+    if(!body)return;
+    const source=hkMapsData();
+    const query=String($('hkmap-search')?.value||'').trim().toLowerCase();
+    const filtered=source.filter(map=>{
+      if(!query)return true;
+      return (map.city+' '+map.grid+' '+map.key).toLowerCase().includes(query);
+    });
+    filtered.sort((a,b)=>{
+      const av=hkMapSortValue(a,hkMapsSort.key);
+      const bv=hkMapSortValue(b,hkMapsSort.key);
+      if(typeof av==='string'||typeof bv==='string'){
+        return String(av).localeCompare(String(bv),'en',{numeric:true})*hkMapsSort.dir;
+      }
+      return (Number(av)-Number(bv))*hkMapsSort.dir;
+    });
+
+    $('hkmap-total').textContent=formatNumber(source.length);
+    $('hkmap-cities').textContent=formatNumber(new Set(source.map(x=>x.city)).size);
+    const openRegistry=window.HK_MAPS_OPEN||{};
+    $('hkmap-ready').textContent=formatNumber(source.filter(x=>openRegistry[x.key]).length);
+    $('hkmap-count').textContent=filtered.length+'/'+source.length+' показано';
+
+    document.querySelectorAll('[data-hkmap-sort]').forEach(th=>{
+      th.removeAttribute('data-sort-direction');
+      if(th.dataset.hkmapSort===hkMapsSort.key){
+        th.dataset.sortDirection=hkMapsSort.dir===1?'asc':'desc';
+      }
+    });
+
+    body.innerHTML=filtered.map(map=>{
+      const opened=hkMapOpenKey===map.key;
+      const openUrl=openRegistry[map.key]||'';
+      const openControl=openUrl
+        ? '<a class="hkmap-open" href="'+safe(openUrl)+'">Open</a>'
+        : '<span class="hkmap-open is-disabled" title="Локальная карта ещё не загружена">Open</span>';
+      const progressClass=Number(map.progress)===100?' ready':'';
+      return '<tr class="hkmap-row'+(opened?' is-open':'')+'" data-hkmap-key="'+safe(map.key)+'">'+
+        '<td><strong>'+safe(map.city)+'</strong></td>'+
+        '<td>'+safe(map.grid)+'</td>'+
+        '<td>'+formatNumber(map.invest)+'</td>'+
+        '<td>'+formatNumber(map.buildings)+'</td>'+
+        '<td>'+formatNumber(map.unknown)+'</td>'+
+        map.crystals.map(value=>'<td>'+formatNumber(value)+'</td>').join('')+
+        '<td>'+formatNumber(map.eventBuildings)+'</td>'+
+        '<td>'+formatNumber(map.totalEvents)+'</td>'+
+        '<td><span class="hkmap-progress'+progressClass+'">'+Number(map.progress).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%</span></td>'+
+        '<td><strong>'+formatNumber(map.score)+'</strong></td>'+
+        '<td>'+openControl+'</td>'+
+      '</tr>'+
+      (opened
+        ? '<tr class="hkmap-detail"><td colspan="16"><div class="hkmap-detail-box">'+
+            '<div class="hkmap-reward"><span>Max reward crystals</span><b>'+formatNumber(map.reward?.max||0)+'</b></div>'+
+            '<div class="hkmap-reward"><span>Normal reward crystals</span><b>'+formatNumber(map.reward?.normal||0)+'</b></div>'+
+            '<div class="hkmap-reward"><span>Investment reward crystals</span><b>'+formatNumber(map.reward?.investment||0)+'</b></div>'+
+          '</div></td></tr>'
+        : '');
+    }).join('');
+  }
+
+  document.addEventListener('click',event=>{
+    const sort=event.target.closest('[data-hkmap-sort]');
+    if(sort){
+      const key=sort.dataset.hkmapSort;
+      if(hkMapsSort.key===key)hkMapsSort.dir*=-1;
+      else hkMapsSort={key,dir:key==='city'||key==='grid'?1:-1};
+      renderMapsIndex();
+      return;
+    }
+    const row=event.target.closest('[data-hkmap-key]');
+    if(row&&!event.target.closest('a,.hkmap-open')){
+      hkMapOpenKey=hkMapOpenKey===row.dataset.hkmapKey?'':row.dataset.hkmapKey;
+      renderMapsIndex();
+    }
+  });
+
+  $('hkmap-search')?.addEventListener('input',renderMapsIndex);
+
+
   function setCabTab(name){
     document.querySelectorAll('[data-cab-tab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.cabTab===name));
     document.querySelectorAll('[data-cab-panel]').forEach(panel=>panel.hidden=panel.dataset.cabPanel!==name);
     if(name==='players')renderPlayerStats();
+    if(name==='maps')renderMapsIndex();
   }
 
   document.addEventListener('click',event=>{
