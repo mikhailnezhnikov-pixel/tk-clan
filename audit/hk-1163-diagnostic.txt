@@ -6,4 +6,3 @@ syntax=ok
 result_code=0
 built=// @version      1.16.3
 --- log tail ---
-source=// @version      1.15.0
