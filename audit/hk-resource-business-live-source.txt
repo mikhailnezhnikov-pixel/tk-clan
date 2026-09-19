@@ -1,0 +1,2035 @@
+260-  function localizeMessage(value) {
+261-    if (language !== 'en') return String(value);
+262-    let text = String(value);
+263-    const replacements = [
+264-      [/Проверяю лицензию…/g,'Checking license…'], [/Доступ разрешён/g,'Access granted'], [/Проверка лицензии…/g,'Checking license…'],
+265-      [/ID не добавлен владельцем/g,'ID has not been added by the owner'], [/Лицензия заблокирована/g,'License is blocked'],
+266-      [/Срок лицензии истёк/g,'License has expired'], [/Достигнут лимит устройств/g,'Device limit reached'],
+267-      [/Домен игры не разрешён/g,'Game domain is not allowed'], [/Не удалось определить ID игрового аккаунта/g,'Could not identify the game account ID'],
+268-      [/Не удалось определить аккаунт/g,'Could not identify the account'], [/Сервер лицензий недоступен/g,'License server is unavailable'],
+269-      [/Добавьте этот ID в панели владельца/g,'Add this ID in the owner panel'], [/Проверка не пройдена/g,'License check failed'],
+270-      [/Подключено/g,'Connected'], [/Ожидание подключения…/g,'Waiting for connection…'], [/Автобой запущен до раунда/g,'Auto battle started up to round'],
+271-      [/Автобой остановлен/g,'Auto battle stopped'], [/Цель достигнута: раунд/g,'Target reached: round'], [/Ускорение боя включено/g,'Battle speed enabled'],
+272-      [/Остановка: достигнут лимит жетонов восстановления/g,'Stopped: recovery token limit reached'],
+273-      [/Остановка: достигнут лимит жетонов активации/g,'Stopped: activation token limit reached'],
+274-      [/Требуется восстановление, но расход жетонов запрещён/g,'Recovery is required, but token spending is disabled'],
+275-      [/Восстановление жетоном/g,'Recovery token'], [/Активация жетоном/g,'Activation token'],
+276-      [/Считываю ярмарки…/g,'Reading fairs…'], [/Ярмарка считана:/g,'Fair loaded:'], [/Ошибка ярмарки:/g,'Fair error:'],
+277-      [/Лот найден\. Покупка/g,'Lot found. Purchase'], [/Куплено/g,'Purchased'], [/Достигнут лимит прокруток:/g,'Reroll limit reached:'],
+278-      [/Лота нет\. Прокрутка/g,'No lot. Reroll'], [/Ярмарка завершена: покупок/g,'Fair completed: purchases'],
+279-      [/прокруток/g,'rerolls'], [/Аварийная остановка ярмарки:/g,'Emergency fair stop:'],
+280-      [/Пустой слот:/g,'Empty slot:'], [/Снимаю/g,'Removing'], [/Вставляю/g,'Inserting'], [/Перестановка завершена/g,'Rearrangement completed'],
+281-      [/Исходная схема восстановлена/g,'Original layout restored'], [/Ошибка:/g,'Error:'], [/Набор/g,'Set'], [/сохранён/g,'saved'], [/выбран/g,'selected']
+282-    ];
+283-    for (const [pattern, replacement] of replacements) text = text.replace(pattern, replacement);
+284-    return text;
+285-  }
+286-
+287-  let settings = {
+288-    target: 200,
+289-    interval: 1.2,
+290-    allowTokens: true,
+291-    activationLimit: 1,
+292-    restoreLimit: 5,
+293-    collectOnly: false,
+294-    ...load().settings
+295-  };
+296-  let pitRunning = false;
+297-  let activationSpent = 0;
+298-  let restoreSpent = 0;
+299-  let pitRunStart = null;
+300-  let playerDocument = null;
+301-  let apiBase = '';
+302-  let apiHeaders = {};
+303-  let layout = [];
+304-  let inventory = [];
+305:  let selectedSlots = new Set();
+306:  let selectedStock = new Map();
+307:  let businessBusy = false;
+308-  let optimizerResult = null;
+309:  let preparedBusinessPlan = null;
+310:  let preparedBusinessPlanSource = '';
+311-  let networkCaptureInstalled = false;
+312-  let nativeNetworkFetch = null;
+313-  let authUpdatedAt = 0;
+314-  let authCreatePromise = null;
+315-  let licenseState = {checked:false, allowed:false, playerId:'', reason:'Проверка лицензии…', update:null};
+316-  let licenseCheckPromise = null;
+317-  let lastLicenseCheck = 0;
+318-  let publicSnapshotPromise = null;
+319-  let lastPublicSnapshot = 0;
+320-  let settingsSyncReady = false;
+321-  let settingsSyncTimer = null;
+322-  let settingsSyncPromise = null;
+323-  let fairDocument = null;
+324-  let shopViewDocument = null;
+325-  let itemCatalogDocument = null;
+326-  let businessCatalogDocument = null;
+327-  let bonusCatalogDocument = null;
+328-  let eventCatalogDocument = null;
+329-  let clientConfigDocument = null;
+330-  let premiumDocument = null;
+331-  let localizationDocument = null;
+332-  let activeEventCode = clean(load().activeEventCode || '').toLowerCase();
+333-  let fairCatalog = [];
+334-  let selectedFairId = '';
+335-  let selectedFairLots = new Set();
+336-  let selectedFairSlotRules = new Map(); // lot id -> {regular:boolean, vip:boolean}
+337-  let selectedFairCurrency = '';
+338-  let selectedFairBonusLots = new Set([5, 10, 30]);
+339-  let fairRunning = false;
+340-  let fairStop = false;
+341-  let shopRows = [];
+342-  let selectedShopLots = new Set();
+343-  let selectedShopCounts = new Map();
+344-  let selectedShopSection = 'regular';
+345-  let selectedShopGroup = 'resources';
+346-  let shopRunning = false;
+347-  let recipeFairId = load().recipeFairId || '';
+348-  let currentRecipePlans = [];
+349-  let recipeRunning = false;
+350-  let recipeStop = false;
+351-  let communityRecipes = [];
+352-  let bureauCosts = [];
+353-  let bureauInventory = [];
+354-  let selectedBureauInputs = new Map();
+355-  let bureauSize = 2;
+--
+624-              if (!settled) timeout = setTimeout(() => settle(false), 8000);
+625-            } catch (_) { settle(false); }
+626-          });
+627-          if (updated) {
+628-            dirty = false; lastFlushAt = Date.now(); flushes += 1;
+629-            recordDiagnostic('game-bridge-flush',{attempt:attempt+1,flushes});
+630-            return true;
+631-          }
+632-          failures += 1;
+633-          player=null; refreshTask=null; refreshThis=null;
+634-          await sleep(attempt ? 1800 : 700);
+635-        }
+636-        return false;
+637-      } finally { flushing = false; }
+638-    };
+639-    const schedule = (delay = 180) => {
+640-      if (!dirty) return;
+641-      clearTimer();
+642-      timer = setTimeout(() => { timer=null; if (dirty && !hkRunner.running) void flush(false); }, Math.max(0,Number(delay)||0));
+643-    };
+644-    const noteMutation = (path, method = 'POST') => {
+645-      const verb = String(method || 'GET').toUpperCase();
+646-      const route = String(path || '').split('?')[0];
+647-      if (['GET','HEAD','OPTIONS'].includes(verb) || route === '/player/me' || route === '/rumors/search' || route === '/regional_boss/battle_state') return;
+648-      dirty = true;
+649-      recordDiagnostic('game-bridge-dirty',{path:route,method:verb});
+650-      if (!hkRunner.running) schedule(180);
+651-    };
+652-    const summary = () => ({ready:ready(),dirty,flushing,lastDiscoveryAt,lastFlushAt,discoveries,flushes,failures,hasGeneralViewStore:!!generalViewStore});
+653-    return {discover,flush,schedule,noteMutation,summary,get ready(){return ready();},get dirty(){return dirty;}};
+654-  })();
+655-
+656-  // Runner completion is the safest place to refresh the game's visible React
+657-  // state after a batch. Individual requests only mark the bridge dirty.
+658-  const hkRunnerFinishBase = hkRunner.finish.bind(hkRunner);
+659-  hkRunner.finish = step => { hkRunnerFinishBase(step); if (hkGameBridge.dirty) void hkGameBridge.flush(true); };
+660-  const hkRunnerFailBase = hkRunner.fail.bind(hkRunner);
+661-  hkRunner.fail = error => { hkRunnerFailBase(error); if (hkGameBridge.dirty) hkGameBridge.schedule(250); };
+662-
+663-  runtime.stateStore = hkStateStore;
+664-  runtime.runner = hkRunner;
+665-  runtime.mutationGate = hkMutationGate;
+666-  runtime.gameBridge = hkGameBridge;
+667-  let clanSkillScanning = false;
+668-  let clanSkillRefreshing = false;
+669:  let resourceBuildings = [];
+670:  let resourceBusy = false;
+671:  let resourceRepeatCount = Math.max(1, Math.min(10, Math.trunc(Number(load().resourceRepeatCount || 1))));
+672-  let resourceMaximumMode = false;
+673-  let resourceSelectedKind = String(load().resourceSelectedKind || 'nut');
+674:  const RESOURCE_BUILDING_TYPES = {
+675-    nut:{marker:'cur_nut', eventMarker:'mf_evts_main_nut', generatorMarker:'resources_1', nameRu:'Ореховая', nameEn:'Nut Station', buildingRu:'Станция снабжения', buildingEn:'Supply Station'},
+676-    build:{marker:'cur_build', eventMarker:'mf_evts_main_build', generatorMarker:'resources_2', nameRu:'Инструментовая', nameEn:'Tool Workshop', buildingRu:'Индустриальный узел', buildingEn:'Industrial Hub'},
+677-    pit:{marker:'cur_pit_pass', eventMarker:'mf_evts_main_pittoken', generatorMarker:'resources_3', nameRu:'Жетоновая', nameEn:'Token Workshop', buildingRu:'Павильон спорта', buildingEn:'Sports Pavilion'}
+678-  };
+679:  if (!RESOURCE_BUILDING_TYPES[resourceSelectedKind]) resourceSelectedKind = 'nut';
+680-  const RESOURCE_PROTECTED_COST_IDS = new Set(['cur_fame','cur_power','cur_daily_combat_hamsters']);
+681-
+682-  // Growth module (HK 1.13): live state is loaded automatically when a Growth
+683-  // tab opens and is refreshed again before a run. Opening a tab never spends
+684-  // resources; mutations start only from an explicit Run action.
+685-  const GROWTH_STATIC_API = 'https://cdn-prod-static-api.hwgame.cloud';
+686-  const GROWTH_ACTION_SAFETY = 5000;
+687-  const GROWTH_LOOTBOX_BATCH = 1000;
+688-  const GROWTH_GENERAL_BALL_PREFIX = 'item_hball_hgen_';
+689-  const GROWTH_HAMSTER_BASE_MAX_LEVEL = 150;
+690-  const GROWTH_HAMSTER_BUDGET_ID = 'cur_cap';
+691-  const GROWTH_GENERAL_BUDGET_ID = 'item_pit_token';
+692-  const GROWTH_COPY_PRIORITY_DEFAULT = [[19,20],[18,20],[4,5],[11,12],[1,2],[7,8],[3,5],[17,20],[10,12],[2,5],[9,12],[6,8]];
+693-  let growthState = null;
+694-  let growthBusy = false;
+695-  let growthMenuLoading = false;
+696-  let growthLoadPromise = null;
+697-  let growthItemsDocument = null;
+698-  let growthHamstersStaticDocument = null;
+699-  let growthShopDocument = null;
+700-  let growthClientConfigDocument = null;
+701-  let growthLastLoadedAt = 0;
+702-
+703-  function log(message, type = '') {
+704-    message = localizeMessage(message);
+705-    const time = new Date().toLocaleTimeString(locale(), {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+706-    if (logBox) {
+707-      const row = document.createElement('div');
+708-      row.className = type ? `hk-log-${type}` : '';
+709-      row.textContent = `[${time}] ${message}`;
+710-      logBox.prepend(row);
+711-      while (logBox.children.length > 80) logBox.lastElementChild.remove();
+712-    }
+713-    if (statusLine) statusLine.textContent = message;
+714-  }
+715-
+716-  function headersToObject(headers) {
+717-    const result = {};
+718-    try { new Headers(headers || {}).forEach((value, key) => result[key] = value); } catch (_) {}
+719-    return result;
+720-  }
+721-
+722-  function captureAuthorization(url, headers) {
+723-    if (!url) return false;
+724-    const resolvedUrl = new URL(url, location.href);
+--
+928-      for (const entry of entries) {
+929-        const url = new URL(String(entry?.name || ''), location.href);
+930-        if (url.origin === new URL(LICENSE_URL).origin) continue;
+931-        if (!useful.has(url.pathname) && !url.pathname.startsWith('/localization/')) continue;
+932-        apiBase = url.origin;
+933-        return true;
+934-      }
+935-    } catch (_) {}
+936-    return false;
+937-  }
+938-
+939-  async function bootstrapLateGameConnection() {
+940-    if (playerDocument && apiBase && apiHeaders.Authorization) { setHealth('game', true, 'игра подключена'); return true; }
+941-    const authorized = await ensureGameAuthorization(false, 'late-bootstrap');
+942-    if (!apiBase || !authorized) { setHealth('game', false, 'нет подключения к игре'); return false; }
+943-    try {
+944-      const documentValue = await apiJson('/player/me', 'POST', null, true, 2);
+945-      acceptPlayerState(`${apiBase}/player/me`, apiHeaders, documentValue, false);
+946-      setHealth('game', true, 'игра отвечает');
+947-      return true;
+948-    } catch (error) {
+949-      recordDiagnostic('late-bootstrap-failed',{error:error?.message || error});
+950-      setHealth('game', false, 'игра не отвечает');
+951-      console.warn('[HK] late connection bootstrap failed', error);
+952-      return false;
+953-    }
+954-  }
+955-
+956-  function acceptPlayerState(url, headers, documentValue, partial = false) {
+957-    if (!documentValue || typeof documentValue !== 'object') return;
+958-    if (!captureAuthorization(url, headers)) return;
+959-    // /player/me with `arguments` returns only the requested sections. Keep
+960-    // the rest of the last full response (advertisement, currencies, pits,
+961-    // etc.) instead of replacing it with that partial document.
+962-    setHealth('game', true, 'данные игрока получены');
+963-    setHealth('auth', true, 'игровая сессия активна');
+964-    playerDocument = partial && playerDocument ? {
+965-      ...playerDocument,
+966-      ...documentValue,
+967-      ...(playerDocument.player || documentValue.player ? {player:{...(playerDocument.player || {}), ...(documentValue.player || {})}} : {}),
+968-      ...(playerDocument.data || documentValue.data ? {data:{...(playerDocument.data || {}), ...(documentValue.data || {})}} : {})
+969-    } : documentValue;
+970-    if (partial) hkStateStore.merge(documentValue, 'player/me-partial');
+971-    else hkStateStore.replace(playerDocument, 'player/me');
+972-    playerDocument = hkStateStore.snapshot || playerDocument;
+973:    refreshBusinessData();
+974-    const player = playerDocument.player || {};
+975-    log(`Подключено${player.nickname ? `: ${player.nickname}` : ''}`);
+976-    // Checking access is required to unlock the panel. This does not scan
+977-    // districts or submit any map data; those actions remain manual.
+978-    checkLicense(player);
+979-    // Never scan or upload map areas automatically. The player must explicitly
+980-    // press "Считать карты аккаунта" in the Maps tab for that operation.
+981-  }
+982-
+983-  function getDeviceId() {
+984-    const stored = load().deviceId;
+985-    if (stored) return stored;
+986-    const value = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}_${Math.random()}`).replace(/[^A-Za-z0-9_-]/g, '');
+987-    save({deviceId:value});
+988-    return value;
+989-  }
+990-
+991-  function playerIdentity(player) {
+992-    return clean(player?.id ?? player?.player_id ?? player?.uuid ?? player?.nickname ?? '');
+993-  }
+994-
+995-  function licenseReason(code) {
+996-    return ({not_allowed:'ID не добавлен владельцем', blocked:'Лицензия заблокирована', expired:'Срок лицензии истёк',
+997-      device_limit:'Достигнут лимит устройств', origin_not_allowed:'Домен игры не разрешён', invalid_identity:'Не удалось определить аккаунт',
+998-      update_required:'Требуется обязательное обновление'}[code] || code || 'Проверка не пройдена');
+999-  }
+1000-
+1001-  function updateLicenseUI() {
+1002-    setHealth('license', !!licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : (licenseState.checked ? licenseState.reason : 'ожидание'));
+1003-    if (!panel) return;
+1004-    const gate = root.querySelector('#hk-license-gate');
+1005-    const updateBox = root.querySelector('#hk-update-banner');
+1006-    const update = licenseState.update;
+1007-    if (updateBox && update?.available && update?.download_url) {
+1008-      const latest=escapeHtml(update.latest_version || '?');
+1009-      updateBox.style.display='block';
+1010-      updateBox.className=`hk-update${update.required ? ' required' : ''}`;
+1011-      updateBox.innerHTML=`<b>${either('Доступно обновление','Update available')} ${latest}</b>${update.notes ? `<small>${escapeHtml(update.notes).replace(/\n/g,'<br>')}</small>` : ''}${update.sha256 ? `<small>SHA-256: ${escapeHtml(String(update.sha256).slice(0,16))}…</small>` : ''}<button id="hk-install-update" class="hk-primary">${either('Установить обновление','Install update')}</button>`;
+1012-      updateBox.querySelector('#hk-install-update').onclick=()=>{
+1013-        const notes=clean(update.notes || '');
+1014-        const heading=either(`Изменения версии ${latest}:`,`Changes in version ${latest}:`);
+1015-        const instruction=either('После открытия файла нажмите значок расширений Safari возле адресной строки → Userscripts → Install/Update.',
+1016-          'After the file opens, tap the Safari extensions icon beside the address bar → Userscripts → Install/Update.');
+1017-        alert(`${heading}${notes ? `\n\n${notes}` : ''}\n\n${instruction}`);
+1018-        window.open(String(update.download_url),'_blank','noopener');
+--
+1164-      .filter(value=>value != null && value !== '').map(String));
+1165-  }
+1166-
+1167-  function roomEventIds(room) {
+1168-    const result=[]; const add=value=>{ if (value != null && value !== '') result.push(String(value)); };
+1169-    add(room?.event_id); add(room?.eventId); add(room?.core_event_id); add(room?.coreEventId);
+1170-    const eventObjects=[room?.event,room?.core_event,room?.coreEvent,
+1171-      ...(room?.side_events || []),...(room?.sideEvents || [])].filter(Boolean);
+1172-    eventObjects.forEach(value=>{ add(value?.event_id); add(value?.eventId); add(value?.id); add(value?.event?.id); });
+1173-    return result;
+1174-  }
+1175-
+1176-  function roomContainsCrystal(room, ids) {
+1177-    return containsCrystalMarker(room) || roomEventIds(room).some(id=>ids.has(id));
+1178-  }
+1179-
+1180-  function buildingRooms(documentValue) {
+1181-    const building=documentValue?.building || documentValue?.data?.building || documentValue?.data || documentValue;
+1182-    for (const value of [building?.events,building?.rooms,building?.event_rooms,building?.building_events,
+1183-      documentValue?.events,documentValue?.rooms,documentValue?.event_rooms]) if (Array.isArray(value)) return value;
+1184-    return [];
+1185-  }
+1186-
+1187-  function directCrystalRoomCount(documentValue) {
+1188-    const building=documentValue?.building || documentValue?.data?.building || documentValue?.data || documentValue;
+1189-    for (const value of [building?.crystals,building?.crystal_rooms,building?.crystalRooms,
+1190-      documentValue?.crystals,documentValue?.crystal_rooms,documentValue?.crystalRooms]) {
+1191-      if (value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))) return Math.max(0,Math.trunc(Number(value)));
+1192-    }
+1193-    return null;
+1194-  }
+1195-
+1196-  function crystalRoomCount(documentValue, ids = crystalEventIds()) {
+1197-    const direct=directCrystalRoomCount(documentValue);
+1198-    if (direct != null) return direct;
+1199-    const rooms=buildingRooms(documentValue);
+1200-    return rooms.length ? rooms.filter(room=>roomContainsCrystal(room,ids)).length : null;
+1201-  }
+1202-
+1203-  function exactResourceBuildingData(documentValue, expectedKind = '', trustedCompleted = false) {
+1204-    const building=documentValue?.building || documentValue?.data?.building || documentValue?.data || documentValue;
+1205-    if (!building || typeof building !== 'object') return null;
+1206-    try {
+1207-      const serialized=JSON.stringify(building);
+1208-      const match=expectedKind
+1209:        ? [[expectedKind,RESOURCE_BUILDING_TYPES[expectedKind]]].find(([,definition])=>definition && serialized.includes(definition.eventMarker))
+1210:        : Object.entries(RESOURCE_BUILDING_TYPES).find(([,definition])=>serialized.includes(definition.eventMarker));
+1211-      if (match) return {kind:match[0],definition:match[1],building};
+1212:      const trustedDefinition=expectedKind && trustedCompleted ? RESOURCE_BUILDING_TYPES[expectedKind] : null;
+1213-      return trustedDefinition && serialized.includes(`"${trustedDefinition.marker}"`)
+1214-        ? {kind:expectedKind,definition:trustedDefinition,building,completedMainEvent:true}
+1215-        : null;
+1216-    } catch (_) { return null; }
+1217-  }
+1218-
+1219-  function exactResourceBuildingDefinition(row, expectedKind) {
+1220:    const definition=RESOURCE_BUILDING_TYPES[expectedKind];
+1221-    const generator=String(row?.meta?.building_generator || row?.building_generator || '').toLowerCase();
+1222-    return !!(definition?.generatorMarker && generator.includes(definition.generatorMarker));
+1223-  }
+1224-
+1225-  function savedResourceBuildingIds() {
+1226-    const stored=load().resourceBuildingIds;
+1227-    const result=stored && typeof stored === 'object' ? {...stored} : {};
+1228-    if (!result.nut && load().resourceNutBuildingId) result.nut=String(load().resourceNutBuildingId);
+1229-    return result;
+1230-  }
+1231-
+1232-  function savedResourceBuildingProofs() {
+1233-    const stored=load().resourceBuildingProofs;
+1234-    return stored && typeof stored === 'object' ? {...stored} : {};
+1235-  }
+1236-
+1237-  function savedResourceTiers() {
+1238-    const stored=load().resourceSelectedTiers;
+1239-    const result=stored && typeof stored === 'object' ? {...stored} : {};
+1240-    if (result.nut == null && Number.isSafeInteger(Number(load().resourceSelectedTier))) result.nut=Number(load().resourceSelectedTier);
+1241-    return result;
+1242-  }
+1243-
+1244-  function resourceTypeName(kind, building = false) {
+1245:    const definition=RESOURCE_BUILDING_TYPES[kind] || RESOURCE_BUILDING_TYPES.nut;
+1246-    return either(building ? definition.buildingRu : definition.nameRu, building ? definition.buildingEn : definition.nameEn);
+1247-  }
+1248-
+1249-  async function discoverResourceBuildingIds(showLog = false, wantedKind = resourceSelectedKind) {
+1250-    const ids=savedResourceBuildingIds();
+1251-    const proofs=savedResourceBuildingProofs();
+1252:    const kinds=RESOURCE_BUILDING_TYPES[wantedKind] ? [wantedKind] : Object.keys(RESOURCE_BUILDING_TYPES);
+1253-    const missing=()=>kinds.filter(kind=>!ids[kind]);
+1254-    if (!missing().length) return ids;
+1255-    const currentArea=String(playerDocument?.gameArea?.gamearea_id || playerDocument?.game_area?.gamearea_id || '');
+1256-    const areaIds=[currentArea, ...(playerDocument?.areas?.areas || []).map(row=>String(row?.gamearea_id || row?.area_id || ''))]
+1257-      .filter((value,index,rows)=>value && rows.indexOf(value)===index);
+1258-    for (let index=0; index<areaIds.length && missing().length; index++) {
+1259-      if (showLog && (index===0 || index%10===9)) log(either(`Ищу ресурсные здания: район ${index+1}/${areaIds.length}…`,`Searching resource buildings: district ${index+1}/${areaIds.length}…`));
+1260-      let definitions=[];
+1261-      try { definitions=await apiJson(`/game_area/${encodeURIComponent(areaIds[index])}/buildings`,'GET'); }
+1262-      catch (_) { continue; }
+1263-      const candidates=(Array.isArray(definitions) ? definitions : [])
+1264-        .filter(row=>missing().includes(String(row?.meta?.resource || '').toLowerCase()))
+1265-        .sort((left,right)=>Number(exactResourceBuildingDefinition(right,String(right?.meta?.resource || '').toLowerCase()))-Number(exactResourceBuildingDefinition(left,String(left?.meta?.resource || '').toLowerCase())));
+1266-      for (const row of candidates) {
+1267-        const kind=String(row?.meta?.resource || '').toLowerCase();
+1268-        // `row.id` is the catalog/template id on some game responses. Only
+1269-        // `building_id` identifies the building owned by this player.
+1270-        const buildingId=String(row?.building_id || '');
+1271:        if (!RESOURCE_BUILDING_TYPES[kind] || !buildingId || ids[kind]) continue;
+1272-        mapBuildingAreas.set(buildingId,areaIds[index]);
+1273-        // Several unrelated buildings may generate the same resource. Confirm
+1274-        // the building by its own main event or its exact resource generator.
+1275-        try {
+1276-          const documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}`, 'POST');
+1277-          const exactGenerator=exactResourceBuildingDefinition(row,kind);
+1278-          if (exactResourceBuildingData(documentValue,kind,exactGenerator)) {
+1279-            ids[kind]=buildingId;
+1280-            proofs[kind]=buildingId;
+1281-          }
+1282-        } catch (_) {}
+1283-      }
+1284-    }
+1285-    save({resourceBuildingIds:ids,resourceBuildingProofs:proofs, ...(ids.nut?{resourceNutBuildingId:ids.nut}:{})});
+1286-    return ids;
+1287-  }
+1288-
+1289-  async function acceptBuildingStudy(url, headers, documentValue) {
+1290-    captureAuthorization(url,headers); const building=documentValue?.building || documentValue?.data?.building || documentValue?.data || documentValue;
+1291-    const buildingId=String(building?.id || building?.building_id || new URL(url,location.href).searchParams.get('building_id') || '');
+1292-    const resourceBuilding=buildingId && exactResourceBuildingData(documentValue);
+1293-    if (resourceBuilding && licenseState.allowed) {
+1294-      const {kind,building:buildingData}=resourceBuilding;
+1295-      const ids=savedResourceBuildingIds();
+1296-      const storedId=String(ids[kind] || '');
+1297-      const proofs=savedResourceBuildingProofs();
+1298-      if (storedId !== buildingId || String(proofs[kind] || '') !== buildingId) {
+1299-        ids[kind]=buildingId;
+1300-        proofs[kind]=buildingId;
+1301-        save({resourceBuildingIds:ids,resourceBuildingProofs:proofs, ...(kind==='nut'?{resourceNutBuildingId:buildingId}:{})});
+1302-        if (storedId !== buildingId) log(either(`Здание «${resourceTypeName(kind,true)}» запомнено`,`${resourceTypeName(kind,true)} remembered`),'ok');
+1303-      }
+1304-      const selectedTier=Number(buildingData?.chosen_tier ?? buildingData?.tier ?? 0);
+1305-      const maximumTier=Math.max(selectedTier,Number(buildingData?.tier ?? selectedTier));
+1306-      const tiers=savedResourceTiers(); tiers[kind]=selectedTier;
+1307-      resourceSelectedKind=kind;
+1308:      resourceBuildings=[{id:buildingId,kind,areaId:'',tier:selectedTier,maxTier:maximumTier,name:resourceTypeName(kind),buildingName:resourceTypeName(kind,true),document:documentValue}];
+1309-      save({resourceSelectedKind:kind,resourceSelectedTiers:tiers, ...(kind==='nut'?{resourceSelectedTier:selectedTier}:{})});
+1310-      renderResources();
+1311-    }
+1312-    const areaId=mapBuildingAreas.get(buildingId); if (!areaId || !licenseState.allowed) return;
+1313-    if (!eventCatalogDocument) { try { eventCatalogDocument=normalizeEventCatalog(await apiJson('/events','GET')); } catch (_) { return; } }
+1314-    const rooms=buildingRooms(documentValue); const roomCount=crystalRoomCount(documentValue);
+1315-    if (roomCount == null) return;
+1316-    const area=(playerDocument?.areas?.areas || []).find(row=>String(row?.gamearea_id)===areaId); if(!area)return;
+1317-    const hasEvents=rooms.length>0 || roomCount>0;
+1318-    if (String(mapDetail?.area?.area_id || '') === areaId) {
+1319-      const localRow=(mapDetail.buildings || []).find(row=>String(row?.building_id)===buildingId);
+1320-      if (localRow) { localRow.opened=true; localRow.room_count=roomCount; localRow.has_events=hasEvents; renderMapDetail(); }
+1321-    }
+1322-    mapServerJson('/submit',{area:{area_id:areaId,city_id:String(area.city_id||''),expected_buildings:0,buildings:[{building_id:buildingId,opened:true,room_count:roomCount,has_events:hasEvents}]}}).catch(()=>{});
+1323-  }
+1324-
+1325-  const PIT_API_PATH_TYPES = new Map([
+1326-    ['/pit/view','normal'], ['/player/pit/start','normal'], ['/player/pit/battle','normal'], ['/player/pit/finish','normal'], ['/player/pit/pass','normal'], ['/player/pit/respawn','normal'], ['/pit/preview','normal'],
+1327-    ['/boss_pit/view','boss'], ['/player/boss_pit/start','boss'], ['/player/boss_pit/battle','boss'], ['/player/boss_pit/finish','boss'], ['/player/boss_pit/pass','boss'], ['/player/boss_pit/respawn','boss'], ['/pit_2/preview','boss'],
+1328-    ['/pit_pve/view','gang'], ['/player/pit_pve/start','gang'], ['/player/pit_pve/battle','gang'], ['/player/pit_pve/finish','gang'], ['/player/pit_pve/pass','gang'], ['/player/pit_pve/respawn','gang'], ['/pit_pve/preview','gang'], ['/player/pit_pve_battle_info','gang']
+1329-  ]);
+1330-  // Pit rounds currently end at 200. Keeping this boundary in one place also
+1331-  // prevents an unrelated nested `level` field from being mistaken for a Pit
+1332-  // round while walking a large /player/me response.
+1333-  const PIT_MAX_LEVEL = 200;
+1334-
+1335-  function pitApiType(path) { return PIT_API_PATH_TYPES.get(String(path || '')) || null; }
+1336-
+1337-  function pitStoreDocument() {
+1338-    const stored = load();
+1339-    const next = {normal:{}, boss:{}, gang:{}, ...(stored.pitPowersV2 || {})};
+1340-    if (!Object.keys(next.normal || {}).length && stored.pitPowers && typeof stored.pitPowers === 'object') {
+1341-      next.normal = Object.fromEntries(Object.entries(stored.pitPowers).map(([level, enemyPower]) => [level, {enemyPower:Number(enemyPower), samples:1, lastSeen:0}]));
+1342-    }
+1343-    for (const pitType of ['normal','boss','gang']) {
+1344-      next[pitType] = Object.fromEntries(Object.entries(next[pitType] || {}).filter(([level,value]) => {
+1345-        const numericLevel = Number(level), enemyPower = Number(value?.enemyPower);
+1346-        return Number.isSafeInteger(numericLevel) && numericLevel >= 1 && numericLevel <= PIT_MAX_LEVEL && Number.isFinite(enemyPower) && enemyPower > 0;
+1347-      }));
+1348-    }
+1349-    return next;
+1350-  }
+1351-
+1352-  function writePitStore(documentValue) {
+1353-    const stored = load();
+--
+1501-    };
+1502-    if (path === '/player/me') {
+1503-      const roots = [documentValue, documentValue.player, documentValue.data].filter(Boolean);
+1504-      for (const base of roots) {
+1505-        const context = {player_factions:base?.player_factions, player_subfactions:base?.player_subfactions};
+1506-        const normal = base?.pit, boss = base?.pit2 ?? base?.boss_pit, gang = base?.pit_pve;
+1507-        const normalLevel = pitDisplayedLevel(normal?.level ?? normal?.round ?? normal?.pit_level);
+1508-        const bossLevel = pitDisplayedLevel(boss?.level ?? boss?.round ?? boss?.pit_level);
+1509-        const gangLevel = pitDisplayedLevel(gang?.level ?? gang?.round ?? gang?.pit_level);
+1510-        visit('normal', normal && {...context,...normal});
+1511-        visit('normal', base?.pit_preview && {...context,...base.pit_preview}, normalLevel);
+1512-        visit('boss', boss && {...context,...boss});
+1513-        visit('boss', base?.pit2_preview && {...context,...base.pit2_preview}, bossLevel);
+1514-        visit('gang', gang && {...context,...gang});
+1515-        visit('gang', base?.pit_pve_preview && {...context,...base.pit_pve_preview}, gangLevel);
+1516-      }
+1517-    } else {
+1518-      const pitType = pitApiType(path);
+1519-      if (pitType) {
+1520-        lastNetworkPitContext = {pitType, at:Date.now()};
+1521-        const roots = [documentValue, documentValue.player, documentValue.data].filter(Boolean);
+1522-        const explicit = [];
+1523-        for (const base of roots) {
+1524-          const state = pitType === 'normal' ? base?.pit : pitType === 'boss' ? (base?.pit2 ?? base?.boss_pit) : base?.pit_pve;
+1525-          const preview = pitType === 'normal' ? base?.pit_preview : pitType === 'boss' ? base?.pit2_preview : base?.pit_pve_preview;
+1526-          const inheritedLevel = pitDisplayedLevel(state?.level ?? state?.round ?? state?.pit_level) || runtime[pitType] || null;
+1527-          const context = {player_factions:base?.player_factions, player_subfactions:base?.player_subfactions};
+1528-          if (state) explicit.push({value:{...context,...state}, level:null});
+1529-          if (preview) explicit.push({value:{...context,...preview}, level:inheritedLevel});
+1530-        }
+1531-        if (explicit.length) explicit.forEach(row => visit(pitType,row.value,row.level));
+1532-        else visit(pitType, documentValue);
+1533-      }
+1534-    }
+1535-    localStorage.setItem(STORE, JSON.stringify({...load(), pitRuntimeLevels:runtime}));
+1536-  }
+1537-
+1538-  function isGameApiRequest(url){
+1539-    try{const target=new URL(String(url||''),location.href),origins=new Set([new URL(GAME_API_FALLBACK).origin]);if(apiBase)origins.add(new URL(apiBase).origin);return origins.has(target.origin);}catch(_){return false;}
+1540-  }
+1541-  function acceptSharedGameResponse(url,documentValue){
+1542-    if(!documentValue||typeof documentValue!=='object'||!isGameApiRequest(url))return;
+1543-    let path='';try{path=new URL(String(url||''),location.href).pathname;}catch(_){}
+1544-    if(path==='/player/me')return;
+1545-    const before=hkStateStore.revision,merged=hkStateStore.merge(documentValue,`game-ui:${path||'response'}`);
+1546:    if(hkStateStore.revision!==before&&merged){playerDocument=merged;try{refreshBusinessData();}catch(_){}}
+1547-  }
+1548-
+1549-  function installNetworkCapture() {
+1550-    if (networkCaptureInstalled) return;
+1551-    if (typeof window.fetch !== 'function' || !window.XMLHttpRequest) throw new Error('Игровая сеть ещё не готова');
+1552-    const nativeFetch = window.fetch.bind(window);
+1553-    nativeNetworkFetch = nativeFetch;
+1554-    window.fetch = async function(input, init) {
+1555-      const url = typeof input === 'string' ? input : input?.url;
+1556-      const requestHeaders = {...headersToObject(input?.headers), ...headersToObject(init?.headers)};
+1557-      captureAuthorization(url, requestHeaders);
+1558-      const response = await nativeFetch(input, init);
+1559-      const path = url ? new URL(url, location.href).pathname : '';
+1560-      if (response.ok && isGameApiRequest(url)) hkGameBridge.noteMutation(path, init?.method || input?.method || 'GET');
+1561-      if(response.ok && isGameApiRequest(url) && path!=='/player/me') response.clone().json().then(body=>acceptSharedGameResponse(url,body)).catch(()=>{});
+1562-      if (path === '/player/me' && response.ok) {
+1563-        let partial = false;
+1564-        try { partial = Array.isArray(JSON.parse(String(init?.body || '{}'))?.arguments); } catch (_) {}
+1565-        response.clone().json().then(body => { acceptPlayerState(url, requestHeaders, body, partial); acceptPitDocument(url, body); }).catch(() => {});
+1566-      } else if (path === '/shop/view' && response.ok) {
+1567-        response.clone().json().then(body => acceptShopView(url, requestHeaders, body)).catch(() => {});
+1568-      } else if (['/items','/business_items','/bonuses/view','/events','/client_config'].includes(path) || path.startsWith('/localization/')) {
+1569-        if (response.ok) response.clone().json().then(body => acceptStaticDocument(url, requestHeaders, body)).catch(() => {});
+1570-      } else if (path === '/player/building' && response.ok) {
+1571-        response.clone().json().then(body => acceptBuildingStudy(url,requestHeaders,body)).catch(()=>{});
+1572-      } else if (pitApiType(path) && response.ok) {
+1573-        response.clone().json().then(body => acceptPitDocument(url,body)).catch(()=>{});
+1574-      }
+1575-      return response;
+1576-    };
+1577-
+1578-    const open = XMLHttpRequest.prototype.open;
+1579-    const setHeader = XMLHttpRequest.prototype.setRequestHeader;
+1580-    const send = XMLHttpRequest.prototype.send;
+1581-    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+1582-      this.__hkUrl = url; this.__hkMethod = method; this.__hkHeaders = {};
+1583-      return open.call(this, method, url, ...rest);
+1584-    };
+1585-    XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+1586-      if (this.__hkHeaders) this.__hkHeaders[name] = value;
+1587-      return setHeader.call(this, name, value);
+1588-    };
+1589-    XMLHttpRequest.prototype.send = function(...args) {
+1590-      if (this.__hkUrl) captureAuthorization(this.__hkUrl, this.__hkHeaders);
+1591-      if (this.__hkUrl && isGameApiRequest(this.__hkUrl)) {
+--
+4058-    }
+4059-  }
+4060-
+4061-  function resourceCost(rawCost) {
+4062-    const result = {items:[], currencies:[]};
+4063-    for (const kind of ['items','currencies']) {
+4064-      result[kind] = (rawCost?.[kind] || []).map(value => ({
+4065-        id:String(value?.id || value?.item_id || value?.currency_id || ''),
+4066-        quantity:Math.max(0, Math.trunc(Number(value?.quantity ?? value?.value ?? 0)))
+4067-      })).filter(value => value.id && value.quantity > 0);
+4068-    }
+4069-    return result;
+4070-  }
+4071-
+4072-  function resourceEventName(eventId) {
+4073-    const wanted = String(eventId || '');
+4074-    const row = normalizeEventCatalog(eventCatalogDocument).find(value => String(value?.id || value?.event_id || value?.event?.id || '') === wanted) || {};
+4075-    return gameText(row?.name || row?.event?.name || row?.title || wanted || either('Ресурсное задание','Resource task'));
+4076-  }
+4077-
+4078-  function resourceEvents(buildingRow) {
+4079-    const documentValue = buildingRow?.document || {};
+4080-    const building = documentValue?.building || documentValue?.data?.building || documentValue?.data || documentValue;
+4081-    const tier = Number(building?.chosen_tier ?? building?.tier ?? buildingRow?.tier ?? 0);
+4082-    const rows = Array.isArray(building?.events) ? building.events : [];
+4083-    return rows.flatMap(room => {
+4084-      const roomId = String(room?.id || '');
+4085-      const roomNumber = Number(room?.room_number || 0);
+4086-      const values = [{...room,isSide:false}, ...(room?.side_events || []).map(value => ({...value,isSide:true}))];
+4087-      return values.filter(value => value?.level != null && Number(value.level) >= 0 && roomId).map(value => {
+4088-        const cost = resourceCost(value?.costs);
+4089-        const parts = costParts(cost);
+4090-        const affordable = parts.length ? Math.max(0, Math.floor(Math.min(...parts.map(part => {
+4091-          const balance = walletAmount(part.id);
+4092-          return balance == null || part.quantity <= 0 ? 0 : balance / part.quantity;
+4093-        })))) : 0;
+4094-        const atMax = value?.max_level == null || Number(value.level) >= Number(value.max_level);
+4095-        return {buildingId:buildingRow.id, buildingName:buildingRow.name, resourceKind:buildingRow.kind, tier, roomId, roomNumber,
+4096-          sideEventId:value.isSide ? String(value?.id || '') : '', eventId:String(value?.event_id || ''),
+4097-          name:resourceEventName(value?.event_id), cost, affordable, atMax};
+4098-      });
+4099-    }).filter(row => !resourceEventIsExcluded(row) && clean(row.name).toLocaleLowerCase() !== clean(row.buildingName).toLocaleLowerCase());
+4100-  }
+4101-
+4102-  function allResourceEvents() {
+4103:    return resourceBuildings.flatMap(resourceEvents);
+4104-  }
+4105-
+4106-  function resourceUsesProtectedCost(row) {
+4107-    return costParts(row?.cost).some(part => RESOURCE_PROTECTED_COST_IDS.has(String(part?.id || '')));
+4108-  }
+4109-
+4110-  function resourceEventIsExcluded(row) {
+4111:    const mainEventId = RESOURCE_BUILDING_TYPES[row?.resourceKind]?.eventMarker || '';
+4112-    return resourceUsesProtectedCost(row) || (mainEventId && String(row?.eventId || '') === mainEventId);
+4113-  }
+4114-
+4115-  function resourceTierLabel(tier) {
+4116-    return ['1','2','3','4','4+','5','5+','MAX'][Math.max(0,Math.trunc(Number(tier)))] || `T${Math.max(0,Math.trunc(Number(tier))) + 1}`;
+4117-  }
+4118-
+4119-  function resourceWalletCostVisual(cost, multiplier = 1000) {
+4120-    const parts = costParts(cost);
+4121:    if (!parts.length) return `<span class="hk-resource-balance ok">${either('Без затрат','No cost')}</span>`;
+4122-    return parts.map(part => {
+4123-      const required = Math.max(0, Number(part.quantity || 0) * multiplier);
+4124-      const balance = walletAmount(part.id);
+4125-      const enough = balance != null && balance >= required;
+4126-      const availableText = balance == null ? '?' : Number(balance).toLocaleString(locale());
+4127:      return `<span class="hk-resource-balance ${enough?'ok':'short'}">${fairIconHtml(paymentIcon(part),'hk-price-icon')}<i>${either('в наличии','available')} <b>${availableText}</b></i><em>/</em><i>${either('нужно','required')} <b>${required.toLocaleString(locale())}</b></i></span>`;
+4128-    }).join('');
+4129-  }
+4130-
+4131-  function renderResources() {
+4132-    if (!resourceBox) return;
+4133-    const events = allResourceEvents();
+4134:    const totalCompletions = 1000 * resourceRepeatCount;
+4135-    const available = events.filter(row => row.atMax && row.affordable > 0 && !resourceEventIsExcluded(row));
+4136:    const activeBuilding = resourceBuildings[0] || null;
+4137-    const savedIds = savedResourceBuildingIds();
+4138:    const buildingButtons = Object.keys(RESOURCE_BUILDING_TYPES).map(kind => `<button data-resource-kind="${kind}" class="${kind===resourceSelectedKind?'active':''}" ${resourceBusy?'disabled':''}><b>${escapeHtml(resourceTypeName(kind,true))}</b><small>${escapeHtml(resourceTypeName(kind))}${savedIds[kind]?' ✓':''}</small></button>`).join('');
+4139-    const activeTier = Math.max(0, Math.trunc(Number(activeBuilding?.tier || 0)));
+4140-    const maximumTier = Math.max(activeTier, Math.trunc(Number(activeBuilding?.maxTier ?? activeTier)));
+4141:    const tierButtons = activeBuilding ? Array.from({length:maximumTier + 1},(_,tier)=>`<button data-resource-tier="${tier}" class="${tier===activeTier?'active':''}" ${resourceBusy?'disabled':''}>${resourceTierLabel(tier)}</button>`).join('') : '';
+4142:    const buildings = resourceBuildings.length ? resourceBuildings.map(building => {
+4143-      const rows = resourceEvents(building);
+4144-      const content = rows.length ? rows.map((row,index) => {
+4145-        const protectedCost = resourceUsesProtectedCost(row);
+4146-        const maximum = Math.max(0, Math.trunc(row.affordable));
+4147-        const planned = protectedCost ? 0 : resourceMaximumMode ? maximum : Math.min(totalCompletions, maximum);
+4148-        const ready = !protectedCost && row.atMax && planned > 0;
+4149-        const reason = protectedCost ? either('Слава защищена — расход отключён','Fame is protected — spending disabled') : !row.atMax ? either('Сначала доведите задание до max','First raise the task to max') : resourceMaximumMode ? either(`Максимально возможно ×${planned}`,`Maximum possible ×${planned}`) : planned < totalCompletions ? either(`Ресурсов меньше выбранного объёма — будет выполнено ×${planned}`,`Resources are below the selected amount — will run ×${planned}`) : either(`Будет выполнено ×${planned}`,`Will run ×${planned}`);
+4150:        return `<div class="hk-resource-task ${protectedCost?'protected':''}"><div><b>${escapeHtml(row.name)}</b><small>${escapeHtml(reason)}</small></div><span class="hk-resource-cost">${resourceWalletCostVisual(row.cost,protectedCost?1:(planned || totalCompletions))}</span><button data-resource-building="${escapeHtml(building.id)}" data-resource-event="${index}" ${resourceBusy || !ready?'disabled':''}>${protectedCost?either('Запрещено','Blocked'):`×${planned || 0}`}</button></div>`;
+4151-      }).join('') : `<p class="hk-muted">${either('Доступных ресурсных заданий нет','No resource tasks are available')}</p>`;
+4152:      return `<section class="hk-resource-building"><h4>${escapeHtml(building.buildingName || resourceTypeName(building.kind,true))} · ${escapeHtml(building.name || building.id)} <small>${resourceTierLabel(building.tier)}</small></h4>${content}</section>`;
+4153-    }).join('') : `<p class="hk-muted">${either(`Скрипт автоматически найдёт «${resourceTypeName(resourceSelectedKind,true)}» в ваших районах и загрузит задания.`,`The script will automatically find “${resourceTypeName(resourceSelectedKind,true)}” in your districts and load its tasks.`)}</p>`;
+4154:    const repeatOptions = Array.from({length:10},(_,index)=>index + 1).map(value=>`<option value="${value}" ${value===resourceRepeatCount?'selected':''}>${value}</option>`).join('');
+4155:    resourceBox.innerHTML = `<div class="hk-resource-type-tabs">${buildingButtons}</div><div class="hk-resource-head"><div><h3>${escapeHtml(resourceTypeName(resourceSelectedKind))}</h3><small>${resourceBuildings.length ? `${either('Заданий','Tasks')}: ${events.length} · ${either('можно выполнить','runnable')}: ${available.length}` : either('Множитель заданий: только ×1000','Task multiplier: ×1000 only')}</small></div><div class="hk-resource-tiers">${tierButtons}</div><button id="hk-resource-read" class="hk-secondary" ${resourceBusy?'disabled':''}>${resourceBusy?either('Считываю…','Reading…'):either(`Обновить ${resourceTypeName(resourceSelectedKind)}`,`Refresh ${resourceTypeName(resourceSelectedKind)}`)}</button></div><label class="hk-resource-repeat"><span>${either('Количество повторов ×1000','Number of ×1000 repeats')}</span><select id="hk-resource-repeat" ${resourceBusy || resourceMaximumMode?'disabled':''}>${repeatOptions}</select></label><button id="hk-resource-maximum" class="hk-secondary hk-resource-maximum" ${resourceBusy || !events.length?'disabled':''}>${resourceMaximumMode?either('Вернуться к выбранному количеству','Return to selected amount'):either('Рассчитать максимально возможный обмен','Calculate maximum possible exchange')}</button><div class="hk-resource-buildings">${buildings}</div><button id="hk-resource-run-all" class="hk-primary" ${resourceBusy || !available.length?'disabled':''}>${resourceMaximumMode?either('Выполнить рассчитанный максимум','Run calculated maximum'):either(`Выполнить доступные — до ×${totalCompletions}`,`Run available — up to ×${totalCompletions}`)}</button><p class="hk-muted">${either('Здания находятся автоматически. Выберите нужное — его задания загрузятся без предварительного открытия в игре. Переключатели 1–MAX меняют тир.','Buildings are found automatically. Select one to load its tasks without opening it in the game first. The 1–MAX controls change the tier.')}</p>`;
+4156-    installIconFallbacks(resourceBox);
+4157:    resourceBox.querySelector('#hk-resource-read').onclick = () => loadResources();
+4158:    resourceBox.querySelector('#hk-resource-run-all').onclick = () => runResourceEvents(available);
+4159-    resourceBox.querySelectorAll('[data-resource-kind]').forEach(button => button.onclick = () => selectResourceBuilding(button.dataset.resourceKind));
+4160-    resourceBox.querySelectorAll('[data-resource-tier]').forEach(button => button.onclick = () => loadResourceTier(Number(button.dataset.resourceTier)));
+4161:    resourceBox.querySelector('#hk-resource-maximum').onclick = async () => {
+4162-      resourceMaximumMode = !resourceMaximumMode;
+4163:      if (resourceMaximumMode) await loadResources(false);
+4164-      else renderResources();
+4165-    };
+4166:    resourceBox.querySelector('#hk-resource-repeat').onchange = event => {
+4167:      resourceRepeatCount = Math.max(1, Math.min(10, Math.trunc(Number(event.target.value || 1))));
+4168-      resourceMaximumMode = false;
+4169:      save({resourceRepeatCount});
+4170-      renderResources();
+4171-    };
+4172-    resourceBox.querySelectorAll('[data-resource-building]').forEach(button => button.onclick = () => {
+4173:      const building = resourceBuildings.find(value => value.id === button.dataset.resourceBuilding);
+4174-      const row = resourceEvents(building)[Number(button.dataset.resourceEvent)];
+4175:      if (row) runResourceEvents([row]);
+4176-    });
+4177-  }
+4178-
+4179-  async function selectResourceBuilding(kind) {
+4180:    if (!RESOURCE_BUILDING_TYPES[kind] || resourceBusy) return false;
+4181-    resourceSelectedKind=kind;
+4182-    resourceMaximumMode=false;
+4183:    resourceBuildings=resourceBuildings.filter(row=>row.kind===kind);
+4184-    save({resourceSelectedKind:kind});
+4185-    renderResources();
+4186:    return loadResources(false);
+4187-  }
+4188-
+4189:  async function loadResources(showLog = true) {
+4190:    if (!requireLicense() || resourceBusy) return false;
+4191:    resourceBusy = true; renderResources();
+4192-    try {
+4193-      playerDocument = await apiJson('/player/me', 'POST');
+4194-      if (!eventCatalogDocument) eventCatalogDocument = normalizeEventCatalog(await apiJson('/events','GET'));
+4195-      const discoveredIds=await discoverResourceBuildingIds(showLog,resourceSelectedKind);
+4196:      let buildingId=String((resourceBuildings[0]?.kind===resourceSelectedKind ? resourceBuildings[0]?.id : '') || discoveredIds[resourceSelectedKind] || '');
+4197-      if (!buildingId) {
+4198:        resourceBuildings=[];
+4199-        if (showLog) log(either(`Здание «${resourceTypeName(resourceSelectedKind,true)}» не найдено в принадлежащих вам районах.`,`“${resourceTypeName(resourceSelectedKind,true)}” was not found in your owned districts.`),'warn');
+4200-        return false;
+4201-      }
+4202-      const storedTier=Number(savedResourceTiers()[resourceSelectedKind]);
+4203:      const requestedTier=Number.isSafeInteger(Number(resourceBuildings[0]?.tier)) ? Number(resourceBuildings[0].tier) : Number.isSafeInteger(storedTier) ? storedTier : null;
+4204-      const tierQuery=requestedTier == null ? '' : `&tier=${encodeURIComponent(requestedTier)}`;
+4205-      let documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}${tierQuery}`, 'POST');
+4206-      let proofs=savedResourceBuildingProofs();
+4207-      let resourceBuilding=exactResourceBuildingData(documentValue,resourceSelectedKind,String(proofs[resourceSelectedKind] || '')===buildingId);
+4208-      if (!resourceBuilding || resourceBuilding.kind!==resourceSelectedKind) {
+4209-        const ids=savedResourceBuildingIds(); delete ids[resourceSelectedKind];
+4210-        delete proofs[resourceSelectedKind];
+4211-        save({resourceBuildingIds:ids,resourceBuildingProofs:proofs, ...(resourceSelectedKind==='nut'?{resourceNutBuildingId:''}:{})});
+4212:        resourceBuildings=[];
+4213-        const rediscoveredIds=await discoverResourceBuildingIds(showLog,resourceSelectedKind);
+4214-        const replacementId=String(rediscoveredIds[resourceSelectedKind] || '');
+4215-        if (!replacementId || replacementId===buildingId) {
+4216-          throw new Error(either(`Не удалось автоматически найти «${resourceTypeName(resourceSelectedKind,true)}» в принадлежащих вам районах.`,`Could not automatically find “${resourceTypeName(resourceSelectedKind,true)}” in your owned districts.`));
+4217-        }
+4218-        buildingId=replacementId;
+4219-        documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}${tierQuery}`, 'POST');
+4220-        proofs=savedResourceBuildingProofs();
+4221-        resourceBuilding=exactResourceBuildingData(documentValue,resourceSelectedKind,String(proofs[resourceSelectedKind] || '')===buildingId);
+4222-        if (!resourceBuilding || resourceBuilding.kind!==resourceSelectedKind) {
+4223-          const retryIds=savedResourceBuildingIds(); delete retryIds[resourceSelectedKind];
+4224-          delete proofs[resourceSelectedKind];
+4225-          save({resourceBuildingIds:retryIds,resourceBuildingProofs:proofs, ...(resourceSelectedKind==='nut'?{resourceNutBuildingId:''}:{})});
+4226-          throw new Error(either(`Автоматически найденное здание не является «${resourceTypeName(resourceSelectedKind,true)}».`,`The automatically found building is not “${resourceTypeName(resourceSelectedKind,true)}”.`));
+4227-        }
+4228-      }
+4229-      if (!resourceBuilding.completedMainEvent && String(proofs[resourceSelectedKind] || '') !== buildingId) {
+4230-        proofs[resourceSelectedKind]=buildingId;
+4231-        save({resourceBuildingProofs:proofs});
+4232-      }
+4233-      const building=resourceBuilding.building;
+4234-      const selectedTier=Number(building?.chosen_tier ?? requestedTier ?? building?.tier ?? 0);
+4235:      const maximumTier=Math.max(selectedTier,Number(building?.tier ?? selectedTier),Number(resourceBuildings[0]?.maxTier ?? selectedTier));
+4236:      resourceBuildings=[{id:buildingId,kind:resourceSelectedKind,areaId:'',tier:selectedTier,maxTier:maximumTier,name:resourceTypeName(resourceSelectedKind),buildingName:resourceTypeName(resourceSelectedKind,true),document:documentValue}];
+4237-      const tiers=savedResourceTiers(); tiers[resourceSelectedKind]=selectedTier;
+4238-      save({resourceSelectedTiers:tiers, ...(resourceSelectedKind==='nut'?{resourceSelectedTier:selectedTier}:{})});
+4239-      if (showLog) log(either(`${resourceTypeName(resourceSelectedKind)} считана, заданий: ${allResourceEvents().length}`,`${resourceTypeName(resourceSelectedKind)} read, tasks: ${allResourceEvents().length}`),'ok');
+4240-      return true;
+4241-    } catch (error) {
+4242-      log(`${either(`Ошибка чтения «${resourceTypeName(resourceSelectedKind)}»`,`${resourceTypeName(resourceSelectedKind)} read error`)}: ${error.message}`,'bad');
+4243-      return false;
+4244-    } finally {
+4245:      resourceBusy = false; renderResources();
+4246-    }
+4247-  }
+4248-
+4249-  async function loadResourceTier(tier) {
+4250:    const row=resourceBuildings[0];
+4251-    const selectedTier=Math.max(0,Math.trunc(Number(tier)));
+4252:    if (!requireLicense() || resourceBusy || !row || !Number.isSafeInteger(selectedTier) || selectedTier > Number(row.maxTier ?? row.tier ?? 0)) return false;
+4253:    resourceBusy=true; renderResources();
+4254-    try {
+4255-      const documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(row.id)}&tier=${encodeURIComponent(selectedTier)}`,'POST');
+4256-      const proofs=savedResourceBuildingProofs();
+4257-      const resourceBuilding=exactResourceBuildingData(documentValue,row.kind,String(proofs[row.kind] || '')===String(row.id));
+4258-      if (!resourceBuilding || resourceBuilding.kind!==row.kind) throw new Error(either(`Не удалось прочитать выбранный тир «${resourceTypeName(row.kind)}».`,`Could not read the selected ${resourceTypeName(row.kind)} tier.`));
+4259-      const building=resourceBuilding.building;
+4260-      const actualTier=Number(building?.chosen_tier ?? selectedTier);
+4261-      if (actualTier !== selectedTier) throw new Error(either(`Игра вернула другой тир: ${resourceTierLabel(actualTier)}.`,`The game returned a different tier: ${resourceTierLabel(actualTier)}.`));
+4262-      const maximumTier=Math.max(actualTier,Number(building?.tier ?? actualTier),Number(row.maxTier ?? actualTier));
+4263:      resourceBuildings=[{...row,tier:actualTier,maxTier:maximumTier,document:documentValue}];
+4264-      const tiers=savedResourceTiers(); tiers[row.kind]=actualTier;
+4265-      save({resourceSelectedTiers:tiers, ...(row.kind==='nut'?{resourceSelectedTier:actualTier}:{})});
+4266-      log(either(`${resourceTypeName(row.kind)}: выбран тир ${resourceTierLabel(actualTier)}, заданий ${allResourceEvents().length}`,`${resourceTypeName(row.kind)}: tier ${resourceTierLabel(actualTier)} selected, tasks ${allResourceEvents().length}`),'ok');
+4267-      return true;
+4268-    } catch (error) {
+4269-      log(`${either('Ошибка переключения тира','Tier switch error')}: ${error.message}`,'bad');
+4270-      return false;
+4271-    } finally {
+4272:      resourceBusy=false; renderResources();
+4273-    }
+4274-  }
+4275-
+4276:  async function runResourceEvents(rows) {
+4277:    const totalCompletions = 1000 * resourceRepeatCount;
+4278-    const maximumMode = resourceMaximumMode;
+4279-    const ready = (rows || []).filter(row => row?.atMax && row?.affordable > 0 && !resourceEventIsExcluded(row)).map(row => {
+4280-      const maximum = Math.max(0, Math.trunc(row.affordable));
+4281-      return {...row,plannedCompletions:maximumMode ? maximum : Math.min(totalCompletions,maximum)};
+4282-    });
+4283:    if (!requireLicense() || resourceBusy || !ready.length) return;
+4284-    const lines = ready.map((row,index) => `${index + 1}. ${row.buildingName} — ${row.name} ×${row.plannedCompletions}`);
+4285-    const heading = maximumMode ? either('Выполнить рассчитанный максимальный обмен?','Run the calculated maximum exchange?') : either(`Выполнить ресурсные задания? Выбранный предел: ×${totalCompletions}.`,`Run resource tasks? Selected limit: ×${totalCompletions}.`);
+4286-    if (!confirm(`${heading}\n\n${lines.join('\n')}`)) return;
+4287:    resourceBusy = true; renderResources();
+4288-    let completed = 0, completions = 0;
+4289-    try {
+4290-      for (const row of ready) {
+4291-        log(either(`Выполняю: ${row.name} ×${row.plannedCompletions}…`,`Running: ${row.name} ×${row.plannedCompletions}…`));
+4292-        const request = numberOfCompletions => apiJson('/player/event','POST',{
+4293-          event_building_id:row.roomId,
+4294-          tier:row.tier,
+4295-          side_event_id:row.sideEventId || undefined,
+4296-          number_of_completions:numberOfCompletions
+4297-        });
+4298-        if (row.plannedCompletions <= 1000) {
+4299-          await request(row.plannedCompletions);
+4300-        } else {
+4301-          try {
+4302-            await request(row.plannedCompletions);
+4303-          } catch (error) {
+4304-            if (!/HTTP (400|422)|invalid|not allowed/i.test(String(error?.message || error))) throw error;
+4305-            const requestCount=Math.ceil(row.plannedCompletions / 1000);
+4306-            if (requestCount > 10 && !confirm(either(`Игра не приняла объединённый обмен ×${row.plannedCompletions}. Для задания «${row.name}» потребуется ${requestCount.toLocaleString(locale())} отдельных запросов. Продолжить?`,`The game rejected the combined ×${row.plannedCompletions} exchange. Task “${row.name}” requires ${requestCount.toLocaleString(locale())} separate requests. Continue?`))) throw new Error(either('Выполнение большого обмена отменено пользователем.','Large exchange cancelled by the user.'));
+4307-            log(either('Сервер не принял объединённый обмен — разбиваю его на части без паузы.','The server rejected the combined exchange — splitting it into chunks without delay.'),'warn');
+4308-            let remaining = row.plannedCompletions;
+4309-            let processedRequests = 0;
+4310-            while (remaining > 0) {
+4311-              const chunk = Math.min(1000, remaining);
+4312-              await request(chunk);
+4313-              remaining -= chunk;
+4314-              processedRequests += 1;
+4315-              if (requestCount > 10 && (processedRequests % 25 === 0 || remaining === 0)) log(either(`Обмен «${row.name}»: запросов ${processedRequests.toLocaleString(locale())}/${requestCount.toLocaleString(locale())}`,`Exchange “${row.name}”: requests ${processedRequests.toLocaleString(locale())}/${requestCount.toLocaleString(locale())}`));
+4316-            }
+4317-          }
+4318-        }
+4319-        completions += row.plannedCompletions;
+4320-        completed += 1;
+4321-      }
+4322-      log(either(`Ресурсные задания выполнены: ${completed}, всего выполнений: ${completions}`,`Resource tasks completed: ${completed}, total completions: ${completions}`),'ok');
+4323:      resourceBusy = false;
+4324:      await loadResources(false);
+4325-    } catch (error) {
+4326-      log(`${either('Ошибка выполнения ресурсного задания','Resource task error')}: ${error.message}`,'bad');
+4327-    } finally {
+4328:      resourceBusy = false; renderResources();
+4329-    }
+4330-  }
+4331-
+4332-  function exportMobileSettings() {
+4333-    const documentValue = {...load(), exportedAt:Date.now(), exportVersion:VERSION};
+4334-    delete documentValue.deviceId;
+4335-    delete documentValue.watermarkCode;
+4336-    const link = document.createElement('a');
+4337-    link.href = URL.createObjectURL(new Blob([JSON.stringify(documentValue, null, 2)], {type:'application/json'}));
+4338-    link.download = `HamsterKingMobile_settings_${VERSION}.json`;
+4339-    link.click();
+4340-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+4341-  }
+4342-
+4343-  function importMobileSettings() {
+4344-    const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json,.json';
+4345-    input.onchange = async () => {
+4346-      try {
+4347-        const file = input.files?.[0]; if (!file) return;
+4348-        const imported = JSON.parse(await file.text());
+4349-        if (!imported || typeof imported !== 'object' || Array.isArray(imported)) throw new Error(either('Некорректный файл','Invalid file'));
+4350-        if (!confirm(either('Восстановить настройки из файла? Текущие настройки будут объединены с импортированными.', 'Restore settings from this file? Current settings will be merged with imported settings.'))) return;
+4351-        const current = load();
+4352-        const merged = {...current, ...imported, deviceId:current.deviceId || getDeviceId(), watermarkCode:current.watermarkCode, _settingsUpdatedAt:Date.now()};
+4353-        delete merged.exportedAt; delete merged.exportVersion;
+4354-        localStorage.setItem(STORE, JSON.stringify(merged));
+4355-        queueSettingsSync(merged);
+4356-        location.reload();
+4357-      } catch (error) { alert(`${either('Не удалось восстановить настройки','Could not restore settings')}: ${error.message}`); }
+4358-    };
+4359-    input.click();
+4360-  }
+4361-
+4362-  function dailyConfirmationText(actions) {
+4363-    const totals = dailyPlanTotals(actions);
+4364-    const lines = actions.map((action,index) => `${index + 1}. ${action.label}${action.count > 1 ? ` ×${action.count}` : ''}${action.kind === 'purchase' ? ` — ${costParts(action.cost).map(part => `${part.quantity * (action.count || 1)} ${paymentLabel(part.id)}`).join(' + ')}` : ` — ${either('без расходов','no cost')}`}`);
+4365-    const costs = [...totals.values()].filter(part => part.quantity > 0).map(part => `${part.quantity.toLocaleString(locale())} ${paymentLabel(part.id)}`);
+4366-    return `${either('Выполнить выбранные действия?','Run selected actions?')}\n\n${lines.join('\n')}\n\n${either('Максимальный расход','Maximum spend')}: ${costs.length ? costs.join(' + ') : '0'}`;
+4367-  }
+4368-
+4369-  async function executeDailyPurchase(action) {
+4370-    playerDocument = await apiJson('/player/me', 'POST');
+4371-    if (action.section === 'fair') {
+4372-      let purchased = 0;
+4373-      const errors = [];
+--
+5227-        <input type="number" inputmode="numeric" min="0" max="${Math.min(row.quantity,bureauSize)}" value="${count}" data-bureau-input="${escapeHtml(row.businessId)}"></div>`;
+5228-    }).join('') || `<p class="hk-muted">${tr('noBusinesses',{n:bureauTier || '?'})}</p>`;
+5229-    installIconFallbacks(bureauCards);
+5230-    bureauCards.querySelectorAll('[data-bureau-input]').forEach(input => input.onchange = () => {
+5231-      const id = input.dataset.bureauInput;
+5232-      const stock = bureauInventory.find(row => row.businessId === id)?.quantity || 0;
+5233-      const without = [...selectedBureauInputs].reduce((sum,[key,value]) => sum + (key === id ? 0 : Number(value || 0)), 0);
+5234-      const count = Math.min(stock, Math.max(0, bureauSize - without), Math.max(0, Math.trunc(Number(input.value || 0))));
+5235-      count ? selectedBureauInputs.set(id,count) : selectedBureauInputs.delete(id);
+5236-      renderProjectBureau();
+5237-    });
+5238-    const selectedCount = [...selectedBureauInputs.values()].reduce((sum,value) => sum + Number(value || 0), 0);
+5239-    const attempts = Math.max(1, Math.trunc(Number(root?.querySelector('#hk-bureau-attempts')?.value || 1)));
+5240-    bureauSummary.innerHTML = `<b>${tr('bureauSelected',{n:selectedCount,max:bureauSize})}</b><br><small>${tr('maxCost')}: ${scaledCostVisual(bureauCost(),attempts)}</small>`;
+5241-    const run = root?.querySelector('#hk-bureau-run'); if (run) run.disabled = bureauRunning || selectedCount !== bureauSize;
+5242-  }
+5243-
+5244-  async function runProjectBureau() {
+5245-    if (!requireLicense() || bureauRunning) return;
+5246-    const inputs = [...selectedBureauInputs].flatMap(([id,count]) => Array(Math.max(0,Number(count || 0))).fill(id));
+5247-    if (inputs.length !== bureauSize) return;
+5248-    const attempts = Math.max(1, Math.min(100, Math.trunc(Number(root.querySelector('#hk-bureau-attempts').value || 1))));
+5249-    const available = new Map(bureauInventory.map(row => [row.businessId,row.quantity]));
+5250-    if ([...selectedBureauInputs].some(([id,count]) => Number(count) * attempts > (available.get(id) || 0))) {
+5251-      alert(either('На складе недостаточно выбранных бизнесов для такого количества созданий.', 'Not enough selected businesses in stock for this creation count.')); return;
+5252-    }
+5253-    if (!confirm(either(`Создать бизнес-планы: ${attempts}?\n\n${tr('maxCost')}: ${scaledCostVisual(bureauCost(),attempts).replace(/<[^>]+>/g,' ')}`,
+5254-      `Create business plans: ${attempts}?\n\n${tr('maxCost')}: ${scaledCostVisual(bureauCost(),attempts).replace(/<[^>]+>/g,' ')}`))) return;
+5255-    bureauRunning = true; renderProjectBureau();
+5256-    let completed = 0;
+5257-    try {
+5258-      for (let index = 0; index < attempts; index++) {
+5259-        log(either(`Создаю бизнес-план ${index + 1}/${attempts}…`, `Creating business plan ${index + 1}/${attempts}…`));
+5260-        playerDocument = await apiJson('/player/business/recipe/craft', 'POST', {businesses:inputs});
+5261-        completed++;
+5262-        await sleep(450);
+5263-      }
+5264-      playerDocument = await apiJson('/player/me', 'POST');
+5265-      bureauInventory = normalizeInventory(playerDocument);
+5266-      selectedBureauInputs.clear();
+5267-      log(either(`Создано бизнес-планов: ${completed}`, `Business plans created: ${completed}`), 'ok');
+5268-    } catch (error) { log(`${either('Проектное бюро остановлено', 'Project Bureau stopped')}: ${error.message}`, 'bad'); }
+5269-    finally { bureauRunning = false; renderProjectBureau(); }
+5270-  }
+5271-
+5272:  function refreshBusinessData() {
+5273-    if (!playerDocument) return;
+5274-    layout = normalizeLayout(playerDocument)
+5275-      .filter(row => row.timer == null || Number(row.timer) === 0)
+5276-      .filter(row => row.businessId ? row.status === 'ACTIVE' : ['INACTIVE', '', null].includes(row.status));
+5277-    inventory = normalizeInventory(playerDocument);
+5278:    selectedSlots = new Set([...selectedSlots].filter(key => layout.some(row => row.key === key)));
+5279-    // Empty active slots are destinations, not businesses to remove. They must
+5280-    // always increase insertion capacity even when a tier filter hides them.
+5281:    if (!preparedBusinessPlan) for (const row of layout) if (!row.businessId) selectedSlots.add(row.key);
+5282:    for (const [id, count] of [...selectedStock]) {
+5283-      const stock = inventory.find(row => row.businessId === id);
+5284:      if (!stock) selectedStock.delete(id); else selectedStock.set(id, Math.min(count, stock.quantity));
+5285-    }
+5286-    renderBusinessLists();
+5287-    renderBusinessOptimizerFilters();
+5288-  }
+5289-
+5290-  function businessSelectionCount() {
+5291:    return [...selectedStock.values()].reduce((sum, value) => sum + Number(value || 0), 0);
+5292-  }
+5293-
+5294-  function clampSelectedStockToSlots() {
+5295:    let freeSlots = selectedSlots.size;
+5296:    for (const [businessId, count] of [...selectedStock]) {
+5297-      const inStock = Math.max(0, Number(inventory.find(row => row.businessId === businessId)?.quantity || 0));
+5298-      const allowed = Math.min(inStock, freeSlots, Math.max(0, Number(count || 0)));
+5299:      if (allowed) selectedStock.set(businessId, allowed); else selectedStock.delete(businessId);
+5300-      freeSlots -= allowed;
+5301-    }
+5302-  }
+5303-
+5304-  function availableSlotsForBusiness(businessId) {
+5305:    const ownCount = Math.max(0, Number(selectedStock.get(businessId) || 0));
+5306:    return Math.max(0, selectedSlots.size - Math.max(0, businessSelectionCount() - ownCount));
+5307-  }
+5308-
+5309-  function businessCardDetails(businessId) {
+5310-    const meta = recipeMetadata(String(businessId || ''));
+5311-    const bonuses = Array.isArray(meta.bonuses) ? meta.bonuses : [];
+5312-    const properties = bonuses.map(value => `${clean(value.value)} ${clean(value.caption)}`.trim()).filter(Boolean).join(' · ');
+5313-    return {
+5314-      name:clean(meta.name) || gameText(businessId),
+5315-      properties:properties || clean(meta.description) || either('Свойства загружаются…', 'Loading properties…')
+5316-    };
+5317-  }
+5318-
+5319-  function businessBonusAmount(bonus) {
+5320-    const source = String(bonus?.value || '').replace(/\s/g, '').replace(',', '.');
+5321-    const match = source.match(/[+-]?\d+(?:\.\d+)?(?:[kкmм])?/i);
+5322-    if (!match) return 1;
+5323-    const suffix = match[0].slice(-1).toLowerCase();
+5324-    let value = Number(match[0].replace(/[kкmм]/i, ''));
+5325-    if (!Number.isFinite(value)) return 1;
+5326-    if (suffix === 'k' || suffix === 'к') value *= 1000;
+5327-    if (suffix === 'm' || suffix === 'м') value *= 1000000;
+5328-    return value;
+5329-  }
+5330-
+5331-  function bonusPropertyKey(bonus) {
+5332-    const label = clean(bonus?.caption);
+5333-    const normalized = label.normalize('NFKC').toLocaleLowerCase(locale())
+5334-      .replace(/ё/g,'е')
+5335-      .replace(/^[\s/\\:;,.+\-–—]+|[\s/\\:;,.+\-–—]+$/g,'')
+5336-      .replace(/[\s\u00a0]+/g,' ')
+5337-      .trim();
+5338-    return normalized || String(bonus?.id || '').toLowerCase();
+5339-  }
+5340-
+5341-  function businessEffects(businessId) {
+5342-    const meta = recipeMetadata(String(businessId || ''));
+5343-    const grouped = new Map();
+5344-    const seen = new Set();
+5345-    for (const bonus of (meta.bonuses || [])) {
+5346-      const id = String(bonus.id || bonus.caption || '');
+5347-      const label = clean(bonus.caption) || clean(bonus.id) || businessId;
+5348-      const amount = businessBonusAmount(bonus);
+5349-      const key = bonusPropertyKey(bonus) || id;
+5350-      // Some combined businesses repeat the exact same bonus reference in the
+5351-      // response. Count that reference once, but add genuinely different
+--
+5604-    const optimized = [];
+5605-    for (const row of types) {
+5606-      const fixedCopies = fixedRows.filter(value => value.businessId === row.id).length;
+5607-      const allowedByLimit = Number.isFinite(row.limit) ? Math.max(0,row.limit-fixedCopies) : replaceableRows.length;
+5608-      const allowed = Math.min(row.count, allowedByLimit, replaceableRows.length-optimized.length);
+5609-      for (let index=0; index<allowed; index++) optimized.push(row.id);
+5610-      if (optimized.length >= replaceableRows.length) break;
+5611-    }
+5612-    // Never remove an installed business merely because the selected tiers do
+5613-    // not provide enough replacement candidates. Preserve the remaining
+5614-    // replaceable positions instead of turning them into empty slots.
+5615-    if (optimized.length < replaceableRows.length) {
+5616-      const alreadyUsed = businessCounts(optimized);
+5617-      for (const row of replaceableRows.filter(value => value.businessId)) {
+5618-        const availableCopies = Number(available.get(row.businessId) || 0);
+5619-        const used = Number(alreadyUsed.get(row.businessId) || 0);
+5620-        if (used >= availableCopies || optimized.length >= replaceableRows.length) continue;
+5621-        optimized.push(row.businessId); alreadyUsed.set(row.businessId,used+1);
+5622-      }
+5623-    }
+5624-    while (optimized.length < replaceableRows.length) optimized.push('');
+5625-    const desired = [...fixedRows.map(row => row.businessId), ...optimized];
+5626-    const pairs = optimizerExactPairs(desired,new Set(fixedRows.map(row => row.key)));
+5627-    const beforeCounts = activeCounts, afterCounts = businessCounts(desired);
+5628-    const beforeEffects = aggregateBusinessEffects(beforeCounts), afterEffects = aggregateBusinessEffects(afterCounts);
+5629-    const changes = [...new Set([...beforeEffects.keys(),...afterEffects.keys()])].map(id => {
+5630-      const before = Number(beforeEffects.get(id)?.amount || 0), after = Number(afterEffects.get(id)?.amount || 0);
+5631-      return {id,label:afterEffects.get(id)?.label || beforeEffects.get(id)?.label || id,before,after,diff:after-before};
+5632-    }).filter(row => row.diff !== 0).sort((a,b) => Math.abs(b.diff)-Math.abs(a.diff));
+5633-    optimizerResult = {goal,keyword,desired,pairs,changes,safety:optimizerSafety(pairs.length),
+5634-      beforeScore:[...beforeCounts].reduce((sum,[id,count]) => sum+optimizerBusinessScore(id,goal,keyword)*count,0),
+5635-      afterScore:[...afterCounts].reduce((sum,[id,count]) => sum+optimizerBusinessScore(id,goal,keyword)*count,0)};
+5636-    renderBusinessOptimizer();
+5637-  }
+5638-
+5639-  function renderBusinessOptimizer() {
+5640-    const box = root?.querySelector('#hk-optimizer-result'); if (!box) return;
+5641-    if (!optimizerResult) { box.innerHTML = `<p class="hk-muted">${tr('optimizerNoPlan')}</p>`; return; }
+5642-    const row = optimizerResult, workers = row.safety.workers;
+5643-    const changes = row.changes.slice(0,10).map(change => `<li><span>${escapeHtml(change.label)}</span><strong class="${change.diff>0?'positive':'negative'}">${change.diff>0?'+':''}${Number(change.diff).toLocaleString(locale())}</strong></li>`).join('') || `<li><span>${either('Изменений бонусов нет','No bonus changes')}</span><strong>—</strong></li>`;
+5644-    const flow = row.pairs.slice(0,6).map(([slot,id]) => `${businessVisual(slot.businessId)}<b>→</b>${businessVisual(id)}`).join('') + (row.pairs.length>6?`<b>+${row.pairs.length-6}</b>`:'');
+5645-    const vipMultiplier = vipPassiveIncomeMultiplier();
+5646-    const vipNotice = vipMultiplier > 1 ? `<div class="hk-optimizer-safety">${either('VIP учтён','VIP included')}: ×${vipMultiplier} ${either('для почасового пассивного дохода','for hourly passive income')}</div>` : '';
+5647-    box.innerHTML = `<div class="hk-optimizer-summary"><span>${tr('optimizerBefore')}<b>${row.beforeScore.toFixed(2)}</b></span><span>${tr('optimizerAfter')}<b>${row.afterScore.toFixed(2)}</b></span><span>${tr('optimizerChanges',{n:row.pairs.length})}<b>${row.pairs.length}</b></span></div><div class="hk-optimizer-flow">${flow || `<span>${either('Перестановка не требуется','No rearrangement needed')}</span>`}</div><b>${tr('optimizerDifference')}</b><ul>${changes}</ul>${vipNotice}<div class="hk-optimizer-safety ${row.safety.allowed?'':'blocked'}">${escapeHtml(row.safety.reason)} · ${tr('optimizerManagers',{busy:workers.busy,max:workers.max||'?'})}</div><button id="hk-optimizer-apply" class="hk-primary" ${row.safety.allowed&&row.pairs.length?'':'disabled'}>${tr('optimizerApply')}</button>`;
+5648-    installIconFallbacks(box);
+5649:    box.querySelector('#hk-optimizer-apply')?.addEventListener('click',applyBusinessOptimizer);
+5650-  }
+5651-
+5652-  function bonusAnalyzerData() {
+5653-    const active = businessCounts(layout.map(row => row.businessId));
+5654-    const effects = new Map();
+5655-    for (const [id,count] of active) for (const effect of businessEffects(id)) {
+5656-      const row = effects.get(effect.key) || {id:effect.key,label:effect.label,total:0,sources:[]};
+5657-      const multiplier = businessEffectMultiplier(effect);
+5658-      row.total += effect.amount * count * multiplier;
+5659-      row.sources.push({id,count,amount:effect.amount,multiplier,contribution:effect.amount*count*multiplier,limit:businessActiveLimit(id)});
+5660-      effects.set(effect.key,row);
+5661-    }
+5662-    const rows = [...effects.values()].sort((a,b) => Math.abs(b.total)-Math.abs(a.total) || a.label.localeCompare(b.label));
+5663-    const candidates = inventory.filter(row => Number(row.quantity || 0) > 0).map(row => {
+5664-      const current = Number(active.get(row.businessId) || 0);
+5665-      const limit = businessActiveLimit(row.businessId);
+5666-      const limited = Number.isFinite(limit) && current >= limit;
+5667-      const effectRows = businessEffects(row.businessId);
+5668-      const score = effectRows.reduce((sum,effect) => sum + Math.log10(1 + Math.abs(effect.amount)),0);
+5669-      return {...row,current,limit,limited,effectRows,score};
+5670-    }).sort((a,b) => Number(a.limited)-Number(b.limited) || b.score-a.score || Number(recipeMetadata(b.businessId).tier||0)-Number(recipeMetadata(a.businessId).tier||0));
+5671-    return {rows,candidates,active};
+5672-  }
+5673-
+5674-  function renderBonusAnalyzer() {
+5675-    const box = root?.querySelector('#hk-bonus-analyzer-result'); if (!box) return;
+5676-    if (!layout.length) { box.innerHTML = `<p class="hk-muted">${tr('optimizerNoPlan')}</p>`; return; }
+5677-    const data = bonusAnalyzerData();
+5678-    const sources = data.rows.map(row => {
+5679-      const sourceHtml = row.sources.map(source => {
+5680-        const meta = recipeMetadata(source.id), limit = Number.isFinite(source.limit) ? source.limit : '∞';
+5681-        const amount = Number(source.amount).toLocaleString(locale());
+5682-        const contribution = Number(source.contribution).toLocaleString(locale());
+5683-        const vip = source.multiplier > 1 ? ` × VIP ${source.multiplier}` : '';
+5684-        return `<span class="hk-bonus-source">${iconHtml(source.id)}<small><b>${escapeHtml(meta.name || source.id)}</b> · ${amount} × ${source.count}${vip} = ${contribution}<br>${tr('bonusActiveCopies',{active:source.count,limit})}</small></span>`;
+5685-      }).join('');
+5686-      return `<details class="hk-bonus-analysis-row"><summary><span>${escapeHtml(row.label)}</span><b>${Number(row.total).toLocaleString(locale())}</b><small>${tr('bonusDuplicates',{n:row.sources.length})}</small></summary><div>${sourceHtml}</div></details>`;
+5687-    }).join('') || `<p class="hk-muted">${tr('bonusZeroEffect')}</p>`;
+5688-    const best = data.candidates.find(row => !row.limited && row.score > 0);
+5689-    const limited = data.candidates.filter(row => row.limited).slice(0,5).map(row => `<span>${iconHtml(row.businessId)}<small>${escapeHtml(recipeMetadata(row.businessId).name || row.businessId)}</small></span>`).join('');
+5690-    box.innerHTML = `<h4>${tr('bonusSources')}</h4><div class="hk-bonus-analysis-list">${sources}</div><h4>${tr('bonusBestNext')}</h4>${best ? `<div class="hk-best-business">${iconHtml(best.businessId)}<span><b>${escapeHtml(recipeMetadata(best.businessId).name || best.businessId)}</b><small>T${recipeMetadata(best.businessId).tier || '—'} · ${escapeHtml(businessCardDetails(best.businessId).properties)}</small></span></div>` : `<p class="hk-muted">${tr('bonusNoCandidate')}</p>`}${limited ? `<h4>${tr('bonusLimited')}</h4><div class="hk-limited-businesses">${limited}</div>` : ''}`;
+5691-    installIconFallbacks(box);
+5692-  }
+5693-
+5694:  function applyBusinessOptimizer() {
+5695-    if (!optimizerResult?.safety?.allowed) return;
+5696:    preparedBusinessPlan = optimizerResult.pairs.map(([row,id]) => [{key:row.key,businessId:row.businessId},id]);
+5697:    preparedBusinessPlanSource = 'optimizer';
+5698:    selectedSlots = new Set(optimizerResult.pairs.map(([row]) => row.key));
+5699:    selectedStock.clear();
+5700:    for (const [,id] of optimizerResult.pairs) if (id) selectedStock.set(id,(selectedStock.get(id)||0)+1);
+5701-    renderBusinessLists();
+5702-    root?.querySelector('[data-business-tab="regular"]')?.click();
+5703-  }
+5704-
+5705-  function renderBusinessLists() {
+5706-    if (!businessLists) return;
+5707:    if (!preparedBusinessPlan) for (const row of layout) if (!row.businessId) selectedSlots.add(row.key);
+5708-    clampSelectedStockToSlots();
+5709-    const removeFilter = Number(document.querySelector('#hk-remove-tier')?.value || 0);
+5710-    const insertFilter = Number(document.querySelector('#hk-insert-tier')?.value || 0);
+5711-    const outgoing = layout.filter(row => removeFilter === -1 ? !row.businessId :
+5712-      !!row.businessId && (!removeFilter || tier(row.businessId) === removeFilter));
+5713-    const incoming = inventory.filter(row => !insertFilter || tier(row.businessId) === insertFilter);
+5714-    businessLists.innerHTML = `
+5715-      <section><h3>${tr('chooseBuildingSlots')}</h3><div class="hk-cards">${outgoing.map(row => {
+5716-        const details = row.businessId ? businessCardDetails(row.businessId) : null;
+5717-        return `
+5718:        <label class="hk-card ${selectedSlots.has(row.key) ? 'selected' : ''} ${row.businessId ? '' : 'empty'}">
+5719:          <input type="checkbox" data-slot="${escapeHtml(row.key)}" ${selectedSlots.has(row.key) ? 'checked' : ''}>
+5720:          ${row.businessId ? iconHtml(row.businessId) : '<span class="hk-empty-icon">＋</span>'}<span class="hk-business-info">${row.businessId
+5721:            ? `<b class="hk-business-name">${escapeHtml(details.name)}</b><small>T${tier(row.businessId) ?? '—'} · ${tr('influence', {n:Number(row.influence).toLocaleString(locale())})}</small><small class="hk-business-properties">${escapeHtml(details.properties)}</small>`
+5722-            : `<b>${tr('emptySlot')}</b><small>${escapeHtml(buildingSlotLabel(row))}</small>`}</span>
+5723-        </label>`;
+5724-      }).join('') || `<p class="hk-muted">${tr('noBusinesses')}</p>`}</div></section>
+5725-      <section><h3>${tr('insertFromStock')}</h3><div class="hk-cards">${incoming.map(row => {
+5726-        const maximum = Math.min(row.quantity, availableSlotsForBusiness(row.businessId));
+5727:        const selected = Math.min(maximum, Number(selectedStock.get(row.businessId) || 0));
+5728-        const details = businessCardDetails(row.businessId);
+5729-        return `
+5730:        <label class="hk-card ${(selectedStock.get(row.businessId) || 0) > 0 ? 'selected' : ''}">
+5731:          ${iconHtml(row.businessId)}<span class="hk-business-info"><b class="hk-business-name">${escapeHtml(details.name)}</b><small>T${tier(row.businessId) ?? '—'} · ${tr('inStock', {n:row.quantity})}</small><small class="hk-business-properties">${escapeHtml(details.properties)}</small></span>
+5732-          <select data-stock="${escapeHtml(row.businessId)}">${Array.from({length: maximum + 1}, (_, i) => `<option ${i === selected ? 'selected' : ''}>${i}</option>`).join('')}</select>
+5733-        </label>`;
+5734-      }).join('') || `<p class="hk-muted">${tr('noBusinesses')}</p>`}</div></section>`;
+5735-    installIconFallbacks(businessLists);
+5736-    businessLists.querySelectorAll('[data-slot]').forEach(input => input.addEventListener('change', () => {
+5737:      preparedBusinessPlan = null; preparedBusinessPlanSource = '';
+5738:      input.checked ? selectedSlots.add(input.dataset.slot) : selectedSlots.delete(input.dataset.slot);
+5739-      renderBusinessLists(); renderPlan();
+5740-    }));
+5741-    businessLists.querySelectorAll('[data-stock]').forEach(select => select.addEventListener('change', () => {
+5742:      preparedBusinessPlan = null; preparedBusinessPlanSource = '';
+5743-      const value = Number(select.value || 0);
+5744:      value ? selectedStock.set(select.dataset.stock, value) : selectedStock.delete(select.dataset.stock);
+5745-      renderBusinessLists(); renderPlan();
+5746-    }));
+5747-    renderBusinessOptimizer();
+5748-    renderBonusAnalyzer();
+5749-    renderPlan();
+5750-  }
+5751-
+5752-  function selectedIncoming() {
+5753:    return [...selectedStock].flatMap(([id, count]) => Array.from({length: count}, () => id));
+5754-  }
+5755-
+5756-  function buildingSlotLabel(row) {
+5757-    const match = String(row?.buildingId || '').match(/(\d+)(?!.*\d)/);
+5758-    const building = match?.[1] || row?.buildingLevel || '—';
+5759-    return tr('buildingSlot', {building, slot:row?.slot ?? '—'});
+5760-  }
+5761-
+5762-  function businessVisual(id) {
+5763-    return id ? iconHtml(id) : '<span class="hk-empty-icon compact">＋</span>';
+5764-  }
+5765-
+5766-  function resolvedPreparedBusinessPlan() {
+5767:    if (!Array.isArray(preparedBusinessPlan) || !preparedBusinessPlan.length) return null;
+5768-    const resolved = [];
+5769:    for (const [saved,id] of preparedBusinessPlan) {
+5770-      const current = layout.find(row => row.key === saved.key);
+5771:      if (!current || String(current.businessId || '') !== String(saved.businessId || '') || !selectedSlots.has(current.key)) return null;
+5772-      resolved.push([current,String(id || '')]);
+5773-    }
+5774-    const expected = businessCounts(resolved.map(([,id]) => id));
+5775:    if ([...expected].some(([id,count]) => Number(selectedStock.get(id)||0) !== count) ||
+5776:        [...selectedStock].some(([id,count]) => Number(expected.get(id)||0) !== Number(count||0))) return null;
+5777-    return resolved;
+5778-  }
+5779-
+5780-  function makePlan() {
+5781-    const prepared = resolvedPreparedBusinessPlan();
+5782-    if (prepared) return prepared;
+5783:    const remaining = layout.filter(row => selectedSlots.has(row.key));
+5784-    const incoming = selectedIncoming();
+5785-    if (!remaining.length || !incoming.length) throw new Error(either(
+5786-      'Выберите хотя бы один бизнес для замены и один для вставки',
+5787-      'Select at least one business to replace and one business to insert'));
+5788-    if (incoming.length > remaining.length) throw new Error(either(
+5789-      `Для вставки ${incoming.length} бизнесов выбрано только ${remaining.length} слотов`,
+5790-      `Only ${remaining.length} slots are selected for ${incoming.length} incoming businesses`));
+5791-    return incoming.map(id => {
+5792-      const wantedTier = tier(id);
+5793-      remaining.sort((a,b) => Number(tier(a.businessId) !== wantedTier) - Number(tier(b.businessId) !== wantedTier) || a.key.localeCompare(b.key));
+5794-      return [remaining.shift(), id];
+5795-    });
+5796-  }
+5797-
+5798-  function renderPlan() {
+5799-    if (!planBox) return;
+5800:    const removeCount = selectedSlots.size;
+5801-    const insertCount = businessSelectionCount();
+5802-    let body = `<div class="hk-count">${tr('selectedPlan', {remove:removeCount, insert:insertCount})}</div>`;
+5803-    try {
+5804-      const plan = makePlan();
+5805-      body += `<div class="hk-plan-row">${plan.slice(0, 4).map(([row,id]) => `${businessVisual(row.businessId)}<b>→</b>${businessVisual(id)}`).join('')}${plan.length > 4 ? `<b>+${plan.length-4}</b>` : ''}</div>`;
+5806-      const untouched = Math.max(0, removeCount - plan.length);
+5807-      if (untouched) body += `<p class="hk-muted">${escapeHtml(either(
+5808-        `${untouched} выбранных бизнесов останутся на своих местах`,
+5809-        `${untouched} selected businesses will remain unchanged`))}</p>`;
+5810:      body += `<button id="hk-business-run" class="hk-primary">${tr('execute')}</button>`;
+5811-    } catch (error) { body += `<p class="hk-muted">${escapeHtml(error.message)}</p>`; }
+5812-    planBox.innerHTML = body;
+5813-    installIconFallbacks(planBox);
+5814:    document.querySelector('#hk-business-run')?.addEventListener('click', executeBusinessPlan);
+5815-  }
+5816-
+5817-  async function businessAction(action, row, businessId = null, timer = null) {
+5818-    const payload = {business_building_id: row.buildingId, slot_index: Number(row.slot)};
+5819-    if (action === 'insert') { payload.business_id = businessId; payload.count = 1; }
+5820-    if (action === 'speedUp') payload.timer = Number(timer);
+5821-    return apiJson(`/player/business/${action}`,'POST',payload,true,3);
+5822-  }
+5823-
+5824-  function findSlot(documentValue, buildingId, slot) {
+5825-    return normalizeLayout(documentValue).find(row => row.buildingId === buildingId && row.slot === Number(slot));
+5826-  }
+5827-
+5828-  function businessWorkerState(documentValue) {
+5829-    let result = null;
+5830-    const visit = value => {
+5831-      if (result || !value || typeof value !== 'object') return;
+5832-      const busyValue = value.business_worker_busy ?? value.pendingBusinesses;
+5833-      const maxValue = value.business_worker_max ?? value.maxPendingBusinesses;
+5834-      if (busyValue !== undefined || maxValue !== undefined) {
+5835-        const busy = Math.max(0, Number(busyValue || 0));
+5836-        const max = Math.max(0, Number(maxValue || 0));
+5837-        if (Number.isFinite(busy) && Number.isFinite(max)) result = {busy, max};
+5838-      }
+5839-      if (!result) for (const child of Object.values(value)) visit(child);
+5840-    };
+5841-    visit(documentValue);
+5842-    return result || {busy:0, max:0};
+5843-  }
+5844-
+5845-  async function readBusinessSlot(buildingId, slot, accept = null, attempts = 5) {
+5846-    let state = null;
+5847-    for (let attempt = 0; attempt < attempts; attempt++) {
+5848-      playerDocument = await apiJson('/player/me', 'POST');
+5849-      state = findSlot(playerDocument, buildingId, slot);
+5850-      if (state && (!accept || accept(state))) return state;
+5851-    }
+5852-    return state;
+5853-  }
+5854-
+5855-  function businessSlotIsActive(state, businessId = '') {
+5856-    return !!state?.businessId && (!businessId || state.businessId === businessId) &&
+5857-      String(state.status || '').toUpperCase() === 'ACTIVE' && Number(state.timer || 0) <= 0;
+5858-  }
+5859-
+--
+5871-      log(`${either('Бесплатно ускорен', 'Sped up for free')} ${label || `T${tier(state.businessId)}`} (0)`);
+5872-      state = findSlot(response, row.buildingId, row.slot) || state;
+5873-      if (!state) throw new Error(either('После ускорения сервер не вернул бизнес', 'The server did not return the business after speed-up'));
+5874-      const settled = await readBusinessSlot(row.buildingId, row.slot,
+5875-        value => value.businessId === expectedBusinessId && Number(value.timer || 0) <= 0, 8);
+5876-      if (settled?.businessId === expectedBusinessId) state = settled;
+5877-    }
+5878-    if (!businessSlotIsActive(state, expectedBusinessId)) {
+5879-      await businessAction('activate', state);
+5880-      log(`${either('Активирован', 'Activated')} ${label || `T${tier(state.businessId)}`}`);
+5881-      state = await readBusinessSlot(row.buildingId, row.slot,
+5882-        value => businessSlotIsActive(value, expectedBusinessId), 8);
+5883-      if (!businessSlotIsActive(state, expectedBusinessId)) {
+5884-        // Retry immediately: each preceding /player/me response already acts
+5885-        // as the synchronization point, so an extra fixed pause is unnecessary.
+5886-        try { await businessAction('activate', state); }
+5887-        catch (error) {
+5888-          if (!/HTTP 409|already active|activation time not passed/i.test(error.message)) throw error;
+5889-        }
+5890-        state = await readBusinessSlot(row.buildingId, row.slot,
+5891-          value => businessSlotIsActive(value, expectedBusinessId), 8);
+5892-      }
+5893-      if (!businessSlotIsActive(state, expectedBusinessId)) throw new Error(either(
+5894-        `Не подтверждена активация ${label || `T${tier(expectedBusinessId)}`}`,
+5895-        `Activation was not confirmed for ${label || `T${tier(expectedBusinessId)}`}`));
+5896-    }
+5897-    return true;
+5898-  }
+5899-
+5900-  async function releaseFreeBusinessManagers() {
+5901-    let workers = businessWorkerState(playerDocument);
+5902-    if (!workers.max || workers.busy < workers.max) return;
+5903-    const pending = normalizeLayout(playerDocument).filter(row => row.businessId &&
+5904-      (row.status !== 'ACTIVE' || Number(row.timer || 0) > 0));
+5905-    for (const row of pending) {
+5906-      await finishPendingBusiness(row);
+5907-      playerDocument = await apiJson('/player/me', 'POST');
+5908-      workers = businessWorkerState(playerDocument);
+5909-      if (!workers.max || workers.busy < workers.max) return;
+5910-    }
+5911-    throw new Error(either(
+5912-      `Нет свободных бизнес-менеджеров (${workers.busy}/${workers.max}). Завершите текущую вставку в игре`,
+5913-      `No free business managers (${workers.busy}/${workers.max}). Finish the current insertion in the game`));
+5914-  }
+5915-
+5916:  async function executeBusinessPlan() {
+5917:    if (!requireLicense() || businessBusy) return;
+5918-    let plan;
+5919-    try { plan = makePlan(); } catch (error) { alert(error.message); return; }
+5920-    if (!confirm(language === 'en'
+5921-      ? `Rearrange ${plan.length} businesses?\n\nOnly the free 0-cost speed-up will be used after insertion. Crystals are prohibited.`
+5922-      : `Переставить ${plan.length} бизнесов?\n\nПосле вставки будет использовано только бесплатное ускорение за 0. Кристаллы запрещены.`)) return;
+5923:    businessBusy = true;
+5924-    const removed = [], inserted = [];
+5925-    try {
+5926-      log(either('Проверяю игровую сессию…', 'Checking game session…'));
+5927-      try {
+5928-        playerDocument = await apiJson('/player/me', 'POST');
+5929-        await releaseFreeBusinessManagers();
+5930-        playerDocument = await apiJson('/player/me', 'POST');
+5931:        refreshBusinessData();
+5932-        plan = makePlan();
+5933-        const safety = optimizerSafety(plan.length);
+5934-        if (!safety.allowed) throw new Error(safety.reason);
+5935-      } catch (sessionError) {
+5936-        if (/HTTP 401|unauthorized/i.test(sessionError.message)) {
+5937-          throw new Error(either('Игровая сессия истекла. Обновите страницу игры, снова откройте HK и повторите перестановку',
+5938-            'Game session expired. Refresh the game page, reopen HK, and run the rearrangement again'));
+5939-        }
+5940-        throw sessionError;
+5941-      }
+5942:      if (preparedBusinessPlanSource !== 'restore') {
+5943-        save({businessOriginalLayout:{savedAt:Date.now(), slots:layout.map(row => ({key:row.key,businessId:row.businessId || ''}))}});
+5944-      }
+5945-      for (const [row] of plan) {
+5946-        if (!row.businessId) { log(`Пустой слот: ${buildingSlotLabel(row)}`); continue; }
+5947-        log(`Снимаю T${tier(row.businessId)}…`);
+5948-        await businessAction('remove', row); removed.push(row);
+5949-      }
+5950-      for (const [row, id] of plan) {
+5951-        if (!id) { log(`${either('Оставляю пустым','Leaving empty')}: ${buildingSlotLabel(row)}`); continue; }
+5952-        log(`Вставляю T${tier(id)}…`);
+5953-        const response = await businessAction('insert', row, id); inserted.push([row,id]);
+5954-        const state = findSlot(response, row.buildingId, row.slot);
+5955-        if (!state) throw new Error('После вставки сервер не вернул новый бизнес');
+5956-        if (state.businessId !== id) throw new Error(either('Сервер вернул другой бизнес после вставки', 'The server returned a different business after insertion'));
+5957-        await finishPendingBusiness(state, `T${tier(id)}`, true);
+5958-      }
+5959-      // Do not announce completion until every inserted business, including the
+5960-      // last one, is confirmed ACTIVE by /player/me.
+5961-      for (const [row, id] of inserted) {
+5962-        let state = await readBusinessSlot(row.buildingId, row.slot,
+5963-          value => businessSlotIsActive(value, id), 6);
+5964-        if (!businessSlotIsActive(state, id)) {
+5965-          if (!state || state.businessId !== id) throw new Error(either(
+5966-            `Последний контроль: в слоте отсутствует вставленный T${tier(id)}`,
+5967-            `Final check: inserted T${tier(id)} is missing from its slot`));
+5968-          await finishPendingBusiness(state, `T${tier(id)}`, true);
+5969-          state = await readBusinessSlot(row.buildingId, row.slot,
+5970-            value => businessSlotIsActive(value, id), 6);
+5971-        }
+5972-        if (!businessSlotIsActive(state, id)) throw new Error(either(
+5973-          `Последний контроль: T${tier(id)} не активирован`,
+5974-          `Final check: T${tier(id)} is not active`));
+5975-      }
+5976:      selectedSlots.clear(); selectedStock.clear(); preparedBusinessPlan = null; preparedBusinessPlanSource = '';
+5977-      log('Перестановка завершена', 'ok');
+5978-      showVisualNotice(either('Перестановка бизнесов завершена', 'Business rearrangement completed'), either(
+5979-        `Все переставленные бизнесы активированы: ${inserted.length}`,
+5980-        `All rearranged businesses are active: ${inserted.length}`));
+5981-    } catch (error) {
+5982-      const changed = removed.length > 0 || inserted.length > 0;
+5983-      if (!changed) {
+5984-        log(`${either('Ошибка', 'Error')}: ${error.message}. ${either('Изменения не выполнялись', 'No changes were made')}`, 'bad');
+5985-      } else if (/HTTP 401|unauthorized|сессия истекла|session expired/i.test(error.message)) {
+5986-        log(`${either('Ошибка', 'Error')}: ${error.message}. ${either('Автоматический откат невозможен без новой сессии', 'Automatic rollback is impossible without a new session')}`, 'bad');
+5987-        alert(either('Сессия игры истекла во время перестановки. Обновите игру и проверьте здания.', 'The game session expired during rearrangement. Refresh the game and check the buildings.'));
+5988-      } else {
+5989-        log(`${either('Ошибка', 'Error')}: ${error.message}. ${either('Пробую вернуть исходную схему', 'Trying to restore the original layout')}`, 'bad');
+5990-        try {
+5991-          for (const [row] of inserted.reverse()) await businessAction('remove', row);
+5992-          for (const row of removed) {
+5993-            await businessAction('insert', row, row.businessId);
+5994-            const restored = await readBusinessSlot(row.buildingId, row.slot, value => value.businessId === row.businessId);
+5995-            if (!restored) throw new Error(either('Сервер не вернул восстановленный бизнес', 'The server did not return the restored business'));
+5996-            await finishPendingBusiness(restored, `T${tier(row.businessId)}`);
+5997-          }
+5998-          log('Исходная схема восстановлена', 'ok');
+5999-        } catch (rollback) {
+6000-          log(`Откат не завершён: ${rollback.message}`, 'bad');
+6001-          alert(either('Не удалось полностью вернуть исходную схему. Проверьте здания в игре.', 'Could not fully restore the original layout. Check the buildings in the game.'));
+6002-        }
+6003-      }
+6004-    } finally {
+6005:      businessBusy = false;
+6006-      renderPlan();
+6007-    }
+6008-  }
+6009-
+6010-  function prepareOriginalBusinessRestore() {
+6011-    const original = load().businessOriginalLayout;
+6012-    if (!Array.isArray(original?.slots) || !original.slots.length) {
+6013-      alert(either('Сохранённой исходной схемы пока нет.', 'No saved original setup yet.')); return;
+6014-    }
+6015-    const available = new Map(businessCounts(layout.map(row => row.businessId)));
+6016-    for (const row of inventory) available.set(row.businessId,(available.get(row.businessId)||0)+Number(row.quantity||0));
+6017-    const needed = businessCounts(original.slots.map(row => row.businessId));
+6018-    const missing = [...needed].filter(([id,count]) => Number(available.get(id)||0)<count);
+6019-    if (missing.length) {
+6020-      alert(either('Не все бизнесы исходной схемы доступны на складе или в зданиях.', 'Not all businesses from the original setup are available.')); return;
+6021-    }
+6022-    const pairs = [];
+6023-    for (const saved of original.slots) {
+6024-      const current = layout.find(row => row.key === saved.key); if (!current) continue;
+6025-      const wanted = String(saved.businessId || '');
+6026-      if (String(current.businessId || '') !== wanted) pairs.push([current,wanted]);
+6027-    }
+6028-    if (!pairs.length) { alert(either('Исходная схема уже установлена.', 'The original setup is already active.')); return; }
+6029:    preparedBusinessPlan = pairs.map(([row,id]) => [{key:row.key,businessId:row.businessId || ''},id]);
+6030:    preparedBusinessPlanSource = 'restore';
+6031:    selectedSlots = new Set(pairs.map(([row]) => row.key)); selectedStock.clear();
+6032:    for (const [,id] of pairs) if (id) selectedStock.set(id,(selectedStock.get(id)||0)+1);
+6033-    renderBusinessLists();
+6034-  }
+6035-
+6036-  function presets() { return load().presets || {}; }
+6037-  function refreshPresets(selectName = '') {
+6038-    if (!presetSelect) return;
+6039-    const names = Object.keys(presets());
+6040-    presetSelect.innerHTML = `<option value="">${tr('savedSets')}</option>${names.map(name => `<option ${name === selectName ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}`;
+6041-  }
+6042-
+6043-  function savePreset() {
+6044-    const name = prompt(either('Название набора:', 'Set name:')); if (!name?.trim()) return;
+6045-    const all = presets();
+6046:    const destinations = layout.filter(row => selectedSlots.has(row.key));
+6047-    all[name.trim()] = {slots: destinations.map(row => ({key:row.key, businessId:row.businessId || ''})),
+6048-      remove: destinations.map(row => row.businessId).filter(Boolean), insert: selectedIncoming()};
+6049-    save({presets: all}); refreshPresets(name.trim()); log(`Набор «${name.trim()}» сохранён`);
+6050-  }
+6051-
+6052-  function loadPreset(name) {
+6053-    const preset = presets()[name]; if (!preset) return;
+6054:    preparedBusinessPlan = null; preparedBusinessPlanSource = '';
+6055:    selectedSlots.clear(); selectedStock.clear();
+6056-    if (Array.isArray(preset.slots)) {
+6057-      for (const saved of preset.slots) {
+6058-        const row = layout.find(item => item.key === saved.key && (saved.businessId ? item.businessId === saved.businessId : !item.businessId));
+6059:        if (row) selectedSlots.add(row.key);
+6060-      }
+6061-    } else {
+6062-      const wanted = [...(preset.remove || [])];
+6063:      for (const id of wanted) { const row = layout.find(item => item.businessId === id && !selectedSlots.has(item.key)); if (row) selectedSlots.add(row.key); }
+6064-    }
+6065:    for (const id of preset.insert || []) selectedStock.set(id, (selectedStock.get(id) || 0) + 1);
+6066:    refreshBusinessData(); log(`Набор «${name}» выбран`);
+6067-  }
+6068-
+6069-  function deletePreset() {
+6070-    const name = presetSelect?.value; if (!name || !confirm(`Удалить набор «${name}»?`)) return;
+6071-    const all = presets(); delete all[name]; save({presets: all}); refreshPresets();
+6072-  }
+6073-
+6074-  function exportPowers() {
+6075-    const types=['normal','boss','gang']; const rowsByType=Object.fromEntries(types.map(type=>[type,new Map(combinedPitRows(type).map(row=>[Number(row.level),row]))]));
+6076-    const levels=[...new Set(types.flatMap(type=>[...rowsByType[type].keys()]))].sort((a,b)=>a-b);
+6077-    if (!levels.length) { alert(either('Пока нет сохранённых данных', 'No saved data yet')); return; }
+6078-    const csv = `\uFEFF${either('Уровень;Обычная Яма;Яма боссов;Яма банд', 'Level;Normal Pit;Boss Pit;Gang Pit')}\n` + levels.map(level=>`${level};${types.map(type=>rowsByType[type].get(level)?.enemy_power||'').join(';')}`).join('\n');
+6079-    const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); link.download = 'pit_levels_three_pits.csv'; link.click();
+6080-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+6081-  }
+6082-
+6083-  function fillTierFilters() {
+6084-    const remove = root?.querySelector('#hk-remove-tier');
+6085-    const insert = root?.querySelector('#hk-insert-tier');
+6086-    const removeValue = remove?.value || '0';
+6087-    const insertValue = insert?.value || '0';
+6088-    if (remove) {
+6089-      remove.innerHTML = `<option value="0">${tr('removeAll')}</option><option value="-1">${tr('emptySlots')}</option>` +
+6090-        Array.from({length:6}, (_,i) => `<option value="${i+1}">${tr('removeTier',{n:i+1})}</option>`).join('');
+6091-      remove.value = [...remove.options].some(option => option.value === removeValue) ? removeValue : '0';
+6092-    }
+6093-    if (insert) {
+6094-      insert.innerHTML = `<option value="0">${tr('insertAll')}</option>` +
+6095-        Array.from({length:6}, (_,i) => `<option value="${i+1}">${tr('insertTier',{n:i+1})}</option>`).join('');
+6096-      insert.value = [...insert.options].some(option => option.value === insertValue) ? insertValue : '0';
+6097-    }
+6098-  }
+6099-
+6100-  function clanWeekStart(value = new Date()) {
+6101-    const date = new Date(value);
+6102-    date.setHours(0, 0, 0, 0);
+6103-    date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+6104-    return date;
+6105-  }
+6106-
+6107-  function clanWeekKey(value = new Date()) {
+6108-    const date = clanWeekStart(value);
+6109-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+6110-  }
+6111-
+--
+7032-      const rect = fab.getBoundingClientRect();
+7033-      drag = {pointerId:`touch:${touch.identifier}`, touchId:touch.identifier, startX:touch.clientX, startY:touch.clientY, left:rect.left, top:rect.top, moved:false};
+7034-      fab.classList.add('dragging');
+7035-      if (event.cancelable) event.preventDefault();
+7036-      event.stopPropagation();
+7037-    };
+7038-    const touchMove = event => {
+7039-      if (!drag || drag.touchId === undefined) return;
+7040-      const touch = touchById(event.touches, drag.touchId) || touchById(event.changedTouches, drag.touchId);
+7041-      if (!touch) return;
+7042-      const deltaX = touch.clientX - drag.startX;
+7043-      const deltaY = touch.clientY - drag.startY;
+7044-      if (Math.hypot(deltaX, deltaY) >= 4) drag.moved = true;
+7045-      if (drag.moved) place({x:drag.left + deltaX, y:drag.top + deltaY});
+7046-      if (event.cancelable) event.preventDefault();
+7047-      event.stopPropagation();
+7048-    };
+7049-    const touchFinish = (event, cancelled = false) => {
+7050-      if (!drag || drag.touchId === undefined) return;
+7051-      const touch = touchById(event.changedTouches, drag.touchId);
+7052-      if (!touch && !cancelled) return;
+7053-      const moved = drag.moved;
+7054-      drag = null;
+7055-      fab.classList.remove('dragging');
+7056-      if (moved) savePosition();
+7057-      else if (!cancelled) { panel.classList.add('open'); updateWatermark(); }
+7058-      if (event.cancelable) event.preventDefault();
+7059-      event.stopPropagation();
+7060-    };
+7061-    fab.addEventListener('touchstart', touchStart, {capture:true, passive:false});
+7062-    document.addEventListener('touchmove', touchMove, {capture:true, passive:false});
+7063-    document.addEventListener('touchend', touchFinish, {capture:true, passive:false});
+7064-    document.addEventListener('touchcancel', event => touchFinish(event, true), {capture:true, passive:false});
+7065-    const restoreInsideViewport = () => place(load().fabPosition || snapshot());
+7066-    window.addEventListener('resize', restoreInsideViewport);
+7067-    window.addEventListener('orientationchange', restoreInsideViewport);
+7068-    fab.addEventListener('keydown', event => {
+7069-      if (event.key !== 'Enter' && event.key !== ' ') return;
+7070-      panel.classList.add('open'); updateWatermark(); event.preventDefault();
+7071-    });
+7072-    window.addEventListener('resize', () => place(load().fabPosition), {passive:true});
+7073-  }
+7074-
+7075-  const MODULE_LIVE_TTL_MS = 12000;
+7076-  const moduleLiveState = new Map();
+7077:  function moduleMutationBusy(){return !!(hkRunner.running||pitRunning||businessBusy||fairRunning||shopRunning||recipeRunning||bureauRunning||resourceBusy||mapScanning||dailyRunning||clanSkillScanning||growthBusy);}
+7078-  async function refreshModuleLive(page, {force=false} = {}) {
+7079-    const key = String(page || '');
+7080-    if (!key || key.startsWith('growth')) return null;
+7081-    if(moduleMutationBusy()){recordDiagnostic('module-live-read-deferred',{page:key});return null;}
+7082-    const existing = moduleLiveState.get(key) || {at:0,promise:null};
+7083-    if (existing.promise) return existing.promise;
+7084-    if (!force && Date.now() - Number(existing.at || 0) < MODULE_LIVE_TTL_MS) return null;
+7085-    let liveReadOk=false;
+7086-    const task = (async () => {
+7087-      try {
+7088-        if (!licenseState.allowed) {
+7089-          const connected = await bootstrapLateGameConnection();
+7090-          if (!connected || !playerDocument) return null;
+7091-          await checkLicense(playerDocument.player || {}, true);
+7092-          if (!licenseState.allowed) return null;
+7093-        }
+7094-        if (key === 'daily') {const value=await refreshDailyTasks();liveReadOk=true;return value;}
+7095:        if (key === 'resources') {const value=await loadResources(false);liveReadOk=true;return value;}
+7096-        if (key === 'fair') {const value=await loadFair();liveReadOk=true;return value;}
+7097-        if (key === 'shop') {const value=await loadShop();liveReadOk=true;return value;}
+7098-        if (key === 'recipes') {const value=await loadRecipes();liveReadOk=true;return value;}
+7099-        if (key === 'business') {
+7100-          playerDocument = await apiJson('/player/me','POST');
+7101-          await ensureRecipeMetadata();
+7102:          refreshBusinessData();
+7103-          liveReadOk=true;return playerDocument;
+7104-        }
+7105-        if (key === 'pit') {
+7106-          playerDocument = await apiJson('/player/me','POST');
+7107-          acceptPitDocument(`${apiBase}/player/me`,playerDocument);
+7108-          updatePitStatus(pitState()); updatePitButtons();
+7109-          liveReadOk=true;return playerDocument;
+7110-        }
+7111-        if (key === 'clan') {
+7112-          playerDocument = await apiJson('/player/me','POST');
+7113-          renderClanSkills();
+7114-          await refreshSharedClanSkills();
+7115-          maybeAutoScanClanSkills();
+7116-          liveReadOk=true;return playerDocument;
+7117-        }
+7118-        if (key === 'maps') {
+7119-          playerDocument = await apiJson('/player/me','POST');
+7120-          const playerId=playerIdentity(playerDocument?.player||{}),lastByPlayer=Number(load().mapContributionByPlayer?.[playerId]||0);
+7121-          if(playerId&&Date.now()-lastByPlayer>86400000&&!initialMapResearchAttempted.has(playerId)){
+7122-            initialMapResearchAttempted.add(playerId);
+7123-            await submitOwnedMapAreas(true);
+7124-          }else await loadMapIndex(false);
+7125-          liveReadOk=true;return playerDocument;
+7126-        }
+7127-        return null;
+7128-      } catch (error) {
+7129-        recordDiagnostic('module-live-read-error',{page:key,error:error?.message||error});
+7130-        log(`${either('Автообновление','Auto refresh')} ${key}: ${error?.message||error}`,'warn');
+7131-        return null;
+7132-      } finally {
+7133-        const row = moduleLiveState.get(key) || {};
+7134-        row.at = liveReadOk ? Date.now() : 0; row.promise = null; moduleLiveState.set(key,row);
+7135-      }
+7136-    })();
+7137-    moduleLiveState.set(key,{...existing,promise:task});
+7138-    return task;
+7139-  }
+7140-
+7141-  function renderRunnerState() {
+7142-    if (!root) return;
+7143-    const box=root.querySelector('#hk-runner'); if(!box)return;
+7144-    const state=hkRunner.state;
+7145-    const visibleState=state.status!=='idle'; box.classList.toggle('show',visibleState);
+7146-    if(!visibleState)return;
+7147-    const labels={running:either('Выполняется','Running'),paused:either('Пауза','Paused'),stopping:either('Остановка','Stopping'),done:either('Готово','Done'),error:either('Ошибка','Error')};
+7148-    const percent=state.total?Math.max(0,Math.min(100,(state.done/state.total)*100)):(state.status==='done'?100:0);
+7149-    root.querySelector('#hk-runner-title').textContent=state.title||either('Выполнение','Execution');
+7150-    root.querySelector('#hk-runner-state').textContent=labels[state.status]||state.status;
+7151-    root.querySelector('#hk-runner-step').textContent=state.error||state.step||(state.total?`${state.done} / ${state.total}`:'');
+7152-    root.querySelector('#hk-runner-fill').style.width=`${percent}%`;
+7153-    const pause=root.querySelector('#hk-runner-pause'); const stop=root.querySelector('#hk-runner-stop');
+7154-    pause.textContent=state.status==='paused'?either('Продолжить','Continue'):either('Пауза','Pause');
+7155-    pause.disabled=!state.pausable||!['running','paused'].includes(state.status);
+7156-    stop.textContent=either('Остановить','Stop'); stop.disabled=!state.stoppable||!['running','paused'].includes(state.status);
+7157-  }
+7158-
+7159-  function renderUI() {
+7160-    if (!document.body || root) return;
+7161-    // If Safari still has an older duplicate userscript enabled, replace its
+7162-    // two-tab panel with this newer build instead of silently aborting.
+7163-    document.querySelector('#hk-mobile-root')?.remove();
+7164-    const style = document.createElement('style');
+7165-    style.textContent = `
+7166-      #hk-mobile-root{position:fixed;z-index:2147483647;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f7f9fc}
+7167-      #hk-fab{width:58px;height:58px;border:0;border-radius:50%;background:linear-gradient(145deg,#ffb627,#ff7b00);box-shadow:0 8px 28px #0008;color:#15100a;font-size:25px;font-weight:900;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+7168-      #hk-fab.dragging{cursor:grabbing;transform:scale(1.05);box-shadow:0 10px 32px #000a}
+7169-      #hk-panel{position:fixed;inset:0;background:#0b1018ee;backdrop-filter:blur(16px);display:none;overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));box-sizing:border-box}
+7170-      #hk-panel.open{display:block} .hk-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-head h2{margin:0;font-size:22px;flex:1}.hk-close{border:0;background:#253044;color:white;border-radius:12px;padding:10px 14px;font-size:20px}.hk-lang{display:flex;gap:5px}.hk-lang button{border:1px solid #34445c;background:#182230;border-radius:10px;padding:7px 8px;font-size:21px;line-height:1;opacity:.5}.hk-lang button.active{opacity:1;border-color:#ffad1f;background:#3a2b14;box-shadow:0 0 0 2px #ffad1f33}
+7171-      .hk-donation{width:100%;margin:12px 0 0;border:1px solid #ff6f91;border-radius:13px;padding:11px;background:linear-gradient(135deg,#7b2947,#b63863);color:#fff;font-weight:900;box-shadow:0 7px 18px #7b294744}.hk-donation:active{transform:scale(.99)}
+7172-      #hk-watermark{position:fixed;inset:-40px;z-index:20;pointer-events:none;display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));grid-auto-rows:minmax(120px,1fr);align-items:center;justify-items:center;overflow:hidden;transition:transform .5s ease}#hk-watermark span{display:block;max-width:310px;color:#fff;font:700 11px ui-monospace,monospace;letter-spacing:.4px;opacity:.035;transform:rotate(-24deg);white-space:nowrap;text-shadow:0 1px 2px #000}
+7173-      .hk-license{padding:11px;border:1px solid #3b4a61;border-radius:12px;background:#101a28;margin:14px 0;color:#c8d4e5}.hk-license.ok{border-color:#287b60}.hk-license.bad{border-color:#803b49}.hk-update{display:none;margin:0 0 14px;padding:12px;border:1px solid #ffad1f;border-radius:13px;background:#2a2418;color:#fff}.hk-update.required{border-color:#ff6b75;background:#351b22}.hk-update b,.hk-update small{display:block}.hk-update small{margin-top:5px;color:#cbd5e5}.hk-update .hk-primary{margin-top:10px}.hk-locked .hk-tabs,.hk-locked .hk-subnav,.hk-locked .hk-runner,.hk-locked .hk-page{display:none!important}
+7174-      .hk-health{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 0 8px}.hk-health-chip{display:grid;grid-template-columns:9px minmax(0,1fr);align-items:center;column-gap:7px;padding:9px 8px;border:1px solid #34445c;border-radius:11px;background:#111a27;color:#d3dbe8;min-width:0}.hk-health-chip:before{content:'';width:8px;height:8px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}.hk-health-chip.ok{border-color:#24694f;background:#10231d}.hk-health-chip.ok:before{background:#52d296;box-shadow:0 0 0 3px #52d29622}.hk-health-chip.bad{border-color:#7a3443;background:#29151b}.hk-health-chip.bad:before{background:#ff6b7a;box-shadow:0 0 0 3px #ff6b7a22}.hk-health-chip b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-chip small{grid-column:2;color:#8392a7;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-actions{display:flex;gap:7px;margin:0 0 14px}.hk-health-actions button{flex:1;min-height:36px;font-size:12px}@media(max-width:430px){.hk-health{grid-template-columns:repeat(2,minmax(0,1fr))}}
+7175-      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}.hk-growth-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.hk-growth-stats>div{padding:11px;border:1px solid #304057;border-radius:12px;background:#0e1723}.hk-growth-stats small{display:block;color:#8797ad;font-size:10px}.hk-growth-stats b{display:block;margin-top:4px;color:#ffe083;font-size:15px}.hk-growth-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-growth-actions button{margin-top:0}.hk-growth-options{display:grid;gap:9px;margin:10px 0}.hk-growth-option{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-option span{display:grid;gap:3px}.hk-growth-option small{color:#8998ad;font-size:10px}.hk-growth-option select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:9px}.hk-growth-check{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-check input{width:20px;height:20px;accent-color:#ffad1f}.hk-growth-live{display:grid;gap:3px;padding:9px 10px;border:1px solid #245d48;border-radius:11px;background:#0d211b}.hk-growth-live span{font-size:11px;font-weight:900;color:#6ee7a8}.hk-growth-live small{font-size:9px;color:#8fa89f}.hk-growth-plan{display:grid;gap:6px;margin:4px 0 10px;padding:11px;border:1px solid #3a4659;border-radius:12px;background:#0e1723}.hk-growth-plan>b{color:#ffe083}.hk-growth-plan>span{font-size:11px;color:#d4deea}.hk-growth-plan>small{font-size:9px;color:#8290a4;line-height:1.4}.hk-growth-priority-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-growth-priority-head h3{margin:0}.hk-growth-priority-list{display:grid;gap:7px;margin-top:8px}.hk-growth-priority{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px;border:1px solid #2d3a4e;border-radius:10px;background:#101927}.hk-growth-priority>b{color:#ffe083}.hk-growth-priority>span{font-size:9px;color:#8797ad}.hk-growth-priority>div{display:flex;gap:4px}.hk-growth-priority button{min-width:30px;margin:0;padding:6px 8px}.hk-growth-stats>div:nth-child(n+5){background:#121a28}@media(max-width:430px){.hk-tab{min-height:58px;padding:8px}.hk-tab-icon{width:32px;height:32px;font-size:19px}}
+7176:      .hk-business-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.hk-business-tab{border:1px solid #34445b;border-radius:11px;padding:11px;background:#172234;color:#b8c4d6;font-weight:700}.hk-business-tab.active{border-color:#ffad1f;background:#3a2a0f;color:#fff}.hk-business-pane{display:none}.hk-business-pane.active{display:block}
+7177-      .hk-page{display:none}.hk-page.active{display:block}.hk-cardbox{background:#151d29;border:1px solid #2a374a;border-radius:16px;padding:14px;margin-bottom:12px}.hk-grid{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center}
+7178-      input,select,button{font:inherit}.hk-grid input,.hk-grid select,.hk-toolbar select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-primary,.hk-secondary,.hk-danger{width:100%;border:0;border-radius:12px;padding:13px;margin-top:9px;font-weight:800}.hk-primary{background:#ffad1f;color:#16110a}.hk-secondary{background:#28364a;color:white}.hk-danger{background:#642a32;color:#fff}.hk-primary:disabled,.hk-secondary:disabled{opacity:.45}
+7179-      .hk-live{padding:10px;border-radius:10px;background:#0d1520;margin:10px 0;color:#cbd5e5}.hk-wallet-forecast{display:grid;gap:7px;margin-top:9px;padding-top:8px;border-top:1px solid #26354a}.hk-wallet-row{display:grid;grid-template-columns:minmax(105px,.65fr) minmax(0,1.35fr);gap:8px;align-items:center;padding:7px 8px;border:1px solid #2b3a50;border-radius:9px;background:#111b29;font-size:12px}.hk-wallet-row.shortage{border-color:#ff6677;background:#301923;color:#ffd6dc}.hk-wallet-currency{display:flex;align-items:center;gap:5px;min-width:0}.hk-wallet-currency b{overflow:hidden;text-overflow:ellipsis}.hk-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.hk-toolbar>*{flex:1}.hk-toolbar button{border:0;border-radius:10px;padding:10px;background:#29374a;color:white}.hk-toolbar input{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}
+7180-      .hk-daily-progress{margin:10px 0;padding:10px;border:1px solid #29394f;border-radius:12px;background:#101927}.hk-daily-progress>div{display:flex;justify-content:space-between;gap:9px;font-size:12px}.hk-daily-progress span{color:#aebbd0}.hk-daily-progress i{display:block;height:8px;margin-top:8px;border-radius:8px;overflow:hidden;background:#080d14}.hk-daily-progress em{display:block;height:100%;border-radius:inherit;background:#36d59a;transition:width .2s}.hk-daily-list{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}.hk-daily-list>li{padding:10px;border:1px solid #29394f;border-radius:11px;background:#0d1520;display:grid;gap:4px}.hk-daily-list>li>b{color:#e7edf7}.hk-daily-list span{font-size:12px;color:#9eabc0}.hk-daily-list ul{list-style:none;margin:5px 0 0;padding:0;display:grid;gap:5px}.hk-daily-list ul li{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#aebbd0}.hk-daily-list ul li.ready b{color:#6ee7a8}
+7181-      .hk-today-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-today-section{margin:9px 0;padding:11px;border:1px solid #29394f;border-radius:12px;background:#0d1520}.hk-today-section h4{margin:0 0 8px;color:#f0f4fb}.hk-today-section p{margin:4px 0;color:#aebbd0}.hk-today-section>ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}.hk-today-section>ul li{display:flex;justify-content:space-between;gap:8px;font-size:12px}.hk-today-section>ul span{color:#9eabc0}.hk-pit-limits{display:grid;gap:6px}.hk-pit-limits>div{display:grid;grid-template-columns:minmax(100px,.8fr) 1.6fr;gap:3px 8px;padding:7px 8px;border-radius:9px;background:#101927}.hk-pit-limits span{font-size:11px;color:#c3cee0}.hk-pit-limits small{grid-column:2;color:#94a3b8}.hk-pit-limits strong{color:#6ee7a8}.hk-pit-enable{display:flex;align-items:center;gap:6px}.hk-pit-enable input{margin:0}.hk-pit-enable span{color:#94a3b8}.hk-pit-move-choice{grid-column:1/3;display:grid;grid-template-columns:minmax(100px,.8fr) minmax(72px,.45fr) 1.6fr;align-items:center;gap:7px;margin-top:4px;padding-top:6px;border-top:1px solid #27364b}.hk-pit-move-choice select{min-width:72px}.hk-pit-move-choice em{font-style:normal;font-size:11px;color:#94a3b8}.hk-pit-move-choice em b{color:#ffbd3f}.hk-today-balances{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:7px}.hk-today-balance{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:6px;padding:7px;border-radius:9px;background:#101927}.hk-today-balance span{font-size:11px;color:#aebbd0}.hk-today-action-groups{display:grid;gap:8px;margin-top:9px}.hk-today-action-group{border:1px solid #304057;border-radius:11px;background:#101927;overflow:hidden}.hk-today-action-group>summary{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;padding:10px}.hk-today-action-group>summary span{min-width:25px;padding:2px 7px;border-radius:12px;background:#26364c;text-align:center;color:#cbd5e5}.hk-today-action-group>div{padding:0 7px 7px}.hk-today-action{display:grid;grid-template-columns:24px 1fr auto;gap:7px;align-items:center;margin:6px 0;padding:8px;border:1px solid #304057;border-radius:10px;background:#0d1520}.hk-today-action.has-lot-icon{grid-template-columns:24px 58px 1fr auto}.hk-today-action.locked{opacity:.6}.hk-today-action>span{display:grid;gap:4px}.hk-today-action small{display:flex;align-items:center;gap:5px;flex-wrap:wrap;color:#9eabc0}.hk-today-quantity{display:grid;gap:3px;min-width:82px;font-size:10px;color:#9eabc0}.hk-today-quantity select{min-width:76px}.hk-today-lot-visual{width:54px;display:grid!important;justify-items:center;gap:1px}.hk-today-lot-image{width:50px;height:50px;object-fit:contain}.hk-today-lot-visual>small{min-height:12px;font-size:10px;font-weight:800;color:#e8eef8}.hk-action-count{color:#ffbd3f}.hk-free{color:#6ee7a8}.hk-today-plan ol{margin:8px 0;padding-left:24px}.hk-today-plan li{padding:5px 0}.hk-today-plan li>span{display:block;color:#aebbd0;font-size:12px}.hk-today-plan li.blocked{color:#ff8290}.hk-budget summary{cursor:pointer;font-weight:800}.hk-budget-row{margin-top:9px;padding:9px;border:1px solid #304057;border-radius:10px;display:grid;grid-template-columns:1.2fr repeat(3,1fr);gap:7px;align-items:end}.hk-budget-title{display:flex;align-items:center;gap:6px}.hk-budget-row>label{display:grid;gap:4px;font-size:10px;color:#9eabc0}.hk-budget-row>small,.hk-budget-flags{grid-column:1/5}.hk-budget-flags{display:flex;gap:10px;flex-wrap:wrap;font-size:11px}.hk-budget-flags label{display:flex;align-items:center;gap:4px}.hk-budget-flags .premium{color:#62dfff}.hk-expense-journal{list-style:none;padding:0;margin:8px 0;display:grid;gap:5px}.hk-expense-journal li{display:grid!important;grid-template-columns:1fr auto;gap:3px 8px;padding:6px;border-radius:7px;background:#101927}.hk-expense-journal li small{grid-column:1/3;color:#8fa0b8}.hk-expense-journal li.failed{color:#ff8290}.hk-expense-journal li.ok b{color:#6ee7a8}
+7182-      .hk-today-store-tabs{display:flex;gap:6px}.hk-today-store-tabs button{display:flex;flex:1 1 0;min-width:0;justify-content:center;align-items:center;gap:5px;padding:9px 6px}.hk-today-store-tabs button.active{border-color:#f3a712;background:#3a2a0e;color:#fff}.hk-today-store-tabs button span{min-width:20px;padding:1px 6px;border-radius:10px;background:#26364c;font-size:10px}.hk-today-store-page{margin-top:7px}.hk-today-action.mandatory{border-color:#2d9a70;background:#10241f}.hk-today-action.mandatory input:disabled,.hk-today-action.mandatory select:disabled{opacity:1}
+7183-      @media(max-width:620px){.hk-today-grid{grid-template-columns:1fr}.hk-budget-row{grid-template-columns:1fr 1fr}.hk-budget-row>small,.hk-budget-flags{grid-column:1/3}.hk-today-store-tabs button{font-size:11px;padding:8px 3px;gap:3px}.hk-today-store-tabs button span{min-width:18px;padding:1px 4px}}
+7184:      #hk-business-lists{display:grid;grid-template-columns:1fr;gap:12px}h3{font-size:16px;margin:8px 0}.hk-cards{display:grid;gap:8px}.hk-card{display:flex;align-items:center;gap:10px;background:#151d29;border:1px solid #2a374a;border-radius:14px;padding:9px}.hk-card.selected{border-color:#ffad1f;background:#2a2418}.hk-card.empty{border-style:dashed}.hk-card input{width:22px;height:22px}.hk-card select{margin-left:auto;background:#0b111b;color:white;border:1px solid #455672;border-radius:9px;padding:8px;min-width:58px}.hk-card>.hk-business-info{display:flex;flex:1;min-width:0;flex-direction:column}.hk-card small{color:#a9b5c7;margin-top:3px}.hk-business-name{line-height:1.25;overflow-wrap:anywhere}.hk-business-properties{color:#e3c66e!important;font-size:11px;line-height:1.3;overflow-wrap:anywhere}.hk-icon{width:46px;height:46px;object-fit:contain;flex:0 0 46px}.hk-empty-icon{width:46px;height:46px;border:2px dashed #6381a8;border-radius:50%;display:flex!important;align-items:center;justify-content:center;color:#77baff;font-size:27px;flex:0 0 46px}.hk-empty-icon.compact{width:34px;height:34px;flex-basis:34px;font-size:20px}.hk-plan-row{display:flex;align-items:center;gap:6px;overflow:hidden;margin:10px 0}.hk-plan-row .hk-icon{width:34px;height:34px;flex-basis:34px}.hk-count{font-weight:800}.hk-muted{color:#9aa8bc}.hk-log{max-height:150px;overflow:auto;font:12px ui-monospace,monospace;background:#080d14;border-radius:12px;padding:9px;margin-top:12px}.hk-log>div{padding:3px 0;border-bottom:1px solid #182130}.hk-log-ok{color:#6ee7a8}.hk-log-warn{color:#ffd166}.hk-log-bad{color:#ff8792}.hk-status{font-size:12px;color:#aebbd0;margin-top:8px}
+7185-      .hk-optimizer{margin:10px 0;padding:11px;border:1px solid #34445b;border-radius:14px;background:#0d1520}.hk-optimizer h3{margin-top:0}.hk-optimizer-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hk-optimizer-controls label{display:grid;gap:4px;color:#aebbd0;font-size:11px}.hk-optimizer-controls select,.hk-optimizer-controls input{min-width:0;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:9px;padding:9px}.hk-optimizer-filter{display:grid;gap:6px;margin-top:9px;padding:9px;border:1px solid #2d3d54;border-radius:10px;background:#101927}.hk-optimizer-filter>small{color:#8fa0b8}.hk-optimizer-collapsible>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none}.hk-optimizer-collapsible>summary::-webkit-details-marker{display:none}.hk-optimizer-collapsible>summary:before{content:'▸';color:#ffbd3f;font-size:15px}.hk-optimizer-collapsible[open]>summary:before{content:'▾'}.hk-optimizer-collapsible:not([open])>small,.hk-optimizer-collapsible:not([open])>.hk-optimizer-replaceable{display:none}.hk-optimizer-tiers{display:flex;gap:6px;flex-wrap:wrap}.hk-tier-choice{display:flex;align-items:center;gap:4px;padding:6px 9px;border:1px solid #42536d;border-radius:9px;background:#0b111b}.hk-optimizer-replaceable{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;max-height:250px;overflow:auto}.hk-optimizer-business-choice{display:grid;grid-template-columns:22px 42px 1fr;align-items:center;gap:6px;padding:6px;border:1px solid #34445b;border-radius:9px;background:#0b111b}.hk-optimizer-business-choice.locked{border-color:#a64d5b;background:#27151b}.hk-optimizer-business-choice.tier-disabled{border-color:#34445b;background:#0b111b;opacity:.48;cursor:not-allowed}.hk-optimizer-business-choice.tier-disabled input{pointer-events:none}.hk-optimizer-business-choice .hk-icon{width:40px;height:40px}.hk-optimizer-business-choice>span{display:grid;gap:2px;min-width:0}.hk-optimizer-business-choice b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hk-optimizer-business-choice small{color:#9eabc0}.hk-optimizer-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.hk-optimizer-result{display:grid;gap:8px;margin-top:9px}.hk-optimizer-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.hk-optimizer-summary span{padding:8px;border-radius:9px;background:#111c2b;color:#aebbd0;font-size:11px}.hk-optimizer-summary b{display:block;color:#f4f7fb;margin-top:3px}.hk-optimizer-result ul{list-style:none;padding:0;margin:0;display:grid;gap:5px}.hk-optimizer-result li{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:8px;background:#111c2b;font-size:11px}.hk-optimizer-result li strong.positive{color:#6ee7a8}.hk-optimizer-result li strong.negative{color:#ff8792}.hk-optimizer-safety{padding:8px;border-radius:9px;background:#10281f;color:#6ee7a8}.hk-optimizer-safety.blocked{background:#301820;color:#ff8792}.hk-optimizer-flow{display:flex;align-items:center;gap:5px;overflow-x:auto;padding:4px 0}.hk-optimizer-flow .hk-icon{width:34px;height:34px;flex-basis:34px}@media(max-width:620px){.hk-optimizer-controls,.hk-optimizer-actions{grid-template-columns:1fr}.hk-optimizer-summary{grid-template-columns:1fr 1fr}.hk-optimizer-replaceable{grid-template-columns:1fr}}
+7186-      .hk-bonus-analyzer{margin:10px 0;padding:11px;border:1px solid #34445b;border-radius:14px;background:#0d1520}.hk-bonus-analyzer h3,.hk-bonus-analyzer h4{margin:4px 0 8px}.hk-bonus-analysis-list{display:grid;gap:6px}.hk-bonus-analysis-row{background:#111c2b;border:1px solid #2c3b50;border-radius:10px;padding:8px}.hk-bonus-analysis-row summary{display:grid;grid-template-columns:1fr auto;gap:3px 8px;cursor:pointer}.hk-bonus-analysis-row summary small{grid-column:1/3;color:#95a5bc}.hk-bonus-analysis-row>div{display:grid;gap:5px;margin-top:7px}.hk-bonus-source,.hk-limited-businesses>span{display:flex;align-items:center;gap:7px}.hk-bonus-source .hk-icon,.hk-limited-businesses .hk-icon{width:30px;height:30px;flex-basis:30px}.hk-best-business{display:flex;align-items:center;gap:10px;background:#10281f;border:1px solid #286148;border-radius:11px;padding:9px}.hk-best-business span{display:grid;gap:3px}.hk-best-business small{color:#b5c2d4}.hk-limited-businesses{display:flex;gap:8px;overflow-x:auto}.hk-limited-businesses>span{min-width:150px;background:#301820;border-radius:9px;padding:6px;color:#ffb0b7}
+7187:      .hk-resource-type-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}.hk-resource-type-tabs button{display:grid;gap:3px;padding:11px 8px;border:1px solid #40516a;border-radius:12px;background:#101a28;color:#d7dfeb}.hk-resource-type-tabs button b{font-size:13px;overflow-wrap:anywhere}.hk-resource-type-tabs button small{color:#96a5ba}.hk-resource-type-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#ffe083;box-shadow:0 0 0 2px #ffad1f2b}.hk-resource-type-tabs button.active small{color:#ffd36a}.hk-resource-head{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(260px,1.4fr) minmax(210px,.48fr);gap:10px;align-items:end}.hk-resource-head h3{margin:0}.hk-resource-head small{display:block;margin-top:4px;color:#96a5ba}.hk-resource-tiers{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;align-self:center}.hk-resource-tiers button{min-width:42px;padding:9px 10px;border:1px solid #40516a;border-radius:50px;background:#101a28;color:#b8c5d8;font-weight:900}.hk-resource-tiers button.active{border-color:#ffad1f;background:#3a2b14;color:#ffe083;box-shadow:0 0 0 2px #ffad1f2b}.hk-resource-repeat{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:10px 12px;border:1px solid #304159;border-radius:10px;background:#101a28}.hk-resource-repeat select{min-width:90px}.hk-resource-maximum{width:100%;margin-top:8px}.hk-resource-buildings{display:grid;gap:10px;margin:12px 0}.hk-resource-building{padding:10px;border:1px solid #304159;border-radius:12px;background:#101a28}.hk-resource-building h4{margin:0 0 8px;color:#f4f7fb}.hk-resource-building h4 small{color:#ffe083}.hk-resource-task{display:grid;grid-template-columns:minmax(150px,1fr) minmax(210px,.9fr) 110px;gap:9px;align-items:center;padding:8px 0;border-top:1px solid #26364b}.hk-resource-task>div{display:grid;gap:3px}.hk-resource-task small{color:#96a5ba}.hk-resource-task.protected{opacity:.6}.hk-resource-task.protected button{border-color:#596578;background:#222c3a;color:#aeb8c8}.hk-resource-task button{padding:10px 6px;border-color:#d99d18;background:#3a2b14;color:#ffe083;font-weight:900}.hk-resource-cost{display:grid;gap:4px;justify-items:end}.hk-resource-balance{display:grid;grid-template-columns:25px auto 8px auto;gap:4px;align-items:center;font-size:10px;color:#aebbd0}.hk-resource-balance .hk-price-icon{width:25px;height:25px}.hk-resource-balance i{display:grid;font-style:normal}.hk-resource-balance em{font-style:normal;color:#748399}.hk-resource-balance b{font-size:12px;color:#f5f7fa}.hk-resource-balance.ok b{color:#72e8ae}.hk-resource-balance.short b{color:#ff8992}.hk-resource-buildings+.hk-primary{width:100%}@media(max-width:820px){.hk-resource-head{grid-template-columns:1fr}.hk-resource-tiers{justify-content:flex-start}}@media(max-width:620px){.hk-resource-type-tabs button{padding:9px 4px}.hk-resource-type-tabs button b{font-size:11px}.hk-resource-type-tabs button small{font-size:10px}.hk-resource-task{grid-template-columns:1fr 110px}.hk-resource-cost{grid-column:1/2;justify-items:start}.hk-resource-task button{grid-column:2;grid-row:1/3}}
+7188-      .hk-clan-head{display:grid;grid-template-columns:1fr minmax(170px,.5fr) 130px;gap:8px;align-items:end}.hk-clan-head h3{margin:0}.hk-clan-head small{color:#94a3b8}.hk-clan-head select{min-width:0;background:#0b111b;color:#fff;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-clan-overall{border:1px solid #2d3d54;border-radius:12px;background:#0d1520;padding:10px;margin:10px 0}.hk-clan-overall summary{cursor:pointer;font-weight:900}.hk-clan-overall summary span{float:right;color:#6ee7a8}.hk-clan-branches{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:12px 0}.hk-clan-branch,.hk-clan-line{border:1px solid #34445b;border-radius:11px;background:#111a27;color:#d9e2ef;padding:8px;display:grid;place-items:center;gap:5px;min-width:0}.hk-clan-branch{height:72px;overflow:hidden}.hk-clan-branch.active,.hk-clan-line.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-clan-branch img{display:block;width:100%;height:100%;max-width:56px;max-height:56px;object-fit:contain}.hk-clan-matrix{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px}.hk-clan-matrix aside{display:grid;gap:7px;align-content:start}.hk-clan-line{width:58px;height:58px}.hk-clan-line img{width:42px;height:42px;object-fit:contain}.hk-clan-matrix>section{border:1px solid #2d3d54;border-radius:12px;background:#0d1520;padding:11px}.hk-clan-line-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.hk-clan-line-summary span{display:grid;gap:3px;padding:8px;border-radius:9px;background:#111c2b;color:#9eabc0;font-size:10px}.hk-clan-line-summary b{font-size:14px;color:#ffe083}.hk-clan-players{display:grid;gap:6px;margin-top:10px}.hk-clan-player{display:flex;justify-content:space-between;gap:9px;padding:8px;border-radius:9px;background:#111c2b}.hk-clan-player span{color:#6ee7a8;font-weight:800}@media(max-width:620px){.hk-clan-head{grid-template-columns:1fr 1fr}.hk-clan-head>div{grid-column:1/3}.hk-clan-branches{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;overflow:visible}.hk-clan-branch{height:64px;padding:5px}.hk-clan-branch img{max-width:48px;max-height:48px}.hk-clan-matrix{grid-template-columns:58px minmax(0,1fr)}.hk-clan-line-summary{grid-template-columns:1fr 1fr}.hk-clan-line-summary span:last-child{grid-column:1/3}}
+7189-      .hk-pit-forecast{margin:10px 0;padding:10px;border:1px solid #304057;border-radius:12px;background:#0d1520}.hk-pit-forecast h4,.hk-pit-forecast p{margin:4px 0}.hk-pit-forecast p{color:#aebbd0}.hk-pit-forecast summary{cursor:pointer;font-weight:800;margin-top:8px;padding:8px 0}.hk-pit-targets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px 0}.hk-pit-targets>div{display:grid;gap:3px;padding:8px;border:1px solid #304057;border-radius:10px;background:#111c2b}.hk-pit-targets strong{font-size:14px;color:#ffe083}.hk-pit-targets small,.hk-pit-forecast td small{display:block;color:#9eabc0;font-size:9px}.hk-pit-table-wrap{overflow-x:auto}.hk-pit-forecast table{width:100%;min-width:580px;margin-top:6px;border-collapse:collapse}.hk-pit-forecast th,.hk-pit-forecast td{padding:6px 8px;border-bottom:1px solid #28364a;text-align:left;vertical-align:top}.hk-pit-forecast thead th{position:sticky;top:0;background:#121d2c;color:#ffe083}.hk-pit-forecast tbody th{color:#ffe083}@media(max-width:620px){.hk-pit-targets{grid-template-columns:1fr}.hk-pit-forecast table{font-size:10px}}
+7190-      .hk-fair-types{display:flex;gap:9px;overflow-x:auto;padding:3px 1px 10px}.hk-fair-type{min-width:92px;border:1px solid #304057;background:#121a26;color:white;border-radius:14px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-fair-type.selected{border-color:#ffad1f;background:#2a2418}.hk-fair-icon{width:58px;height:58px;object-fit:contain}.hk-fair-type span,.hk-lot span{display:flex;align-items:center;justify-content:center;gap:4px}.hk-price-icon{width:22px;height:22px;object-fit:contain}.hk-fair-lots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hk-lot{position:relative;border:1px solid #2d3b50;background:#121a26;color:white;border-radius:15px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px}.hk-lot.selected{border:2px solid #3ee0a4;background:#173128}.hk-lot.locked{opacity:.48}.hk-lot small{color:#ff8792}.hk-fair-controls{display:grid;grid-template-columns:1fr 90px;gap:9px;align-items:center}.hk-fair-controls input[type=number],.hk-fair-controls select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px;min-width:0}.hk-check{display:flex;gap:8px;align-items:center;margin:12px 0}.hk-check input{width:22px;height:22px}
+7191-      .hk-fair-currencies{display:flex;gap:7px;overflow-x:auto;padding:0 0 11px}.hk-fair-currencies button{border:1px solid #304057;background:#121a26;color:white;border-radius:11px;padding:7px 9px;display:flex;align-items:center;gap:5px;white-space:nowrap}.hk-fair-currencies button.selected{border-color:#ffad1f;background:#2a2418}.hk-fair-currencies span{font-size:12px}.hk-fair-bonus-lots{margin:9px 0;padding:10px;border:1px solid #304057;border-radius:11px;background:#101a28;display:grid;grid-template-columns:minmax(150px,1fr) auto;align-items:center;gap:8px}.hk-fair-bonus-lots>div{display:flex;gap:8px;flex-wrap:wrap}.hk-fair-bonus-lots .hk-check{margin:0;padding:7px 10px;border:1px solid #ffad1f;border-radius:9px;background:#3a2b14;color:#ffe083}.hk-fair-bonus-lots .hk-check.unavailable{opacity:.38;border-color:#4a5668;background:#192331;color:#9ba8ba}
+7192-      #hk-fair-slot-rules{margin:10px 0;padding:11px;background:#0d1520;border:1px solid #2a374a;border-radius:13px}#hk-fair-slot-rules h3{margin-top:0}.hk-slot-rule{display:grid;grid-template-columns:74px 1fr;gap:9px;align-items:center;padding:9px 0;border-top:1px solid #223046}.hk-slot-product{display:flex;align-items:center;gap:5px}.hk-slot-buttons{display:grid;grid-template-columns:repeat(2,minmax(80px,1fr));gap:7px}.hk-slot-buttons button{border:1px solid #3a4a61;border-radius:10px;background:#172130;color:#9eacc0;padding:10px 5px;font-weight:800}.hk-slot-buttons button.selected{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-slot-buttons button.vip{border-color:#9e7bff;color:#dbcfff}.hk-slot-buttons button.vip.selected{background:#34255b;border-color:#c3a7ff;color:#fff}.hk-slot-buttons button:disabled{opacity:.35}
+7193-      .hk-shop-tabs,.hk-shop-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.hk-shop-tabs button,.hk-shop-groups button{border:1px solid #34445b;border-radius:10px;background:#182230;color:#aebbd0;padding:10px 4px;font-size:12px;font-weight:800}.hk-shop-tabs button.active,.hk-shop-groups button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-shop-lots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hk-shop-lot{position:relative;border:1px solid #2d3b50;background:#121a26;color:white;border-radius:15px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-shop-lot.selected{border:2px solid #3ee0a4;background:#173128}.hk-shop-lot.locked{opacity:.45}.hk-shop-lot span{display:flex;align-items:center;gap:4px}.hk-shop-lot small{color:#aab7ca}.hk-shop-lot.locked small{color:#ff8792}.hk-shop-pick{width:100%;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-shop-pick>input{position:absolute;top:8px;left:8px;width:21px;height:21px}.hk-shop-quantity{display:grid;grid-template-columns:1fr minmax(72px,100px) 48px;align-items:center;gap:5px;width:100%;font-size:11px}.hk-shop-quantity input{min-width:0;width:100%;box-sizing:border-box;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:8px;padding:7px 4px;text-align:center}.hk-shop-quantity button{padding:7px 3px;border:1px solid #b67b12;border-radius:8px;background:#3a2b14;color:#ffd76b;font-weight:900}.hk-premium-mark{position:absolute;right:7px;top:7px;font-style:normal;font-size:17px}.hk-lot.premium,.hk-shop-lot.premium{border-color:#9e7bff;box-shadow:inset 0 0 0 1px #9e7bff55}.hk-lot.premium.selected,.hk-shop-lot.premium.selected{border-color:#d2b7ff;background:#302453}#hk-shop-summary img{vertical-align:middle}
+7194-      .hk-recipe-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}.hk-recipe-tabs button{border:1px solid #34445b;border-radius:11px;background:#182230;color:#aebbd0;padding:11px 4px;font-size:12px;font-weight:800}.hk-recipe-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-recipe-pane{display:none}.hk-recipe-pane.active{display:block}.hk-recipe-plans{display:grid;gap:9px;margin:10px 0}.hk-recipe-row{width:100%;display:grid;grid-template-columns:minmax(115px,1.15fr) 82px minmax(150px,1.25fr) minmax(135px,1fr);gap:10px;align-items:center;text-align:left;color:#f6f8fc;background:#111a27;border:1px solid #35445a;border-left:4px solid var(--recipe-rank);border-radius:14px;padding:10px}.hk-recipe-row:active{transform:scale(.995)}.hk-recipe-id{font-size:10px;color:#93a4bd;overflow-wrap:anywhere}.hk-recipe-result{position:relative;display:grid;justify-items:center;gap:2px}.hk-recipe-result .hk-icon{width:58px;height:58px}.hk-recipe-result small{color:#aebbd0}.hk-rank-badge{position:absolute;left:2px;bottom:18px;background:var(--recipe-rank);color:#111;padding:1px 5px;border-radius:5px;font-size:11px}.hk-recipe-bonuses,.hk-recipe-components,.hk-detail-bonuses{display:grid;gap:6px}.hk-recipe-bonuses span,.hk-detail-bonuses span{display:flex;align-items:center;gap:4px;font-size:11px}.hk-bonus-icon{width:20px;height:20px;object-fit:contain}.hk-component-group{display:flex;align-items:center;gap:5px;font-size:10px}.hk-component-group b{background:var(--rank);color:#111;border-radius:4px;padding:2px 5px}.hk-detail-backdrop{position:fixed;inset:0;z-index:2147483647;background:#02060dcc;display:flex;align-items:center;justify-content:center;padding:20px}.hk-detail-card{position:relative;width:min(480px,100%);max-height:80vh;overflow:auto;background:#111a27;border:1px solid #35445a;border-top:4px solid var(--recipe-rank);border-radius:18px;padding:18px;color:white}.hk-detail-close{position:absolute;right:10px;top:8px;background:#26364d;color:white;border:0;border-radius:9px;font-size:24px;width:38px;height:38px}.hk-detail-title{display:flex;align-items:center;gap:12px;padding-right:42px}.hk-detail-title .hk-icon{width:72px;height:72px}.hk-detail-title span{display:grid;gap:5px}.hk-detail-title small,.hk-recipe-row small{color:#aebbd0}.hk-bureau-sizes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.hk-bureau-sizes button{border:1px solid #35445a;border-radius:11px;background:#111a27;color:white;padding:9px;display:flex;align-items:center;justify-content:center;gap:7px}.hk-bureau-sizes button.active{border-color:#ffad1f;background:#3a2b14}.hk-bureau-sizes span{display:flex;align-items:center;gap:4px}.hk-bureau-list{display:grid;gap:8px;margin:10px 0}.hk-bureau-item{display:grid;grid-template-columns:48px 1fr 64px;align-items:center;gap:9px;border:1px solid #2d3b50;border-radius:13px;background:#111a27;padding:8px}.hk-bureau-item.selected{border-color:#ffad1f;background:#2a2418}.hk-bureau-item span{display:flex;flex-direction:column}.hk-bureau-item small{color:#aebbd0}.hk-bureau-item input{min-width:0;width:100%;background:#0b111b;color:white;border:1px solid #43536d;border-radius:9px;padding:8px;text-align:center}
+7195-      .hk-recipe-ways{display:grid;gap:9px;padding:10px}.hk-recipe-way{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;border:1px solid #29394f;border-radius:12px;background:#0c1420;padding:8px}.hk-recipe-way-number{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:var(--recipe-rank);color:#10151d}.hk-recipe-way-flow{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:2px 0}.hk-recipe-step{position:relative;flex:0 0 78px;display:grid;place-items:center;border:1px solid #35445a;border-bottom:3px solid var(--rank);border-radius:10px;background:#111a27;color:white;padding:6px}.hk-recipe-step .hk-icon{width:48px;height:48px}.hk-recipe-step .hk-rank-badge{bottom:16px;left:1px}.hk-recipe-step .hk-component-order{position:absolute;right:3px;top:3px;z-index:2;background:#25344a;border-radius:5px;padding:1px 4px;font-size:9px}.hk-recipe-plus{flex:0 0 auto;color:#ffbd3f;font-size:22px}.hk-recipe-result-group>.hk-recipe-row{grid-template-columns:82px minmax(150px,1fr) minmax(150px,.8fr)}
+7196-      .hk-recipe-step .hk-rank-badge{background:var(--rank)}
+7197-      @media(max-width:620px){.hk-recipe-row{grid-template-columns:70px 1fr 1.25fr}.hk-recipe-id{display:none}.hk-recipe-components{grid-column:2/4;border-top:1px solid #25344a;padding-top:7px}.hk-recipe-result-group>.hk-recipe-row{grid-template-columns:70px 1fr}.hk-recipe-result-group .hk-recipe-toggle{grid-column:1/3;border-top:1px solid #25344a;padding-top:7px}.hk-recipe-way{grid-template-columns:24px minmax(0,1fr);padding:6px}.hk-recipe-way-number{width:22px;height:22px;font-size:11px}}
+7198-      .hk-recipe-group{border:1px solid #35445a;border-left:4px solid var(--recipe-rank);border-radius:14px;background:#111a27;overflow:hidden}.hk-recipe-group>.hk-recipe-row{grid-template-columns:78px minmax(0,1fr) 120px;border:0;border-left:0;border-radius:0;cursor:pointer;list-style:none}.hk-recipe-group>.hk-recipe-row::-webkit-details-marker{display:none}.hk-recipe-toggle{display:grid;gap:4px;text-align:right}.hk-recipe-toggle small{font-size:9px}.hk-recipe-group[open] .hk-recipe-toggle b{color:#ffad1f}.hk-recipe-component-list{display:grid;gap:7px;padding:0 9px 10px 18px;border-top:1px solid #25344a}.hk-recipe-component{position:relative;width:100%;display:grid;grid-template-columns:65px minmax(0,1fr);gap:10px;align-items:center;text-align:left;color:#f6f8fc;background:#0d1521;border:1px solid #2b394d;border-left:3px solid var(--recipe-rank);border-radius:11px;padding:8px;margin-top:8px}.hk-recipe-component .hk-icon{width:52px;height:52px}.hk-component-order{position:absolute;left:-15px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#ffad1f;color:#16100a;font-size:11px}.hk-recipe-component-list>.hk-muted{margin:10px}.hk-recipe-component .hk-rank-badge{bottom:16px}
+7199-      @media(max-width:620px){.hk-recipe-group>.hk-recipe-row{grid-template-columns:67px minmax(0,1fr)}.hk-recipe-toggle{grid-column:1/3;border-top:1px solid #25344a;padding-top:7px;text-align:left}.hk-recipe-component{grid-template-columns:58px minmax(0,1fr)}}
+7200-      .hk-map-source-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0 12px}.hk-map-source-tabs button{border:1px solid #34445b;border-radius:11px;background:#182230;color:#aebbd0;padding:11px 5px;font-size:12px;font-weight:800}.hk-map-source-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-map-controls{display:grid;grid-template-columns:1fr 120px;gap:7px}.hk-map-controls input,.hk-map-controls select,.hk-map-filters select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-map-list{display:grid;gap:7px;margin-top:10px}.hk-map-row{display:grid;grid-template-columns:1.2fr 54px repeat(3,1fr) 58px 48px;gap:6px;align-items:center;text-align:left;background:#111a27;color:white;border:1px solid #35445a;border-radius:11px;padding:10px;font-size:10px}.hk-map-row>b{font-size:12px;color:#ffe083}.hk-map-row strong{color:#35df9e}.hk-progress{background:#35df9e;color:#082117;border-radius:12px;padding:4px;text-align:center;font-weight:900}.hk-map-filters{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:10px 0}.hk-map-legend{display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:#9eabc0;margin:8px 0}.hk-map-legend span{display:flex;align-items:center;gap:4px}.hk-map-dot{width:10px;height:10px;border-radius:3px;display:inline-block}.hk-map-zoom{display:grid;grid-template-columns:44px 82px 44px;gap:6px;justify-content:end;margin:7px 0}.hk-map-zoom button{padding:8px 4px;font-weight:900}.hk-map-zoom #hk-map-zoom-value{color:#ffe083}.hk-map-visual{height:56vh;min-height:360px;max-height:650px;background:#080d14;border:1px solid #304057;border-radius:13px;overflow:hidden;touch-action:none}.hk-map-visual svg{display:block;width:100%;height:100%;touch-action:none;transform-origin:50% 50%;will-change:transform}.hk-map-shape{cursor:pointer;transition:opacity .15s,stroke-width .15s}.hk-map-shape.dim{opacity:.055;pointer-events:none}.hk-map-shape.match{opacity:.94}.hk-map-shape.selected{stroke:#fff!important;stroke-width:3.2!important;opacity:1}.hk-map-selected{display:grid;grid-template-columns:1.1fr 1fr 55px;gap:7px;align-items:center;margin-top:8px;padding:10px;background:#101927;border:1px solid #304057;border-radius:11px}.hk-map-selected small{grid-column:1/4;color:#93a3b8}.hk-map-selected strong{color:#6deaff}.hk-map-match-count{font-size:11px;color:#9eabc0;margin:6px 0}
+7201-      @media(max-width:620px){.hk-map-row{grid-template-columns:1fr 45px 54px}.hk-map-row span:nth-of-type(2),.hk-map-row span:nth-of-type(3){display:none}.hk-map-row strong{grid-column:3}.hk-map-row .hk-progress{grid-column:2}.hk-map-building{grid-template-columns:1fr 55px}.hk-map-building>span{grid-column:1}.hk-map-building small{grid-column:1/3}}
+7202-    `;
+7203-    document.head.appendChild(style);
+7204-    const NAV_GROUPS = [
+7205-      {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
+7206-      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{planned:true,ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+7207-      {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{planned:true,ru:'Здания',en:'Buildings'},{planned:true,ru:'Исследование',en:'Explore'}]},
+7208-      {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
+7209-      {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
+7210-      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+7211-      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{planned:true,ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+7212-    ];
+7213-    const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
+7214-    root = document.createElement('div'); root.id = 'hk-mobile-root';
+7215-    root.innerHTML = `<button id="hk-fab">HK</button><div id="hk-panel" class="hk-locked">
+7216-      <div id="hk-watermark" aria-hidden="true"></div><div class="hk-head"><h2>Hamster King Mobile <small style="font-size:12px;color:#9aa8bc">v${VERSION}</small></h2><div class="hk-lang"><button data-lang="ru" aria-label="Русский">🇷🇺</button><button data-lang="en" aria-label="English">🇬🇧</button></div><button class="hk-close">×</button></div>
+7217-      <button id="hk-donation" class="hk-donation">❤️ <span data-i18n="donation">${tr('donation')}</span></button>
+7218-      <div id="hk-license-gate" class="hk-license" data-i18n="checkingLicense">${tr('checkingLicense')}</div>
+7219-      <div id="hk-health" class="hk-health">
+7220-        <div class="hk-health-chip" data-health="game"><b>${either('Игра','Game')}</b><small>${either('ожидание','waiting')}</small></div>
+7221-        <div class="hk-health-chip" data-health="auth"><b>${either('Авторизация','Auth')}</b><small>${either('ожидание','waiting')}</small></div>
+7222-        <div class="hk-health-chip" data-health="license"><b>${either('Лицензия','License')}</b><small>${either('ожидание','waiting')}</small></div>
+7223-        <div class="hk-health-chip" data-health="server"><b>${either('Сервер','Server')}</b><small>${either('ожидание','waiting')}</small></div>
+7224-      </div>
+7225-      <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">${either('Диагностика','Diagnostics')}</button></div>
+7226-      <div id="hk-update-banner" class="hk-update"></div>
+7227-      <div class="hk-tabs">${menuTabs}</div>
+7228-      <div id="hk-subnav" class="hk-subnav"></div>
+7229-      <div id="hk-runner" class="hk-runner"><div class="hk-runner-head"><b id="hk-runner-title"></b><span id="hk-runner-state" class="hk-runner-state"></span></div><div id="hk-runner-step" class="hk-runner-step"></div><div class="hk-runner-track"><div id="hk-runner-fill" class="hk-runner-fill"></div></div><div class="hk-runner-actions"><button id="hk-runner-pause" class="hk-secondary"></button><button id="hk-runner-stop" class="hk-danger"></button></div></div>
+7230-      <div class="hk-page active" data-content="daily">
+7231-        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div class="hk-toolbar"><button id="hk-daily-refresh" class="hk-secondary" data-i18n="dailyRefresh">${tr('dailyRefresh')}</button><button id="hk-daily-clear" data-i18n="dailyClear">${tr('dailyClear')}</button></div><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
+7232-      </div>
+7233-      <div class="hk-page" data-content="resources">
+7234:        <div id="hk-resource-content" class="hk-cardbox"></div>
+7235-      </div>
+7236-      <div class="hk-page" data-content="pit">
+7237-        <div class="hk-cardbox"><div class="hk-grid">
+7238-          <label data-i18n="targetRound">${tr('targetRound')}</label><input id="hk-target" type="number" min="1" value="${settings.target}">
+7239-          <label data-i18n="delay">${tr('delay')}</label><input id="hk-interval" type="number" min="0.7" step="0.1" value="${settings.interval}">
+7240-          <label data-i18n="activationTokens">${tr('activationTokens')}</label><input id="hk-activation-limit" type="number" min="0" value="${settings.activationLimit}">
+7241-          <label data-i18n="restoreTokens">${tr('restoreTokens')}</label><input id="hk-restore-limit" type="number" min="0" value="${settings.restoreLimit}">
+7242-          <label data-i18n="allowTokens">${tr('allowTokens')}</label><input id="hk-allow-tokens" type="checkbox" ${settings.allowTokens ? 'checked' : ''}>
+7243-          <label data-i18n="pitCollectOnly">${tr('pitCollectOnly')}</label><input id="hk-pit-collect-only" type="checkbox" ${settings.collectOnly ? 'checked' : ''}>
+7244-        </div><div id="hk-pit-live" class="hk-live">${tr('round')}: —</div><section id="hk-pit-forecast" class="hk-pit-forecast"></section>
+7245-        <button id="hk-pit-start" class="hk-primary" data-i18n="startBattle">${tr('startBattle')}</button><button id="hk-pit-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
+7246-        <button id="hk-export" class="hk-secondary" data-i18n="exportCsv">${tr('exportCsv')}</button></div>
+7247-      </div>
+7248-      <div class="hk-page" data-content="business">
+7249-        <div class="hk-cardbox"><div class="hk-toolbar"><button id="hk-refresh-game" data-i18n="refreshGame">${tr('refreshGame')}</button><span id="hk-connect">${tr('waiting')}</span></div>
+7250:        <div class="hk-business-tabs"><button class="hk-business-tab active" data-business-tab="regular" data-i18n="businessRegular">${tr('businessRegular')}</button><button class="hk-business-tab" data-business-tab="optimizer" data-i18n="businessOptimizer">${tr('businessOptimizer')}</button></div>
+7251:        <div class="hk-business-pane active" data-business-pane="regular"><div class="hk-toolbar"><select id="hk-preset"><option>${tr('savedSets')}</option></select><button id="hk-save-preset" data-i18n="saveNew">${tr('saveNew')}</button><button id="hk-delete-preset" data-i18n="delete">${tr('delete')}</button></div>
+7252-        <div class="hk-toolbar"><select id="hk-remove-tier"></select><button id="hk-select-remove" data-i18n="selectAll">${tr('selectAll')}</button></div>
+7253-        <div class="hk-toolbar"><select id="hk-insert-tier"></select></div>
+7254:        <div id="hk-business-lists"></div><div id="hk-plan" class="hk-cardbox"></div></div>
+7255:        <div class="hk-business-pane" data-business-pane="optimizer"><section class="hk-optimizer"><h3 data-i18n="optimizer">${tr('optimizer')}</h3><div class="hk-optimizer-controls"><label><span data-i18n="optimizerGoal">${tr('optimizerGoal')}</span><select id="hk-optimizer-goal"><option value="pit" data-i18n="optimizerPit">${tr('optimizerPit')}</option><option value="income" data-i18n="optimizerIncome">${tr('optimizerIncome')}</option><option value="energy" data-i18n="optimizerEnergy">${tr('optimizerEnergy')}</option><option value="buildings" data-i18n="optimizerBuildings">${tr('optimizerBuildings')}</option></select></label></div><div class="hk-optimizer-filter"><b data-i18n="optimizerRemoveTiers">${tr('optimizerRemoveTiers')}</b><div id="hk-optimizer-remove-tiers" class="hk-optimizer-tiers"></div></div><div class="hk-optimizer-filter"><b data-i18n="optimizerInsertTiers">${tr('optimizerInsertTiers')}</b><div id="hk-optimizer-insert-tiers" class="hk-optimizer-tiers"></div></div><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="replaceable" ${optimizerSectionOpen('replaceable')?'open':''}><summary><b data-i18n="optimizerReplaceable">${tr('optimizerReplaceable')}</b></summary><small data-i18n="optimizerReplaceHint">${tr('optimizerReplaceHint')}</small><div id="hk-optimizer-replaceable" class="hk-optimizer-replaceable"></div></details><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="stock" ${optimizerSectionOpen('stock')?'open':''}><summary><b data-i18n="optimizerStockAllowed">${tr('optimizerStockAllowed')}</b></summary><small data-i18n="optimizerStockHint">${tr('optimizerStockHint')}</small><div id="hk-optimizer-stock-allowed" class="hk-optimizer-replaceable"></div></details><div class="hk-optimizer-actions"><button id="hk-optimizer-calculate" class="hk-secondary" data-i18n="optimizerCalculate">${tr('optimizerCalculate')}</button><button id="hk-optimizer-restore" data-i18n="optimizerRestore">${tr('optimizerRestore')}</button></div><div id="hk-optimizer-result" class="hk-optimizer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section>
+7256-        <section class="hk-bonus-analyzer"><h3 data-i18n="bonusAnalyzer">${tr('bonusAnalyzer')}</h3><div id="hk-bonus-analyzer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section></div></div>
+7257-      </div>
+7258-      <div class="hk-page" data-content="clan">
+7259-        <div id="hk-clan-content" class="hk-cardbox"><h3>${either('Навыки клана','Clan skills')}</h3><p class="hk-muted">${either('Данные ещё не считаны','No data has been read yet')}</p></div>
+7260-      </div>
+7261-      <div class="hk-page" data-content="fair">
+7262-        <div class="hk-cardbox"><button id="hk-fair-load" class="hk-secondary" data-i18n="loadFair">${tr('loadFair')}</button>
+7263-          <div class="hk-toolbar" style="margin-top:10px"><select id="hk-fair-preset"><option value="">${tr('fairSavedSettings')}</option></select><button id="hk-fair-save-preset" data-i18n="saveSetting">${tr('saveSetting')}</button></div>
+7264-          <div class="hk-toolbar"><button id="hk-fair-update-preset" data-i18n="updateSetting">${tr('updateSetting')}</button><button id="hk-fair-delete-preset" data-i18n="delete">${tr('delete')}</button></div>
+7265-          <h3 data-i18n="chooseFair">${tr('chooseFair')}</h3><div id="hk-fair-types" class="hk-fair-types"><p class="hk-muted">${tr('readFirst')}</p></div>
+7266-          <div class="hk-toolbar"><input id="hk-fair-search" data-i18n-placeholder="searchLot" placeholder="${tr('searchLot')}"></div>
+7267-          <div id="hk-fair-currencies" class="hk-fair-currencies"></div>
+7268-          <h3 data-i18n="choosePurchases">${tr('choosePurchases')}</h3><div id="hk-fair-lots" class="hk-fair-lots"></div>
+7269-          <div id="hk-fair-selected" class="hk-live">${tr('selectedLots',{n:0})}</div>
+7270-          <div id="hk-fair-slot-rules" style="display:none"></div>
+7271-          <div class="hk-fair-controls"><label data-i18n="fairExactLots">${tr('fairExactLots')}</label><select id="hk-fair-exact-lots"><option value="0">${tr('no')}</option><option value="3">3</option><option value="6">6</option><option value="9">9</option></select></div>
+7272-          <div id="hk-fair-bonus-lots" class="hk-fair-bonus-lots"></div>
+7273-          <div class="hk-fair-controls"><label data-i18n="totalPurchases">${tr('totalPurchases')}</label><input id="hk-fair-buy-limit" type="number" min="1" max="999" value="1">
+7274-            <label data-i18n="maxRerolls">${tr('maxRerolls')}</label><input id="hk-fair-reroll-limit" type="number" min="0" max="10000" value="50"></div>
+7275-          <label class="hk-check"><input id="hk-fair-premium-reroll" type="checkbox"><span data-i18n="allowDiamonds">${tr('allowDiamonds')}</span></label>
+7276-          <button id="hk-fair-start" class="hk-primary" data-i18n="findBuy" disabled>${tr('findBuy')}</button><button id="hk-fair-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
+7277-          <p class="hk-muted" data-i18n="fairWarning">${tr('fairWarning')}</p>
+7278-        </div>
+7279-      </div>
+7280-      <div class="hk-page" data-content="shop">
+7281-        <div class="hk-cardbox"><h3 data-i18n="shop">${tr('shop')}</h3>
+7282-          <div class="hk-shop-tabs"><button class="active" data-shop-section="regular" data-i18n="regularShop">${tr('regularShop')}</button><button data-shop-section="ordinary" data-i18n="ordinaryShop">${tr('ordinaryShop')}</button><button data-shop-section="clan" data-i18n="clanShop">${tr('clanShop')}</button></div>
+7283-          <div id="hk-shop-groups" class="hk-shop-groups" style="display:none"><button class="active" data-shop-group="resources" data-i18n="resourcesShop">${tr('resourcesShop')}</button><button data-shop-group="renovation" data-i18n="renovationShop">${tr('renovationShop')}</button><button data-shop-group="invest" data-i18n="investShop">${tr('investShop')}</button></div>
+7284-          <button id="hk-shop-load" class="hk-secondary" data-i18n="readShop">${tr('readShop')}</button>
+7285-          <button id="hk-shop-select" class="hk-secondary" data-i18n="selectAvailable">${tr('selectAvailable')}</button>
+7286-          <div id="hk-shop-cards" class="hk-shop-lots" style="margin-top:10px"><p class="hk-muted">${tr('shopReadFirst')}</p></div>
+7287-          <div id="hk-shop-summary" class="hk-live">${tr('selectedPurchases',{n:0})}</div>
+7288-          <button id="hk-shop-buy" class="hk-primary" data-i18n="buySelected" disabled>${tr('buySelected')}</button>
+7289-          <p class="hk-muted" data-i18n="shopWarning">${tr('shopWarning')}</p>
+7290-        </div>
+7291-      </div>
+7292-      <div class="hk-page" data-content="recipes">
+7293-        <div class="hk-cardbox"><div class="hk-recipe-tabs"><button class="active" data-recipe-pane="spin" data-i18n="recipeSpin">${tr('recipeSpin')}</button><button data-recipe-pane="database" data-i18n="recipeDatabase">${tr('recipeDatabase')}</button><button data-recipe-pane="bureau" data-i18n="projectBureau">${tr('projectBureau')}</button></div>
+7294-          <div class="hk-recipe-pane active" data-recipe-content="spin">
+7295-            <button id="hk-recipe-load" class="hk-secondary" data-i18n="readRecipes">${tr('readRecipes')}</button>
+7296-            <h3 data-i18n="currentRecipePlans">${tr('currentRecipePlans')}</h3><div id="hk-recipe-cards" class="hk-recipe-plans"><p class="hk-muted">${tr('recipeReadFirst')}</p></div>
+7297-            <div class="hk-grid"><label data-i18n="recipeAttempts">${tr('recipeAttempts')}</label><input id="hk-recipe-attempts" type="number" min="1" max="100" value="1"></div>
+7298-            <div id="hk-recipe-summary" class="hk-live">${tr('recipeReadFirst')}</div>
+7299-            <button id="hk-recipe-run" class="hk-primary" data-i18n="spinRecipes" disabled>${tr('spinRecipes')}</button><button id="hk-recipe-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
+7300-          </div>
+--
+7327-          <label class="hk-growth-check"><span><b>${either('Открыть все шары','Open all balls')}</b><small>${either('Все распознанные шары Хомяков/Генералов','All recognized Hamster/General balls')}</small></span><input id="hk-growth-balls" type="checkbox"></label>
+7328-          <label class="hk-growth-check"><span><b>${either('Открыть все коробки','Open all boxes')}</b><small>${either('Коробки/lootbox/chest, кроме пассивного дохода','Boxes/lootboxes/chests except passive-income boxes')}</small></span><input id="hk-growth-boxes" type="checkbox"></label>
+7329-        </div></div>
+7330-        <div class="hk-cardbox"><div data-growth-plan></div><button class="hk-primary" data-growth-action="all">${either('Запустить полный план','Run full plan')}</button></div>
+7331-      </div>
+7332-      <div class="hk-page" data-content="growth-hamsters">
+7333-        <div class="hk-cardbox"><h3>${either('Хомяки','Hamsters')}</h3><p class="hk-muted">${either('Состояние, магазин и справочник Хомяков считываются автоматически. Максимальный уровень определяется из live-данных каждого Хомяка.','State, shop and Hamster metadata are read automatically. Maximum level is derived from each Hamster’s live data.')}</p><div data-growth-summary></div>
+7334-          <div class="hk-growth-options">
+7335-            <label class="hk-growth-option"><span><b>${either('Бюджет Крышек','Caps budget')}</b><small>${either('Доля текущего баланса Крышек на фазу Хомяков','Share of current Caps balance for the Hamster phase')}</small></span><select id="hk-growth-caps-percent">${[10,20,30,40,50,60,70,80,90,100].map(v=>`<option value="${v}">${v}%</option>`).join('')}</select></label>
+7336-            <label class="hk-growth-option"><span><b>${either('Вес Mobster Pit','Mobster Pit weight')}</b><small>${either('Idol / Crypto / помощники Ямы. «—» = ×1','Idol / Crypto / Pit helpers. “—” = ×1')}</small></span><select id="hk-growth-hamster-weight">${[1,2,3,4,5,6,7,8].map(v=>`<option value="${v}">${v===1?'—':'×'+v}</option>`).join('')}</select></label>
+7337-            <label class="hk-growth-check"><span><b>${either('Hamster Copy Priority','Hamster Copy Priority')}</b><small>${either('Сначала докупает недостающие копии в заданном порядке, затем повышает редкость','Buys missing copies in the selected order, then upgrades rarity')}</small></span><input id="hk-growth-copy-enabled" type="checkbox"></label>
+7338-            <label class="hk-growth-check"><span><b>${either('Исключить Хомяков текущего события','Exclude current-event Hamsters')}</b><small>${either('Определяются автоматически через активное событие игры','Detected automatically from the active game event')}</small></span><input id="hk-growth-exclude-event" type="checkbox"></label>
+7339-          </div>
+7340-        </div>
+7341-        <div class="hk-cardbox"><div class="hk-growth-priority-head"><h3>${either('Приоритет копий','Copy Priority')}</h3><button class="hk-secondary" data-growth-action="reset-priority">${either('Сбросить','Reset')}</button></div><p class="hk-muted">${either('Порядок пар «есть / нужно». Стрелками меняется приоритет, «−» исключает пару.','Order of “owned / required” pairs. Arrows reorder; “−” removes a pair.')}</p><div id="hk-growth-copy-priority" class="hk-growth-priority-list"></div></div>
+7342-        <div class="hk-cardbox"><div data-growth-plan></div><button class="hk-primary" data-growth-action="hamsters">${either('Запустить Хомяков','Run Hamsters')}</button></div>
+7343-      </div>
+7344-      <div class="hk-page" data-content="growth-generals">
+7345-        <div class="hk-cardbox"><h3>${either('Генералы','Generals')}</h3><p class="hk-muted">${either('Перед каждым запуском баланс и доступные улучшения считываются заново.','Balance and available upgrades are read again before every run.')}</p><div data-growth-summary></div>
+7346-          <div class="hk-growth-options">
+7347-            <label class="hk-growth-option"><span><b>${either('Бюджет Pit Tokens','Pit Token budget')}</b><small>${either('Доля текущего баланса для Генералов','Share of current balance for Generals')}</small></span><select id="hk-growth-pit-percent">${[10,20,30,40,50,60,70,80,90,100].map(v=>`<option value="${v}">${v}%</option>`).join('')}</select></label>
+7348-            <label class="hk-growth-option"><span><b>${either('Level Up','Level Up')}</b><small>${either('×1 или ближайший шаг ×10, когда сервер его предлагает и бюджет позволяет','×1 or nearest ×10 when the server offers it and budget allows')}</small></span><select id="hk-growth-general-mode"><option value="x1">×1</option><option value="fast10">×10</option></select></label>
+7349-            <label class="hk-growth-option"><span><b>${either('Вес Mobster Pit','Mobster Pit weight')}</b><small>${either('Idol / Crypto / Pit General. «—» = ×1','Idol / Crypto / Pit General. “—” = ×1')}</small></span><select id="hk-growth-general-weight">${[1,2,3,4,5,6,7,8].map(v=>`<option value="${v}">${v===1?'—':'×'+v}</option>`).join('')}</select></label>
+7350-          </div>
+7351-        </div>
+7352-        <div class="hk-cardbox"><div data-growth-plan></div><button class="hk-primary" data-growth-action="generals">${either('Запустить Генералов','Run Generals')}</button></div>
+7353-      </div>
+7354-      <div class="hk-page" data-content="maps">
+7355-        <div id="hk-map-index" class="hk-cardbox"><h3 data-i18n="mapIndex">${tr('mapIndex')}</h3>
+7356-          <div class="hk-map-source-tabs"><button class="active" data-map-source="mine">${tr('myMaps')}</button><button data-map-source="uploaded">${tr('uploadedMaps')}</button></div>
+7357-          <div class="hk-map-controls"><input id="hk-map-search" data-i18n-placeholder="mapSearch" placeholder="${tr('mapSearch')}"><select id="hk-map-sort"><option value="rating">${tr('mapRating')}</option><option value="total_rooms">${tr('mapRooms')}</option><option value="progress">${tr('mapProgress')}</option><option value="city">${either('Город','City')}</option></select></div>
+7358-          <button id="hk-map-load" class="hk-secondary" style="display:none">${tr('refreshUploadedMaps')}</button><button id="hk-map-scan" class="hk-primary">${tr('scanAccountMaps')}</button>
+7359-          <div id="hk-map-list" class="hk-map-list"><p class="hk-muted">${either('Откройте индекс карт','Open the map index')}</p></div></div>
+7360-        <div id="hk-map-detail" class="hk-cardbox" style="display:none"><button id="hk-map-back" class="hk-secondary">← ${either('К индексу','Back to index')}</button><h3 id="hk-map-detail-title"></h3>
+7361-          <div class="hk-map-filters"><select id="hk-map-status-filter"><option value="all">${either('Все здания','All buildings')}</option><option value="opened">${either('Открытые','Opened')}</option><option value="unknown">${tr('mapUnexplored')}</option></select>
+7362-          <select id="hk-map-room-filter"><option value="all">${tr('mapRooms')}: ${tr('all')}</option><option value="0">0 💎</option><option value="1">1 💎</option><option value="2">2 💎</option><option value="3">3 💎</option><option value="4">4 💎</option><option value="5">5+ 💎</option></select>
+7363-          <select id="hk-map-type-filter"><option value="all">${either('Все типы','All types')}</option><option value="normal">${either('Обычные','Regular')}</option><option value="invest">${either('Инвестиционные','Investment')}</option></select><select id="hk-map-faction-filter"><option value="all">${either('Все фракции','All factions')}</option></select></div>
+7364-          <div class="hk-map-legend"><span><i class="hk-map-dot" style="background:#d7a93d"></i>${either('не исследовано','unresearched')}</span><span><i class="hk-map-dot" style="background:#34435a"></i>0 💎</span><span><i class="hk-map-dot" style="background:#35c77a"></i>1 💎</span><span><i class="hk-map-dot" style="background:#21b8d7"></i>2 💎</span><span><i class="hk-map-dot" style="background:#4285f4"></i>3 💎</span><span><i class="hk-map-dot" style="background:#9b67ed"></i>4 💎</span><span><i class="hk-map-dot" style="background:#78efff"></i>5+ 💎</span><span>◆ ${either('инвестиционное','investment')}</span></div>
+7365-          <div id="hk-map-match-count" class="hk-map-match-count"></div><div class="hk-map-zoom"><button id="hk-map-zoom-out" aria-label="${either('Отдалить','Zoom out')}">−</button><button id="hk-map-zoom-value" aria-label="${either('Сбросить масштаб','Reset zoom')}">100%</button><button id="hk-map-zoom-in" aria-label="${either('Приблизить','Zoom in')}">+</button></div><div id="hk-map-visual" class="hk-map-visual"></div><div id="hk-map-selected" class="hk-map-selected"><span>${either('Нажмите на здание на карте','Tap a building on the map')}</span></div></div>
+7366-      </div>
+7367-      <div id="hk-log" class="hk-log"></div><div id="hk-status" class="hk-status">${tr('version',{v:VERSION})}</div>
+7368-    </div>`;
+7369-    document.body.appendChild(root);
+7370-    hideBootstrap();
+7371-    panel = root.querySelector('#hk-panel'); logBox = root.querySelector('#hk-log'); statusLine = root.querySelector('#hk-status');
+7372:    businessLists = root.querySelector('#hk-business-lists'); planBox = root.querySelector('#hk-plan'); presetSelect = root.querySelector('#hk-preset'); dailyBox = root.querySelector('#hk-daily-tasks'); clanBox = root.querySelector('#hk-clan-content'); resourceBox = root.querySelector('#hk-resource-content');
+7373-    fairTypes = root.querySelector('#hk-fair-types'); fairLots = root.querySelector('#hk-fair-lots'); fairSlotRules = root.querySelector('#hk-fair-slot-rules'); fairPresetSelect = root.querySelector('#hk-fair-preset');
+7374-    shopCards = root.querySelector('#hk-shop-cards'); shopSummary = root.querySelector('#hk-shop-summary');
+7375-    recipeCards = root.querySelector('#hk-recipe-cards'); recipeSummary = root.querySelector('#hk-recipe-summary'); recipeDatabaseBox = root.querySelector('#hk-recipe-database');
+7376-    bureauCards = root.querySelector('#hk-bureau-cards'); bureauSummary = root.querySelector('#hk-bureau-summary');
+7377-    mapIndexBox = root.querySelector('#hk-map-index'); mapDetailBox = root.querySelector('#hk-map-detail');
+7378-    installFabDragging(root.querySelector('#hk-fab'));
+7379-    root.querySelector('.hk-close').onclick = () => panel.classList.remove('open');
+7380-    root.querySelector('#hk-donation').onclick = () => window.open(DONATION_URL, '_blank', 'noopener');
+7381-    root.querySelectorAll('[data-lang]').forEach(button => button.onclick = () => {
+7382-      language = button.dataset.lang === 'en' ? 'en' : 'ru';
+7383-      save({language});
+7384-      applyLanguage();
+7385-    });
+7386-    root.querySelectorAll('[data-optimizer-section]').forEach(section => section.ontoggle = () => {
+7387-      saveOptimizerSectionState(section.dataset.optimizerSection, section.open);
+7388-    });
+7389-    const groupForPage = page => NAV_GROUPS.find(group=>group.modules.some(module=>module.page===page)) || NAV_GROUPS[0];
+7390-    const renderGroupSubnav = (groupId, activePage) => {
+7391-      const group=NAV_GROUPS.find(row=>row.id===groupId)||NAV_GROUPS[0];
+7392-      const box=root.querySelector('#hk-subnav');
+7393-      box.innerHTML=group.modules.map(module=>`<button class="${module.page===activePage?'active ':''}${module.planned?'planned':''}" ${module.page?`data-module="${module.page}"`:''} ${module.planned?'disabled':''} data-nav-ru="${escapeHtml(module.ru)}" data-nav-en="${escapeHtml(module.en)}">${escapeHtml(language==='en'?module.en:module.ru)}${module.planned?` · ${either('скоро','soon')}`:''}</button>`).join('');
+7394-      box.querySelectorAll('[data-module]:not([disabled])').forEach(button=>button.onclick=()=>activateModule(button.dataset.module,true));
+7395-    };
+7396-    const activateModule = (page,persist=true) => {
+7397-      const target=root.querySelector(`[data-content="${page}"]`) || root.querySelector('[data-content="daily"]');
+7398-      const finalPage=target.dataset.content;
+7399-      const group=groupForPage(finalPage);
+7400-      root.querySelectorAll('.hk-tab').forEach(button=>button.classList.toggle('active',button.dataset.group===group.id));
+7401-      root.querySelectorAll('.hk-page').forEach(section=>section.classList.toggle('active',section===target));
+7402-      renderGroupSubnav(group.id,finalPage);
+7403-      if(persist) save({navGroup:group.id,navModule:finalPage});
+7404-      if (finalPage === 'maps') renderMapIndex();
+7405-      if (finalPage === 'business') { renderBusinessLists(); renderBusinessOptimizerFilters(); }
+7406-      if (finalPage === 'daily') renderDailyTasks();
+7407-      if (finalPage === 'resources') renderResources();
+7408-      if (finalPage === 'clan') renderClanSkills();
+7409-      if (finalPage === 'fair') renderFair();
+7410-      if (finalPage === 'shop') renderShop();
+7411-      if (finalPage === 'recipes') renderRecipes();
+7412-      if (finalPage.startsWith('growth')) { renderGrowth(); growthAutoOpen(finalPage); }
+7413-      else void refreshModuleLive(finalPage);
+7414-    };
+7415-    root.querySelectorAll('.hk-tab').forEach(tab=>tab.onclick=()=>{
+7416-      const group=NAV_GROUPS.find(row=>row.id===tab.dataset.group)||NAV_GROUPS[0];
+7417-      const preferred=group.modules.find(module=>module.page && !module.planned)?.page || 'daily';
+--
+7445-    root.querySelector('#hk-runner-stop').onclick = () => hkRunner.stop('user');
+7446-    root.addEventListener('click',event=>{
+7447-      const actionButton=event.target.closest?.('[data-growth-action]');
+7448-      if(actionButton){
+7449-        const action=actionButton.dataset.growthAction;
+7450-        if(action==='all')void growthRunPlan('all');
+7451-        else if(action==='hamsters')void growthRunPlan('hamsters');
+7452-        else if(action==='generals')void growthRunPlan('generals');
+7453-        else if(action==='prep')void growthRunPlan('prep');
+7454-        else if(action==='reset-priority')growthResetPriority();
+7455-        return;
+7456-      }
+7457-      const row=event.target.closest?.('[data-growth-priority-index]');if(!row)return;
+7458-      const index=Number(row.dataset.growthPriorityIndex);
+7459-      if(event.target.closest('[data-growth-priority-remove]'))growthRemovePriority(index);
+7460-      else{const move=event.target.closest('[data-growth-priority-move]')?.dataset.growthPriorityMove;if(move)growthMovePriority(index,move);}
+7461-    });
+7462-    const growthSettingIds=['#hk-growth-run-prep','#hk-growth-run-generals','#hk-growth-run-hamsters','#hk-growth-contracts','#hk-growth-balls','#hk-growth-boxes','#hk-growth-pit-percent','#hk-growth-general-mode','#hk-growth-general-weight','#hk-growth-caps-percent','#hk-growth-hamster-weight','#hk-growth-copy-enabled','#hk-growth-exclude-event'];
+7463-    for(const selector of growthSettingIds)root.querySelector(selector)?.addEventListener('change',()=>{growthReadSettingsFromUi();renderGrowth();if(selector==='#hk-growth-exclude-event'&&root.querySelector(selector)?.checked)void growthLoadLive({force:false,loadShop:true,loadConfig:true,silent:true});});
+7464-    renderHealth(); renderRunnerState(); renderGrowth();
+7465-    runtime.open = () => { try { panel?.classList.add('open'); updateWatermark(); } catch (_) {} };
+7466-    runtime.navigate = page => { try { activateModule(page,true); panel?.classList.add('open'); } catch (_) {} };
+7467-    root.querySelector('#hk-daily-refresh').onclick = () => refreshModuleLive('daily',{force:true});
+7468-    root.querySelector('#hk-daily-run').onclick = runDailySelected;
+7469-    root.querySelector('#hk-daily-clear').onclick = () => { if (logBox) logBox.innerHTML = ''; if (statusLine) statusLine.textContent = tr('dailyReady'); };
+7470-    root.querySelector('#hk-pit-start').onclick = () => {
+7471-      if (!requireLicense()) return;
+7472-      settings = {
+7473-        target: Math.max(1, Number(root.querySelector('#hk-target').value || 1)),
+7474-        interval: Math.max(.7, Number(root.querySelector('#hk-interval').value || 1.2)),
+7475-        activationLimit: Math.max(0, Number(root.querySelector('#hk-activation-limit').value || 0)),
+7476-        restoreLimit: Math.max(0, Number(root.querySelector('#hk-restore-limit').value || 0)),
+7477-        allowTokens: root.querySelector('#hk-allow-tokens').checked,
+7478-        collectOnly: root.querySelector('#hk-pit-collect-only').checked
+7479-      };
+7480-      save({settings}); activationSpent = 0; restoreSpent = 0; pitRunStart = (() => { const state=pitState(); return {round:state.round,power:pitPowerValue(state)}; })(); pitRunning = true; updatePitButtons(); log(settings.collectOnly ? either('Запущен безопасный сбор данных Ямы без боя','Started safe Pit data collection without battle') : `Автобой запущен до раунда ${settings.target}`); pitLoop();
+7481-    };
+7482-    root.querySelector('#hk-pit-stop').onclick = () => { pitRunning = false; updatePitButtons(); log('Автобой остановлен'); };
+7483-    root.querySelector('#hk-export').onclick = exportPowers;
+7484-    root.querySelector('#hk-refresh-game').onclick = () => location.reload();
+7485-    root.querySelector('#hk-optimizer-calculate').onclick = calculateBusinessOptimizer;
+7486-    root.querySelector('#hk-optimizer-restore').onclick = prepareOriginalBusinessRestore;
+7487-    root.querySelector('#hk-remove-tier').onchange = renderBusinessLists;
+7488-    root.querySelector('#hk-insert-tier').onchange = renderBusinessLists;
+7489-    root.querySelector('#hk-select-remove').onclick = () => {
+7490:      preparedBusinessPlan = null; preparedBusinessPlanSource = '';
+7491-      const filter = Number(root.querySelector('#hk-remove-tier').value || 0);
+7492-      layout.filter(row => filter === 0 ? true : filter === -1 ? !row.businessId : !!row.businessId && tier(row.businessId) === filter)
+7493:        .forEach(row => selectedSlots.add(row.key));
+7494-      renderBusinessLists();
+7495-    };
+7496-    root.querySelector('#hk-save-preset').onclick = savePreset;
+7497-    root.querySelector('#hk-delete-preset').onclick = deletePreset;
+7498-    root.querySelector('#hk-fair-load').onclick = () => refreshModuleLive('fair',{force:true});
+7499-    root.querySelector('#hk-fair-save-preset').onclick = () => saveFairPreset();
+7500-    root.querySelector('#hk-fair-update-preset').onclick = () => fairPresetSelect?.value ? saveFairPreset(fairPresetSelect.value) : saveFairPreset();
+7501-    root.querySelector('#hk-fair-delete-preset').onclick = deleteFairPreset;
+7502-    fairPresetSelect.onchange = () => loadFairPreset(fairPresetSelect.value);
+7503-    root.querySelector('#hk-fair-search').oninput = renderFair;
+7504-    const exactFairLots = root.querySelector('#hk-fair-exact-lots');
+7505-    exactFairLots.oninput = exactFairLots.onchange = () => { renderFairBonusChoices(); updateFairControls(); };
+7506-    root.querySelector('#hk-fair-buy-limit').oninput = updateFairControls;
+7507-    root.querySelector('#hk-fair-reroll-limit').oninput = updateFairControls;
+7508-    root.querySelector('#hk-fair-start').onclick = runFair;
+7509-    root.querySelector('#hk-fair-stop').onclick = () => { fairStop = true; log('Останавливаю ярмарку после текущего запроса…', 'warn'); };
+7510-    renderFairBonusChoices();
+7511-    root.querySelector('#hk-shop-load').onclick = () => refreshModuleLive('shop',{force:true});
+7512-    root.querySelector('#hk-shop-buy').onclick = buyRegularShop;
+7513-    root.querySelector('#hk-shop-select').onclick = () => {
+7514-      selectedShopLots.clear();
+7515-      selectedShopCounts.clear();
+7516-      shopRows.filter(row => row.section === selectedShopSection &&
+7517-        (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && row.safe && row.remaining > 0)
+7518-        .forEach(row => { selectedShopLots.add(row.lotId); selectedShopCounts.set(row.lotId, defaultShopPurchaseCount(row)); });
+7519-      renderShop();
+7520-    };
+7521-    root.querySelectorAll('[data-shop-section]').forEach(button => button.onclick = () => {
+7522-      selectedShopSection = button.dataset.shopSection;
+7523-      selectedShopGroup = selectedShopSection === 'ordinary' ? 'resources' : selectedShopSection === 'clan' ? 'personal' : '';
+7524-      selectedShopLots.clear();
+7525-      selectedShopCounts.clear();
+7526-      root.querySelectorAll('[data-shop-section]').forEach(element => element.classList.toggle('active', element === button));
+7527-      renderShop();
+7528-    });
+7529-    root.querySelectorAll('[data-shop-group]').forEach(button => button.onclick = () => {
+7530-      selectedShopGroup = button.dataset.shopGroup;
+7531-      selectedShopLots.clear();
+7532-      selectedShopCounts.clear();
+7533-      root.querySelectorAll('[data-shop-group]').forEach(element => element.classList.toggle('active', element === button));
+7534-      renderShop();
+7535-    });
+7536-    root.querySelectorAll('[data-recipe-pane]').forEach(button => button.onclick = () => {
+7537-      root.querySelectorAll('[data-recipe-pane]').forEach(element => element.classList.toggle('active', element === button));
+7538-      root.querySelectorAll('[data-recipe-content]').forEach(element => element.classList.toggle('active', element.dataset.recipeContent === button.dataset.recipePane));
+7539-      if(button.dataset.recipePane==='spin')void refreshModuleLive('recipes',{force:true});
+7540-      if(button.dataset.recipePane==='database')void loadCommunityRecipes();
+7541-      if(button.dataset.recipePane==='bureau')void loadProjectBureau();
+7542-    });
+7543-    root.querySelector('#hk-recipe-load').onclick = () => refreshModuleLive('recipes',{force:true});
+7544-    root.querySelector('#hk-recipe-attempts').oninput = renderRecipes;
+7545-    root.querySelector('#hk-recipe-run').onclick = runRecipes;
+7546-    root.querySelector('#hk-recipe-stop').onclick = () => { recipeStop = true; log(either('Останавливаю после текущей прокрутки…', 'Stopping after the current reroll…'), 'warn'); };
+7547-    root.querySelector('#hk-recipe-db-load').onclick = loadCommunityRecipes;
+7548-    root.querySelector('#hk-bureau-load').onclick = loadProjectBureau;
+7549-    root.querySelector('#hk-bureau-tier').onchange = event => { bureauTier = Number(event.target.value || 0); renderProjectBureau(); };
+7550-    root.querySelector('#hk-bureau-attempts').oninput = renderProjectBureau;
+7551-    root.querySelector('#hk-bureau-run').onclick = runProjectBureau;
+7552-    root.querySelector('#hk-map-load').onclick = () => loadMapIndex(false);
+7553-    root.querySelector('#hk-map-scan').onclick = () => submitOwnedMapAreas(true);
+7554-    root.querySelectorAll('[data-map-source]').forEach(button => button.onclick = () => setMapSource(button.dataset.mapSource));
+7555-    root.querySelector('#hk-map-search').oninput = renderMapIndex;
+7556-    root.querySelector('#hk-map-sort').onchange = renderMapIndex;
+7557-    root.querySelector('#hk-map-back').onclick = renderMapIndex;
+7558-    root.querySelector('#hk-map-zoom-out').onclick = () => changeMapZoom(mapZoom / 1.4);
+7559-    root.querySelector('#hk-map-zoom-in').onclick = () => changeMapZoom(mapZoom * 1.4);
+7560-    root.querySelector('#hk-map-zoom-value').onclick = resetMapZoom;
+7561-    ['#hk-map-status-filter','#hk-map-room-filter','#hk-map-type-filter','#hk-map-faction-filter'].forEach(selector => root.querySelector(selector).onchange=renderMapDetail);
+7562-    presetSelect.onchange = () => loadPreset(presetSelect.value);
+7563-    fillTierFilters(); refreshPresets(); refreshFairPresets(); renderBusinessLists(); renderBusinessOptimizerFilters(); renderDailyTasks(); renderClanSkills(); renderResources();
+7564:    if (playerDocument) refreshBusinessData();
+7565-    applyLanguage();
+7566-    setInterval(() => {
+7567-      updatePitStatus();
+7568-      const c=root.querySelector('#hk-connect'); if(c)c.textContent=apiHeaders.Authorization?tr('connectedSlots',{n:layout.length}):tr('waiting');
+7569-      const token=currentGameBearer(); const exp=jwtExpiration(token);
+7570-      setHealth('auth', !!token && exp > Date.now()+5000, token ? (exp > Date.now()+5000 ? 'авторизация активна' : 'токен истёк') : 'нет токена');
+7571-    }, 1000);
+7572-    setInterval(updateWatermark, 30000);
+7573-  }
+7574-
+7575-  function startNetworkCapture() {
+7576-    try { installNetworkCapture(); }
+7577-    catch (_) { setTimeout(startNetworkCapture, 250); }
+7578-  }
+7579-
+7580-  function startInterface() {
+7581-    if (root) return;
+7582-    try {
+7583-      if (document.body) renderUI();
+7584-    } catch (error) {
+7585-      showBootstrap(error?.message || error);
+7586-      return;
+7587-    }
+7588-    if (!root) setTimeout(startInterface, 250);
+7589-  }
+7590-
+7591-  startNetworkCapture();
+7592-  startInterface();
+7593-  setTimeout(() => bootstrapLateGameConnection(), 250);
+7594-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
+7595-  setInterval(() => { ensureGameAuthorization(false, 'background').catch(error => recordDiagnostic('auth-background-error',{error:error?.message || error})); }, 30000);
+7596-  setInterval(captureActiveEventCode, 1500);
+7597-  setTimeout(() => hkGameBridge.discover(false), 1500);
+7598-  setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
+7599-  setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
+7600-  setInterval(() => collectPublicSnapshot(), PUBLIC_SNAPSHOT_INTERVAL_MS);
+7601-})();
