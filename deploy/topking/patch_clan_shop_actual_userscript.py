@@ -2,6 +2,7 @@
 from pathlib import Path
 import re
 from patch_today_live_1170 import apply_today_hotfix
+from patch_native_login_gate_1170 import apply_login_gate
 
 p=Path("/tmp/HamsterKingMobile.user.js")
 s=p.read_text()
@@ -25,8 +26,9 @@ def sync_version(text):
 s = sync_version(s)
 if MARKER in s:
     s = apply_today_hotfix(s)
+    s = apply_login_gate(s)
     p.write_text(s)
-    print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_AND_TODAY_HOTFIXED")
+    print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_TODAY_AND_LOGIN_GATE")
     raise SystemExit(0)
 
 anchor="  const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';\n"
@@ -103,5 +105,6 @@ if old not in s:
 s=s.replace(old,new,1)
 
 s = apply_today_hotfix(s)
+s = apply_login_gate(s)
 p.write_text(s)
-print("CLAN_SHOP_USERSCRIPT_PATCH_OK")
+print("CLAN_SHOP_USERSCRIPT_PATCH_OK_WITH_LOGIN_GATE")
