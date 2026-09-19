@@ -7,6 +7,11 @@ def apply_hotfix(text):
         if x not in s: raise SystemExit(m)
     if '// @version      1.17.1' not in s and '// @version      1.17.2' not in s: raise SystemExit('Bosses read-only requires 1.17.1 or 1.17.2')
     req("HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1'",'Stage 2I Buildings missing')
+    if f"HK_STAGE2J_BOSSES_REV = '{REV}'" in s:
+        # Bosses existing-marker version sync: the outer deploy chain normalizes
+        # the source to 1.17.0/1.17.1 before reapplying current hotfixes.
+        s=s.replace('// @version      1.17.1','// @version      1.17.2',1)
+        s=s.replace(": '1.17.1';",": '1.17.2';",1)
     if f"HK_STAGE2J_BOSSES_REV = '{REV}'" not in s:
         s=s.replace('// @version      1.17.1','// @version      1.17.2',1)
         s=s.replace(": '1.17.1';",": '1.17.2';",1)
