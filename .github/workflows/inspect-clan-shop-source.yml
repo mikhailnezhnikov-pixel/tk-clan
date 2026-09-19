@@ -1,0 +1,38 @@
+name: Inspect clan shop source data
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-clan-shop-source.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect source
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            f=/opt/hamsterking-license/server.py
+            echo "=== DASHBOARD FUNCTIONS ==="
+            grep -n -A180 -B20 "^def cabinet_dashboard" "$f" | head -240 || true
+            echo "=== CLAN TABLES ==="
+            grep -n -E "CREATE TABLE IF NOT EXISTS.*clan|clan_.*snapshot|participant|contributor" "$f" | head -180 || true
+            echo "=== CABINET ROUTES ==="
+            grep -n -A90 -B15 "/api/v1/cabinet/dashboard" "$f" | head -150 || true
+          '
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
