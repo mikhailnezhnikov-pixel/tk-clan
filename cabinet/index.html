@@ -1330,13 +1330,22 @@
     return totals;
   }
 
+  function clanShopLotWord(value){
+    const n=Math.abs(Number(value)||0)%100;
+    const n1=n%10;
+    if(n>10&&n<20)return 'лотов';
+    if(n1===1)return 'лот';
+    if(n1>=2&&n1<=4)return 'лота';
+    return 'лотов';
+  }
+
   function clanShopPlayerHtml(row){
     const totals=clanShopPlayerActualTotals(row);
     const factClass=totals.total>0?' has-actual':'';
     const weekLabel=totals.week_start?clanShopWeekLabel(totals.week_start):'текущая неделя';
     return '<div class="clanshop-player">'+
       '<div class="clanshop-player-head"><strong>'+safe(row.nickname||'—')+'</strong>'+
-      '<span class="clanshop-actual-badge'+factClass+'">Факт: <b>'+totals.total+'</b> лот.</span></div>'+
+      '<span class="clanshop-actual-badge'+factClass+'">Факт: <b>'+totals.total+'</b> '+clanShopLotWord(totals.total)+'</span></div>'+
       '<small class="clanshop-inline-history">'+safe(weekLabel)+': Бизнесы S+ <b>'+totals.splus_businesses+'</b> · Шары <b>'+totals.idol_orbs+'</b></small></div>';
   }
 
@@ -1499,7 +1508,7 @@
       const total=row.idol_orbs+row.splus_businesses;
       html.push('<tr class="clanshop-history-player" data-clanshop-history-player="'+safe(row.player_key)+'">'+
         '<td><div class="clanshop-player"><div class="clanshop-player-head"><strong>'+safe(row.nickname)+'</strong>'+
-        '<span class="clanshop-actual-badge'+(total>0?' has-actual':'')+'">Факт: <b>'+total+'</b> лот.</span></div></div></td>'+
+        '<span class="clanshop-actual-badge'+(total>0?' has-actual':'')+'">Факт: <b>'+total+'</b> '+clanShopLotWord(total)+'</span></div></div></td>'+
         '<td>'+row.idol_orbs+'</td><td>'+row.splus_businesses+'</td><td><b>'+total+'</b></td></tr>');
       if(clanShopHistoryOpenPlayer===row.player_key){
         const weeks=[...row.weeks].sort((a,b)=>String(b.week_start).localeCompare(String(a.week_start)));
