@@ -1,0 +1,101 @@
+name: Test TopKing 1.16.2 Migration Build
+
+on:
+  push:
+    paths:
+      - '.github/workflows/test-topking-1162-build.yml'
+      - 'deploy/topking/stage2_runner_patch.py'
+      - 'deploy/topking/stage2b_runner_patch.py'
+      - 'deploy/topking/stage2c_state_patch.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: test-topking-1162-build
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch current live read only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.15.0$' /tmp/HamsterKingMobile.user.js
+          grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Apply Stage 2A 2B 2C
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/stage2_runner_patch.py
+          python3 deploy/topking/stage2b_runner_patch.py
+          python3 deploy/topking/stage2c_state_patch.py
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Validate migrated artifact
+        run: |
+          set -euo pipefail
+          grep -q '^// @version      1.16.2$' /tmp/HamsterKingMobile.user.js
+          grep -q "HK_STAGE2_RUNNER_REV.*stage2a-20260919-r1" /tmp/HamsterKingMobile.user.js
+          grep -q "HK_STAGE2B_RUNNER_REV.*stage2b-20260919-r1" /tmp/HamsterKingMobile.user.js
+          grep -q "HK_STAGE2_STATE_REV.*stage2c-state-20260919-r1" /tmp/HamsterKingMobile.user.js
+          grep -q "hkRunner.stop('pit')" /tmp/HamsterKingMobile.user.js
+          grep -q "hkRunner.stop('fair')" /tmp/HamsterKingMobile.user.js
+          grep -q "hkRunner.stop('recipes')" /tmp/HamsterKingMobile.user.js
+          grep -q "title:either('Магазин','Shop')" /tmp/HamsterKingMobile.user.js
+          grep -q "title:either('Проектное бюро','Project Bureau')" /tmp/HamsterKingMobile.user.js
+          grep -q "else if (hkIsMutationRequest(path, method))" /tmp/HamsterKingMobile.user.js
+          grep -q "hkAuthoritativePlayerRead('shop-complete')" /tmp/HamsterKingMobile.user.js
+          grep -q "hkAuthoritativePlayerRead('fair-complete')" /tmp/HamsterKingMobile.user.js
+          grep -q "hkAuthoritativePlayerRead('recipes-complete')" /tmp/HamsterKingMobile.user.js
+          grep -q "hkAuthoritativePlayerRead('bureau-complete')" /tmp/HamsterKingMobile.user.js
+          grep -q "GROWTH_HAMSTER_BUDGET_ID.*cur_cap" /tmp/HamsterKingMobile.user.js
+          grep -q "GROWTH_GENERAL_BUDGET_ID.*item_pit_token" /tmp/HamsterKingMobile.user.js
+
+      - name: Record build result
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          sha="$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')"
+          {
+            echo "version=1.16.2"
+            echo "stage2a=passed"
+            echo "stage2b=passed"
+            echo "stage2c=passed"
+            echo "modules=pit,fair,shop,recipes,bureau,state-store"
+            echo "syntax=ok"
+            echo "sha256=$sha"
+            echo "deploy=not-yet"
+          } > audit/hk-1162-build-status.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-1162-build-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Verify TopKing 1.16.2 migration build"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js
