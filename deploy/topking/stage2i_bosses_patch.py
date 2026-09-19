@@ -4,10 +4,10 @@ s=p.read_text(encoding='utf-8')
 REV='stage2j-bosses-20260920-r1'
 def req(x,m):
     if x not in s: raise SystemExit(m)
-if '// @version      1.16.9' not in s and '// @version      1.16.9' not in s: raise SystemExit('Stage 2J requires 1.16.8 or 1.16.9')
+if '// @version      1.16.8' not in s and '// @version      1.16.9' not in s: raise SystemExit('Stage 2J requires 1.16.8 or 1.16.9')
 req("HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1'",'Stage 2I Buildings missing')
 if f"HK_STAGE2J_BOSSES_REV = '{REV}'" not in s:
-    s=s.replace('// @version      1.16.9','// @version      1.16.9',1)
+    s=s.replace('// @version      1.16.8','// @version      1.16.9',1)
     s=s.replace(": '1.16.8';",": '1.16.9';",1)
     a="  const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';"; req(a,'marker')
     s=s.replace(a,a+f"\n  const HK_STAGE2J_BOSSES_REV = '{REV}';",1)
@@ -53,5 +53,5 @@ if "if (key === 'bosses')" not in s:
 if "if (finalPage === 'bosses') renderBosses();" not in s:
     a="      if (finalPage === 'wars') renderWars();";req(a,'wars activate')
     s=s.replace(a,a+"\n      if (finalPage === 'bosses') renderBosses();",1)
-for x in ['// @version      1.16.9',f"HK_STAGE2J_BOSSES_REV = '{REV}'","{page:'bosses',ru:'Боссы',en:'Bosses'}",'data-content="bosses"','function bossStateRows(','async function refreshBosses(',"documentValue?.player_bosses","documentValue?.player_regional_bosses","documentValue?.boss_battle","GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'","GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'"]:req(x,'Stage 2I missing '+x)
+for x in ['// @version      1.16.9',f"HK_STAGE2J_BOSSES_REV = '{REV}'","{page:'bosses',ru:'Боссы',en:'Bosses'}",'data-content="bosses"','function bossStateRows(','async function refreshBosses(',"documentValue?.player_bosses","documentValue?.player_regional_bosses","documentValue?.boss_battle","GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'","GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'"]:req(x,'Stage 2J missing '+x)
 p.write_text(s,encoding='utf-8')
