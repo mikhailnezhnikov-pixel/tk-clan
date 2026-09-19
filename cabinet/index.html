@@ -396,6 +396,24 @@
         </article>
 
         <article class="card cab-card wide">
+          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Дополнительный скрипт</div>
+          <h2>Kokkaras — слухи и реклама</h2>
+          <p class="stats-sub">Автоматизация сбора слухов и рекламы. Устанавливается такой же закладкой в браузере и запускается только на странице Hamster King.</p>
+
+          <div class="bookmarklet-box">
+            <h3>Создать закладку Kokkaras</h3>
+            <p>Создайте в этом же браузере отдельную закладку с названием <b>Kokkaras</b>. Перетащите кнопку на панель закладок или скопируйте команду и вставьте её в поле <b>URL / Адрес</b>.</p>
+            <div class="bookmarklet-actions">
+              <a id="kokkaras-bookmarklet-link" class="bookmarklet-link" href="javascript:(()=>{s=document.createElement('script');s.src='https://kokkaras.com/hk_maps/panel.js?v='+Date.now();document.documentElement.appendChild(s)})()">★ Установить Kokkaras</a>
+              <button id="copy-kokkaras-bookmarklet" class="button ghost" type="button">Скопировать команду</button>
+            </div>
+            <textarea id="kokkaras-bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{s=document.createElement('script');s.src='https://kokkaras.com/hk_maps/panel.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
+            <p class="bookmarklet-hint">После создания: откройте <b>app.hamsterking.games</b> → войдите в игру → нажмите закладку <b>Kokkaras</b> → скрипт загрузится с kokkaras.com.</p>
+            <p id="kokkaras-bookmarklet-message" class="message" role="status" aria-live="polite"></p>
+          </div>
+        </article>
+
+        <article class="card cab-card wide">
           <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Резервный вариант</div>
           <h2>Скачать .user.js</h2>
           <p class="stats-sub">Используйте этот вариант только если запуск через закладку не работает в вашем браузере. Файл можно скачать кнопкой <b>«Скачать .user.js»</b> во вкладке «Обзор».</p>
@@ -454,6 +472,7 @@
   });
 
   const BOOKMARKLET="javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()";
+  const KOKKARAS_BOOKMARKLET="javascript:(()=>{s=document.createElement('script');s.src='https://kokkaras.com/hk_maps/panel.js?v='+Date.now();document.documentElement.appendChild(s)})()";
 
   document.addEventListener('click',async event=>{
     if(event.target.closest('#show-bookmarklet')){
@@ -471,6 +490,19 @@
       try{await navigator.clipboard.writeText(BOOKMARKLET);setMessage('bookmarklet-message','Команда скопирована.','good')}
       catch{
         const field=$('bookmarklet-code');field?.focus();field?.select();setMessage('bookmarklet-message','Команда выделена — скопируйте её вручную.');
+      }
+      return;
+    }
+    if(event.target.closest('#kokkaras-bookmarklet-link')){
+      event.preventDefault();
+      try{await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);setMessage('kokkaras-bookmarklet-message','Команда Kokkaras скопирована. Создайте закладку и вставьте её в поле URL / Адрес.','good')}
+      catch{setMessage('kokkaras-bookmarklet-message','Перетащите кнопку на панель закладок или скопируйте команду из поля ниже.')}
+      return;
+    }
+    if(event.target.closest('#copy-kokkaras-bookmarklet')){
+      try{await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);setMessage('kokkaras-bookmarklet-message','Команда Kokkaras скопирована.','good')}
+      catch{
+        const field=$('kokkaras-bookmarklet-code');field?.focus();field?.select();setMessage('kokkaras-bookmarklet-message','Команда выделена — скопируйте её вручную.');
       }
     }
   });
