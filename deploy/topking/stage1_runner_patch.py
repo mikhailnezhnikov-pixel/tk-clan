@@ -23,7 +23,6 @@ if not (is_1144 or is_1150):
 require("GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'", 'hamster budget must be cur_cap')
 require("GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'", 'general budget must be item_pit_token')
 require('HKNetworkTimeout', 'network timeout protection missing')
-require('GROWTH_NO_PROGRESS_LIMIT', 'Growth no-progress protection missing')
 require('growthRunGeneralsCore', 'general runner missing')
 require('growthRunPriorityCopiesCore', 'priority copy runner missing')
 require('growthRunLevelsCore', 'hamster level runner missing')
@@ -123,6 +122,8 @@ if 'async function growthRunLevelsCore' in s:
         s = s.replace(old_hamster_after, new_hamster_after, 1)
     elif "growth-hamster-no-progress" not in s:
         raise SystemExit('Hamster no-progress result anchor missing')
+
+require('GROWTH_NO_PROGRESS_LIMIT', 'Growth no-progress protection missing after migration')
 
 if is_1144:
     s = s.replace('// @version      1.14.4', '// @version      1.15.0', 1)
