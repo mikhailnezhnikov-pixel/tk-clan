@@ -4,11 +4,11 @@ import re, sys
 path=Path(sys.argv[1])
 text=path.read_text("utf-8","replace")
 terms=[
-    "Ri.alliance","Ri.members","Ri.list",
+    "Ri.alliance","Ri.members","Ri.list","function Yc","Yc=",
     "alliance_id","allianceId",
     "defense_points","defence_points","defensePoints","defencePoints",
     "hamsters_power","hamstersPower",
-    "player_level","playerLevel",
+    "player_level","playerLevel","leaderboard_type","clan_player_level_lb","hamsters_power_lb","_lb",
     "active_battles","active_defense_wars",
     "warHealth","health"
 ]
