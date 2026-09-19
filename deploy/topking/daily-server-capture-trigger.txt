@@ -1,3 +1,2 @@
-capture=2026-09-20T02:45:00+09:00
-scope=bureau-resources-build-only
-retry=5
+capture=2026-09-20T02:50:00+09:00
+scope=live-1171-bureau-resources-postdeploy
