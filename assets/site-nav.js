@@ -15,6 +15,41 @@
   function current(){const p=parts();return p[0]||'home'}
   function root(){const p=parts();if(!p.length)return './';return '../'.repeat(p.length)}
   function href(path){return root()+path}
+  function ensureBranding(){
+    const crest=href('assets/brand/topking-clan-crest.png');
+    let favicon=document.querySelector('link[data-tk-favicon]');
+    if(!favicon){
+      favicon=document.createElement('link');
+      favicon.rel='icon';
+      favicon.type='image/png';
+      favicon.dataset.tkFavicon='1';
+      document.head.appendChild(favicon);
+    }
+    favicon.href=crest;
+
+    let apple=document.querySelector('link[data-tk-apple-icon]');
+    if(!apple){
+      apple=document.createElement('link');
+      apple.rel='apple-touch-icon';
+      apple.dataset.tkAppleIcon='1';
+      document.head.appendChild(apple);
+    }
+    apple.href=crest;
+
+    document.querySelectorAll('.site-header .brand,.topbar .brand').forEach(brand=>{
+      brand.setAttribute('aria-label','Top King');
+      brand.title='Top King';
+      let img=brand.querySelector('img.tk-clan-crest');
+      if(!img){
+        brand.textContent='';
+        img=document.createElement('img');
+        img.className='tk-clan-crest';
+        img.alt='Top King';
+        brand.appendChild(img);
+      }
+      img.src=crest;
+    });
+  }
   function ensureTheme(){
     if(current()==='home')return;
     const has=[...document.querySelectorAll('link[rel="stylesheet"]')].some(x=>(x.getAttribute('href')||'').includes('assets/public.css'));
@@ -99,6 +134,16 @@
           gap:12px!important;
           justify-self:end!important;
         }
+      }
+      .site-header .brand,.topbar .brand{min-width:58px!important;gap:0!important;letter-spacing:0!important}
+      .site-header .brand .tk-clan-crest,.topbar .brand .tk-clan-crest{
+        width:58px!important;height:58px!important;display:block!important;object-fit:contain!important;
+        padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;
+        box-shadow:none!important;filter:drop-shadow(0 5px 12px rgba(0,0,0,.28))
+      }
+      @media(max-width:680px){
+        .site-header .brand,.topbar .brand{min-width:50px!important}
+        .site-header .brand .tk-clan-crest,.topbar .brand .tk-clan-crest{width:50px!important;height:50px!important}
       }
       .tk-header-actions{display:flex;align-items:center;gap:12px;flex:0 0 auto;margin-inline-start:auto}
       .tk-header-actions .tk-desktop-cabinet{min-height:46px;display:inline-flex;align-items:center;justify-content:center;padding:11px 20px;border:1px solid rgba(232,182,84,.45);border-radius:14px;color:#ffe3a0!important;background:rgba(232,182,84,.08);font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;transition:transform .2s ease,border-color .2s ease,background .2s ease}
@@ -207,12 +252,12 @@
   function createHeader(){
     if(current()==='home'||document.querySelector('.topbar,.site-header'))return;
     const header=document.createElement('header');header.className='topbar tk-generated-header';
-    header.innerHTML=`<div class="shell topbar-inner"><a class="brand" href="${href('')}"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png" alt=""><span>TOP KING</span></a><nav class="nav" aria-label="Navigation"></nav><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Menu">☰</button></div><nav class="mobile-nav" data-mobile-nav></nav>`;
+    header.innerHTML=`<div class="shell topbar-inner"><a class="brand" href="${href('')}" aria-label="Top King"><img class="tk-clan-crest" src="${href('assets/brand/topking-clan-crest.png')}" alt="Top King"></a><nav class="nav" aria-label="Navigation"></nav><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Menu">☰</button></div><nav class="mobile-nav" data-mobile-nav></nav>`;
     document.body.prepend(header);document.body.classList.add('tk-synthetic-header');
   }
   function normalizeExistingHeader(){
-    document.querySelectorAll('.topbar .brand img').forEach(img=>img.src='https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png');
     document.querySelectorAll('nav.tabs[aria-label="Разделы сайта"]').forEach(n=>n.classList.add('tk-legacy-site-nav'));
+    ensureBranding();
   }
   function portalMobileMenus(){
     document.querySelectorAll('[data-mobile-nav]').forEach(menu=>{
@@ -328,7 +373,7 @@
     }
   }
   function render(){
-    ensureTheme();ensureNavStyles();createHeader();normalizeExistingHeader();ensureCabinetTabGroups();
+    ensureTheme();ensureNavStyles();createHeader();normalizeExistingHeader();ensureBranding();ensureCabinetTabGroups();
     document.querySelectorAll('.tk-desktop-cabinet').forEach(a=>a.remove());
     document.querySelectorAll('nav.nav,nav.desktop-nav').forEach(n=>renderContainer(n,false));
     document.querySelectorAll('nav.mobile-nav,.mobile-links').forEach(n=>renderContainer(n,true));
