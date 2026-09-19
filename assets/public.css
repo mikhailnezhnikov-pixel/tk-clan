@@ -11,3 +11,113 @@
 @media(max-width:1060px){.nav{display:none}.menu-toggle{display:grid}.card.third{grid-column:span 6}}
 @media(max-width:680px){:root{--header:68px;--radius:20px}.shell{width:min(100% - 32px,1200px)}.topbar-inner{min-height:var(--header)}.brand{gap:9px;font-size:13px}.brand img{width:38px;height:38px}.menu-toggle{width:43px;height:43px}.languages button{min-width:32px;padding:6px 4px}.page-head{padding:calc(var(--header) + 48px) 0 26px}.eyebrow,.kicker{margin-bottom:13px;font-size:10px!important;letter-spacing:.18em!important}h1{font-size:clamp(42px,13.5vw,60px)!important;line-height:.95!important}.lead,.hint{font-size:16px}.content{padding:20px 0 58px}.card,.card.third{grid-column:1/-1;padding:20px;border-radius:20px!important}.game-icon{width:58px;height:58px}.actions .button,.toolbar .button{width:100%}.toolbar{align-items:stretch}.input{width:100%}.data-table th,.data-table td,.reward-table th,.reward-table td{padding:11px 12px}.tk-synthetic-header>main{padding-top:calc(var(--header) + 22px)!important}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+
+
+/* TK FLOWING BACKGROUND 2026-09 */
+body.tk-main-theme{
+  position:relative;
+  background:#07080b!important;
+  background-attachment:fixed!important;
+}
+body.tk-main-theme:before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-3;
+  pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(5,7,10,.18) 0%,rgba(5,7,10,.46) 22%,rgba(7,8,11,.82) 48%,#07080b 78%),
+    radial-gradient(ellipse at 72% 8%,rgba(232,182,84,.20),transparent 34%),
+    url("home/top-king-clan-hero-approved.jpg") 58% top / min(1500px,118vw) auto no-repeat,
+    #07080b;
+  opacity:.72;
+  transform:translateZ(0);
+}
+body.tk-main-theme:after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse at 12% 28%,rgba(232,182,84,.07),transparent 30%),
+    radial-gradient(ellipse at 88% 62%,rgba(255,227,160,.035),transparent 34%),
+    linear-gradient(180deg,transparent 0%,rgba(7,8,11,.14) 20%,rgba(7,8,11,.56) 46%,rgba(7,8,11,.94) 86%,#07080b 100%);
+}
+body.tk-main-theme main,
+body.tk-main-theme .content,
+body.tk-main-theme .section{
+  background:transparent!important;
+}
+body.tk-main-theme .page-head{
+  isolation:isolate;
+}
+body.tk-main-theme .page-head:before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  left:-18vw;
+  right:-18vw;
+  top:0;
+  bottom:-72px;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse at 50% 18%,rgba(7,8,11,.08),transparent 34%),
+    linear-gradient(180deg,rgba(7,8,11,.08),rgba(7,8,11,.20) 55%,transparent);
+}
+body.tk-main-theme .card,
+body.tk-main-theme .panel,
+body.tk-main-theme .recipe-toolbar,
+body.tk-main-theme .recipe,
+body.tk-main-theme .exact-card{
+  background:
+    radial-gradient(circle at 92% 4%,rgba(232,182,84,.10),transparent 31%),
+    linear-gradient(145deg,rgba(18,22,29,.80),rgba(8,11,16,.74))!important;
+  border-color:rgba(255,255,255,.11)!important;
+  box-shadow:0 18px 55px rgba(0,0,0,.18)!important;
+  backdrop-filter:blur(18px) saturate(120%);
+  -webkit-backdrop-filter:blur(18px) saturate(120%);
+}
+@media(max-width:680px){
+  body.tk-main-theme:before{
+    background:
+      linear-gradient(180deg,rgba(5,7,10,.16) 0%,rgba(5,7,10,.44) 24%,rgba(7,8,11,.80) 48%,#07080b 76%),
+      radial-gradient(ellipse at 65% 4%,rgba(232,182,84,.18),transparent 30%),
+      url("home/top-king-clan-hero-approved.jpg") 56% top / auto 360px no-repeat,
+      #07080b;
+    opacity:.68;
+  }
+  body.tk-main-theme:after{
+    background:
+      linear-gradient(180deg,rgba(7,8,11,.02) 0%,rgba(7,8,11,.18) 19%,rgba(7,8,11,.56) 38%,rgba(7,8,11,.90) 65%,#07080b 100%),
+      radial-gradient(ellipse at 50% 8%,rgba(232,182,84,.08),transparent 34%);
+  }
+  body.tk-main-theme .page-head{
+    padding:calc(var(--header) + 34px) 0 22px;
+  }
+  body.tk-main-theme h1{
+    max-width:94%;
+    font-size:clamp(34px,10.8vw,46px)!important;
+    line-height:1!important;
+    letter-spacing:-.045em!important;
+  }
+  body.tk-main-theme .lead,
+  body.tk-main-theme .hint{
+    margin-top:15px;
+    font-size:15px!important;
+    line-height:1.52;
+  }
+  body.tk-main-theme .content{
+    padding-top:14px;
+  }
+  body.tk-main-theme .card,
+  body.tk-main-theme .panel,
+  body.tk-main-theme .recipe-toolbar,
+  body.tk-main-theme .recipe,
+  body.tk-main-theme .exact-card{
+    border-radius:19px!important;
+    background:
+      radial-gradient(circle at 96% 0%,rgba(232,182,84,.09),transparent 28%),
+      linear-gradient(145deg,rgba(17,21,28,.76),rgba(8,11,16,.70))!important;
+  }
+}
