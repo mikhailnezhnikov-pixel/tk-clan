@@ -42,7 +42,10 @@ jobs:
               raise SystemExit(f'expected 13 map data parts, found {len(files)}')
           for path in files:
               encoded=open(path,'rb').read()
-              block=json.loads(gzip.decompress(base64.b64decode(encoded)))
+              try:
+                  block=json.loads(gzip.decompress(base64.b64decode(encoded)))
+              except Exception as exc:
+                  raise SystemExit(f'bad map data part {path}: {exc}')
               rows.extend(block)
           if len(rows) != 235:
               raise SystemExit(f'expected 235 maps, found {len(rows)}')
