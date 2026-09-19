@@ -26,7 +26,7 @@ s = sync_version(s)
 if MARKER in s:
     s = apply_today_hotfix(s)
     p.write_text(s)
-    print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_AND_TODAY_HOTFIXED")
+    print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_AND_TODAY_HOTFIXED_R3")
     raise SystemExit(0)
 
 anchor="  const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';\n"
