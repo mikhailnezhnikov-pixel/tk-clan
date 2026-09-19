@@ -1,4 +1,4 @@
-name: Find TopKing userscript backups
+name: Export preserved TopKing 1.9.6
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  find-version:
+  export:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,38 +25,20 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Inventory userscript backups
+      - name: Export preserved source
         shell: bash
         run: |
-          set -u
-          mkdir -p found
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' > found/inventory.txt <<'REMOTE'
-          echo "CURRENT"
-          grep -m1 '^// @version' /opt/hamsterking-license/HamsterKingMobile.user.js 2>/dev/null || true
-          echo "FILES"
-          for f in /opt/hamsterking-license/HamsterKingMobile.user.js* /opt/hamsterking-license/*.user.js* /root/HamsterKingMobile.user.js*; do
-            [ -f "$f" ] || continue
-            v="$(grep -m1 '^// @version' "$f" 2>/dev/null | sed -E 's#^// @version[[:space:]]+##' || true)"
-            [ -n "$v" ] || continue
-            printf '%s\t%s\t%s\t%s\n' "$v" "$(stat -c %Y "$f" 2>/dev/null)" "$(stat -c %s "$f" 2>/dev/null)" "$f"
-          done | sort -V
-          REMOTE
-          cat found/inventory.txt
+          set -euo pipefail
+          mkdir -p preserved
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js.bak.20260919-061430             preserved/HamsterKingMobile_v1.9.6_preserved.user.js
+          grep -m1 '^// @version' preserved/HamsterKingMobile_v1.9.6_preserved.user.js
+          sha256sum preserved/HamsterKingMobile_v1.9.6_preserved.user.js
 
-          MATCH_PATH="$(awk -F '\t' '$1=="1.9.5"{print $4; exit}' found/inventory.txt)"
-          if [ -n "$MATCH_PATH" ]; then
-            printf 'FOUND_1_9_5=YES\nPATH=%s\n' "$MATCH_PATH" > found/result.txt
-            scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new "root@89.125.1.71:$MATCH_PATH" found/HamsterKingMobile_v1.9.5.user.js
-          else
-            echo "FOUND_1_9_5=NO" > found/result.txt
-          fi
-
-      - name: Upload search result
-        if: always()
+      - name: Upload preserved source
         uses: actions/upload-artifact@v4
         with:
-          name: topking-userscript-backup-inventory
-          path: found/
+          name: topking-preserved-1-9-6
+          path: preserved/
           retention-days: 1
 
       - name: Cleanup
