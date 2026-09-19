@@ -270,6 +270,23 @@
     .clanshop-request-add{display:inline-flex;align-items:center;justify-content:center;min-width:82px;padding:6px 8px;border:1px solid rgba(232,182,84,.38);border-radius:9px;background:rgba(232,182,84,.08);color:#ffe0a0;font-size:11px;font-weight:900;cursor:pointer}
     .clanshop-request-add:disabled{border-color:rgba(255,255,255,.09);background:rgba(255,255,255,.025);color:#68717c;cursor:default}
     .clanshop-final-title{margin:18px 0 9px;color:#fff;font-size:18px}
+    .clanshop-history{margin-top:20px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}
+    .clanshop-history-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}
+    .clanshop-history-head h3{margin:0 0 5px;color:#fff;font-size:20px}
+    .clanshop-history-head p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+    .clanshop-periods{display:flex;gap:6px;flex-wrap:wrap}
+    .clanshop-period{padding:7px 10px;border:1px solid rgba(255,255,255,.10);border-radius:9px;background:rgba(255,255,255,.025);color:#aeb6c1;font-size:12px;font-weight:850;cursor:pointer}
+    .clanshop-period.active{border-color:rgba(232,182,84,.45);background:rgba(232,182,84,.10);color:#ffe0a0}
+    .clanshop-history-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:10px 0 12px}
+    .clanshop-history-summary>div{padding:11px 12px;border:1px solid rgba(255,255,255,.075);border-radius:11px;background:rgba(255,255,255,.025)}
+    .clanshop-history-summary span{display:block;color:var(--muted);font-size:11px}
+    .clanshop-history-summary b{display:block;margin-top:3px;color:#fff;font-size:20px}
+    .clanshop-history-player{cursor:pointer}
+    .clanshop-history-player:hover td{background:rgba(255,255,255,.025)}
+    .clanshop-history-detail td{padding:0!important;background:#090d13}
+    .clanshop-history-weeks{display:grid;gap:6px;padding:10px 12px}
+    .clanshop-history-week{display:grid;grid-template-columns:minmax(130px,1fr) 1fr 1fr;gap:8px;padding:8px 10px;border:1px solid rgba(255,255,255,.06);border-radius:9px;background:rgba(255,255,255,.02);font-size:12px}
+    .clanshop-history-week span:first-child{color:#c7a75f;font-weight:850}
     @media(max-width:680px){
       .hkmap-card{padding:20px}
       .hkmap-head{display:block}
@@ -291,6 +308,10 @@
       .clanshop-request-controls{grid-template-columns:1fr}
       .clanshop-requests-head{display:block}
       .clanshop-request-count{display:block;margin-top:6px}
+      .clanshop-history-head{display:block}
+      .clanshop-periods{margin-top:10px}
+      .clanshop-history-summary{grid-template-columns:1fr}
+      .clanshop-history-week{grid-template-columns:1fr}
     }
 
     .hidden{display:none!important}
@@ -678,6 +699,42 @@
             </div>
             <p class="clanshop-note">Для каждого участника можно поставить от 1 до 3 единиц каждого типа. Ноль означает «не покупать». Общий недельный лимит: 14 шаров идолов и 30 бизнесов S+.</p>
           </section>
+
+          <section class="clanshop-history">
+            <div class="clanshop-history-head">
+              <div>
+                <h3>История покупок</h3>
+                <p>Считаются только опубликованные итоговые списки. Заявки игроков в статистику не входят.</p>
+              </div>
+              <div class="clanshop-periods" role="group" aria-label="Период истории покупок">
+                <button class="clanshop-period active" type="button" data-clanshop-period="week">Неделя</button>
+                <button class="clanshop-period" type="button" data-clanshop-period="month">Месяц</button>
+                <button class="clanshop-period" type="button" data-clanshop-period="6m">6 месяцев</button>
+                <button class="clanshop-period" type="button" data-clanshop-period="all">Всё время</button>
+              </div>
+            </div>
+
+            <div class="clanshop-history-summary">
+              <div><span>Шары идолов</span><b id="clanshop-history-idols">0</b></div>
+              <div><span>Бизнесы S+</span><b id="clanshop-history-businesses">0</b></div>
+              <div><span>Игроков</span><b id="clanshop-history-players">0</b></div>
+            </div>
+
+            <div class="clanshop-table-wrap">
+              <table class="clanshop-table">
+                <thead>
+                  <tr>
+                    <th>Игрок</th>
+                    <th>Шары идолов</th>
+                    <th>Бизнесы S+</th>
+                    <th>Всего покупок</th>
+                  </tr>
+                </thead>
+                <tbody id="clanshop-history-body"></tbody>
+              </table>
+            </div>
+            <p id="clanshop-history-message" class="clanshop-note"></p>
+          </section>
         </article>
       </section>
 
@@ -855,6 +912,10 @@
   let initialCabTabApplied=false;
   let clanShopData=null;
   let clanShopLoaded=false;
+  let clanShopHistory=[];
+  let clanShopHistoryLoaded=false;
+  let clanShopHistoryPeriod='week';
+  let clanShopHistoryOpenPlayer='';
 
   function hkMapsData(){
     return hkMaps;
@@ -1218,6 +1279,118 @@
     }).join('')||'<tr><td colspan="3" class="muted">Участники клана пока не загружены.</td></tr>';
   }
 
+  function clanShopHistoryRows(){
+    const rows=Array.isArray(clanShopHistory)?clanShopHistory:[];
+    if(!rows.length)return [];
+    const dates=rows.map(row=>new Date(String(row.week_start||'')+'T00:00:00Z')).filter(date=>!Number.isNaN(date.getTime()));
+    if(!dates.length)return [];
+    const latest=new Date(Math.max(...dates.map(date=>date.getTime())));
+    let start=null;
+    if(clanShopHistoryPeriod==='week')start=new Date(latest);
+    else if(clanShopHistoryPeriod==='month'){start=new Date(latest);start.setUTCDate(start.getUTCDate()-30)}
+    else if(clanShopHistoryPeriod==='6m'){start=new Date(latest);start.setUTCDate(start.getUTCDate()-183)}
+    return rows.filter(row=>{
+      if(!start)return true;
+      const date=new Date(String(row.week_start||'')+'T00:00:00Z');
+      if(Number.isNaN(date.getTime()))return false;
+      if(clanShopHistoryPeriod==='week')return date.getTime()===latest.getTime();
+      return date>=start&&date<=latest;
+    });
+  }
+
+  function clanShopWeekLabel(weekStart){
+    const start=new Date(String(weekStart||'')+'T00:00:00Z');
+    if(Number.isNaN(start.getTime()))return String(weekStart||'—');
+    const end=new Date(start);end.setUTCDate(end.getUTCDate()+6);
+    const fmt=date=>date.toLocaleDateString('ru-RU',{timeZone:'UTC',day:'2-digit',month:'2-digit',year:'2-digit'});
+    return fmt(start)+'–'+fmt(end);
+  }
+
+  function renderClanShopHistory(){
+    document.querySelectorAll('[data-clanshop-period]').forEach(button=>{
+      button.classList.toggle('active',button.dataset.clanshopPeriod===clanShopHistoryPeriod);
+    });
+    const body=$('clanshop-history-body');
+    if(!body)return;
+    const rows=clanShopHistoryRows();
+    const grouped=new Map();
+    rows.forEach(row=>{
+      const key=String(row.player_key||row.player_id||row.nickname||'');
+      if(!grouped.has(key))grouped.set(key,{
+        player_key:key,
+        nickname:String(row.nickname||'—'),
+        player_id:String(row.player_id||''),
+        idol_orbs:0,
+        splus_businesses:0,
+        weeks:[]
+      });
+      const item=grouped.get(key);
+      item.idol_orbs+=Number(row.idol_orbs||0);
+      item.splus_businesses+=Number(row.splus_businesses||0);
+      item.weeks.push(row);
+    });
+    const players=[...grouped.values()].sort((a,b)=>{
+      const totalB=b.idol_orbs+b.splus_businesses,totalA=a.idol_orbs+a.splus_businesses;
+      return totalB-totalA||a.nickname.localeCompare(b.nickname,'ru');
+    });
+    const idolTotal=players.reduce((sum,row)=>sum+row.idol_orbs,0);
+    const businessTotal=players.reduce((sum,row)=>sum+row.splus_businesses,0);
+    $('clanshop-history-idols').textContent=idolTotal;
+    $('clanshop-history-businesses').textContent=businessTotal;
+    $('clanshop-history-players').textContent=players.length;
+
+    const html=[];
+    players.forEach(row=>{
+      const total=row.idol_orbs+row.splus_businesses;
+      html.push('<tr class="clanshop-history-player" data-clanshop-history-player="'+safe(row.player_key)+'">'+
+        '<td><div class="clanshop-player"><strong>'+safe(row.nickname)+'</strong>'+
+        (row.player_id?'<small>ID: '+safe(row.player_id)+'</small>':'')+'</div></td>'+
+        '<td>'+row.idol_orbs+'</td><td>'+row.splus_businesses+'</td><td><b>'+total+'</b></td></tr>');
+      if(clanShopHistoryOpenPlayer===row.player_key){
+        const weeks=[...row.weeks].sort((a,b)=>String(b.week_start).localeCompare(String(a.week_start)));
+        html.push('<tr class="clanshop-history-detail"><td colspan="4"><div class="clanshop-history-weeks">'+
+          weeks.map(week=>'<div class="clanshop-history-week"><span>'+safe(clanShopWeekLabel(week.week_start))+'</span>'+
+            '<span>Шары идолов: <b>'+Number(week.idol_orbs||0)+'</b></span>'+
+            '<span>Бизнесы S+: <b>'+Number(week.splus_businesses||0)+'</b></span></div>').join('')+
+          '</div></td></tr>');
+      }
+    });
+    body.innerHTML=html.join('')||'<tr><td colspan="4" class="muted">Опубликованных покупок за этот период пока нет.</td></tr>';
+    const message=$('clanshop-history-message');
+    if(message){
+      message.textContent=players.length?'Нажмите на игрока, чтобы раскрыть покупки по неделям.':'';
+    }
+  }
+
+  async function loadClanShopHistory(force=false){
+    if(clanShopHistoryLoaded&&!force){renderClanShopHistory();return}
+    try{
+      const data=await request('/clan-shop/history');
+      clanShopHistory=Array.isArray(data.items)?data.items:[];
+      clanShopHistoryLoaded=true;
+      renderClanShopHistory();
+    }catch{
+      setMessage('clanshop-message','Не удалось загрузить историю покупок.','bad');
+    }
+  }
+
+  document.addEventListener('click',event=>{
+    const period=event.target.closest('[data-clanshop-period]');
+    if(period){
+      clanShopHistoryPeriod=period.dataset.clanshopPeriod||'week';
+      clanShopHistoryOpenPlayer='';
+      renderClanShopHistory();
+      return;
+    }
+    const player=event.target.closest('[data-clanshop-history-player]');
+    if(player){
+      const key=String(player.dataset.clanshopHistoryPlayer||'');
+      clanShopHistoryOpenPlayer=clanShopHistoryOpenPlayer===key?'':key;
+      renderClanShopHistory();
+    }
+  });
+
+
   async function loadClanShop(force=false){
     if(clanShopLoaded&&!force){renderClanShop();return}
     setMessage('clanshop-message','Загружаю Clan Shop…');
@@ -1225,6 +1398,7 @@
       clanShopData=await request('/clan-shop');
       clanShopLoaded=true;
       renderClanShop();
+      await loadClanShopHistory(force);
       setMessage('clanshop-message');
     }catch{
       setMessage('clanshop-message','Не удалось загрузить Clan Shop.','bad');
@@ -1321,6 +1495,7 @@
       clanShopData=await request('/clan-shop/publish',{method:'POST',body:'{}'});
       clanShopLoaded=true;
       renderClanShop();
+      await loadClanShopHistory(true);
       setMessage('clanshop-message','Список Clan Shop опубликован.','good');
     }catch(error){
       const msg=error.code==='clan_shop_topic_not_configured'
@@ -1985,7 +2160,7 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/cabinet-i18n.js?v=20260920-4"></script>
+<script src="../assets/cabinet-i18n.js?v=20260920-5"></script>
 <script src="../assets/site-nav.js?v=20260919-9"></script>
 </body>
 </html>
