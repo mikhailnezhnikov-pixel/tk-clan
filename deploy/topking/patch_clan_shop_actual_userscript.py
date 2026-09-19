@@ -14,12 +14,23 @@ p=Path("/tmp/HamsterKingMobile.user.js")
 s=p.read_text()
 MARKER="HK_CLAN_SHOP_ACTUAL_FACTS_V1"
 
+def _run_optional_patch(filename, marker):
+    current=p.read_text()
+    if marker in current:
+        return
+    try:
+        runpy.run_path(str(Path(__file__).with_name(filename)), run_name="__main__")
+    except SystemExit as exc:
+        if exc.code not in (None, 0):
+            raise
+
+
 def apply_alliance_v2_file_patch():
-    runpy.run_path(str(Path(__file__).with_name("patch_alliance_ratings_v2_userscript.py")), run_name="__main__")
+    _run_optional_patch("patch_alliance_ratings_v2_userscript.py", "HK_ALLIANCE_RATINGS_V2")
 
 
 def apply_public_war_alliance_v3_file_patch():
-    runpy.run_path(str(Path(__file__).with_name("patch_public_war_alliance_v3_userscript.py")), run_name="__main__")
+    _run_optional_patch("patch_public_war_alliance_v3_userscript.py", "HK_PUBLIC_WAR_ALLIANCE_V3")
 
 
 def apply_alliance_ratings_patch(text):
