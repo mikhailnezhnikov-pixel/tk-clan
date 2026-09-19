@@ -70,6 +70,13 @@
     .script-card .actions{margin-top:20px}
     .script-card .button.primary{width:100%}
     .script-note{margin:12px 0 0;color:var(--muted);font-size:13px}
+    .bookmarklet-box{margin-top:18px;padding:18px;border:1px solid rgba(232,182,84,.24);border-radius:18px;background:rgba(232,182,84,.055)}
+    .bookmarklet-box h3{margin:0 0 8px;color:#fff;font-size:19px}
+    .bookmarklet-box p{margin:0 0 12px;color:var(--muted)}
+    .bookmarklet-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .bookmarklet-link{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 16px;border-radius:13px;border:1px solid rgba(232,182,84,.55);background:linear-gradient(180deg,rgba(232,182,84,.23),rgba(139,92,25,.18));color:#ffe6a4;font-weight:900;text-decoration:none;cursor:grab}
+    .bookmarklet-code{width:100%;min-height:76px;margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,.10);border-radius:12px;background:#090d12;color:#cbd1da;font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}
+    .bookmarklet-hint{margin-top:10px!important;font-size:12px}
 
     .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:20px}
     .stat{position:relative;padding:17px;border:1px solid rgba(255,255,255,.09);border-radius:17px;background:rgba(8,11,16,.48);overflow:hidden}
@@ -281,8 +288,11 @@
           <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Hamster King Mobile</div>
           <h2>Скрипт</h2>
           <div class="script-version"><span>Актуальная версия</span><b id="script-version">—</b></div>
-          <p class="script-note">Файл доступен только авторизованным участникам клана.</p>
-          <div class="actions"><button id="download" class="button primary" type="button">Скачать актуальную версию</button></div>
+          <p class="script-note">Рекомендуемый запуск — через закладку браузера: ничего скачивать и переустанавливать при обновлениях не нужно.</p>
+          <div class="actions">
+            <button id="show-bookmarklet" class="button primary" type="button">Настроить запуск через закладку</button>
+            <button id="download" class="button ghost" type="button">Скачать .user.js (запасной способ)</button>
+          </div>
           <p id="download-message" class="message" role="status" aria-live="polite"></p>
         </article>
 
@@ -347,8 +357,25 @@
 
       <section class="cab-panel" data-cab-panel="install" hidden>
         <article class="card cab-card wide">
-          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Установка</div>
-          <h2>Как установить скрипт</h2>
+          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Запуск без установки</div>
+          <h2>HK через закладку браузера</h2>
+          <p class="stats-sub">Закладку нужно создать один раз. При каждом запуске она сама загружает с нашего сервера актуальную версию HK.</p>
+          <div class="bookmarklet-box">
+            <h3>1. Создайте закладку «HK»</h3>
+            <p>На компьютере можно перетащить кнопку ниже прямо на панель закладок. Либо скопируйте команду и вставьте её в поле «URL / Адрес» закладки.</p>
+            <div class="bookmarklet-actions">
+              <a id="bookmarklet-link" class="bookmarklet-link" href="javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()">★ HK · Запустить</a>
+              <button id="copy-bookmarklet" class="button ghost" type="button">Скопировать команду</button>
+            </div>
+            <textarea id="bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
+            <p class="bookmarklet-hint">2. Откройте <b>app.hamsterking.games</b> → войдите в игру → нажмите закладку HK. Обновления устанавливаются автоматически: менять закладку больше не нужно.</p>
+            <p id="bookmarklet-message" class="message" role="status" aria-live="polite"></p>
+          </div>
+        </article>
+
+        <article class="card cab-card wide">
+          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Запасной способ</div>
+          <h2>Установка .user.js</h2>
           <div class="guide">
             <article class="guide-step">
               <div class="guide-head"><span class="guide-icon">🤖</span><h3>Android</h3></div>
@@ -421,6 +448,28 @@
     const tab=event.target.closest('[data-cab-tab]');
     if(tab){setCabTab(tab.dataset.cabTab);return}
     if(event.target.closest('[data-open-player-stats]'))setCabTab('players');
+  });
+
+  const BOOKMARKLET="javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()";
+
+  document.addEventListener('click',async event=>{
+    if(event.target.closest('#show-bookmarklet')){
+      setCabTab('install');
+      setTimeout(()=>document.getElementById('bookmarklet-link')?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+      return;
+    }
+    if(event.target.closest('#bookmarklet-link')){
+      event.preventDefault();
+      try{await navigator.clipboard.writeText(BOOKMARKLET);setMessage('bookmarklet-message','Команда скопирована. Создайте закладку HK и вставьте её в поле URL / Адрес.','good')}
+      catch{setMessage('bookmarklet-message','Перетащите кнопку на панель закладок или скопируйте команду из поля ниже.')}
+      return;
+    }
+    if(event.target.closest('#copy-bookmarklet')){
+      try{await navigator.clipboard.writeText(BOOKMARKLET);setMessage('bookmarklet-message','Команда скопирована.','good')}
+      catch{
+        const field=$('bookmarklet-code');field?.focus();field?.select();setMessage('bookmarklet-message','Команда выделена — скопируйте её вручную.');
+      }
+    }
   });
 
   function showLogin(message='',bad=false){
