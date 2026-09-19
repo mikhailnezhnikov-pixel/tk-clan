@@ -400,6 +400,8 @@
     'branches','branch_levels','branchLevels','levels','progress','clan_progress','clanProgress',
     'contributions','contribution','trees','tree','skills','upgrades','categories','stats'
   ];
+  const labelKeys=new Set(['label','title','name','branch_name','branchName','key','id']);
+  const valueKeys=new Set(['total','levels','level','value','count','delta','gain']);
 
   function numeric(value){
     if(typeof value==='number'&&Number.isFinite(value))return value;
@@ -417,40 +419,48 @@
       .replace(/^./,s=>s.toUpperCase());
   }
 
+  function joinBranch(prefix,label){
+    const clean=prettyBranchName(label);
+    if(!clean)return prettyBranchName(prefix);
+    return prefix?prettyBranchName(prefix+' · '+clean):clean;
+  }
+
   function collectNode(node,prefix,out,depth){
-    if(node==null||depth>4)return;
+    if(node==null||depth>7)return;
+
     if(Array.isArray(node)){
       node.forEach((item,index)=>{
-        if(item&&typeof item==='object'&&!Array.isArray(item)){
-          const label=item.label??item.title??item.name??item.branch_name??item.branchName??item.key??item.id;
-          const value=numeric(item.total??item.levels??item.level??item.value??item.count??item.delta??item.gain);
-          if(label!=null&&value!=null){
-            out.push({name:prettyBranchName(label),value});
-          }else{
-            collectNode(item,prefix?prefix+' '+(index+1):String(index+1),out,depth+1);
-          }
-        }else{
-          const value=numeric(item);
-          if(value!=null)out.push({name:prettyBranchName(prefix?prefix+' '+(index+1):String(index+1)),value});
+        if(item&&typeof item==='object'){
+          collectNode(item,prefix,out,depth+1);
+          return;
         }
+        const value=numeric(item);
+        if(value!=null)out.push({name:joinBranch(prefix,String(index+1)),value});
       });
       return;
     }
+
     if(typeof node!=='object')return;
 
     const descriptor=node.label??node.title??node.name??node.branch_name??node.branchName??node.key;
     const direct=numeric(node.total??node.levels??node.level??node.value??node.count??node.delta??node.gain);
-    if(descriptor!=null&&direct!=null){
-      out.push({name:prettyBranchName(descriptor),value:direct});
-      return;
+    const currentPrefix=descriptor!=null?joinBranch(prefix,descriptor):prefix;
+
+    // Важное отличие от старого парсера: найденный total/level/value
+    // больше не завершает обход объекта. Сохраняем итог и продолжаем
+    // читать вложенные ветки этого же игрока.
+    if(descriptor!=null&&direct!=null&&currentPrefix){
+      out.push({name:currentPrefix,value:direct});
     }
 
     Object.entries(node).forEach(([key,value])=>{
       if(metaKeys.has(key))return;
+      if(descriptor!=null&&(labelKeys.has(key)||valueKeys.has(key)))return;
+
       const n=numeric(value);
-      const name=prefix?prefix+' · '+key:key;
+      const name=joinBranch(currentPrefix,key);
       if(n!=null){
-        out.push({name:prettyBranchName(name),value:n});
+        if(name)out.push({name,value:n});
       }else if(value&&typeof value==='object'){
         collectNode(value,name,out,depth+1);
       }
@@ -459,29 +469,40 @@
 
   function getPlayerBranches(player){
     const out=[];
-    let foundContainer=false;
+    if(!player||typeof player!=='object')return out;
+
+    // Читаем ВСЕ известные контейнеры. Раньше наличие хотя бы одного
+    // контейнера отключало чтение остальных полей игрока.
     containerKeys.forEach(key=>{
-      if(player&&player[key]!=null){
-        foundContainer=true;
-        collectNode(player[key],'',out,0);
+      if(player[key]!=null)collectNode(player[key],'',out,0);
+    });
+
+    // Одновременно читаем ветки, которые API положил непосредственно
+    // в объект игрока. Это делает отображение одинаковым для старых и
+    // новых форматов сохранённых сканов.
+    Object.entries(player).forEach(([key,value])=>{
+      if(metaKeys.has(key)||containerKeys.includes(key))return;
+      const n=numeric(value);
+      if(n!=null){
+        out.push({name:prettyBranchName(key),value:n});
+      }else if(value&&typeof value==='object'){
+        collectNode(value,prettyBranchName(key),out,0);
       }
     });
 
-    if(!foundContainer&&player&&typeof player==='object'){
-      Object.entries(player).forEach(([key,value])=>{
-        if(metaKeys.has(key)||containerKeys.includes(key))return;
-        const n=numeric(value);
-        if(n!=null)out.push({name:prettyBranchName(key),value:n});
-      });
-    }
-
+    // API может одновременно прислать одну и ту же ветку через старое
+    // и новое имя поля. Не складываем такие дубли, чтобы не завышать вклад.
     const map=new Map();
     out.forEach(item=>{
-      if(!item.name)return;
-      if(!map.has(item.name))map.set(item.name,item.value);
-      else map.set(item.name,Math.max(map.get(item.name),item.value));
+      if(!item.name||numeric(item.value)==null)return;
+      const key=item.name.replace(/\s+/g,' ').trim();
+      if(!map.has(key))map.set(key,Number(item.value));
+      else map.set(key,Math.max(map.get(key),Number(item.value)));
     });
-    return [...map.entries()].map(([name,value])=>({name,value})).sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+
+    return [...map.entries()]
+      .map(([name,value])=>({name,value}))
+      .sort((a,b)=>a.name.localeCompare(b.name,'ru'));
   }
 
   function branchValue(player,name){
