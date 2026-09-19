@@ -1,0 +1,40 @@
+name: Inspect actual Clan Shop game purchases
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-actual-clan-shop-purchases.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inspect live backend
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            f=/opt/hamsterking-license/server.py
+            echo "=== PURCHASE / SHOP REFS ==="
+            grep -niE "purchase|shop|idol|orb|s\+|business|buy|buyer|transaction|log" "$f" | head -260 || true
+            echo "=== SNAPSHOT / TELEMETRY REFS ==="
+            grep -niE "snapshot|telemetry|sync|clan_full|overall|payload" "$f" | head -260 || true
+            echo "=== DB TABLES ==="
+            python3 -c "import sqlite3; db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db'); print('\n'.join(r[0] for r in db.execute(\"select name from sqlite_master where type='table' order by name\")))"
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
