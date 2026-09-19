@@ -1,55 +1,87 @@
-name: Export TopKing live sources
+name: Find TopKing userscript 1.9.5
 
 on:
-  workflow_dispatch:
   push:
     paths:
       - '.github/workflows/export-topking-live.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  export:
+  find-version:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - name: Prepare SSH key
+        shell: bash
         env:
           SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
         run: |
           set -euo pipefail
           test -n "$SSH_PRIVATE_KEY"
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
-          chmod 600 ~/.ssh/topking
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
 
-      - name: Export live sources
+      - name: Search VPS backups for 1.9.5
+        shell: bash
         run: |
           set -euo pipefail
-          mkdir -p live-source
-
-          scp \
-            -i ~/.ssh/topking \
+          mkdir -p found
+          ssh -i "$HOME/.ssh/topking" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
             -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71:/opt/hamsterking-license/server.py \
-            live-source/server.py
+            root@89.125.1.71 'bash -s' > found/inventory.txt <<'REMOTE'
+          set -euo pipefail
+          echo "CURRENT:"
+          grep -m1 '^// @version' /opt/hamsterking-license/HamsterKingMobile.user.js 2>/dev/null || true
+          echo
+          echo "CANDIDATES:"
+          find /opt/hamsterking-license /root /srv /var/www \
+            -maxdepth 8 -type f \
+            \( -iname 'HamsterKingMobile*.js' -o -iname 'HamsterKingMobile*.js.*' -o -iname '*.user.js' -o -iname '*.user.js.*' \) \
+            -size -8M 2>/dev/null | while IFS= read -r file; do
+              version="$(grep -m1 '^// @version' "$file" 2>/dev/null | sed -E 's#^// @version[[:space:]]+##' || true)"
+              [ -n "$version" ] || continue
+              printf '%s\t%s\t%s\t%s\n' "$version" "$(stat -c %Y "$file")" "$(stat -c %s "$file")" "$file"
+            done | sort -V
+          REMOTE
+          cat found/inventory.txt
 
-          scp \
-            -i ~/.ssh/topking \
-            -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js \
-            live-source/HamsterKingMobile.user.js
+          MATCH_PATH="$(
+            ssh -i "$HOME/.ssh/topking" \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              -o StrictHostKeyChecking=accept-new \
+              root@89.125.1.71 \
+              "find /opt/hamsterking-license /root /srv /var/www -maxdepth 8 -type f \
+              \( -iname 'HamsterKingMobile*.js' -o -iname 'HamsterKingMobile*.js.*' -o -iname '*.user.js' -o -iname '*.user.js.*' \) \
+              -size -8M 2>/dev/null | while IFS= read -r f; do grep -q '^// @version[[:space:]]\+1\.9\.5$' \"\$f\" 2>/dev/null && { echo \"\$f\"; break; }; done"
+          )"
 
-      - name: Upload live sources
+          if [ -n "$MATCH_PATH" ]; then
+            echo "FOUND_1_9_5=YES" >> found/result.txt
+            echo "PATH=$MATCH_PATH" >> found/result.txt
+            scp -i "$HOME/.ssh/topking" \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              -o StrictHostKeyChecking=accept-new \
+              "root@89.125.1.71:$MATCH_PATH" \
+              found/HamsterKingMobile_v1.9.5.user.js
+          else
+            echo "FOUND_1_9_5=NO" >> found/result.txt
+          fi
+
+      - name: Upload search result
         uses: actions/upload-artifact@v4
         with:
-          name: topking-live-source
-          path: live-source/
+          name: topking-v1-9-5-search
+          path: found/
           retention-days: 1
 
       - name: Cleanup
         if: always()
-        run: rm -f ~/.ssh/topking
-# refresh-current-live-sources
+        run: rm -f "$HOME/.ssh/topking"
