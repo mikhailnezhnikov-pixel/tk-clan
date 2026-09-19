@@ -596,8 +596,17 @@
     return {title,branches:rawBranches.map(normalizeBranch).filter(x=>x.members.length||x.total)};
   }
 
+  function clanSnapshot(){
+    return (clanInfo&&(
+      clanInfo.snapshot||
+      clanInfo.clan_snapshot||
+      clanInfo.clanSnapshot
+    ))||clanInfo||{};
+  }
+
   function structuredClanBlocks(){
-    const raw=getArray(clanInfo,['blocks','clan_blocks','clanBlocks','upgrade_blocks','upgradeBlocks','sections','categories']);
+    const root=clanSnapshot();
+    const raw=getArray(root,['blocks','clan_blocks','clanBlocks','upgrade_blocks','upgradeBlocks','sections','categories']);
     return raw.map(normalizeBlock).filter(block=>block.branches.length);
   }
 
@@ -639,12 +648,16 @@
   }
 
   function renderOverallContributions(){
-    const members=clanPlayers.map((p,index)=>({
-      nickname:String(p.nickname||p.name||('Участник '+(index+1))),
-      value:Number(p.total||p.total_levels||p.totalLevels||0),
-      playerId:String(p.player_id??p.playerId??p.id??'')
+    const root=clanSnapshot();
+    const rawOverall=getArray(root,['overall','overall_contribution','overallContribution','players','members','participants']);
+    const source=rawOverall.length?rawOverall:clanPlayers;
+    const members=source.map((p,index)=>({
+      nickname:String(p.nickname||p.player_name||p.playerName||p.name||('Участник '+(index+1))),
+      value:Number(p.total??p.total_levels??p.totalLevels??p.value??p.levels??p.level??0),
+      playerId:String(p.player_id??p.playerId??p.user_id??p.userId??p.id??'')
     })).sort((a,b)=>b.value-a.value);
-    $('players-participants').textContent=clanInfo.participants||members.length||0;
+    const participants=numeric(root.participants_count??root.participantsCount??root.participants)??clanInfo.participants??members.length;
+    $('players-participants').textContent=participants||0;
     $('players-list').innerHTML=members.length?rankingHtml(members):'<div class="empty">Нет данных по общему вкладу.</div>';
   }
 
