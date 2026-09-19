@@ -65,6 +65,8 @@ jobs:
 
           grep -nE -C 30 'growthRunGeneralsCore|growthRunLevelsCore|growthPitCost|growthCapCost|growthCostOnlyUses|growthGeneralCostSafe|growth-general-no-progress|growth-hamster-no-progress|HK_MUTATION_GATE_REV|async function apiJsonCore|const hkMutationGate' \
             /tmp/topking-live.js > /tmp/hk-growth-live-source.txt || true
+          grep -nE -C 45 'resourceBusy|resourceBuildings|loadResources|runResource|executeResource|resourceRepeatCount|RESOURCE_BUILDING_TYPES|businessBusy|refreshBusinessData|runBusiness|applyBusiness|executeBusiness|preparedBusinessPlan|selectedSlots|selectedStock|hk-resource|hk-business' \
+            /tmp/topking-live.js > /tmp/hk-resource-business-live-source.txt || true
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -75,7 +77,8 @@ jobs:
             mkdir -p audit
             cp /tmp/hk-stage1-live-probe.txt audit/hk-stage1-live-probe.txt
             cp /tmp/hk-growth-live-source.txt audit/hk-growth-live-source.txt
-            git add audit/hk-stage1-live-probe.txt audit/hk-growth-live-source.txt
+            cp /tmp/hk-resource-business-live-source.txt audit/hk-resource-business-live-source.txt
+            git add audit/hk-stage1-live-probe.txt audit/hk-growth-live-source.txt audit/hk-resource-business-live-source.txt
             if git diff --cached --quiet; then pushed=1; break; fi
             git commit -m "Probe current TopKing Stage 1 live"
             if git push origin HEAD:main; then pushed=1; break; fi
@@ -85,4 +88,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/topking-live.js /tmp/hk-stage1-live-probe.txt /tmp/hk-growth-live-source.txt
+        run: rm -f "$HOME/.ssh/topking" /tmp/topking-live.js /tmp/hk-stage1-live-probe.txt /tmp/hk-growth-live-source.txt /tmp/hk-resource-business-live-source.txt
