@@ -31,16 +31,19 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Fetch live 1.14.4 read only
+      - name: Fetch live read only
         run: |
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          grep -Eq '^// @version      (1\.14\.4|1\.15\.0)$' /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
 
       - name: Test Stage 1 build and record result
         run: |
           set +e
           : > /tmp/stage1-build.log
+
           python3 deploy/topking/test_stage1_patch_fixture.py >>/tmp/stage1-build.log 2>&1
           fixture_status=$?
           if [ "$fixture_status" -eq 0 ]; then fixture=passed; else fixture=failed; fi
@@ -54,12 +57,29 @@ jobs:
           if [ "$syntax_status" -eq 0 ]; then syntax=ok; else syntax=bad; fi
 
           validation=failed
-          if [ "$patch_status" -eq 0 ] &&
-             grep -q '^// @version      1.15.0            echo "--- log tail ---"
-            tail -n 40 /tmp/stage1-build.log
-          } > audit/hk-stage1-build-test.txt
+          if [ "$patch_status" -eq 0 ] && [ "$syntax_status" -eq 0 ]; then
+            validation=passed
+            grep -q '^// @version      1.15.0$' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq "HK_MUTATION_GATE_REV = 'stage1-20260919-r4'" /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID])' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'growthGeneralCostSafe(fast)' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'growthGeneralCostSafe(costs)' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'growth-general-no-progress' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'growth-hamster-no-progress' /tmp/HamsterKingMobile.user.js || validation=failed
+          fi
 
-          cp audit/hk-stage1-build-test.txt /tmp/hk-stage1-build-test.txt
+          mkdir -p audit
+          {
+            echo "fixture=$fixture"
+            echo "patch=$patch"
+            echo "syntax=$syntax"
+            echo "validation=$validation"
+            echo "built_version=$(grep -m1 '^// @version' /tmp/HamsterKingMobile.user.js | sed 's/^\/\/ @version[[:space:]]*//')"
+            echo '--- log tail ---'
+            tail -n 60 /tmp/stage1-build.log
+          } > /tmp/hk-stage1-build-test.txt
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           pushed=0
@@ -78,36 +98,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/stage1-build.log
- /tmp/HamsterKingMobile.user.js &&
-             grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /tmp/HamsterKingMobile.user.js &&
-             grep -q "growthCostOnlyUses(cost,\[GROWTH_HAMSTER_BUDGET_ID\])" /tmp/HamsterKingMobile.user.js &&
-             grep -q "growthCostOnlyUses(cost,\[GROWTH_GENERAL_BUDGET_ID\])" /tmp/HamsterKingMobile.user.js &&
-             grep -q "growthGeneralCostSafe(fast)" /tmp/HamsterKingMobile.user.js &&
-             grep -q "growthGeneralCostSafe(costs)" /tmp/HamsterKingMobile.user.js &&
-             grep -q "growth-general-no-progress" /tmp/HamsterKingMobile.user.js &&
-             grep -q "growth-hamster-no-progress" /tmp/HamsterKingMobile.user.js; then
-            validation=passed
-          fi
-
-          mkdir -p audit
-          {
-            echo "fixture=$fixture"
-            echo "patch=$patch"
-            echo "syntax=$syntax"
-            echo "validation=$validation"
-            echo "built_version=$(grep -m1 '^// @version' /tmp/HamsterKingMobile.user.js | sed 's/^\/\/ @version[[:space:]]*//')"
-            echo "--- log tail ---"
-            tail -n 40 /tmp/stage1-build.log
-          } > audit/hk-stage1-build-test.txt
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-stage1-build-test.txt
-          git commit -m "Record Stage 1 build-only test" || true
-          git pull --rebase origin main || true
-          git push origin HEAD:main || true
-
-      - name: Cleanup
-        if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/stage1-build.log
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/stage1-build.log /tmp/hk-stage1-build-test.txt
