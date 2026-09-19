@@ -1,0 +1,70 @@
+name: Verify TopKing Stage 1 Live Read Only
+
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-topking-stage1-live.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verify-topking-stage1-live
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Read current live userscript
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/topking-live.js
+
+      - name: Record live facts
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          version="$(grep -m1 '^// @version' /tmp/topking-live.js | sed 's/^\/\/ @version[[:space:]]*//')"
+          if node --check /tmp/topking-live.js >/dev/null 2>&1; then syntax=ok; else syntax=bad; fi
+          if grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /tmp/topking-live.js; then revision=stage1-20260919-r4; else revision=missing; fi
+          if grep -q "GROWTH_HAMSTER_BUDGET_ID.*cur_cap" /tmp/topking-live.js; then hamsters=cur_cap; else hamsters=wrong; fi
+          if grep -q "GROWTH_GENERAL_BUDGET_ID.*item_pit_token" /tmp/topking-live.js; then generals=item_pit_token; else generals=wrong; fi
+          live_sha="$(sha256sum /tmp/topking-live.js | awk '{print $1}')"
+          {
+            echo "version=$version"
+            echo "revision=$revision"
+            echo "hamsters=$hamsters"
+            echo "generals=$generals"
+            echo "syntax=$syntax"
+            echo "sha256=$live_sha"
+          } > audit/hk-stage1-live-probe.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage1-live-probe.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Probe current TopKing Stage 1 live"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/topking-live.js
