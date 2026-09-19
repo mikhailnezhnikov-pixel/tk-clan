@@ -1,0 +1,68 @@
+name: Export TopKing live sources
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/export-topking-live.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+
+      - name: Export live sources
+        run: |
+          set -euo pipefail
+          mkdir -p live-source
+
+          scp \
+            -i ~/.ssh/topking \
+            -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py \
+            live-source/server.py
+
+          SCRIPT_PATH="$(
+            ssh \
+              -i ~/.ssh/topking \
+              -o StrictHostKeyChecking=accept-new \
+              root@89.125.1.71 \
+              "find /opt /srv /var/www /root -maxdepth 6 -type f \
+              \( -iname '*HamsterKingMobile*.js' -o -iname '*.user.js' \) \
+              2>/dev/null | head -1"
+          )"
+
+          echo "Userscript: $SCRIPT_PATH"
+
+          if [ -n "$SCRIPT_PATH" ]; then
+            scp \
+              -i ~/.ssh/topking \
+              -o StrictHostKeyChecking=accept-new \
+              "root@89.125.1.71:$SCRIPT_PATH" \
+              live-source/HamsterKingMobile.user.js
+          fi
+
+      - name: Upload live sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: topking-live-source
+          path: live-source/
+          retention-days: 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/topking
