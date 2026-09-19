@@ -1,4 +1,5 @@
 from pathlib import Path
+# deploy-trigger: verified 1.17.3 workflow
 
 REV='regular-fair-ui-20260920-r1'
 MARKER=f"HK_REGULAR_FAIR_REV = '{REV}'"
