@@ -867,6 +867,12 @@
   };
 
   init();
+
+  // Пока кабинет открыт, подтягиваем новый серверный snapshot автоматически.
+  setInterval(async()=>{
+    if(!session||document.hidden)return;
+    try{showDashboard(await request('/dashboard'))}catch{}
+  },60000);
 </script>
 <script src="../assets/site-nav.js?v=20260919-4"></script>
 <script>
