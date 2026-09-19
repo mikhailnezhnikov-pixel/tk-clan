@@ -22,8 +22,6 @@ if not (is_1144 or is_1150):
 # Currency/data-source invariants from the verified 1.14.4 baseline.
 require("GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'", 'hamster budget must be cur_cap')
 require("GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'", 'general budget must be item_pit_token')
-require('growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID])', 'strict hamster Caps cost guard missing')
-require('growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])', 'strict general Pit Token cost guard missing')
 require('HKNetworkTimeout', 'network timeout protection missing')
 require('GROWTH_NO_PROGRESS_LIMIT', 'Growth no-progress protection missing')
 require('growthRunGeneralsCore', 'general runner missing')
@@ -36,6 +34,47 @@ if 'hk-growth-nuts-percent' in s:
     raise SystemExit('obsolete Nuts hamster budget control found')
 if 'growthNutCost' in s:
     raise SystemExit('obsolete Nuts hamster cost path found')
+
+# Harden Growth currency enforcement on the verified 1.14.4 source.
+# Hamsters may spend only Caps (cur_cap); Generals may spend only Pit Tokens.
+strict_hamster = "growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID])"
+strict_general = "growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])"
+if strict_hamster not in s or strict_general not in s:
+    old_cost_guards = (
+        "  function growthSafeCost(cost){ return costParts(cost).every(row=>row.id&&row.quantity>0&&!['cur_prem','cur_hard'].includes(row.id)); }\n"
+        "  function growthHamsterCostSafe(cost){ return growthSafeCost(cost)&&growthPitCost(cost)===0; }\n"
+        "  function growthHamsterLevelCostSafe(cost){ return growthHamsterCostSafe(cost)&&growthCapCost(cost)>0; }"
+    )
+    new_cost_guards = (
+        "  function growthSafeCost(cost){ return costParts(cost).every(row=>row.id&&row.quantity>0&&!['cur_prem','cur_hard'].includes(row.id)); }\n"
+        "  function growthCostOnlyUses(cost,allowed){const ids=new Set((allowed||[]).map(String)),parts=costParts(cost).filter(row=>row.id&&row.quantity>0);return parts.length>0&&parts.every(row=>ids.has(String(row.id)));}\n"
+        "  function growthHamsterCostSafe(cost){ return growthSafeCost(cost)&&growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID]); }\n"
+        "  function growthHamsterLevelCostSafe(cost){ return growthHamsterCostSafe(cost)&&growthCapCost(cost)>0; }\n"
+        "  function growthGeneralCostSafe(cost){ return growthSafeCost(cost)&&growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])&&growthPitCost(cost)>0; }"
+    )
+    if old_cost_guards not in s:
+        raise SystemExit('verified 1.14.4 Growth cost guard block not found')
+    s = s.replace(old_cost_guards, new_cost_guards, 1)
+
+# The General selector must reject a mixed or foreign-currency cost before any
+# level-up request is sent. This is separate from the budget arithmetic.
+if 'function growthBestGeneral' in s:
+    old_fast = "if(mode==='fast10'&&general?.nearest10LevelUp){const fast=general.nearest10LevelUp.costs||{};if(growthCanAfford(fast,state)&&budget.spent+growthPitCost(fast)<=budget.limit)"
+    new_fast = "if(mode==='fast10'&&general?.nearest10LevelUp){const fast=general.nearest10LevelUp.costs||{};if(growthGeneralCostSafe(fast)&&growthCanAfford(fast,state)&&budget.spent+growthPitCost(fast)<=budget.limit)"
+    if old_fast in s:
+        s = s.replace(old_fast, new_fast, 1)
+    elif new_fast not in s:
+        raise SystemExit('General fast10 selector guard not found')
+
+    old_regular = "const pit=growthPitCost(costs);if(pit<=0||!growthCanAfford(costs,state)||budget.spent+pit>budget.limit)continue;"
+    new_regular = "const pit=growthPitCost(costs);if(!growthGeneralCostSafe(costs)||pit<=0||!growthCanAfford(costs,state)||budget.spent+pit>budget.limit)continue;"
+    if old_regular in s:
+        s = s.replace(old_regular, new_regular, 1)
+    elif new_regular not in s:
+        raise SystemExit('General regular selector guard not found')
+
+require(strict_hamster, 'strict hamster Caps cost guard missing')
+require(strict_general, 'strict general Pit Token cost guard missing')
 
 if is_1144:
     s = s.replace('// @version      1.14.4', '// @version      1.15.0', 1)
