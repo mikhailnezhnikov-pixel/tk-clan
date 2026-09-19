@@ -4,7 +4,9 @@ on:
   push:
     paths:
       - '.github/workflows/deploy-topking-1143.yml'
-      - 'deploy/topking/userscript-1.14.3.patch.gz.b64'
+      - 'deploy/topking/userscript-1.14.3.patch.part00.b64'
+      - 'deploy/topking/userscript-1.14.3.patch.part01.b64'
+      - 'deploy/topking/userscript-1.14.3.patch.part02.b64'
   workflow_dispatch:
 
 permissions:
@@ -36,7 +38,7 @@ jobs:
       - name: Build and audit 1.14.3
         run: |
           set -euo pipefail
-          base64 -d deploy/topking/userscript-1.14.3.patch.gz.b64 | gzip -d > /tmp/userscript-1.14.3.patch
+          cat deploy/topking/userscript-1.14.3.patch.part00.b64 deploy/topking/userscript-1.14.3.patch.part01.b64 deploy/topking/userscript-1.14.3.patch.part02.b64 | base64 -d | gzip -d > /tmp/userscript-1.14.3.patch
           patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.14.3.patch
           grep -q '^// @version      1.14.3$' /tmp/HamsterKingMobile.user.js
           grep -q "GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'" /tmp/HamsterKingMobile.user.js
