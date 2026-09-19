@@ -52,7 +52,20 @@ jobs:
             grep -q "TELEGRAM_APPLICATION_TOPIC_V1" /opt/hamsterking-license/server.py
             grep -q "/setapplications" /opt/hamsterking-license/server.py
             echo TELEGRAM_APPLICATION_TOPIC_BACKEND_OK
-            curl -fsS --max-time 10 http://127.0.0.1:3188/health
+            ok=0
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -fsS --max-time 3 http://127.0.0.1:8787/health >/tmp/hk-health.json 2>/dev/null || curl -fsS --max-time 3 http://127.0.0.1:3188/health >/tmp/hk-health.json 2>/dev/null; then
+                cat /tmp/hk-health.json
+                ok=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ok" -ne 1 ]; then
+              systemctl status hamsterking-license.service --no-pager -l || true
+              journalctl -u hamsterking-license.service -n 60 --no-pager || true
+              exit 1
+            fi
           '
 
       - name: Cleanup
