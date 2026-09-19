@@ -45,7 +45,7 @@
     if (host && !bootstrapButton.isConnected) host.appendChild(bootstrapButton);
   }
   function hideBootstrap() { bootstrapButton?.remove(); }
-  showBootstrap();
+  // HK UI is intentionally deferred until the native game login has completed.
 
   const VERSION = BUILD_VERSION;
   const MENU_ICONS_BASE = 'https://tk-clan.ru/assets/menu';
@@ -2928,16 +2928,50 @@
     if (!root) setTimeout(startInterface, 250);
   }
 
-  startNetworkCapture();
-  startInterface();
-  setTimeout(() => bootstrapLateGameConnection(), 250);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
-  setInterval(() => { ensureGameAuthorization(false, 'background').catch(error => recordDiagnostic('auth-background-error',{error:error?.message || error})); }, 30000);
-  setInterval(captureActiveEventCode, 1500);
-  setTimeout(() => hkGameBridge.discover(false), 1500);
-  setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
-  setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
-  setInterval(() => collectPublicSnapshot(), PUBLIC_SNAPSHOT_INTERVAL_MS);
+  // HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1
+  let hkNativeLoginRuntimeStarted = false;
+
+  function hkNativeGameLoginReady() {
+    if (playerDocument && apiHeaders.Authorization) return true;
+    try {
+      for (const storage of [sessionStorage, localStorage]) {
+        const token = String(storage.getItem('token') || '').trim();
+        if (token && jwtExpiration(token) > Date.now() + 5000 && gameBearerPlayerId(token)) return true;
+      }
+    } catch (_) {}
+    try {
+      const licenseOrigin = new URL(LICENSE_URL).origin;
+      for (const entry of performance.getEntriesByType('resource').slice().reverse()) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.origin === licenseOrigin) continue;
+        if (url.pathname === '/player/me') return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function startAfterNativeGameLogin() {
+    if (hkNativeLoginRuntimeStarted) return;
+    if (!hkNativeGameLoginReady()) {
+      setTimeout(startAfterNativeGameLogin, 500);
+      return;
+    }
+    hkNativeLoginRuntimeStarted = true;
+    showBootstrap();
+    startNetworkCapture();
+    startInterface();
+    setTimeout(() => bootstrapLateGameConnection(), 100);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
+    setInterval(() => { ensureGameAuthorization(false, 'background').catch(error => recordDiagnostic('auth-background-error',{error:error?.message || error})); }, 30000);
+    setInterval(captureActiveEventCode, 1500);
+    setTimeout(() => hkGameBridge.discover(false), 1500);
+    setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
+    setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
+    setInterval(() => collectPublicSnapshot(), PUBLIC_SNAPSHOT_INTERVAL_MS);
+    recordDiagnostic('native-login-gate-open',{revision:'login-gate-20260920-r1'});
+  }
+
+  startAfterNativeGameLogin();
 })();
 
 
