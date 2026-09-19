@@ -46,7 +46,7 @@ jobs:
           base64 -d deploy/topking/userscript-1.12.0.patch.gz.b64 | gzip -d > /tmp/userscript-1.12.0.patch
           patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.12.0.patch
 
-          grep -q '^// @version      1.11.0$' /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.12.0$' /tmp/HamsterKingMobile.user.js
           grep -q 'const hkStateStore' /tmp/HamsterKingMobile.user.js
           grep -q 'const hkRunner' /tmp/HamsterKingMobile.user.js
           grep -q 'navBattles' /tmp/HamsterKingMobile.user.js
