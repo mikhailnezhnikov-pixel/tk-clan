@@ -36,25 +36,11 @@ jobs:
             root@89.125.1.71:/opt/hamsterking-license/server.py \
             live-source/server.py
 
-          SCRIPT_PATH="$(
-            ssh \
-              -i ~/.ssh/topking \
-              -o StrictHostKeyChecking=accept-new \
-              root@89.125.1.71 \
-              "find /opt /srv /var/www /root -maxdepth 6 -type f \
-              \( -iname '*HamsterKingMobile*.js' -o -iname '*.user.js' \) \
-              2>/dev/null | head -1"
-          )"
-
-          echo "Userscript: $SCRIPT_PATH"
-
-          if [ -n "$SCRIPT_PATH" ]; then
-            scp \
-              -i ~/.ssh/topking \
-              -o StrictHostKeyChecking=accept-new \
-              "root@89.125.1.71:$SCRIPT_PATH" \
-              live-source/HamsterKingMobile.user.js
-          fi
+          scp \
+            -i ~/.ssh/topking \
+            -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js \
+            live-source/HamsterKingMobile.user.js
 
       - name: Upload live sources
         uses: actions/upload-artifact@v4
