@@ -7,10 +7,7 @@ concurrency:
 on:
   push:
     paths:
-      - '.github/workflows/deploy-topking-1150.yml'
-      - 'deploy/topking/stage1_runner_patch.py'
-      - 'deploy/topking/test_stage1_mutation_gate.js'
-      - 'deploy/topking/test_stage1_patch_fixture.py'
+      - 'deploy/topking/stage1-deploy-trigger.txt'
   workflow_dispatch:
 
 permissions:
