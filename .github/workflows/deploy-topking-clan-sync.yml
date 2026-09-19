@@ -1757,6 +1757,12 @@ jobs:
           install -m 0644 /tmp/server.py /opt/hamsterking-license/server.py
           install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
           python3 /opt/hamsterking-license/server.py --self-test
+          install -d -m 755 /etc/systemd/system/hamsterking-license.service.d
+          cat > /etc/systemd/system/hamsterking-license.service.d/min-version.conf <<'EOF_MIN'
+          [Service]
+          Environment="HK_MIN_SCRIPT_VERSION=1.7.65"
+          EOF_MIN
+          systemctl daemon-reload
           systemctl restart hamsterking-license.service
           systemctl is-active --quiet hamsterking-license.service
           sleep 2
