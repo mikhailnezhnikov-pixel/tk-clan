@@ -103,6 +103,10 @@ jobs:
               "/fair/",
               "ordinary",
               "regular",
+              "Обычная ярмарка",
+              "data-content=\\\"fair\\\"",
+              "function activateModule",
+              "const activateModule",
           ]
           fair_out=["# Current live Fair schema anchors",""]
           for needle in fair_needles:
@@ -172,6 +176,10 @@ jobs:
               "/fair/",
               "ordinary",
               "regular",
+              "Обычная ярмарка",
+              "data-content=\\\"fair\\\"",
+              "function activateModule",
+              "const activateModule",
           ]
           fair_out=["# Current live Fair schema anchors",""]
           for needle in fair_needles:
