@@ -56,9 +56,18 @@ jobs:
           sed -n '1,40p' /tmp/hk-app/index.html || true
           echo "=== SCRIPT SRCS ==="
           grep -o 'src="[^"]*"' /tmp/hk-app/index.html | head -40 || true
+          echo "=== CLIENT BUILD ==="
+          curl -fsSL --max-time 20 https://cdn-prod-route-service.hwgame.cloud/version -o /tmp/hk-app/version.json
+          cat /tmp/hk-app/version.json
+          echo
+          build="$(python3 -c 'import json;print(json.load(open("/tmp/hk-app/version.json")).get("client_build",""))')"
+          test -n "$build"
+          curl -fsSL --max-time 25 "https://app.hamsterking.games/app_${build}.html" -o /tmp/hk-app/app.html
+          echo "=== APP BUILD HTML ==="
+          sed -n '1,50p' /tmp/hk-app/app.html || true
           python3 - <<'PY'
           import re, html, pathlib, urllib.parse
-          text=pathlib.Path('/tmp/hk-app/index.html').read_text('utf-8','replace')
+          text=pathlib.Path('/tmp/hk-app/app.html').read_text('utf-8','replace')
           srcs=re.findall(r'<script[^>]+src=["\']([^"\']+)["\']',text,re.I)
           base='https://app.hamsterking.games/'
           for i,src in enumerate(srcs[:30]):
