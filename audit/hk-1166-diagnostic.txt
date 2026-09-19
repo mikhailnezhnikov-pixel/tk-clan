@@ -1,0 +1,12 @@
+client=passed
+backend=passed
+client_syntax=ok
+backend_syntax=ok
+result_code=0
+built=// @version      1.16.6
+client_marker=1
+backend_marker=1
+rumor_game_calls=2
+rumor_backend_routes=1
+rumor_admin_routes=2
+--- log tail ---
