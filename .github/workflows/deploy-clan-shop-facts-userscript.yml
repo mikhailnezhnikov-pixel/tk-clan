@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'deploy/topking/patch_clan_shop_actual_userscript.py'
+      - 'deploy/topking/patch_bosses_readonly_1172.py'
   workflow_dispatch:
 
 permissions:
@@ -59,8 +60,20 @@ jobs:
             install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
             printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.2\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
             systemctl daemon-reload
-            systemctl restart hamsterking-license.service
-            systemctl is-active --quiet hamsterking-license.service
+            systemctl restart hamsterking-license.service || true
+            active=0
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if systemctl is-active --quiet hamsterking-license.service; then
+                active=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$active" -ne 1 ]; then
+              systemctl --no-pager --full status hamsterking-license.service || true
+              journalctl -u hamsterking-license.service -n 80 --no-pager || true
+              exit 1
+            fi
             grep -q "^// @version      1.17.2$" /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -q "HK_CLAN_SHOP_ACTUAL_FACTS_V1" /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -q "HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1" /opt/hamsterking-license/HamsterKingMobile.user.js
