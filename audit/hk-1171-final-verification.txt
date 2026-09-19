@@ -1,0 +1,31 @@
+TopKing live verification summary
+date=2026-09-20
+live_version=1.17.1
+capture_blob=263631e60fa9b7428f0880be67b06fee86a9fc75
+
+login_gate=PASS
+today=PASS
+pit=PASS
+recipes=PASS
+project_bureau=PASS
+resource_buildings=PASS
+maps_research=PASS
+clan_skills=PASS
+rumors=PASS
+wars=PASS_READ_ONLY
+buildings=PASS_READ_ONLY
+explore=PASS
+fair=PASS
+shop=PASS
+
+safety:
+- Native Hamster King login completes before TopKing runtime mounts.
+- Mutation gate serializes irreversible game writes and disables network retries for mutation calls.
+- Project Bureau refreshes live inventory/costs, applies projected and per-craft budget checks, journals spend, then performs authoritative player refresh.
+- Resource Buildings rebuild selected rows from fresh state, apply projected and per-request budget checks, journal spend, then perform authoritative player refresh.
+- Fair and Shop refresh live player/catalog state before execution and retain Runner Pause/Stop checks.
+- Irreversible game purchases/exchanges were not fired merely for verification; live code paths and server deployment/round-trip were verified instead.
+
+deploy_run=35458028394
+postdeploy_capture_run=35458060369
+fair_shop_capture_run=35458097592
