@@ -63,6 +63,12 @@ jobs:
           grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /tmp/HamsterKingMobile.user.js
           grep -q "GROWTH_HAMSTER_BUDGET_ID.*cur_cap" /tmp/HamsterKingMobile.user.js
           grep -q "GROWTH_GENERAL_BUDGET_ID.*item_pit_token" /tmp/HamsterKingMobile.user.js
+          grep -q "growthCostOnlyUses(cost,\[GROWTH_HAMSTER_BUDGET_ID\])" /tmp/HamsterKingMobile.user.js
+          grep -q "growthCostOnlyUses(cost,\[GROWTH_GENERAL_BUDGET_ID\])" /tmp/HamsterKingMobile.user.js
+          grep -q "growthGeneralCostSafe(fast)" /tmp/HamsterKingMobile.user.js
+          grep -q "growthGeneralCostSafe(costs)" /tmp/HamsterKingMobile.user.js
+          grep -q "growth-general-no-progress" /tmp/HamsterKingMobile.user.js
+          grep -q "growth-hamster-no-progress" /tmp/HamsterKingMobile.user.js
           grep -q 'const hkMutationGate' /tmp/HamsterKingMobile.user.js
           grep -q 'const safeDiagnostic' /tmp/HamsterKingMobile.user.js
           grep -q 'runtime.mutationGate = hkMutationGate' /tmp/HamsterKingMobile.user.js
@@ -93,6 +99,12 @@ jobs:
             grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /opt/hamsterking-license/HamsterKingMobile.user.js;
             grep -q "GROWTH_HAMSTER_BUDGET_ID.*cur_cap" /opt/hamsterking-license/HamsterKingMobile.user.js;
             grep -q "GROWTH_GENERAL_BUDGET_ID.*item_pit_token" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            grep -q "growthCostOnlyUses(cost,\[GROWTH_HAMSTER_BUDGET_ID\])" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            grep -q "growthCostOnlyUses(cost,\[GROWTH_GENERAL_BUDGET_ID\])" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            grep -q "growthGeneralCostSafe(fast)" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            grep -q "growthGeneralCostSafe(costs)" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            grep -q "growth-general-no-progress" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            grep -q "growth-hamster-no-progress" /opt/hamsterking-license/HamsterKingMobile.user.js;
             grep -q "const hkMutationGate" /opt/hamsterking-license/HamsterKingMobile.user.js;
             grep -q "const safeDiagnostic" /opt/hamsterking-license/HamsterKingMobile.user.js;
             grep -q "runtime.mutationGate = hkMutationGate" /opt/hamsterking-license/HamsterKingMobile.user.js;
@@ -108,6 +120,10 @@ jobs:
           grep -q '^// @version      1.15.0          grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /tmp/topking-live-after-deploy.js
           grep -q "GROWTH_HAMSTER_BUDGET_ID.*cur_cap" /tmp/topking-live-after-deploy.js
           grep -q "GROWTH_GENERAL_BUDGET_ID.*item_pit_token" /tmp/topking-live-after-deploy.js
+          grep -q "growthCostOnlyUses(cost,\[GROWTH_HAMSTER_BUDGET_ID\])" /tmp/topking-live-after-deploy.js
+          grep -q "growthCostOnlyUses(cost,\[GROWTH_GENERAL_BUDGET_ID\])" /tmp/topking-live-after-deploy.js
+          grep -q "growth-general-no-progress" /tmp/topking-live-after-deploy.js
+          grep -q "growth-hamster-no-progress" /tmp/topking-live-after-deploy.js
 
           mkdir -p audit
           live_sha="$(sha256sum /tmp/topking-live-after-deploy.js | awk '{print $1}')"
@@ -116,6 +132,8 @@ jobs:
             echo "revision=stage1-20260919-r4"
             echo "hamsters=cur_cap"
             echo "generals=item_pit_token"
+            echo "growth_guards=strict"
+            echo "no_progress_limit=2"
             echo "sha256=$live_sha"
             echo "verified_by=deploy-topking-1150"
           } > audit/hk-stage1-live-status.txt
