@@ -41,3 +41,18 @@ Observed live version: **1.14.4**.
 
 ## Stage 1 entry condition
 Stage 0 confirms the next required change is a global mutation execution layer: all state-changing modules must serialize through one Runner/queue, preserve module-specific Stop semantics, and feed every successful mutation into State Store before UI refresh.
+
+
+## Stage 1 implementation contract
+The global mutation runner must own every state-changing request, not only Today/Growth. Required invariants:
+- one mutation task globally at a time;
+- FIFO queue for independent modules;
+- one AbortController per active task;
+- Pause blocks before the next mutation but never interrupts an already accepted server mutation;
+- Stop aborts pending network work, removes queued work for that task, and prevents subsequent mutations;
+- transient lock/429/5xx retry remains centralized in apiJson;
+- successful mutation response is merged into hkStateStore before module UI callbacks;
+- optional authoritative reread runs after mutation groups;
+- read-only requests are not globally serialized.
+
+Migration order for Stage 1: Growth/Today compatibility wrapper → Pit → Fair → Shop → Recipes/Bureau → remaining mutation loops. Legacy module flags remain only as UI compatibility state until each module is migrated.
