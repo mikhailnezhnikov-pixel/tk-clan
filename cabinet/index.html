@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; connect-src https://hk-license.89.125.1.71.sslip.io; frame-src https://oauth.telegram.org https://telegram.org https://t.me; object-src 'none'; base-uri 'self'">
   <title>Личный кабинет клана — Top King</title>
   <meta name="description" content="Закрытый личный кабинет участников клана Top King.">
-  <link rel="stylesheet" href="../assets/public.css?v=20260919-6">
+  <link rel="stylesheet" href="../assets/public.css?v=20260919-7">
   <link rel="icon" href="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png">
   <style>
     .cabinet-head{padding-bottom:24px}
@@ -77,6 +77,10 @@
     .bookmarklet-link{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 16px;border-radius:13px;border:1px solid rgba(232,182,84,.55);background:linear-gradient(180deg,rgba(232,182,84,.23),rgba(139,92,25,.18));color:#ffe6a4;font-weight:900;text-decoration:none;cursor:grab}
     .bookmarklet-code{width:100%;min-height:76px;margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,.10);border-radius:12px;background:#090d12;color:#cbd1da;font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}
     .bookmarklet-hint{margin-top:10px!important;font-size:12px}
+    .install-quick{margin-top:14px;padding:14px 15px;border:1px solid rgba(117,216,156,.24);border-radius:14px;background:rgba(65,177,103,.06)}
+    .install-quick strong{display:block;margin-bottom:7px;color:#b8efca}
+    .install-quick ol{margin:0;padding-left:20px;color:#d8dee7}
+    .install-quick li+li{margin-top:5px}
 
     .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:20px}
     .stat{position:relative;padding:17px;border:1px solid rgba(255,255,255,.09);border-radius:17px;background:rgba(8,11,16,.48);overflow:hidden}
@@ -487,11 +491,20 @@
           <div class="bookmarklet-box">
             <h3>Создать закладку HK</h3>
             <div class="bookmarklet-actions">
-              <a id="bookmarklet-link" class="bookmarklet-link" href="javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()">★ Установить HK</a>
+              <button id="bookmarklet-link" class="bookmarklet-link" type="button">★ Установить HK</button>
               <button id="copy-bookmarklet" class="button ghost" type="button">Скопировать команду</button>
             </div>
             <textarea id="bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
             <p class="bookmarklet-hint"><b>Важно:</b> адрес закладки должен начинаться именно с <code>javascript:</code>. Саму закладку запускайте только на странице <b>app.hamsterking.games</b>.</p>
+            <div id="hk-install-quick" class="install-quick hidden">
+              <strong>Команда скопирована.</strong>
+              <ol>
+                <li>В Chrome создайте обычную закладку с названием <b>HK</b>.</li>
+                <li>Откройте «Закладки» → удерживайте HK → «Изменить».</li>
+                <li>Удалите старый URL и вставьте скопированную команду.</li>
+                <li>Откройте Hamster King и нажмите закладку HK.</li>
+              </ol>
+            </div>
             <p id="bookmarklet-message" class="message" role="status" aria-live="polite"></p>
           </div>
         </article>
@@ -505,11 +518,20 @@
             <h3>Создать закладку Kokkaras</h3>
             <p>Создайте в этом же браузере отдельную закладку с названием <b>Kokkaras</b>. Перетащите кнопку на панель закладок или скопируйте команду и вставьте её в поле <b>URL / Адрес</b>.</p>
             <div class="bookmarklet-actions">
-              <a id="kokkaras-bookmarklet-link" class="bookmarklet-link" href="javascript:(()=>{s=document.createElement('script');s.src='https://kokkaras.com/hk_maps/panel.js?v='+Date.now();document.documentElement.appendChild(s)})()">★ Установить Kokkaras</a>
+              <button id="kokkaras-bookmarklet-link" class="bookmarklet-link" type="button">★ Установить Kokkaras</button>
               <button id="copy-kokkaras-bookmarklet" class="button ghost" type="button">Скопировать команду</button>
             </div>
             <textarea id="kokkaras-bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{s=document.createElement('script');s.src='https://kokkaras.com/hk_maps/panel.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
             <p class="bookmarklet-hint">После создания: откройте <b>app.hamsterking.games</b> → войдите в игру → нажмите закладку <b>Kokkaras</b> → скрипт загрузится с kokkaras.com.</p>
+            <div id="kokkaras-install-quick" class="install-quick hidden">
+              <strong>Команда Kokkaras скопирована.</strong>
+              <ol>
+                <li>Создайте обычную закладку с названием <b>Kokkaras</b>.</li>
+                <li>Откройте «Закладки» → удерживайте её → «Изменить».</li>
+                <li>Замените URL на скопированную команду.</li>
+                <li>Откройте Hamster King и нажмите закладку Kokkaras.</li>
+              </ol>
+            </div>
             <p id="kokkaras-bookmarklet-message" class="message" role="status" aria-live="polite"></p>
           </div>
         </article>
@@ -578,17 +600,29 @@
   document.addEventListener('click',async event=>{
     if(event.target.closest('#show-bookmarklet')){
       setCabTab('install');
-      setTimeout(()=>document.getElementById('bookmarklet-link')?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+      try{
+        await navigator.clipboard.writeText(BOOKMARKLET);
+        $('hk-install-quick')?.classList.remove('hidden');
+        setMessage('bookmarklet-message','Команда HK уже скопирована. Выполните 4 шага выше.','good');
+      }catch{
+        setMessage('bookmarklet-message','Нажмите «Скопировать команду», затем выполните короткую инструкцию.');
+      }
+      setTimeout(()=>document.getElementById('hk-install-quick')?.scrollIntoView({behavior:'smooth',block:'center'}),50);
       return;
     }
     if(event.target.closest('#bookmarklet-link')){
       event.preventDefault();
-      try{await navigator.clipboard.writeText(BOOKMARKLET);setMessage('bookmarklet-message','Команда скопирована. Создайте закладку HK и вставьте её в поле URL / Адрес.','good')}
-      catch{setMessage('bookmarklet-message','Перетащите кнопку на панель закладок или скопируйте команду из поля ниже.')}
+      try{
+        await navigator.clipboard.writeText(BOOKMARKLET);
+        $('hk-install-quick')?.classList.remove('hidden');
+        setMessage('bookmarklet-message','Команда HK скопирована. Выполните короткую инструкцию выше.','good');
+      }catch{
+        setMessage('bookmarklet-message','Не удалось скопировать автоматически. Нажмите «Скопировать команду».','bad');
+      }
       return;
     }
     if(event.target.closest('#copy-bookmarklet')){
-      try{await navigator.clipboard.writeText(BOOKMARKLET);setMessage('bookmarklet-message','Команда скопирована.','good')}
+      try{await navigator.clipboard.writeText(BOOKMARKLET);$('hk-install-quick')?.classList.remove('hidden');setMessage('bookmarklet-message','Команда HK скопирована. Выполните короткую инструкцию выше.','good')}
       catch{
         const field=$('bookmarklet-code');field?.focus();field?.select();setMessage('bookmarklet-message','Команда выделена — скопируйте её вручную.');
       }
@@ -596,12 +630,17 @@
     }
     if(event.target.closest('#kokkaras-bookmarklet-link')){
       event.preventDefault();
-      try{await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);setMessage('kokkaras-bookmarklet-message','Команда Kokkaras скопирована. Создайте закладку и вставьте её в поле URL / Адрес.','good')}
-      catch{setMessage('kokkaras-bookmarklet-message','Перетащите кнопку на панель закладок или скопируйте команду из поля ниже.')}
+      try{
+        await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);
+        $('kokkaras-install-quick')?.classList.remove('hidden');
+        setMessage('kokkaras-bookmarklet-message','Команда Kokkaras скопирована. Выполните короткую инструкцию выше.','good');
+      }catch{
+        setMessage('kokkaras-bookmarklet-message','Не удалось скопировать автоматически. Нажмите «Скопировать команду».','bad');
+      }
       return;
     }
     if(event.target.closest('#copy-kokkaras-bookmarklet')){
-      try{await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);setMessage('kokkaras-bookmarklet-message','Команда Kokkaras скопирована.','good')}
+      try{await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);$('kokkaras-install-quick')?.classList.remove('hidden');setMessage('kokkaras-bookmarklet-message','Команда Kokkaras скопирована. Выполните короткую инструкцию выше.','good')}
       catch{
         const field=$('kokkaras-bookmarklet-code');field?.focus();field?.select();setMessage('kokkaras-bookmarklet-message','Команда выделена — скопируйте её вручную.');
       }
@@ -1085,6 +1124,6 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/site-nav.js?v=20260919-6"></script>
+<script src="../assets/site-nav.js?v=20260919-7"></script>
 </body>
 </html>
