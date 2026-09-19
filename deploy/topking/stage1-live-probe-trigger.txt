@@ -1,2 +1,2 @@
-probe=2026-09-19T14:41:00Z
-purpose=full-stage2-a-through-f
+probe=2026-09-19T14:49:00Z
+purpose=stage2e-f-on-live-1163
