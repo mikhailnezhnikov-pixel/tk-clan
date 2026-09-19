@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/diagnose-topking-1163.yml'
+      - 'deploy/topking/1163-diagnostic-trigger.txt'
       - 'deploy/topking/stage2_runner_patch.py'
       - 'deploy/topking/stage2b_runner_patch.py'
       - 'deploy/topking/stage2c_state_patch.py'
