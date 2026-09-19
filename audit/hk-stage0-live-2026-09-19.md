@@ -36,7 +36,7 @@ Observed live version: **1.14.4**.
 2. **State Store is not the single source everywhere.** Many legacy modules still assign `playerDocument = await apiJson(...)` directly and retain module-local documents.
 3. **No WebSocket implementation exists in the live userscript.** No `WebSocket` constructor/use was found. Real-time event invalidation is therefore not implemented at the common engine level.
 4. **Post-mutation reread is inconsistent outside Growth.** Growth has targeted entity refresh/recovery; legacy modules vary between direct response assignment and explicit `/player/me` rereads.
-5. **Growth currency naming needs source verification.** Live 1.14.4 uses Caps (`cur_cap`) for the hamster percentage budget while displaying Nuts separately. This must be checked against the KKras source/mechanic before changing it; it is not Pit Tokens.
+5. **Growth currency split is fixed and must not be cross-wired.** Hamsters use Caps (`cur_cap`) for level/rarity spending; Generals use Pit Tokens (`item_pit_token`). Nuts may be displayed separately but are not the Hamster upgrade budget, and Pit Tokens must never be used by Hamster actions.
 6. **Global mutation serialization is incomplete.** The shared Runner blocks concurrent Runner tasks, but modules outside Runner can still mutate independently. This leaves a remaining path to `player state is locked`.
 
 ## Stage 1 entry condition
