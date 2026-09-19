@@ -357,45 +357,48 @@
 
       <section class="cab-panel" data-cab-panel="install" hidden>
         <article class="card cab-card wide">
-          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Запуск без установки</div>
-          <h2>Установить HK</h2>
-          <p class="stats-sub">Закладку нужно создать один раз. При каждом запуске она сама загружает с нашего сервера актуальную версию HK.</p>
+          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Установка HK</div>
+          <h2>Запуск через закладку браузера</h2>
+          <p class="stats-sub">Ничего устанавливать в браузер не нужно. Закладка создаётся один раз и при каждом запуске сама загружает актуальную версию HK.</p>
+
+          <div class="guide">
+            <article class="guide-step">
+              <div class="guide-head"><span class="guide-icon">1</span><h3>Откройте веб-версию игры</h3></div>
+              <p>В этом же браузере откройте <b>https://app.hamsterking.games</b> и войдите в игру.</p>
+            </article>
+
+            <article class="guide-step">
+              <div class="guide-head"><span class="guide-icon">2</span><h3>Создайте закладку HK</h3></div>
+              <p>Перетащите кнопку <b>«★ Установить HK»</b> на панель закладок. Если перетаскивание недоступно — создайте обычную закладку вручную, нажмите <b>«Скопировать команду»</b> и вставьте её в поле <b>URL / Адрес</b>.</p>
+            </article>
+
+            <article class="guide-step">
+              <div class="guide-head"><span class="guide-icon">3</span><h3>Запустите HK</h3></div>
+              <p>Вернитесь на открытую страницу Hamster King и нажмите созданную закладку <b>HK</b>. Через несколько секунд появится панель HK.</p>
+            </article>
+
+            <article class="guide-step">
+              <div class="guide-head"><span class="guide-icon">4</span><h3>Дальше обновлять ничего не нужно</h3></div>
+              <p>Используйте ту же закладку при каждом запуске. Новая версия HK будет загружаться автоматически с нашего сервера.</p>
+            </article>
+          </div>
+
           <div class="bookmarklet-box">
-            <h3>1. Создайте закладку «HK»</h3>
-            <p>На компьютере можно перетащить кнопку ниже прямо на панель закладок. Либо скопируйте команду и вставьте её в поле «URL / Адрес» закладки.</p>
+            <h3>Создать закладку HK</h3>
             <div class="bookmarklet-actions">
               <a id="bookmarklet-link" class="bookmarklet-link" href="javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()">★ Установить HK</a>
               <button id="copy-bookmarklet" class="button ghost" type="button">Скопировать команду</button>
             </div>
             <textarea id="bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
-            <p class="bookmarklet-hint">2. Откройте <b>app.hamsterking.games</b> → войдите в игру → нажмите закладку HK. Обновления устанавливаются автоматически: менять закладку больше не нужно.</p>
+            <p class="bookmarklet-hint"><b>Важно:</b> адрес закладки должен начинаться именно с <code>javascript:</code>. Саму закладку запускайте только на странице <b>app.hamsterking.games</b>.</p>
             <p id="bookmarklet-message" class="message" role="status" aria-live="polite"></p>
           </div>
         </article>
 
         <article class="card cab-card wide">
-          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Запасной способ</div>
-          <h2>Установка .user.js</h2>
-          <div class="guide">
-            <article class="guide-step">
-              <div class="guide-head"><span class="guide-icon">🤖</span><h3>Android</h3></div>
-              <ol>
-                <li>Установите Firefox и расширение Violentmonkey.</li>
-                <li>Скачайте скрипт во вкладке «Обзор» и откройте файл в Firefox.</li>
-                <li>Подтвердите установку в Violentmonkey.</li>
-                <li>Откройте игру и полностью обновите страницу — появится кнопка HK.</li>
-              </ol>
-            </article>
-            <article class="guide-step">
-              <div class="guide-head"><span class="guide-icon"></span><h3>iPhone / iPad</h3></div>
-              <ol>
-                <li>Установите приложение Userscripts из App Store.</li>
-                <li>В Safari включите расширение Userscripts и доступ к сайту игры.</li>
-                <li>Скачайте скрипт во вкладке «Обзор» и поместите его в выбранную папку Userscripts.</li>
-                <li>Откройте игру, включите скрипт и обновите страницу.</li>
-              </ol>
-            </article>
-          </div>
+          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Резервный вариант</div>
+          <h2>Скачать .user.js</h2>
+          <p class="stats-sub">Используйте этот вариант только если запуск через закладку не работает в вашем браузере. Файл можно скачать кнопкой <b>«Скачать .user.js»</b> во вкладке «Обзор».</p>
         </article>
       </section>
     </section>
