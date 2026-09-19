@@ -1,2 +1,2 @@
-capture=2026-09-20T00:56:00+09:00
-scope=today-live-1168
+capture=2026-09-20T01:30:00+09:00
+scope=today-live-1168-fresh
