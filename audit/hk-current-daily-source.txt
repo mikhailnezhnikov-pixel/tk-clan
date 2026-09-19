@@ -4,7 +4,7 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.16.8
+// @version      1.17.0
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
 // @release-note Hotfix версии bookmarklet: metadata и runtime version синхронизированы; аудит валют и live-state сохранён.
 // @match        https://app.hamsterking.games/*
@@ -61,6 +61,7 @@
   const PIT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/pits';
   const SETTINGS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/settings';
   const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';
+  const CLAN_SHOP_FACT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1';
   const PUBLIC_SNAPSHOT_API = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-snapshot';
   const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
   const PUBLIC_SNAPSHOT_INTERVAL_MS = 15 * 60 * 1000;
@@ -219,8 +220,7 @@
     en: {
       daily:'Today', pit:'Pit', businesses:'Businesses', clan:'Clan', fair:'Fair', shop:'Shop', recipes:'Recipes', maps:'Maps', navToday:'Today', navBattles:'Battles', navCity:'City', navBusiness:'Business', navGrowth:'Growth', navTrade:'Trade', navClan:'Clan', navTodayHint:'tasks and rewards', navBattlesHint:'pits and battles', navCityHint:'maps and buildings', navBusinessHint:'cards and recipes', navGrowthHint:'hamsters and generals', navTradeHint:'fair and shop', navClanHint:'skills and wars', checkingLicense:'Checking license…',
       dailyTasks:'Today', dailyRefresh:'Check only', dailyRun:'Run selected', dailyAdRun:'Watch available ad', dailyClear:'Clear log', dailyOverall:'Overall progress', dailyCurrent:'Current stage', dailyAds:'Ads', dailyClan:'Clan purchases', dailyInvest:'Investment offers', dailyReady:'Ready to start', dailyNoShop:'Open the in-game shop first, then tap “Check only”.',
-      dailyBalances:'Balances', dailyStores:'Available purchases', dailyFreeActions:'Free actions', dailyRegularActions:'Regular shop', dailyOrdinaryActions:'Standard shop', dailyClanActions:'Personal clan lots', dailyInvestActions:'Invest deals', dailyPit:'Pit status', pitNormal:'Normal Pit', pitBoss:'Boss Pit', pitGang:'Gang Pit', pitAvailableNow:'available now', pitLimit:'limit', pitDiamondTopUp:'diamond top-up', pitMultipleReady:'already divisible by 5', pitOpenOnce:'Open this Pit section once', pitRun:'Run', pitUseMoves:'Use moves', pitMovePlan:'Optimal', pitNoMoves:'not selected', dailyConsigliere:'Consigliere', dailyPlan:'Execution plan', dailyBudget:'Unified budget', dailyReserve:'Minimum balance', dailyLimit:'Daily limit', weeklyLimit:'Weekly limit', spentToday:'Spent today', spentWeek:'Spent this week', allowPremium:'Allow diamonds', exportSettings:'Export settings', importSettings:'Restore settings', noLimit:'No limit', selectedActions:'Selected actions: {n}', exactPlan:'Review the exact spending plan before running.',
-      targetRound:'Reach round', delay:'Delay
+      dailyBalances:'Balances', dailyStores:'Available purchases', dailyFreeActions:'Free actions', dailyRegularActions:'Regular shop', dailyOrdinaryActions:'Standard shop', dailyClanActions:'Personal clan lots', dailyInvestActions:'Invest deals', dailyPit:'Pit status', pitNormal:'Normal Pit', pitBoss:'Boss Pit', pitGang:'Gang Pit', pitAvailableNow:'available now', pitLimit:'limit', pitDiamondTopUp:'diamond top-up', pitMultipleReady:'already divisible by 5', pitOpenOnce:'Open this Pit section once', pitRun:'Run', pitUseMoves:'Use moves', pitMovePlan:'Optimal', pitNoMoves:'not selected', dailyConsigliere:'Consigliere', dailyPlan:'Execution plan', dailyBudget:'Unified budget', dailyReserve:'Minimum balance', dailyLimit:'Daily limit', weeklyLimit:'Weekly limit', spentToday:'Spent today', spentWeek:'Spent this week', allowPremium:'Allow diamonds', exportSettings:'Export settings', importSettings:'Restore settings', noLimit:'No limit', selectedActions:'Selected actions: {n}', exactPlan:'Review the
 
 ===== let dailyShopRows =====
 

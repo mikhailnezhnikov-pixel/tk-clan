@@ -3047,6 +3047,21 @@ def application_language(state: dict | None) -> str:
                     result = {"ok": True, "clan_key": clan, "week_key": week,
                               "players": players, "total_players": len(players)}
                 self.send_json(HTTPStatus.OK, result)
+            elif path == "/api/v1/clan-shop-facts/submit":
+                origin = self.headers.get("Origin", "")
+                if origin not in ALLOWED_ORIGINS:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"})
+                    return
+                player_id = self.recipe_player()
+                if not player_id:
+                    self.send_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"})
+                    return
+                try:
+                    body = self.read_json(100_000)
+                    result = submit_clan_shop_actual_facts(player_id, body.get("rows"))
+                    self.send_json(HTTPStatus.OK, result)
+                except ValueError:
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_clan_shop_facts"})
             elif path in ("/api/v1/settings/load", "/api/v1/settings/save"):
                 origin = self.headers.get("Origin", "")
                 if origin not in ALLOWED_ORIGINS:
@@ -3099,21 +3114,7 @@ def application_language(state: dict | None) -> str:
                 else:
                     maps = map_index(); self.send_json(HTTPStatus.OK, {"ok":True,"total":len(maps),"maps":maps})
             elif path == "/api/v1/rumors/today":
-                origin = self.headers.get("Origin", "")
-                if origin not in ALLOWED_ORIGINS:
-                    self.send_json(HTTPStatus.FORBIDDEN, {"error":"origin_not_allowed"}); return
-                if not self.recipe_player():
-                    self.send_json(HTTPStatus.UNAUTHORIZED, {"error":"unauthorized"}); return
-                self.read_json()
-                today = active_rumor_route_date()
-                with db_session() as db:
-                    row = db.execute("SELECT route_date,routes_json,published_at FROM rumor_routes WHERE route_date=?", (today,)).fetchone()
-                if not row:
-                    self.send_json(HTTPStatus.OK, {"ok": True, "date": today, "routes": []})
-                    return
-                try:
-                    routes = json.loads(row["routes_json"])
-                except j
+                origin = self.h
 
 ===== path == "/api/v1/maps =====
 NOT FOUND
