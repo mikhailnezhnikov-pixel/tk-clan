@@ -4,8 +4,9 @@ on:
   push:
     paths:
       - '.github/workflows/deploy-private-hk-maps.yml'
-      - 'deploy/maps/hk-maps-payload.cms.b64'
+      - 'deploy/maps/hk-maps-payload.cms.b64.part*'
       - 'deploy/maps/server-map-data.patch.gz.b64'
+      - 'deploy/maps/server-map-data-v3.patch.gz.b64'
   workflow_dispatch:
 
 permissions:
@@ -14,7 +15,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,17 +46,21 @@ jobs:
               chmod 600 /opt/hamsterking-license/private-maps/upload-key.pem
               chmod 644 /opt/hamsterking-license/private-maps/upload-cert.pem
             fi
-            echo "===HK_MAPS_UPLOAD_CERT_BEGIN==="
-            cat /opt/hamsterking-license/private-maps/upload-cert.pem
-            echo "===HK_MAPS_UPLOAD_CERT_END==="
           '
 
-      - name: Deploy encrypted map payload when present
-        if: hashFiles('deploy/maps/hk-maps-payload.cms.b64') != ''
+      - name: Reassemble encrypted map payload
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d deploy/maps/hk-maps-payload.cms.b64 > /tmp/hk-maps-payload.cms
+          parts=(deploy/maps/hk-maps-payload.cms.b64.part*)
+          test -e "${parts[0]}"
+          cat "${parts[@]}" | base64 -d > /tmp/hk-maps-payload.cms
+          test -s /tmp/hk-maps-payload.cms
+
+      - name: Deploy encrypted private map payload
+        shell: bash
+        run: |
+          set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             /tmp/hk-maps-payload.cms root@89.125.1.71:/tmp/hk-maps-payload.cms
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
@@ -71,33 +76,66 @@ jobs:
             echo PRIVATE_MAP_PAYLOAD_OK
           '
 
-      - name: Patch backend map-data endpoints when patch present
-        if: hashFiles('deploy/maps/server-map-data.patch.gz.b64') != ''
+      - name: Build backend with private map-data endpoints
         shell: bash
         run: |
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+
           if ! grep -q 'def private_hk_map_data' /tmp/server.py; then
             base64 -d deploy/maps/server-map-data.patch.gz.b64 | gzip -d > /tmp/server-map-data.patch
             patch --fuzz=0 /tmp/server.py < /tmp/server-map-data.patch
           fi
+
+          if ! grep -q 'HKMP3' /tmp/server.py; then
+            base64 -d deploy/maps/server-map-data-v3.patch.gz.b64 | gzip -d > /tmp/server-map-data-v3.patch
+            patch --fuzz=0 /tmp/server.py < /tmp/server-map-data-v3.patch
+          fi
+
           python3 -m py_compile /tmp/server.py
+
+          cat > /tmp/set-hk-map-open.py <<'PY'
+          import sqlite3
+          DB='/var/lib/hamsterking-license/licenses.db'
+          with sqlite3.connect(DB) as db:
+              before=db.execute("select count(*) from hk_maps_catalog").fetchone()[0]
+              db.execute("update hk_maps_catalog set open_url='/maps/view/?key=' || map_key where map_key like 'hk_%'")
+              ready=db.execute("select count(*) from hk_maps_catalog where open_url<>''").fetchone()[0]
+              published=db.execute("select count(*) from hk_maps_catalog where published=1").fetchone()[0]
+              db.commit()
+          if before != 235 or ready != 235:
+              raise SystemExit(f'catalog mismatch total={before} ready={ready}')
+          print(f'CATALOG_READY total={before} open={ready} published={published}')
+          PY
+
+      - name: Deploy backend and connect all Open links
+        shell: bash
+        run: |
+          set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             /tmp/server.py root@89.125.1.71:/tmp/server-private-maps.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/set-hk-map-open.py root@89.125.1.71:/tmp/set-hk-map-open.py
+
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             stamp="$(date +%Y%m%d-%H%M%S)"
             cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.$stamp"
             install -m 0644 /tmp/server-private-maps.py /opt/hamsterking-license/server.py
+            python3 /tmp/set-hk-map-open.py
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
             sleep 2
+            PYTHONPATH=/opt/hamsterking-license python3 -c "import server; d=server.private_hk_map_data('hk_newyork2332'); assert len(d['points'])>1000; print('MAP_DATA_OK', d['title'], len(d['points']))"
             (curl -fsS http://127.0.0.1:8787/health || curl -fsS http://127.0.0.1:3188/health)
             echo
+            (curl -fsS http://127.0.0.1:8787/api/v1/public/maps || curl -fsS http://127.0.0.1:3188/api/v1/public/maps)
+            echo
+            rm -f /tmp/server-private-maps.py /tmp/set-hk-map-open.py
             echo PRIVATE_MAP_BACKEND_OK
           '
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/hk-maps-payload.cms /tmp/server.py /tmp/server-map-data.patch
+        run: rm -f "$HOME/.ssh/topking" /tmp/hk-maps-payload.cms /tmp/server.py /tmp/server-map-data.patch /tmp/server-map-data-v3.patch /tmp/set-hk-map-open.py
