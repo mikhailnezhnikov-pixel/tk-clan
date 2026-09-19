@@ -53,3 +53,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking"
+
+# verify live before exact HG rebuild
