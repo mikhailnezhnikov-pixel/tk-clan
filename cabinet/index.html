@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; connect-src https://hk-license.89.125.1.71.sslip.io; frame-src https://oauth.telegram.org https://telegram.org https://t.me; object-src 'none'; base-uri 'self'">
   <title>Личный кабинет клана — Top King</title>
   <meta name="description" content="Закрытый личный кабинет участников клана Top King.">
-  <link rel="stylesheet" href="../assets/public.css?v=20260919-7">
+  <link rel="stylesheet" href="../assets/public.css?v=20260919-8">
   <link rel="icon" href="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png">
   <style>
     .cabinet-head{padding-bottom:24px}
@@ -81,6 +81,9 @@
     .install-quick strong{display:block;margin-bottom:7px;color:#b8efca}
     .install-quick ol{margin:0;padding-left:20px;color:#d8dee7}
     .install-quick li+li{margin-top:5px}
+    .install-code-details{margin-top:12px;color:var(--muted);font-size:13px}
+    .install-code-details summary{cursor:pointer;color:#d8dee7;font-weight:800}
+    .install-code-details[open] summary{margin-bottom:8px}
 
     .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:20px}
     .stat{position:relative;padding:17px;border:1px solid rgba(255,255,255,.09);border-radius:17px;background:rgba(8,11,16,.48);overflow:hidden}
@@ -466,44 +469,20 @@
           <h2>Запуск через закладку браузера</h2>
           <p class="stats-sub">Ничего устанавливать в браузер не нужно. Закладка создаётся один раз и при каждом запуске сама загружает актуальную версию HK.</p>
 
-          <div class="guide">
-            <article class="guide-step">
-              <div class="guide-head"><span class="guide-icon">1</span><h3>Откройте веб-версию игры</h3></div>
-              <p>В этом же браузере откройте <b>https://app.hamsterking.games</b> и войдите в игру.</p>
-            </article>
-
-            <article class="guide-step">
-              <div class="guide-head"><span class="guide-icon">2</span><h3>Создайте закладку HK</h3></div>
-              <p>Перетащите кнопку <b>«★ Установить HK»</b> на панель закладок. Если перетаскивание недоступно — создайте обычную закладку вручную, нажмите <b>«Скопировать команду»</b> и вставьте её в поле <b>URL / Адрес</b>.</p>
-            </article>
-
-            <article class="guide-step">
-              <div class="guide-head"><span class="guide-icon">3</span><h3>Запустите HK</h3></div>
-              <p>Вернитесь на открытую страницу Hamster King и нажмите созданную закладку <b>HK</b>. Через несколько секунд появится панель HK.</p>
-            </article>
-
-            <article class="guide-step">
-              <div class="guide-head"><span class="guide-icon">4</span><h3>Дальше обновлять ничего не нужно</h3></div>
-              <p>Используйте ту же закладку при каждом запуске. Новая версия HK будет загружаться автоматически с нашего сервера.</p>
-            </article>
-          </div>
-
           <div class="bookmarklet-box">
             <h3>Создать закладку HK</h3>
             <div class="bookmarklet-actions">
               <button id="bookmarklet-link" class="bookmarklet-link" type="button">★ Установить HK</button>
               <button id="copy-bookmarklet" class="button ghost" type="button">Скопировать команду</button>
             </div>
-            <textarea id="bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
-            <p class="bookmarklet-hint"><b>Важно:</b> адрес закладки должен начинаться именно с <code>javascript:</code>. Саму закладку запускайте только на странице <b>app.hamsterking.games</b>.</p>
-            <div id="hk-install-quick" class="install-quick hidden">
-              <strong>Команда скопирована.</strong>
-              <ol>
-                <li>В Chrome создайте обычную закладку с названием <b>HK</b>.</li>
-                <li>Откройте «Закладки» → удерживайте HK → «Изменить».</li>
-                <li>Удалите старый URL и вставьте скопированную команду.</li>
-                <li>Откройте Hamster King и нажмите закладку HK.</li>
-              </ol>
+            <details class="install-code-details">
+              <summary>Показать команду вручную</summary>
+              <textarea id="bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
+              <p class="bookmarklet-hint">Адрес закладки должен начинаться с <code>javascript:</code>.</p>
+            </details>
+            <div id="hk-install-quick" class="install-quick hidden" data-install-name="HK">
+              <strong>Команда скопирована ✓</strong>
+              <ol data-install-steps></ol>
             </div>
             <p id="bookmarklet-message" class="message" role="status" aria-live="polite"></p>
           </div>
@@ -521,16 +500,13 @@
               <button id="kokkaras-bookmarklet-link" class="bookmarklet-link" type="button">★ Установить Kokkaras</button>
               <button id="copy-kokkaras-bookmarklet" class="button ghost" type="button">Скопировать команду</button>
             </div>
-            <textarea id="kokkaras-bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{s=document.createElement('script');s.src='https://kokkaras.com/hk_maps/panel.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
-            <p class="bookmarklet-hint">После создания: откройте <b>app.hamsterking.games</b> → войдите в игру → нажмите закладку <b>Kokkaras</b> → скрипт загрузится с kokkaras.com.</p>
-            <div id="kokkaras-install-quick" class="install-quick hidden">
-              <strong>Команда Kokkaras скопирована.</strong>
-              <ol>
-                <li>Создайте обычную закладку с названием <b>Kokkaras</b>.</li>
-                <li>Откройте «Закладки» → удерживайте её → «Изменить».</li>
-                <li>Замените URL на скопированную команду.</li>
-                <li>Откройте Hamster King и нажмите закладку Kokkaras.</li>
-              </ol>
+            <details class="install-code-details">
+              <summary>Показать команду вручную</summary>
+              <textarea id="kokkaras-bookmarklet-code" class="bookmarklet-code" readonly>javascript:(()=>{s=document.createElement('script');s.src='https://kokkaras.com/hk_maps/panel.js?v='+Date.now();document.documentElement.appendChild(s)})()</textarea>
+            </details>
+            <div id="kokkaras-install-quick" class="install-quick hidden" data-install-name="Kokkaras">
+              <strong>Команда Kokkaras скопирована ✓</strong>
+              <ol data-install-steps></ol>
             </div>
             <p id="kokkaras-bookmarklet-message" class="message" role="status" aria-live="polite"></p>
           </div>
@@ -597,12 +573,61 @@
   const BOOKMARKLET="javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()";
   const KOKKARAS_BOOKMARKLET="javascript:(()=>{s=document.createElement('script');s.src='https://kokkaras.com/hk_maps/panel.js?v='+Date.now();document.documentElement.appendChild(s)})()";
 
+  function renderInstallSteps(boxId,name){
+    const box=$(boxId);
+    const list=box?.querySelector('[data-install-steps]');
+    if(!box||!list)return;
+    const ua=navigator.userAgent||'';
+    const isiOS=/iPhone|iPad|iPod/i.test(ua);
+    const isAndroid=/Android/i.test(ua);
+    let steps;
+    if(isiOS){
+      steps=[
+        'В Chrome нажмите <b>⋯</b> → <b>Добавить в закладки</b> и назовите её <b>'+name+'</b>.',
+        'Откройте <b>⋯ → Закладки</b>, удерживайте '+name+' → <b>Изменить</b>.',
+        'Удалите старый URL и вставьте скопированную команду.',
+        'Откройте <b>app.hamsterking.games</b> и нажмите закладку <b>'+name+'</b>.'
+      ];
+    }else if(isAndroid){
+      steps=[
+        'В Chrome создайте обычную закладку и назовите её <b>'+name+'</b>.',
+        'Откройте <b>Закладки</b> → меню закладки → <b>Изменить</b>.',
+        'Замените URL на скопированную команду.',
+        'Откройте <b>app.hamsterking.games</b> и нажмите закладку <b>'+name+'</b>.'
+      ];
+    }else{
+      steps=[
+        'Создайте обычную закладку и назовите её <b>'+name+'</b>.',
+        'Откройте редактирование этой закладки.',
+        'Замените её адрес на скопированную команду и сохраните.',
+        'Откройте <b>app.hamsterking.games</b> и нажмите закладку <b>'+name+'</b>.'
+      ];
+    }
+    list.innerHTML=steps.map(step=>'<li>'+step+'</li>').join('');
+    box.classList.remove('hidden');
+  }
+
+  function markInstalledButton(id,label){
+    const button=$(id);
+    if(!button)return;
+    const original=button.dataset.originalLabel||button.textContent;
+    button.dataset.originalLabel=original;
+    button.textContent='✓ Скопировано';
+    button.classList.add('copied');
+    clearTimeout(button._copyTimer);
+    button._copyTimer=setTimeout(()=>{
+      button.textContent=label||original;
+      button.classList.remove('copied');
+    },2200);
+  }
+
   document.addEventListener('click',async event=>{
     if(event.target.closest('#show-bookmarklet')){
       setCabTab('install');
       try{
         await navigator.clipboard.writeText(BOOKMARKLET);
-        $('hk-install-quick')?.classList.remove('hidden');
+        renderInstallSteps('hk-install-quick','HK');
+        markInstalledButton('bookmarklet-link','★ Установить HK');
         setMessage('bookmarklet-message','Команда HK уже скопирована. Выполните 4 шага выше.','good');
       }catch{
         setMessage('bookmarklet-message','Нажмите «Скопировать команду», затем выполните короткую инструкцию.');
@@ -614,7 +639,8 @@
       event.preventDefault();
       try{
         await navigator.clipboard.writeText(BOOKMARKLET);
-        $('hk-install-quick')?.classList.remove('hidden');
+        renderInstallSteps('hk-install-quick','HK');
+        markInstalledButton('bookmarklet-link','★ Установить HK');
         setMessage('bookmarklet-message','Команда HK скопирована. Выполните короткую инструкцию выше.','good');
       }catch{
         setMessage('bookmarklet-message','Не удалось скопировать автоматически. Нажмите «Скопировать команду».','bad');
@@ -622,7 +648,7 @@
       return;
     }
     if(event.target.closest('#copy-bookmarklet')){
-      try{await navigator.clipboard.writeText(BOOKMARKLET);$('hk-install-quick')?.classList.remove('hidden');setMessage('bookmarklet-message','Команда HK скопирована. Выполните короткую инструкцию выше.','good')}
+      try{await navigator.clipboard.writeText(BOOKMARKLET);renderInstallSteps('hk-install-quick','HK');setMessage('bookmarklet-message','Команда HK скопирована. Выполните короткую инструкцию выше.','good')}
       catch{
         const field=$('bookmarklet-code');field?.focus();field?.select();setMessage('bookmarklet-message','Команда выделена — скопируйте её вручную.');
       }
@@ -632,7 +658,8 @@
       event.preventDefault();
       try{
         await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);
-        $('kokkaras-install-quick')?.classList.remove('hidden');
+        renderInstallSteps('kokkaras-install-quick','Kokkaras');
+        markInstalledButton('kokkaras-bookmarklet-link','★ Установить Kokkaras');
         setMessage('kokkaras-bookmarklet-message','Команда Kokkaras скопирована. Выполните короткую инструкцию выше.','good');
       }catch{
         setMessage('kokkaras-bookmarklet-message','Не удалось скопировать автоматически. Нажмите «Скопировать команду».','bad');
@@ -640,7 +667,7 @@
       return;
     }
     if(event.target.closest('#copy-kokkaras-bookmarklet')){
-      try{await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);$('kokkaras-install-quick')?.classList.remove('hidden');setMessage('kokkaras-bookmarklet-message','Команда Kokkaras скопирована. Выполните короткую инструкцию выше.','good')}
+      try{await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);renderInstallSteps('kokkaras-install-quick','Kokkaras');setMessage('kokkaras-bookmarklet-message','Команда Kokkaras скопирована. Выполните короткую инструкцию выше.','good')}
       catch{
         const field=$('kokkaras-bookmarklet-code');field?.focus();field?.select();setMessage('kokkaras-bookmarklet-message','Команда выделена — скопируйте её вручную.');
       }
@@ -1124,6 +1151,6 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/site-nav.js?v=20260919-7"></script>
+<script src="../assets/site-nav.js?v=20260919-8"></script>
 </body>
 </html>
