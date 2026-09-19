@@ -6,4 +6,13 @@ status=FAIL
 exit_code=1
 deployed=no
 --- log ---
-BUILD_VERSION 1.17.0 fallback missing
+BUREAU_RESOURCES_LIVE_1171_OK
+/tmp/HamsterKingMobile.user.js:4784
+${[...new Set(projectedProblems)].join('
+                                       ^
+
+SyntaxError: Invalid or unexpected token
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at checkSyntax (node:internal/main/check_syntax:78:3)
+
+Node.js v22.23.2
