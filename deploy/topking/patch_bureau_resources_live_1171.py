@@ -89,7 +89,7 @@ def apply_hotfix(text):
     }
     const projectedBureau = budgetDecision(liveBureauCost, 'bureau', attempts, playerDocument);
     if (!projectedBureau.allowed) {
-      alert(projectedBureau.problems.join('\n'));
+      alert(projectedBureau.problems.join('\\n'));
       renderProjectBureau();
       return;
     }
@@ -142,7 +142,7 @@ def apply_hotfix(text):
     old = "    const lines = ready.map((row,index) => `${index + 1}. ${row.buildingName} — ${row.name} ×${row.plannedCompletions}`);"
     new = """    const projectedProblems = ready.flatMap(row => budgetDecision(row.cost, 'resources', row.plannedCompletions, playerDocument).problems);
     if (projectedProblems.length) {
-      alert(`${either('Ресурсный обмен заблокирован единым бюджетом','Resource exchange blocked by unified budget')}:\n\n${[...new Set(projectedProblems)].join('\n')}`);
+      alert(`${either('Ресурсный обмен заблокирован единым бюджетом','Resource exchange blocked by unified budget')}:\\n\\n${[...new Set(projectedProblems)].join('\\n')}`);
       return;
     }
     const lines = ready.map((row,index) => `${index + 1}. ${row.buildingName} — ${row.name} ×${row.plannedCompletions}`);"""
