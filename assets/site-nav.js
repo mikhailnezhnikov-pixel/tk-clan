@@ -62,6 +62,10 @@
     const style=document.createElement('style');
     style.id='tk-grouped-nav-style';
     style.textContent=`
+      .tk-header-actions{display:flex;align-items:center;gap:12px;flex:0 0 auto;margin-inline-start:auto}
+      .tk-header-actions .tk-desktop-cabinet{min-height:46px;display:inline-flex;align-items:center;justify-content:center;padding:11px 20px;border:1px solid rgba(232,182,84,.45);border-radius:14px;color:#ffe3a0!important;background:rgba(232,182,84,.08);font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;transition:transform .2s ease,border-color .2s ease,background .2s ease}
+      .tk-header-actions .tk-desktop-cabinet:hover,.tk-header-actions .tk-desktop-cabinet.active{color:#fff!important;border-color:rgba(255,220,135,.72);background:rgba(232,182,84,.13);transform:translateY(-1px)}
+      @media(max-width:980px){.tk-header-actions .tk-desktop-cabinet{display:none!important}.tk-header-actions{margin-inline-start:auto}}
       .nav-group{position:relative;display:flex;align-items:center;flex:0 0 auto}
       .nav-group-toggle{min-height:42px;padding:10px 12px;border:0;border-radius:12px;background:transparent;color:#cbd0d8;font:700 14px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;transition:color .2s ease,background .2s ease,transform .2s ease}
       .nav-group-toggle:hover,.nav-group-toggle.active,.nav-group.open>.nav-group-toggle{color:#fff;background:rgba(255,255,255,.075);transform:translateY(-1px)}
@@ -77,6 +81,25 @@
     document.head.appendChild(style);
   }
 
+  function placeDesktopCabinet(){
+    document.querySelectorAll('.site-header .header-inner,.topbar .topbar-inner').forEach(row=>{
+      const nav=row.querySelector('nav.desktop-nav,nav.nav');
+      if(!nav)return;
+      const login=nav.querySelector('a.nav-login[data-site-nav="cabinet"],a.nav-login');
+      if(!login)return;
+      let actions=row.querySelector('.tk-header-actions');
+      if(!actions){
+        actions=document.createElement('div');
+        actions.className='tk-header-actions';
+        const menu=row.querySelector('[data-menu-toggle]');
+        row.insertBefore(actions,menu||null);
+      }
+      const language=row.querySelector('.language-switch,.languages');
+      if(language&&language.parentElement!==actions)actions.appendChild(language);
+      login.classList.add('tk-desktop-cabinet');
+      actions.appendChild(login);
+    });
+  }
   function ensureCabinetTabGroups(){
     if(current()!=='cabinet')return;
     const tabs=document.querySelector('.cab-tabs');
@@ -209,8 +232,10 @@
   }
   function render(){
     ensureTheme();ensureNavStyles();createHeader();normalizeExistingHeader();ensureCabinetTabGroups();
+    document.querySelectorAll('.tk-desktop-cabinet').forEach(a=>a.remove());
     document.querySelectorAll('nav.nav,nav.desktop-nav').forEach(n=>renderContainer(n,false));
     document.querySelectorAll('nav.mobile-nav,.mobile-links').forEach(n=>renderContainer(n,true));
+    placeDesktopCabinet();
     portalMobileMenus();
     wireDesktopGroups();
     wireGeneratedMenu();
