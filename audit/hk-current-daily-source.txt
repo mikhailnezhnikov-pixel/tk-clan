@@ -1251,6 +1251,7 @@
     const importButton = dailyBox.querySelector('#hk-settings-import'); if (importButton) importButton.onclick = importMobileSettings;
   }
 
+  // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   async function refreshDailyTasks() {
     if (!requireLicense()) return;
     try {
@@ -1351,12 +1352,10 @@
     const activeBuilding = resourceBuildings[0] || null;
     const savedIds = savedResourceBuildingIds();
     const buildingButtons = Object.keys(RESOURCE_BUILDING_TYPES).map(kind => `<button data-resource-kind="${kind}" class="${kind===resourceSelectedKind?'active':''}" ${resourceBusy?'disabled':''}><b>${escapeHtml(resourceTypeName(kind,true))}</b><small>${escapeHtml(resourceTypeName(kind))}${savedIds[kind]?' ✓':''}</small></button>`).join('');
-    const activeTier = Math.max(0, Math.trunc(Number(activeBuilding?.tier || 0)));
-    const ma
+    const activeTier = Math.max(0, 
 
 ===== async function refreshDailyTasks() =====
 
-        <label>${tr('dailyReserve')}<input data-budget-field="reserve" type="number" min="0" step="1" value="${rules.reserve}"></label>
         <label>${tr('dailyLimit')}<input data-budget-field="dailyLimit" type="number" min="0" step="1" value="${rules.dailyLimit}"></label>
         <label>${tr('weeklyLimit')}<input data-budget-field="weeklyLimit" type="number" min="0" step="1" value="${rules.weeklyLimit}"></label>
         <small>${tr('spentToday')}: <b>${usage.day.toLocaleString(locale())}</b> · ${tr('spentWeek')}: <b>${usage.week.toLocaleString(locale())}</b></small>
@@ -1412,6 +1411,7 @@
     const importButton = dailyBox.querySelector('#hk-settings-import'); if (importButton) importButton.onclick = importMobileSettings;
   }
 
+  // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   async function refreshDailyTasks() {
     if (!requireLicense()) return;
     try {
@@ -1635,10 +1635,6 @@
 
 ===== async function runDailySelected() =====
 
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([JSON.stringify(documentValue, null, 2)], {type:'application/json'}));
-    link.download = `HamsterKingMobile_settings_${VERSION}.json`;
-    link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   }
 
@@ -1674,6 +1670,7 @@
       let purchased = 0;
       const errors = [];
       for (const target of action.slots || []) {
+        if (hkRunner.running) await hkRunner.waitIfPaused();
         try {
           fairDocument = playerDocument;
           const state = fairState(target.fairId, playerDocument);
@@ -1690,6 +1687,7 @@
           for (const part of costParts(live.cost)) appendExpense({section:'fair', lotId:live.lotId, name:gameText(live.name) || live.name,
             currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, result), status:'ok', result:'purchased'});
         } catch (error) {
+          if (error?.name === 'AbortError' || hkRunner.signal?.aborted) throw error;
           errors.push(error.message);
           log(`${action.label}: ${error.message}`, 'warn');
         }
@@ -1699,10 +1697,12 @@
     }
     const requested = Math.max(1, Math.floor(Number(action.count || 1)));
     for (let index = 0; index < requested; index++) {
+      if (hkRunner.running) await hkRunner.waitIfPaused();
       // Reload both the player balance and the live shop counters before every
       // purchase. A changed price, exhausted lot or budget limit skips the
       // remaining copies instead of spending by stale data.
-      if (index > 0) playerDocument = await apiJson('/player/me', 'POST');
+      playerDocument = await apiJson('/player/me', 'POST');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
       dailyShopRows = normalizeRegularShop();
       const live = dailyShopRows.find(row => row.lotId === action.row.lotId);
       if (!live || live.remaining <= 0) throw new Error(either(`лот закончился после ${index} покупок`,`lot exhausted after ${index} purchases`));
@@ -1747,6 +1747,7 @@
           else if (action.kind === 'purchase') await executeDailyPurchase(action);
           completed++;
         } catch (error) {
+          if (error?.name === 'AbortError' || hkRunner.signal?.aborted) break;
           skipped++;
           if (action.kind === 'purchase') for (const part of costParts(action.cost)) appendExpense({section:action.section, lotId:action.row?.lotId,
             name:action.label, currencyId:part.id, amount:part.quantity * Math.max(1, Number(action.count || 1)), status:'failed', result:error.message});
@@ -1760,13 +1761,15 @@
         hkRunner.advance();
         await sleep(300);
       }
+      const stopped=!!hkRunner.signal?.aborted;
+      if (stopped) hkRunner.reset();
       playerDocument = await apiJson('/player/me', 'POST');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
       dailyShopRows = normalizeRegularShop();
       dailySnapshot = {checkedAt:Date.now(), playerId:playerIdentity(playerDocument?.player || {}), periodStart:gamePeriodBounds().dayStart};
       save({today:{...(load().today || {}), selection:{...dailySelection}, snapshot:dailySnapshot}, budget:budgetDocument()});
-      const stopped=!!hkRunner.signal?.aborted;
       log(stopped ? either(`Выполнение остановлено: завершено ${completed}, пропущено ${skipped}`,`Execution stopped: completed ${completed}, skipped ${skipped}`) : either(`Выбранные действия завершены: ${completed}, пропущено ${skipped}`, `Selected actions completed: ${completed}, skipped ${skipped}`), stopped || skipped ? 'warn' : 'ok');
-      if (stopped) hkRunner.reset(); else hkRunner.finish(either('План выполнен','Plan completed'));
+      if (!stopped) hkRunner.finish(either('План выполнен','Plan completed'));
     } catch (error) {
       hkRunner.fail(error); throw error;
     } finally { dailyRunning = false; renderDailyTasks(); }
@@ -2009,19 +2012,17 @@
       : either('Загруженные карты пока отсутствуют.','There are no uploaded maps yet.');
     list.innerHTML=rows.length ? rows.map(row => {
       const gameAreaId = mapSource === 'mine' ? [String(row.area_id || ''), ...(Array.isArray(row.aliases) ? row.aliases.map(String) : [])].find(id => owned.has(id)) : String(row.area_id || '');
-      return `<button class="hk-map-row" data-area="${escapeHtml(row.area_id)}" data-game-area="${escapeHtml(gameAreaId || row.area_id)}"><b>${escapeHtml(row.city_name || row.city_id)}</b><span>${row.x ?? '?'}:${row.y ?? '?'}</span><span>${tr('mapBuildings')}: ${Number(row.opened||0).toLocaleString(locale())}</span><span>${tr('mapUnexplored')}: ${Number(row.unexplored||0).toLocaleString(locale())}</span><span>${tr('mapRooms')}: ${Number(row.total_rooms||0).toLocaleString(locale())}</span><span class="hk-progress">${row.progress}%</span><strong>${row.rating||0} ›</strong></bu
+      return `<button class="hk-map-row" data-area="${escapeHtml(row.area_id)}" data-game-area="${escapeHtml(gameAreaId || row.area_id)}"><b>${escapeHtml(row.city_name || row.city_id)}</b><span>${row.x ?? '?'}:${row.y ?? '?'}</span><span>${tr('mapBuildings')}: ${Number(row.opened||0).toLocaleString(locale())}</span><span>${tr('mapUnexplored')}: ${Number(row.unexplored||0).toLocaleString(locale())}</span><span>${tr('mapRoom
 
 ===== async function runDailyClanPurchases() =====
 
-          const decision = budgetDecision(live.cost, 'fair', 1, playerDocument);
-          if (!decision.allowed) throw new Error(decision.problems.join('; '));
-          const before = new Map(costParts(live.cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
           const result = await apiJson('/shop/buy', 'POST', {shop_lot_id:live.lotId, payment_type:'INTERNAL', fair_id:target.fairId,
             slot_id:slot.id, lotName:live.name, lotDescription:''});
           playerDocument = result; fairDocument = result; purchased++;
           for (const part of costParts(live.cost)) appendExpense({section:'fair', lotId:live.lotId, name:gameText(live.name) || live.name,
             currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, result), status:'ok', result:'purchased'});
         } catch (error) {
+          if (error?.name === 'AbortError' || hkRunner.signal?.aborted) throw error;
           errors.push(error.message);
           log(`${action.label}: ${error.message}`, 'warn');
         }
@@ -2031,10 +2032,12 @@
     }
     const requested = Math.max(1, Math.floor(Number(action.count || 1)));
     for (let index = 0; index < requested; index++) {
+      if (hkRunner.running) await hkRunner.waitIfPaused();
       // Reload both the player balance and the live shop counters before every
       // purchase. A changed price, exhausted lot or budget limit skips the
       // remaining copies instead of spending by stale data.
-      if (index > 0) playerDocument = await apiJson('/player/me', 'POST');
+      playerDocument = await apiJson('/player/me', 'POST');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
       dailyShopRows = normalizeRegularShop();
       const live = dailyShopRows.find(row => row.lotId === action.row.lotId);
       if (!live || live.remaining <= 0) throw new Error(either(`лот закончился после ${index} покупок`,`lot exhausted after ${index} purchases`));
@@ -2079,6 +2082,7 @@
           else if (action.kind === 'purchase') await executeDailyPurchase(action);
           completed++;
         } catch (error) {
+          if (error?.name === 'AbortError' || hkRunner.signal?.aborted) break;
           skipped++;
           if (action.kind === 'purchase') for (const part of costParts(action.cost)) appendExpense({section:action.section, lotId:action.row?.lotId,
             name:action.label, currencyId:part.id, amount:part.quantity * Math.max(1, Number(action.count || 1)), status:'failed', result:error.message});
@@ -2092,13 +2096,15 @@
         hkRunner.advance();
         await sleep(300);
       }
+      const stopped=!!hkRunner.signal?.aborted;
+      if (stopped) hkRunner.reset();
       playerDocument = await apiJson('/player/me', 'POST');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
       dailyShopRows = normalizeRegularShop();
       dailySnapshot = {checkedAt:Date.now(), playerId:playerIdentity(playerDocument?.player || {}), periodStart:gamePeriodBounds().dayStart};
       save({today:{...(load().today || {}), selection:{...dailySelection}, snapshot:dailySnapshot}, budget:budgetDocument()});
-      const stopped=!!hkRunner.signal?.aborted;
       log(stopped ? either(`Выполнение остановлено: завершено ${completed}, пропущено ${skipped}`,`Execution stopped: completed ${completed}, skipped ${skipped}`) : either(`Выбранные действия завершены: ${completed}, пропущено ${skipped}`, `Selected actions completed: ${completed}, skipped ${skipped}`), stopped || skipped ? 'warn' : 'ok');
-      if (stopped) hkRunner.reset(); else hkRunner.finish(either('План выполнен','Plan completed'));
+      if (!stopped) hkRunner.finish(either('План выполнен','Plan completed'));
     } catch (error) {
       hkRunner.fail(error); throw error;
     } finally { dailyRunning = false; renderDailyTasks(); }
