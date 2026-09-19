@@ -1,4 +1,4 @@
-name: Deploy TopKing userscript 1.17.3
+name: Deploy TopKing userscript 1.17.4
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - 'deploy/topking/patch_clan_shop_actual_userscript.py'
       - 'deploy/topking/patch_bosses_readonly_1172.py'
       - 'deploy/topking/patch_regular_fair_1173.py'
+      - 'deploy/topking/patch_auto_routines_1174.py'
   workflow_dispatch:
 
 permissions:
@@ -37,13 +38,16 @@ jobs:
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           python3 deploy/topking/patch_clan_shop_actual_userscript.py
-          grep -q '^// @version      1.17.3$' /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.17.4$' /tmp/HamsterKingMobile.user.js
           grep -q 'HK_CLAN_SHOP_ACTUAL_FACTS_V1' /tmp/HamsterKingMobile.user.js
           grep -q '/clan-shop-facts/submit' /tmp/HamsterKingMobile.user.js
           grep -q 'HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1' /tmp/HamsterKingMobile.user.js
           grep -q 'HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1' /tmp/HamsterKingMobile.user.js
           grep -q 'bosses-readonly-20260920-r1' /tmp/HamsterKingMobile.user.js
           grep -q 'regular-fair-ui-20260920-r1' /tmp/HamsterKingMobile.user.js
+          grep -q 'auto-routines-20260920-r1' /tmp/HamsterKingMobile.user.js
+          grep -Fq "{page:'routines',ru:'Авто-рутины',en:'Auto routines'}" /tmp/HamsterKingMobile.user.js
+          grep -Fq "async function runAutoRoutine()" /tmp/HamsterKingMobile.user.js
           grep -Fq "{page:'fair-regular',ru:'Обычная ярмарка',en:'Regular Fair'}" /tmp/HamsterKingMobile.user.js
           grep -Fq "String(state?.id || '') === 'fair_default'" /tmp/HamsterKingMobile.user.js
           grep -Fq "{page:'bosses',ru:'Боссы',en:'Bosses'}" /tmp/HamsterKingMobile.user.js
@@ -62,7 +66,7 @@ jobs:
             node --check /tmp/HamsterKingMobile.user.js
             cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp"
             install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
-            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.3\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.4\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
             systemctl daemon-reload
             systemctl restart hamsterking-license.service || true
             active=0
