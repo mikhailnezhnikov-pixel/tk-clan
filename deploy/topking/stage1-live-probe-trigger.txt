@@ -1,2 +1,2 @@
-trigger=2026-09-19T14:32Z
-reason=resolve-stage2-deploy-race
+probe=2026-09-19T14:22:00Z
+purpose=remaining-gameplay-capture
