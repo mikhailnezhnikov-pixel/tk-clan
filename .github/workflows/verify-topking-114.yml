@@ -1,0 +1,50 @@
+name: Verify TopKing 1.14.0
+
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-topking-114.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare SSH key
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch and verify live 1.14.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p live
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js live/HamsterKingMobile.user.js
+          grep -q '^// @version      1.14.0$' live/HamsterKingMobile.user.js
+          grep -q 'const hkGameBridge' live/HamsterKingMobile.user.js
+          grep -q 'refreshModuleLive' live/HamsterKingMobile.user.js
+          node --check live/HamsterKingMobile.user.js
+          echo '06acfbf79575c757533d0207cc0928bb8093dbb4f0aca6f312618aac39a8560b  live/HamsterKingMobile.user.js' | sha256sum -c -
+
+      - name: Upload verified live script
+        uses: actions/upload-artifact@v4
+        with:
+          name: topking-live-1.14.0-verified
+          path: live/HamsterKingMobile.user.js
+          retention-days: 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
