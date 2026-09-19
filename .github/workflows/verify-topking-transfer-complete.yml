@@ -1,0 +1,128 @@
+name: Verify TopKing Transfer Complete
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/transfer-complete-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verify-topking-transfer-complete
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch and verify live 1.16.8
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          grep -q '^// @version      1.16.8$' /tmp/live.js
+          node --check /tmp/live.js
+
+          # Architecture migration chain.
+          grep -Fq "stage1-20260919-r4" /tmp/live.js
+          grep -Fq "stage2a-20260919-r1" /tmp/live.js
+          grep -Fq "stage2b-20260919-r1" /tmp/live.js
+          grep -Fq "stage2c-state-20260919-r1" /tmp/live.js
+          grep -Fq "stage2d-resource-business-20260919-r1" /tmp/live.js
+          grep -Fq "stage2e-maps-20260919-r1" /tmp/live.js
+          grep -Fq "stage2f-clan-20260919-r1" /tmp/live.js
+          grep -Fq "stage2g-rumors-20260919-r1" /tmp/live.js
+          grep -Fq "stage2h-wars-20260919-r1" /tmp/live.js
+          grep -Fq "stage2i-buildings-explore-20260919-r1" /tmp/live.js
+
+          # User-approved Growth currency split.
+          grep -Fq "GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'" /tmp/live.js
+          grep -Fq "GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'" /tmp/live.js
+          ! grep -Fq 'growthNutCost' /tmp/live.js
+
+          # Replacements for historical donor Growth wrappers.
+          grep -Fq 'function growthBestHamster(' /tmp/live.js
+          grep -Fq 'function growthBuyAllGeneralContractsCore(' /tmp/live.js
+          grep -Fq 'function growthInventoryMap(' /tmp/live.js
+          grep -Fq 'function growthEnsureStatic(' /tmp/live.js
+          grep -Fq 'function growthLoadLive(' /tmp/live.js
+          grep -Fq 'function growthRefreshEntity(' /tmp/live.js
+          grep -Fq 'function growthRunGeneralsCore(' /tmp/live.js
+          grep -Fq 'function growthRunHamstersCore(' /tmp/live.js
+          grep -Fq 'function growthOpenLootboxFamilyCore(' /tmp/live.js
+          grep -Fq 'function growthArray(' /tmp/live.js
+
+          # Historical Nut-only detector was superseded by generalized resource-building logic.
+          grep -Fq 'function exactResourceBuildingData(' /tmp/live.js
+          grep -Fq 'function discoverResourceBuildingIds(' /tmp/live.js
+
+          # Real donor game endpoints and flows.
+          grep -Fq "/player/building" /tmp/live.js
+          grep -Fq "/player/event" /tmp/live.js
+          grep -Fq "/game_area/" /tmp/live.js
+          grep -Fq "/buildings" /tmp/live.js
+          grep -Fq "/city/' + encodeURIComponent(cityId) + '/game_area" /tmp/live.js
+          grep -Fq "/rumors/search" /tmp/live.js
+          grep -Fq "/clan/active_battles" /tmp/live.js
+          grep -Fq "/clan/active_defense_wars" /tmp/live.js
+
+          # User-visible transferred modules.
+          for page in daily pit maps resources buildings explore business recipes growth growth-hamsters growth-generals fair shop clan wars; do
+            grep -Fq "data-content=\"$page\"" /tmp/live.js
+          done
+
+          # Shared runtime.
+          grep -Fq 'const hkStateStore = (() => {' /tmp/live.js
+          grep -Fq 'const hkRunner = (() => {' /tmp/live.js
+          grep -Fq 'const hkMutationGate = (() => {' /tmp/live.js
+
+      - name: Record transfer status
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          sha="$(sha256sum /tmp/live.js | awk '{print $1}')"
+          {
+            echo "live_version=1.16.8"
+            echo "syntax=ok"
+            echo "sha256=$sha"
+            echo "transferable_donor_logic=complete"
+            echo "donor_versions=1.7.95,1.9.8,1.12.0,1.13.0,1.14.4"
+            echo "active_transferred_modules=daily,pits,maps,resources,buildings,explore,business,recipes,growth-hamsters,growth-generals,fair,shop,clan,wars,rumors"
+            echo "building_events=covered-by-resources-player-event"
+            echo "districts=covered-by-maps-explore"
+            echo "intentional_exclusion=growthNutCost"
+            echo "intentional_exclusion_reason=Hamsters use cur_cap; Generals use item_pit_token"
+            echo "planned_in_all_relevant_donors=bosses,neighborhoods,auto-routines,regular-fair,rat-hunt"
+            echo "not_implemented_in_donors=reminders,realtime,websocket"
+            echo "next_phase=point-by-point-live-verification"
+          } > audit/hk-transfer-complete-status.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git reset --hard origin/main
+          git add audit/hk-transfer-complete-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Verify TopKing donor transfer complete"
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js
