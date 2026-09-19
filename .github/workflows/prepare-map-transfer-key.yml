@@ -1,0 +1,30 @@
+name: Prepare private map transfer key
+
+on:
+  push:
+    paths:
+      - '.github/workflows/prepare-map-transfer-key.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Derive public recipient key
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/map-transfer"
+          chmod 600 "$HOME/.ssh/map-transfer"
+          printf 'MAP_TRANSFER_PUBLIC_KEY='
+          ssh-keygen -y -f "$HOME/.ssh/map-transfer"
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/map-transfer"
