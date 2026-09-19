@@ -3,7 +3,7 @@ name: Verify TopKing Stage 1 Live Read Only
 on:
   push:
     paths:
-      - '.github/workflows/verify-topking-stage1-live.yml'
+      - 'deploy/topking/stage1-live-probe-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -40,33 +40,49 @@ jobs:
       - name: Record live facts
         run: |
           set -euo pipefail
-          mkdir -p audit
-          version="$(grep -m1 '^// @version' /tmp/topking-live.js | sed 's/^\/\/ @version[[:space:]]*//')"
+          version=$(grep -m1 '^// @version' /tmp/topking-live.js | sed 's/^\/\/ @version[[:space:]]*//')
           if node --check /tmp/topking-live.js >/dev/null 2>&1; then syntax=ok; else syntax=bad; fi
-          if grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /tmp/topking-live.js; then revision=stage1-20260919-r4; else revision=missing; fi
-          if grep -q "GROWTH_HAMSTER_BUDGET_ID.*cur_cap" /tmp/topking-live.js; then hamsters=cur_cap; else hamsters=wrong; fi
-          if grep -q "GROWTH_GENERAL_BUDGET_ID.*item_pit_token" /tmp/topking-live.js; then generals=item_pit_token; else generals=wrong; fi
-          live_sha="$(sha256sum /tmp/topking-live.js | awk '{print $1}')"
+          if grep -Fq "HK_MUTATION_GATE_REV = 'stage1-20260919-r4'" /tmp/topking-live.js; then revision=stage1-20260919-r4; else revision=missing; fi
+          if grep -Fq "GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'" /tmp/topking-live.js; then hamsters=cur_cap; else hamsters=wrong; fi
+          if grep -Fq "GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'" /tmp/topking-live.js; then generals=item_pit_token; else generals=wrong; fi
+          guards=missing
+          if grep -Fq 'growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID])' /tmp/topking-live.js && \
+             grep -Fq 'growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])' /tmp/topking-live.js && \
+             grep -Fq 'growthGeneralCostSafe(costs)' /tmp/topking-live.js; then guards=strict; fi
+          no_progress=missing
+          if grep -Fq 'growth-general-no-progress' /tmp/topking-live.js && grep -Fq 'growth-hamster-no-progress' /tmp/topking-live.js; then no_progress=2; fi
+          live_sha=$(sha256sum /tmp/topking-live.js | awk '{print $1}')
           {
             echo "version=$version"
             echo "revision=$revision"
             echo "hamsters=$hamsters"
             echo "generals=$generals"
+            echo "growth_guards=$guards"
+            echo "no_progress_limit=$no_progress"
             echo "syntax=$syntax"
             echo "sha256=$live_sha"
-          } > audit/hk-stage1-live-probe.txt
+          } > /tmp/hk-stage1-live-probe.txt
 
-          grep -nE -C 45 'growthRunGeneralsCore|growthRunLevelsCore|growthRunRarityCore|growthPitCost|growthCapCost|growthHamsterCostSafe|growthHamsterLevelCostSafe|player_hamster_generals|lvlUp/view|fast_type' /tmp/topking-live.js > audit/hk-growth-live-source.txt || true
+          grep -nE -C 30 'growthRunGeneralsCore|growthRunLevelsCore|growthPitCost|growthCapCost|growthCostOnlyUses|growthGeneralCostSafe|growth-general-no-progress|growth-hamster-no-progress|HK_MUTATION_GATE_REV|async function apiJsonCore|const hkMutationGate' \
+            /tmp/topking-live.js > /tmp/hk-growth-live-source.txt || true
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-stage1-live-probe.txt audit/hk-growth-live-source.txt
-          if ! git diff --cached --quiet; then
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p audit
+            cp /tmp/hk-stage1-live-probe.txt audit/hk-stage1-live-probe.txt
+            cp /tmp/hk-growth-live-source.txt audit/hk-growth-live-source.txt
+            git add audit/hk-stage1-live-probe.txt audit/hk-growth-live-source.txt
+            if git diff --cached --quiet; then pushed=1; break; fi
             git commit -m "Probe current TopKing Stage 1 live"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = "1"
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/topking-live.js
+        run: rm -f "$HOME/.ssh/topking" /tmp/topking-live.js /tmp/hk-stage1-live-probe.txt /tmp/hk-growth-live-source.txt
