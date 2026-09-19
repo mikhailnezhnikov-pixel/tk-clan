@@ -8,6 +8,7 @@ name: Export TopKing bookmarklet sources
 # inspect current live before clean 1.13 deploy
 # diagnose current live before 1.13
 # verify live 1.13.0
+# inspect cabinet map permissions
 
 on:
   push:
