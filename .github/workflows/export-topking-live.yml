@@ -55,6 +55,39 @@ jobs:
             base64 -d deploy/topking/server-maps-access.patch.gz.b64 | gzip -d > /tmp/server-maps-access.patch
             patch --fuzz=0 live/server.py < /tmp/server-maps-access.patch
           fi
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('live/server.py')
+          text=path.read_text()
+
+          # A maps manager always has viewing access, even if maps_access was
+          # accidentally cleared separately.
+          text=text.replace(
+              'if not public and (not member or not member.get("maps_access")):',
+              'if not public and (not member or not (member.get("maps_access") or member.get("maps_manage"))):'
+          )
+          text=text.replace(
+              'def cabinet_maps(member: dict) -> dict:\n    if not member.get("maps_access"):',
+              'def cabinet_maps(member: dict) -> dict:\n    if not (member.get("maps_access") or member.get("maps_manage")):'
+          )
+          text=text.replace(
+              '    return dict(row) if row and row["active"] else None',
+              '    if not row or not row["active"]:\n        return None\n    member = dict(row)\n    if member.get("maps_manage"):\n        member["maps_access"] = 1\n    return member'
+          )
+
+          # The viewer must use the current DB-backed 235-map dataset.
+          text=text.replace(
+              '            if not member.get("maps_access"):\n                self.send_cabinet_json(HTTPStatus.FORBIDDEN, {"error": "maps_access_denied"}); return\n            key = parse_qs(parsed.query).get("key", [""])[0].strip()\n            try:\n                self.send_cabinet_json(HTTPStatus.OK, private_hk_map_data(key))',
+              '            if not (member.get("maps_access") or member.get("maps_manage")):\n                self.send_cabinet_json(HTTPStatus.FORBIDDEN, {"error": "maps_access_denied"}); return\n            key = parse_qs(parsed.query).get("key", [""])[0].strip()\n            try:\n                self.send_cabinet_json(HTTPStatus.OK, hk_map_data(key, member=member))'
+          )
+          text=text.replace(
+              '                self.send_public_json(HTTPStatus.OK, public_hk_map_data(key))',
+              '                self.send_public_json(HTTPStatus.OK, hk_map_data(key, public=True))'
+          )
+
+          path.write_text(text)
+          PY
+
           python3 -m py_compile live/server.py
           python3 live/server.py --self-test
 
@@ -98,6 +131,7 @@ jobs:
               echo;
               curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/public/maps || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/public/maps;
               echo;
+              python3 -c "import sys; sys.path.insert(0,'/opt/hamsterking-license'); import server; import sqlite3; db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db'); db.row_factory=sqlite3.Row; m=db.execute('select map_key from hk_maps_catalog order by map_key limit 1').fetchone(); mgr=db.execute('select maps_access,maps_manage from clan_members where active=1 and maps_manage=1 limit 1').fetchone(); assert m and mgr; d=server.hk_map_data(m['map_key'], member=dict(mgr)); assert d.get('ok') and d.get('point_count',0)>=0; print('PRIVATE_MANAGER_MAP_OK',m['map_key'],d.get('point_count',0))";
               echo MAPS_BACKEND_DEPLOY_OK'
 
       - name: Upload sources
