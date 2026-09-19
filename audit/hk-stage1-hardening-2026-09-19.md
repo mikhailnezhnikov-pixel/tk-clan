@@ -42,9 +42,17 @@ For a mutation:
 That is a self-deadlock.
 
 ## Hardening applied
-Commits:
+Key commits:
 - `c04c143e105229d76854cf05fbb7918a12ef42a5` — keep internal retries inside `apiJsonCore`; add build-time currency/progress/timeout invariants.
 - `9600a915a17ca56fc9ac497d17d34e3d34a2ebf2` — make diagnostics non-fatal and remove cross-module pause coupling from the serialization gate.
+- `19168b9545a7b403c65818619b9d6afeb6164c5e` — serialize Stage 1 deployments with GitHub Actions concurrency.
+- `7f8991e651ee2c0fa65956f9ee28d35dbe8e1286` — add mutation-gate deadlock/FIFO/diagnostic regression test.
+- `fbad45fdcdad0a08146c9575f1fafc5d4cb9a5ea` + follow-up fixes — make the patch repair either verified 1.14.4 or an existing Stage 1 1.15.0.
+- `ea3f23e5ba1affa12e09f8915d53c0a8fba9a6f8` — rebuild the deployment workflow cleanly after detecting a malformed intermediate edit.
+- `cb4ece899cd0db0c9179d5a15e3e0cb441e6f6bf` — add synthetic 1.14.4→1.15→1.15 fixture/idempotency regression test.
+- `830bf19fe349fac61b33eda883f81efa0efddc53` — normalize gate block boundaries for byte-stable idempotency.
+
+Current Stage 1 revision marker: `stage1-20260919-r4`.
 
 Current Stage 1 patch now:
 - refuses to build unless its base is verified 1.14.4;
@@ -56,7 +64,14 @@ Current Stage 1 patch now:
 - serializes state-changing requests FIFO;
 - does not let a paused Growth/Today runner freeze unrelated modules;
 - does not let diagnostic logging failure strand the FIFO queue;
-- leaves read-only API requests outside the mutation queue.
+- leaves read-only API requests outside the mutation queue;
+- can repair an already-installed older 1.15.0 gate in place;
+- runs a deadlock/FIFO regression test before patching;
+- the deployment workflow also runs a synthetic patch idempotency test;
+- GitHub Actions deployment uses a single concurrency group with `cancel-in-progress: true` so an older Stage 1 run cannot intentionally remain active beside the latest run.
+
+## Verification status
+Repository-side hardening and regression coverage are in place. The connector used for this audit does not expose usable GitHub Actions run status for these commits, so do not claim the current live server is verified 1.15.0 until a live export / workflow result confirms revision `stage1-20260919-r4`. The verified pre-Stage-1 baseline remains live audit 1.14.4.
 
 ## Stage 1 is NOT complete yet
 Do not mark the global runner migration complete until these are implemented and verified:
