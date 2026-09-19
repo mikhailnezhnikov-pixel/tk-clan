@@ -109,6 +109,19 @@ jobs:
           print(f'CATALOG_READY total={before} open={ready} published={published}')
           PY
 
+          cat > /tmp/verify-hk-map.py <<'PY'
+          import sys
+          sys.path.insert(0, '/opt/hamsterking-license')
+          import server
+          maps=server._load_private_hk_maps()
+          if len(maps) != 235:
+              raise SystemExit(f'private map count mismatch: {len(maps)}')
+          data=server.private_hk_map_data('hk_newyork2332')
+          if len(data.get('points') or []) < 1000:
+              raise SystemExit('new york map point count too small')
+          print('MAP_DATA_OK', len(maps), data['title'], len(data['points']))
+          PY
+
       - name: Deploy backend and connect all Open links
         shell: bash
         run: |
@@ -117,6 +130,8 @@ jobs:
             /tmp/server.py root@89.125.1.71:/tmp/server-private-maps.py
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             /tmp/set-hk-map-open.py root@89.125.1.71:/tmp/set-hk-map-open.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/verify-hk-map.py root@89.125.1.71:/tmp/verify-hk-map.py
 
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
@@ -127,15 +142,15 @@ jobs:
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
             sleep 2
-            PYTHONPATH=/opt/hamsterking-license python3 -c "import server; d=server.private_hk_map_data('hk_newyork2332'); assert len(d['points'])>1000; print('MAP_DATA_OK', d['title'], len(d['points']))"
+            python3 /tmp/verify-hk-map.py
             (curl -fsS http://127.0.0.1:8787/health || curl -fsS http://127.0.0.1:3188/health)
             echo
             (curl -fsS http://127.0.0.1:8787/api/v1/public/maps || curl -fsS http://127.0.0.1:3188/api/v1/public/maps)
             echo
-            rm -f /tmp/server-private-maps.py /tmp/set-hk-map-open.py
+            rm -f /tmp/server-private-maps.py /tmp/set-hk-map-open.py /tmp/verify-hk-map.py
             echo PRIVATE_MAP_BACKEND_OK
           '
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/hk-maps-payload.cms /tmp/server.py /tmp/server-map-data.patch /tmp/server-map-data-v3.patch /tmp/set-hk-map-open.py
+        run: rm -f "$HOME/.ssh/topking" /tmp/hk-maps-payload.cms /tmp/server.py /tmp/server-map-data.patch /tmp/server-map-data-v3.patch /tmp/set-hk-map-open.py /tmp/verify-hk-map.py
