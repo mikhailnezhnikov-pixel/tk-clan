@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; connect-src https://hk-license.89.125.1.71.sslip.io; frame-src https://oauth.telegram.org https://telegram.org https://t.me; object-src 'none'; base-uri 'self'">
   <title>Личный кабинет клана — Top King</title>
   <meta name="description" content="Закрытый личный кабинет участников клана Top King.">
-  <link rel="stylesheet" href="../assets/public.css?v=20260919-8">
+  <link rel="stylesheet" href="../assets/public.css?v=20260919-9">
   <link rel="icon" href="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png">
   <style>
     .cabinet-head{padding-bottom:24px}
@@ -573,20 +573,33 @@
   const BOOKMARKLET="javascript:(()=>{const s=document.createElement('script');s.src='https://tk-clan.ru/hk/loader.js?v='+Date.now();document.documentElement.appendChild(s)})()";
   const KOKKARAS_BOOKMARKLET="javascript:(()=>{s=document.createElement('script');s.src='https://kokkaras.com/hk_maps/panel.js?v='+Date.now();document.documentElement.appendChild(s)})()";
 
+  function isIOSChromeBrowser(){
+    const ua=navigator.userAgent||'';
+    return /iPhone|iPad|iPod/i.test(ua)&&/CriOS/i.test(ua);
+  }
+
   function renderInstallSteps(boxId,name){
     const box=$(boxId);
     const list=box?.querySelector('[data-install-steps]');
     if(!box||!list)return;
     const ua=navigator.userAgent||'';
     const isiOS=/iPhone|iPad|iPod/i.test(ua);
+    const isIOSChrome=isIOSChromeBrowser();
     const isAndroid=/Android/i.test(ua);
     let steps;
-    if(isiOS){
+    if(isIOSChrome){
       steps=[
-        'В Chrome нажмите <b>⋯</b> → <b>Добавить в закладки</b> и назовите её <b>'+name+'</b>.',
-        'Откройте <b>⋯ → Закладки</b>, удерживайте '+name+' → <b>Изменить</b>.',
-        'Удалите старый URL и вставьте скопированную команду.',
-        'Откройте <b>app.hamsterking.games</b> и нажмите закладку <b>'+name+'</b>.'
+        '<b>Chrome на iPhone не запускает такие javascript-закладки.</b>',
+        'Откройте <b>tk-clan.ru</b> в <b>Safari</b> и войдите в личный кабинет.',
+        'Во вкладке «Установка» нажмите <b>Установить '+name+'</b> и создайте закладку по инструкции Safari.',
+        'Игру <b>app.hamsterking.games</b> тоже откройте в Safari и запускайте '+name+' из закладок.'
+      ];
+    }else if(isiOS){
+      steps=[
+        'В Safari создайте обычную закладку и назовите её <b>'+name+'</b>.',
+        'Откройте список закладок → <b>Изменить</b> → выберите '+name+'.',
+        'Удалите старый адрес и вставьте скопированную команду.',
+        'Откройте <b>app.hamsterking.games</b> в Safari и нажмите закладку <b>'+name+'</b>.'
       ];
     }else if(isAndroid){
       steps=[
@@ -624,6 +637,12 @@
   document.addEventListener('click',async event=>{
     if(event.target.closest('#show-bookmarklet')){
       setCabTab('install');
+      if(isIOSChromeBrowser()){
+        renderInstallSteps('hk-install-quick','HK');
+        setMessage('bookmarklet-message','На iPhone Chrome не запускает HK из javascript-закладки. Откройте кабинет и игру в Safari.','bad');
+        setTimeout(()=>document.getElementById('hk-install-quick')?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+        return;
+      }
       try{
         await navigator.clipboard.writeText(BOOKMARKLET);
         renderInstallSteps('hk-install-quick','HK');
@@ -637,6 +656,11 @@
     }
     if(event.target.closest('#bookmarklet-link')){
       event.preventDefault();
+      if(isIOSChromeBrowser()){
+        renderInstallSteps('hk-install-quick','HK');
+        setMessage('bookmarklet-message','Chrome на iPhone не поддерживает запуск этой закладки. Используйте Safari.','bad');
+        return;
+      }
       try{
         await navigator.clipboard.writeText(BOOKMARKLET);
         renderInstallSteps('hk-install-quick','HK');
@@ -656,6 +680,11 @@
     }
     if(event.target.closest('#kokkaras-bookmarklet-link')){
       event.preventDefault();
+      if(isIOSChromeBrowser()){
+        renderInstallSteps('kokkaras-install-quick','Kokkaras');
+        setMessage('kokkaras-bookmarklet-message','Chrome на iPhone не поддерживает запуск этой закладки. Используйте Safari.','bad');
+        return;
+      }
       try{
         await navigator.clipboard.writeText(KOKKARAS_BOOKMARKLET);
         renderInstallSteps('kokkaras-install-quick','Kokkaras');
@@ -1151,6 +1180,6 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/site-nav.js?v=20260919-8"></script>
+<script src="../assets/site-nav.js?v=20260919-9"></script>
 </body>
 </html>
