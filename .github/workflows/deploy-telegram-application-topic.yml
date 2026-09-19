@@ -1,0 +1,71 @@
+name: Deploy Telegram applications topic
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_telegram_application_topic.py'
+      - '.github/workflows/deploy-telegram-application-topic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch and patch live backend
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          python3 deploy/topking/patch_telegram_application_topic.py /tmp/server.py
+          grep -q 'TELEGRAM_APPLICATION_TOPIC_V1' /tmp/server.py
+          grep -q '/setapplications' /tmp/server.py
+          grep -q 'message_thread_id' /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+
+      - name: Deploy backend
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/hamsterking-server.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            python3 -m py_compile /tmp/hamsterking-server.py
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.$stamp"
+            install -m 0644 /tmp/hamsterking-server.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+            grep -q "TELEGRAM_APPLICATION_TOPIC_V1" /opt/hamsterking-license/server.py
+            grep -q "/setapplications" /opt/hamsterking-license/server.py
+            python3 - <<'"'"'PY'"'"'
+            import sqlite3
+            db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
+            db.execute("""CREATE TABLE IF NOT EXISTS telegram_delivery_targets (
+                kind TEXT PRIMARY KEY,
+                chat_id TEXT NOT NULL,
+                thread_id INTEGER,
+                updated_by TEXT NOT NULL DEFAULT '',
+                updated_at INTEGER NOT NULL
+            )""")
+            print("TELEGRAM_APPLICATION_TOPIC_BACKEND_OK")
+            PY
+            curl -fsS --max-time 10 http://127.0.0.1:3188/health
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py
