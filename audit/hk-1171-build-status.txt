@@ -2,17 +2,11 @@ source_live=1.17.0
 target=1.17.1
 revision=bureau-resources-live-20260920-r1
 mode=build-only
-status=FAIL
-exit_code=1
+status=PASS
+syntax=ok
+idempotent=yes
 deployed=no
 --- log ---
 BUREAU_RESOURCES_LIVE_1171_OK
-/tmp/HamsterKingMobile.user.js:4784
-${[...new Set(projectedProblems)].join('
-                                       ^
-
-SyntaxError: Invalid or unexpected token
-    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
-    at checkSyntax (node:internal/main/check_syntax:78:3)
-
-Node.js v22.23.2
+BUREAU_RESOURCES_LIVE_1171_OK
+6767915e46703b4c08426886d1be24ebfeb7b37755a62953bb90798df7f6f49c  /tmp/HamsterKingMobile.user.js
