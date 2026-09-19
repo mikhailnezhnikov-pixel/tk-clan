@@ -1,0 +1,1883 @@
+# Preserved 1.13.0 Boss source
+
+98-  function setHealth(name, ok, detail = '') {
+99-    if (!healthState[name]) return;
+100-    healthState[name] = {ok:!!ok, detail:clean(detail || (ok ? 'OK' : 'ошибка'))};
+101-    renderHealth();
+102-  }
+103-  function renderHealth() {
+104-    if (!root) return;
+105-    for (const name of ['game','auth','license','server']) {
+106-      const item = root.querySelector(`[data-health="${name}"]`);
+107-      if (!item) continue;
+108-      const state = healthState[name];
+109-      item.classList.toggle('ok', !!state.ok);
+110-      item.classList.toggle('bad', !state.ok && state.detail !== 'ожидание');
+111-      item.title = state.detail || '';
+112-      const detail = item.querySelector('small');
+113-      if (detail) detail.textContent = state.ok ? either('OK','OK') : state.detail === 'ожидание' ? either('ожидание','waiting') : either('проверить','check');
+114-    }
+115-  }
+116-  function diagnosticEnvironment() {
+117-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+118-    return {
+119-      page:{origin:location.origin, pathname:location.pathname},
+120-      browser:{userAgent:navigator.userAgent, language:navigator.language, onLine:navigator.onLine},
+121-      viewport:{width:innerWidth, height:innerHeight, dpr:devicePixelRatio || 1},
+122-      document:{visibilityState:document.visibilityState, readyState:document.readyState},
+123-      timezone:Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+124-      connection:connection ? {effectiveType:connection.effectiveType || '', downlink:connection.downlink ?? null, rtt:connection.rtt ?? null, saveData:!!connection.saveData} : null
+125-    };
+126-  }
+127-  function downloadDiagnosticReport() {
+128-    const currentBearer = String(apiHeaders?.Authorization || '').replace(/^Bearer\s+/i,'');
+129-    const report = {
+130-      schema:'topking-hk-diagnostic-v1', version:VERSION, startedAt:diagnostic.startedAt, exportedAt:new Date().toISOString(),
+131-      environment:diagnosticEnvironment(), health:healthState,
+132-      gameAuth:{present:!!currentBearer, fingerprint:currentBearer ? diagnosticFingerprint(currentBearer) : '', expiresAt:jwtExpiration(currentBearer) || null},
+133-      license:{checked:!!licenseState.checked, allowed:!!licenseState.allowed, playerId:clean(licenseState.playerId || ''), tokenPresent:!!licenseState.token},
+134-      stateStore:hkStateStore?.exportSummary?.() || null,
+135-      runner:{...hkRunner.state},
+136-      events:diagnostic.events
+137-    };
+138-    const blob = new Blob([JSON.stringify(report,null,2)], {type:'application/json;charset=utf-8'});
+139-    const url = URL.createObjectURL(blob);
+140-    const link = document.createElement('a');
+141-    link.href = url; link.download = `HK_diagnostic_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+142-    document.body.appendChild(link); link.click(); link.remove();
+143-    setTimeout(() => URL.revokeObjectURL(url), 1200);
+144-    recordDiagnostic('diagnostic-exported');
+145-  }
+146-  function showVisualNotice(title, details = '') {
+147-    const host = root || document.body || document.documentElement;
+148-    if (!host) return;
+149-    let notice = host.querySelector?.('#hk-visual-notice');
+150-    if (!notice) {
+151-      notice = document.createElement('div');
+152-      notice.id = 'hk-visual-notice';
+153-      notice.style.cssText = 'position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:2147483647;width:min(440px,calc(100vw - 28px));box-sizing:border-box;padding:16px 48px 16px 18px;border:2px solid #42d69b;border-radius:16px;background:#10271f;color:#f5fff9;box-shadow:0 14px 40px #000b;font:15px/1.35 Arial,sans-serif';
+154-      host.appendChild(notice);
+155-    }
+156-    clearTimeout(notice.__hkTimer);
+157-    notice.innerHTML = `<button type="button" aria-label="Close" style="position:absolute;right:9px;top:8px;width:32px;height:32px;border:0;border-radius:9px;background:#ffffff1c;color:#fff;font-size:22px">×</button><b style="display:block;font-size:18px;color:#6ee7a8">✓ ${escapeHtml(title)}</b>${details ? `<span style="display:block;margin-top:5px;color:#d7e7df">${escapeHtml(details)}</span>` : ''}`;
+158-    notice.querySelector('button').onclick = () => notice.remove();
+159-    notice.__hkTimer = setTimeout(() => notice.remove(), 15000);
+160-    try { navigator.vibrate?.([120, 60, 120]); } catch (_) {}
+161-  }
+162-  const load = () => {
+163-    try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (_) { return {}; }
+164-  };
+165-  const save = patch => {
+166-    const userKeys = Object.keys(patch || {}).filter(key => !['deviceId', 'watermarkCode', '_settingsUpdatedAt'].includes(key));
+167-    const next = {...load(), ...patch, ...(userKeys.length ? {_settingsUpdatedAt:Date.now()} : {})};
+168-    localStorage.setItem(STORE, JSON.stringify(next));
+169-    try { if (userKeys.length) queueSettingsSync(next); } catch (_) {}
+170-    return next;
+171-  };
+172-
+173-  let language = load().language === 'en' ? 'en' : 'ru';
+174-  const TEXT = {
+175-    ru: {
+176-      daily:'Сегодня', pit:'Яма', businesses:'Бизнесы', clan:'Клан', fair:'Ярмарка', shop:'Магазин', recipes:'Рецепты', maps:'Карты', navToday:'Сегодня', navBattles:'Бои', navCity:'Город', navBusiness:'Бизнес', navGrowth:'Развитие', navTrade:'Торговля', navClan:'Клан', navTodayHint:'задачи и награды', navBattlesHint:'ямы и бои', navCityHint:'карты и здания', navBusinessHint:'карты и рецепты', navGrowthHint:'хомяки и генералы', navTradeHint:'ярмарка и магазин', navClanHint:'навыки и войны', checkingLicense:'Проверяю лицензию…',
+177-      dailyTasks:'Сегодня', dailyRefresh:'Только проверить', dailyRun:'Выполнить выбранное', dailyAdRun:'Просмотреть доступную рекламу', dailyClear:'Очистить журнал', dailyOverall:'Общий прогресс', dailyCurrent:'Текущий этап', dailyAds:'Реклама', dailyClan:'Покупки клана', dailyInvest:'Инвестиционные предложения', dailyReady:'Готово к запуску', dailyNoShop:'Сначала откройте в игре магазин и нажмите «Только проверить».',
+178:      dailyBalances:'Балансы', dailyStores:'Доступные покупки', dailyFreeActions:'Бесплатные действия', dailyRegularActions:'Регулярный магазин', dailyOrdinaryActions:'Обычный магазин', dailyClanActions:'Личные лоты клана', dailyInvestActions:'Инвест-сделки', dailyPit:'Состояние Ямы', pitNormal:'Обычная Яма', pitBoss:'Яма боссов', pitGang:'Яма банд', pitAvailableNow:'доступно сейчас', pitLimit:'лимит', pitDiamondTopUp:'догон за 💎', pitMultipleReady:'уже кратно 5', pitOpenOnce:'Откройте этот раздел Ямы один раз', pitRun:'Запускать', pitUseMoves:'Отходить', pitMovePlan:'Оптимально', pitNoMoves:'не выбрано', dailyConsigliere:'Консильери', dailyPlan:'План выполнения', dailyBudget:'Единый бюджет', dailyReserve:'Оставить минимум', dailyLimit:'Лимит в сутки', weeklyLimit:'Лимит в неделю', spentToday:'Сегодня потрачено', spentWeek:'За неделю', allowPremium:'Разрешить алмазы', exportSettings:'Экспорт настроек', importSettings:'Восстановить настройки', noLimit:'Без лимита', selectedActions:'Выбрано действий: {n}', exactPlan:'Проверьте точный план расходов перед запуском.',
+179-      targetRound:'Дойти до раунда', delay:'Пауза, секунд', activationTokens:'Жетоны на активацию', pitCollectOnly:'Только собирать данные — не нажимать бой', pitForecast:'Прогноз до цели', pitObserved:'Сохранено уровней: {n}', pitPredictedPower:'Прогноз силы на раунде {round}: {power}', pitTokenBudget:'Максимальный разрешённый расход: {n} жетонов', pitComparison:'За запуск: раунд {before} → {after}, сила {powerBefore} → {powerAfter}', pitPowerTable:'Сохранённая сила уровней',
+180-      restoreTokens:'Жетоны на восстановление', allowTokens:'Разрешить жетоны', round:'Раунд', startBattle:'Запустить автобой',
+181-      stop:'Остановить', exportCsv:'Скачать силу уровней CSV', refreshGame:'Обновить игру', waiting:'Ожидание подключения…',
+182-      savedSets:'Сохранённые наборы', saveNew:'Сохранить новый', delete:'Удалить', removeAll:'Достать: все тиры',
+183-      emptySlots:'Пустые слоты', removeTier:'Достать: T{n}', selectAll:'Выбрать все', insertAll:'Вставить: все тиры',
+184-      insertTier:'Вставить: T{n}', loadFair:'Считать ярмарку', chooseFair:'Выберите ярмарку', readFirst:'Сначала считайте данные',
+185-      searchLot:'Поиск лота', choosePurchases:'Выберите покупки', selectedLots:'Выбрано лотов: {n}', totalPurchases:'Всего покупок',
+186-      maxRerolls:'Макс. прокруток', allowDiamonds:'Разрешить алмазы на прокрутки и покупки', findBuy:'Найти и выкупить',
+187-      fairWarning:'Лоты за кристаллы отмечены 💎. Перед запуском показывается максимальный расход.', version:'Версия {v}',
+188-      connectedSlots:'Подключено · слотов {n}', chooseBuildingSlots:'Выбрать слоты в зданиях', insertFromStock:'Вставить со склада',
+189-      emptySlot:'Пустой слот', influence:'Влияние {n}', inStock:'На складе {n}', noBusinesses:'Нет бизнесов этого тира',
+190-      buildingSlot:'Здание {building} · слот {slot}', selectedPlan:'Выбрано: слотов {remove} · вставить {insert}', execute:'Выполнить перестановку',
+191-      businessRegular:'Обычная перестановка', businessOptimizer:'Оптимизатор', optimizer:'Умный оптимизатор', optimizerGoal:'Цель', optimizerPit:'Сила в Яме', optimizerIncome:'Пассивный доход', optimizerEnergy:'Энергия', optimizerBuildings:'Лимит зданий', optimizerRemoveTiers:'Какие тиры можно достать', optimizerInsertTiers:'Какие тиры можно вставить', optimizerReplaceable:'Какие установленные бизнесы можно заменять', optimizerReplaceHint:'Снятая галочка защищает все экземпляры этого бизнеса', optimizerStockAllowed:'Какие складские бизнесы можно вставить', optimizerStockHint:'Выбор доступен вручную для всех тиров', optimizerCalculate:'Рассчитать лучший состав', optimizerApply:'Перенести в план', optimizerRestore:'Вернуть сохранённую схему', optimizerNoPlan:'Сначала считайте бизнесы и рассчитайте состав.', optimizerChanges:'Замен: {n}', optimizerManagers:'Менеджеры: {busy}/{max}', optimizerSafe:'Проверка пройдена', optimizerBlocked:'Запуск заблокирован', optimizerBefore:'Было', optimizerAfter:'Станет', optimizerDifference:'Изменение бонусов',
+192-      bonusAnalyzer:'Анализатор бонусов', bonusSources:'Источники бонусов', bonusDuplicates:'одинаковых источников: {n}', bonusActiveCopies:'активно: {active} / лимит: {limit}', bonusNoLimit:'лимит не указан', bonusBestNext:'Лучший следующий бизнес', bonusNoCandidate:'Подходящего бизнеса на складе нет', bonusLimited:'Лимит активных экземпляров уже достигнут', bonusZeroEffect:'Эффект не распознан',
+193-      all:'Все', blocked:'заблокировано', noLots:'Лоты не найдены', noFairs:'Нет ярмарок с доступными лотами',
+194-      allowedCells:'Разрешённые слоты', cell:'Ячейка {n}', selectCellsHint:'Выберите, из каких групп слотов разрешён выкуп',
+195-      regularSlots:'Обычные', vipSlots:'VIP', yes:'ДА', no:'НЕТ', noCells:'Для выбранного товара отключены и обычные, и VIP-слоты', fairSavedSettings:'Сохранённые настройки',
+196-      fairExactLots:'Искать комбинации до', fairBonusLots:'Выкупить бонусные лоты',
+197-      saveSetting:'Сохранить настройку', updateSetting:'Обновить', settingName:'Название настройки:', settingSaved:'Настройка «{name}» сохранена',
+198-      settingLoaded:'Настройка «{name}» загружена', deleteSetting:'Удалить настройку «{name}»?',
+199-      regularShop:'Регулярный магазин', ordinaryShop:'Обычный магазин', clanShop:'Магазин клана', readShop:'Считать магазин', selectAvailable:'Выбрать доступные', shopReadFirst:'Сначала считайте магазин',
+200-      remaining:'Осталось {n}', unlimited:'Без лимита', boughtOut:'Выкуплено', selectedPurchases:'Выбрано покупок: {n}', maxCost:'Максимальная стоимость',
+201-      balance:'Баланс', willSpend:'Расход', balanceAfter:'Останется',
+202-      buySelected:'Выкупить выбранное', shopWarning:'Лоты за кристаллы доступны только в ярмарке и магазине клана и отмечены 💎. Внешняя оплата заблокирована.',
+203-      resourcesShop:'Ресурсы', renovationShop:'Реновация', investShop:'Инвест-сделки', personalLots:'Личные лоты', sharedLots:'Общие лоты', quantity:'Количество',
+204-      recipeSpin:'Каталог', recipeDatabase:'Общая база', projectBureau:'Проектное бюро', readRecipes:'Считать каталог', recipeAttempts:'Количество прокруток',
+205-      spinRecipes:'Прокрутить каталог', currentRecipePlans:'Сейчас в каталоге', recipeCost:'Цена одной прокрутки',
+206-      loadRecipeDatabase:'Обновить общую базу', uniqueRecipes:'Уникальных бизнес-планов: {n}', uniqueRecipeResults:'Итоговых бизнесов: {results} · рецептов: {plans}', recipeWays:'Вариантов получения: {n}', recipeReadFirst:'Сначала считайте каталог',
+207-      recipeDatabaseEmpty:'В общей базе пока нет бизнес-планов', recipeSharedHint:'Каждый увиденный бизнес-план добавляется в общую базу один раз. Повторные выпадения не засчитываются.',
+208-      readBureau:'Считать бизнесы', bureauSize:'Бизнесов в проекте', bureauAttempts:'Количество созданий', bureauSelected:'Выбрано бизнесов: {n} / {max}',
+209-      createBusinessPlan:'Создать бизнес-план', bureauHint:'Действия Проектного бюро не добавляются в общую базу и не сохраняются.',
+210-      bureauTier:'Тир бизнеса', bureauAllTiers:'Все тиры', mapIndex:'Исследованные карты', readMapIndex:'Обновить индекс', scanMyMaps:'Исследовать мои районы',
+211-      donation:'Пожертвование', mapSearch:'Город, район или координаты', mapOpen:'Открыть', mapProgress:'Прогресс', mapRating:'Рейтинг', mapBuildings:'Здания', mapUnexplored:'Не исследовано', mapRooms:'Алмазные комнаты',
+212-      myMaps:'Мои карты', uploadedMaps:'Загруженные карты', scanAccountMaps:'Считать карты аккаунта', refreshUploadedMaps:'Обновить загруженные карты'
+213-    },
+214-    en: {
+215-      daily:'Today', pit:'Pit', businesses:'Businesses', clan:'Clan', fair:'Fair', shop:'Shop', recipes:'Recipes', maps:'Maps', navToday:'Today', navBattles:'Battles', navCity:'City', navBusiness:'Business', navGrowth:'Growth', navTrade:'Trade', navClan:'Clan', navTodayHint:'tasks and rewards', navBattlesHint:'pits and battles', navCityHint:'maps and buildings', navBusinessHint:'cards and recipes', navGrowthHint:'hamsters and generals', navTradeHint:'fair and shop', navClanHint:'skills and wars', checkingLicense:'Checking license…',
+216-      dailyTasks:'Today', dailyRefresh:'Check only', dailyRun:'Run selected', dailyAdRun:'Watch available ad', dailyClear:'Clear log', dailyOverall:'Overall progress', dailyCurrent:'Current stage', dailyAds:'Ads', dailyClan:'Clan purchases', dailyInvest:'Investment offers', dailyReady:'Ready to start', dailyNoShop:'Open the in-game shop first, then tap “Check only”.',
+217:      dailyBalances:'Balances', dailyStores:'Available purchases', dailyFreeActions:'Free actions', dailyRegularActions:'Regular shop', dailyOrdinaryActions:'Standard shop', dailyClanActions:'Personal clan lots', dailyInvestActions:'Invest deals', dailyPit:'Pit status', pitNormal:'Normal Pit', pitBoss:'Boss Pit', pitGang:'Gang Pit', pitAvailableNow:'available now', pitLimit:'limit', pitDiamondTopUp:'diamond top-up', pitMultipleReady:'already divisible by 5', pitOpenOnce:'Open this Pit section once', pitRun:'Run', pitUseMoves:'Use moves', pitMovePlan:'Optimal', pitNoMoves:'not selected', dailyConsigliere:'Consigliere', dailyPlan:'Execution plan', dailyBudget:'Unified budget', dailyReserve:'Minimum balance', dailyLimit:'Daily limit', weeklyLimit:'Weekly limit', spentToday:'Spent today', spentWeek:'Spent this week', allowPremium:'Allow diamonds', exportSettings:'Export settings', importSettings:'Restore settings', noLimit:'No limit', selectedActions:'Selected actions: {n}', exactPlan:'Review the exact spending plan before running.',
+218-      targetRound:'Reach round', delay:'Delay, seconds', activationTokens:'Activation tokens', pitCollectOnly:'Collect data only — never click battle', pitForecast:'Forecast to target', pitObserved:'Saved levels: {n}', pitPredictedPower:'Predicted power at round {round}: {power}', pitTokenBudget:'Maximum allowed spend: {n} tokens', pitComparison:'This run: round {before} → {after}, power {powerBefore} → {powerAfter}', pitPowerTable:'Saved level powers', restoreTokens:'Recovery tokens',
+219-      allowTokens:'Allow tokens', round:'Round', startBattle:'Start auto battle', stop:'Stop', exportCsv:'Download level power CSV',
+220-      refreshGame:'Refresh game', waiting:'Waiting for connection…', savedSets:'Saved sets', saveNew:'Save new', delete:'Delete',
+221-      removeAll:'Remove: all tiers', emptySlots:'Empty slots', removeTier:'Remove: T{n}', selectAll:'Select all',
+222-      insertAll:'Insert: all tiers', insertTier:'Insert: T{n}', loadFair:'Read fair', chooseFair:'Choose a fair',
+223-      readFirst:'Read the data first', searchLot:'Search lots', choosePurchases:'Choose purchases', selectedLots:'Selected lots: {n}',
+224-      totalPurchases:'Total purchases', maxRerolls:'Max rerolls', allowDiamonds:'Allow diamonds for rerolls and purchases',
+225-      findBuy:'Find and buy', fairWarning:'Crystal lots are marked 💎. The maximum cost is shown before starting.',
+226-      version:'Version {v}', connectedSlots:'Connected · slots {n}', chooseBuildingSlots:'Choose building slots', insertFromStock:'Insert from stock',
+227-      emptySlot:'Empty slot', influence:'Influence {n}', inStock:'In stock {n}', noBusinesses:'No businesses of this tier',
+228-      buildingSlot:'Building {building} · slot {slot}', selectedPlan:'Selected: slots {remove} · insert {insert}', execute:'Run rearrangement',
+229-      businessRegular:'Manual rearrangement', businessOptimizer:'Optimizer', optimizer:'Smart optimizer', optimizerGoal:'Goal', optimizerPit:'Pit power', optimizerIncome:'Passive income', optimizerEnergy:'Energy', optimizerBuildings:'Building limit', optimizerRemoveTiers:'Tiers allowed to be removed', optimizerInsertTiers:'Tiers allowed to be inserted', optimizerReplaceable:'Installed businesses allowed to be replaced', optimizerReplaceHint:'Clear a checkbox to protect every copy of that business', optimizerStockAllowed:'Stock businesses allowed to be inserted', optimizerStockHint:'Every tier remains manually selectable', optimizerCalculate:'Calculate best setup', optimizerApply:'Move to plan', optimizerRestore:'Restore saved setup', optimizerNoPlan:'Read businesses and calculate a setup first.', optimizerChanges:'Replacements: {n}', optimizerManagers:'Managers: {busy}/{max}', optimizerSafe:'Safety check passed', optimizerBlocked:'Start is blocked', optimizerBefore:'Before', optimizerAfter:'After', optimizerDifference:'Bonus changes',
+230-      bonusAnalyzer:'Bonus analyzer', bonusSources:'Bonus sources', bonusDuplicates:'matching sources: {n}', bonusActiveCopies:'active: {active} / limit: {limit}', bonusNoLimit:'limit not specified', bonusBestNext:'Best next business', bonusNoCandidate:'No suitable business in stock', bonusLimited:'Active-copy limit reached', bonusZeroEffect:'Effect was not recognized',
+231-      all:'All', blocked:'blocked', noLots:'No lots found', noFairs:'No fairs with available lots',
+232-      allowedCells:'Allowed slots', cell:'Cell {n}', selectCellsHint:'Choose which slot groups are allowed for purchases',
+233-      regularSlots:'Regular', vipSlots:'VIP', yes:'YES', no:'NO', noCells:'Both regular and VIP slots are disabled for a selected item', fairSavedSettings:'Saved settings', saveSetting:'Save setting',
+234-      fairExactLots:'Search combinations up to', fairBonusLots:'Buy bonus lots',
+235-      updateSetting:'Update', settingName:'Setting name:', settingSaved:'Setting “{name}” saved', settingLoaded:'Setting “{name}” loaded',
+236-      deleteSetting:'Delete setting “{name}”?', regularShop:'Regular shop', ordinaryShop:'Standard shop', clanShop:'Clan shop', readShop:'Read shop', selectAvailable:'Select available',
+237-      shopReadFirst:'Read the shop first', remaining:'Remaining {n}', unlimited:'Unlimited', boughtOut:'Purchased', selectedPurchases:'Selected purchases: {n}',
+238-      balance:'Balance', willSpend:'Spend', balanceAfter:'Remaining',
+239-      maxCost:'Maximum cost', buySelected:'Buy selected', shopWarning:'Crystal lots are available only in the fair and clan shop and are marked 💎. External payments are blocked.',
+240-      resourcesShop:'Resources', renovationShop:'Renovation', investShop:'Invest deals', personalLots:'Personal lots', sharedLots:'Shared lots', quantity:'Quantity',
+241-      recipeSpin:'Catalog', recipeDatabase:'Shared database', projectBureau:'Project Bureau', readRecipes:'Read catalog', recipeAttempts:'Reroll count',
+242-      spinRecipes:'Reroll catalog', currentRecipePlans:'Currently in catalog', recipeCost:'Cost per reroll',
+243-      loadRecipeDatabase:'Refresh shared database', uniqueRecipes:'Unique business plans: {n}', uniqueRecipeResults:'Result businesses: {results} · recipes: {plans}', recipeWays:'Ways to obtain: {n}', recipeReadFirst:'Read the catalog first',
+244-      recipeDatabaseEmpty:'No business plans in the shared database yet', recipeSharedHint:'Each observed business plan is added to the shared database once. Repeat drops are ignored.',
+245-      readBureau:'Read businesses', bureauSize:'Businesses per project', bureauAttempts:'Creation count', bureauSelected:'Selected businesses: {n} / {max}',
+246-      createBusinessPlan:'Create business plan', bureauHint:'Project Bureau actions are not added to the shared database and are not stored.',
+247-      bureauTier:'Business tier', bureauAllTiers:'All tiers', mapIndex:'Researched maps', readMapIndex:'Refresh index', scanMyMaps:'Research my districts',
+248-      donation:'Donation', mapSearch:'City, district or coordinates', mapOpen:'Open', mapProgress:'Progress', mapRating:'Rating', mapBuildings:'Buildings', mapUnexplored:'Unresearched', mapRooms:'Diamond rooms',
+249-      myMaps:'My maps', uploadedMaps:'Uploaded maps', scanAccountMaps:'Read account maps', refreshUploadedMaps:'Refresh uploaded maps'
+250-    }
+251-  };
+252-  const tr = (key, vars = {}) => {
+253-    let value = TEXT[language]?.[key] ?? TEXT.ru[key] ?? key;
+254-    for (const [name, replacement] of Object.entries(vars)) value = value.replaceAll(`{${name}}`, replacement);
+255-    return value;
+256-  };
+257-  const locale = () => language === 'en' ? 'en-US' : 'ru-RU';
+258-  const either = (ru, en) => language === 'en' ? en : ru;
+259-  function localizeMessage(value) {
+260-    if (language !== 'en') return String(value);
+261-    let text = String(value);
+262-    const replacements = [
+263-      [/Проверяю лицензию…/g,'Checking license…'], [/Доступ разрешён/g,'Access granted'], [/Проверка лицензии…/g,'Checking license…'],
+264-      [/ID не добавлен владельцем/g,'ID has not been added by the owner'], [/Лицензия заблокирована/g,'License is blocked'],
+265-      [/Срок лицензии истёк/g,'License has expired'], [/Достигнут лимит устройств/g,'Device limit reached'],
+266-      [/Домен игры не разрешён/g,'Game domain is not allowed'], [/Не удалось определить ID игрового аккаунта/g,'Could not identify the game account ID'],
+267-      [/Не удалось определить аккаунт/g,'Could not identify the account'], [/Сервер лицензий недоступен/g,'License server is unavailable'],
+268-      [/Добавьте этот ID в панели владельца/g,'Add this ID in the owner panel'], [/Проверка не пройдена/g,'License check failed'],
+269-      [/Подключено/g,'Connected'], [/Ожидание подключения…/g,'Waiting for connection…'], [/Автобой запущен до раунда/g,'Auto battle started up to round'],
+270-      [/Автобой остановлен/g,'Auto battle stopped'], [/Цель достигнута: раунд/g,'Target reached: round'], [/Ускорение боя включено/g,'Battle speed enabled'],
+271-      [/Остановка: достигнут лимит жетонов восстановления/g,'Stopped: recovery token limit reached'],
+272-      [/Остановка: достигнут лимит жетонов активации/g,'Stopped: activation token limit reached'],
+273-      [/Требуется восстановление, но расход жетонов запрещён/g,'Recovery is required, but token spending is disabled'],
+274-      [/Восстановление жетоном/g,'Recovery token'], [/Активация жетоном/g,'Activation token'],
+275-      [/Считываю ярмарки…/g,'Reading fairs…'], [/Ярмарка считана:/g,'Fair loaded:'], [/Ошибка ярмарки:/g,'Fair error:'],
+276-      [/Лот найден\. Покупка/g,'Lot found. Purchase'], [/Куплено/g,'Purchased'], [/Достигнут лимит прокруток:/g,'Reroll limit reached:'],
+277-      [/Лота нет\. Прокрутка/g,'No lot. Reroll'], [/Ярмарка завершена: покупок/g,'Fair completed: purchases'],
+278-      [/прокруток/g,'rerolls'], [/Аварийная остановка ярмарки:/g,'Emergency fair stop:'],
+279-      [/Пустой слот:/g,'Empty slot:'], [/Снимаю/g,'Removing'], [/Вставляю/g,'Inserting'], [/Перестановка завершена/g,'Rearrangement completed'],
+280-      [/Исходная схема восстановлена/g,'Original layout restored'], [/Ошибка:/g,'Error:'], [/Набор/g,'Set'], [/сохранён/g,'saved'], [/выбран/g,'selected']
+281-    ];
+282-    for (const [pattern, replacement] of replacements) text = text.replace(pattern, replacement);
+283-    return text;
+284-  }
+285-
+286-  let settings = {
+287-    target: 200,
+288-    interval: 1.2,
+289-    allowTokens: true,
+290-    activationLimit: 1,
+291-    restoreLimit: 5,
+292-    collectOnly: false,
+293-    ...load().settings
+294-  };
+295-  let pitRunning = false;
+296-  let activationSpent = 0;
+297-  let restoreSpent = 0;
+--
+314-  let licenseState = {checked:false, allowed:false, playerId:'', reason:'Проверка лицензии…', update:null};
+315-  let licenseCheckPromise = null;
+316-  let lastLicenseCheck = 0;
+317-  let publicSnapshotPromise = null;
+318-  let lastPublicSnapshot = 0;
+319-  let settingsSyncReady = false;
+320-  let settingsSyncTimer = null;
+321-  let settingsSyncPromise = null;
+322-  let fairDocument = null;
+323-  let shopViewDocument = null;
+324-  let itemCatalogDocument = null;
+325-  let businessCatalogDocument = null;
+326-  let bonusCatalogDocument = null;
+327-  let eventCatalogDocument = null;
+328-  let clientConfigDocument = null;
+329-  let premiumDocument = null;
+330-  let localizationDocument = null;
+331-  let activeEventCode = clean(load().activeEventCode || '').toLowerCase();
+332-  let fairCatalog = [];
+333-  let selectedFairId = '';
+334-  let selectedFairLots = new Set();
+335-  let selectedFairSlotRules = new Map(); // lot id -> {regular:boolean, vip:boolean}
+336-  let selectedFairCurrency = '';
+337-  let selectedFairBonusLots = new Set([5, 10, 30]);
+338-  let fairRunning = false;
+339-  let fairStop = false;
+340-  let shopRows = [];
+341-  let selectedShopLots = new Set();
+342-  let selectedShopCounts = new Map();
+343-  let selectedShopSection = 'regular';
+344-  let selectedShopGroup = 'resources';
+345-  let shopRunning = false;
+346-  let recipeFairId = load().recipeFairId || '';
+347-  let currentRecipePlans = [];
+348-  let recipeRunning = false;
+349-  let recipeStop = false;
+350-  let communityRecipes = [];
+351-  let bureauCosts = [];
+352-  let bureauInventory = [];
+353-  let selectedBureauInputs = new Map();
+354-  let bureauSize = 2;
+355-  let bureauTier = 0;
+356-  let bureauRunning = false;
+357-  let mapRows = [];
+358-  let mapSource = 'mine';
+359-  let mapDetail = null;
+360-  let mapGeometry = null;
+361-  let mapZoom = 1;
+362-  let mapPanX = 0;
+363-  let mapPanY = 0;
+364-  let mapPointerMoved = false;
+365-  let mapBuildingAreas = new Map();
+366-  let mapScanning = false;
+367-  let dailyShopRows = [];
+368-  let dailyRunning = false;
+369-  let dailyAdController = null;
+370-  let dailySnapshot = load().today?.snapshot || null;
+371-  let dailySelection = {...{advertisement:true, recruits:false, cartels:false, investments:false}, ...(load().today?.selection || {})};
+372-  delete dailySelection.rumors;
+373-  let dailyPurchaseCounts = {...(load().today?.purchaseCounts || {})};
+374-  let dailyStoreTab = String(load().today?.storeTab || 'regular');
+375-  let sharedPitRows = [];
+376-  let pitCatalogLoaded = false;
+377-  let pitSubmitQueue = [];
+378-  let pitSubmitTimer = null;
+379-  let pitPowerTableOpen = true;
+380-  let lastNetworkPitContext = null;
+381-  const pitSubmittedThisSession = new Set();
+382-  const initialMapResearchAttempted = new Set();
+383-  let root, panel, statusLine, logBox, businessLists, planBox, presetSelect, fairTypes, fairLots, fairSlotRules, fairPresetSelect, shopCards, shopSummary, recipeCards, recipeSummary, recipeDatabaseBox, bureauCards, bureauSummary, mapIndexBox, mapDetailBox, dailyBox, clanBox, resourceBox;
+384-
+385-  // Shared live player state. Full /player/me responses replace complete fields;
+386-  // action responses merge entity rows so a one-hamster response cannot erase
+387-  // the rest of the account. Server timestamps prevent an older concurrent
+388-  // response from overwriting newer state.
+389-  const HK_STATE_MERGE_ROWS = {
+390-    currencies:['currency_id','id'], buildings:['id','building_id'], business_building:['id'], constructions:['id'],
+391-    playerFactions:['id','faction_id'], playerHamsters:['hamster_id','id'], player_hamster_generals:['hamster_id','id'],
+392-    player_counters:['id','counter_id']
+393-  };
+394:  const HK_STATE_REPLACE_ARRAYS = new Set(['items','shop_lot_limits','fair','hamsteresses','player_hamsteresses_skill_line','hamsteresses_quest_slots','favorite_building_slots','player_bosses','player_battle_pass_rewards','auth_methods','offers','triggers']);
+395:  const HK_STATE_REPLACE_VALUES = new Set(['advertisement','areas','bonuses','boss_battle','clan','daily_rewards','gameArea','gamearea_recommendation','idler','pit','pit2','pit_generals','pit_pve','player_regional_bosses','quests','referals','rumors']);
+396-  function hkMergeRowsByFields(existing,incoming,fields){
+397-    if(!Array.isArray(incoming)) return Array.isArray(existing)?existing:[];
+398-    const result=(Array.isArray(existing)?existing:[]).map(row=>row&&typeof row==='object'?{...row}:row), positions=new Map();
+399-    for(let i=0;i<result.length;i++) for(const field of fields){const value=result[i]?.[field];if(value!==undefined&&value!==null){positions.set(`${field}:${value}`,i);break;}}
+400-    for(const row of incoming){if(!row||typeof row!=='object')continue;let key='';for(const field of fields){const value=row[field];if(value!==undefined&&value!==null){key=`${field}:${value}`;break;}}if(!key)continue;if(positions.has(key)){const i=positions.get(key);result[i]={...result[i],...row};}else{positions.set(key,result.length);result.push({...row});}}
+401-    return result;
+402-  }
+403-  const hkStateStore = (() => {
+404-    let snapshot = null, updatedAt = 0, revision = 0, fieldTimestamps = Object.create(null);
+405-    const listeners = new Set();
+406-    const clone = value => { if(value==null)return value; try{return structuredClone(value);}catch(_){try{return JSON.parse(JSON.stringify(value));}catch(_){return value;}} };
+407-    const notify = (reason='update',changed=new Set()) => { revision+=1;const event={reason,revision,updatedAt,snapshot,changed};for(const listener of [...listeners]){try{listener(event);}catch(_){}} };
+408-    const applyOne = (state,data,full=false,changed=new Set()) => {
+409-      if(!state||!data||typeof data!=='object') return changed;
+410-      const incomingTs=Math.max(0,Number(data.timestamp||0));
+411-      const canApply=key=>!incomingTs||!fieldTimestamps[key]||fieldTimestamps[key]<=incomingTs;
+412-      const stamp=key=>{if(incomingTs)fieldTimestamps[key]=incomingTs;changed.add(key);};
+413-      const replaceArray=(key,value)=>{if(!canApply(key)||!Array.isArray(value))return;state[key]=value.map(row=>row&&typeof row==='object'?{...row}:row);stamp(key);};
+414-      const mergeRows=(key,value,fields)=>{if(!canApply(key)||!Array.isArray(value))return;state[key]=hkMergeRowsByFields(state[key],value,fields);stamp(key);};
+415-      if(data.player&&typeof data.player==='object'&&canApply('player')){state.player=state.player&&typeof state.player==='object'?{...state.player,...data.player}:{...data.player};stamp('player');}
+416-      for(const [key,fields] of Object.entries(HK_STATE_MERGE_ROWS)) if(Array.isArray(data[key])) full?replaceArray(key,data[key]):mergeRows(key,data[key],fields);
+417-      for(const key of HK_STATE_REPLACE_ARRAYS) if(Array.isArray(data[key])) replaceArray(key,data[key]);
+418-      if(data.building&&typeof data.building==='object') mergeRows('buildings',[data.building],['id','building_id']);
+419-      for(const key of HK_STATE_REPLACE_VALUES) if(Object.prototype.hasOwnProperty.call(data,key)&&canApply(key)){state[key]=data[key];stamp(key);}
+420-      if(full){
+421-        for(const [key,value] of Object.entries(data)){
+422-          if(key==='player'||key==='building'||key==='timestamp'||changed.has(key)||HK_STATE_MERGE_ROWS[key]||HK_STATE_REPLACE_ARRAYS.has(key)||HK_STATE_REPLACE_VALUES.has(key)||!canApply(key))continue;
+423-          state[key]=value;stamp(key);
+424-        }
+425-      }
+426-      if(incomingTs) state.timestamp=Math.max(Number(state.timestamp||0),incomingTs);
+427-      return changed;
+428-    };
+429-    const candidates = value => [value,value?.result,value?.data].filter(row=>row&&typeof row==='object');
+430-    return {
+431-      get snapshot(){return snapshot;}, get updatedAt(){return updatedAt;}, get revision(){return revision;},
+432-      replace(value,reason='player/me'){
+433-        if(!value||typeof value!=='object')return snapshot;
+434-        const currentId=snapshot?.player?.id,incomingId=value?.player?.id;
+435-        if(!snapshot||(currentId!=null&&incomingId!=null&&String(currentId)!==String(incomingId))){snapshot={};fieldTimestamps=Object.create(null);}
+436-        const changed=new Set();applyOne(snapshot,value,true,changed);if(changed.size){updatedAt=Date.now();notify(reason,changed);}return snapshot;
+437-      },
+438-      merge(value,reason='partial'){
+439-        if(!value||typeof value!=='object')return snapshot;
+440-        if(!snapshot)snapshot={};const changed=new Set();for(const source of candidates(value))applyOne(snapshot,source,false,changed);if(changed.size){updatedAt=Date.now();notify(reason,changed);}return snapshot;
+441-      },
+442-      syncFromPlayerDocument(reason='legacy-sync'){if(playerDocument)this.replace(playerDocument,reason);return snapshot;},
+443-      subscribe(listener){if(typeof listener!=='function')return()=>{};listeners.add(listener);return()=>listeners.delete(listener);},
+444-      exportSummary(){return{revision,updatedAt,hasSnapshot:!!snapshot,playerId:playerIdentity(snapshot?.player||{}),fields:Object.keys(snapshot||{}).length};},
+445-      clone
+446-    };
+447-  })();
+448-
+449-  const hkRunner = (() => {
+450-    const state = {status:'idle', title:'', step:'', done:0, total:0, startedAt:0, error:'', pausable:true, stoppable:true};
+451-    let abortController = null;
+452-    let pauseResolvers = [];
+453-    const emit = () => renderRunnerState();
+454-    const settlePaused = () => { const rows=pauseResolvers.splice(0); rows.forEach(resolve=>resolve()); };
+455-    return {
+456-      state,
+457-      get signal(){ return abortController?.signal || null; },
+458-      get running(){ return state.status === 'running' || state.status === 'paused'; },
+459-      start({title='', total=0, step='', pausable=true, stoppable=true}={}) {
+460-        if (this.running) throw new Error(either('Уже выполняется другая задача','Another task is already running'));
+461-        abortController = new AbortController();
+462-        Object.assign(state,{status:'running',title:String(title||either('Выполнение','Execution')),step:String(step||''),done:0,total:Math.max(0,Number(total)||0),startedAt:Date.now(),error:'',pausable:!!pausable,stoppable:!!stoppable});
+463-        recordDiagnostic('runner-start',{title:state.title,total:state.total}); emit(); return state;
+464-      },
+465-      setStep(step, done=state.done, total=state.total) { state.step=String(step||''); state.done=Math.max(0,Number(done)||0); state.total=Math.max(0,Number(total)||0); emit(); return state; },
+466-      advance(step='') { state.done=Math.min(state.total||state.done+1,state.done+1); if(step)state.step=String(step); emit(); return state; },
+467-      pause() { if(state.status!=='running'||!state.pausable)return false; state.status='paused'; recordDiagnostic('runner-pause',{title:state.title}); emit(); return true; },
+468-      resume() { if(state.status!=='paused')return false; state.status='running'; settlePaused(); recordDiagnostic('runner-resume',{title:state.title}); emit(); return true; },
+469-      async waitIfPaused() { while(state.status==='paused') await new Promise(resolve=>pauseResolvers.push(resolve)); if(abortController?.signal.aborted) throw new DOMException('Aborted','AbortError'); },
+470-      stop(reason='user') { if(!this.running||!state.stoppable)return false; state.status='stopping'; abortController?.abort(reason); settlePaused(); recordDiagnostic('runner-stop',{title:state.title,reason}); emit(); return true; },
+471-      finish(step='') { if(step)state.step=String(step); state.status='done'; if(state.total)state.done=state.total; recordDiagnostic('runner-finish',{title:state.title}); emit(); setTimeout(()=>{if(state.status==='done'){state.status='idle';emit();}},1800); },
+472-      fail(error) { state.status='error'; state.error=String(error?.message||error||either('Ошибка','Error')); recordDiagnostic('runner-error',{title:state.title,error:state.error}); emit(); },
+473-      reset() { abortController=null; settlePaused(); Object.assign(state,{status:'idle',title:'',step:'',done:0,total:0,startedAt:0,error:'',pausable:true,stoppable:true}); emit(); }
+474-    };
+475-  })();
+--
+1057-  }
+1058-
+1059-  async function discoverResourceBuildingIds(showLog = false, wantedKind = resourceSelectedKind) {
+1060-    const ids=savedResourceBuildingIds();
+1061-    const proofs=savedResourceBuildingProofs();
+1062-    const kinds=RESOURCE_BUILDING_TYPES[wantedKind] ? [wantedKind] : Object.keys(RESOURCE_BUILDING_TYPES);
+1063-    const missing=()=>kinds.filter(kind=>!ids[kind]);
+1064-    if (!missing().length) return ids;
+1065-    const currentArea=String(playerDocument?.gameArea?.gamearea_id || playerDocument?.game_area?.gamearea_id || '');
+1066-    const areaIds=[currentArea, ...(playerDocument?.areas?.areas || []).map(row=>String(row?.gamearea_id || row?.area_id || ''))]
+1067-      .filter((value,index,rows)=>value && rows.indexOf(value)===index);
+1068-    for (let index=0; index<areaIds.length && missing().length; index++) {
+1069-      if (showLog && (index===0 || index%10===9)) log(either(`Ищу ресурсные здания: район ${index+1}/${areaIds.length}…`,`Searching resource buildings: district ${index+1}/${areaIds.length}…`));
+1070-      let definitions=[];
+1071-      try { definitions=await apiJson(`/game_area/${encodeURIComponent(areaIds[index])}/buildings`,'GET'); }
+1072-      catch (_) { continue; }
+1073-      const candidates=(Array.isArray(definitions) ? definitions : [])
+1074-        .filter(row=>missing().includes(String(row?.meta?.resource || '').toLowerCase()))
+1075-        .sort((left,right)=>Number(exactResourceBuildingDefinition(right,String(right?.meta?.resource || '').toLowerCase()))-Number(exactResourceBuildingDefinition(left,String(left?.meta?.resource || '').toLowerCase())));
+1076-      for (const row of candidates) {
+1077-        const kind=String(row?.meta?.resource || '').toLowerCase();
+1078-        // `row.id` is the catalog/template id on some game responses. Only
+1079-        // `building_id` identifies the building owned by this player.
+1080-        const buildingId=String(row?.building_id || '');
+1081-        if (!RESOURCE_BUILDING_TYPES[kind] || !buildingId || ids[kind]) continue;
+1082-        mapBuildingAreas.set(buildingId,areaIds[index]);
+1083-        // Several unrelated buildings may generate the same resource. Confirm
+1084-        // the building by its own main event or its exact resource generator.
+1085-        try {
+1086-          const documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}`, 'POST');
+1087-          const exactGenerator=exactResourceBuildingDefinition(row,kind);
+1088-          if (exactResourceBuildingData(documentValue,kind,exactGenerator)) {
+1089-            ids[kind]=buildingId;
+1090-            proofs[kind]=buildingId;
+1091-          }
+1092-        } catch (_) {}
+1093-      }
+1094-    }
+1095-    save({resourceBuildingIds:ids,resourceBuildingProofs:proofs, ...(ids.nut?{resourceNutBuildingId:ids.nut}:{})});
+1096-    return ids;
+1097-  }
+1098-
+1099-  async function acceptBuildingStudy(url, headers, documentValue) {
+1100-    captureAuthorization(url,headers); const building=documentValue?.building || documentValue?.data?.building || documentValue?.data || documentValue;
+1101-    const buildingId=String(building?.id || building?.building_id || new URL(url,location.href).searchParams.get('building_id') || '');
+1102-    const resourceBuilding=buildingId && exactResourceBuildingData(documentValue);
+1103-    if (resourceBuilding && licenseState.allowed) {
+1104-      const {kind,building:buildingData}=resourceBuilding;
+1105-      const ids=savedResourceBuildingIds();
+1106-      const storedId=String(ids[kind] || '');
+1107-      const proofs=savedResourceBuildingProofs();
+1108-      if (storedId !== buildingId || String(proofs[kind] || '') !== buildingId) {
+1109-        ids[kind]=buildingId;
+1110-        proofs[kind]=buildingId;
+1111-        save({resourceBuildingIds:ids,resourceBuildingProofs:proofs, ...(kind==='nut'?{resourceNutBuildingId:buildingId}:{})});
+1112-        if (storedId !== buildingId) log(either(`Здание «${resourceTypeName(kind,true)}» запомнено`,`${resourceTypeName(kind,true)} remembered`),'ok');
+1113-      }
+1114-      const selectedTier=Number(buildingData?.chosen_tier ?? buildingData?.tier ?? 0);
+1115-      const maximumTier=Math.max(selectedTier,Number(buildingData?.tier ?? selectedTier));
+1116-      const tiers=savedResourceTiers(); tiers[kind]=selectedTier;
+1117-      resourceSelectedKind=kind;
+1118-      resourceBuildings=[{id:buildingId,kind,areaId:'',tier:selectedTier,maxTier:maximumTier,name:resourceTypeName(kind),buildingName:resourceTypeName(kind,true),document:documentValue}];
+1119-      save({resourceSelectedKind:kind,resourceSelectedTiers:tiers, ...(kind==='nut'?{resourceSelectedTier:selectedTier}:{})});
+1120-      renderResources();
+1121-    }
+1122-    const areaId=mapBuildingAreas.get(buildingId); if (!areaId || !licenseState.allowed) return;
+1123-    if (!eventCatalogDocument) { try { eventCatalogDocument=normalizeEventCatalog(await apiJson('/events','GET')); } catch (_) { return; } }
+1124-    const rooms=buildingRooms(documentValue); const roomCount=crystalRoomCount(documentValue);
+1125-    if (roomCount == null) return;
+1126-    const area=(playerDocument?.areas?.areas || []).find(row=>String(row?.gamearea_id)===areaId); if(!area)return;
+1127-    const hasEvents=rooms.length>0 || roomCount>0;
+1128-    if (String(mapDetail?.area?.area_id || '') === areaId) {
+1129-      const localRow=(mapDetail.buildings || []).find(row=>String(row?.building_id)===buildingId);
+1130-      if (localRow) { localRow.opened=true; localRow.room_count=roomCount; localRow.has_events=hasEvents; renderMapDetail(); }
+1131-    }
+1132-    mapServerJson('/submit',{area:{area_id:areaId,city_id:String(area.city_id||''),expected_buildings:0,buildings:[{building_id:buildingId,opened:true,room_count:roomCount,has_events:hasEvents}]}}).catch(()=>{});
+1133-  }
+1134-
+1135-  const PIT_API_PATH_TYPES = new Map([
+1136-    ['/pit/view','normal'], ['/player/pit/start','normal'], ['/player/pit/battle','normal'], ['/player/pit/finish','normal'], ['/player/pit/pass','normal'], ['/player/pit/respawn','normal'], ['/pit/preview','normal'],
+1137:    ['/boss_pit/view','boss'], ['/player/boss_pit/start','boss'], ['/player/boss_pit/battle','boss'], ['/player/boss_pit/finish','boss'], ['/player/boss_pit/pass','boss'], ['/player/boss_pit/respawn','boss'], ['/pit_2/preview','boss'],
+1138-    ['/pit_pve/view','gang'], ['/player/pit_pve/start','gang'], ['/player/pit_pve/battle','gang'], ['/player/pit_pve/finish','gang'], ['/player/pit_pve/pass','gang'], ['/player/pit_pve/respawn','gang'], ['/pit_pve/preview','gang'], ['/player/pit_pve_battle_info','gang']
+1139-  ]);
+1140-  // Pit rounds currently end at 200. Keeping this boundary in one place also
+1141-  // prevents an unrelated nested `level` field from being mistaken for a Pit
+1142-  // round while walking a large /player/me response.
+1143-  const PIT_MAX_LEVEL = 200;
+1144-
+1145-  function pitApiType(path) { return PIT_API_PATH_TYPES.get(String(path || '')) || null; }
+1146-
+1147-  function pitStoreDocument() {
+1148-    const stored = load();
+1149:    const next = {normal:{}, boss:{}, gang:{}, ...(stored.pitPowersV2 || {})};
+1150-    if (!Object.keys(next.normal || {}).length && stored.pitPowers && typeof stored.pitPowers === 'object') {
+1151-      next.normal = Object.fromEntries(Object.entries(stored.pitPowers).map(([level, enemyPower]) => [level, {enemyPower:Number(enemyPower), samples:1, lastSeen:0}]));
+1152-    }
+1153:    for (const pitType of ['normal','boss','gang']) {
+1154-      next[pitType] = Object.fromEntries(Object.entries(next[pitType] || {}).filter(([level,value]) => {
+1155-        const numericLevel = Number(level), enemyPower = Number(value?.enemyPower);
+1156-        return Number.isSafeInteger(numericLevel) && numericLevel >= 1 && numericLevel <= PIT_MAX_LEVEL && Number.isFinite(enemyPower) && enemyPower > 0;
+1157-      }));
+1158-    }
+1159-    return next;
+1160-  }
+1161-
+1162-  function writePitStore(documentValue) {
+1163-    const stored = load();
+1164-    localStorage.setItem(STORE, JSON.stringify({...stored, pitPowersV2:documentValue}));
+1165-  }
+1166-
+1167-  function normalizePitChance(value) {
+1168-    const result = number(value);
+1169-    if (result === null) return null;
+1170-    const normalized = result > 1 && result <= 100 ? result / 100 : result;
+1171-    return normalized >= 0 && normalized <= 1 ? normalized : null;
+1172-  }
+1173-
+1174-  function pitAtLeastWins(chances, needed) {
+1175-    let distribution = [1];
+1176-    for (const chance of chances) {
+1177-      const next = Array(distribution.length + 1).fill(0);
+1178-      distribution.forEach((value, wins) => { next[wins] += value * (1 - chance); next[wins + 1] += value * chance; });
+1179-      distribution = next;
+1180-    }
+1181-    return distribution.slice(needed).reduce((sum,value)=>sum+value,0);
+1182-  }
+1183-
+1184-  function rememberPitObservation(pitType, raw) {
+1185-    const level = Number(raw?.level), enemyPower = Math.round(Number(raw?.enemyPower || 0));
+1186:    if (!['normal','boss','gang'].includes(pitType) || !Number.isSafeInteger(level) || level < 1 || level > PIT_MAX_LEVEL || !Number.isSafeInteger(enemyPower) || enemyPower < 1) return;
+1187-    const playerPower = Math.max(0, Math.round(Number(raw?.playerPower || 0))) || null;
+1188-    const supportPower = Math.max(0, Math.round(Number(raw?.supportPower || 0))) || 0;
+1189-    const winrate = normalizePitChance(raw?.winrate);
+1190-    const roundEnemyPowers = Array.isArray(raw?.roundEnemyPowers) ? raw.roundEnemyPowers.map(Number).slice(0,8) : [];
+1191-    const roundChances = Array.isArray(raw?.roundChances) ? raw.roundChances.map(normalizePitChance).slice(0,8) : [];
+1192-    const documentValue = pitStoreDocument();
+1193-    const previous = documentValue[pitType]?.[level] || {};
+1194-    documentValue[pitType] = {...(documentValue[pitType] || {}), [level]:{
+1195-      enemyPower, playerPower:playerPower || previous.playerPower || null,
+1196-      winrate:winrate ?? previous.winrate ?? null, samples:Number(previous.samples || 0) + 1,
+1197-      lastSeen:Date.now(), source:raw?.source || previous.source || 'legacy'
+1198-    }};
+1199-    writePitStore(documentValue);
+1200:    // Boss Pit uses the sum of every combat cartel. Normal Pit only needs the
+1201-    // single strongest cartel and Gang Pit uses eight separate battles.
+1202:    const factionLimit = pitType === 'boss' ? 64 : pitType === 'gang' ? 8 : 1;
+1203-    const factionPowers = Array.isArray(raw?.factionPowers) ? raw.factionPowers.map(Number).filter(value=>value>0).slice(0,factionLimit) : [];
+1204-    if (playerPower || factionPowers.length) {
+1205-      const stored = load();
+1206-      const previousProfile = stored.pitPlayerProfiles?.[pitType] || {};
+1207-      localStorage.setItem(STORE, JSON.stringify({...stored, pitPlayerProfiles:{...(stored.pitPlayerProfiles || {}), [pitType]:{
+1208-        playerPower:playerPower || previousProfile.playerPower || null,
+1209-        supportPower:supportPower || previousProfile.supportPower || 0,
+1210-        factionPowers:factionPowers.length ? factionPowers : (previousProfile.factionPowers || []),
+1211-        roundEnemyPowers:roundEnemyPowers.length === 8 ? roundEnemyPowers : (previousProfile.roundEnemyPowers || []),
+1212-        roundChances:roundChances.length === 8 ? roundChances : (previousProfile.roundChances || []),
+1213-        referenceEnemyPower:pitType !== 'gang' || roundEnemyPowers.length === 8 ? enemyPower : (previousProfile.referenceEnemyPower || enemyPower),
+1214-        level, winrate, updatedAt:Date.now()
+1215-      }}}));
+1216-    }
+1217-    const observation = {pit_type:pitType, level, enemy_power:enemyPower, player_power:playerPower, winrate};
+1218-    const key = [pitType, level, enemyPower, playerPower || '', winrate ?? ''].join(':');
+1219-    if (!pitSubmittedThisSession.has(key)) {
+1220-      pitSubmittedThisSession.add(key); pitSubmitQueue.push(observation); schedulePitSubmission();
+1221-    }
+1222-    if (root) renderPitForecast();
+1223-  }
+1224-
+1225-  function schedulePitSubmission() {
+1226-    clearTimeout(pitSubmitTimer);
+1227-    pitSubmitTimer = setTimeout(flushPitObservations, 900);
+1228-  }
+1229-
+1230-  async function flushPitObservations() {
+1231-    if (!pitSubmitQueue.length || !licenseState.allowed || !licenseState.token) return;
+1232-    const observations = pitSubmitQueue.splice(0, 80);
+1233-    try { await pitServerJson('/submit', {observations}); }
+1234-    catch (error) { pitSubmitQueue.unshift(...observations); console.warn('[HK] pit observation upload failed', error); }
+1235-  }
+1236-
+1237-  function pitDisplayedLevel(rawLevel) {
+1238-    const value = number(rawLevel);
+1239-    const displayed = value !== null ? Math.trunc(value) + 1 : null;
+1240-    return Number.isSafeInteger(displayed) && displayed >= 1 && displayed <= PIT_MAX_LEVEL ? displayed : null;
+1241-  }
+1242-
+1243-  function pitFactionPowers(value, pitType = 'normal') {
+1244-    // The game keeps the combat factions in player_factions. The similarly
+1245-    // named player_subfactions object is the support cartel and must not be
+1246-    // used as the four/eight combat powers.
+1247-    const source = value?.player_factions ?? value?.playerFactions;
+1248-    const rows = Array.isArray(source) ? source : (source && typeof source === 'object' ? Object.values(source) : []);
+1249:    const limit = pitType === 'boss' ? Number.POSITIVE_INFINITY : pitType === 'gang' ? 8 : 4;
+1250-    return rows.map(row => number(typeof row === 'number' ? row : row?.overall_power ?? row?.overallPower ?? row?.power ?? row?.value ?? row?.total_power ?? row?.totalPower)).filter(row=>row>0).sort((a,b)=>b-a).slice(0,limit);
+1251-  }
+1252-
+1253-  function pitSupportPower(value) {
+1254-    const direct = number(
+1255-      value?.support_power ?? value?.supportPower ?? value?.player_support_power ?? value?.playerSupportPower ??
+1256-      value?.player_subfactions?.overall_power ?? value?.playerSubfactions?.overallPower ?? value?.support?.overall_power ?? value?.support?.overallPower ?? value?.support?.power
+1257-    );
+1258-    if (direct > 0) return direct;
+1259-    const source = value?.player_subfactions ?? value?.playerSubfactions ?? value?.support?.factions ?? value?.support?.rows;
+1260-    const rows = Array.isArray(source) ? source : (source && typeof source === 'object' ? Object.values(source) : []);
+1261-    return rows.map(row=>number(typeof row === 'number' ? row : row?.overall_power ?? row?.overallPower ?? row?.power ?? row?.value ?? row?.total_power ?? row?.totalPower))
+1262-      .filter(power=>power>0).reduce((sum,power)=>sum+power,0);
+1263-  }
+1264-
+1265-  function pitCombinedPlayerPower(value) {
+1266-    const direct = number(
+1267-      value?.power ?? value?.player_power ?? value?.playerPower ?? value?.overall_power ?? value?.overallPower ??
+1268-      value?.total_power ?? value?.totalPower ?? value?.player_total_power ?? value?.playerTotalPower ?? value?.player?.power
+1269-    );
+1270-    if (direct > 0) return direct;
+1271-    const source = value?.player_factions ?? value?.playerFactions;
+1272-    const rows = Array.isArray(source) ? source : (source && typeof source === 'object' ? Object.values(source) : []);
+1273-    const factionTotal = rows.map(row => number(typeof row === 'number' ? row : row?.overall_power ?? row?.overallPower ?? row?.power ?? row?.total_power ?? row?.totalPower)).filter(row=>row>0).reduce((sum,row)=>sum+row,0);
+1274-    const calculated = factionTotal + pitSupportPower(value);
+1275-    return calculated > 0 ? calculated : null;
+1276-  }
+1277-
+1278-  function acceptPitDocument(url, documentValue) {
+1279-    if (!documentValue || typeof documentValue !== 'object') return;
+1280-    const path = new URL(url || location.href, location.href).pathname;
+1281-    const runtime = {...(load().pitRuntimeLevels || {})};
+1282-    const visit = (pitType, value, inheritedLevel = null) => {
+1283-      if (!value || typeof value !== 'object') return;
+1284-      if (Array.isArray(value)) { value.forEach(row => visit(pitType, row, inheritedLevel)); return; }
+1285-      const rawLevel = number(value.level ?? value.round ?? value.pit_level);
+1286-      const level = rawLevel !== null ? pitDisplayedLevel(rawLevel) : inheritedLevel || runtime[pitType] || null;
+1287-      if (level) runtime[pitType] = level;
+1288-      const rounds = Array.isArray(value.rounds) ? value.rounds.filter(row => number(row?.enemy_power) > 0) : [];
+1289-      if (rounds.length) {
+1290-        const directEnemyPower = number(value.enemy_power ?? value.enemyPower);
+1291-        const roundEnemyPowers = rounds.map(row=>Number(row.enemy_power));
+1292-        // Gang rounds may contain one enemy boosted by faction efficiency.
+1293-        // The shared level value is the unboosted base power, not the average.
+1294-        const enemyPower = Math.round(pitType === 'gang'
+1295-          ? Math.min(...roundEnemyPowers)
+1296-          : directEnemyPower || roundEnemyPowers.reduce((sum,power)=>sum+power,0)/roundEnemyPowers.length);
+1297-        const powered = rounds.filter(row=>number(row.power)>0);
+1298-        const playerPower = powered.length ? Math.round(powered.reduce((sum,row)=>sum+Number(row.power),0)/powered.length) : pitCombinedPlayerPower(value);
+1299-        // PVE preview stores the eight combat powers directly in rounds.
+1300-        // Keep their original order for the gang probability calculation.
+1301-        const roundFactionPowers = pitType === 'gang' && powered.length >= 8 ? powered.slice(0,8).map(row=>Number(row.power)) : [];
+1302-        const roundChances = rounds.map(row=>normalizePitChance(row.winrate));
+1303-        const validChances = roundChances.filter(row=>row!==null);
+1304-        const winrate = normalizePitChance(value.winrate) ?? (validChances.length === rounds.length ? pitAtLeastWins(validChances, 5) : null);
+1305-        rememberPitObservation(pitType, {level, enemyPower, playerPower, winrate, supportPower:pitSupportPower(value), factionPowers:roundFactionPowers.length ? roundFactionPowers : pitFactionPowers(value,pitType), roundEnemyPowers, roundChances, source:'network'});
+1306-        return;
+1307-      }
+1308-      const enemyPower = number(value.enemy_power ?? value.enemyPower);
+1309-      if (enemyPower && level) rememberPitObservation(pitType, {level, enemyPower, playerPower:pitCombinedPlayerPower(value), winrate:value.winrate, supportPower:pitSupportPower(value), factionPowers:pitFactionPowers(value,pitType), source:'network'});
+1310-      Object.values(value).forEach(child => visit(pitType, child, level));
+1311-    };
+1312-    if (path === '/player/me') {
+1313-      const roots = [documentValue, documentValue.player, documentValue.data].filter(Boolean);
+1314-      for (const base of roots) {
+1315-        const context = {player_factions:base?.player_factions, player_subfactions:base?.player_subfactions};
+1316:        const normal = base?.pit, boss = base?.pit2 ?? base?.boss_pit, gang = base?.pit_pve;
+1317-        const normalLevel = pitDisplayedLevel(normal?.level ?? normal?.round ?? normal?.pit_level);
+1318:        const bossLevel = pitDisplayedLevel(boss?.level ?? boss?.round ?? boss?.pit_level);
+1319-        const gangLevel = pitDisplayedLevel(gang?.level ?? gang?.round ?? gang?.pit_level);
+1320-        visit('normal', normal && {...context,...normal});
+1321-        visit('normal', base?.pit_preview && {...context,...base.pit_preview}, normalLevel);
+1322:        visit('boss', boss && {...context,...boss});
+1323:        visit('boss', base?.pit2_preview && {...context,...base.pit2_preview}, bossLevel);
+1324-        visit('gang', gang && {...context,...gang});
+1325-        visit('gang', base?.pit_pve_preview && {...context,...base.pit_pve_preview}, gangLevel);
+1326-      }
+1327-    } else {
+1328-      const pitType = pitApiType(path);
+1329-      if (pitType) {
+1330-        lastNetworkPitContext = {pitType, at:Date.now()};
+1331-        const roots = [documentValue, documentValue.player, documentValue.data].filter(Boolean);
+1332-        const explicit = [];
+1333-        for (const base of roots) {
+1334:          const state = pitType === 'normal' ? base?.pit : pitType === 'boss' ? (base?.pit2 ?? base?.boss_pit) : base?.pit_pve;
+1335:          const preview = pitType === 'normal' ? base?.pit_preview : pitType === 'boss' ? base?.pit2_preview : base?.pit_pve_preview;
+1336-          const inheritedLevel = pitDisplayedLevel(state?.level ?? state?.round ?? state?.pit_level) || runtime[pitType] || null;
+1337-          const context = {player_factions:base?.player_factions, player_subfactions:base?.player_subfactions};
+1338-          if (state) explicit.push({value:{...context,...state}, level:null});
+1339-          if (preview) explicit.push({value:{...context,...preview}, level:inheritedLevel});
+1340-        }
+1341-        if (explicit.length) explicit.forEach(row => visit(pitType,row.value,row.level));
+1342-        else visit(pitType, documentValue);
+1343-      }
+1344-    }
+1345-    localStorage.setItem(STORE, JSON.stringify({...load(), pitRuntimeLevels:runtime}));
+1346-  }
+1347-
+1348-  function isGameApiRequest(url){
+1349-    try{const target=new URL(String(url||''),location.href),origins=new Set([new URL(GAME_API_FALLBACK).origin]);if(apiBase)origins.add(new URL(apiBase).origin);return origins.has(target.origin);}catch(_){return false;}
+1350-  }
+1351-  function acceptSharedGameResponse(url,documentValue){
+1352-    if(!documentValue||typeof documentValue!=='object'||!isGameApiRequest(url))return;
+1353-    let path='';try{path=new URL(String(url||''),location.href).pathname;}catch(_){}
+1354-    if(path==='/player/me')return;
+1355-    const before=hkStateStore.revision,merged=hkStateStore.merge(documentValue,`game-ui:${path||'response'}`);
+1356-    if(hkStateStore.revision!==before&&merged){playerDocument=merged;try{refreshBusinessData();}catch(_){}}
+1357-  }
+1358-
+1359-  function installNetworkCapture() {
+1360-    if (networkCaptureInstalled) return;
+1361-    if (typeof window.fetch !== 'function' || !window.XMLHttpRequest) throw new Error('Игровая сеть ещё не готова');
+1362-    const nativeFetch = window.fetch.bind(window);
+1363-    nativeNetworkFetch = nativeFetch;
+1364-    window.fetch = async function(input, init) {
+1365-      const url = typeof input === 'string' ? input : input?.url;
+1366-      const requestHeaders = {...headersToObject(input?.headers), ...headersToObject(init?.headers)};
+1367-      captureAuthorization(url, requestHeaders);
+1368-      const response = await nativeFetch(input, init);
+1369-      const path = url ? new URL(url, location.href).pathname : '';
+1370-      if(response.ok && isGameApiRequest(url) && path!=='/player/me') response.clone().json().then(body=>acceptSharedGameResponse(url,body)).catch(()=>{});
+1371-      if (path === '/player/me' && response.ok) {
+1372-        let partial = false;
+1373-        try { partial = Array.isArray(JSON.parse(String(init?.body || '{}'))?.arguments); } catch (_) {}
+1374-        response.clone().json().then(body => { acceptPlayerState(url, requestHeaders, body, partial); acceptPitDocument(url, body); }).catch(() => {});
+1375-      } else if (path === '/shop/view' && response.ok) {
+1376-        response.clone().json().then(body => acceptShopView(url, requestHeaders, body)).catch(() => {});
+1377-      } else if (['/items','/business_items','/bonuses/view','/events','/client_config'].includes(path) || path.startsWith('/localization/')) {
+1378-        if (response.ok) response.clone().json().then(body => acceptStaticDocument(url, requestHeaders, body)).catch(() => {});
+1379-      } else if (path === '/player/building' && response.ok) {
+1380-        response.clone().json().then(body => acceptBuildingStudy(url,requestHeaders,body)).catch(()=>{});
+1381-      } else if (pitApiType(path) && response.ok) {
+1382-        response.clone().json().then(body => acceptPitDocument(url,body)).catch(()=>{});
+1383-      }
+1384-      return response;
+1385-    };
+1386-
+1387-    const open = XMLHttpRequest.prototype.open;
+1388-    const setHeader = XMLHttpRequest.prototype.setRequestHeader;
+1389-    const send = XMLHttpRequest.prototype.send;
+1390-    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+1391-      this.__hkUrl = url; this.__hkHeaders = {};
+1392-      return open.call(this, method, url, ...rest);
+1393-    };
+1394-    XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+1395-      if (this.__hkHeaders) this.__hkHeaders[name] = value;
+1396-      return setHeader.call(this, name, value);
+1397-    };
+1398-    XMLHttpRequest.prototype.send = function(...args) {
+1399-      if (this.__hkUrl) captureAuthorization(this.__hkUrl, this.__hkHeaders);
+1400-      if (this.__hkUrl && isGameApiRequest(this.__hkUrl)) {
+1401-        this.addEventListener('load', () => {
+1402-          if (this.status >= 200 && this.status < 300) {
+1403-            try {
+1404-              const path = new URL(this.__hkUrl, location.href).pathname;
+1405-              const body = JSON.parse(this.responseText);
+1406-              if(path!=='/player/me')acceptSharedGameResponse(this.__hkUrl,body);
+1407-               if (path === '/player/me') {
+1408-                 let partial = false;
+1409-                 try { partial = Array.isArray(JSON.parse(String(args[0] || '{}'))?.arguments); } catch (_) {}
+1410-                 acceptPlayerState(this.__hkUrl, this.__hkHeaders, body, partial); acceptPitDocument(this.__hkUrl,body);
+1411-               }
+1412-              else if (path === '/shop/view') acceptShopView(this.__hkUrl, this.__hkHeaders, body);
+1413-              else if (path === '/player/building') acceptBuildingStudy(this.__hkUrl,this.__hkHeaders,body);
+1414-              else if (pitApiType(path)) acceptPitDocument(this.__hkUrl,body);
+1415-              else acceptStaticDocument(this.__hkUrl, this.__hkHeaders, body);
+1416-            } catch (_) {}
+1417-          }
+1418-        });
+1419-      }
+1420-      return send.apply(this, args);
+1421-    };
+1422-    networkCaptureInstalled = true;
+1423-  }
+1424-
+1425-  function pitState() {
+1426-    const text = document.body?.innerText || '';
+1427-    const roundText = clean(document.querySelector('.pit-page__round-name')?.innerText || '');
+1428-    const parseRound = value => {
+1429-      const match = String(value || '').match(/(?:Раунд|Round)\s*([\d\s.,]+)/i);
+1430-      let digits = (match?.[1] || '').replace(/\D/g, '');
+1431-      if (!digits) return null;
+1432-      // The mobile game draws the same number in two text layers. Safari can
+1433-      // expose "Раунд 135135" instead of "Раунд 135".
+1434-      if (digits.length % 2 === 0) {
+1435-        const half = digits.length / 2;
+1436-        if (digits.slice(0, half) === digits.slice(half)) digits = digits.slice(0, half);
+1437-      }
+1438-      const parsed = Number(digits);
+1439-      return Number.isSafeInteger(parsed) && parsed > 0 && parsed < 10000 ? parsed : null;
+1440-    };
+1441-    const parsedRound = parseRound(roundText) ?? parseRound(text);
+1442-    const controls = [...document.querySelectorAll('button,[role="button"],a')].filter(visible).map(e => clean(e.innerText)).filter(Boolean);
+1443-    const state = {
+1444-      round: parsedRound,
+1445-      roundText,
+1446-      controls,
+1447-      restoreModal: /Восстановление жизней|Restore lives/i.test(text),
+1448-      fastToggle: !![...document.querySelectorAll('button.event-offer__auto')].find(visible),
+1449-      enemyText: clean(document.querySelector('.pit-page__enemy')?.innerText || '')
+1450-    };
+1451-    capturePitLimitFromPage();
+1452-    return state;
+1453-  }
+1454-
+1455-  const PIT_LIMIT_TYPES = [
+1456-    {id:'normal', textKey:'pitNormal', currencyId:'cur_pit_pass', currencyType:'pit-ticket', heading:/^(?:Хомячья Яма|Hamster Pit)$/i},
+1457:    {id:'boss', textKey:'pitBoss', currencyId:'cur_pit_2_pass', currencyType:'boss-pit-ticket', heading:/^(?:Яма Боссов|Boss Pit)$/i},
+1458-    {id:'gang', textKey:'pitGang', currencyId:'cur_pit_3_pass', currencyType:'pve-pit-ticket', heading:/^(?:Яма Банд|Gang Pit)$/i}
+1459-  ];
+1460-  const PIT_DAILY_API = {
+1461-    normal:{stateKeys:['pit'], start:'/player/pit/start', battle:'/player/pit/battle', finish:'/player/pit/finish'},
+1462:    boss:{stateKeys:['pit2','boss_pit'], start:'/player/boss_pit/start', battle:'/player/boss_pit/battle', finish:'/player/boss_pit/finish'},
+1463-    gang:{stateKeys:['pit_pve'], start:'/player/pit_pve/start', battle:'/player/pit_pve/battle', finish:'/player/pit_pve/finish'}
+1464-  };
+1465-
+1466-  function persistPitLimits(limits) {
+1467-    const previous = load();
+1468-    localStorage.setItem(STORE, JSON.stringify({...previous, pitLimits:limits}));
+1469-  }
+1470-
+1471-  function capturePitLimitFromPage() {
+1472-    const heading = clean(document.querySelector('h1')?.innerText || '');
+1473-    const type = PIT_LIMIT_TYPES.find(value => value.heading.test(heading));
+1474-    if (!type) return null;
+1475-    const counter = [...document.querySelectorAll('.value-bar__value span')]
+1476-      .map(element => clean(element.innerText || '')).find(value => /^\d+\s*\/\s*\d+$/.test(value));
+1477-    const match = String(counter || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+1478-    if (!match) return null;
+1479-    const current = Number(match[1]), limit = Number(match[2]);
+1480-    if (!Number.isSafeInteger(current) || !Number.isSafeInteger(limit) || limit <= 0) return null;
+1481-    const limits = {...(load().pitLimits || {}), [type.id]:{current, limit, capturedAt:Date.now()}};
+1482-    const previous = load().pitLimits?.[type.id];
+1483-    if (!previous || previous.current !== current || previous.limit !== limit) persistPitLimits(limits);
+1484-    return limits[type.id];
+1485-  }
+1486-
+1487-  function pitLimitFromPlayer(type, documentValue = playerDocument) {
+1488-    const lists = [documentValue?.currencies, documentValue?.player?.currencies, documentValue?.inventory?.currencies];
+1489-    for (const list of lists) {
+1490-      if (!Array.isArray(list)) continue;
+1491-      const value = list.find(row => String(row?.currency_id || row?.id || '') === type.currencyId ||
+1492-        String(row?.type || row?.currency_type || row?.currencyType || '') === type.currencyType);
+1493-      if (!value) continue;
+1494-      const current = number(value.value ?? value.quantity ?? value.current ?? value.amount);
+1495-      const limit = number(value.max_value ?? value.maxValue ?? value.limit ?? value.maximum);
+1496-      if (limit !== null && limit > 0) return {current:Math.max(0, current || 0), limit};
+1497-    }
+1498-    return null;
+1499-  }
+1500-
+1501-  function pitLimitSummaries() {
+1502-    capturePitLimitFromPage();
+1503-    const cached = load().pitLimits || {};
+1504-    return PIT_LIMIT_TYPES.map(type => {
+1505-      const live = pitLimitFromPlayer(type);
+1506-      const value = live || cached[type.id] || null;
+1507-      // `current` is the number of moves that can actually be spent now.
+1508-      // It may be higher than maxValue after bonuses, so never clamp it to
+1509-      // the nominal limit shown after the slash.
+1510-      const walletCurrent = Math.max(0, Number(value?.current ?? value?.used ?? 0));
+1511-      // A race multiplier describes a separate already-started batch. Its
+1512-      // tickets have already been removed from the wallet and must not be
+1513-      // added back to the value labelled "available now". Finished races can
+1514-      // also remain in /player/me briefly, which previously displayed 55 when
+1515-      // the real wallet contained 50.
+1516-      const race = pitRaceState(type.id, playerDocument);
+1517-      const reserved = Math.max(0, Math.trunc(Number(race?.mass_multiplier ?? race?.massMultiplier ?? race?.multiplier ?? 0)));
+1518-      const current = pitUnavailableThisPeriod(type.id) ? 0 : walletCurrent;
+1519-      const limit = Math.max(0, Number(value?.limit || 0));
+1520-      const topUp = limit ? (5 - limit % 5) % 5 : null;
+1521-      return {...type, current, walletCurrent, reserved, limit, topUp};
+1522-    });
+1523-  }
+1524-
+1525-  function pitMovePlan(amount) {
+1526-    let remaining = Math.max(0, Math.floor(Number(amount || 0)));
+1527-    const result = [];
+1528-    for (const size of [50, 20, 10, 5, 1]) {
+1529-      const count = Math.floor(remaining / size);
+1530-      if (count > 0) result.push({size, count});
+1531-      remaining %= size;
+1532-    }
+1533-    return result;
+1534-  }
+1535-
+1536-  function pitMovePlanText(amount) {
+1537-    const parts = pitMovePlan(amount);
+1538-    if (!parts.length) return tr('pitNoMoves');
+1539-    return parts.map(part => part.count > 1 ? `${part.count} × ${part.size}` : `×${part.size}`).join(' + ');
+1540-  }
+1541-
+1542-  function selectedPitMoves(typeId, maximum) {
+--
+1735-      log(`${tr(action.textKey)}: ${either('пройдена серия','batch completed')} ×${part.size}`, 'ok');
+1736-      await sleep(250);
+1737-    }
+1738-    savePitMoves(typeId, 0);
+1739-  }
+1740-
+1741-  function clickText(pattern, forbidden = null) {
+1742-    const candidates = [...document.querySelectorAll('button,[role="button"],a')]
+1743-      .filter(visible)
+1744-      .filter(e => pattern.test(clean(e.innerText)) && !(forbidden && forbidden.test(clean(e.innerText))))
+1745-      .sort((a, b) => clean(a.innerText).length - clean(b.innerText).length);
+1746-    if (!candidates[0]) return false;
+1747-    candidates[0].click();
+1748-    return true;
+1749-  }
+1750-
+1751-  async function clickEntranceToken() {
+1752-    const exactOne = [...document.querySelectorAll('button,[role="button"]')].filter(visible).filter(e => clean(e.innerText) === '1');
+1753-    for (const button of exactOne) {
+1754-      let ancestor = button.parentElement;
+1755-      for (let depth = 0; ancestor && depth < 12; depth++, ancestor = ancestor.parentElement) {
+1756-        const context = clean(ancestor.innerText);
+1757-        if (/алмаз|diamond/i.test(context)) break;
+1758-        if (/Оплатить вход|Pay (?:for )?entrance|Pay entry/i.test(context)) {
+1759-          button.click(); return true;
+1760-        }
+1761-      }
+1762-    }
+1763-    const roots = [...document.querySelectorAll('[role="dialog"],[class*="modal"],[class*="popup"],[class*="payment"]')].filter(visible);
+1764-    const describe = e => clean([e.innerText, e.getAttribute?.('aria-label'), e.getAttribute?.('title'), ...[...e.querySelectorAll?.('img') || []].map(img => img.alt)].filter(Boolean).join(' '));
+1765-    const safe = e => !/алмаз|diamond/i.test(describe(e));
+1766-    const actionable = e => e && !e.disabled && (e.matches('button,[role="button"],a') || e.onclick || getComputedStyle(e).cursor === 'pointer');
+1767-    const confirm = () => roots.flatMap(r => [...r.querySelectorAll('button,[role="button"],a,div')]).filter(visible).filter(actionable).filter(safe)
+1768-      .find(e => /использовать\s*(?:1\s*)?жетон|use\s*(?:1\s*)?token|подтвердить|confirm/i.test(describe(e)));
+1769-    let target = confirm();
+1770-    if (target) { target.click(); return true; }
+1771-    const marker = roots.flatMap(r => [...r.querySelectorAll('button,[role="button"],a,div')]).filter(visible).filter(safe)
+1772-      .find(e => /жетон|token/i.test(describe(e)));
+1773-    if (!marker) return false;
+1774-    target = marker;
+1775-    for (let depth = 0; target && depth < 8; depth++, target = target.parentElement) {
+1776-      if (!safe(target)) break;
+1777-      if (actionable(target)) {
+1778-        target.click(); await sleep(450);
+1779-        const next = confirm(); if (next) next.click();
+1780-        return true;
+1781-      }
+1782-    }
+1783-    return false;
+1784-  }
+1785-
+1786-  function clickRestoreToken() {
+1787-    const candidates = [...document.querySelectorAll('button,[role="button"]')].filter(visible).filter(e => clean(e.innerText) === '1');
+1788-    for (const button of candidates) {
+1789-      let ancestor = button.parentElement;
+1790-      for (let depth = 0; ancestor && depth < 10; depth++, ancestor = ancestor.parentElement) {
+1791-        if (/Восстановление жизней|Restore lives/i.test(clean(ancestor.innerText)) && !/алмаз|diamond/i.test(clean(ancestor.innerText))) {
+1792-          button.click(); return true;
+1793-        }
+1794-      }
+1795-    }
+1796-    return false;
+1797-  }
+1798-
+1799-  function rememberPower(state) {
+1800-    if (!state.round || !state.enemyText) return;
+1801-    // Do not use look-behind here: some Safari userscript engines reject it
+1802-    // while parsing the whole panel, which prevented the HK button from
+1803-    // appearing at all. The follow-up numeric filtering is sufficient.
+1804-    const values = [...state.enemyText.matchAll(/\d[\d\s.,]{4,}\d/g)].map(m => Number(m[0].replace(/\D/g, ''))).filter(Boolean);
+1805-    if (!values.length) return;
+1806-    const pitType = currentPitType();
+1807-    if (!pitType) return;
+1808-    rememberPitObservation(pitType, {level:state.round, enemyPower:Math.max(...values), source:'screen'});
+1809-    renderPitForecast(state);
+1810-  }
+1811-
+1812-  function currentPitType() {
+1813-    const path = location.pathname.toLowerCase();
+1814-    const heading = [...document.querySelectorAll('h1,h2,.pit-page__title,.page-title')].map(element=>clean(element.innerText || '')).join(' · ');
+1815:    if (/boss[_-]?pit|pit[_-]?2/.test(path) || /Яма Боссов|Boss Pit/i.test(heading)) return 'boss';
+1816-    if (/pit[_-]?pve|pve[_-]?pit/.test(path) || /Яма Банд|Gang Pit/i.test(heading)) return 'gang';
+1817-    if (/(?:^| · )(?:Хомячья Яма|Hamster Pit)(?: · |$)/i.test(heading)) return 'normal';
+1818-    if (lastNetworkPitContext && Date.now()-lastNetworkPitContext.at < 120000) return lastNetworkPitContext.pitType;
+1819-    return null;
+1820-  }
+1821-
+1822-  function pitPowerValue(state) {
+1823-    const values = [...String(state?.enemyText || '').matchAll(/\d[\d\s.,]{4,}\d/g)].map(match => Number(match[0].replace(/\D/g,''))).filter(Boolean);
+1824-    return values.length ? Math.max(...values) : null;
+1825-  }
+1826-
+1827-  function combinedPitRows(pitType) {
+1828-    const local = pitStoreDocument()[pitType] || {};
+1829-    const grouped = new Map();
+1830-    for (const row of sharedPitRows.filter(value=>value?.pit_type===pitType)) {
+1831-      const level = Number(row.level), existing = grouped.get(level);
+1832-      if (!Number.isSafeInteger(level) || level < 1 || level > PIT_MAX_LEVEL || !Number.isFinite(Number(row.enemy_power))) continue;
+1833-      if (!existing || Number(row.players||0)>Number(existing.players||0) || (Number(row.players||0)===Number(existing.players||0) && Number(row.samples||0)>Number(existing.samples||0))) grouped.set(level,row);
+1834-    }
+1835-    for (const [level,value] of Object.entries(local)) {
+1836-      const numericLevel = Number(level), enemyPower = Number(value.enemyPower);
+1837-      if (!Number.isSafeInteger(numericLevel) || numericLevel < 1 || numericLevel > PIT_MAX_LEVEL || !(enemyPower > 0)) continue;
+1838-      const confirmedElsewhere = value.source !== 'network' && sharedPitRows.some(row =>
+1839-        row?.pit_type !== pitType && Number(row?.level) === numericLevel && Number(row?.enemy_power) === enemyPower
+1840-      );
+1841-      if (confirmedElsewhere) continue;
+1842-      grouped.set(numericLevel, {pit_type:pitType,level:numericLevel,enemy_power:enemyPower,players:Math.max(1,Number(grouped.get(numericLevel)?.players||0)),samples:Number(value.samples||1),observed_winrate:value.winrate});
+1843-    }
+1844-    return [...grouped.values()].sort((a,b)=>Number(a.level)-Number(b.level));
+1845-  }
+1846-
+1847-  function predictedPitPower(round, pitType = 'normal') {
+1848-    const rows = combinedPitRows(pitType).map(row => [Number(row.level),Number(row.enemy_power)]).filter(([x,y]) => Number.isFinite(x)&&Number.isFinite(y));
+1849-    if (!rows.length) return null;
+1850-    if (rows.length === 1) return rows[0][1];
+1851-    const meanX = rows.reduce((sum,row)=>sum+row[0],0)/rows.length;
+1852-    const meanY = rows.reduce((sum,row)=>sum+row[1],0)/rows.length;
+1853-    const denominator = rows.reduce((sum,row)=>sum+(row[0]-meanX)**2,0);
+1854-    const slope = denominator ? rows.reduce((sum,row)=>sum+(row[0]-meanX)*(row[1]-meanY),0)/denominator : 0;
+1855-    return Math.max(0,Math.round(meanY+slope*(Number(round)-meanX)));
+1856-  }
+1857-
+1858-  function pitDuelChance(playerPower, enemyPower, exponent = 5) {
+1859-    if (!(playerPower > 0) || !(enemyPower > 0)) return null;
+1860-    return Math.max(0,Math.min(1,2*Math.atan((playerPower/enemyPower)**exponent)/Math.PI));
+1861-  }
+1862-
+1863-  function pitChanceExponentFromSample(playerPower, enemyPower, rawChance) {
+1864-    const chance = normalizePitChance(rawChance);
+1865-    const ratio = Number(playerPower || 0) / Number(enemyPower || 0);
+1866-    if (!(chance > 0 && chance < 1) || !(ratio > 0) || Math.abs(ratio - 1) < 0.001) return 5;
+1867-    const exponent = Math.log(Math.tan(chance*Math.PI/2)) / Math.log(ratio);
+1868-    return Number.isFinite(exponent) && exponent >= 1 && exponent <= 12 ? exponent : 5;
+1869-  }
+1870-
+1871-  function pitLocalChanceExponent(pitType, playerPower) {
+1872-    const profile = load().pitPlayerProfiles?.[pitType] || {};
+1873-    const level = Number(profile.level || 0);
+1874-    const enemyPower = Number(pitStoreDocument()?.[pitType]?.[level]?.enemyPower || 0);
+1875-    return pitChanceExponentFromSample(playerPower,enemyPower,profile.winrate);
+1876-  }
+1877-
+1878-  function pitForecastProfile(pitType) {
+1879-    const profiles = load().pitPlayerProfiles || {};
+1880-    const roots = [playerDocument, playerDocument?.player, playerDocument?.data].filter(value=>value && typeof value === 'object');
+1881-    const typePreviews = roots.map(value=>pitType === 'normal' ? value?.pit_preview
+1882:      : pitType === 'boss' ? value?.pit2_preview
+1883-        : value?.pit_pve_preview).filter(value=>value && typeof value === 'object');
+1884-    const liveFactionSets = roots.map(value=>pitFactionPowers(value,pitType)).filter(rows=>rows.length)
+1885-      .map(rows=>rows.map(Number).filter(power=>power>0).sort((a,b)=>b-a));
+1886-    const liveBest = liveFactionSets.sort((a,b)=>b.length-a.length)[0] || [];
+1887-    const saved = Array.isArray(profiles[pitType]?.factionPowers)
+1888-      ? profiles[pitType].factionPowers.map(Number).filter(power=>power>0)
+1889-      : [];
+1890-    if (pitType !== 'gang') saved.sort((a,b)=>b-a);
+1891:    // Profiles from different Pit types are not interchangeable: Boss Pit
+1892:    // must use only the cartel powers and support captured for Boss Pit.
+1893-    const best = pitType === 'gang' && saved.length ? saved : liveBest.length ? liveBest : saved;
+1894:    const factionPowers = pitType === 'boss' ? best : best.slice(0,pitType === 'gang' ? 8 : 1);
+1895-    const liveTypeSupport = typePreviews.map(pitSupportPower).find(power=>power>0) || 0;
+1896-    const genericLiveSupport = roots.map(pitSupportPower).find(power=>power>0) || 0;
+1897-    const supportPower = liveTypeSupport || Number(profiles[pitType]?.supportPower || 0) || genericLiveSupport;
+1898-    const liveTypePlayerPower = typePreviews.map(pitCombinedPlayerPower).find(power=>power>0) || 0;
+1899-    // Never borrow another mode's or another participant's power. The value
+1900-    // saved from this installation's preview is the authoritative local one.
+1901-    const playerPower = liveTypePlayerPower || Number(profiles[pitType]?.playerPower || 0) ||
+1902:      (pitType === 'boss' ? 0 : roots.map(pitCombinedPlayerPower).find(power=>power>0) || 0);
+1903-    const roundEnemyPowers = Array.isArray(profiles[pitType]?.roundEnemyPowers) ? profiles[pitType].roundEnemyPowers.map(Number).slice(0,8) : [];
+1904-    const roundChances = Array.isArray(profiles[pitType]?.roundChances) ? profiles[pitType].roundChances.map(normalizePitChance).slice(0,8) : [];
+1905-    const referenceEnemyPower = Number(profiles[pitType]?.referenceEnemyPower || 0);
+1906-    const localLevel = Number(profiles[pitType]?.level || 0);
+1907-    const localWinrate = normalizePitChance(profiles[pitType]?.winrate);
+1908-    return {factionPowers, supportPower, playerPower, roundEnemyPowers, roundChances, referenceEnemyPower, localLevel, localWinrate};
+1909-  }
+1910-
+1911-  function pitForecastChance(pitType, level, enemyPower) {
+1912-    const profile = pitForecastProfile(pitType);
+1913-    const supportPower = Number(profile?.supportPower || 0);
+1914-    if (Number(level) === profile.localLevel && profile.localWinrate !== null && profile.referenceEnemyPower > 0 &&
+1915-        Math.abs(Number(enemyPower || 0)-profile.referenceEnemyPower) <= Math.max(1,profile.referenceEnemyPower*0.001)) {
+1916-      return profile.localWinrate;
+1917-    }
+1918-    if (pitType === 'normal' && (Number(profile?.playerPower || 0) > 0 || (Array.isArray(profile?.factionPowers) && profile.factionPowers.length))) {
+1919-      const strongest = Math.max(0,...(profile.factionPowers || []).map(Number).filter(power=>power>0));
+1920-      // Normal Pit preview already includes the selected cartel, generals,
+1921-      // the current efficiency bonus and every support cartel.
+1922-      const effectivePower = Number(profile?.playerPower || 0) || strongest*1.5+supportPower;
+1923-      return pitDuelChance(effectivePower,Number(enemyPower||0),pitLocalChanceExponent('normal',effectivePower));
+1924-    }
+1925:    if (pitType === 'boss' && (Number(profile?.playerPower || 0) > 0 || (Array.isArray(profile?.factionPowers) && profile.factionPowers.length))) {
+1926:      // The Boss Pit preview returns this participant's final power after all
+1927-      // cartel and support modifiers. Prefer it so every installation gets an
+1928-      // individual forecast; reconstruct the value only before preview data is available.
+1929-      const combinedPower = Number(profile?.playerPower || 0) ||
+1930-        profile.factionPowers.reduce((sum,power)=>sum+Number(power||0),0) + supportPower*5;
+1931:      return pitDuelChance(combinedPower,Number(enemyPower||0),pitLocalChanceExponent('boss',combinedPower));
+1932-    }
+1933-    if (pitType === 'gang' && Array.isArray(profile?.factionPowers) && profile.factionPowers.length >= 8) {
+1934-      const referenceBase = Number(profile.referenceEnemyPower || 0);
+1935-      const hasRoundProfile = referenceBase > 0 && profile.roundEnemyPowers?.length === 8 && profile.roundChances?.length === 8;
+1936-      if (!hasRoundProfile) return null;
+1937-      const chances = profile.factionPowers.slice(0,8).map((power,index)=>{
+1938-        const referenceEnemy = Number(profile.roundEnemyPowers[index] || referenceBase);
+1939-        const targetEnemy = Number(enemyPower || 0) * referenceEnemy / referenceBase;
+1940-        const exponent = pitChanceExponentFromSample(power,referenceEnemy,profile.roundChances[index]);
+1941-        return pitDuelChance(Number(power),targetEnemy,exponent);
+1942-      }).filter(value=>value!==null);
+1943-      return chances.length === 8 ? pitAtLeastWins(chances,5) : null;
+1944-    }
+1945-    const duel = pitDuelChance(Number(profile?.playerPower||0), Number(enemyPower||0));
+1946-    if (duel === null) return null;
+1947-    return pitType === 'gang' ? null : duel;
+1948-  }
+1949-
+1950-  function pitPaws(pitType, chance) {
+1951-    if (!(chance > 0)) return chance === 0 ? Infinity : null;
+1952-    // The player starts with five free attempts. Every recovery token adds
+1953-    // another five, so only attempts beyond the first five consume tokens.
+1954-    const expectedAttempts = 1/chance;
+1955-    return Math.max(0, Math.ceil(expectedAttempts/5)-1);
+1956-  }
+1957-
+1958-  function pitChanceLabel(chance) {
+1959-    if (chance === null) return '';
+1960-    if (chance > 0 && chance < 0.001) return '<0,1%';
+1961-    return `${(chance*100).toLocaleString(locale(),{maximumFractionDigits:1})}%`;
+1962-  }
+1963-
+1964-  function pitRestoreLabel(tokens) {
+1965-    const amount = tokens === Infinity ? '∞' : tokens;
+1966-    return locale() === 'ru' ? `жет. восстановления: ${amount}` : `restore tokens: ${amount}`;
+1967-  }
+1968-
+1969-  function pitCurrentLevel(pitType) {
+1970-    const stored = load();
+1971-    const runtime = Number(stored.pitRuntimeLevels?.[pitType] || 0);
+1972-    const observed = Number(stored.pitPlayerProfiles?.[pitType]?.level || 0);
+1973-    const value = Math.max(runtime, observed);
+1974-    return Number.isSafeInteger(value) && value > 0 ? value : null;
+1975-  }
+1976-
+1977-  function pitEstimatedTokensToTarget(pitType, target, rowsByLevel) {
+1978-    const from = pitCurrentLevel(pitType);
+1979-    if (!from) return {from:null, tokens:null};
+1980-    if (target <= from) return {from, tokens:0};
+1981-    let tokens = 0;
+1982-    // Reaching level N requires completing the current level through N-1.
+1983-    for (let level = from; level < target; level++) {
+1984-      const exact = rowsByLevel.get(level);
+1985-      const enemyPower = Number(exact?.enemy_power) || predictedPitPower(level,pitType);
+1986-      const chance = pitForecastChance(pitType,level,enemyPower);
+1987-      const estimate = pitPaws(pitType,chance);
+1988-      if (estimate === null) return {from, tokens:null};
+1989-      if (estimate === Infinity) return {from, tokens:Infinity};
+1990-      tokens += estimate;
+1991-    }
+1992-    return {from, tokens};
+1993-  }
+1994-
+1995-  function pitPowerCell(pitType, level, enemyPower) {
+1996-    if (!(enemyPower > 0)) return '<span class="hk-muted">—</span>';
+1997-    const chance = pitForecastChance(pitType,level,enemyPower);
+1998-    const paws = pitPaws(pitType,chance);
+1999-    const detail = chance === null ? '' : `<small>${pitChanceLabel(chance)} · ${pitRestoreLabel(paws)}</small>`;
+2000-    const power = Math.round(enemyPower).toLocaleString(locale());
+2001-    const shownPower = pitType === 'gang'
+2002-      ? `<b>${power}</b><small>${either('обычная','base')}: ${power} · +50%: ${Math.round(enemyPower*1.5).toLocaleString(locale())}</small>`
+2003-      : `<b>${power}</b>`;
+2004-    return `${shownPower}${detail}`;
+2005-  }
+2006-
+2007-  function renderPitForecast(state = pitState()) {
+2008-    const box = root?.querySelector('#hk-pit-forecast'); if (!box) return;
+2009-    const currentDetails = box.querySelector('details');
+2010-    if (currentDetails) pitPowerTableOpen = currentDetails.open;
+2011:    const byType = Object.fromEntries(['normal','boss','gang'].map(type=>[type,combinedPitRows(type)]));
+2012-    const levels = [...new Set(Object.values(byType).flatMap(rows=>rows.map(row=>Number(row.level))))].filter(Number.isFinite).sort((a,b)=>a-b);
+2013-    const lookup = Object.fromEntries(Object.entries(byType).map(([type,rows])=>[type,new Map(rows.map(row=>[Number(row.level),row]))]));
+2014-    const target = Math.max(1,Number(root?.querySelector('#hk-target')?.value || settings.target || 1));
+2015-    const currentPower = pitPowerValue(state);
+2016-    const comparison = pitRunStart && state.round ? `<p>${tr('pitComparison',{before:pitRunStart.round||'—',after:state.round,powerBefore:Number(pitRunStart.power||0).toLocaleString(locale()),powerAfter:Number(currentPower||0).toLocaleString(locale())})}</p>` : '';
+2017:    const targets = ['normal','boss','gang'].map(type=>{
+2018-      const exact=lookup[type].get(target); const power=Number(exact?.enemy_power)||predictedPitPower(target,type); const chance=pitForecastChance(type,target,power); const paws=pitPaws(type,chance);
+2019:      const label=tr(type==='normal'?'pitNormal':type==='boss'?'pitBoss':'pitGang');
+2020-      const displayedPower = power ? (type === 'gang'
+2021-        ? `${Math.round(power).toLocaleString(locale())} / +50% ${Math.round(power*1.5).toLocaleString(locale())}`
+2022-        : Math.round(power).toLocaleString(locale())) : '—';
+2023-      const total = pitEstimatedTokensToTarget(type,target,lookup[type]);
+2024-      const totalText = total.tokens === null
+2025-        ? either('Откройте эту Яму, чтобы определить текущий уровень и силу','Open this Pit to detect the current level and power')
+2026-        : total.tokens === Infinity
+2027-          ? either(`Примерно до уровня ${target}: 🐾 ∞`,`Estimated to level ${target}: 🐾 ∞`)
+2028-          : either(`Примерно до уровня ${target}: 🐾 ${total.tokens} · с уровня ${total.from}`,`Estimated to level ${target}: 🐾 ${total.tokens} · from level ${total.from}`);
+2029-      const targetChance = chance === null ? '' : ` · ${either('шанс боя','battle chance')}: ${pitChanceLabel(chance)} · ${pitRestoreLabel(paws)}`;
+2030-      return `<div><b>${label}</b><small>${either(`Сила уровня ${target}`,`Level ${target} power`)}</small><strong>${displayedPower}</strong><small>${totalText}${targetChance}</small></div>`;
+2031-    }).join('');
+2032:    const table = levels.slice(-40).reverse().map(level=>`<tr><th>${level}</th>${['normal','boss','gang'].map(type=>{const row=lookup[type].get(level);return `<td>${pitPowerCell(type,level,Number(row?.enemy_power))}</td>`;}).join('')}</tr>`).join('');
+2033:    box.innerHTML = `<h4>${tr('pitForecast')}</h4><div class="hk-pit-targets">${targets}</div><p>${either('Расчёт: обычная Яма — итоговая сила лучшего картеля из предпросмотра боя, включая генералов, текущую эффективность и всю поддержку; Яма боссов — итоговая сила всех картелей из личного предпросмотра; Яма банд — восемь индивидуальных пар с их фактической силой, эффективностью и поддержкой, общий успех требует минимум 5 побед из 8. Проценты рассчитываются индивидуально. Один жетон восстановления даёт 5 дополнительных попыток.','Calculation: Normal Pit uses the best cartel final power from the local preview, including generals, current efficiency and all support; Boss Pit uses the local preview final power of all cartels; Gang Pit uses eight individual matchups with their actual power, efficiency and support, and requires at least 5 wins out of 8. Chances are calculated individually. One recovery token gives five extra attempts.')}</p><p>${tr('pitTokenBudget',{n:Number(settings.activationLimit||0)+Number(settings.restoreLimit||0)})}</p>${comparison}${table?`<details ${pitPowerTableOpen?'open':''}><summary>${tr('pitPowerTable')}</summary><div class="hk-pit-table-wrap"><table><thead><tr><th>${either('Уровень','Level')}</th><th>${tr('pitNormal')}</th><th>${tr('pitBoss')}</th><th>${tr('pitGang')}</th></tr></thead><tbody>${table}</tbody></table></div></details>`:''}`;
+2034-    const details = box.querySelector('details');
+2035-    if (details) details.addEventListener('toggle',()=>{ pitPowerTableOpen=details.open; });
+2036-  }
+2037-
+2038-  async function pitLoop() {
+2039-    while (pitRunning) {
+2040-      const state = pitState();
+2041-      rememberPower(state);
+2042-      updatePitStatus(state);
+2043-      if (state.round !== null && state.round >= settings.target) {
+2044-        pitRunning = false; log(`Цель достигнута: раунд ${state.round}`, 'ok'); break;
+2045-      }
+2046-      if (settings.collectOnly) {
+2047-        await sleep(Math.max(700, settings.interval * 1000));
+2048-        continue;
+2049-      }
+2050-      let acted = false;
+2051-      if (state.restoreModal) {
+2052-        if (!settings.allowTokens || restoreSpent >= settings.restoreLimit) {
+2053-          pitRunning = false; log('Остановка: достигнут лимит жетонов восстановления', 'warn'); break;
+2054-        }
+2055-        acted = clickRestoreToken();
+2056-        if (acted) { restoreSpent++; log(`Восстановление жетоном ${restoreSpent}/${settings.restoreLimit}`); }
+2057-      } else if (state.controls.some(text => /^(Восстановить|Restore)$/i.test(text))) {
+2058-        if (!settings.allowTokens || restoreSpent >= settings.restoreLimit) {
+2059-          pitRunning = false; log('Требуется восстановление, но расход жетонов запрещён', 'warn'); break;
+2060-        }
+2061-        acted = clickText(/^(Восстановить|Restore)$/i);
+2062-      } else if (state.controls.some(text => /Сражаться\s+До конца|Fight\s+to\s+end/i.test(text))) {
+2063-        acted = clickText(/Сражаться\s+До конца|Fight\s+to\s+end/i);
+2064-      } else if (state.controls.some(text => /Сражаться|Fight/i.test(text))) {
+2065-        const fast = [...document.querySelectorAll('button.event-offer__auto')].find(visible);
+2066-        if (fast) { fast.click(); acted = true; log('Ускорение боя включено'); }
+2067-        else acted = clickText(/Сражаться|Fight/i, /До конца|to end/i);
+2068-      } else if (state.controls.some(text => /Оплатить|Pay/i.test(text)) || /Оплатить вход|Pay entry/i.test(document.body?.innerText || '')) {
+2069-        if (!settings.allowTokens || activationSpent >= settings.activationLimit) {
+2070-          pitRunning = false; log('Остановка: достигнут лимит жетонов активации', 'warn'); break;
+2071-        }
+2072-        if (state.controls.some(text => /Оплатить|Pay/i.test(text))) clickText(/Оплатить|Pay/i);
+2073-        await sleep(400);
+2074-        acted = await clickEntranceToken();
+2075-        if (acted) { activationSpent++; log(`Активация жетоном ${activationSpent}/${settings.activationLimit}`); }
+2076-      } else if (/жетон|token/i.test(document.body?.innerText || '')) {
+2077-        if (settings.allowTokens && activationSpent < settings.activationLimit) {
+2078-          acted = await clickEntranceToken();
+2079-          if (acted) { activationSpent++; log(`Активация жетоном ${activationSpent}/${settings.activationLimit}`); }
+2080-        }
+2081-      }
+2082-      await sleep(Math.max(700, settings.interval * 1000));
+2083-      if (!acted) await sleep(500);
+2084-    }
+2085-    updatePitButtons();
+2086-  }
+2087-
+2088-  function updatePitStatus(state = pitState()) {
+2089-    const element = document.querySelector('#hk-pit-live');
+2090-    if (element) element.textContent = language === 'en'
+2091-      ? `Round: ${state.round ?? '—'} · activations ${activationSpent}/${settings.activationLimit} · recoveries ${restoreSpent}/${settings.restoreLimit}`
+2092-      : `Раунд: ${state.round ?? '—'} · активации ${activationSpent}/${settings.activationLimit} · восстановления ${restoreSpent}/${settings.restoreLimit}`;
+2093-    renderPitForecast(state);
+2094-  }
+2095-
+2096-  function updatePitButtons() {
+2097-    const start = document.querySelector('#hk-pit-start');
+2098-    const stop = document.querySelector('#hk-pit-stop');
+2099-    if (start) start.disabled = pitRunning;
+2100-    if (stop) stop.disabled = !pitRunning;
+2101-  }
+2102-
+2103-  function findBuildings(value) {
+2104-    if (Array.isArray(value)) { for (const child of value) { const found = findBuildings(child); if (found) return found; } }
+2105-    else if (value && typeof value === 'object') {
+2106-      if (Array.isArray(value.business_building)) return value.business_building;
+2107-      for (const child of Object.values(value)) { const found = findBuildings(child); if (found) return found; }
+2108-    }
+2109-    return null;
+2110-  }
+2111-
+2112-  function normalizeLayout(documentValue) {
+2113-    const result = [];
+--
+4984-  function businessBonusAmount(bonus) {
+4985-    const source = String(bonus?.value || '').replace(/\s/g, '').replace(',', '.');
+4986-    const match = source.match(/[+-]?\d+(?:\.\d+)?(?:[kкmм])?/i);
+4987-    if (!match) return 1;
+4988-    const suffix = match[0].slice(-1).toLowerCase();
+4989-    let value = Number(match[0].replace(/[kкmм]/i, ''));
+4990-    if (!Number.isFinite(value)) return 1;
+4991-    if (suffix === 'k' || suffix === 'к') value *= 1000;
+4992-    if (suffix === 'm' || suffix === 'м') value *= 1000000;
+4993-    return value;
+4994-  }
+4995-
+4996-  function bonusPropertyKey(bonus) {
+4997-    const label = clean(bonus?.caption);
+4998-    const normalized = label.normalize('NFKC').toLocaleLowerCase(locale())
+4999-      .replace(/ё/g,'е')
+5000-      .replace(/^[\s/\\:;,.+\-–—]+|[\s/\\:;,.+\-–—]+$/g,'')
+5001-      .replace(/[\s\u00a0]+/g,' ')
+5002-      .trim();
+5003-    return normalized || String(bonus?.id || '').toLowerCase();
+5004-  }
+5005-
+5006-  function businessEffects(businessId) {
+5007-    const meta = recipeMetadata(String(businessId || ''));
+5008-    const grouped = new Map();
+5009-    const seen = new Set();
+5010-    for (const bonus of (meta.bonuses || [])) {
+5011-      const id = String(bonus.id || bonus.caption || '');
+5012-      const label = clean(bonus.caption) || clean(bonus.id) || businessId;
+5013-      const amount = businessBonusAmount(bonus);
+5014-      const key = bonusPropertyKey(bonus) || id;
+5015-      // Some combined businesses repeat the exact same bonus reference in the
+5016-      // response. Count that reference once, but add genuinely different
+5017-      // bonuses which have the same visible property.
+5018-      const fingerprint = `${id}\u0000${amount}`;
+5019-      if (seen.has(fingerprint)) continue;
+5020-      seen.add(fingerprint);
+5021-      const row = grouped.get(key) || {key,id,label,amount:0,ids:[],search:''};
+5022-      row.amount += amount;
+5023-      row.ids.push(id);
+5024-      row.search += ` ${id} ${bonus.caption || ''}`.toLowerCase();
+5025-      grouped.set(key,row);
+5026-    }
+5027-    return [...grouped.values()];
+5028-  }
+5029-
+5030-  function playerHasVip(documentValue = playerDocument) {
+5031-    const player = documentValue?.player || documentValue?.data?.player || documentValue || {};
+5032-    const applied = player?.vip_status_applied === true || player?.vipStatusApplied === true;
+5033-    const timer = player?.vip_status_end_timer ?? player?.vipStatusEndTimer;
+5034-    return applied && (timer == null || !Number.isFinite(Number(timer)) || Number(timer) > 0);
+5035-  }
+5036-
+5037-  function vipPassiveIncomeMultiplier(documentValue = playerDocument) {
+5038-    if (!playerHasVip(documentValue)) return 1;
+5039-    const configured = Number(premiumDocument?.passive_income_multiplier || premiumDocument?.passiveIncomeMultiplier || 2);
+5040-    return Number.isFinite(configured) && configured > 1 ? configured : 2;
+5041-  }
+5042-
+5043-  function isPassiveIncomeEffect(effect) {
+5044-    const text = `${effect?.search || ''} ${effect?.id || ''} ${effect?.label || ''}`.toLowerCase();
+5045-    return /perhour|per_hour|passive[_\s-]*income|пассивн\w*\s+доход|\/час/.test(text);
+5046-  }
+5047-
+5048-  function businessEffectMultiplier(effect, documentValue = playerDocument) {
+5049-    return isPassiveIncomeEffect(effect) ? vipPassiveIncomeMultiplier(documentValue) : 1;
+5050-  }
+5051-
+5052-  function businessActiveLimit(businessId) {
+5053-    const details = businessCardDetails(businessId);
+5054-    const text = `${details.properties} ${recipeMetadata(String(businessId || '')).description || ''}`;
+5055-    const match = text.match(/(?:лимит\s+активных|limit\s+(?:of\s+)?active)\D{0,8}(\d+)/i);
+5056-    return match ? Math.max(1, Number(match[1])) : Number.POSITIVE_INFINITY;
+5057-  }
+5058-
+5059-  function optimizerEffectMatches(effect, goal, keyword = '') {
+5060-    const text = effect.search;
+5061-    if (goal === 'mixed') return true;
+5062-    if (goal === 'currency') return Boolean(keyword) && text.includes(keyword.toLowerCase());
+5063-    const patterns = {
+5064:      pit:['pit','яма','ямы','boss','босс','combat','battle','power','сила','damage'],
+5065-      income:['income','доход','perhour','per_hour','passive','пассив','profit','прибыл'],
+5066-      energy:['energy','энерг'], rumors:['rumor','слух'], buildings:['building','здан','slot','слот']
+5067-    };
+5068-    return (patterns[goal] || []).some(value => text.includes(value));
+5069-  }
+5070-
+5071-  function optimizerBusinessScore(businessId, goal, keyword = '') {
+5072-    const effects = businessEffects(businessId);
+5073-    let score = 0;
+5074-    let matched = false;
+5075-    for (const effect of effects) {
+5076-      if (!optimizerEffectMatches(effect, goal, keyword)) continue;
+5077-      matched = true;
+5078-      const amount = effect.amount * businessEffectMultiplier(effect);
+5079-      const weight = Math.log10(1 + Math.abs(amount));
+5080-      score += amount < 0 ? -weight : weight;
+5081-    }
+5082-    // A business without a useful effect for the selected goal must not enter
+5083-    // the replacement pool merely because it has a higher tier. Returning zero
+5084-    // also keeps the before/after summary finite for unrelated active bonuses.
+5085-    if (!matched || score <= 0) return 0;
+5086-    // A deterministic, very small tie-breaker keeps stronger visible tiers
+5087-    // ahead without overriding the chosen effect.
+5088-    return score + Math.max(0, Number(recipeMetadata(businessId).tier || 0)) / 10000;
+5089-  }
+5090-
+5091-  function businessHasPositiveGoalEffect(businessId, goal, keyword = '') {
+5092-    return businessEffects(businessId).some(effect =>
+5093-      optimizerEffectMatches(effect, goal, keyword) &&
+5094-      effect.amount * businessEffectMultiplier(effect) > 0
+5095-    );
+5096-  }
+5097-
+5098-  function businessCounts(ids) {
+5099-    const result = new Map();
+5100-    for (const id of ids.filter(Boolean)) result.set(id, (result.get(id) || 0) + 1);
+5101-    return result;
+5102-  }
+5103-
+5104-  function aggregateBusinessEffects(counts) {
+5105-    const result = new Map();
+5106-    for (const [id,count] of counts) for (const effect of businessEffects(id)) {
+5107-      const row = result.get(effect.key) || {label:effect.label, amount:0};
+5108-      row.amount += effect.amount * count * businessEffectMultiplier(effect); result.set(effect.key,row);
+5109-    }
+5110-    return result;
+5111-  }
+5112-
+5113-  function optimizerSafety(changeCount) {
+5114-    const workers = businessWorkerState(playerDocument);
+5115-    const pending = normalizeLayout(playerDocument).filter(row => row.businessId &&
+5116-      (row.status !== 'ACTIVE' || Number(row.timer || 0) > 0));
+5117-    const canRelease = pending.some(row => Number(row.timer || 0) <= Math.max(0, Number(row.freeSpeedUpTime || 0)));
+5118-    const managersAvailable = !changeCount || !workers.max || workers.busy < workers.max || canRelease;
+5119-    return {workers, managersAvailable, allowed:managersAvailable,
+5120-      reason:managersAvailable ? tr('optimizerSafe') : either('Нет свободного менеджера с бесплатным ускорением','No free manager with a free speed-up')};
+5121-  }
+5122-
+5123-  function businessOptimizerPreferences() {
+5124-    const stored = load().businessOptimizer || {};
+5125-    const legacyTiers = Array.isArray(stored.allowedTiers) ? stored.allowedTiers : [1,2,3,4,5,6];
+5126-    const normalizeTiers = values => values.map(Number).filter(value => value >= 1 && value <= 6);
+5127-    const removeTiers = normalizeTiers(Array.isArray(stored.removeTiers) ? stored.removeTiers : legacyTiers);
+5128-    const insertTiers = normalizeTiers(Array.isArray(stored.insertTiers) ? stored.insertTiers : legacyTiers);
+5129-    return {removeTiers:new Set(removeTiers), insertTiers:new Set(insertTiers),
+5130-      lockedBusinessIds:new Set(Array.isArray(stored.lockedBusinessIds) ? stored.lockedBusinessIds.map(String) : []),
+5131-      excludedInsertBusinessIds:new Set(Array.isArray(stored.excludedInsertBusinessIds) ? stored.excludedInsertBusinessIds.map(String) : [])};
+5132-  }
+5133-
+5134-  function optimizerSectionOpen(sectionId) {
+5135-    const stored = load().businessOptimizer?.openSections;
+5136-    return !stored || stored[sectionId] !== false;
+5137-  }
+5138-
+5139-  function saveOptimizerSectionState(sectionId, open) {
+5140-    const stored = load().businessOptimizer || {};
+5141-    save({businessOptimizer:{...stored, openSections:{...(stored.openSections || {}), [sectionId]:Boolean(open)}}});
+5142-  }
+5143-
+5144-  function saveBusinessOptimizerPreferences(removeTiers, insertTiers, lockedBusinessIds, excludedInsertBusinessIds) {
+--
+5176-    removeTierBox.querySelectorAll('[data-optimizer-remove-tier]').forEach(input => input.onchange = () => {
+5177-      const current = businessOptimizerPreferences();
+5178-      const value = Number(input.dataset.optimizerRemoveTier);
+5179-      const idsInTier = installed.filter(row => row.tier === value).map(row => row.businessId);
+5180-      if (input.checked) {
+5181-        current.removeTiers.add(value);
+5182-        // Selecting a removable tier immediately enables every installed
+5183-        // business of that tier. Individual eligible businesses can still be
+5184-        // protected afterwards.
+5185-        for (const id of idsInTier) current.lockedBusinessIds.delete(id);
+5186-      } else {
+5187-        current.removeTiers.delete(value);
+5188-        // Businesses outside the selected removable tiers are always
+5189-        // protected and their checkboxes are disabled.
+5190-        for (const id of idsInTier) current.lockedBusinessIds.add(id);
+5191-      }
+5192-      saveBusinessOptimizerPreferences(current.removeTiers,current.insertTiers,current.lockedBusinessIds); optimizerResult=null; renderBusinessOptimizerFilters(); renderBusinessOptimizer();
+5193-    });
+5194-    insertTierBox.querySelectorAll('[data-optimizer-insert-tier]').forEach(input => input.onchange = () => {
+5195-      const current = businessOptimizerPreferences();
+5196-      const value = Number(input.dataset.optimizerInsertTier);
+5197-      if (input.checked) current.insertTiers.add(value); else current.insertTiers.delete(value);
+5198-      saveBusinessOptimizerPreferences(current.removeTiers,current.insertTiers,current.lockedBusinessIds); optimizerResult=null; renderBusinessOptimizer();
+5199-    });
+5200-    replaceBox.querySelectorAll('[data-optimizer-business]').forEach(input => input.onchange = () => {
+5201-      if (input.disabled) return;
+5202-      const current = businessOptimizerPreferences();
+5203-      const id = String(input.dataset.optimizerBusiness || '');
+5204-      if (input.checked) current.lockedBusinessIds.delete(id); else current.lockedBusinessIds.add(id);
+5205-      saveBusinessOptimizerPreferences(current.removeTiers,current.insertTiers,current.lockedBusinessIds); optimizerResult=null; renderBusinessOptimizerFilters(); renderBusinessOptimizer();
+5206-    });
+5207-    stockBox.querySelectorAll('[data-optimizer-stock-business]').forEach(input => input.onchange = () => {
+5208-      const current = businessOptimizerPreferences();
+5209-      const id = String(input.dataset.optimizerStockBusiness || '');
+5210-      if (input.checked) current.excludedInsertBusinessIds.delete(id); else current.excludedInsertBusinessIds.add(id);
+5211-      saveBusinessOptimizerPreferences(current.removeTiers,current.insertTiers,current.lockedBusinessIds,current.excludedInsertBusinessIds);
+5212-      optimizerResult=null; renderBusinessOptimizerFilters(); renderBusinessOptimizer();
+5213-    });
+5214-  }
+5215-
+5216-  function optimizerExactPairs(desiredIds, protectedSlotKeys = new Set()) {
+5217-    const wanted = businessCounts(desiredIds);
+5218-    const keep = new Map(wanted);
+5219-    let emptyToKeep = desiredIds.filter(id => !id).length;
+5220-    const outgoing = [];
+5221-    for (const row of layout) if (row.businessId && protectedSlotKeys.has(row.key)) {
+5222-      const left = Number(keep.get(row.businessId) || 0);
+5223-      if (left > 0) keep.set(row.businessId,left - 1);
+5224-    }
+5225-    for (const row of layout) {
+5226-      if (protectedSlotKeys.has(row.key)) continue;
+5227-      const left = row.businessId ? Number(keep.get(row.businessId) || 0) : 0;
+5228-      if (row.businessId && left > 0) keep.set(row.businessId,left - 1);
+5229-      else if (!row.businessId && emptyToKeep > 0) emptyToKeep--;
+5230-      else outgoing.push(row);
+5231-    }
+5232-    const incoming = [];
+5233-    for (const [id,count] of keep) for (let index=0; index<count; index++) incoming.push(id);
+5234-    outgoing.sort((a,b) => a.key.localeCompare(b.key));
+5235-    incoming.sort((a,b) => Number(tier(a) || 0) - Number(tier(b) || 0) || a.localeCompare(b));
+5236-    const result = incoming.map(id => {
+5237-      const wantedTier = tier(id);
+5238-      outgoing.sort((a,b) => Number(tier(a.businessId) !== wantedTier) - Number(tier(b.businessId) !== wantedTier) || a.key.localeCompare(b.key));
+5239-      return [outgoing.shift(),id];
+5240-    });
+5241-    while (outgoing.length) result.push([outgoing.shift(),'']);
+5242-    return result;
+5243-  }
+5244-
+5245-  function calculateBusinessOptimizer() {
+5246-    if (!layout.length) { optimizerResult = null; renderBusinessOptimizer(); return; }
+5247-    const goal = root?.querySelector('#hk-optimizer-goal')?.value || 'pit';
+5248-    const keyword = '';
+5249-    const preferences = businessOptimizerPreferences();
+5250-    if (!preferences.removeTiers.size || !preferences.insertTiers.size) {
+5251-      alert(either('Выберите хотя бы один тир для снятия и один тир для вставки.', 'Select at least one tier to remove and one tier to insert.')); return;
+5252-    }
+5253-    // Passive income is a family of independent hourly resources. Replacing a
+5254-    // business that already produces one of them with another income business
+5255-    // can raise the combined score while silently reducing restoration tokens,
+5256:    // boss invitations or influence funds. For the income goal, preserve every
+5257-    // installed positive income producer and improve only the remaining slots.
+5258-    const protectedByGoal = row => goal === 'income' && row.businessId && businessHasPositiveGoalEffect(row.businessId,goal,keyword);
+5259-    const canRemove = row => !row.businessId || (!protectedByGoal(row) && preferences.removeTiers.has(Number(tier(row.businessId) || 0)) && !preferences.lockedBusinessIds.has(row.businessId));
+5260-    const fixedRows = layout.filter(row => !canRemove(row));
+5261-    const replaceableRows = layout.filter(canRemove);
+5262-    const activeCounts = businessCounts(layout.map(row => row.businessId));
+5263-    const available = businessCounts(replaceableRows.map(row => row.businessId));
+5264-    for (const row of inventory) available.set(row.businessId,(available.get(row.businessId) || 0) + Math.max(0,Number(row.quantity || 0)));
+5265-    const types = [...available].filter(([id]) => preferences.insertTiers.has(Number(tier(id) || 0)) &&
+5266-      !preferences.excludedInsertBusinessIds.has(id)).map(([id,count]) => ({id,count,score:optimizerBusinessScore(id,goal,keyword),limit:businessActiveLimit(id),
+5267-      active:Number(activeCounts.get(id) || 0)})).filter(row => Number.isFinite(row.score) && row.score > 0)
+5268-      .sort((a,b) => b.score-a.score || Number(b.active>0)-Number(a.active>0) || a.id.localeCompare(b.id));
+5269-    const optimized = [];
+5270-    for (const row of types) {
+5271-      const fixedCopies = fixedRows.filter(value => value.businessId === row.id).length;
+5272-      const allowedByLimit = Number.isFinite(row.limit) ? Math.max(0,row.limit-fixedCopies) : replaceableRows.length;
+5273-      const allowed = Math.min(row.count, allowedByLimit, replaceableRows.length-optimized.length);
+5274-      for (let index=0; index<allowed; index++) optimized.push(row.id);
+5275-      if (optimized.length >= replaceableRows.length) break;
+5276-    }
+5277-    // Never remove an installed business merely because the selected tiers do
+5278-    // not provide enough replacement candidates. Preserve the remaining
+5279-    // replaceable positions instead of turning them into empty slots.
+5280-    if (optimized.length < replaceableRows.length) {
+5281-      const alreadyUsed = businessCounts(optimized);
+5282-      for (const row of replaceableRows.filter(value => value.businessId)) {
+5283-        const availableCopies = Number(available.get(row.businessId) || 0);
+5284-        const used = Number(alreadyUsed.get(row.businessId) || 0);
+5285-        if (used >= availableCopies || optimized.length >= replaceableRows.length) continue;
+5286-        optimized.push(row.businessId); alreadyUsed.set(row.businessId,used+1);
+5287-      }
+5288-    }
+5289-    while (optimized.length < replaceableRows.length) optimized.push('');
+5290-    const desired = [...fixedRows.map(row => row.businessId), ...optimized];
+5291-    const pairs = optimizerExactPairs(desired,new Set(fixedRows.map(row => row.key)));
+5292-    const beforeCounts = activeCounts, afterCounts = businessCounts(desired);
+5293-    const beforeEffects = aggregateBusinessEffects(beforeCounts), afterEffects = aggregateBusinessEffects(afterCounts);
+5294-    const changes = [...new Set([...beforeEffects.keys(),...afterEffects.keys()])].map(id => {
+5295-      const before = Number(beforeEffects.get(id)?.amount || 0), after = Number(afterEffects.get(id)?.amount || 0);
+5296-      return {id,label:afterEffects.get(id)?.label || beforeEffects.get(id)?.label || id,before,after,diff:after-before};
+5297-    }).filter(row => row.diff !== 0).sort((a,b) => Math.abs(b.diff)-Math.abs(a.diff));
+5298-    optimizerResult = {goal,keyword,desired,pairs,changes,safety:optimizerSafety(pairs.length),
+5299-      beforeScore:[...beforeCounts].reduce((sum,[id,count]) => sum+optimizerBusinessScore(id,goal,keyword)*count,0),
+5300-      afterScore:[...afterCounts].reduce((sum,[id,count]) => sum+optimizerBusinessScore(id,goal,keyword)*count,0)};
+5301-    renderBusinessOptimizer();
+5302-  }
+5303-
+5304-  function renderBusinessOptimizer() {
+5305-    const box = root?.querySelector('#hk-optimizer-result'); if (!box) return;
+5306-    if (!optimizerResult) { box.innerHTML = `<p class="hk-muted">${tr('optimizerNoPlan')}</p>`; return; }
+5307-    const row = optimizerResult, workers = row.safety.workers;
+5308-    const changes = row.changes.slice(0,10).map(change => `<li><span>${escapeHtml(change.label)}</span><strong class="${change.diff>0?'positive':'negative'}">${change.diff>0?'+':''}${Number(change.diff).toLocaleString(locale())}</strong></li>`).join('') || `<li><span>${either('Изменений бонусов нет','No bonus changes')}</span><strong>—</strong></li>`;
+5309-    const flow = row.pairs.slice(0,6).map(([slot,id]) => `${businessVisual(slot.businessId)}<b>→</b>${businessVisual(id)}`).join('') + (row.pairs.length>6?`<b>+${row.pairs.length-6}</b>`:'');
+5310-    const vipMultiplier = vipPassiveIncomeMultiplier();
+5311-    const vipNotice = vipMultiplier > 1 ? `<div class="hk-optimizer-safety">${either('VIP учтён','VIP included')}: ×${vipMultiplier} ${either('для почасового пассивного дохода','for hourly passive income')}</div>` : '';
+5312-    box.innerHTML = `<div class="hk-optimizer-summary"><span>${tr('optimizerBefore')}<b>${row.beforeScore.toFixed(2)}</b></span><span>${tr('optimizerAfter')}<b>${row.afterScore.toFixed(2)}</b></span><span>${tr('optimizerChanges',{n:row.pairs.length})}<b>${row.pairs.length}</b></span></div><div class="hk-optimizer-flow">${flow || `<span>${either('Перестановка не требуется','No rearrangement needed')}</span>`}</div><b>${tr('optimizerDifference')}</b><ul>${changes}</ul>${vipNotice}<div class="hk-optimizer-safety ${row.safety.allowed?'':'blocked'}">${escapeHtml(row.safety.reason)} · ${tr('optimizerManagers',{busy:workers.busy,max:workers.max||'?'})}</div><button id="hk-optimizer-apply" class="hk-primary" ${row.safety.allowed&&row.pairs.length?'':'disabled'}>${tr('optimizerApply')}</button>`;
+5313-    installIconFallbacks(box);
+5314-    box.querySelector('#hk-optimizer-apply')?.addEventListener('click',applyBusinessOptimizer);
+5315-  }
+5316-
+5317-  function bonusAnalyzerData() {
+5318-    const active = businessCounts(layout.map(row => row.businessId));
+5319-    const effects = new Map();
+5320-    for (const [id,count] of active) for (const effect of businessEffects(id)) {
+5321-      const row = effects.get(effect.key) || {id:effect.key,label:effect.label,total:0,sources:[]};
+5322-      const multiplier = businessEffectMultiplier(effect);
+5323-      row.total += effect.amount * count * multiplier;
+5324-      row.sources.push({id,count,amount:effect.amount,multiplier,contribution:effect.amount*count*multiplier,limit:businessActiveLimit(id)});
+5325-      effects.set(effect.key,row);
+5326-    }
+5327-    const rows = [...effects.values()].sort((a,b) => Math.abs(b.total)-Math.abs(a.total) || a.label.localeCompare(b.label));
+5328-    const candidates = inventory.filter(row => Number(row.quantity || 0) > 0).map(row => {
+5329-      const current = Number(active.get(row.businessId) || 0);
+5330-      const limit = businessActiveLimit(row.businessId);
+5331-      const limited = Number.isFinite(limit) && current >= limit;
+5332-      const effectRows = businessEffects(row.businessId);
+5333-      const score = effectRows.reduce((sum,effect) => sum + Math.log10(1 + Math.abs(effect.amount)),0);
+5334-      return {...row,current,limit,limited,effectRows,score};
+5335-    }).sort((a,b) => Number(a.limited)-Number(b.limited) || b.score-a.score || Number(recipeMetadata(b.businessId).tier||0)-Number(recipeMetadata(a.businessId).tier||0));
+5336-    return {rows,candidates,active};
+--
+5667-            if (!restored) throw new Error(either('Сервер не вернул восстановленный бизнес', 'The server did not return the restored business'));
+5668-            await finishPendingBusiness(restored, `T${tier(row.businessId)}`);
+5669-          }
+5670-          log('Исходная схема восстановлена', 'ok');
+5671-        } catch (rollback) {
+5672-          log(`Откат не завершён: ${rollback.message}`, 'bad');
+5673-          alert(either('Не удалось полностью вернуть исходную схему. Проверьте здания в игре.', 'Could not fully restore the original layout. Check the buildings in the game.'));
+5674-        }
+5675-      }
+5676-    } finally {
+5677-      businessBusy = false;
+5678-      renderPlan();
+5679-    }
+5680-  }
+5681-
+5682-  function prepareOriginalBusinessRestore() {
+5683-    const original = load().businessOriginalLayout;
+5684-    if (!Array.isArray(original?.slots) || !original.slots.length) {
+5685-      alert(either('Сохранённой исходной схемы пока нет.', 'No saved original setup yet.')); return;
+5686-    }
+5687-    const available = new Map(businessCounts(layout.map(row => row.businessId)));
+5688-    for (const row of inventory) available.set(row.businessId,(available.get(row.businessId)||0)+Number(row.quantity||0));
+5689-    const needed = businessCounts(original.slots.map(row => row.businessId));
+5690-    const missing = [...needed].filter(([id,count]) => Number(available.get(id)||0)<count);
+5691-    if (missing.length) {
+5692-      alert(either('Не все бизнесы исходной схемы доступны на складе или в зданиях.', 'Not all businesses from the original setup are available.')); return;
+5693-    }
+5694-    const pairs = [];
+5695-    for (const saved of original.slots) {
+5696-      const current = layout.find(row => row.key === saved.key); if (!current) continue;
+5697-      const wanted = String(saved.businessId || '');
+5698-      if (String(current.businessId || '') !== wanted) pairs.push([current,wanted]);
+5699-    }
+5700-    if (!pairs.length) { alert(either('Исходная схема уже установлена.', 'The original setup is already active.')); return; }
+5701-    preparedBusinessPlan = pairs.map(([row,id]) => [{key:row.key,businessId:row.businessId || ''},id]);
+5702-    preparedBusinessPlanSource = 'restore';
+5703-    selectedSlots = new Set(pairs.map(([row]) => row.key)); selectedStock.clear();
+5704-    for (const [,id] of pairs) if (id) selectedStock.set(id,(selectedStock.get(id)||0)+1);
+5705-    renderBusinessLists();
+5706-  }
+5707-
+5708-  function presets() { return load().presets || {}; }
+5709-  function refreshPresets(selectName = '') {
+5710-    if (!presetSelect) return;
+5711-    const names = Object.keys(presets());
+5712-    presetSelect.innerHTML = `<option value="">${tr('savedSets')}</option>${names.map(name => `<option ${name === selectName ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}`;
+5713-  }
+5714-
+5715-  function savePreset() {
+5716-    const name = prompt(either('Название набора:', 'Set name:')); if (!name?.trim()) return;
+5717-    const all = presets();
+5718-    const destinations = layout.filter(row => selectedSlots.has(row.key));
+5719-    all[name.trim()] = {slots: destinations.map(row => ({key:row.key, businessId:row.businessId || ''})),
+5720-      remove: destinations.map(row => row.businessId).filter(Boolean), insert: selectedIncoming()};
+5721-    save({presets: all}); refreshPresets(name.trim()); log(`Набор «${name.trim()}» сохранён`);
+5722-  }
+5723-
+5724-  function loadPreset(name) {
+5725-    const preset = presets()[name]; if (!preset) return;
+5726-    preparedBusinessPlan = null; preparedBusinessPlanSource = '';
+5727-    selectedSlots.clear(); selectedStock.clear();
+5728-    if (Array.isArray(preset.slots)) {
+5729-      for (const saved of preset.slots) {
+5730-        const row = layout.find(item => item.key === saved.key && (saved.businessId ? item.businessId === saved.businessId : !item.businessId));
+5731-        if (row) selectedSlots.add(row.key);
+5732-      }
+5733-    } else {
+5734-      const wanted = [...(preset.remove || [])];
+5735-      for (const id of wanted) { const row = layout.find(item => item.businessId === id && !selectedSlots.has(item.key)); if (row) selectedSlots.add(row.key); }
+5736-    }
+5737-    for (const id of preset.insert || []) selectedStock.set(id, (selectedStock.get(id) || 0) + 1);
+5738-    refreshBusinessData(); log(`Набор «${name}» выбран`);
+5739-  }
+5740-
+5741-  function deletePreset() {
+5742-    const name = presetSelect?.value; if (!name || !confirm(`Удалить набор «${name}»?`)) return;
+5743-    const all = presets(); delete all[name]; save({presets: all}); refreshPresets();
+5744-  }
+5745-
+5746-  function exportPowers() {
+5747:    const types=['normal','boss','gang']; const rowsByType=Object.fromEntries(types.map(type=>[type,new Map(combinedPitRows(type).map(row=>[Number(row.level),row]))]));
+5748-    const levels=[...new Set(types.flatMap(type=>[...rowsByType[type].keys()]))].sort((a,b)=>a-b);
+5749-    if (!levels.length) { alert(either('Пока нет сохранённых данных', 'No saved data yet')); return; }
+5750:    const csv = `\uFEFF${either('Уровень;Обычная Яма;Яма боссов;Яма банд', 'Level;Normal Pit;Boss Pit;Gang Pit')}\n` + levels.map(level=>`${level};${types.map(type=>rowsByType[type].get(level)?.enemy_power||'').join(';')}`).join('\n');
+5751-    const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); link.download = 'pit_levels_three_pits.csv'; link.click();
+5752-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+5753-  }
+5754-
+5755-  function fillTierFilters() {
+5756-    const remove = root?.querySelector('#hk-remove-tier');
+5757-    const insert = root?.querySelector('#hk-insert-tier');
+5758-    const removeValue = remove?.value || '0';
+5759-    const insertValue = insert?.value || '0';
+5760-    if (remove) {
+5761-      remove.innerHTML = `<option value="0">${tr('removeAll')}</option><option value="-1">${tr('emptySlots')}</option>` +
+5762-        Array.from({length:6}, (_,i) => `<option value="${i+1}">${tr('removeTier',{n:i+1})}</option>`).join('');
+5763-      remove.value = [...remove.options].some(option => option.value === removeValue) ? removeValue : '0';
+5764-    }
+5765-    if (insert) {
+5766-      insert.innerHTML = `<option value="0">${tr('insertAll')}</option>` +
+5767-        Array.from({length:6}, (_,i) => `<option value="${i+1}">${tr('insertTier',{n:i+1})}</option>`).join('');
+5768-      insert.value = [...insert.options].some(option => option.value === insertValue) ? insertValue : '0';
+5769-    }
+5770-  }
+5771-
+5772-  function clanWeekStart(value = new Date()) {
+5773-    const date = new Date(value);
+5774-    date.setHours(0, 0, 0, 0);
+5775-    date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+5776-    return date;
+5777-  }
+5778-
+5779-  function clanWeekKey(value = new Date()) {
+5780-    const date = clanWeekStart(value);
+5781-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+5782-  }
+5783-
+5784-  function localDateKey(value = new Date()) {
+5785-    const date = new Date(value);
+5786-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+5787-  }
+5788-
+5789-  function clanSkillStore() {
+5790-    const stored = load().clanSkills;
+5791-    return stored && typeof stored === 'object' ? stored : {snapshots:[]};
+5792-  }
+5793-
+5794-  function clanTimestamp(value) {
+5795-    const numeric = Number(value || 0);
+5796-    if (!numeric) return 0;
+5797-    return numeric < 1e12 ? numeric * 1000 : numeric;
+5798-  }
+5799-
+5800-  function clanIdentity(staticDocument = {}, linesDocument = {}, clanDocument = {}) {
+5801-    const player = playerDocument?.player || {};
+5802-    const candidates = [
+5803-      // `/clan/info` is authoritative and common to every member. Prefer its
+5804-      // explicit clan_id over nested player objects that may describe the
+5805-      // membership rather than the clan itself.
+5806-      clanDocument?.clan_id, clanDocument?.clan?.clan_id, clanDocument?.clan?.id,
+5807-      clanDocument?.clan_info?.clan_id, clanDocument?.clan_info?.id,
+5808-      clanDocument?.player?.clan_id, clanDocument?.player?.clan?.id,
+5809-      player.clan_id, player.clanId, player.clan_uuid, player.clan?.clan_id, player.clan?.id,
+5810-      staticDocument?.clan?.id, staticDocument?.clan_id, staticDocument?.clanId,
+5811-      linesDocument?.clan?.id, linesDocument?.clan_id, linesDocument?.clanId
+5812-    ];
+5813-    return clean(candidates.find(value => value !== undefined && value !== null && String(value).trim()) || '');
+5814-  }
+5815-
+5816-  function normalizeClanSkillSnapshot(staticDocument, linesDocument, historyDocument, clanDocument = {}, membersDocument = {}, statsDocument = {}) {
+5817-    const blocksSource = Array.isArray(staticDocument?.clan_blocks) ? staticDocument.clan_blocks : [];
+5818-    const lineStateSource = Array.isArray(linesDocument?.clan_skill_lines) ? linesDocument.clan_skill_lines : [];
+5819-    const historySource = Array.isArray(historyDocument?.clan_skill_lines_history) ? historyDocument.clan_skill_lines_history : [];
+5820-    const lineState = {};
+5821-    lineStateSource.forEach(row => {
+5822-      const id = String(row.line_id ?? row.id ?? '');
+5823-      if (!id) return;
+5824-      lineState[id] = {
+5825-        level: row.is_locked ? 0 : Number(row.level || 0) + Number(row.uncommited_player_level || 0),
+5826-        playerLevel: Number(row.player_level || 0),
+5827-        locked: Boolean(row.is_locked)
+5828-      };
+5829-    });
+5830-    const contributions = {};
+--
+6662-    };
+6663-    fab.addEventListener('touchstart', touchStart, {capture:true, passive:false});
+6664-    document.addEventListener('touchmove', touchMove, {capture:true, passive:false});
+6665-    document.addEventListener('touchend', touchFinish, {capture:true, passive:false});
+6666-    document.addEventListener('touchcancel', event => touchFinish(event, true), {capture:true, passive:false});
+6667-    const restoreInsideViewport = () => place(load().fabPosition || snapshot());
+6668-    window.addEventListener('resize', restoreInsideViewport);
+6669-    window.addEventListener('orientationchange', restoreInsideViewport);
+6670-    fab.addEventListener('keydown', event => {
+6671-      if (event.key !== 'Enter' && event.key !== ' ') return;
+6672-      panel.classList.add('open'); updateWatermark(); event.preventDefault();
+6673-    });
+6674-    window.addEventListener('resize', () => place(load().fabPosition), {passive:true});
+6675-  }
+6676-
+6677-  function renderRunnerState() {
+6678-    if (!root) return;
+6679-    const box=root.querySelector('#hk-runner'); if(!box)return;
+6680-    const state=hkRunner.state;
+6681-    const visibleState=state.status!=='idle'; box.classList.toggle('show',visibleState);
+6682-    if(!visibleState)return;
+6683-    const labels={running:either('Выполняется','Running'),paused:either('Пауза','Paused'),stopping:either('Остановка','Stopping'),done:either('Готово','Done'),error:either('Ошибка','Error')};
+6684-    const percent=state.total?Math.max(0,Math.min(100,(state.done/state.total)*100)):(state.status==='done'?100:0);
+6685-    root.querySelector('#hk-runner-title').textContent=state.title||either('Выполнение','Execution');
+6686-    root.querySelector('#hk-runner-state').textContent=labels[state.status]||state.status;
+6687-    root.querySelector('#hk-runner-step').textContent=state.error||state.step||(state.total?`${state.done} / ${state.total}`:'');
+6688-    root.querySelector('#hk-runner-fill').style.width=`${percent}%`;
+6689-    const pause=root.querySelector('#hk-runner-pause'); const stop=root.querySelector('#hk-runner-stop');
+6690-    pause.textContent=state.status==='paused'?either('Продолжить','Continue'):either('Пауза','Pause');
+6691-    pause.disabled=!state.pausable||!['running','paused'].includes(state.status);
+6692-    stop.textContent=either('Остановить','Stop'); stop.disabled=!state.stoppable||!['running','paused'].includes(state.status);
+6693-  }
+6694-
+6695-  function renderUI() {
+6696-    if (!document.body || root) return;
+6697-    // If Safari still has an older duplicate userscript enabled, replace its
+6698-    // two-tab panel with this newer build instead of silently aborting.
+6699-    document.querySelector('#hk-mobile-root')?.remove();
+6700-    const style = document.createElement('style');
+6701-    style.textContent = `
+6702-      #hk-mobile-root{position:fixed;z-index:2147483647;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f7f9fc}
+6703-      #hk-fab{width:58px;height:58px;border:0;border-radius:50%;background:linear-gradient(145deg,#ffb627,#ff7b00);box-shadow:0 8px 28px #0008;color:#15100a;font-size:25px;font-weight:900;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+6704-      #hk-fab.dragging{cursor:grabbing;transform:scale(1.05);box-shadow:0 10px 32px #000a}
+6705-      #hk-panel{position:fixed;inset:0;background:#0b1018ee;backdrop-filter:blur(16px);display:none;overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));box-sizing:border-box}
+6706-      #hk-panel.open{display:block} .hk-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-head h2{margin:0;font-size:22px;flex:1}.hk-close{border:0;background:#253044;color:white;border-radius:12px;padding:10px 14px;font-size:20px}.hk-lang{display:flex;gap:5px}.hk-lang button{border:1px solid #34445c;background:#182230;border-radius:10px;padding:7px 8px;font-size:21px;line-height:1;opacity:.5}.hk-lang button.active{opacity:1;border-color:#ffad1f;background:#3a2b14;box-shadow:0 0 0 2px #ffad1f33}
+6707-      .hk-donation{width:100%;margin:12px 0 0;border:1px solid #ff6f91;border-radius:13px;padding:11px;background:linear-gradient(135deg,#7b2947,#b63863);color:#fff;font-weight:900;box-shadow:0 7px 18px #7b294744}.hk-donation:active{transform:scale(.99)}
+6708-      #hk-watermark{position:fixed;inset:-40px;z-index:20;pointer-events:none;display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));grid-auto-rows:minmax(120px,1fr);align-items:center;justify-items:center;overflow:hidden;transition:transform .5s ease}#hk-watermark span{display:block;max-width:310px;color:#fff;font:700 11px ui-monospace,monospace;letter-spacing:.4px;opacity:.035;transform:rotate(-24deg);white-space:nowrap;text-shadow:0 1px 2px #000}
+6709-      .hk-license{padding:11px;border:1px solid #3b4a61;border-radius:12px;background:#101a28;margin:14px 0;color:#c8d4e5}.hk-license.ok{border-color:#287b60}.hk-license.bad{border-color:#803b49}.hk-update{display:none;margin:0 0 14px;padding:12px;border:1px solid #ffad1f;border-radius:13px;background:#2a2418;color:#fff}.hk-update.required{border-color:#ff6b75;background:#351b22}.hk-update b,.hk-update small{display:block}.hk-update small{margin-top:5px;color:#cbd5e5}.hk-update .hk-primary{margin-top:10px}.hk-locked .hk-tabs,.hk-locked .hk-subnav,.hk-locked .hk-runner,.hk-locked .hk-page{display:none!important}
+6710-      .hk-health{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 0 8px}.hk-health-chip{display:grid;grid-template-columns:9px minmax(0,1fr);align-items:center;column-gap:7px;padding:9px 8px;border:1px solid #34445c;border-radius:11px;background:#111a27;color:#d3dbe8;min-width:0}.hk-health-chip:before{content:'';width:8px;height:8px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}.hk-health-chip.ok{border-color:#24694f;background:#10231d}.hk-health-chip.ok:before{background:#52d296;box-shadow:0 0 0 3px #52d29622}.hk-health-chip.bad{border-color:#7a3443;background:#29151b}.hk-health-chip.bad:before{background:#ff6b7a;box-shadow:0 0 0 3px #ff6b7a22}.hk-health-chip b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-chip small{grid-column:2;color:#8392a7;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-actions{display:flex;gap:7px;margin:0 0 14px}.hk-health-actions button{flex:1;min-height:36px;font-size:12px}@media(max-width:430px){.hk-health{grid-template-columns:repeat(2,minmax(0,1fr))}}
+6711-      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}.hk-growth-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.hk-growth-stats>div{padding:11px;border:1px solid #304057;border-radius:12px;background:#0e1723}.hk-growth-stats small{display:block;color:#8797ad;font-size:10px}.hk-growth-stats b{display:block;margin-top:4px;color:#ffe083;font-size:15px}.hk-growth-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-growth-actions button{margin-top:0}.hk-growth-options{display:grid;gap:9px;margin:10px 0}.hk-growth-option{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-option span{display:grid;gap:3px}.hk-growth-option small{color:#8998ad;font-size:10px}.hk-growth-option select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:9px}.hk-growth-check{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-check input{width:20px;height:20px;accent-color:#ffad1f}.hk-growth-live{display:grid;gap:3px;padding:9px 10px;border:1px solid #245d48;border-radius:11px;background:#0d211b}.hk-growth-live span{font-size:11px;font-weight:900;color:#6ee7a8}.hk-growth-live small{font-size:9px;color:#8fa89f}.hk-growth-plan{display:grid;gap:6px;margin:4px 0 10px;padding:11px;border:1px solid #3a4659;border-radius:12px;background:#0e1723}.hk-growth-plan>b{color:#ffe083}.hk-growth-plan>span{font-size:11px;color:#d4deea}.hk-growth-plan>small{font-size:9px;color:#8290a4;line-height:1.4}.hk-growth-priority-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-growth-priority-head h3{margin:0}.hk-growth-priority-list{display:grid;gap:7px;margin-top:8px}.hk-growth-priority{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px;border:1px solid #2d3a4e;border-radius:10px;background:#101927}.hk-growth-priority>b{color:#ffe083}.hk-growth-priority>span{font-size:9px;color:#8797ad}.hk-growth-priority>div{display:flex;gap:4px}.hk-growth-priority button{min-width:30px;margin:0;padding:6px 8px}.hk-growth-stats>div:nth-child(n+5){background:#121a28}@media(max-width:430px){.hk-tab{min-height:58px;padding:8px}.hk-tab-icon{width:32px;height:32px;font-size:19px}}
+6712-      .hk-business-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.hk-business-tab{border:1px solid #34445b;border-radius:11px;padding:11px;background:#172234;color:#b8c4d6;font-weight:700}.hk-business-tab.active{border-color:#ffad1f;background:#3a2a0f;color:#fff}.hk-business-pane{display:none}.hk-business-pane.active{display:block}
+6713-      .hk-page{display:none}.hk-page.active{display:block}.hk-cardbox{background:#151d29;border:1px solid #2a374a;border-radius:16px;padding:14px;margin-bottom:12px}.hk-grid{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center}
+6714-      input,select,button{font:inherit}.hk-grid input,.hk-grid select,.hk-toolbar select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-primary,.hk-secondary,.hk-danger{width:100%;border:0;border-radius:12px;padding:13px;margin-top:9px;font-weight:800}.hk-primary{background:#ffad1f;color:#16110a}.hk-secondary{background:#28364a;color:white}.hk-danger{background:#642a32;color:#fff}.hk-primary:disabled,.hk-secondary:disabled{opacity:.45}
+6715-      .hk-live{padding:10px;border-radius:10px;background:#0d1520;margin:10px 0;color:#cbd5e5}.hk-wallet-forecast{display:grid;gap:7px;margin-top:9px;padding-top:8px;border-top:1px solid #26354a}.hk-wallet-row{display:grid;grid-template-columns:minmax(105px,.65fr) minmax(0,1.35fr);gap:8px;align-items:center;padding:7px 8px;border:1px solid #2b3a50;border-radius:9px;background:#111b29;font-size:12px}.hk-wallet-row.shortage{border-color:#ff6677;background:#301923;color:#ffd6dc}.hk-wallet-currency{display:flex;align-items:center;gap:5px;min-width:0}.hk-wallet-currency b{overflow:hidden;text-overflow:ellipsis}.hk-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.hk-toolbar>*{flex:1}.hk-toolbar button{border:0;border-radius:10px;padding:10px;background:#29374a;color:white}.hk-toolbar input{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}
+6716-      .hk-daily-progress{margin:10px 0;padding:10px;border:1px solid #29394f;border-radius:12px;background:#101927}.hk-daily-progress>div{display:flex;justify-content:space-between;gap:9px;font-size:12px}.hk-daily-progress span{color:#aebbd0}.hk-daily-progress i{display:block;height:8px;margin-top:8px;border-radius:8px;overflow:hidden;background:#080d14}.hk-daily-progress em{display:block;height:100%;border-radius:inherit;background:#36d59a;transition:width .2s}.hk-daily-list{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}.hk-daily-list>li{padding:10px;border:1px solid #29394f;border-radius:11px;background:#0d1520;display:grid;gap:4px}.hk-daily-list>li>b{color:#e7edf7}.hk-daily-list span{font-size:12px;color:#9eabc0}.hk-daily-list ul{list-style:none;margin:5px 0 0;padding:0;display:grid;gap:5px}.hk-daily-list ul li{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#aebbd0}.hk-daily-list ul li.ready b{color:#6ee7a8}
+6717-      .hk-today-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-today-section{margin:9px 0;padding:11px;border:1px solid #29394f;border-radius:12px;background:#0d1520}.hk-today-section h4{margin:0 0 8px;color:#f0f4fb}.hk-today-section p{margin:4px 0;color:#aebbd0}.hk-today-section>ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}.hk-today-section>ul li{display:flex;justify-content:space-between;gap:8px;font-size:12px}.hk-today-section>ul span{color:#9eabc0}.hk-pit-limits{display:grid;gap:6px}.hk-pit-limits>div{display:grid;grid-template-columns:minmax(100px,.8fr) 1.6fr;gap:3px 8px;padding:7px 8px;border-radius:9px;background:#101927}.hk-pit-limits span{font-size:11px;color:#c3cee0}.hk-pit-limits small{grid-column:2;color:#94a3b8}.hk-pit-limits strong{color:#6ee7a8}.hk-pit-enable{display:flex;align-items:center;gap:6px}.hk-pit-enable input{margin:0}.hk-pit-enable span{color:#94a3b8}.hk-pit-move-choice{grid-column:1/3;display:grid;grid-template-columns:minmax(100px,.8fr) minmax(72px,.45fr) 1.6fr;align-items:center;gap:7px;margin-top:4px;padding-top:6px;border-top:1px solid #27364b}.hk-pit-move-choice select{min-width:72px}.hk-pit-move-choice em{font-style:normal;font-size:11px;color:#94a3b8}.hk-pit-move-choice em b{color:#ffbd3f}.hk-today-balances{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:7px}.hk-today-balance{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:6px;padding:7px;border-radius:9px;background:#101927}.hk-today-balance span{font-size:11px;color:#aebbd0}.hk-today-action-groups{display:grid;gap:8px;margin-top:9px}.hk-today-action-group{border:1px solid #304057;border-radius:11px;background:#101927;overflow:hidden}.hk-today-action-group>summary{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;padding:10px}.hk-today-action-group>summary span{min-width:25px;padding:2px 7px;border-radius:12px;background:#26364c;text-align:center;color:#cbd5e5}.hk-today-action-group>div{padding:0 7px 7px}.hk-today-action{display:grid;grid-template-columns:24px 1fr auto;gap:7px;align-items:center;margin:6px 0;padding:8px;border:1px solid #304057;border-radius:10px;background:#0d1520}.hk-today-action.has-lot-icon{grid-template-columns:24px 58px 1fr auto}.hk-today-action.locked{opacity:.6}.hk-today-action>span{display:grid;gap:4px}.hk-today-action small{display:flex;align-items:center;gap:5px;flex-wrap:wrap;color:#9eabc0}.hk-today-quantity{display:grid;gap:3px;min-width:82px;font-size:10px;color:#9eabc0}.hk-today-quantity select{min-width:76px}.hk-today-lot-visual{width:54px;display:grid!important;justify-items:center;gap:1px}.hk-today-lot-image{width:50px;height:50px;object-fit:contain}.hk-today-lot-visual>small{min-height:12px;font-size:10px;font-weight:800;color:#e8eef8}.hk-action-count{color:#ffbd3f}.hk-free{color:#6ee7a8}.hk-today-plan ol{margin:8px 0;padding-left:24px}.hk-today-plan li{padding:5px 0}.hk-today-plan li>span{display:block;color:#aebbd0;font-size:12px}.hk-today-plan li.blocked{color:#ff8290}.hk-budget summary{cursor:pointer;font-weight:800}.hk-budget-row{margin-top:9px;padding:9px;border:1px solid #304057;border-radius:10px;display:grid;grid-template-columns:1.2fr repeat(3,1fr);gap:7px;align-items:end}.hk-budget-title{display:flex;align-items:center;gap:6px}.hk-budget-row>label{display:grid;gap:4px;font-size:10px;color:#9eabc0}.hk-budget-row>small,.hk-budget-flags{grid-column:1/5}.hk-budget-flags{display:flex;gap:10px;flex-wrap:wrap;font-size:11px}.hk-budget-flags label{display:flex;align-items:center;gap:4px}.hk-budget-flags .premium{color:#62dfff}.hk-expense-journal{list-style:none;padding:0;margin:8px 0;display:grid;gap:5px}.hk-expense-journal li{display:grid!important;grid-template-columns:1fr auto;gap:3px 8px;padding:6px;border-radius:7px;background:#101927}.hk-expense-journal li small{grid-column:1/3;color:#8fa0b8}.hk-expense-journal li.failed{color:#ff8290}.hk-expense-journal li.ok b{color:#6ee7a8}
+6718-      .hk-today-store-tabs{display:flex;gap:6px}.hk-today-store-tabs button{display:flex;flex:1 1 0;min-width:0;justify-content:center;align-items:center;gap:5px;padding:9px 6px}.hk-today-store-tabs button.active{border-color:#f3a712;background:#3a2a0e;color:#fff}.hk-today-store-tabs button span{min-width:20px;padding:1px 6px;border-radius:10px;background:#26364c;font-size:10px}.hk-today-store-page{margin-top:7px}.hk-today-action.mandatory{border-color:#2d9a70;background:#10241f}.hk-today-action.mandatory input:disabled,.hk-today-action.mandatory select:disabled{opacity:1}
+6719-      @media(max-width:620px){.hk-today-grid{grid-template-columns:1fr}.hk-budget-row{grid-template-columns:1fr 1fr}.hk-budget-row>small,.hk-budget-flags{grid-column:1/3}.hk-today-store-tabs button{font-size:11px;padding:8px 3px;gap:3px}.hk-today-store-tabs button span{min-width:18px;padding:1px 4px}}
+6720-      #hk-business-lists{display:grid;grid-template-columns:1fr;gap:12px}h3{font-size:16px;margin:8px 0}.hk-cards{display:grid;gap:8px}.hk-card{display:flex;align-items:center;gap:10px;background:#151d29;border:1px solid #2a374a;border-radius:14px;padding:9px}.hk-card.selected{border-color:#ffad1f;background:#2a2418}.hk-card.empty{border-style:dashed}.hk-card input{width:22px;height:22px}.hk-card select{margin-left:auto;background:#0b111b;color:white;border:1px solid #455672;border-radius:9px;padding:8px;min-width:58px}.hk-card>.hk-business-info{display:flex;flex:1;min-width:0;flex-direction:column}.hk-card small{color:#a9b5c7;margin-top:3px}.hk-business-name{line-height:1.25;overflow-wrap:anywhere}.hk-business-properties{color:#e3c66e!important;font-size:11px;line-height:1.3;overflow-wrap:anywhere}.hk-icon{width:46px;height:46px;object-fit:contain;flex:0 0 46px}.hk-empty-icon{width:46px;height:46px;border:2px dashed #6381a8;border-radius:50%;display:flex!important;align-items:center;justify-content:center;color:#77baff;font-size:27px;flex:0 0 46px}.hk-empty-icon.compact{width:34px;height:34px;flex-basis:34px;font-size:20px}.hk-plan-row{display:flex;align-items:center;gap:6px;overflow:hidden;margin:10px 0}.hk-plan-row .hk-icon{width:34px;height:34px;flex-basis:34px}.hk-count{font-weight:800}.hk-muted{color:#9aa8bc}.hk-log{max-height:150px;overflow:auto;font:12px ui-monospace,monospace;background:#080d14;border-radius:12px;padding:9px;margin-top:12px}.hk-log>div{padding:3px 0;border-bottom:1px solid #182130}.hk-log-ok{color:#6ee7a8}.hk-log-warn{color:#ffd166}.hk-log-bad{color:#ff8792}.hk-status{font-size:12px;color:#aebbd0;margin-top:8px}
+6721-      .hk-optimizer{margin:10px 0;padding:11px;border:1px solid #34445b;border-radius:14px;background:#0d1520}.hk-optimizer h3{margin-top:0}.hk-optimizer-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hk-optimizer-controls label{display:grid;gap:4px;color:#aebbd0;font-size:11px}.hk-optimizer-controls select,.hk-optimizer-controls input{min-width:0;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:9px;padding:9px}.hk-optimizer-filter{display:grid;gap:6px;margin-top:9px;padding:9px;border:1px solid #2d3d54;border-radius:10px;background:#101927}.hk-optimizer-filter>small{color:#8fa0b8}.hk-optimizer-collapsible>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none}.hk-optimizer-collapsible>summary::-webkit-details-marker{display:none}.hk-optimizer-collapsible>summary:before{content:'▸';color:#ffbd3f;font-size:15px}.hk-optimizer-collapsible[open]>summary:before{content:'▾'}.hk-optimizer-collapsible:not([open])>small,.hk-optimizer-collapsible:not([open])>.hk-optimizer-replaceable{display:none}.hk-optimizer-tiers{display:flex;gap:6px;flex-wrap:wrap}.hk-tier-choice{display:flex;align-items:center;gap:4px;padding:6px 9px;border:1px solid #42536d;border-radius:9px;background:#0b111b}.hk-optimizer-replaceable{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;max-height:250px;overflow:auto}.hk-optimizer-business-choice{display:grid;grid-template-columns:22px 42px 1fr;align-items:center;gap:6px;padding:6px;border:1px solid #34445b;border-radius:9px;background:#0b111b}.hk-optimizer-business-choice.locked{border-color:#a64d5b;background:#27151b}.hk-optimizer-business-choice.tier-disabled{border-color:#34445b;background:#0b111b;opacity:.48;cursor:not-allowed}.hk-optimizer-business-choice.tier-disabled input{pointer-events:none}.hk-optimizer-business-choice .hk-icon{width:40px;height:40px}.hk-optimizer-business-choice>span{display:grid;gap:2px;min-width:0}.hk-optimizer-business-choice b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hk-optimizer-business-choice small{color:#9eabc0}.hk-optimizer-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.hk-optimizer-result{display:grid;gap:8px;margin-top:9px}.hk-optimizer-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.hk-optimizer-summary span{padding:8px;border-radius:9px;background:#111c2b;color:#aebbd0;font-size:11px}.hk-optimizer-summary b{display:block;color:#f4f7fb;margin-top:3px}.hk-optimizer-result ul{list-style:none;padding:0;margin:0;display:grid;gap:5px}.hk-optimizer-result li{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:8px;background:#111c2b;font-size:11px}.hk-optimizer-result li strong.positive{color:#6ee7a8}.hk-optimizer-result li strong.negative{color:#ff8792}.hk-optimizer-safety{padding:8px;border-radius:9px;background:#10281f;color:#6ee7a8}.hk-optimizer-safety.blocked{background:#301820;color:#ff8792}.hk-optimizer-flow{display:flex;align-items:center;gap:5px;overflow-x:auto;padding:4px 0}.hk-optimizer-flow .hk-icon{width:34px;height:34px;flex-basis:34px}@media(max-width:620px){.hk-optimizer-controls,.hk-optimizer-actions{grid-template-columns:1fr}.hk-optimizer-summary{grid-template-columns:1fr 1fr}.hk-optimizer-replaceable{grid-template-columns:1fr}}
+6722-      .hk-bonus-analyzer{margin:10px 0;padding:11px;border:1px solid #34445b;border-radius:14px;background:#0d1520}.hk-bonus-analyzer h3,.hk-bonus-analyzer h4{margin:4px 0 8px}.hk-bonus-analysis-list{display:grid;gap:6px}.hk-bonus-analysis-row{background:#111c2b;border:1px solid #2c3b50;border-radius:10px;padding:8px}.hk-bonus-analysis-row summary{display:grid;grid-template-columns:1fr auto;gap:3px 8px;cursor:pointer}.hk-bonus-analysis-row summary small{grid-column:1/3;color:#95a5bc}.hk-bonus-analysis-row>div{display:grid;gap:5px;margin-top:7px}.hk-bonus-source,.hk-limited-businesses>span{display:flex;align-items:center;gap:7px}.hk-bonus-source .hk-icon,.hk-limited-businesses .hk-icon{width:30px;height:30px;flex-basis:30px}.hk-best-business{display:flex;align-items:center;gap:10px;background:#10281f;border:1px solid #286148;border-radius:11px;padding:9px}.hk-best-business span{display:grid;gap:3px}.hk-best-business small{color:#b5c2d4}.hk-limited-businesses{display:flex;gap:8px;overflow-x:auto}.hk-limited-businesses>span{min-width:150px;background:#301820;border-radius:9px;padding:6px;color:#ffb0b7}
+6723-      .hk-resource-type-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}.hk-resource-type-tabs button{display:grid;gap:3px;padding:11px 8px;border:1px solid #40516a;border-radius:12px;background:#101a28;color:#d7dfeb}.hk-resource-type-tabs button b{font-size:13px;overflow-wrap:anywhere}.hk-resource-type-tabs button small{color:#96a5ba}.hk-resource-type-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#ffe083;box-shadow:0 0 0 2px #ffad1f2b}.hk-resource-type-tabs button.active small{color:#ffd36a}.hk-resource-head{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(260px,1.4fr) minmax(210px,.48fr);gap:10px;align-items:end}.hk-resource-head h3{margin:0}.hk-resource-head small{display:block;margin-top:4px;color:#96a5ba}.hk-resource-tiers{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;align-self:center}.hk-resource-tiers button{min-width:42px;padding:9px 10px;border:1px solid #40516a;border-radius:50px;background:#101a28;color:#b8c5d8;font-weight:900}.hk-resource-tiers button.active{border-color:#ffad1f;background:#3a2b14;color:#ffe083;box-shadow:0 0 0 2px #ffad1f2b}.hk-resource-repeat{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:10px 12px;border:1px solid #304159;border-radius:10px;background:#101a28}.hk-resource-repeat select{min-width:90px}.hk-resource-maximum{width:100%;margin-top:8px}.hk-resource-buildings{display:grid;gap:10px;margin:12px 0}.hk-resource-building{padding:10px;border:1px solid #304159;border-radius:12px;background:#101a28}.hk-resource-building h4{margin:0 0 8px;color:#f4f7fb}.hk-resource-building h4 small{color:#ffe083}.hk-resource-task{display:grid;grid-template-columns:minmax(150px,1fr) minmax(210px,.9fr) 110px;gap:9px;align-items:center;padding:8px 0;border-top:1px solid #26364b}.hk-resource-task>div{display:grid;gap:3px}.hk-resource-task small{color:#96a5ba}.hk-resource-task.protected{opacity:.6}.hk-resource-task.protected button{border-color:#596578;background:#222c3a;color:#aeb8c8}.hk-resource-task button{padding:10px 6px;border-color:#d99d18;background:#3a2b14;color:#ffe083;font-weight:900}.hk-resource-cost{display:grid;gap:4px;justify-items:end}.hk-resource-balance{display:grid;grid-template-columns:25px auto 8px auto;gap:4px;align-items:center;font-size:10px;color:#aebbd0}.hk-resource-balance .hk-price-icon{width:25px;height:25px}.hk-resource-balance i{display:grid;font-style:normal}.hk-resource-balance em{font-style:normal;color:#748399}.hk-resource-balance b{font-size:12px;color:#f5f7fa}.hk-resource-balance.ok b{color:#72e8ae}.hk-resource-balance.short b{color:#ff8992}.hk-resource-buildings+.hk-primary{width:100%}@media(max-width:820px){.hk-resource-head{grid-template-columns:1fr}.hk-resource-tiers{justify-content:flex-start}}@media(max-width:620px){.hk-resource-type-tabs button{padding:9px 4px}.hk-resource-type-tabs button b{font-size:11px}.hk-resource-type-tabs button small{font-size:10px}.hk-resource-task{grid-template-columns:1fr 110px}.hk-resource-cost{grid-column:1/2;justify-items:start}.hk-resource-task button{grid-column:2;grid-row:1/3}}
+6724-      .hk-clan-head{display:grid;grid-template-columns:1fr minmax(170px,.5fr) 130px;gap:8px;align-items:end}.hk-clan-head h3{margin:0}.hk-clan-head small{color:#94a3b8}.hk-clan-head select{min-width:0;background:#0b111b;color:#fff;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-clan-overall{border:1px solid #2d3d54;border-radius:12px;background:#0d1520;padding:10px;margin:10px 0}.hk-clan-overall summary{cursor:pointer;font-weight:900}.hk-clan-overall summary span{float:right;color:#6ee7a8}.hk-clan-branches{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:12px 0}.hk-clan-branch,.hk-clan-line{border:1px solid #34445b;border-radius:11px;background:#111a27;color:#d9e2ef;padding:8px;display:grid;place-items:center;gap:5px;min-width:0}.hk-clan-branch{height:72px;overflow:hidden}.hk-clan-branch.active,.hk-clan-line.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-clan-branch img{display:block;width:100%;height:100%;max-width:56px;max-height:56px;object-fit:contain}.hk-clan-matrix{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px}.hk-clan-matrix aside{display:grid;gap:7px;align-content:start}.hk-clan-line{width:58px;height:58px}.hk-clan-line img{width:42px;height:42px;object-fit:contain}.hk-clan-matrix>section{border:1px solid #2d3d54;border-radius:12px;background:#0d1520;padding:11px}.hk-clan-line-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.hk-clan-line-summary span{display:grid;gap:3px;padding:8px;border-radius:9px;background:#111c2b;color:#9eabc0;font-size:10px}.hk-clan-line-summary b{font-size:14px;color:#ffe083}.hk-clan-players{display:grid;gap:6px;margin-top:10px}.hk-clan-player{display:flex;justify-content:space-between;gap:9px;padding:8px;border-radius:9px;background:#111c2b}.hk-clan-player span{color:#6ee7a8;font-weight:800}@media(max-width:620px){.hk-clan-head{grid-template-columns:1fr 1fr}.hk-clan-head>div{grid-column:1/3}.hk-clan-branches{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;overflow:visible}.hk-clan-branch{height:64px;padding:5px}.hk-clan-branch img{max-width:48px;max-height:48px}.hk-clan-matrix{grid-template-columns:58px minmax(0,1fr)}.hk-clan-line-summary{grid-template-columns:1fr 1fr}.hk-clan-line-summary span:last-child{grid-column:1/3}}
+6725-      .hk-pit-forecast{margin:10px 0;padding:10px;border:1px solid #304057;border-radius:12px;background:#0d1520}.hk-pit-forecast h4,.hk-pit-forecast p{margin:4px 0}.hk-pit-forecast p{color:#aebbd0}.hk-pit-forecast summary{cursor:pointer;font-weight:800;margin-top:8px;padding:8px 0}.hk-pit-targets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px 0}.hk-pit-targets>div{display:grid;gap:3px;padding:8px;border:1px solid #304057;border-radius:10px;background:#111c2b}.hk-pit-targets strong{font-size:14px;color:#ffe083}.hk-pit-targets small,.hk-pit-forecast td small{display:block;color:#9eabc0;font-size:9px}.hk-pit-table-wrap{overflow-x:auto}.hk-pit-forecast table{width:100%;min-width:580px;margin-top:6px;border-collapse:collapse}.hk-pit-forecast th,.hk-pit-forecast td{padding:6px 8px;border-bottom:1px solid #28364a;text-align:left;vertical-align:top}.hk-pit-forecast thead th{position:sticky;top:0;background:#121d2c;color:#ffe083}.hk-pit-forecast tbody th{color:#ffe083}@media(max-width:620px){.hk-pit-targets{grid-template-columns:1fr}.hk-pit-forecast table{font-size:10px}}
+6726-      .hk-fair-types{display:flex;gap:9px;overflow-x:auto;padding:3px 1px 10px}.hk-fair-type{min-width:92px;border:1px solid #304057;background:#121a26;color:white;border-radius:14px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-fair-type.selected{border-color:#ffad1f;background:#2a2418}.hk-fair-icon{width:58px;height:58px;object-fit:contain}.hk-fair-type span,.hk-lot span{display:flex;align-items:center;justify-content:center;gap:4px}.hk-price-icon{width:22px;height:22px;object-fit:contain}.hk-fair-lots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hk-lot{position:relative;border:1px solid #2d3b50;background:#121a26;color:white;border-radius:15px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px}.hk-lot.selected{border:2px solid #3ee0a4;background:#173128}.hk-lot.locked{opacity:.48}.hk-lot small{color:#ff8792}.hk-fair-controls{display:grid;grid-template-columns:1fr 90px;gap:9px;align-items:center}.hk-fair-controls input[type=number],.hk-fair-controls select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px;min-width:0}.hk-check{display:flex;gap:8px;align-items:center;margin:12px 0}.hk-check input{width:22px;height:22px}
+6727-      .hk-fair-currencies{display:flex;gap:7px;overflow-x:auto;padding:0 0 11px}.hk-fair-currencies button{border:1px solid #304057;background:#121a26;color:white;border-radius:11px;padding:7px 9px;display:flex;align-items:center;gap:5px;white-space:nowrap}.hk-fair-currencies button.selected{border-color:#ffad1f;background:#2a2418}.hk-fair-currencies span{font-size:12px}.hk-fair-bonus-lots{margin:9px 0;padding:10px;border:1px solid #304057;border-radius:11px;background:#101a28;display:grid;grid-template-columns:minmax(150px,1fr) auto;align-items:center;gap:8px}.hk-fair-bonus-lots>div{display:flex;gap:8px;flex-wrap:wrap}.hk-fair-bonus-lots .hk-check{margin:0;padding:7px 10px;border:1px solid #ffad1f;border-radius:9px;background:#3a2b14;color:#ffe083}.hk-fair-bonus-lots .hk-check.unavailable{opacity:.38;border-color:#4a5668;background:#192331;color:#9ba8ba}
+6728-      #hk-fair-slot-rules{margin:10px 0;padding:11px;background:#0d1520;border:1px solid #2a374a;border-radius:13px}#hk-fair-slot-rules h3{margin-top:0}.hk-slot-rule{display:grid;grid-template-columns:74px 1fr;gap:9px;align-items:center;padding:9px 0;border-top:1px solid #223046}.hk-slot-product{display:flex;align-items:center;gap:5px}.hk-slot-buttons{display:grid;grid-template-columns:repeat(2,minmax(80px,1fr));gap:7px}.hk-slot-buttons button{border:1px solid #3a4a61;border-radius:10px;background:#172130;color:#9eacc0;padding:10px 5px;font-weight:800}.hk-slot-buttons button.selected{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-slot-buttons button.vip{border-color:#9e7bff;color:#dbcfff}.hk-slot-buttons button.vip.selected{background:#34255b;border-color:#c3a7ff;color:#fff}.hk-slot-buttons button:disabled{opacity:.35}
+6729-      .hk-shop-tabs,.hk-shop-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.hk-shop-tabs button,.hk-shop-groups button{border:1px solid #34445b;border-radius:10px;background:#182230;color:#aebbd0;padding:10px 4px;font-size:12px;font-weight:800}.hk-shop-tabs button.active,.hk-shop-groups button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-shop-lots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hk-shop-lot{position:relative;border:1px solid #2d3b50;background:#121a26;color:white;border-radius:15px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-shop-lot.selected{border:2px solid #3ee0a4;background:#173128}.hk-shop-lot.locked{opacity:.45}.hk-shop-lot span{display:flex;align-items:center;gap:4px}.hk-shop-lot small{color:#aab7ca}.hk-shop-lot.locked small{color:#ff8792}.hk-shop-pick{width:100%;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-shop-pick>input{position:absolute;top:8px;left:8px;width:21px;height:21px}.hk-shop-quantity{display:grid;grid-template-columns:1fr minmax(72px,100px) 48px;align-items:center;gap:5px;width:100%;font-size:11px}.hk-shop-quantity input{min-width:0;width:100%;box-sizing:border-box;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:8px;padding:7px 4px;text-align:center}.hk-shop-quantity button{padding:7px 3px;border:1px solid #b67b12;border-radius:8px;background:#3a2b14;color:#ffd76b;font-weight:900}.hk-premium-mark{position:absolute;right:7px;top:7px;font-style:normal;font-size:17px}.hk-lot.premium,.hk-shop-lot.premium{border-color:#9e7bff;box-shadow:inset 0 0 0 1px #9e7bff55}.hk-lot.premium.selected,.hk-shop-lot.premium.selected{border-color:#d2b7ff;background:#302453}#hk-shop-summary img{vertical-align:middle}
+6730-      .hk-recipe-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}.hk-recipe-tabs button{border:1px solid #34445b;border-radius:11px;background:#182230;color:#aebbd0;padding:11px 4px;font-size:12px;font-weight:800}.hk-recipe-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-recipe-pane{display:none}.hk-recipe-pane.active{display:block}.hk-recipe-plans{display:grid;gap:9px;margin:10px 0}.hk-recipe-row{width:100%;display:grid;grid-template-columns:minmax(115px,1.15fr) 82px minmax(150px,1.25fr) minmax(135px,1fr);gap:10px;align-items:center;text-align:left;color:#f6f8fc;background:#111a27;border:1px solid #35445a;border-left:4px solid var(--recipe-rank);border-radius:14px;padding:10px}.hk-recipe-row:active{transform:scale(.995)}.hk-recipe-id{font-size:10px;color:#93a4bd;overflow-wrap:anywhere}.hk-recipe-result{position:relative;display:grid;justify-items:center;gap:2px}.hk-recipe-result .hk-icon{width:58px;height:58px}.hk-recipe-result small{color:#aebbd0}.hk-rank-badge{position:absolute;left:2px;bottom:18px;background:var(--recipe-rank);color:#111;padding:1px 5px;border-radius:5px;font-size:11px}.hk-recipe-bonuses,.hk-recipe-components,.hk-detail-bonuses{display:grid;gap:6px}.hk-recipe-bonuses span,.hk-detail-bonuses span{display:flex;align-items:center;gap:4px;font-size:11px}.hk-bonus-icon{width:20px;height:20px;object-fit:contain}.hk-component-group{display:flex;align-items:center;gap:5px;font-size:10px}.hk-component-group b{background:var(--rank);color:#111;border-radius:4px;padding:2px 5px}.hk-detail-backdrop{position:fixed;inset:0;z-index:2147483647;background:#02060dcc;display:flex;align-items:center;justify-content:center;padding:20px}.hk-detail-card{position:relative;width:min(480px,100%);max-height:80vh;overflow:auto;background:#111a27;border:1px solid #35445a;border-top:4px solid var(--recipe-rank);border-radius:18px;padding:18px;color:white}.hk-detail-close{position:absolute;right:10px;top:8px;background:#26364d;color:white;border:0;border-radius:9px;font-size:24px;width:38px;height:38px}.hk-detail-title{display:flex;align-items:center;gap:12px;padding-right:42px}.hk-detail-title .hk-icon{width:72px;height:72px}.hk-detail-title span{display:grid;gap:5px}.hk-detail-title small,.hk-recipe-row small{color:#aebbd0}.hk-bureau-sizes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.hk-bureau-sizes button{border:1px solid #35445a;border-radius:11px;background:#111a27;color:white;padding:9px;display:flex;align-items:center;justify-content:center;gap:7px}.hk-bureau-sizes button.active{border-color:#ffad1f;background:#3a2b14}.hk-bureau-sizes span{display:flex;align-items:center;gap:4px}.hk-bureau-list{display:grid;gap:8px;margin:10px 0}.hk-bureau-item{display:grid;grid-template-columns:48px 1fr 64px;align-items:center;gap:9px;border:1px solid #2d3b50;border-radius:13px;background:#111a27;padding:8px}.hk-bureau-item.selected{border-color:#ffad1f;background:#2a2418}.hk-bureau-item span{display:flex;flex-direction:column}.hk-bureau-item small{color:#aebbd0}.hk-bureau-item input{min-width:0;width:100%;background:#0b111b;color:white;border:1px solid #43536d;border-radius:9px;padding:8px;text-align:center}
+6731-      .hk-recipe-ways{display:grid;gap:9px;padding:10px}.hk-recipe-way{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;border:1px solid #29394f;border-radius:12px;background:#0c1420;padding:8px}.hk-recipe-way-number{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:var(--recipe-rank);color:#10151d}.hk-recipe-way-flow{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:2px 0}.hk-recipe-step{position:relative;flex:0 0 78px;display:grid;place-items:center;border:1px solid #35445a;border-bottom:3px solid var(--rank);border-radius:10px;background:#111a27;color:white;padding:6px}.hk-recipe-step .hk-icon{width:48px;height:48px}.hk-recipe-step .hk-rank-badge{bottom:16px;left:1px}.hk-recipe-step .hk-component-order{position:absolute;right:3px;top:3px;z-index:2;background:#25344a;border-radius:5px;padding:1px 4px;font-size:9px}.hk-recipe-plus{flex:0 0 auto;color:#ffbd3f;font-size:22px}.hk-recipe-result-group>.hk-recipe-row{grid-template-columns:82px minmax(150px,1fr) minmax(150px,.8fr)}
+6732-      .hk-recipe-step .hk-rank-badge{background:var(--rank)}
+6733-      @media(max-width:620px){.hk-recipe-row{grid-template-columns:70px 1fr 1.25fr}.hk-recipe-id{display:none}.hk-recipe-components{grid-column:2/4;border-top:1px solid #25344a;padding-top:7px}.hk-recipe-result-group>.hk-recipe-row{grid-template-columns:70px 1fr}.hk-recipe-result-group .hk-recipe-toggle{grid-column:1/3;border-top:1px solid #25344a;padding-top:7px}.hk-recipe-way{grid-template-columns:24px minmax(0,1fr);padding:6px}.hk-recipe-way-number{width:22px;height:22px;font-size:11px}}
+6734-      .hk-recipe-group{border:1px solid #35445a;border-left:4px solid var(--recipe-rank);border-radius:14px;background:#111a27;overflow:hidden}.hk-recipe-group>.hk-recipe-row{grid-template-columns:78px minmax(0,1fr) 120px;border:0;border-left:0;border-radius:0;cursor:pointer;list-style:none}.hk-recipe-group>.hk-recipe-row::-webkit-details-marker{display:none}.hk-recipe-toggle{display:grid;gap:4px;text-align:right}.hk-recipe-toggle small{font-size:9px}.hk-recipe-group[open] .hk-recipe-toggle b{color:#ffad1f}.hk-recipe-component-list{display:grid;gap:7px;padding:0 9px 10px 18px;border-top:1px solid #25344a}.hk-recipe-component{position:relative;width:100%;display:grid;grid-template-columns:65px minmax(0,1fr);gap:10px;align-items:center;text-align:left;color:#f6f8fc;background:#0d1521;border:1px solid #2b394d;border-left:3px solid var(--recipe-rank);border-radius:11px;padding:8px;margin-top:8px}.hk-recipe-component .hk-icon{width:52px;height:52px}.hk-component-order{position:absolute;left:-15px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#ffad1f;color:#16100a;font-size:11px}.hk-recipe-component-list>.hk-muted{margin:10px}.hk-recipe-component .hk-rank-badge{bottom:16px}
+6735-      @media(max-width:620px){.hk-recipe-group>.hk-recipe-row{grid-template-columns:67px minmax(0,1fr)}.hk-recipe-toggle{grid-column:1/3;border-top:1px solid #25344a;padding-top:7px;text-align:left}.hk-recipe-component{grid-template-columns:58px minmax(0,1fr)}}
+6736-      .hk-map-source-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0 12px}.hk-map-source-tabs button{border:1px solid #34445b;border-radius:11px;background:#182230;color:#aebbd0;padding:11px 5px;font-size:12px;font-weight:800}.hk-map-source-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-map-controls{display:grid;grid-template-columns:1fr 120px;gap:7px}.hk-map-controls input,.hk-map-controls select,.hk-map-filters select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-map-list{display:grid;gap:7px;margin-top:10px}.hk-map-row{display:grid;grid-template-columns:1.2fr 54px repeat(3,1fr) 58px 48px;gap:6px;align-items:center;text-align:left;background:#111a27;color:white;border:1px solid #35445a;border-radius:11px;padding:10px;font-size:10px}.hk-map-row>b{font-size:12px;color:#ffe083}.hk-map-row strong{color:#35df9e}.hk-progress{background:#35df9e;color:#082117;border-radius:12px;padding:4px;text-align:center;font-weight:900}.hk-map-filters{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:10px 0}.hk-map-legend{display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:#9eabc0;margin:8px 0}.hk-map-legend span{display:flex;align-items:center;gap:4px}.hk-map-dot{width:10px;height:10px;border-radius:3px;display:inline-block}.hk-map-zoom{display:grid;grid-template-columns:44px 82px 44px;gap:6px;justify-content:end;margin:7px 0}.hk-map-zoom button{padding:8px 4px;font-weight:900}.hk-map-zoom #hk-map-zoom-value{color:#ffe083}.hk-map-visual{height:56vh;min-height:360px;max-height:650px;background:#080d14;border:1px solid #304057;border-radius:13px;overflow:hidden;touch-action:none}.hk-map-visual svg{display:block;width:100%;height:100%;touch-action:none;transform-origin:50% 50%;will-change:transform}.hk-map-shape{cursor:pointer;transition:opacity .15s,stroke-width .15s}.hk-map-shape.dim{opacity:.055;pointer-events:none}.hk-map-shape.match{opacity:.94}.hk-map-shape.selected{stroke:#fff!important;stroke-width:3.2!important;opacity:1}.hk-map-selected{display:grid;grid-template-columns:1.1fr 1fr 55px;gap:7px;align-items:center;margin-top:8px;padding:10px;background:#101927;border:1px solid #304057;border-radius:11px}.hk-map-selected small{grid-column:1/4;color:#93a3b8}.hk-map-selected strong{color:#6deaff}.hk-map-match-count{font-size:11px;color:#9eabc0;margin:6px 0}
+6737-      @media(max-width:620px){.hk-map-row{grid-template-columns:1fr 45px 54px}.hk-map-row span:nth-of-type(2),.hk-map-row span:nth-of-type(3){display:none}.hk-map-row strong{grid-column:3}.hk-map-row .hk-progress{grid-column:2}.hk-map-building{grid-template-columns:1fr 55px}.hk-map-building>span{grid-column:1}.hk-map-building small{grid-column:1/3}}
+6738-    `;
+6739-    document.head.appendChild(style);
+6740-    const NAV_GROUPS = [
+6741-      {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
+6742:      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{planned:true,ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+6743-      {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{planned:true,ru:'Здания',en:'Buildings'},{planned:true,ru:'Исследование',en:'Explore'}]},
+6744-      {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
+6745-      {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
+6746-      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+6747-      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{planned:true,ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+6748-    ];
+6749-    const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
+6750-    root = document.createElement('div'); root.id = 'hk-mobile-root';
+6751-    root.innerHTML = `<button id="hk-fab">HK</button><div id="hk-panel" class="hk-locked">
+6752-      <div id="hk-watermark" aria-hidden="true"></div><div class="hk-head"><h2>Hamster King Mobile <small style="font-size:12px;color:#9aa8bc">v${VERSION}</small></h2><div class="hk-lang"><button data-lang="ru" aria-label="Русский">🇷🇺</button><button data-lang="en" aria-label="English">🇬🇧</button></div><button class="hk-close">×</button></div>
+6753-      <button id="hk-donation" class="hk-donation">❤️ <span data-i18n="donation">${tr('donation')}</span></button>
+6754-      <div id="hk-license-gate" class="hk-license" data-i18n="checkingLicense">${tr('checkingLicense')}</div>
+6755-      <div id="hk-health" class="hk-health">
+6756-        <div class="hk-health-chip" data-health="game"><b>${either('Игра','Game')}</b><small>${either('ожидание','waiting')}</small></div>
+6757-        <div class="hk-health-chip" data-health="auth"><b>${either('Авторизация','Auth')}</b><small>${either('ожидание','waiting')}</small></div>
+6758-        <div class="hk-health-chip" data-health="license"><b>${either('Лицензия','License')}</b><small>${either('ожидание','waiting')}</small></div>
+6759-        <div class="hk-health-chip" data-health="server"><b>${either('Сервер','Server')}</b><small>${either('ожидание','waiting')}</small></div>
+6760-      </div>
+6761-      <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">${either('Диагностика','Diagnostics')}</button></div>
+6762-      <div id="hk-update-banner" class="hk-update"></div>
+6763-      <div class="hk-tabs">${menuTabs}</div>
+6764-      <div id="hk-subnav" class="hk-subnav"></div>
+6765-      <div id="hk-runner" class="hk-runner"><div class="hk-runner-head"><b id="hk-runner-title"></b><span id="hk-runner-state" class="hk-runner-state"></span></div><div id="hk-runner-step" class="hk-runner-step"></div><div class="hk-runner-track"><div id="hk-runner-fill" class="hk-runner-fill"></div></div><div class="hk-runner-actions"><button id="hk-runner-pause" class="hk-secondary"></button><button id="hk-runner-stop" class="hk-danger"></button></div></div>
+6766-      <div class="hk-page active" data-content="daily">
+6767-        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div class="hk-toolbar"><button id="hk-daily-refresh" class="hk-secondary" data-i18n="dailyRefresh">${tr('dailyRefresh')}</button><button id="hk-daily-clear" data-i18n="dailyClear">${tr('dailyClear')}</button></div><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
+6768-      </div>
+6769-      <div class="hk-page" data-content="resources">
+6770-        <div id="hk-resource-content" class="hk-cardbox"></div>
+6771-      </div>
+6772-      <div class="hk-page" data-content="pit">
+6773-        <div class="hk-cardbox"><div class="hk-grid">
+6774-          <label data-i18n="targetRound">${tr('targetRound')}</label><input id="hk-target" type="number" min="1" value="${settings.target}">
+6775-          <label data-i18n="delay">${tr('delay')}</label><input id="hk-interval" type="number" min="0.7" step="0.1" value="${settings.interval}">
+6776-          <label data-i18n="activationTokens">${tr('activationTokens')}</label><input id="hk-activation-limit" type="number" min="0" value="${settings.activationLimit}">
+6777-          <label data-i18n="restoreTokens">${tr('restoreTokens')}</label><input id="hk-restore-limit" type="number" min="0" value="${settings.restoreLimit}">
+6778-          <label data-i18n="allowTokens">${tr('allowTokens')}</label><input id="hk-allow-tokens" type="checkbox" ${settings.allowTokens ? 'checked' : ''}>
+6779-          <label data-i18n="pitCollectOnly">${tr('pitCollectOnly')}</label><input id="hk-pit-collect-only" type="checkbox" ${settings.collectOnly ? 'checked' : ''}>
+6780-        </div><div id="hk-pit-live" class="hk-live">${tr('round')}: —</div><section id="hk-pit-forecast" class="hk-pit-forecast"></section>
+6781-        <button id="hk-pit-start" class="hk-primary" data-i18n="startBattle">${tr('startBattle')}</button><button id="hk-pit-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
+6782-        <button id="hk-export" class="hk-secondary" data-i18n="exportCsv">${tr('exportCsv')}</button></div>
+6783-      </div>
+6784-      <div class="hk-page" data-content="business">
+6785-        <div class="hk-cardbox"><div class="hk-toolbar"><button id="hk-refresh-game" data-i18n="refreshGame">${tr('refreshGame')}</button><span id="hk-connect">${tr('waiting')}</span></div>
+6786-        <div class="hk-business-tabs"><button class="hk-business-tab active" data-business-tab="regular" data-i18n="businessRegular">${tr('businessRegular')}</button><button class="hk-business-tab" data-business-tab="optimizer" data-i18n="businessOptimizer">${tr('businessOptimizer')}</button></div>
+6787-        <div class="hk-business-pane active" data-business-pane="regular"><div class="hk-toolbar"><select id="hk-preset"><option>${tr('savedSets')}</option></select><button id="hk-save-preset" data-i18n="saveNew">${tr('saveNew')}</button><button id="hk-delete-preset" data-i18n="delete">${tr('delete')}</button></div>
+6788-        <div class="hk-toolbar"><select id="hk-remove-tier"></select><button id="hk-select-remove" data-i18n="selectAll">${tr('selectAll')}</button></div>
+6789-        <div class="hk-toolbar"><select id="hk-insert-tier"></select></div>
+6790-        <div id="hk-business-lists"></div><div id="hk-plan" class="hk-cardbox"></div></div>
+6791-        <div class="hk-business-pane" data-business-pane="optimizer"><section class="hk-optimizer"><h3 data-i18n="optimizer">${tr('optimizer')}</h3><div class="hk-optimizer-controls"><label><span data-i18n="optimizerGoal">${tr('optimizerGoal')}</span><select id="hk-optimizer-goal"><option value="pit" data-i18n="optimizerPit">${tr('optimizerPit')}</option><option value="income" data-i18n="optimizerIncome">${tr('optimizerIncome')}</option><option value="energy" data-i18n="optimizerEnergy">${tr('optimizerEnergy')}</option><option value="buildings" data-i18n="optimizerBuildings">${tr('optimizerBuildings')}</option></select></label></div><div class="hk-optimizer-filter"><b data-i18n="optimizerRemoveTiers">${tr('optimizerRemoveTiers')}</b><div id="hk-optimizer-remove-tiers" class="hk-optimizer-tiers"></div></div><div class="hk-optimizer-filter"><b data-i18n="optimizerInsertTiers">${tr('optimizerInsertTiers')}</b><div id="hk-optimizer-insert-tiers" class="hk-optimizer-tiers"></div></div><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="replaceable" ${optimizerSectionOpen('replaceable')?'open':''}><summary><b data-i18n="optimizerReplaceable">${tr('optimizerReplaceable')}</b></summary><small data-i18n="optimizerReplaceHint">${tr('optimizerReplaceHint')}</small><div id="hk-optimizer-replaceable" class="hk-optimizer-replaceable"></div></details><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="stock" ${optimizerSectionOpen('stock')?'open':''}><summary><b data-i18n="optimizerStockAllowed">${tr('optimizerStockAllowed')}</b></summary><small data-i18n="optimizerStockHint">${tr('optimizerStockHint')}</small><div id="hk-optimizer-stock-allowed" class="hk-optimizer-replaceable"></div></details><div class="hk-optimizer-actions"><button id="hk-optimizer-calculate" class="hk-secondary" data-i18n="optimizerCalculate">${tr('optimizerCalculate')}</button><button id="hk-optimizer-restore" data-i18n="optimizerRestore">${tr('optimizerRestore')}</button></div><div id="hk-optimizer-result" class="hk-optimizer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section>
+6792-        <section class="hk-bonus-analyzer"><h3 data-i18n="bonusAnalyzer">${tr('bonusAnalyzer')}</h3><div id="hk-bonus-analyzer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section></div></div>
+6793-      </div>
+6794-      <div class="hk-page" data-content="clan">
+6795-        <div id="hk-clan-content" class="hk-cardbox"><h3>${either('Навыки клана','Clan skills')}</h3><p class="hk-muted">${either('Данные ещё не считаны','No data has been read yet')}</p></div>
+6796-      </div>
+6797-      <div class="hk-page" data-content="fair">
+6798-        <div class="hk-cardbox"><button id="hk-fair-load" class="hk-secondary" data-i18n="loadFair">${tr('loadFair')}</button>
+6799-          <div class="hk-toolbar" style="margin-top:10px"><select id="hk-fair-preset"><option value="">${tr('fairSavedSettings')}</option></select><button id="hk-fair-save-preset" data-i18n="saveSetting">${tr('saveSetting')}</button></div>
+6800-          <div class="hk-toolbar"><button id="hk-fair-update-preset" data-i18n="updateSetting">${tr('updateSetting')}</button><button id="hk-fair-delete-preset" data-i18n="delete">${tr('delete')}</button></div>
+6801-          <h3 data-i18n="chooseFair">${tr('chooseFair')}</h3><div id="hk-fair-types" class="hk-fair-types"><p class="hk-muted">${tr('readFirst')}</p></div>
+6802-          <div class="hk-toolbar"><input id="hk-fair-search" data-i18n-placeholder="searchLot" placeholder="${tr('searchLot')}"></div>
+6803-          <div id="hk-fair-currencies" class="hk-fair-currencies"></div>
+6804-          <h3 data-i18n="choosePurchases">${tr('choosePurchases')}</h3><div id="hk-fair-lots" class="hk-fair-lots"></div>
+6805-          <div id="hk-fair-selected" class="hk-live">${tr('selectedLots',{n:0})}</div>
+6806-          <div id="hk-fair-slot-rules" style="display:none"></div>
+6807-          <div class="hk-fair-controls"><label data-i18n="fairExactLots">${tr('fairExactLots')}</label><select id="hk-fair-exact-lots"><option value="0">${tr('no')}</option><option value="3">3</option><option value="6">6</option><option value="9">9</option></select></div>
+6808-          <div id="hk-fair-bonus-lots" class="hk-fair-bonus-lots"></div>
+6809-          <div class="hk-fair-controls"><label data-i18n="totalPurchases">${tr('totalPurchases')}</label><input id="hk-fair-buy-limit" type="number" min="1" max="999" value="1">
+6810-            <label data-i18n="maxRerolls">${tr('maxRerolls')}</label><input id="hk-fair-reroll-limit" type="number" min="0" max="10000" value="50"></div>
+6811-          <label class="hk-check"><input id="hk-fair-premium-reroll" type="checkbox"><span data-i18n="allowDiamonds">${tr('allowDiamonds')}</span></label>
+6812-          <button id="hk-fair-start" class="hk-primary" data-i18n="findBuy" disabled>${tr('findBuy')}</button><button id="hk-fair-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
+6813-          <p class="hk-muted" data-i18n="fairWarning">${tr('fairWarning')}</p>
+6814-        </div>
+6815-      </div>
+6816-      <div class="hk-page" data-content="shop">
+6817-        <div class="hk-cardbox"><h3 data-i18n="shop">${tr('shop')}</h3>
+6818-          <div class="hk-shop-tabs"><button class="active" data-shop-section="regular" data-i18n="regularShop">${tr('regularShop')}</button><button data-shop-section="ordinary" data-i18n="ordinaryShop">${tr('ordinaryShop')}</button><button data-shop-section="clan" data-i18n="clanShop">${tr('clanShop')}</button></div>
+6819-          <div id="hk-shop-groups" class="hk-shop-groups" style="display:none"><button class="active" data-shop-group="resources" data-i18n="resourcesShop">${tr('resourcesShop')}</button><button data-shop-group="renovation" data-i18n="renovationShop">${tr('renovationShop')}</button><button data-shop-group="invest" data-i18n="investShop">${tr('investShop')}</button></div>
+6820-          <button id="hk-shop-load" class="hk-secondary" data-i18n="readShop">${tr('readShop')}</button>
+6821-          <button id="hk-shop-select" class="hk-secondary" data-i18n="selectAvailable">${tr('selectAvailable')}</button>
+6822-          <div id="hk-shop-cards" class="hk-shop-lots" style="margin-top:10px"><p class="hk-muted">${tr('shopReadFirst')}</p></div>
