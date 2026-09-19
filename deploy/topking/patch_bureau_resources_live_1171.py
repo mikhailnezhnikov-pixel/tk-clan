@@ -21,14 +21,15 @@ def sync_version(text):
         return text
     require(text, "// @version      1.17.0", "live version 1.17.0")
     text = text.replace("// @version      1.17.0", "// @version      1.17.1", 1)
-    text, n = re.subn(
-        r"(const BUILD_VERSION = typeof GM_info[\\s\\S]*?: )'1\\.17\\.0';",
-        r"\\1'1.17.1';",
-        text,
-        count=1,
-    )
-    if n != 1:
+    old_fallback = """  const BUILD_VERSION = typeof GM_info !== 'undefined' && GM_info?.script?.version
+    ? String(GM_info.script.version)
+    : '1.17.0';"""
+    new_fallback = """  const BUILD_VERSION = typeof GM_info !== 'undefined' && GM_info?.script?.version
+    ? String(GM_info.script.version)
+    : '1.17.1';"""
+    if old_fallback not in text:
         raise SystemExit("BUILD_VERSION 1.17.0 fallback missing")
+    text = text.replace(old_fallback, new_fallback, 1)
     return text
 
 def apply_hotfix(text):
