@@ -1,2 +1,2 @@
-capture=2026-09-20T01:50:00+09:00
-scope=pit-live-1170-post-r1
+capture=2026-09-20T02:12:00+09:00
+scope=remaining-modules-live-1170
