@@ -47,6 +47,47 @@ jobs:
               echo
             done
           '
+      - name: Inspect Hamster King alliance routes
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hk-app
+          curl -fsSL --max-time 20 https://app.hamsterking.games/ -o /tmp/hk-app/index.html
+          python3 - <<'PY'
+          import re, html, pathlib, urllib.parse
+          text=pathlib.Path('/tmp/hk-app/index.html').read_text('utf-8','replace')
+          srcs=re.findall(r'<script[^>]+src=["\']([^"\']+)["\']',text,re.I)
+          base='https://app.hamsterking.games/'
+          for i,src in enumerate(srcs[:30]):
+              print(f'SCRIPT {i} {urllib.parse.urljoin(base,html.unescape(src))}')
+          PY
+          python3 - <<'PY' >/tmp/hk-app/scripts.txt
+          import re, html, pathlib, urllib.parse
+          text=pathlib.Path('/tmp/hk-app/index.html').read_text('utf-8','replace')
+          srcs=re.findall(r'<script[^>]+src=["\']([^"\']+)["\']',text,re.I)
+          base='https://app.hamsterking.games/'
+          for src in srcs[:30]:
+              print(urllib.parse.urljoin(base,html.unescape(src)))
+          PY
+          n=0
+          while IFS= read -r url; do
+            n=$((n+1))
+            curl -fsSL --max-time 25 "$url" -o "/tmp/hk-app/$n.js" || continue
+          done </tmp/hk-app/scripts.txt
+          echo "=== ALLIANCE ROUTE STRINGS ==="
+          python3 - <<'PY'
+          import pathlib,re
+          found=[]
+          for p in pathlib.Path('/tmp/hk-app').glob('*.js'):
+              text=p.read_text('utf-8','replace')
+              for m in re.finditer(r'.{0,140}(?:/alliance|alliance/|active_defense_wars|active_battles).{0,220}',text,re.I|re.S):
+                  s=re.sub(r'\s+',' ',m.group(0))
+                  if s not in found:
+                      found.append(s)
+                  if len(found)>=120: break
+              if len(found)>=120: break
+          for row in found: print(row[:500])
+          PY
+
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking"
