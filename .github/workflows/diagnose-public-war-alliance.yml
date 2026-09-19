@@ -87,25 +87,8 @@ jobs:
             curl -fsSL --max-time 25 "$url" -o "/tmp/hk-app/$n.js" || continue
           done </tmp/hk-app/scripts.txt
           curl -fsSL --max-time 30 https://cdn-prod-front-dist.hwgame.cloud/assets/app_2017.js -o /tmp/hk-app/app_2017.js
-          echo "=== ALLIANCE KEY TERMS ==="
-          grep -o '.\{0,280\}alliance_id.\{0,700\}' /tmp/hk-app/app_2017.js | head -20 || true
-          grep -o '.\{0,280\}defense_points.\{0,700\}' /tmp/hk-app/app_2017.js | head -20 || true
-          grep -o '.\{0,280\}hamsters_power.\{0,700\}' /tmp/hk-app/app_2017.js | head -20 || true
-          grep -o '.\{0,280\}player_level.\{0,700\}' /tmp/hk-app/app_2017.js | head -20 || true
-          echo "=== ALLIANCE ROUTE STRINGS ==="
-          python3 - <<'PY'
-          import pathlib,re
-          found=[]
-          for p in pathlib.Path('/tmp/hk-app').glob('*.js'):
-              text=p.read_text('utf-8','replace')
-              for m in re.finditer(r'.{0,140}(?:/alliance|alliance/|active_defense_wars|active_battles).{0,220}',text,re.I|re.S):
-                  s=re.sub(r'\s+',' ',m.group(0))
-                  if s not in found:
-                      found.append(s)
-                  if len(found)>=120: break
-              if len(found)>=120: break
-          for row in found: print(row[:500])
-          PY
+          echo "=== FOCUSED API CONTEXTS ==="
+          python3 deploy/topking/inspect_game_bundle.py /tmp/hk-app/app_2017.js
 
       - name: Cleanup
         if: always()
