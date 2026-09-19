@@ -1,2 +1,2 @@
-capture=2026-09-20T02:50:00+09:00
-scope=live-1171-bureau-resources-postdeploy
+capture=2026-09-20T02:55:00+09:00
+scope=fair-shop-live-1171-verify
