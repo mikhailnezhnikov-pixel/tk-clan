@@ -110,6 +110,27 @@
     .branch-item.highlight{border-color:rgba(232,182,84,.34);background:rgba(232,182,84,.055)}
     .branch-item.highlight b{color:var(--gold-light)}
     .no-branches{padding:14px 0 2px;color:var(--muted);font-size:13px}
+    .mirror-overall{margin-top:20px;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:rgba(8,11,16,.48);overflow:hidden}
+    .mirror-overall summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 17px;cursor:pointer;list-style:none;color:#fff;font-weight:900}
+    .mirror-overall summary::-webkit-details-marker{display:none}
+    .mirror-overall summary b{color:#68e0a3;font-size:20px}
+    .mirror-ranking{display:grid;gap:7px;padding:10px 12px 14px}
+    .mirror-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 13px;border-radius:11px;background:rgba(20,34,50,.72)}
+    .mirror-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mirror-row b{color:#68e0a3;font-size:17px}
+    .clan-mirror{margin-top:14px}
+    .mirror-block-tabs{display:grid;grid-template-columns:repeat(5,minmax(90px,1fr));gap:8px;margin:0 0 12px}
+    .mirror-block-tab{min-height:70px;padding:9px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(10,20,32,.60);color:#d7dde6;font-weight:850;cursor:pointer;overflow:hidden;text-overflow:ellipsis}
+    .mirror-block-tab.active{border-color:rgba(232,182,84,.78);background:rgba(130,82,13,.28);color:#fff0c4}
+    .mirror-stage{display:grid;grid-template-columns:66px minmax(0,1fr);gap:12px;padding:12px;border:1px solid rgba(255,255,255,.10);border-radius:18px;background:rgba(8,11,16,.46)}
+    .mirror-branch-tabs{display:grid;align-content:start;gap:8px}
+    .mirror-branch-tab{min-height:58px;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:13px;background:rgba(10,20,32,.62);color:#d9dee8;font-weight:850;cursor:pointer;overflow:hidden}
+    .mirror-branch-tab.active{border-color:rgba(232,182,84,.75);background:rgba(130,82,13,.28);color:#fff0c4}
+    .mirror-branch-content{min-width:0}
+    .mirror-branch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:4px 2px 8px}
+    .mirror-branch-head h3{margin:3px 0 0;color:#fff;font-size:20px}
+    .mirror-stats{margin-top:6px}
+    .mirror-stats+.mirror-ranking{padding:12px 0 0}
 
     .guide{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
     .guide-step{padding:20px;border:1px solid rgba(255,255,255,.09);border-radius:19px;background:rgba(8,11,16,.44)}
@@ -279,34 +300,44 @@
         <article class="card cab-card wide player-stats-card">
           <div class="stats-head">
             <div>
-              <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png" alt="">Клан · участники</div>
+              <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png" alt="">Клан · статистика</div>
               <h2>Статистика игроков</h2>
-              <p class="stats-sub">Общий вклад каждого участника и детализация по отдельным веткам прокачки — по тем же данным, которые собирает вкладка «Клан» в скрипте.</p>
+              <p class="stats-sub">Зеркало вкладки «Клан» из скрипта: общий вклад участников, блоки прокачки, ветки внутри блоков и вклад каждого игрока.</p>
             </div>
           </div>
 
-          <div class="stats">
-            <div class="stat"><span>Участников</span><b id="players-participants">0</b></div>
-            <div class="stat"><span>Общий вклад</span><b id="players-total">0</b></div>
-            <div class="stat"><span>Неделя</span><b id="players-week">—</b></div>
-          </div>
-
-          <div class="stats-tools">
-            <input id="players-search" type="search" autocomplete="off" placeholder="Найти участника">
-            <select id="players-branch" aria-label="Ветка прокачки">
-              <option value="">Все ветки</option>
-            </select>
-            <select id="players-sort" aria-label="Сортировка">
-              <option value="total-desc">Общий вклад ↓</option>
-              <option value="total-asc">Общий вклад ↑</option>
-              <option value="name">По имени</option>
-              <option value="scan">По дате считывания</option>
-            </select>
-          </div>
+          <details class="mirror-overall" open>
+            <summary><span>▸ Общий вклад участников</span><b id="players-participants">0</b></summary>
+            <div id="players-list" class="mirror-ranking"></div>
+          </details>
 
           <div id="stats-source-note" class="stats-source-note hidden"></div>
-          <div id="players-empty" class="empty">Данные появятся после следующего считывания вкладки «Клан» в скрипте.</div>
-          <div id="players-list" class="players-list hidden"></div>
+          <div id="blocks-empty" class="empty">Блоки и ветки появятся после того, как сервер передаст полный снимок вкладки «Клан» из скрипта.</div>
+
+          <div id="clan-mirror" class="clan-mirror hidden">
+            <div id="block-tabs" class="mirror-block-tabs" aria-label="Блоки прокачки"></div>
+
+            <div class="mirror-stage">
+              <aside id="branch-tabs" class="mirror-branch-tabs" aria-label="Ветки блока"></aside>
+
+              <section class="mirror-branch-content">
+                <div class="mirror-branch-head">
+                  <div>
+                    <span id="mirror-block-name" class="muted"></span>
+                    <h3 id="mirror-branch-name">Ветка</h3>
+                  </div>
+                </div>
+
+                <div class="stats mirror-stats">
+                  <div class="stat"><span>Общий уровень</span><b id="mirror-total">0</b></div>
+                  <div class="stat"><span>Твои уровни</span><b id="mirror-mine">—</b></div>
+                  <div class="stat"><span>Участников</span><b id="mirror-participants">0</b></div>
+                </div>
+
+                <div id="branch-ranking" class="mirror-ranking"></div>
+              </section>
+            </div>
+          </div>
         </article>
       </section>
 
@@ -356,6 +387,9 @@
   let session=localStorage.getItem(TOKEN_KEY)||'';
   let clanPlayers=[];
   let clanInfo={};
+  let currentLinkedPlayerId='';
+  let selectedClanBlock=0;
+  let selectedClanBranch=0;
 
   async function request(path,options={}){
     const headers={'Content-Type':'application/json',...(options.headers||{})};
@@ -516,75 +550,163 @@
     return [...set].sort((a,b)=>a.localeCompare(b,'ru'));
   }
 
-  function renderBranchFilter(){
-    const select=$('players-branch');
-    const previous=select.value;
-    const names=allBranchNames(clanPlayers);
-    select.innerHTML='<option value="">Все ветки</option>'+names.map(name=>'<option value="'+safe(name)+'">'+safe(name)+'</option>').join('');
-    if(names.includes(previous))select.value=previous;
-    select.disabled=names.length===0;
+  function memberValue(item){
+    return numeric(item?.value??item?.levels??item?.level??item?.total??item?.count??item?.contribution??item?.gain)??0;
+  }
+
+  function normalizeMember(item,index=0){
+    if(!item||typeof item!=='object')return {nickname:'Участник '+(index+1),value:numeric(item)??0,playerId:''};
+    return {
+      nickname:String(item.nickname??item.player_name??item.playerName??item.name??item.title??('Участник '+(index+1))),
+      value:memberValue(item),
+      playerId:String(item.player_id??item.playerId??item.user_id??item.userId??item.id??'')
+    };
+  }
+
+  function getContributors(node){
+    if(!node||typeof node!=='object')return [];
+    for(const key of ['players','members','participants','contributors','ranking','top','users']){
+      if(Array.isArray(node[key]))return node[key].map(normalizeMember);
+    }
+    return [];
+  }
+
+  function getArray(node,keys){
+    if(!node||typeof node!=='object')return [];
+    for(const key of keys)if(Array.isArray(node[key]))return node[key];
+    return [];
+  }
+
+  function normalizeBranch(node,index){
+    const members=getContributors(node).sort((a,b)=>b.value-a.value);
+    const title=String(node?.title??node?.label??node?.name??node?.branch_name??node?.branchName??node?.localization_key??node?.localizationKey??node?.key??node?.id??('Ветка '+(index+1)));
+    const total=numeric(node?.total_levels??node?.totalLevels??node?.total??node?.level??node?.value);
+    return {
+      title,
+      total:total!=null?total:members.reduce((sum,x)=>sum+x.value,0),
+      participants:numeric(node?.participants_count??node?.participantsCount??node?.participants)??members.length,
+      members
+    };
+  }
+
+  function normalizeBlock(node,index){
+    const title=String(node?.title??node?.label??node?.name??node?.block_name??node?.blockName??node?.localization_key??node?.localizationKey??node?.key??node?.id??('Блок '+(index+1)));
+    let rawBranches=getArray(node,['branches','items','skills','upgrades','children','tabs','nodes']);
+    if(!rawBranches.length&&getContributors(node).length)rawBranches=[node];
+    return {title,branches:rawBranches.map(normalizeBranch).filter(x=>x.members.length||x.total)};
+  }
+
+  function structuredClanBlocks(){
+    const raw=getArray(clanInfo,['blocks','clan_blocks','clanBlocks','upgrade_blocks','upgradeBlocks','sections','categories']);
+    return raw.map(normalizeBlock).filter(block=>block.branches.length);
+  }
+
+  function derivedClanBlocks(){
+    const blocks=new Map();
+    clanPlayers.forEach(player=>{
+      const nickname=String(player.nickname||player.name||'Без имени');
+      const playerId=String(player.player_id??player.playerId??player.id??'');
+      getPlayerBranches(player).forEach(item=>{
+        const parts=item.name.split(/\s*·\s*/).filter(Boolean);
+        const blockTitle=parts.length>1?parts.shift():'Прокачка клана';
+        const branchTitle=parts.length?parts.join(' · '):item.name;
+        if(!blocks.has(blockTitle))blocks.set(blockTitle,new Map());
+        const branches=blocks.get(blockTitle);
+        if(!branches.has(branchTitle))branches.set(branchTitle,[]);
+        branches.get(branchTitle).push({nickname,value:Number(item.value||0),playerId});
+      });
+    });
+    return [...blocks.entries()].map(([title,branches])=>({
+      title,
+      branches:[...branches.entries()].map(([branchTitle,members])=>({
+        title:branchTitle,
+        total:members.reduce((sum,x)=>sum+x.value,0),
+        participants:members.length,
+        members:members.sort((a,b)=>b.value-a.value)
+      }))
+    }));
+  }
+
+  function clanBlocks(){
+    const structured=structuredClanBlocks();
+    return structured.length?structured:derivedClanBlocks();
+  }
+
+  function rankingHtml(members){
+    return members.slice().sort((a,b)=>b.value-a.value).map((m,index)=>
+      '<div class="mirror-row"><strong>'+(index+1)+'. '+safe(m.nickname)+'</strong><b>'+formatNumber(m.value)+' ур.</b></div>'
+    ).join('');
+  }
+
+  function renderOverallContributions(){
+    const members=clanPlayers.map((p,index)=>({
+      nickname:String(p.nickname||p.name||('Участник '+(index+1))),
+      value:Number(p.total||p.total_levels||p.totalLevels||0),
+      playerId:String(p.player_id??p.playerId??p.id??'')
+    })).sort((a,b)=>b.value-a.value);
+    $('players-participants').textContent=clanInfo.participants||members.length||0;
+    $('players-list').innerHTML=members.length?rankingHtml(members):'<div class="empty">Нет данных по общему вкладу.</div>';
+  }
+
+  function renderSelectedClanBranch(){
+    const blocks=clanBlocks();
+    const block=blocks[selectedClanBlock];
+    if(!block)return;
+    if(selectedClanBranch>=block.branches.length)selectedClanBranch=0;
+    const branch=block.branches[selectedClanBranch];
+    if(!branch)return;
+    $('mirror-block-name').textContent=block.title;
+    $('mirror-branch-name').textContent=branch.title;
+    $('mirror-total').textContent=formatNumber(branch.total||0);
+    $('mirror-participants').textContent=branch.participants||branch.members.length||0;
+    const mine=branch.members.find(m=>currentLinkedPlayerId&&String(m.playerId)===currentLinkedPlayerId);
+    $('mirror-mine').textContent=mine?formatNumber(mine.value):'—';
+    $('branch-ranking').innerHTML=branch.members.length?rankingHtml(branch.members):'<div class="empty">По этой ветке пока нет данных.</div>';
+    document.querySelectorAll('.mirror-branch-tab').forEach((btn,index)=>btn.classList.toggle('active',index===selectedClanBranch));
+  }
+
+  function renderClanBlocks(){
+    const blocks=clanBlocks();
+    $('blocks-empty').classList.toggle('hidden',blocks.length>0);
+    $('clan-mirror').classList.toggle('hidden',blocks.length===0);
+    const structured=structuredClanBlocks().length>0;
     const note=$('stats-source-note');
-    if(clanPlayers.length&&names.length===0){
-      note.textContent='Сейчас сервер кабинета передаёт по участнику только общий итог. Интерфейс для веток уже готов; детализация появится автоматически, как только API начнёт отдавать данные веток из вкладки «Клан» скрипта.';
+    if(clanPlayers.length&&!structured&&blocks.length){
+      note.textContent='Сейчас сайт восстанавливает блоки из данных игроков. Для точного зеркала скрипт должен передавать на сервер готовый снимок block → branch → participants.';
       note.classList.remove('hidden');
     }else{
       note.classList.add('hidden');
       note.textContent='';
     }
+    if(!blocks.length)return;
+    if(selectedClanBlock>=blocks.length)selectedClanBlock=0;
+
+    $('block-tabs').innerHTML=blocks.map((block,index)=>
+      '<button class="mirror-block-tab'+(index===selectedClanBlock?' active':'')+'" type="button" data-block-index="'+index+'" title="'+safe(block.title)+'">'+safe(block.title)+'</button>'
+    ).join('');
+
+    const block=blocks[selectedClanBlock];
+    if(selectedClanBranch>=block.branches.length)selectedClanBranch=0;
+    $('branch-tabs').innerHTML=block.branches.map((branch,index)=>
+      '<button class="mirror-branch-tab'+(index===selectedClanBranch?' active':'')+'" type="button" data-branch-index="'+index+'" title="'+safe(branch.title)+'">'+(index+1)+'</button>'
+    ).join('');
+
+    document.querySelectorAll('[data-block-index]').forEach(btn=>btn.onclick=()=>{
+      selectedClanBlock=Number(btn.dataset.blockIndex)||0;
+      selectedClanBranch=0;
+      renderClanBlocks();
+    });
+    document.querySelectorAll('[data-branch-index]').forEach(btn=>btn.onclick=()=>{
+      selectedClanBranch=Number(btn.dataset.branchIndex)||0;
+      renderSelectedClanBranch();
+    });
+    renderSelectedClanBranch();
   }
 
   function renderPlayerStats(){
-    const list=$('players-list'),empty=$('players-empty');
-    if(!list||!empty)return;
-
-    $('players-participants').textContent=clanInfo.participants||clanPlayers.length||0;
-    $('players-total').textContent=formatNumber(clanInfo.total_levels||clanPlayers.reduce((sum,p)=>sum+Number(p.total||0),0));
-    $('players-week').textContent=clanInfo.week||'—';
-
-    renderBranchFilter();
-
-    const query=$('players-search').value.trim().toLowerCase();
-    const branch=$('players-branch').value;
-    const sort=$('players-sort').value;
-    let players=clanPlayers.filter(p=>String(p.nickname||p.name||'').toLowerCase().includes(query));
-
-    players=players.slice().sort((a,b)=>{
-      const av=branch?branchValue(a,branch):Number(a.total||0);
-      const bv=branch?branchValue(b,branch):Number(b.total||0);
-      if(sort==='total-asc')return av-bv;
-      if(sort==='name')return String(a.nickname||a.name||'').localeCompare(String(b.nickname||b.name||''),'ru');
-      if(sort==='scan')return Number(b.scanned_at||b.scannedAt||0)-Number(a.scanned_at||a.scannedAt||0);
-      return bv-av;
-    });
-
-    empty.classList.toggle('hidden',players.length>0);
-    list.classList.toggle('hidden',players.length===0);
-
-    list.innerHTML=players.map((p,index)=>{
-      const nickname=p.nickname||p.name||'Без имени';
-      const scanned=Number(p.scanned_at||p.scannedAt||0);
-      const scannedText=scanned?new Date(scanned*1000).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'дата не указана';
-      const branches=getPlayerBranches(p);
-      const displayValue=branch?branchValue(p,branch):Number(p.total||0);
-      const valueLabel=branch?branch:'Общий вклад';
-      const branchHtml=branches.length
-        ?branches.map(item=>'<div class="branch-item'+(branch&&item.name===branch?' highlight':'')+'"><span title="'+safe(item.name)+'">'+safe(item.name)+'</span><b>'+formatNumber(item.value)+'</b></div>').join('')
-        :'<div class="no-branches">По этому участнику сервер пока не передал разбивку по веткам.</div>';
-
-      return '<details class="player-stat">'+
-        '<summary><div class="player-summary">'+
-          '<div class="player-name"><span class="player-rank">'+(index+1)+'</span><div><strong>'+safe(nickname)+'</strong><span class="player-scan">Считано: '+safe(scannedText)+'</span></div></div>'+
-          '<div class="player-total"><span>'+safe(valueLabel)+'</span><b>'+formatNumber(displayValue)+'</b></div>'+
-          '<span class="expand-mark">⌄</span>'+
-        '</div></summary>'+
-        '<div class="player-detail"><div class="branch-grid">'+branchHtml+'</div></div>'+
-      '</details>';
-    }).join('');
+    renderOverallContributions();
+    renderClanBlocks();
   }
-
-  $('players-search').addEventListener('input',renderPlayerStats);
-  $('players-branch').addEventListener('change',renderPlayerStats);
-  $('players-sort').addEventListener('change',renderPlayerStats);
 
   function showDashboard(data){
     $('login').classList.add('hidden');
@@ -594,6 +716,7 @@
     $('member-name').textContent=m.first_name||m.note||'Участник Top King';
     $('member-id').textContent='Telegram ID: '+m.telegram_id+(m.username?' · @'+m.username:'');
     const linked=String(m.linked_player_id||'');
+    currentLinkedPlayerId=linked;
     $('link-box').classList.toggle('hidden',!!linked);
     $('linked-box').classList.toggle('hidden',!linked);
     $('copy-player').classList.toggle('hidden',!linked);
