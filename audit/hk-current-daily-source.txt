@@ -1252,12 +1252,13 @@
   }
 
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
+  // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
     if (!requireLicense()) return;
     try {
       log(either('Проверяю доступные ежедневные задачи…', 'Checking available daily tasks…'));
       playerDocument = await apiJson('/player/me', 'POST');
-      if (!shopViewDocument) shopViewDocument = await apiJson('/shop/view', 'GET');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
       dailyShopRows = shopViewDocument ? normalizeRegularShop() : [];
       if (!shopViewDocument) log(tr('dailyNoShop'), 'warn');
       await loadRumorRoute();
@@ -1351,8 +1352,7 @@
     const available = events.filter(row => row.atMax && row.affordable > 0 && !resourceEventIsExcluded(row));
     const activeBuilding = resourceBuildings[0] || null;
     const savedIds = savedResourceBuildingIds();
-    const buildingButtons = Object.keys(RESOURCE_BUILDING_TYPES).map(kind => `<button data-resource-kind="${kind}" class="${kind===resourceSelectedKind?'active':''}" ${resourceBusy?'disabled':''}><b>${escapeHtml(resourceTypeName(kind,true))}</b><small>${escapeHtml(resourceTypeName(kind))}${savedIds[kind]?' ✓':''}</small></button>`).join('');
-    const activeTier = Math.max(0, 
+    const buildingButtons = Object.keys(RESOURCE_BUILDING_TYPES).map(kind => `<button data-resource-kind="${kind}" class="${kind===resourceSelectedKind?'active':''}" ${resourceBusy?'disabled':''}><b>${escapeHtml(resourceTypeName(kind,true))}</b><small>${escapeHtml(resourceTypeName(kind))}${savedIds[kind]?' ✓':''}</small></button>`).join('
 
 ===== async function refreshDailyTasks() =====
 
@@ -1412,12 +1412,13 @@
   }
 
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
+  // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
     if (!requireLicense()) return;
     try {
       log(either('Проверяю доступные ежедневные задачи…', 'Checking available daily tasks…'));
       playerDocument = await apiJson('/player/me', 'POST');
-      if (!shopViewDocument) shopViewDocument = await apiJson('/shop/view', 'GET');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
       dailyShopRows = shopViewDocument ? normalizeRegularShop() : [];
       if (!shopViewDocument) log(tr('dailyNoShop'), 'warn');
       await loadRumorRoute();
@@ -1631,7 +1632,7 @@
       const documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(row.id)}&tier=${encodeURIComponent(selectedTier)}`,'POST');
       const proofs=savedResourceBuildingProofs();
       const resourceBuilding=exactResourceBuildingData(documentValue,row.kind,String(proofs[row.kind] || '')===String(row.id));
-      if (!resourceBuilding || reso
+      if (!resourceBuilding || resourceBuilding.kind!==row
 
 ===== async function runDailySelected() =====
 
