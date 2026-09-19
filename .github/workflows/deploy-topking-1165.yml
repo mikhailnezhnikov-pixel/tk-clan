@@ -16,7 +16,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,7 +38,11 @@ jobs:
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
-          grep -q '^// @version      1.16.5
+          grep -q '^// @version      1.16.5$' /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1'" /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile /tmp/server.py
+
       - name: Build and validate 1.16.6
         run: |
           set -euo pipefail
@@ -105,6 +109,7 @@ jobs:
             echo "module=rumors"
             echo "source=historical-1.9.8"
             echo "syntax=ok"
+            echo "service=active"
             echo "roundtrip=identical"
             echo "client_sha256=$client_sha"
             echo "server_sha256=$server_sha"
@@ -122,72 +127,3 @@ jobs:
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/server.py /tmp/topking-live-1166.js /tmp/topking-live-server-1166.py
- /tmp/HamsterKingMobile.user.js
-          grep -Fq "HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1'" /tmp/HamsterKingMobile.user.js
-          node --check /tmp/HamsterKingMobile.user.js
-          python3 -m py_compile /tmp/server.py
-
-      - name: Build and validate 1.16.5
-        run: |
-          set -euo pipefail
-          python3 deploy/topking/stage2e_maps_patch.py
-          python3 deploy/topking/stage2f_clan_patch.py
-          grep -q '^// @version      1.16.5$' /tmp/HamsterKingMobile.user.js
-          grep -Fq "HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1'" /tmp/HamsterKingMobile.user.js
-          grep -Fq "HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1'" /tmp/HamsterKingMobile.user.js
-          grep -Fq "title:either('Исследование районов','District research')" /tmp/HamsterKingMobile.user.js
-          grep -Fq "title:either('Навыки клана','Clan skills')" /tmp/HamsterKingMobile.user.js
-          grep -Fq "if (automatic && hkRunner.running) return false;" /tmp/HamsterKingMobile.user.js
-          grep -Fq "GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'" /tmp/HamsterKingMobile.user.js
-          grep -Fq "GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'" /tmp/HamsterKingMobile.user.js
-          node --check /tmp/HamsterKingMobile.user.js
-
-      - name: Deploy
-        run: |
-          set -euo pipefail
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -euo pipefail;
-            stamp="$(date +%Y%m%d-%H%M%S)";
-            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
-            node --check /tmp/HamsterKingMobile.user.js;
-            install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
-            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.16.5\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
-            systemctl daemon-reload;
-            systemctl restart hamsterking-license.service;
-            systemctl is-active --quiet hamsterking-license.service;
-            grep -q "^// @version      1.16.5$" /opt/hamsterking-license/HamsterKingMobile.user.js;
-            node --check /opt/hamsterking-license/HamsterKingMobile.user.js'
-
-      - name: Round trip verify and record
-        run: |
-          set -euo pipefail
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/topking-live-1165.js
-          cmp -s /tmp/HamsterKingMobile.user.js /tmp/topking-live-1165.js
-          node --check /tmp/topking-live-1165.js
-          sha="$(sha256sum /tmp/topking-live-1165.js | awk '{print $1}')"
-
-          mkdir -p audit
-          {
-            echo "version=1.16.5"
-            echo "stage2e=stage2e-maps-20260919-r1"
-            echo "stage2f=stage2f-clan-20260919-r1"
-            echo "modules=maps-district-research,clan-skills"
-            echo "syntax=ok"
-            echo "roundtrip=identical"
-            echo "sha256=$sha"
-          } > audit/hk-1165-live-status.txt
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-1165-live-status.txt
-          if ! git diff --cached --quiet; then
-            git commit -m "Verify live TopKing 1.16.5 maps and clan"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
-
-      - name: Cleanup
-        if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/topking-live-1165.js
