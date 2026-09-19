@@ -34,8 +34,10 @@
     .message.bad{color:var(--bad)}
     .message.good{color:var(--good)}
 
-    .cab-tabs{position:sticky;top:calc(var(--header) + 10px);z-index:20;display:flex;gap:8px;margin:0 0 18px;padding:7px;border:1px solid rgba(255,255,255,.09);border-radius:17px;background:rgba(8,11,16,.82);backdrop-filter:blur(18px) saturate(130%);-webkit-backdrop-filter:blur(18px) saturate(130%);box-shadow:0 16px 44px rgba(0,0,0,.18)}
-    .cab-tab{flex:1;min-height:44px;padding:10px 14px;border:1px solid transparent;border-radius:12px;background:transparent;color:#cbd1da;font-weight:850;cursor:pointer}
+    .cab-tabs{position:sticky;top:calc(var(--header) + 10px);z-index:20;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:8px;margin:0 0 18px;padding:7px;border:1px solid rgba(255,255,255,.09);border-radius:17px;background:rgba(8,11,16,.82);backdrop-filter:blur(18px) saturate(130%);-webkit-backdrop-filter:blur(18px) saturate(130%);box-shadow:0 16px 44px rgba(0,0,0,.18)}
+    .cab-tab-group{min-width:0;display:flex;align-items:center;gap:5px;padding:3px;border:1px solid rgba(255,255,255,.055);border-radius:13px;background:rgba(255,255,255,.018)}
+    .cab-tab-group-label{flex:0 0 auto;padding:0 7px;color:#727c89;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+    .cab-tab{flex:1;min-width:0;min-height:44px;padding:10px 10px;border:1px solid transparent;border-radius:10px;background:transparent;color:#cbd1da;font-weight:850;cursor:pointer;white-space:nowrap}
     .cab-tab:hover{background:rgba(255,255,255,.045);color:#fff}
     .cab-tab.active{border-color:rgba(232,182,84,.38);color:#1b1205;background:linear-gradient(135deg,#ffe3a0,#d79b36);box-shadow:0 8px 24px rgba(196,128,32,.18)}
     .cab-panel[hidden]{display:none!important}
@@ -372,8 +374,11 @@
       .login-visual{min-height:190px;padding:20px}
       .login-visual:before{background-size:118px auto;background-position:center 18%}
       .login-visual h3{font-size:25px}
-      .cab-tabs{top:calc(var(--header) + 7px);gap:5px;padding:5px;margin-bottom:14px;border-radius:14px;overflow-x:auto}
-      .cab-tab{flex:0 0 auto;min-height:40px;padding:8px 12px;font-size:13px;white-space:nowrap}
+      .cab-tabs{top:calc(var(--header) + 7px);grid-template-columns:1fr;gap:5px;padding:5px;margin-bottom:14px;border-radius:14px;overflow:visible}
+      .cab-tab-group{width:100%;overflow-x:auto;scrollbar-width:none}
+      .cab-tab-group::-webkit-scrollbar{display:none}
+      .cab-tab-group-label{position:sticky;left:0;z-index:2;padding:0 7px;background:#0c1017}
+      .cab-tab{flex:1 0 auto;min-width:92px;min-height:40px;padding:8px 10px;font-size:12px;white-space:nowrap}
       .accountline{flex-direction:column}
       .account-main h2{font-size:24px}
       .access-badge{order:-1}
@@ -547,12 +552,18 @@
 
     <section id="dashboard" class="hidden">
       <nav class="cab-tabs" aria-label="Разделы личного кабинета">
-        <button class="cab-tab active" type="button" data-cab-tab="overview">Обзор</button>
-        <button class="cab-tab" type="button" data-cab-tab="players">Статистика игроков</button>
-        <button class="cab-tab" type="button" data-cab-tab="maps" hidden>Карты</button>
-        <button class="cab-tab" type="button" data-cab-tab="announcements">Новости игры</button>
-        <button class="cab-tab" type="button" data-cab-tab="clan-shop">Clan Shop</button>
-        <button class="cab-tab" type="button" data-cab-tab="install">Установка</button>
+        <div class="cab-tab-group" data-cab-group="main">
+          <span class="cab-tab-group-label">Основное</span>
+          <button class="cab-tab active" type="button" data-cab-tab="overview">Обзор</button>
+          <button class="cab-tab" type="button" data-cab-tab="players">Статистика</button>
+          <button class="cab-tab" type="button" data-cab-tab="clan-shop">Clan Shop</button>
+        </div>
+        <div class="cab-tab-group" data-cab-group="sections">
+          <span class="cab-tab-group-label">Разделы</span>
+          <button class="cab-tab" type="button" data-cab-tab="announcements">Новости игры</button>
+          <button class="cab-tab" type="button" data-cab-tab="maps" hidden>Карты</button>
+          <button class="cab-tab" type="button" data-cab-tab="install">Установка</button>
+        </div>
       </nav>
 
       <section class="cab-panel dashboard-grid" data-cab-panel="overview">
@@ -2307,7 +2318,7 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/cabinet-i18n.js?v=20260920-9"></script>
+<script src="../assets/cabinet-i18n.js?v=20260920-10"></script>
 <script src="../assets/site-nav.js?v=20260919-9"></script>
 </body>
 </html>
