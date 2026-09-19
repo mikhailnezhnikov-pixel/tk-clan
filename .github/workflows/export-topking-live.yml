@@ -108,7 +108,20 @@ jobs:
         run: |
           set -euo pipefail
           cat > /tmp/verify-map-viewer.py <<'PY'
-          import json, sqlite3, sys, urllib.request
+          import json, os, sqlite3, subprocess, sys, urllib.request
+
+          # Load the same runtime environment as the systemd service so the
+          # verification token is signed with the live signing secret.
+          pid=subprocess.check_output(
+              ["systemctl","show","hamsterking-license.service","-p","MainPID","--value"],
+              text=True,
+          ).strip()
+          for item in open(f"/proc/{pid}/environ","rb").read().split(b"\\0"):
+              if b"=" not in item:
+                  continue
+              key,value=item.split(b"=",1)
+              os.environ[key.decode("utf-8","ignore")]=value.decode("utf-8","ignore")
+
           sys.path.insert(0, "/opt/hamsterking-license")
           import server
 
