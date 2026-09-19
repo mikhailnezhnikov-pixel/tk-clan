@@ -247,6 +247,8 @@ jobs:
             [ -n "$svc_group" ] || svc_group="$(id -gn "$svc_user")"
             full_file=/opt/hamsterking-license/private-maps/full/hk_newyork2332.full.json.gz
             if [ -f "$full_file" ]; then
+              chgrp "$svc_group" /opt/hamsterking-license/private-maps
+              chmod 0710 /opt/hamsterking-license/private-maps
               chgrp "$svc_group" /opt/hamsterking-license/private-maps/full "$full_file"
               chmod 0750 /opt/hamsterking-license/private-maps/full
               chmod 0640 "$full_file"
