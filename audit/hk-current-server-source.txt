@@ -2508,7 +2508,11 @@ def merge_existing_map_duplicates() -> dict:
     return {"groups": sum(1 for values in groups.values() if len(values) > 1), "merged": merged, "removed": removed}
 
 
-RATING_KINDS = frozenset({"influence", "power", "clans", "alliances"})
+# ALLIANCE_RATINGS_SERVER_V1
+RATING_KINDS = frozenset({
+    "influence", "power", "clans", "alliances",
+    "alliance_power", "alliance_influence", "alliance_defense",
+})
 
 
 def public_snapshot_member(player_id: str) -> bool:
@@ -2658,11 +2662,7 @@ APPLICATION_FIELDS_EN = (
     ("about", "Anything else", "Anything else you would like to add?\n\nThis question is optional — send /skip to skip it."),
 )
 APPLICATION_OPTIONAL_FIELDS = frozenset({"about"})
-FEEDBACK_TYPES = {"wish": "Пожелание", "suggestion": "Предложение", "question": "Вопрос"}
-
-
-def application_language(state: dict | None) -> str:
-    if not state or
+FEEDBACK_TYPES = {"wish": "Пожелание", "suggestion": "Предложени
 
 ===== def do_POST =====
 
