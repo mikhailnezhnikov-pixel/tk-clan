@@ -112,7 +112,6 @@ def main():
 
   let recipeRunning=false,recipeStop=false,recipeFairId='recipe',currentRecipePlans=[];
   const recipeState=()=>({fair_reroll_cost:{}});
-  const safeReroll=()=>true;
   const tr=x=>x;
   const clean=x=>x;
   const plansFromRecipeState=()=>[];
