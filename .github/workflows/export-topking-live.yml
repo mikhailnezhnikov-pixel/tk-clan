@@ -1,4 +1,4 @@
-name: Find TopKing userscript 1.9.5
+name: Find TopKing userscript backups
 
 on:
   push:
@@ -25,60 +25,37 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Search VPS backups for 1.9.5
+      - name: Inventory userscript backups
         shell: bash
         run: |
-          set -euo pipefail
+          set -u
           mkdir -p found
-          ssh -i "$HOME/.ssh/topking" \
-            -o BatchMode=yes \
-            -o ConnectTimeout=15 \
-            -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71 'bash -s' > found/inventory.txt <<'REMOTE'
-          set -euo pipefail
-          echo "CURRENT:"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' > found/inventory.txt <<'REMOTE'
+          echo "CURRENT"
           grep -m1 '^// @version' /opt/hamsterking-license/HamsterKingMobile.user.js 2>/dev/null || true
-          echo
-          echo "CANDIDATES:"
-          find /opt/hamsterking-license /root /srv /var/www \
-            -maxdepth 8 -type f \
-            \( -iname 'HamsterKingMobile*.js' -o -iname 'HamsterKingMobile*.js.*' -o -iname '*.user.js' -o -iname '*.user.js.*' \) \
-            -size -8M 2>/dev/null | while IFS= read -r file; do
-              version="$(grep -m1 '^// @version' "$file" 2>/dev/null | sed -E 's#^// @version[[:space:]]+##' || true)"
-              [ -n "$version" ] || continue
-              printf '%s\t%s\t%s\t%s\n' "$version" "$(stat -c %Y "$file")" "$(stat -c %s "$file")" "$file"
-            done | sort -V
+          echo "FILES"
+          for f in /opt/hamsterking-license/HamsterKingMobile.user.js* /opt/hamsterking-license/*.user.js* /root/HamsterKingMobile.user.js*; do
+            [ -f "$f" ] || continue
+            v="$(grep -m1 '^// @version' "$f" 2>/dev/null | sed -E 's#^// @version[[:space:]]+##' || true)"
+            [ -n "$v" ] || continue
+            printf '%s\t%s\t%s\t%s\n' "$v" "$(stat -c %Y "$f" 2>/dev/null)" "$(stat -c %s "$f" 2>/dev/null)" "$f"
+          done | sort -V
           REMOTE
           cat found/inventory.txt
 
-          MATCH_PATH="$(
-            ssh -i "$HOME/.ssh/topking" \
-              -o BatchMode=yes \
-              -o ConnectTimeout=15 \
-              -o StrictHostKeyChecking=accept-new \
-              root@89.125.1.71 \
-              "find /opt/hamsterking-license /root /srv /var/www -maxdepth 8 -type f \
-              \( -iname 'HamsterKingMobile*.js' -o -iname 'HamsterKingMobile*.js.*' -o -iname '*.user.js' -o -iname '*.user.js.*' \) \
-              -size -8M 2>/dev/null | while IFS= read -r f; do grep -q '^// @version[[:space:]]\+1\.9\.5$' \"\$f\" 2>/dev/null && { echo \"\$f\"; break; }; done"
-          )"
-
+          MATCH_PATH="$(awk -F '\t' '$1=="1.9.5"{print $4; exit}' found/inventory.txt)"
           if [ -n "$MATCH_PATH" ]; then
-            echo "FOUND_1_9_5=YES" >> found/result.txt
-            echo "PATH=$MATCH_PATH" >> found/result.txt
-            scp -i "$HOME/.ssh/topking" \
-              -o BatchMode=yes \
-              -o ConnectTimeout=15 \
-              -o StrictHostKeyChecking=accept-new \
-              "root@89.125.1.71:$MATCH_PATH" \
-              found/HamsterKingMobile_v1.9.5.user.js
+            printf 'FOUND_1_9_5=YES\nPATH=%s\n' "$MATCH_PATH" > found/result.txt
+            scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new "root@89.125.1.71:$MATCH_PATH" found/HamsterKingMobile_v1.9.5.user.js
           else
-            echo "FOUND_1_9_5=NO" >> found/result.txt
+            echo "FOUND_1_9_5=NO" > found/result.txt
           fi
 
       - name: Upload search result
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: topking-v1-9-5-search
+          name: topking-userscript-backup-inventory
           path: found/
           retention-days: 1
 
