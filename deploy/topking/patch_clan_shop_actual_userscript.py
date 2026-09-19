@@ -4,6 +4,7 @@ import re
 from patch_today_live_1170 import apply_today_hotfix
 from patch_pit_live_1170 import apply_pit_live_hotfix
 from patch_business_live_1170 import apply_business_live_hotfix
+from patch_fair_shop_live_1170 import apply_fair_shop_live_hotfix
 
 p=Path("/tmp/HamsterKingMobile.user.js")
 s=p.read_text()
@@ -29,6 +30,7 @@ if MARKER in s:
     s = apply_today_hotfix(s)
     s = apply_pit_live_hotfix(s)
     s = apply_business_live_hotfix(s)
+    s = apply_fair_shop_live_hotfix(s)
     p.write_text(s)
     print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_AND_TODAY_HOTFIXED")
     raise SystemExit(0)
@@ -109,5 +111,6 @@ s=s.replace(old,new,1)
 s = apply_today_hotfix(s)
 s = apply_pit_live_hotfix(s)
 s = apply_business_live_hotfix(s)
+s = apply_fair_shop_live_hotfix(s)
 p.write_text(s)
 print("CLAN_SHOP_USERSCRIPT_PATCH_OK")
