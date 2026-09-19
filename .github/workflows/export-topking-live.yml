@@ -1,14 +1,6 @@
 name: Export TopKing bookmarklet sources
-# export refresh 2026-09-19 rumor cleanup
-# architecture refresh
-# verify live 1.10.0
-# verify live 1.11.0
-# verify live 1.12.0
-# inspect live after 1.13 precheck
-# inspect current live before clean 1.13 deploy
-# diagnose current live before 1.13
 # verify live 1.13.0
-# inspect cabinet map permissions
+# secure private maps permissions + publishing
 
 on:
   push:
@@ -24,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Prepare SSH key
         shell: bash
         env:
@@ -48,6 +43,59 @@ jobs:
           python3 -m py_compile live/server.py
           node --check live/HamsterKingMobile.user.js
 
+      - name: Build secure maps backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! grep -q 'CREATE TABLE IF NOT EXISTS hk_maps_catalog' live/server.py; then
+            base64 -d deploy/topking/server-maps-access.patch.gz.b64 | gzip -d > /tmp/server-maps-access.patch
+            patch --fuzz=0 live/server.py < /tmp/server-maps-access.patch
+          fi
+          python3 -m py_compile live/server.py
+          python3 live/server.py --self-test
+
+          if [ -f cabinet/hk-maps-index.js ]; then
+            node <<'NODE'
+          const fs=require('fs');
+          global.window={};
+          require(process.cwd()+'/cabinet/hk-maps-index.js');
+          if(!Array.isArray(window.HK_MAPS_INDEX)||window.HK_MAPS_INDEX.length!==235){
+            throw new Error('Expected 235 HK maps');
+          }
+          fs.writeFileSync('/tmp/hk-maps-index.json',JSON.stringify(window.HK_MAPS_INDEX));
+          NODE
+          fi
+
+      - name: Deploy secure maps backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            live/server.py root@89.125.1.71:/tmp/hamsterking-server.py
+          if [ -f /tmp/hk-maps-index.json ]; then
+            scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+              /tmp/hk-maps-index.json root@89.125.1.71:/tmp/hk-maps-index.json
+          fi
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'set -euo pipefail;
+              stamp="$(date +%Y%m%d-%H%M%S)";
+              python3 -m py_compile /tmp/hamsterking-server.py;
+              cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.$stamp";
+              install -m 0644 /tmp/hamsterking-server.py /opt/hamsterking-license/server.py;
+              systemctl restart hamsterking-license.service;
+              systemctl is-active --quiet hamsterking-license.service;
+              sleep 2;
+              if [ -f /tmp/hk-maps-index.json ]; then
+                python3 /opt/hamsterking-license/server.py --import-hk-maps-index /tmp/hk-maps-index.json;
+                rm -f /tmp/hk-maps-index.json;
+              fi;
+              curl -fsS --max-time 10 http://127.0.0.1:8787/health || curl -fsS --max-time 10 http://127.0.0.1:3188/health;
+              echo;
+              curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/public/maps || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/public/maps;
+              echo;
+              echo MAPS_BACKEND_DEPLOY_OK'
+
       - name: Upload sources
         uses: actions/upload-artifact@v4
         with:
@@ -57,6 +105,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking"
-
-# verify live before exact HG rebuild
+        run: rm -f "$HOME/.ssh/topking" /tmp/server-maps-access.patch /tmp/hk-maps-index.json
