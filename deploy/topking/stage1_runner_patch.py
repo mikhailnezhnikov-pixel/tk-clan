@@ -220,10 +220,11 @@ for needle, message in checks:
     if needle not in s:
         raise SystemExit(message)
 
-# Assert again on the FINAL generated apiJsonCore block, not only the input block.
+# Assert again on the FINAL apiJsonCore body only. The public apiJson wrapper
+# intentionally exists after the core, inside the gate block.
 final_core_start = s.index("  async function apiJsonCore(")
-final_core_end = s.index(marker, final_core_start)
-if re.search(r'\bapiJson\s*\(', s[final_core_start:final_core_end]):
+final_gate_start = s.index("\n  const HK_MUTATION_GATE_REV = ", final_core_start)
+if re.search(r'\bapiJson\s*\(', s[final_core_start:final_gate_start]):
     raise SystemExit('final apiJsonCore re-enters public apiJson and can deadlock')
 
 p.write_text(s, encoding='utf-8')
