@@ -1583,3 +1583,244 @@ NOT FOUND
       deleteSetting:'Delete setting “{name}”?', regularShop:'Regular shop', ordinaryShop:'Standard shop', clanShop:'Clan shop', readShop:'Refresh shop', selectAvailable:'Select available',
       shopReadFirst:'Read the shop first', remaining:'Remaining {n}', unlimited:'Unlimited', boughtOut:'Purchased', selectedPurchases:'Selected purchases: {n}',
       balance:'Balance', willSpend:'Spend', bala
+
+===== Обычная ярмарка =====
+
+      .hk-map-source-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0 12px}.hk-map-source-tabs button{border:1px solid #34445b;border-radius:11px;background:#182230;color:#aebbd0;padding:11px 5px;font-size:12px;font-weight:800}.hk-map-source-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-map-controls{display:grid;grid-template-columns:1fr 120px;gap:7px}.hk-map-controls input,.hk-map-controls select,.hk-map-filters select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-map-list{display:grid;gap:7px;margin-top:10px}.hk-map-row{display:grid;grid-template-columns:1.2fr 54px repeat(3,1fr) 58px 48px;gap:6px;align-items:center;text-align:left;background:#111a27;color:white;border:1px solid #35445a;border-radius:11px;padding:10px;font-size:10px}.hk-map-row>b{font-size:12px;color:#ffe083}.hk-map-row strong{color:#35df9e}.hk-progress{background:#35df9e;color:#082117;border-radius:12px;padding:4px;text-align:center;font-weight:900}.hk-map-filters{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:10px 0}.hk-map-legend{display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:#9eabc0;margin:8px 0}.hk-map-legend span{display:flex;align-items:center;gap:4px}.hk-map-dot{width:10px;height:10px;border-radius:3px;display:inline-block}.hk-map-zoom{display:grid;grid-template-columns:44px 82px 44px;gap:6px;justify-content:end;margin:7px 0}.hk-map-zoom button{padding:8px 4px;font-weight:900}.hk-map-zoom #hk-map-zoom-value{color:#ffe083}.hk-map-visual{height:56vh;min-height:360px;max-height:650px;background:#080d14;border:1px solid #304057;border-radius:13px;overflow:hidden;touch-action:none}.hk-map-visual svg{display:block;width:100%;height:100%;touch-action:none;transform-origin:50% 50%;will-change:transform}.hk-map-shape{cursor:pointer;transition:opacity .15s,stroke-width .15s}.hk-map-shape.dim{opacity:.055;pointer-events:none}.hk-map-shape.match{opacity:.94}.hk-map-shape.selected{stroke:#fff!important;stroke-width:3.2!important;opacity:1}.hk-map-selected{display:grid;grid-template-columns:1.1fr 1fr 55px;gap:7px;align-items:center;margin-top:8px;padding:10px;background:#101927;border:1px solid #304057;border-radius:11px}.hk-map-selected small{grid-column:1/4;color:#93a3b8}.hk-map-selected strong{color:#6deaff}.hk-map-match-count{font-size:11px;color:#9eabc0;margin:6px 0}
+      @media(max-width:620px){.hk-map-row{grid-template-columns:1fr 45px 54px}.hk-map-row span:nth-of-type(2),.hk-map-row span:nth-of-type(3){display:none}.hk-map-row strong{grid-column:3}.hk-map-row .hk-progress{grid-column:2}.hk-map-building{grid-template-columns:1fr 55px}.hk-map-building>span{grid-column:1}.hk-map-building small{grid-column:1/3}}
+    `;
+    document.head.appendChild(style);
+    const NAV_GROUPS = [
+      {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
+      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{page:'bosses',ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+      {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
+      {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
+      {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
+      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+    ];
+    const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
+    root = document.createElement('div'); root.id = 'hk-mobile-root';
+    root.innerHTML = `<button id="hk-fab">HK</button><div id="hk-panel" class="hk-locked">
+      <div id="hk-watermark" aria-hidden="true"></div><div class="hk-head"><h2>Hamster King Mobile <small style="font-size:12px;color:#9aa8bc">v${VERSION}</small></h2><div class="hk-lang"><button data-lang="ru" aria-label="Русский">🇷🇺</button><button data-lang="en" aria-label="English">🇬🇧</button></div><button class="hk-close">×</button></div>
+      <button id="hk-donation" class="hk-donation">❤️ <span data-i18n="donation">${tr('donation')}</span></button>
+      <div id="hk-license-gate" class="hk-license" data-i18n="checkingLicense">${tr('checkingLicense')}</div>
+      <div id="hk-health" class="hk-health">
+        <div class="hk-health-chip" data-health="game"><b>${either('Игра','Game')}</b><small>${either('ожидание','waiting')}</small></div>
+        <div class="hk-health-chip" data-health="auth"><b>${either('Авторизация','Auth')}</b><small>${either('ожидание','waiting')}</small></div>
+        <div class="hk-health-chip" data-health="license"><b>${either('Лицензия','License')}</b><small>${either('ожидание','waiting')}</small></div>
+        <div class="hk-health-chip" data-health="server"><b>${either('Сервер','Server')}</b><small>${either('ожидание','waiting')}</small></div>
+      </div>
+      <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">${either('Диагностика','Diagnostics')}</button></div>
+      <div id="hk-update-banner" class="hk-update"></div>
+      <div class="hk-tabs">${menuTabs}</div>
+      <div id="hk-subnav" class="hk-subnav"></div>
+      <div id="hk-runner" class="hk-runner"><div class="hk-runner-head"><b id="hk-runner-title"></b><span id="hk-runner-state" class="hk-runner-state"></span></div><div id="hk-runner-step" class="hk-runner-step"></div><div class="hk-runner-track"><div id="hk-runner-fill" class="hk-runner-fill"></div></div><div class="hk-runner-actions"><button id="hk-runner-pause" class="hk-secondary"></button><button id="hk-runner-stop" class="hk-danger"></button></div></div>
+      <div class="hk-page active" data-content="daily">
+        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div class="hk-toolbar"><button id="hk-daily-refresh" class="hk-secondary" data-i18n="dailyRefresh">${tr('dailyRefresh')}</button><button id="hk-daily-clear" data-i18n="dailyClear">${tr('dailyClear')}</button></div><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
+      </div>
+      <div class="hk-page" data-content="resources">
+        <div id="hk-resource-content" class="hk-cardbox"></div>
+      </div>
+      <div class="hk-page" data-content="bosses"><div id="hk-boss-content" class="hk-cardbox"><h3>${either('Боссы','Bosses')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать состояние босса.','Open this tab to read boss state.')}</p></div></div>
+          <div class="hk-page" data-content="pit">
+        <div class="hk-cardbox"><div class="hk-grid">
+          <label data-i18n="targetRound">${tr('targetRound')}</label><input id="hk-target" type="number" min="1" value="${settings.target}">
+          <label data-i18n="delay">${tr('delay')}</label><input id="hk-interval" type="number" min="0.7" step="0.1" value="${settings.interval}">
+          <label data-i18n="activationTokens">${tr('activationTokens')}</label><input id="hk-activation-limit" type="number" min="0" value="${settings.activationLimit}">
+          <label data-i18n="restoreTokens">${tr('restoreTokens')}</label><input id="hk-restore-limit" type="number" min="0" value="${settings.restoreLimit}">
+          <label data-i18n="allowTokens">${tr('allowTokens')}</label><input id="hk-allow-tokens" type="checkbox" ${settings.allowTokens ? 'checked' : ''}>
+          <label data-i18n="pitCollectOnly">${tr('pitCollectOnly')}</label><input id="hk-pit-collect-only" type="checkbox" ${settings.collectOnly ? 'checked' : ''}>
+        </div><div id="hk-pit-live" class="hk-live">${tr('round')}: —</div><section id="hk-pit-forecast" class="hk-pit-forecast"></section>
+        <button id="hk-pit-start" class="hk-primary" data-i18n="startBattle">${tr('startBattle')}</button><button id="hk-pit-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
+        <button id="hk-export" class="hk-secondary" data-i18n="exportCsv">${tr('exportCsv')}</button></div>
+      </div>
+      <div class="hk-page" data-content="business">
+        <div class="hk-cardbox"><div class="hk-toolbar"><button id="hk-refresh-game" data-i18n="refreshGame">${tr('refreshGame')}</button><span id="hk-connect">${tr('waiting')}</span></div>
+        <div class="hk-business-tabs"><button class="hk-business-tab active" data-business-tab="regular" data-i18n="businessRegular">${tr('businessRegular')}</button><button class="hk-business-tab" data-business-tab="optimizer" data-i18n="businessOptimizer">${tr('businessOptimizer')}</button></div>
+        <div class="hk-business-pane active" data-business-pane="regular"><div class="hk-toolbar"><select id="hk-preset"><option>${tr('savedSets')}</option></select><button id="hk-save-preset" data-i18n="saveNew">${tr('saveNew')}</button><button id="hk-delete-preset" data-i18n="delete">${tr('delete')}</button></div>
+        <div class="hk-toolbar"><select id="hk-remove-tier"></select><button id="hk-select-remove" data-i18n="selectAll">${tr('selectAll')}</button></div>
+        <div class="hk-toolbar"><select id="hk-insert-tier"></select></div>
+        <div id="hk-business-lists"></div><div id="hk-plan" class="hk-cardbox"></div></div>
+        <div class="hk-business-pane" data-business-pane="optimizer"><section class="hk-optimizer"><h3 data-i18n="optimizer">${tr('optimizer')}</h3><div class="hk-optimizer-controls"><label><span data-i18n="optimizerGoal">${tr('optimizerGoal')}</span><select id="hk-optimizer-goal"><option value="pit" data-i18n="optimizerPit">${tr('optimizerPit')}</option><option value="income" data-i18n="optimizerIncome">${tr('optimizerIncome')}</option><option value="energy" data-i18n="optimizerEnergy">${tr('optimizerEnergy')}</option><option value="buildings" data-i18n="optimizerBuildings">${tr('optimizerBuildings')}</option></select></label></div><div class="hk-optimizer-filter"><b data-i18n="optimizerRemoveTiers">${tr('optimizerRemoveTiers')}</b><div id="hk-optimizer-remove-tiers" class="hk-optimizer-tiers"></div></div><div class="hk-optimizer-filter"><b data-i18n="optimizerInsertTiers">${tr('optimizerInsertTiers')}</b><div id="hk-optimizer-insert-tiers" class="hk-optimizer-tiers"></div></div><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="replaceable" ${optimizerSectionOpen('replaceable')?'open':''}><summary><b data-i18n="optimizerReplaceable">${tr('optimizerReplaceable')}</b></summary><small data-i18n="optimizerReplaceHint">${tr('optimizerReplaceHint')}</small><div id="hk-optimizer-replaceable" class="hk-optimizer-replaceable"></div></details><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="stock" ${optimizerSectionOpen('stock')?'open':''}><summary><b data-i18n="optimizerStockAllowed">${tr('optimizerStockAllowed')}</b></summary><small data-i18n="optimizerStockHint">${tr('optimizerStockHint')}</small><div id="hk-optimizer-stock-allowed" class="hk-optimizer-replaceable"></div></details><div class="hk-optimizer-actions"><button id="hk-optimizer-calculate" class="hk-secondary" data-i18n="optimizerCalculate">${tr('optimizerCalculate')}</button><button id="hk-optimizer-restore" data-i18n="optimizerRestore">${tr('optimizerRestore')}</button></div><div id="hk-optimizer-result" class="hk-optimizer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section>
+        <section class="hk-bonus-analyzer"><h3 data-i18n="bonusAnalyzer">${tr('bonusAnalyzer')}</h3><div id="hk-bonus-analyzer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section></div></div>
+      </div>
+      
+
+===== data-content=\"fair\" =====
+NOT FOUND
+
+===== function activateModule =====
+NOT FOUND
+
+===== const activateModule =====
+
+          <div class="hk-map-legend"><span><i class="hk-map-dot" style="background:#d7a93d"></i>${either('не исследовано','unresearched')}</span><span><i class="hk-map-dot" style="background:#34435a"></i>0 💎</span><span><i class="hk-map-dot" style="background:#35c77a"></i>1 💎</span><span><i class="hk-map-dot" style="background:#21b8d7"></i>2 💎</span><span><i class="hk-map-dot" style="background:#4285f4"></i>3 💎</span><span><i class="hk-map-dot" style="background:#9b67ed"></i>4 💎</span><span><i class="hk-map-dot" style="background:#78efff"></i>5+ 💎</span><span>◆ ${either('инвестиционное','investment')}</span></div>
+          <div id="hk-map-match-count" class="hk-map-match-count"></div><div class="hk-map-zoom"><button id="hk-map-zoom-out" aria-label="${either('Отдалить','Zoom out')}">−</button><button id="hk-map-zoom-value" aria-label="${either('Сбросить масштаб','Reset zoom')}">100%</button><button id="hk-map-zoom-in" aria-label="${either('Приблизить','Zoom in')}">+</button></div><div id="hk-map-visual" class="hk-map-visual"></div><div id="hk-map-selected" class="hk-map-selected"><span>${either('Нажмите на здание на карте','Tap a building on the map')}</span></div></div>
+      </div>
+      <div id="hk-log" class="hk-log"></div><div id="hk-status" class="hk-status">${tr('version',{v:VERSION})}</div>
+    </div>`;
+    document.body.appendChild(root);
+    hideBootstrap();
+    panel = root.querySelector('#hk-panel'); logBox = root.querySelector('#hk-log'); statusLine = root.querySelector('#hk-status');
+    businessLists = root.querySelector('#hk-business-lists'); planBox = root.querySelector('#hk-plan'); presetSelect = root.querySelector('#hk-preset'); dailyBox = root.querySelector('#hk-daily-tasks'); clanBox = root.querySelector('#hk-clan-content'); resourceBox = root.querySelector('#hk-resource-content');
+    fairTypes = root.querySelector('#hk-fair-types'); fairLots = root.querySelector('#hk-fair-lots'); fairSlotRules = root.querySelector('#hk-fair-slot-rules'); fairPresetSelect = root.querySelector('#hk-fair-preset');
+    shopCards = root.querySelector('#hk-shop-cards'); shopSummary = root.querySelector('#hk-shop-summary');
+    recipeCards = root.querySelector('#hk-recipe-cards'); recipeSummary = root.querySelector('#hk-recipe-summary'); recipeDatabaseBox = root.querySelector('#hk-recipe-database');
+    bureauCards = root.querySelector('#hk-bureau-cards'); bureauSummary = root.querySelector('#hk-bureau-summary');
+    mapIndexBox = root.querySelector('#hk-map-index'); mapDetailBox = root.querySelector('#hk-map-detail');
+    installFabDragging(root.querySelector('#hk-fab'));
+    root.querySelector('.hk-close').onclick = () => panel.classList.remove('open');
+    root.querySelector('#hk-donation').onclick = () => window.open(DONATION_URL, '_blank', 'noopener');
+    root.querySelectorAll('[data-lang]').forEach(button => button.onclick = () => {
+      language = button.dataset.lang === 'en' ? 'en' : 'ru';
+      save({language});
+      applyLanguage();
+    });
+    root.querySelectorAll('[data-optimizer-section]').forEach(section => section.ontoggle = () => {
+      saveOptimizerSectionState(section.dataset.optimizerSection, section.open);
+    });
+    const groupForPage = page => NAV_GROUPS.find(group=>group.modules.some(module=>module.page===page)) || NAV_GROUPS[0];
+    const renderGroupSubnav = (groupId, activePage) => {
+      const group=NAV_GROUPS.find(row=>row.id===groupId)||NAV_GROUPS[0];
+      const box=root.querySelector('#hk-subnav');
+      box.innerHTML=group.modules.map(module=>`<button class="${module.page===activePage?'active ':''}${module.planned?'planned':''}" ${module.page?`data-module="${module.page}"`:''} ${module.planned?'disabled':''} data-nav-ru="${escapeHtml(module.ru)}" data-nav-en="${escapeHtml(module.en)}">${escapeHtml(language==='en'?module.en:module.ru)}${module.planned?` · ${either('скоро','soon')}`:''}</button>`).join('');
+      box.querySelectorAll('[data-module]:not([disabled])').forEach(button=>button.onclick=()=>activateModule(button.dataset.module,true));
+    };
+    const activateModule = (page,persist=true) => {
+      const target=root.querySelector(`[data-content="${page}"]`) || root.querySelector('[data-content="daily"]');
+      const finalPage=target.dataset.content;
+      const group=groupForPage(finalPage);
+      root.querySelectorAll('.hk-tab').forEach(button=>button.classList.toggle('active',button.dataset.group===group.id));
+      root.querySelectorAll('.hk-page').forEach(section=>section.classList.toggle('active',section===target));
+      renderGroupSubnav(group.id,finalPage);
+      if(persist) save({navGroup:group.id,navModule:finalPage});
+      if (finalPage === 'maps') renderMapIndex();
+      if (finalPage === 'business') { renderBusinessLists(); renderBusinessOptimizerFilters(); }
+      if (finalPage === 'daily') renderDailyTasks();
+      if (finalPage === 'resources') renderResources();
+      if (finalPage === 'buildings') renderBuildings();
+      if (finalPage === 'explore') renderExplore();
+      if (finalPage === 'clan') renderClanSkills();
+      if (finalPage === 'wars') renderWars();
+      if (finalPage === 'bosses') renderBosses();
+      if (finalPage === 'fair') renderFair();
+      if (finalPage === 'shop') renderShop();
+      if (finalPage === 'recipes') renderRecipes();
+      if (finalPage.startsWith('growth')) { renderGrowth(); growthAutoOpen(finalPage); }
+      else void refreshModuleLive(finalPage);
+    };
+    root.querySelectorAll('.hk-tab').forEach(tab=>tab.onclick=()=>{
+      const group=NAV_GROUPS.find(row=>row.id===tab.dataset.group)||NAV_GROUPS[0];
+      const preferred=group.modules.find(module=>module.page && !module.planned)?.page || 'daily';
+      activateModule(preferred,true);
+    });
+    const remembered=clean(load().navModule||'daily');
+    activateModule(root.querySelector(`[data-content="${remembered}"]`)?remembered:'daily',false);
+    const activateBusinessPane = (paneName, persist = true) => {
+      const pane = paneName === 'optimizer' ? 'optimizer' : 'regular';
+      root.querySelectorAll('[data-business-tab]').forEach(button => button.classList.toggle('active', button.dataset.businessTab === pane));
+      root.querySelectorAll('[data-business-pane]').forEach(section => section.classList.toggle('active', section.dataset.businessPane === pane));
+      if (persist) save({businessSubtab:pane});
+      if (pane === 'optimizer') {
+        renderBusinessOptimizerFilters();
+        renderBonusAnalyzer();
+      } else {
+        renderBusinessLists();
+      }
+    };
+    root.querySelectorAll('[data-business-tab]').forEach(button => button.onclick = () => activateBusinessPane(button.dataset.businessTab));
+    activateBusinessPane(load().businessSubtab, false);
+    root.querySelector('#hk-health-check').onclick = async () => {
+      log(either('Проверяю подключение…','Checking connection…'));
+      const gameOk = await bootstrapLateGameConnection();
+      const licenseOk = playerDocument ? await checkLicense(playerDocument.player || {}, true) : false;
+      renderHealth();
+      log(gameOk && licenseOk ? either('Связь проверена: всё работает','Connection check passed') : either('Есть проблема с подключением — скачайте диагностику','Connection problem detected — download diagnostics'), gameOk && licenseOk ? 'ok' : 'warn');
+    };
+    root.querySelector('#hk-diagnostic').onclick = downloadDiagnosticReport;
+    root.querySelector('#hk-runner-pause').onclick = () => hkRunner.state.status==='paused' ? hkRunner.resume() : hkRunner.pause();
+    root.querySelector('#hk-runner-stop').onclick = () => hkRunner.stop('user');
+    root.addEventListener('click',event=>{
+      const actionButton=event.target.closest?.('[data-growth-action]');
+      if(actionButton){
+        const action=actionButton.dataset.growthAction;
+        if(action==='all')void growthRunPlan('all');
+        else if(action==='hamsters')void growthRunPlan('hamsters');
+        else if(action==='generals')void growthRunPlan('generals');
+        else if(action==='prep')void growthRunPlan('prep');
+        else if(action==='reset-priority')growthResetPriority();
+        return;
+      }
+      const row=event.target.closest?.('[data-growth-priority-index]');if(!row)return;
+      const index=Number(row.dataset.growthPriorityIndex);
+      if(event.target.closest('[data-growth-priority-remove]'))growthRemovePriority(index);
+      else{const move=event.target.closest('[data-growth-priority-move]')?.dataset.growthPriorityMove;if(move)growthMovePriority(index,move);}
+    });
+    const growthSettingIds=['#hk-growth-run-prep','#hk-growth-run-generals','#hk-growth-run-hamsters','#hk-growth-contracts','#hk-growth-balls','#hk-growth-boxes','#hk-growth-pit-percent','#hk-growth-general-mode','#hk-growth-general-weight','#hk-growth-caps-percent','#hk-growth-hamster-weight','#hk-growth-copy-enabled','#hk-growth-exclude-event'];
+    for(const selector of growthSettingIds)root.querySelector(selector)?.addEventListener('change',()=>{growthReadSettingsFromUi();renderGrowth();if(selector==='#hk-growth-exclude-event'&&root.querySelector(selector)?.checked)void growthLoadLive({force:false,loadShop:true,loadConfig:true,silent:true});});
+    renderHealth(); renderRunnerState(); renderGrowth();
+    runtime.open = () => { try { panel?.classList.add('open'); updateWatermark(); } catch (_) {} };
+    runtime.navigate = page => { try { activateModule(page,true); panel?.classList.add('open'); } catch (_) {} };
+    root.querySelector('#hk-daily-refresh').onclick = () => refreshModuleLive('daily',{force:true});
+    root.querySelector('#hk-daily-run').onclick = runDailySelected;
+    root.querySelector('#hk-daily-clear').onclick = () => { if (logBox) logBox.innerHTML = ''; if (statusLine) statusLine.textContent = tr('dailyReady'); };
+    root.querySelector('#hk-pit-start').onclick = async () => {
+      if (!requireLicense()) return;
+      if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+      settings = {
+        target: Math.max(1, Number(root.querySelector('#hk-target').value || 1)),
+        interval: Math.max(.7, Number(root.querySelector('#hk-interval').value || 1.2)),
+        activationLimit: Math.max(0, Number(root.querySelector('#hk-activation-limit').value || 0)),
+        restoreLimit: Math.max(0, Number(root.querySelector('#hk-restore-limit').value || 0)),
+        allowTokens: root.querySelector('#hk-allow-tokens').checked,
+        collectOnly: root.querySelector('#hk-pit-collect-only').checked
+      };
+      save({settings});
+      activationSpent = 0;
+      restoreSpent = 0;
+      pitRunStart = (() => { const state=pitState(); return {round:state.round,power:pitPowerValue(state)}; })();
+      hkRunner.start({title:either('Яма','Pit'),step:either('Автобой','Auto battle'),pausable:true,stoppable:true});
+      pitRunning = true;
+      updatePitButtons();
+      log(settings.collectOnly ? either('Запущен безопасный сбор данных Ямы без боя','Started safe Pit data collection without battle') : `Автобой запущен до раунда ${settings.target}`);
+      try {
+        await pitLoop();
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        hkRunner.finish(either('Яма завершена','Pit completed'));
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          hkRunner.reset();
+          log(either('Автобой остановлен','Auto battle stopped'),'warn');
+        } else {
+          hkRunner.fail(error);
+          log(`${either('Ошибка Ямы','Pit error')}: ${error?.message || error}`,'bad');
+        }
+      } finally {
+        pitRunning = false;
+        updatePitButtons();
+      }
+    };
+    root.querySelector('#hk-pit-stop').onclick = () => {
+      pitRunning = false;
+      hkRunner.stop('pit');
+      updatePitButtons();
+      log(either('Останавливаю автобой…','Stopping auto battle…'),'warn');
+    };
+    root.querySelector('#hk-export').onclick = exportPowers;
+    root.querySelector('#hk-refresh-game').onclick = () => location.reload();
+    root.querySelector('#hk-optimizer-calculate').onclick = calculateBusinessOptimizer;
+    root.querySelector('#hk-optimizer-restore').onclick = prepareOriginalBusinessRestore;
+    root.querySelector('#hk-remove-tier').onchange = renderBusinessLists;
+    root.querySelector('#hk-insert-tier').onchange = renderBusinessLists;
+    root.querySelector('#hk-select-remove').onclick = () => {
+      preparedBusinessPlan = null; preparedBusinessPlanSource = '';
+      const filter = Number(root.querySelector('#hk-remove-tier').value || 0);
+      layout.filter(row => filter === 0 ? true : filter === -1 ? !row.businessId : !!row.businessId && tier(row.businessId) === filter)
+        .forEach(row => selectedSlots.add(row.key));
+      renderBusinessLists();
+    };
+    root.querySelector('#hk-save-preset').onclick = savePreset;
+    root.querySelector('#hk-delete-preset').onclick = deletePreset;
+    root.querySelector('#hk-fair-load').onclick = () => refreshModuleLive('fair',{force:true});
+    root.querySelector('#h
