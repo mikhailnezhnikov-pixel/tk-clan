@@ -193,12 +193,103 @@
       .player-total{grid-column:2;grid-row:1}
       .expand-mark{display:none}
       .branch-grid{grid-template-columns:1fr 1fr}
+
+      /* Clan mirror: mobile-first layout */
+      .clan-mirror{margin-top:12px}
+      .mirror-block-tabs{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:8px;
+        width:100%;
+      }
+      .mirror-block-tab{
+        min-width:0;
+        min-height:64px;
+        padding:7px;
+      }
+      .mirror-block-tab img{
+        width:48px;
+        height:48px;
+        max-width:100%;
+      }
+      .mirror-stage{
+        grid-template-columns:1fr;
+        gap:12px;
+        padding:10px;
+      }
+      .mirror-branch-tabs{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:8px;
+        width:100%;
+      }
+      .mirror-branch-tab{
+        min-width:0;
+        min-height:56px;
+        padding:6px;
+      }
+      .mirror-branch-tab img{
+        width:40px;
+        height:40px;
+        max-width:100%;
+      }
+      .mirror-branch-head{
+        display:block;
+        padding:2px 2px 8px;
+      }
+      .mirror-branch-head .muted:empty{display:none}
+      .mirror-branch-head h3{
+        margin:0;
+        font-size:20px;
+        line-height:1.2;
+        overflow-wrap:anywhere;
+        word-break:normal;
+      }
+      .mirror-stats{
+        grid-template-columns:1fr 1fr;
+        gap:10px;
+      }
+      .mirror-stats .stat{
+        min-width:0;
+        padding:15px;
+      }
+      .mirror-stats .stat:last-child{
+        grid-column:1/-1;
+      }
+      .mirror-row{
+        gap:10px;
+        padding:11px 12px;
+      }
+      .mirror-row strong{
+        white-space:normal;
+        overflow:visible;
+        text-overflow:clip;
+        overflow-wrap:anywhere;
+      }
+      .mirror-row b{
+        white-space:nowrap;
+      }
+      .cab-tabs{
+        top:calc(var(--header) + env(safe-area-inset-top,0px) + 6px);
+        scrollbar-width:none;
+      }
+      .cab-tabs::-webkit-scrollbar{display:none}
     }
     @media(max-width:420px){
       .profile-actions{grid-template-columns:1fr}
       .stats{grid-template-columns:1fr}
       .stat:last-child{grid-column:auto}
       .branch-grid{grid-template-columns:1fr}
+      .mirror-block-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .mirror-block-tab{min-height:58px;padding:5px}
+      .mirror-block-tab img{width:42px;height:42px}
+      .mirror-branch-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .mirror-branch-tab{min-height:50px;padding:5px}
+      .mirror-branch-tab img{width:36px;height:36px}
+      .mirror-stats{grid-template-columns:1fr}
+      .mirror-stats .stat:last-child{grid-column:auto}
+      .mirror-ranking{padding-left:0;padding-right:0}
+      .mirror-row{padding:10px}
+      .mirror-row strong{font-size:14px}
+      .mirror-row b{font-size:15px}
       .player-stat summary{padding:13px 14px}
       .player-detail{padding:0 14px 14px}
     }
@@ -665,9 +756,18 @@
     return [];
   }
 
+  function readableClanTitle(value,fallback=''){
+    const text=String(value??'').trim();
+    if(!text)return fallback;
+    if(/^(?:clanblock_|clan_).+_name$/i.test(text))return fallback;
+    if(/^clan(?:block)?[_-]/i.test(text))return fallback;
+    return text;
+  }
+
   function normalizeBranch(node,index){
     const members=getContributors(node).sort((a,b)=>b.value-a.value);
-    const title=String(node?.title??node?.label??node?.name??node?.branch_name??node?.branchName??node?.localization_key??node?.localizationKey??node?.key??node?.id??('Ветка '+(index+1)));
+    const rawTitle=node?.title??node?.label??node?.name??node?.branch_name??node?.branchName??node?.localization_key??node?.localizationKey??node?.key??node?.id??'';
+    const title=readableClanTitle(rawTitle,'Ветка '+(index+1));
     const total=numeric(node?.total_levels??node?.totalLevels??node?.total??node?.level??node?.value);
     return {
       title,
@@ -679,7 +779,8 @@
   }
 
   function normalizeBlock(node,index){
-    const title=String(node?.title??node?.label??node?.name??node?.block_name??node?.blockName??node?.localization_key??node?.localizationKey??node?.key??node?.id??('Блок '+(index+1)));
+    const rawTitle=node?.title??node?.label??node?.name??node?.block_name??node?.blockName??node?.localization_key??node?.localizationKey??node?.key??node?.id??'';
+    const title=readableClanTitle(rawTitle,'');
     let rawBranches=getArray(node,['branches','items','skills','upgrades','children','tabs','nodes']);
     if(!rawBranches.length&&getContributors(node).length)rawBranches=[node];
     return {title,icon:String(node?.icon??node?.image??node?.meta?.icon??''),branches:rawBranches.map(normalizeBranch).filter(x=>x.members.length||x.total)};
@@ -759,8 +860,10 @@
     if(selectedClanBranch>=block.branches.length)selectedClanBranch=0;
     const branch=block.branches[selectedClanBranch];
     if(!branch)return;
-    $('mirror-block-name').textContent=block.title;
-    $('mirror-branch-name').textContent=branch.title;
+    const blockName=$('mirror-block-name');
+    blockName.textContent=block.title||'';
+    blockName.classList.toggle('hidden',!block.title);
+    $('mirror-branch-name').textContent=branch.title||('Ветка '+(selectedClanBranch+1));
     $('mirror-total').textContent=formatNumber(branch.total||0);
     $('mirror-participants').textContent=branch.participants||branch.members.length||0;
     const mine=branch.members.find(m=>currentLinkedPlayerId&&String(m.playerId)===currentLinkedPlayerId);
