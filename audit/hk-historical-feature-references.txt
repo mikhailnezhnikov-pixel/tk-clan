@@ -1,0 +1,414 @@
+# Historical feature references
+
+
+===== index.txt =====
+
+===== userscript-1.10.0.patch.txt =====
+
+===== userscript-1.11.0.patch.txt =====
+26-       gameAuth:{present:!!currentBearer, fingerprint:currentBearer ? diagnosticFingerprint(currentBearer) : '', expiresAt:jwtExpiration(currentBearer) || null},
+27-       license:{checked:!!licenseState.checked, allowed:!!licenseState.allowed, playerId:clean(licenseState.playerId || ''), tokenPresent:!!licenseState.token},
+28-+      stateStore:hkStateStore?.exportSummary?.() || null,
+29-+      runner:{...hkRunner.state},
+30-       events:diagnostic.events
+31-     };
+32-     const blob = new Blob([JSON.stringify(report,null,2)], {type:'application/json;charset=utf-8'});
+33-@@ -171,7 +173,7 @@
+34-   let language = load().language === 'en' ? 'en' : 'ru';
+35-   const TEXT = {
+36-     ru: {
+37--      daily:'Сегодня', pit:'Яма', businesses:'Бизнесы', clan:'Клан', fair:'Ярмарка', shop:'Магазин', recipes:'Рецепты', maps:'Карты', checkingLicense:'Проверяю лицензию…',
+38:+      daily:'Сегодня', pit:'Яма', businesses:'Бизнесы', clan:'Клан', fair:'Ярмарка', shop:'Магазин', recipes:'Рецепты', maps:'Карты', navToday:'Сегодня', navBattles:'Бои', navCity:'Город', navBusiness:'Бизнес', navGrowth:'Развитие', navTrade:'Торговля', navClan:'Клан', navTodayHint:'задачи и награды', navBattlesHint:'ямы и бои', navCityHint:'карты и здания', navBusinessHint:'карты и рецепты', navGrowthHint:'хомяки и генералы', navTradeHint:'ярмарка и магазин', navClanHint:'навыки и войны', checkingLicense:'Проверяю лицензию…',
+39-       dailyTasks:'Сегодня', dailyRefresh:'Только проверить', dailyRun:'Выполнить выбранное', dailyAdRun:'Просмотреть доступную рекламу', dailyClear:'Очистить журнал', dailyOverall:'Общий прогресс', dailyCurrent:'Текущий этап', dailyAds:'Реклама', dailyClan:'Покупки клана', dailyInvest:'Инвестиционные предложения', dailyReady:'Готово к запуску', dailyNoShop:'Сначала откройте в игре магазин и нажмите «Только проверить».',
+40:       dailyBalances:'Балансы', dailyStores:'Доступные покупки', dailyFreeActions:'Бесплатные действия', dailyRegularActions:'Регулярный магазин', dailyOrdinaryActions:'Обычный магазин', dailyClanActions:'Личные лоты клана', dailyInvestActions:'Инвест-сделки', dailyPit:'Состояние Ямы', pitNormal:'Обычная Яма', pitBoss:'Яма боссов', pitGang:'Яма банд', pitAvailableNow:'доступно сейчас', pitLimit:'лимит', pitDiamondTopUp:'догон за 💎', pitMultipleReady:'уже кратно 5', pitOpenOnce:'Откройте этот раздел Ямы один раз', pitRun:'Запускать', pitUseMoves:'Отходить', pitMovePlan:'Оптимально', pitNoMoves:'не выбрано', dailyConsigliere:'Консильери', dailyPlan:'План выполнения', dailyBudget:'Единый бюджет', dailyReserve:'Оставить минимум', dailyLimit:'Лимит в сутки', weeklyLimit:'Лимит в неделю', spentToday:'Сегодня потрачено', spentWeek:'За неделю', allowPremium:'Разрешить алмазы', exportSettings:'Экспорт настроек', importSettings:'Восстановить настройки', noLimit:'Без лимита', selectedActions:'Выбрано действий: {n}', exactPlan:'Проверьте точный план расходов перед запуском.',
+41-       targetRound:'Дойти до раунда', delay:'Пауза, секунд', activationTokens:'Жетоны на активацию', pitCollectOnly:'Только собирать данные — не нажимать бой', pitForecast:'Прогноз до цели', pitObserved:'Сохранено уровней: {n}', pitPredictedPower:'Прогноз силы на раунде {round}: {power}', pitTokenBudget:'Максимальный разрешённый расход: {n} жетонов', pitComparison:'За запуск: раунд {before} → {after}, сила {powerBefore} → {powerAfter}', pitPowerTable:'Сохранённая сила уровней',
+42-@@ -210,7 +212,7 @@
+43-       myMaps:'Мои карты', uploadedMaps:'Загруженные карты', scanAccountMaps:'Считать карты аккаунта', refreshUploadedMaps:'Обновить загруженные карты'
+44-     },
+45-     en: {
+46--      daily:'Today', pit:'Pit', businesses:'Businesses', clan:'Clan', fair:'Fair', shop:'Shop', recipes:'Recipes', maps:'Maps', checkingLicense:'Checking license…',
+47-+      daily:'Today', pit:'Pit', businesses:'Businesses', clan:'Clan', fair:'Fair', shop:'Shop', recipes:'Recipes', maps:'Maps', navToday:'Today', navBattles:'Battles', navCity:'City', navBusiness:'Business', navGrowth:'Growth', navTrade:'Trade', navClan:'Clan', navTodayHint:'tasks and rewards', navBattlesHint:'pits and battles', navCityHint:'maps and buildings', navBusinessHint:'cards and recipes', navGrowthHint:'hamsters and generals', navTradeHint:'fair and shop', navClanHint:'skills and wars', checkingLicense:'Checking license…',
+48-       dailyTasks:'Today', dailyRefresh:'Check only', dailyRun:'Run selected', dailyAdRun:'Watch available ad', dailyClear:'Clear log', dailyOverall:'Overall progress', dailyCurrent:'Current stage', dailyAds:'Ads', dailyClan:'Clan purchases', dailyInvest:'Investment offers', dailyReady:'Ready to start', dailyNoShop:'Open the in-game shop first, then tap “Check only”.',
+49-       dailyBalances:'Balances', dailyStores:'Available purchases', dailyFreeActions:'Free actions', dailyRegularActions:'Regular shop', dailyOrdinaryActions:'Standard shop', dailyClanActions:'Personal clan lots', dailyInvestActions:'Invest deals', dailyPit:'Pit status', pitNormal:'Normal Pit', pitBoss:'Boss Pit', pitGang:'Gang Pit', pitAvailableNow:'available now', pitLimit:'limit', pitDiamondTopUp:'diamond top-up', pitMultipleReady:'already divisible by 5', pitOpenOnce:'Open this Pit section once', pitRun:'Run', pitUseMoves:'Use moves', pitMovePlan:'Optimal', pitNoMoves:'not selected', dailyConsigliere:'Consigliere', dailyPlan:'Execution plan', dailyBudget:'Unified budget', dailyReserve:'Minimum balance', dailyLimit:'Daily limit', weeklyLimit:'Weekly limit', spentToday:'Spent today', spentWeek:'Spent this week', allowPremium:'Allow diamonds', exportSettings:'Export settings', importSettings:'Restore settings', noLimit:'No limit', selectedActions:'Selected actions: {n}', exactPlan:'Review the exact spending plan before running.',
+50-       targetRound:'Reach round', delay:'Delay, seconds', activationTokens:'Activation tokens', pitCollectOnly:'Collect data only — never click battle', pitForecast:'Forecast to target', pitObserved:'Saved levels: {n}', pitPredictedPower:'Predicted power at round {round}: {power}', pitTokenBudget:'Maximum allowed spend: {n} tokens', pitComparison:'This run: round {before} → {after}, power {powerBefore} → {powerAfter}', pitPowerTable:'Saved level powers', restoreTokens:'Recovery tokens',
+51-@@ -379,6 +381,78 @@
+52-   const pitSubmittedThisSession = new Set();
+--
+250--      ['daily','daily','today.png'],
+251--      ['resources','resourcesShop','resources.png'],
+252--      ['pit','pit','mine.png'],
+253--      ['business','businesses','businesses.png'],
+254--      ['clan','clan','clan.png'],
+255--      ['fair','fair','fair.png'],
+256--      ['shop','shop','shop.png'],
+257--      ['recipes','recipes','recipes.png'],
+258--      ['maps','maps','maps.png']
+259--    ].map(([page,label,image], index) => `<button class="hk-tab${index===0?' active':''}" data-page="${page}" data-menu-label="${label}" title="${escapeHtml(tr(label))}" aria-label="${escapeHtml(tr(label))}"><img class="hk-menu-picture" src="${MENU_ICONS_BASE}/${image}?v=${VERSION}" alt="" aria-hidden="true"></button>`).join('');
+260-+    const NAV_GROUPS = [
+261-+      {id:'today',label:'navToday',hint:'navTodayHint',icon:'☀️',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
+262:+      {id:'battles',label:'navBattles',hint:'navBattlesHint',icon:'⚔️',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{planned:true,ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+263:+      {id:'city',label:'navCity',hint:'navCityHint',icon:'🏙️',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{planned:true,ru:'Здания',en:'Buildings'},{planned:true,ru:'Исследование',en:'Explore'}]},
+264-+      {id:'business',label:'navBusiness',hint:'navBusinessHint',icon:'💼',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
+265-+      {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{planned:true,ru:'Хомяки',en:'Hamsters'},{planned:true,ru:'Генералы',en:'Generals'}]},
+266-+      {id:'trade',label:'navTrade',hint:'navTradeHint',icon:'🛒',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+267:+      {id:'clan',label:'navClan',hint:'navClanHint',icon:'🛡️',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{planned:true,ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+268-+    ];
+269-+    const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.icon}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
+270-     root = document.createElement('div'); root.id = 'hk-mobile-root';
+271-     root.innerHTML = `<button id="hk-fab">HK</button><div id="hk-panel" class="hk-locked">
+272-       <div id="hk-watermark" aria-hidden="true"></div><div class="hk-head"><h2>Hamster King Mobile <small style="font-size:12px;color:#9aa8bc">v${VERSION}</small></h2><div class="hk-lang"><button data-lang="ru" aria-label="Русский">🇷🇺</button><button data-lang="en" aria-label="English">🇬🇧</button></div><button class="hk-close">×</button></div>
+273-@@ -6201,6 +6315,8 @@
+274-       <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">${either('Диагностика','Diagnostics')}</button></div>
+275-       <div id="hk-update-banner" class="hk-update"></div>
+276-       <div class="hk-tabs">${menuTabs}</div>
+277-+      <div id="hk-subnav" class="hk-subnav"></div>
+278-+      <div id="hk-runner" class="hk-runner"><div class="hk-runner-head"><b id="hk-runner-title"></b><span id="hk-runner-state" class="hk-runner-state"></span></div><div id="hk-runner-step" class="hk-runner-step"></div><div class="hk-runner-track"><div id="hk-runner-fill" class="hk-runner-fill"></div></div><div class="hk-runner-actions"><button id="hk-runner-pause" class="hk-secondary"></button><button id="hk-runner-stop" class="hk-danger"></button></div></div>
+279-       <div class="hk-page active" data-content="daily">
+
+===== userscript-1.12.0.patch.txt =====
+442-       .hk-license{padding:11px;border:1px solid #3b4a61;border-radius:12px;background:#101a28;margin:14px 0;color:#c8d4e5}.hk-license.ok{border-color:#287b60}.hk-license.bad{border-color:#803b49}.hk-update{display:none;margin:0 0 14px;padding:12px;border:1px solid #ffad1f;border-radius:13px;background:#2a2418;color:#fff}.hk-update.required{border-color:#ff6b75;background:#351b22}.hk-update b,.hk-update small{display:block}.hk-update small{margin-top:5px;color:#cbd5e5}.hk-update .hk-primary{margin-top:10px}.hk-locked .hk-tabs,.hk-locked .hk-subnav,.hk-locked .hk-runner,.hk-locked .hk-page{display:none!important}
+443-       .hk-health{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 0 8px}.hk-health-chip{display:grid;grid-template-columns:9px minmax(0,1fr);align-items:center;column-gap:7px;padding:9px 8px;border:1px solid #34445c;border-radius:11px;background:#111a27;color:#d3dbe8;min-width:0}.hk-health-chip:before{content:'';width:8px;height:8px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}.hk-health-chip.ok{border-color:#24694f;background:#10231d}.hk-health-chip.ok:before{background:#52d296;box-shadow:0 0 0 3px #52d29622}.hk-health-chip.bad{border-color:#7a3443;background:#29151b}.hk-health-chip.bad:before{background:#ff6b7a;box-shadow:0 0 0 3px #ff6b7a22}.hk-health-chip b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-chip small{grid-column:2;color:#8392a7;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-actions{display:flex;gap:7px;margin:0 0 14px}.hk-health-actions button{flex:1;min-height:36px;font-size:12px}@media(max-width:430px){.hk-health{grid-template-columns:repeat(2,minmax(0,1fr))}}
+444--      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}@media(max-width:430px){.hk-tab{min-height:58px;padding:8px}.hk-tab-icon{width:32px;height:32px;font-size:19px}}
+445-+      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}.hk-growth-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.hk-growth-stats>div{padding:11px;border:1px solid #304057;border-radius:12px;background:#0e1723}.hk-growth-stats small{display:block;color:#8797ad;font-size:10px}.hk-growth-stats b{display:block;margin-top:4px;color:#ffe083;font-size:15px}.hk-growth-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-growth-actions button{margin-top:0}.hk-growth-options{display:grid;gap:9px;margin:10px 0}.hk-growth-option{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-option span{display:grid;gap:3px}.hk-growth-option small{color:#8998ad;font-size:10px}.hk-growth-option select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:9px}.hk-growth-check{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-check input{width:20px;height:20px;accent-color:#ffad1f}@media(max-width:430px){.hk-tab{min-height:58px;padding:8px}.hk-tab-icon{width:32px;height:32px;font-size:19px}}
+446-       .hk-business-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.hk-business-tab{border:1px solid #34445b;border-radius:11px;padding:11px;background:#172234;color:#b8c4d6;font-weight:700}.hk-business-tab.active{border-color:#ffad1f;background:#3a2a0f;color:#fff}.hk-business-pane{display:none}.hk-business-pane.active{display:block}
+447-       .hk-page{display:none}.hk-page.active{display:block}.hk-cardbox{background:#151d29;border:1px solid #2a374a;border-radius:16px;padding:14px;margin-bottom:12px}.hk-grid{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center}
+448-       input,select,button{font:inherit}.hk-grid input,.hk-grid select,.hk-toolbar select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-primary,.hk-secondary,.hk-danger{width:100%;border:0;border-radius:12px;padding:13px;margin-top:9px;font-weight:800}.hk-primary{background:#ffad1f;color:#16110a}.hk-secondary{background:#28364a;color:white}.hk-danger{background:#642a32;color:#fff}.hk-primary:disabled,.hk-secondary:disabled{opacity:.45}
+449-@@ -6292,15 +6678,15 @@
+450-     `;
+451-     document.head.appendChild(style);
+452-     const NAV_GROUPS = [
+453--      {id:'today',label:'navToday',hint:'navTodayHint',icon:'☀️',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
+454:-      {id:'battles',label:'navBattles',hint:'navBattlesHint',icon:'⚔️',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{planned:true,ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+455:-      {id:'city',label:'navCity',hint:'navCityHint',icon:'🏙️',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{planned:true,ru:'Здания',en:'Buildings'},{planned:true,ru:'Исследование',en:'Explore'}]},
+456--      {id:'business',label:'navBusiness',hint:'navBusinessHint',icon:'💼',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
+457--      {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{planned:true,ru:'Хомяки',en:'Hamsters'},{planned:true,ru:'Генералы',en:'Generals'}]},
+458--      {id:'trade',label:'navTrade',hint:'navTradeHint',icon:'🛒',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+459:-      {id:'clan',label:'navClan',hint:'navClanHint',icon:'🛡️',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{planned:true,ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+460-+      {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
+461:+      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{planned:true,ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+462:+      {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{planned:true,ru:'Здания',en:'Buildings'},{planned:true,ru:'Исследование',en:'Explore'}]},
+463-+      {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
+464-+      {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
+465-+      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+466:+      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{planned:true,ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+467-     ];
+468--    const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.icon}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
+469-+    const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
+470-     root = document.createElement('div'); root.id = 'hk-mobile-root';
+471-     root.innerHTML = `<button id="hk-fab">HK</button><div id="hk-panel" class="hk-locked">
+472-       <div id="hk-watermark" aria-hidden="true"></div><div class="hk-head"><h2>Hamster King Mobile <small style="font-size:12px;color:#9aa8bc">v${VERSION}</small></h2><div class="hk-lang"><button data-lang="ru" aria-label="Русский">🇷🇺</button><button data-lang="en" aria-label="English">🇬🇧</button></div><button class="hk-close">×</button></div>
+473-@@ -6406,7 +6792,14 @@
+474-         </div>
+475-       </div>
+476-       <div class="hk-page" data-content="growth">
+477--        <div class="hk-cardbox"><h3>${either('Развитие','Growth')}</h3><p class="hk-muted">${either('Здесь появится единый оптимизатор Хомяков и Генералов. Фундамент State Store и Runner уже подключён в этой версии.','The Hamsters and Generals optimizer will live here. State Store and Runner foundations are already connected in this version.')}</p><div class="hk-roadmap"><div class="hk-roadmap-item"><b>${either('Хомяки','Hamsters')}</b><small>${either('Копии · редкость · уровни · бюджет орехов','Copies · rarity · levels · Nuts budget')}</small></div><div class="hk-roadmap-item"><b>${either('Генералы','Generals')}</b><small>${either('Контракты · шары · уровни · бюджет Pit Tokens','Contracts · balls · levels · Pit Token budget')}</small></div></div></div>
+478-+        <div class="hk-cardbox"><h3>${either('Развитие','Growth')}</h3><p class="hk-muted">${either('Единый центр развития аккаунта. Все действия используют HK State Store, общий Runner и живые лимиты ресурсов.','One account-growth center. Actions use HK State Store, the shared Runner and live resource limits.')}</p><div data-growth-summary></div><button class="hk-secondary" data-growth-action="refresh">${either('Обновить состояние','Refresh state')}</button></div>
+
+===== userscript-1.14.3.patch.txt =====
+
+===== userscript-1.14.4.patch.txt =====
+
+===== userscript-1.7.66.patch.txt =====
+
+===== userscript-1.9.7.patch.txt =====
+1---- /mnt/data/topking196/HamsterKingMobile_v1.9.6_preserved.user.js	2026-09-19 06:38:42.000000000 +0000
+2-+++ /mnt/data/HamsterKingMobile_v1.9.7.user.js	2026-09-19 06:41:12.030045918 +0000
+3-@@ -1,9 +1,9 @@
+4- // ==UserScript==
+5- // @name         Hamster King Mobile
+6- // @namespace    hamsterking.local
+7--// @version      1.9.6
+8-+// @version      1.9.7
+9- // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
+10:-// @release-note Добавлена безопасная автоматическая выгрузка общего счёта клановой войны и публичных рейтингов без игровых токенов и персонального урона.
+11-+// @release-note Статистика навыков клана синхронизируется с сайтом целиком: общий вклад, накопленные уровни, ветки, участники и игровые иконки; автосчитывание — раз в день.
+12- // @match        https://app.hamsterking.games/*
+13- // @run-at       document-start
+14- // @grant        none
+15-@@ -13,7 +13,7 @@
+16-   'use strict';
+17-   const BUILD_VERSION = typeof GM_info !== 'undefined' && GM_info?.script?.version
+18-     ? String(GM_info.script.version)
+19--    : '1.9.6';
+20-+    : '1.9.7';
+21-   if (window.__HK_MOBILE_LOADED__ && window.__HK_MOBILE_VERSION__ === BUILD_VERSION) return;
+22-   window.__HK_MOBILE_LOADED__ = true;
+
+===== userscript-1.9.8.patch.txt =====
+
+===== userscript-1.9.9.patch.txt =====
+1---- /mnt/data/topking_live_current/HamsterKingMobile.user.js	2026-09-19 08:26:30.000000000 +0000
+2:+++ /mnt/data/rumor_cleanup/HamsterKingMobile.user.js	2026-09-19 08:28:56.646012799 +0000
+3-@@ -1,9 +1,9 @@
+4- // ==UserScript==
+5- // @name         Hamster King Mobile
+6- // @namespace    hamsterking.local
+7--// @version      1.9.8
+8-+// @version      1.9.9
+9- // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
+10--// @release-note Статистика навыков клана синхронизируется с сайтом целиком: общий вклад, накопленные уровни, ветки, участники и игровые иконки; автосчитывание — раз в день.
+11-+// @release-note Удалён устаревший сбор слухов по координатам и связанный маршрут из раздела «Сегодня».
+12- // @match        https://app.hamsterking.games/*
+13- // @run-at       document-start
+14- // @grant        none
+--
+16-   'use strict';
+17-   const BUILD_VERSION = typeof GM_info !== 'undefined' && GM_info?.script?.version
+18-     ? String(GM_info.script.version)
+19--    : '1.9.8';
+20-+    : '1.9.9';
+21-   if (window.__HK_MOBILE_LOADED__ && window.__HK_MOBILE_VERSION__ === BUILD_VERSION) return;
+22-   window.__HK_MOBILE_LOADED__ = true;
+23-   window.__HK_MOBILE_VERSION__ = BUILD_VERSION;
+24-@@ -50,7 +50,6 @@
+25-   const RECIPE_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/recipes';
+26-   const MAP_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/maps';
+27-   const PIT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/pits';
+28:-  const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
+29-   const SETTINGS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/settings';
+30-   const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';
+31-   const PUBLIC_SNAPSHOT_API = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-snapshot';
+32-@@ -93,7 +92,7 @@
+33-   const TEXT = {
+34-     ru: {
+35-       daily:'Сегодня', pit:'Яма', businesses:'Бизнесы', clan:'Клан', fair:'Ярмарка', shop:'Магазин', recipes:'Рецепты', maps:'Карты', checkingLicense:'Проверяю лицензию…',
+36:-      dailyTasks:'Сегодня', dailyRefresh:'Только проверить', dailyRun:'Выполнить выбранное', dailyRumorRun:'Собрать слухи', dailyAdRun:'Просмотреть доступную рекламу', dailyClear:'Очистить журнал', dailyOverall:'Общий прогресс', dailyCurrent:'Текущий этап', dailyRumors:'Слухи по маршруту', dailyRouteHint:'Маршрут слухов появится после публикации владельцем', dailyAds:'Реклама', dailyClan:'Покупки клана', dailyInvest:'Инвестиционные предложения', dailyReady:'Готово к запуску', dailyNoShop:'Сначала откройте в игре магазин и нажмите «Только проверить».',
+37-+      dailyTasks:'Сегодня', dailyRefresh:'Только проверить', dailyRun:'Выполнить выбранное', dailyAdRun:'Просмотреть доступную рекламу', dailyClear:'Очистить журнал', dailyOverall:'Общий прогресс', dailyCurrent:'Текущий этап', dailyAds:'Реклама', dailyClan:'Покупки клана', dailyInvest:'Инвестиционные предложения', dailyReady:'Готово к запуску', dailyNoShop:'Сначала откройте в игре магазин и нажмите «Только проверить».',
+38:       dailyBalances:'Балансы', dailyStores:'Доступные покупки', dailyFreeActions:'Бесплатные действия', dailyRegularActions:'Регулярный магазин', dailyOrdinaryActions:'Обычный магазин', dailyClanActions:'Личные лоты клана', dailyInvestActions:'Инвест-сделки', dailyPit:'Состояние Ямы', pitNormal:'Обычная Яма', pitBoss:'Яма боссов', pitGang:'Яма банд', pitAvailableNow:'доступно сейчас', pitLimit:'лимит', pitDiamondTopUp:'догон за 💎', pitMultipleReady:'уже кратно 5', pitOpenOnce:'Откройте этот раздел Ямы один раз', pitRun:'Запускать', pitUseMoves:'Отходить', pitMovePlan:'Оптимально', pitNoMoves:'не выбрано', dailyConsigliere:'Консильери', dailyPlan:'План выполнения', dailyBudget:'Единый бюджет', dailyReserve:'Оставить минимум', dailyLimit:'Лимит в сутки', weeklyLimit:'Лимит в неделю', spentToday:'Сегодня потрачено', spentWeek:'За неделю', allowPremium:'Разрешить алмазы', exportSettings:'Экспорт настроек', importSettings:'Восстановить настройки', noLimit:'Без лимита', selectedActions:'Выбрано действий: {n}', exactPlan:'Проверьте точный план расходов перед запуском.',
+39-       targetRound:'Дойти до раунда', delay:'Пауза, секунд', activationTokens:'Жетоны на активацию', pitCollectOnly:'Только собирать данные — не нажимать бой', pitForecast:'Прогноз до цели', pitObserved:'Сохранено уровней: {n}', pitPredictedPower:'Прогноз силы на раунде {round}: {power}', pitTokenBudget:'Максимальный разрешённый расход: {n} жетонов', pitComparison:'За запуск: раунд {before} → {after}, сила {powerBefore} → {powerAfter}', pitPowerTable:'Сохранённая сила уровней',
+40-       restoreTokens:'Жетоны на восстановление', allowTokens:'Разрешить жетоны', round:'Раунд', startBattle:'Запустить автобой',
+41-@@ -132,7 +131,7 @@
+42-     },
+43-     en: {
+44-       daily:'Today', pit:'Pit', businesses:'Businesses', clan:'Clan', fair:'Fair', shop:'Shop', recipes:'Recipes', maps:'Maps', checkingLicense:'Checking license…',
+45:-      dailyTasks:'Today', dailyRefresh:'Check only', dailyRun:'Run selected', dailyRumorRun:'Collect rumors', dailyAdRun:'Watch available ad', dailyClear:'Clear log', dailyOverall:'Overall progress', dailyCurrent:'Current stage', dailyRumors:'Rumors by route', dailyRouteHint:'The rumor route will appear after the owner publishes it', dailyAds:'Ads', dailyClan:'Clan purchases', dailyInvest:'Investment offers', dailyReady:'Ready to start', dailyNoShop:'Open the in-game shop first, then tap “Check only”.',
+46-+      dailyTasks:'Today', dailyRefresh:'Check only', dailyRun:'Run selected', dailyAdRun:'Watch available ad', dailyClear:'Clear log', dailyOverall:'Overall progress', dailyCurrent:'Current stage', dailyAds:'Ads', dailyClan:'Clan purchases', dailyInvest:'Investment offers', dailyReady:'Ready to start', dailyNoShop:'Open the in-game shop first, then tap “Check only”.',
+47-       dailyBalances:'Balances', dailyStores:'Available purchases', dailyFreeActions:'Free actions', dailyRegularActions:'Regular shop', dailyOrdinaryActions:'Standard shop', dailyClanActions:'Personal clan lots', dailyInvestActions:'Invest deals', dailyPit:'Pit status', pitNormal:'Normal Pit', pitBoss:'Boss Pit', pitGang:'Gang Pit', pitAvailableNow:'available now', pitLimit:'limit', pitDiamondTopUp:'diamond top-up', pitMultipleReady:'already divisible by 5', pitOpenOnce:'Open this Pit section once', pitRun:'Run', pitUseMoves:'Use moves', pitMovePlan:'Optimal', pitNoMoves:'not selected', dailyConsigliere:'Consigliere', dailyPlan:'Execution plan', dailyBudget:'Unified budget', dailyReserve:'Minimum balance', dailyLimit:'Daily limit', weeklyLimit:'Weekly limit', spentToday:'Spent today', spentWeek:'Spent this week', allowPremium:'Allow diamonds', exportSettings:'Export settings', importSettings:'Restore settings', noLimit:'No limit', selectedActions:'Selected actions: {n}', exactPlan:'Review the exact spending plan before running.',
+48-       targetRound:'Reach round', delay:'Delay, seconds', activationTokens:'Activation tokens', pitCollectOnly:'Collect data only — never click battle', pitForecast:'Forecast to target', pitObserved:'Saved levels: {n}', pitPredictedPower:'Predicted power at round {round}: {power}', pitTokenBudget:'Maximum allowed spend: {n} tokens', pitComparison:'This run: round {before} → {after}, power {powerBefore} → {powerAfter}', pitPowerTable:'Saved level powers', restoreTokens:'Recovery tokens',
+49-       allowTokens:'Allow tokens', round:'Round', startBattle:'Start auto battle', stop:'Stop', exportCsv:'Download level power CSV',
+50-@@ -285,10 +284,9 @@
+51-   let dailyShopRows = [];
+52-   let dailyRunning = false;
+53-   let dailyAdController = null;
+54:-  let dailyRumorRoute = [];
+55--  let dailyAccountAreaIndex = [];
+56-   let dailySnapshot = load().today?.snapshot || null;
+57:-  let dailySelection = {...{rumors:true, advertisement:true, recruits:false, cartels:false, investments:false}, ...(load().today?.selection || {})};
+58-+  let dailySelection = {...{advertisement:true, recruits:false, cartels:false, investments:false}, ...(load().today?.selection || {})};
+59:+  delete dailySelection.rumors;
+60-   let dailyPurchaseCounts = {...(load().today?.purchaseCounts || {})};
+61-   let dailyStoreTab = String(load().today?.storeTab || 'regular');
+62-   let sharedPitRows = [];
+63-@@ -3094,7 +3092,6 @@
+64-   function dailyActionRows() {
+65-     const ad = dailyAdvertisement();
+66-     const actions = [
+67:-      {id:'rumors', label:tr('dailyRumors'), kind:'rumors', uiGroup:'free', free:true, available:dailyRumorRoute.length > 0},
+68-       {id:'advertisement', label:tr('dailyAds'), kind:'advertisement', uiGroup:'free', free:true, available:ad.available}
+69-     ];
+70-     for (const row of pitLimitSummaries()) {
+71-@@ -3162,135 +3159,6 @@
+72-     return `<li class="${available ? 'ready' : ''}"><b>${escapeHtml(title)}</b><span>${message}</span></li>`;
+73-   }
+74- 
+75--  function dailyCityKey(value) {
+76--    const key = clean(value).toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]+/g, ' ').trim();
+77--    const aliases = {
+78--      'moscow':'moscow','москва':'moscow','spb':'spb','saint petersburg':'spb','st petersburg':'spb','санкт петербург':'spb',
+79--      'minsk':'minsk','минск':'minsk','berlin':'berlin','берлин':'berlin','london':'london','лондон':'london',
+--
+81--      'singapore':'singapore','сингапур':'singapore','new york':'new york','нью йорк':'new york',
+82--      'los angeles':'los angeles','лос анджелес':'los angeles','boston':'boston','бостон':'boston',
+83--      'washington':'washington','вашингтон':'washington','rio':'rio','rio de janeiro':'rio','рио':'rio','рио де жанейро':'rio',
+84--      'lagos':'lagos','лагос':'lagos','sydney':'sydney','сидней':'sydney','auckland':'auckland','окленд':'auckland'
+85--    };
+86--    return aliases[key] || key.replace(/^(?:city|город)\s+/, '');
+87--  }
+88--
+89--  function dailyMapArea(rows, city, point) {
+90--    const wantedCity = dailyCityKey(city);
+91--    const wantedX = Number(point?.x), wantedY = Number(point?.y);
+92--    // The game API returns grid axes in row/column order, while the map and
+93:-    // published rumor route display coordinates as X:Y (column:row).
+94--    return rows.find(row => Number(row?.x) === wantedY && Number(row?.y) === wantedX &&
+95--      [row?.city_name, row?.city_id].some(value => {
+96--        const cityKey = dailyCityKey(value);
+97--        return cityKey && wantedCity && (cityKey.includes(wantedCity) || wantedCity.includes(cityKey));
+98--      }));
+99--  }
+100--
+101--  async function loadDailyAccountAreas() {
+102--    if (dailyAccountAreaIndex.length) return dailyAccountAreaIndex;
+103--    playerDocument = await apiJson('/player/me', 'POST');
+104--    await ensureRecipeMetadata();
+105--    const citiesValue = await apiJson('/cities', 'GET');
+106--    const cities = Array.isArray(citiesValue) ? citiesValue : (Array.isArray(citiesValue?.cities) ? citiesValue.cities : []);
+107:-    const routeCities = new Set(dailyRumorRoute.map(row => dailyCityKey(row?.city)).filter(Boolean));
+108--    const wantedCities = cities.filter(city => {
+109--      const key = dailyCityKey(cityLabel(city));
+110--      return routeCities.has(key) || [...routeCities].some(routeKey => key.includes(routeKey) || routeKey.includes(key));
+111--    });
+112--    const rows = [];
+113--    let cursor = 0;
+114--    log(either(`Сопоставляю полную сетку городов: ${wantedCities.length}…`, `Matching complete city grids: ${wantedCities.length}…`));
+115--    const worker = async () => {
+116--      while (cursor < wantedCities.length) {
+117--        const city = wantedCities[cursor++];
+118--        const cityId = String(city?.id || '');
+119--        try {
+--
+128--          }
+129--        } catch (error) {
+130--          log(`${either('Не удалось считать сетку города','Could not read city grid')} ${cityLabel(city)}: ${error.message}`, 'warn');
+131--        }
+132--      }
+133--    };
+134--    await Promise.all(Array.from({length:Math.min(4, Math.max(1, wantedCities.length))}, worker));
+135--    dailyAccountAreaIndex = rows;
+136--    log(either(`Клетки маршрута сопоставлены: ${rows.length}`, `Route grid cells matched: ${rows.length}`), rows.length ? 'ok' : 'warn');
+137--    return rows;
+138--  }
+139--
+140:-  async function runDailyRumors(internal = false) {
+141--    if (!requireLicense() || (dailyRunning && !internal)) return;
+142:-    if (!dailyRumorRoute.length) await loadRumorRoute();
+143:-    if (!dailyRumorRoute.length) { log(either('Маршрут слухов не опубликован.', 'The rumor route is not published.'), 'warn'); return; }
+144--    if (!internal) dailyRunning = true; renderDailyTasks();
+145--    let collected = 0, completed = 0, checked = 0, completedCities = 0, skippedCities = 0;
+146--    try {
+147--      const maps = await loadDailyAccountAreas();
+148:-      for (const route of dailyRumorRoute) {
+149--        let cityCollected = 0, cityCompleted = 0, cityUnavailable = false;
+150--        for (const point of route.points || []) {
+151--          if (cityCompleted >= 3) break;
+152--          const area = dailyMapArea(maps, route.city, point);
+153--          const ids = area?.area_id ? [String(area.area_id)] : [];
+154--          if (!ids.length) { log(`${route.city} ${point.x}:${point.y} — ${either('район не найден','district not found')}`, 'warn'); continue; }
+155--          let searched = false;
+156--          for (const gameareaId of ids) {
+157--            try {
+158:-              playerDocument = await apiJson('/rumors/search', 'POST', {gamearea_id:gameareaId});
+159--              collected++; completed++; cityCollected++; cityCompleted++; checked++; searched = true;
+160:-              log(`★ ${either('СЛУХ СОБРАН','RUMOR COLLECTED')} → ${route.city} [${point.x}:${point.y}] (${cityCompleted}/3)`, 'ok');
+161--              break;
+162--            } catch (error) {
+163:-              if (/player.{0,40}does.{0,20}not.{0,20}have.{0,20}city|does.{0,20}not.{0,20}have.{0,20}city.{0,40}(?:rumor|search)|нет.{0,30}город/i.test(error.message)) {
+164--                cityUnavailable = true; searched = true;
+165--                log(`↷ ${route.city} — ${either('города нет на аккаунте, пропускаю','city is not available on this account, skipping')}`, 'warn');
+166--                break;
+167--              }
+168:-              if (/already.{0,50}(?:searched.{0,20}rumor|research|explor)|(?:searched.{0,20}rumor|research|explor).{0,50}already|уже.{0,30}исследован/i.test(error.message)) {
+169--                completed++; cityCompleted++; checked++; searched = true;
+170:-                log(`✓ ${either('СЛУХ УЖЕ НАЙДЕН','RUMOR ALREADY FOUND')} → ${route.city} [${point.x}:${point.y}] (${cityCompleted}/3)`, 'warn');
+171--                break;
+172--              }
+173:-              if (/no.{0,20}rumor.{0,20}(?:for|in).{0,20}gamearea|object.{0,20}not.{0,20}found/i.test(error.message)) {
+174--                checked++; searched = true;
+175:-                log(`— ${either('СЛУХ НЕ НАЙДЕН','NO RUMOR FOUND')} → ${route.city} [${point.x}:${point.y}]`, 'warn');
+176--                break;
+177--              }
+178--              throw error;
+179--            }
+180--          }
+181--          if (cityUnavailable) break;
+182:-          if (!searched) { checked++; log(`↻ ${route.city} [${point.x}:${point.y}] — ${either('слух уже найден','rumor already found')}`, 'warn'); }
+183--          await sleep(300);
+184--        }
+185--        if (cityUnavailable) { skippedCities++; continue; }
+186--        if (cityCompleted >= 3) completedCities++;
+187--        const today = load().today || {};
+188:-        const rumors = {...(today.rumors || {}), [dailyCityKey(route.city)]:{city:route.city, completed:cityCompleted, collected:cityCollected, updatedAt:Date.now(), periodStart:gamePeriodBounds().dayStart}};
+189:-        save({today:{...today, rumors}});
+190--        log(either(
+191--          `${route.city}: найдено ${cityCompleted}/3, новых ${cityCollected}`,
+192--          `${route.city}: found ${cityCompleted}/3, new ${cityCollected}`
+193--        ), cityCompleted >= 3 ? 'ok' : 'warn');
+194--      }
+195:-      const availableCities = Math.max(0, dailyRumorRoute.length - skippedCities);
+196--      log(either(
+197--        `Сбор слухов завершён: доступных городов 3/3 — ${completedCities}/${availableCities}, пропущено недоступных ${skippedCities}, слухов ${completed}, новых ${collected}, проверено точек ${checked}`,
+198:-        `Rumor collection completed: available cities 3/3 — ${completedCities}/${availableCities}, unavailable skipped ${skippedCities}, rumors ${completed}, new ${collected}, points checked ${checked}`
+199--      ), completedCities ? 'ok' : 'warn');
+200:-    } catch (error) { log(`${either('Сбор слухов остановлен','Rumor collection stopped')}: ${error.message}`, 'bad'); if (internal) throw error; }
+201--    finally { if (!internal) dailyRunning = false; renderDailyTasks(); }
+202--  }
+203--
+204-   function playRewardedAdInPageWorld() {
+205-     return new Promise((resolve, reject) => {
+206-       const bridgeId = `hk-ad-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+207-@@ -3357,13 +3225,6 @@
+208-     const selected = selectedDailyActions();
+209-     const totals = dailyPlanTotals(selected);
+210-     const currencies = discoveredCurrencyIds();
+211:-    const rumorsStored = load().today?.rumors || {};
+212--    const periodStart = gamePeriodBounds().dayStart;
+213:-    const routeHtml = dailyRumorRoute.length ? `<ul>${dailyRumorRoute.map(row => {
+214:-      const progress = rumorsStored[dailyCityKey(row.city)];
+215--      const count = progress?.periodStart === periodStart ? Math.min(3, Number(progress.completed || 0)) : 0;
+216--      return `<li><b>${escapeHtml(row.city)}</b><span>${count}/3 · ${(row.points || []).map(point => `${Number(point.x)}:${String(Number(point.y)).padStart(2,'0')}`).join(' · ')}</span></li>`;
+217--    }).join('')}</ul>` : `<span>${tr('dailyRouteHint')}</span>`;
+218-     const ad = dailyAdvertisement();
+219-     const adTimer = ad.timer?.timestamp || firstTimer(ad.raw);
+220-     const pit = pitState();
+221-@@ -3410,7 +3271,6 @@
+222-     const journalHtml = expenseJournal().slice(-12).reverse().map(row => `<li class="${row.status === 'ok' ? 'ok' : 'failed'}"><span>${new Date(row.time).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · ${escapeHtml(row.name || row.lotId || '')}</span><b>${Number(row.amount || 0).toLocaleString(locale())} ${escapeHtml(paymentLabel(row.currencyId))}</b><small>${escapeHtml(row.result || row.status || '')}</small></li>`).join('') || `<li><span>${either('Операций пока нет','No operations yet')}</span></li>`;
+223-     dailyBox.innerHTML = `<div class="hk-daily-progress"><div><b>${tr('dailyCurrent')}</b><span>${dailyRunning ? either('выполняется','running') : dailySnapshot ? `${either('проверено','checked')} ${new Date(dailySnapshot.checkedAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'})}` : tr('dailyReady')}</span></div><i><em style="width:${dailyRunning ? 45 : dailySnapshot ? 100 : 0}%"></em></i></div>
+224-       <section class="hk-today-section"><h4>${tr('dailyBalances')}</h4><div class="hk-today-balances">${balancesHtml}</div></section>
+225:-      <section class="hk-today-section"><h4>${tr('dailyRumors')}</h4>${routeHtml}</section>
+226-       <div class="hk-today-grid"><section class="hk-today-section"><h4>${tr('dailyAds')}</h4><p>${ad.lotId ? (adTimer ? either('Ожидание','Cooldown') : either('Доступна','Available')) : either('Недоступна','Unavailable')}${adTimer ? ` · ${countdownLabel(adTimer)}` : ''}</p></section>
+227-       <section class="hk-today-section"><h4>${tr('dailyPit')}</h4>${pitLimitsHtml()}${pit.round ? `<p>${tr('round')}: <b>${pit.round}</b>${pit.enemyText ? ` · ${escapeHtml(pit.enemyText)}` : ''}</p>` : ''}</section></div>
+228-       <section class="hk-today-section"><h4>${tr('dailyStores')}</h4><div class="hk-today-action-groups">${actionHtml}</div></section>
+229-@@ -3464,7 +3324,6 @@
+230-       playerDocument = await apiJson('/player/me', 'POST');
+231-       dailyShopRows = shopViewDocument ? normalizeRegularShop() : [];
+232-       if (!shopViewDocument) log(tr('dailyNoShop'), 'warn');
+233:-      await loadRumorRoute();
+234-       fairDocument = playerDocument;
+235-       if (shopViewDocument) fairCatalog = normalizeFairCatalog(shopViewDocument);
+236-       dailySnapshot = {checkedAt:Date.now(), playerId:playerIdentity(playerDocument?.player || {}), periodStart:gamePeriodBounds().dayStart};
+237-@@ -3854,8 +3713,7 @@
+238-       for (const action of actions) {
+239-         try {
+240-           log(`${either('Выполняю','Running')}: ${action.label}`);
+241:-          if (action.kind === 'rumors') await runDailyRumors(true);
+242--          else if (action.kind === 'advertisement') await runDailyAd(true);
+243-+          if (action.kind === 'advertisement') await runDailyAd(true);
+244-           else if (action.kind === 'pit') await executeDailyPit(action);
+245-           else if (action.kind === 'purchase') await executeDailyPurchase(action);
+246-           completed++;
+247-@@ -3880,35 +3738,6 @@
+248-     } finally { dailyRunning = false; renderDailyTasks(); }
+249-   }
+250- 
+251:-  async function rumorServerJson(path, body = {}, retry = true) {
+252--    if (!licenseState.token) await checkLicense(playerDocument?.player || {}, true);
+253--    const request = nativeNetworkFetch || window.fetch.bind(window);
+254:-    const response = await request(`${RUMOR_API_BASE}${path}`, {method:'POST', headers:{
+255--      'Content-Type':'application/json', Authorization:`Bearer ${licenseState.token || ''}`
+256--    }, body:JSON.stringify(body)});
+257:-    if (response.status === 401 && retry) { await checkLicense(playerDocument?.player || {}, true); return rumorServerJson(path, body, false); }
+258--    const text = await response.text(); let value; try { value = JSON.parse(text); } catch (_) { value = null; }
+259--    if (!response.ok || !value) throw new Error(`HTTP ${response.status}: ${text.slice(0,120)}`);
+260--    return value;
+261--  }
+262--
+263:-  async function loadRumorRoute() {
+264--    try {
+265:-      const result = await rumorServerJson('/today');
+266:-      dailyRumorRoute = Array.isArray(result.routes) ? result.routes : [];
+267:-      if (dailyRumorRoute.length) {
+268:-        const pointCount = dailyRumorRoute.reduce((sum, row) => sum + (Array.isArray(row?.points) ? row.points.length : 0), 0);
+269--        log(either(
+270:-          `Маршрут слухов загружен: ${dailyRumorRoute.length} городов · ${pointCount} точек`,
+271:-          `Rumor route loaded: ${dailyRumorRoute.length} cities · ${pointCount} points`
+272--        ), 'ok');
+273--      }
+274--    } catch (error) {
+275:-      dailyRumorRoute = [];
+276:-      log(`${either('Ошибка маршрута слухов', 'Rumor route error')}: ${error.message}`, 'warn');
+277--    }
+278--  }
+279--
+280-   async function runDailyClanPurchases() {
+281-     if (!requireLicense() || dailyRunning) return;
+282-     if (!dailyShopRows.length) { await refreshDailyTasks(); if (!dailyShopRows.length) return; }
