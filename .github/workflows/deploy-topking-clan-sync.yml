@@ -38,7 +38,7 @@ jobs:
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          grep -q '^// @version      1.11.0
+          grep -q '^// @version      1.11.0$' /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
           ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
           ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
@@ -47,78 +47,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat deploy/topking/userscript-1.13.0.patch.part00.b64 deploy/topking/userscript-1.13.0.patch.part01.b64 deploy/topking/userscript-1.13.0.patch.part02.b64 deploy/topking/userscript-1.13.0.patch.part03.b64 | base64 -d | gzip -d > /tmp/userscript-1.13.0.patch
-          patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.13.0.patch
-
-          grep -q '^// @version      1.13.0$' /tmp/HamsterKingMobile.user.js
-          grep -q 'const HK_STATE_MERGE_ROWS' /tmp/HamsterKingMobile.user.js
-          grep -q 'GROWTH_COPY_PRIORITY_DEFAULT' /tmp/HamsterKingMobile.user.js
-          grep -q 'growthAutoOpen' /tmp/HamsterKingMobile.user.js
-          grep -q 'growthDiscoverCurrentEventHamsters' /tmp/HamsterKingMobile.user.js
-          grep -q 'growthRunPriorityCopiesCore' /tmp/HamsterKingMobile.user.js
-          grep -q 'growthRunGeneralsCore' /tmp/HamsterKingMobile.user.js
-          grep -q 'growthRunLevelsCore' /tmp/HamsterKingMobile.user.js
-          grep -q 'hamsters/view' /tmp/HamsterKingMobile.user.js
-          grep -q 'fast_type=actionType' /tmp/HamsterKingMobile.user.js
-          grep -q 'data-growth-action="all"' /tmp/HamsterKingMobile.user.js
-          ! grep -q 'data-growth-action="refresh"' /tmp/HamsterKingMobile.user.js
-          grep -q 'today.png' /tmp/HamsterKingMobile.user.js
-          grep -q 'clan-war.png' /tmp/HamsterKingMobile.user.js
-          grep -q 'businesses.png' /tmp/HamsterKingMobile.user.js
-          grep -q 'fair.png' /tmp/HamsterKingMobile.user.js
-          grep -q 'maps.png' /tmp/HamsterKingMobile.user.js
-          grep -q 'clan.png' /tmp/HamsterKingMobile.user.js
-          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
-          ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
-          node --check /tmp/HamsterKingMobile.user.js
-
-      - name: Deploy 1.13.0
-        shell: bash
-        run: |
-          set -euo pipefail
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
-
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71 'set -euo pipefail;
-              stamp="$(date +%Y%m%d-%H%M%S)";
-              cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
-              grep -q "^// @version      1.13.0$" /tmp/HamsterKingMobile.user.js;
-              node --check /tmp/HamsterKingMobile.user.js;
-              grep -q "growthAutoOpen" /tmp/HamsterKingMobile.user.js;
-              grep -q "growthRunGeneralsCore" /tmp/HamsterKingMobile.user.js;
-              grep -q "growthRunPriorityCopiesCore" /tmp/HamsterKingMobile.user.js;
-              install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
-              install -d -m 755 /etc/systemd/system/hamsterking-license.service.d;
-              printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.13.0\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
-              systemctl daemon-reload;
-              systemctl restart hamsterking-license.service;
-              systemctl is-active --quiet hamsterking-license.service;
-              sleep 2;
-              (curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config);
-              echo;
-              echo DEPLOY_OK;
-              grep -m1 "^// @version" /opt/hamsterking-license/HamsterKingMobile.user.js;
-              grep -q "const HK_STATE_MERGE_ROWS" /opt/hamsterking-license/HamsterKingMobile.user.js;
-              grep -q "growthAutoOpen" /opt/hamsterking-license/HamsterKingMobile.user.js;
-              grep -q "growthRunGeneralsCore" /opt/hamsterking-license/HamsterKingMobile.user.js;
-              grep -q "growthRunPriorityCopiesCore" /opt/hamsterking-license/HamsterKingMobile.user.js;
-              ! grep -q "runDailyRumors" /opt/hamsterking-license/HamsterKingMobile.user.js'
-
-      - name: Cleanup
-        if: always()
-        shell: bash
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript-1.13.0.patch
- /tmp/HamsterKingMobile.user.js
-          node --check /tmp/HamsterKingMobile.user.js
-          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
-          ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
-
-      - name: Build and validate 1.13.0
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat deploy/topking/userscript-1.13.0.patch.part*.b64 | base64 -d | gzip -d > /tmp/userscript-1.13.0.patch
+          cat \
+            deploy/topking/userscript-1.13.0.patch.part00.b64 \
+            deploy/topking/userscript-1.13.0.patch.part01.b64 \
+            deploy/topking/userscript-1.13.0.patch.part02.b64 \
+            deploy/topking/userscript-1.13.0.patch.part03.b64 \
+            | base64 -d | gzip -d > /tmp/userscript-1.13.0.patch
           patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.13.0.patch
 
           grep -q '^// @version      1.13.0$' /tmp/HamsterKingMobile.user.js
