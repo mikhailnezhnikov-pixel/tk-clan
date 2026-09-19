@@ -1,10 +1,10 @@
-name: Deploy TopKing 1.11.0
+name: Deploy TopKing 1.12.0
 
 on:
   push:
     paths:
       - '.github/workflows/deploy-topking-clan-sync.yml'
-      - 'deploy/topking/userscript-1.11.0.patch.gz.b64'
+      - 'deploy/topking/userscript-1.12.0.patch.gz.b64'
   workflow_dispatch:
 
 permissions:
@@ -29,13 +29,178 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Fetch live 1.10.0
+      - name: Fetch live 1.11.0
         shell: bash
         run: |
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          grep -q '^// @version      1.10.0$' /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.11.0
+          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
+          ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
+
+      - name: Build 1.12.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d deploy/topking/userscript-1.12.0.patch.gz.b64 | gzip -d > /tmp/userscript-1.12.0.patch
+          patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.12.0.patch
+
+          grep -q '^// @version      1.12.0
+          grep -q 'const hkStateStore' /tmp/HamsterKingMobile.user.js
+          grep -q 'const hkRunner' /tmp/HamsterKingMobile.user.js
+          grep -q 'navBattles' /tmp/HamsterKingMobile.user.js
+          grep -q 'data-content="growth-hamsters"' /tmp/HamsterKingMobile.user.js
+          grep -q 'data-content="growth-generals"' /tmp/HamsterKingMobile.user.js
+          grep -q 'growthRunHamsters' /tmp/HamsterKingMobile.user.js
+          grep -q 'growthRunGenerals' /tmp/HamsterKingMobile.user.js
+          grep -q 'growthBuyGeneralContracts' /tmp/HamsterKingMobile.user.js
+          grep -q 'growthRunLootboxes' /tmp/HamsterKingMobile.user.js
+          grep -q 'today.png' /tmp/HamsterKingMobile.user.js
+          grep -q 'clan-war.png' /tmp/HamsterKingMobile.user.js
+          grep -q 'businesses.png' /tmp/HamsterKingMobile.user.js
+          grep -q 'fair.png' /tmp/HamsterKingMobile.user.js
+          grep -q 'maps.png' /tmp/HamsterKingMobile.user.js
+          grep -q 'clan.png' /tmp/HamsterKingMobile.user.js
+          grep -q 'hkRunner.start({title:either' /tmp/HamsterKingMobile.user.js
+          grep -q 'ensureGameAuthorization' /tmp/HamsterKingMobile.user.js
+          grep -q 'clanCanonicalSnapshot' /tmp/HamsterKingMobile.user.js
+          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
+          ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Deploy 1.12.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'set -euo pipefail;
+              stamp="$(date +%Y%m%d-%H%M%S)";
+              cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
+              grep -q "^// @version      1.12.0$" /tmp/HamsterKingMobile.user.js;
+              node --check /tmp/HamsterKingMobile.user.js;
+              install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
+              install -d -m 755 /etc/systemd/system/hamsterking-license.service.d;
+              printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.12.0\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
+              systemctl daemon-reload;
+              systemctl restart hamsterking-license.service;
+              systemctl is-active --quiet hamsterking-license.service;
+              sleep 2;
+              (curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config);
+              echo;
+              echo DEPLOY_OK;
+              grep -m1 "^// @version" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "const hkStateStore" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "const hkRunner" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "growthRunHamsters" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "growthRunGenerals" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "growthBuyGeneralContracts" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              ! grep -q "runDailyRumors" /opt/hamsterking-license/HamsterKingMobile.user.js'
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript-1.12.0.patch
+ /tmp/HamsterKingMobile.user.js
+          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
+          ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
+
+      - name: Build 1.11.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d deploy/topking/userscript-1.11.0.patch.gz.b64 | gzip -d > /tmp/userscript-1.11.0.patch
+          patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.11.0.patch
+
+          grep -q '^// @version      1.11.0$' /tmp/HamsterKingMobile.user.js
+          grep -q 'const hkStateStore' /tmp/HamsterKingMobile.user.js
+          grep -q 'const hkRunner' /tmp/HamsterKingMobile.user.js
+          grep -q 'navBattles' /tmp/HamsterKingMobile.user.js
+          grep -q 'data-content="growth"' /tmp/HamsterKingMobile.user.js
+          grep -q 'hkRunner.start({title:either' /tmp/HamsterKingMobile.user.js
+          grep -q 'ensureGameAuthorization' /tmp/HamsterKingMobile.user.js
+          grep -q 'clanCanonicalSnapshot' /tmp/HamsterKingMobile.user.js
+          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
+          ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Deploy 1.11.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'set -euo pipefail;
+              stamp="$(date +%Y%m%d-%H%M%S)";
+              cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
+              grep -q "^// @version      1.11.0$" /tmp/HamsterKingMobile.user.js;
+              node --check /tmp/HamsterKingMobile.user.js;
+              install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
+              install -d -m 755 /etc/systemd/system/hamsterking-license.service.d;
+              printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.11.0\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
+              systemctl daemon-reload;
+              systemctl restart hamsterking-license.service;
+              systemctl is-active --quiet hamsterking-license.service;
+              sleep 2;
+              (curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config);
+              echo;
+              echo DEPLOY_OK;
+              grep -m1 "^// @version" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "const hkStateStore" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "const hkRunner" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              ! grep -q "runDailyRumors" /opt/hamsterking-license/HamsterKingMobile.user.js'
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript-1.11.0.patch
+ /tmp/HamsterKingMobile.user.js
+          grep -q 'const hkStateStore' /tmp/HamsterKingMobile.user.js
+          grep -q 'const hkRunner' /tmp/HamsterKingMobile.user.js
+          grep -q 'navBattles' /tmp/HamsterKingMobile.user.js
+          grep -q 'data-content="growth"' /tmp/HamsterKingMobile.user.js
+          grep -q 'hkRunner.start({title:either' /tmp/HamsterKingMobile.user.js
+          grep -q 'ensureGameAuthorization' /tmp/HamsterKingMobile.user.js
+          grep -q 'clanCanonicalSnapshot' /tmp/HamsterKingMobile.user.js
+          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
+          ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Deploy 1.11.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'set -euo pipefail;
+              stamp="$(date +%Y%m%d-%H%M%S)";
+              cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
+              grep -q "^// @version      1.11.0$" /tmp/HamsterKingMobile.user.js;
+              node --check /tmp/HamsterKingMobile.user.js;
+              install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
+              install -d -m 755 /etc/systemd/system/hamsterking-license.service.d;
+              printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.11.0\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
+              systemctl daemon-reload;
+              systemctl restart hamsterking-license.service;
+              systemctl is-active --quiet hamsterking-license.service;
+              sleep 2;
+              (curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config);
+              echo;
+              echo DEPLOY_OK;
+              grep -m1 "^// @version" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "const hkStateStore" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "const hkRunner" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              ! grep -q "runDailyRumors" /opt/hamsterking-license/HamsterKingMobile.user.js'
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript-1.11.0.patch
+ /tmp/HamsterKingMobile.user.js
           ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
           ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
 
