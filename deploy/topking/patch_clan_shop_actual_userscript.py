@@ -1,5 +1,6 @@
 # Deploy trigger: actual Clan Shop telemetry v1
 from pathlib import Path
+import re
 
 p=Path("/tmp/HamsterKingMobile.user.js")
 s=p.read_text()
@@ -8,7 +9,10 @@ if MARKER in s:
     print("CLAN_SHOP_USERSCRIPT_ALREADY_PATCHED")
     raise SystemExit(0)
 
-s=s.replace("// @version      1.16.9","// @version      1.17.0",1)
+ s_version, n_version = re.subn(r"^// @version\\s+\\S+.*$", "// @version      1.17.0", s, count=1, flags=re.M)
+if n_version != 1:
+    raise SystemExit("userscript version metadata missing")
+s = s_version
 
 anchor="  const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';\n"
 if anchor not in s:
