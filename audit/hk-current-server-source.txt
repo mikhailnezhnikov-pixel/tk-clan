@@ -2537,11 +2537,20 @@ def normalize_clan_war(value: object) -> dict | None:
         "opponent": clean_public_name(value.get("opponent")),
         "status": clean_public_name(value.get("status"), 32) or "active",
     }
+    # CLAN_WAR_HP_SERVER_V1
     for key in ("our_score", "opponent_score", "started_at", "ends_at"):
         try:
             number = int(value.get(key) or 0)
         except (TypeError, ValueError):
             number = 0
+        result[key] = max(0, min(number, 10**18))
+    for key in ("our_hp", "our_hp_max", "opponent_hp", "opponent_hp_max"):
+        if key not in value:
+            continue
+        try:
+            number = int(value.get(key))
+        except (TypeError, ValueError):
+            continue
         result[key] = max(0, min(number, 10**18))
     if not result["our_clan"] or not result["opponent"]:
         raise ValueError("clan names required")
@@ -2658,11 +2667,7 @@ APPLICATION_FIELDS_EN = (
     ("chat_online", "Chat activity", "How often are you online in clan chats?"),
     ("goals", "Goals", "What are your goals in the game and in a clan?"),
     ("reason", "Reason for joining", "Why do you want to join Top King?"),
-    ("expectations", "Expectations", "What do you expect from Top King?"),
-    ("about", "Anything else", "Anything else you would like to add?\n\nThis question is optional — send /skip to skip it."),
-)
-APPLICATION_OPTIONAL_FIELDS = frozenset({"about"})
-FEEDBACK_TYPES = {"wish": "Пожелание", "suggestion": "Предложени
+
 
 ===== def do_POST =====
 

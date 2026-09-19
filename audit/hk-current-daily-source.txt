@@ -4,7 +4,7 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.1
+// @version      1.17.2
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
 // @release-note Hotfix версии bookmarklet: metadata и runtime version синхронизированы; аудит валют и live-state сохранён.
 // @match        https://app.hamsterking.games/*
@@ -16,7 +16,7 @@
   'use strict';
   const BUILD_VERSION = typeof GM_info !== 'undefined' && GM_info?.script?.version
     ? String(GM_info.script.version)
-    : '1.17.1';
+    : '1.17.2';
   const previousRuntime = window.__HK_MOBILE_RUNTIME__;
   if (previousRuntime?.active) {
     try { previousRuntime.open?.(); } catch (_) {}
@@ -2427,7 +2427,7 @@
     document.head.appendChild(style);
     const NAV_GROUPS = [
       {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
-      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{planned:true,ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{page:'bosses',ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
       {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
@@ -2457,7 +2457,8 @@
       <div class="hk-page" data-content="resources">
         <div id="hk-resource-content" class="hk-cardbox"></div>
       </div>
-      <div class="hk-page" data-content="pit">
+      <div class="hk-page" data-content="bosses"><div id="hk-boss-content" class="hk-cardbox"><h3>${either('Боссы','Bosses')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать состояние босса.','Open this tab to read boss state.')}</p></div></div>
+          <div class="hk-page" data-content="pit">
         <div class="hk-cardbox"><div class="hk-grid">
           <label data-i18n="targetRound">${tr('targetRound')}</label><input id="hk-target" type="number" min="1" value="${settings.target}">
           <label data-i18n="delay">${tr('delay')}</label><input id="hk-interval" type="number" min="0.7" step="0.1" value="${settings.interval}">
@@ -2542,8 +2543,7 @@
       <div class="hk-page" data-content="growth">
         <div class="hk-cardbox"><h3>${either('Развитие','Growth')}</h3><p class="hk-muted">${either('Живое состояние аккаунта загружается автоматически. Открытие вкладки ничего не покупает и не прокачивает.','Live account state loads automatically. Opening the tab never buys or upgrades anything.')}</p><div data-growth-summary></div></div>
         <div class="hk-cardbox"><h3>${either('Что выполнять','What to run')}</h3><div class="hk-growth-options">
-          <label class="hk-growth-check"><span><b>${either('Подготовка','Preparation')}</b><small>${either('Контракты → шары → коробки','Contracts → balls → boxes')}</small></span><input id="hk-growth-run-prep" type="checkbox"></label>
-          <label class="hk-growth-check"><span><b>${either('Генералы','Generals')}</b><small>${either('Лучшее Power / Pit Token','Best Power / Pit Token')}</small></span><input id="hk-growth-run-generals" type="checkbox
+          <label class="hk-growth-check"><span><b>${either('Подготовка','Preparation')}</b><small>${either('Контракты → шары → коробки','Contracts → balls → boxes')}</small></span><input
 
 ===== data-content="daily" =====
 
@@ -2553,7 +2553,7 @@
     document.head.appendChild(style);
     const NAV_GROUPS = [
       {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
-      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{planned:true,ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{page:'bosses',ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
       {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
@@ -2583,7 +2583,8 @@
       <div class="hk-page" data-content="resources">
         <div id="hk-resource-content" class="hk-cardbox"></div>
       </div>
-      <div class="hk-page" data-content="pit">
+      <div class="hk-page" data-content="bosses"><div id="hk-boss-content" class="hk-cardbox"><h3>${either('Боссы','Bosses')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать состояние босса.','Open this tab to read boss state.')}</p></div></div>
+          <div class="hk-page" data-content="pit">
         <div class="hk-cardbox"><div class="hk-grid">
           <label data-i18n="targetRound">${tr('targetRound')}</label><input id="hk-target" type="number" min="1" value="${settings.target}">
           <label data-i18n="delay">${tr('delay')}</label><input id="hk-interval" type="number" min="0.7" step="0.1" value="${settings.interval}">
@@ -2689,14 +2690,10 @@
           </div>
         </div>
         <div class="hk-cardbox"><div class="hk-growth-priority-head"><h3>${either('Приоритет копий','Copy Priority')}</h3><button class="hk-secondary" data-growth-action="reset-priority">${either('Сбросить','Reset')}</button></div><p class="hk-muted">${either('Порядок пар «есть / нужно». Стрелками меняется приоритет, «−» исключает пару.','Order of “owned / required” pairs. Arrows reorder; “−” removes a pair.')}</p><div id="hk-growth-copy-priority" class="hk-growth-priority-list"></div></div>
-        <div class="hk-cardbox"><div data-growth-plan></div><button class="hk-primary" data-growth-action="hamsters">${either('Запустить Хомяков','Run Hamsters')}</button></div>
-      </div>
-      <div class="hk-page" data-content="growth-generals">
-        <div class="hk-cardbox"><h3>${either('Генералы','Generals')}</h3><p class="hk-muted">${either('Перед каждым запуском баланс и доступные 
+        <div class="hk-cardbox"><div data-growth-plan></div><button class="hk-primary" data-growth-action="hamsters">${either(
 
 ===== root.querySelector('#hk-daily-refresh') =====
 
-      const group=NAV_GROUPS.find(row=>row.id===groupId)||NAV_GROUPS[0];
       const box=root.querySelector('#hk-subnav');
       box.innerHTML=group.modules.map(module=>`<button class="${module.page===activePage?'active ':''}${module.planned?'planned':''}" ${module.page?`data-module="${module.page}"`:''} ${module.planned?'disabled':''} data-nav-ru="${escapeHtml(module.ru)}" data-nav-en="${escapeHtml(module.en)}">${escapeHtml(language==='en'?module.en:module.ru)}${module.planned?` · ${either('скоро','soon')}`:''}</button>`).join('');
       box.querySelectorAll('[data-module]:not([disabled])').forEach(button=>button.onclick=()=>activateModule(button.dataset.module,true));
@@ -2717,6 +2714,7 @@
       if (finalPage === 'explore') renderExplore();
       if (finalPage === 'clan') renderClanSkills();
       if (finalPage === 'wars') renderWars();
+      if (finalPage === 'bosses') renderBosses();
       if (finalPage === 'fair') renderFair();
       if (finalPage === 'shop') renderShop();
       if (finalPage === 'recipes') renderRecipes();
@@ -3210,6 +3208,54 @@
     return 0;
   }
 
+  // HK_CLAN_WAR_HP_V1
+  function publicWarNumber(...values) {
+    for (const value of values) {
+      if (value === null || value === undefined || value === '') continue;
+      const parsed=Number(value);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+    return null;
+  }
+
+  function publicWarHp(node, row, side) {
+    const currentKeys=['hp','current_hp','currentHp','health','current_health','currentHealth','remaining_hp','remainingHp','remaining_health','remainingHealth','hit_points','hitPoints','current_hit_points','currentHitPoints'];
+    const maxKeys=['max_hp','maxHp','total_hp','totalHp','hp_max','hpMax','max_health','maxHealth','total_health','totalHealth','health_max','healthMax','max_hit_points','maxHitPoints','total_hit_points','totalHitPoints'];
+    const direct=(keys,source)=>{
+      if(!source||typeof source!=='object')return null;
+      for(const key of keys){
+        if(!Object.prototype.hasOwnProperty.call(source,key))continue;
+        const value=publicWarNumber(source[key]);
+        if(value!==null)return value;
+      }
+      return null;
+    };
+    const prefixes=side==='our'
+      ? ['our','player','attacker','my','clan']
+      : ['opponent','enemy','defender','rival','target'];
+    const directional=(suffixes)=>{
+      for(const prefix of prefixes){
+        for(const suffix of suffixes){
+          const key=prefix+'_'+suffix;
+          if(Object.prototype.hasOwnProperty.call(row,key)){
+            const value=publicWarNumber(row[key]);
+            if(value!==null)return value;
+          }
+          const camel=prefix+suffix.split('_').map(part=>part ? part[0].toUpperCase()+part.slice(1) : '').join('');
+          if(Object.prototype.hasOwnProperty.call(row,camel)){
+            const value=publicWarNumber(row[camel]);
+            if(value!==null)return value;
+          }
+        }
+      }
+      return null;
+    };
+    return {
+      current:direct(currentKeys,node) ?? directional(['hp','current_hp','health','current_health','remaining_hp','remaining_health','hit_points','current_hit_points']),
+      max:direct(maxKeys,node) ?? directional(['max_hp','total_hp','hp_max','max_health','total_health','health_max','max_hit_points','total_hit_points'])
+    };
+  }
+
   function normalizePublicWar(documentValue) {
     for (const row of deepObjects(documentValue)) {
       const ourNode = row.our_clan || row.player_clan || row.my_clan || row.attacker_clan || row.clan;
@@ -3217,7 +3263,9 @@
       const ourClan = firstText(ourNode?.name, ourNode?.title, row.our_clan_name, row.player_clan_name, row.attacker_name);
       const opponent = firstText(enemyNode?.name, enemyNode?.title, row.opponent_name, row.enemy_name, row.defender_name);
       if (!ourClan || !opponent) continue;
-      return {
+      const ourHp=publicWarHp(ourNode,row,'our');
+      const opponentHp=publicWarHp(enemyNode,row,'opponent');
+      const result={
         our_clan:ourClan, opponent,
         our_score:firstFinite(row.our_score, row.player_score, row.attacker_score, ourNode?.score, ourNode?.points),
         opponent_score:firstFinite(row.opponent_score, row.enemy_score, row.defender_score, enemyNode?.score, enemyNode?.points),
@@ -3225,6 +3273,17 @@
         started_at:firstFinite(row.started_at, row.start_at, row.start_time, row.started),
         ends_at:firstFinite(row.ends_at, row.end_at, row.finish_time, row.finished_at),
       };
+      if(ourHp.current!==null)result.our_hp=Math.round(ourHp.current);
+      if(ourHp.max!==null)result.our_hp_max=Math.round(ourHp.max);
+      if(opponentHp.current!==null)result.opponent_hp=Math.round(opponentHp.current);
+      if(opponentHp.max!==null)result.opponent_hp_max=Math.round(opponentHp.max);
+      if(!result.our_hp_max && !result.opponent_hp_max){
+        try{
+          const keys=[...new Set([row,ourNode,enemyNode].filter(Boolean).flatMap(value=>Object.keys(value||{})))].filter(key=>/hp|health|life|durab/i.test(key)).slice(0,60);
+          if(keys.length)recordDiagnostic('clan-war-hp-schema',{keys});
+        }catch(_){}
+      }
+      return result;
     }
     return null;
   }
@@ -3387,6 +3446,8 @@
     return licensedServerJson(PUBLIC_SNAPSHOT_API, '', documentValue, retry, 'public-snapshot');
   }
 
+  let bossSnapshot = null;
+  let bossLastReadAt = 0;
   let warSnapshot = null;
   let warLastReadAt = 0;
 
@@ -3406,81 +3467,14 @@
     return {read:endpointRead,war:null};
   }
 
-  function renderWars() {
-    const box=root?.querySelector('#hk-war-content');
-    if(!box)return;
-    const war=warSnapshot;
-    if(!war){
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
-    }else{
-      const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
-      const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
-      const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
-        '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong></div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong></div></div>'+
-        '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
-    }
-    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
-  }
-
-  async function refreshWars(force=false) {
-    if(!requireLicense())return null;
-    try{
-      const result=await readPublicWar();
-      warSnapshot=result?.war||null;
-      warLastReadAt=Date.now();
-      renderWars();
-      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
-      return warSnapshot;
-    }catch(error){
-      log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
-      renderWars();
-      return null;
-    }
-  }
-
-  async function readPublicRatings() {
-    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
-    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
-      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
-      catch (_) {}
-    }
-    try {
-      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
-      Object.assign(ratings, normalizeAllianceRatings(value));
-    } catch (_) {}
-    return ratings;
-  }
-
-  async function collectPublicSnapshot(force = false) {
-    if (publicSnapshotPromise || !licenseState.allowed || !licenseState.token || !apiHeaders.Authorization) return publicSnapshotPromise;
-    if (!force && Date.now() - lastPublicSnapshot < PUBLIC_SNAPSHOT_INTERVAL_MS) return null;
-    publicSnapshotPromise = (async () => {
-      try {
-        const [warResult, ratings] = await Promise.all([readPublicWar(), readPublicRatings()]);
-        const payload = {ratings}; if (warResult.read) payload.war = warResult.war;
-        if (!warResult.read && !Object.keys(ratings).length) return;
-        await publicSnapshotServerJson(payload); lastPublicSnapshot = Date.now();
-      } catch (error) { console.warn('[HK] public snapshot failed', error); }
-      finally { publicSnapshotPromise = null; }
-    })();
-    return publicSnapshotPromise;
-  }
-
-  async function loadFair() {
-    if (!requireLicense()) return;
-    try {
-      log('Считываю ярмарки…');
-      playerDocument = await apiJson('/player/me', 'POST');
-      fairDocument = playerDocument;
-      shopViewDocument = await apiJson('/shop/view', 'GET');
-      fairCatalog = normalizeFairCatalog(shopViewDocument);
-      const visibleFairs = visibleFairStates();
-      if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
-      selectedFairLots.clear();
-      selectedFairSlotRules.clear();
-      renderFair();
-      log(`Яр
+  function bossStateRows(documentValue = bossSnapshot || hkStateStore.snapshot || playerDocument) {
+        const rows=[]; const add=(kind,value)=>{if(value==null)return;if(Array.isArray(value))value.forEach((row,index)=>rows.push({kind,index,row}));else if(typeof value==='object')rows.push({kind,index:0,row:value});};
+        add('player_bosses',documentValue?.player_bosses); add('player_regional_bosses',documentValue?.player_regional_bosses); add('boss_battle',documentValue?.boss_battle); return rows;
+      }
+      function bossRowLabel(v,i=0){return gameText(v?.name||v?.title||v?.boss?.name||v?.boss_name||v?.regional_boss_id||v?.boss_id||v?.id||(either('Босс ','Boss ')+(i+1)));}
+      function bossRowSummary(v){const f=[[either('Уровень','Level'),v?.level??v?.boss_level??v?.tier],[either('Здоровье','Health'),v?.health??v?.hp??v?.current_health],[either('Макс. здоровье','Max health'),v?.max_health??v?.max_hp],[either('Урон','Damage'),v?.damage??v?.player_damage??v?.total_damage],[either('Попытки','Attempts'),v?.attempts??v?.tries??v?.battle_count],[either('Статус','Status'),v?.status??v?.state]].filter(([,x])=>x!==undefined&&x!==null&&String(x)!=='');return f.map(([k,x])=>'<span><small>'+escapeHtml(k)+'</small><b>'+escapeHtml(typeof x==='number'?Number(x).toLocaleString(locale()):String(x))+'</b></span>').join('');}
+      function renderBosses(){
+        const 
 
 ===== const HK_STAGE2B_RUNNER_REV =====
 
@@ -3607,6 +3601,7 @@
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -3618,6 +3613,7 @@
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
   runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;
+  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;
   runtime.mutationGate = hkMutationGate;
   runtime.gameBridge = hkGameBridge;
   let clanSkillScanning = false;
@@ -3956,9 +3952,7 @@
 
   function updateLicenseUI() {
     setHealth('license', !!licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : (licenseState.checked ? licenseState.reason : 'ожидание'));
-    if (!panel) return;
-    const gate = root.querySelector('#hk-license-gate');
-    const updateBox = root.querySelector('#h
+    if (!panel)
 
 ===== const HK_STAGE2E_RUNNER_REV =====
 
@@ -4081,6 +4075,7 @@
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -4092,6 +4087,7 @@
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
   runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;
+  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;
   runtime.mutationGate = hkMutationGate;
   runtime.gameBridge = hkGameBridge;
   let clanSkillScanning = false;
@@ -4434,9 +4430,7 @@
     const gate = root.querySelector('#hk-license-gate');
     const updateBox = root.querySelector('#hk-update-banner');
     const update = licenseState.update;
-    if (updateBox && update?.available && update?.download_url) {
-      const latest=escapeHtml(update.latest_version || '?');
- 
+    if (updateBox 
 
 ===== const HK_STAGE2F_RUNNER_REV =====
 
@@ -4557,6 +4551,7 @@
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -4568,6 +4563,7 @@
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
   runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;
+  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;
   runtime.mutationGate = hkMutationGate;
   runtime.gameBridge = hkGameBridge;
   let clanSkillScanning = false;
@@ -4911,9 +4907,7 @@
     const updateBox = root.querySelector('#hk-update-banner');
     const update = licenseState.update;
     if (updateBox && update?.available && update?.download_url) {
-      const latest=escapeHtml(update.latest_version || '?');
-      updateBox.style.display='block';
-      updateBox.classN
+      const 
 
 ===== const HK_STAGE2G_RUMORS_REV =====
 
@@ -5032,6 +5026,7 @@
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -5043,6 +5038,7 @@
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
   runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;
+  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;
   runtime.mutationGate = hkMutationGate;
   runtime.gameBridge = hkGameBridge;
   let clanSkillScanning = false;
@@ -5387,9 +5383,7 @@
     const update = licenseState.update;
     if (updateBox && update?.available && update?.download_url) {
       const latest=escapeHtml(update.latest_version || '?');
-      updateBox.style.display='block';
-      updateBox.className=`hk-update${update.required ? ' required' : ''}`;
-      
+      updat
 
 ===== const HK_STAGE2H_WARS_REV =====
 
@@ -5507,6 +5501,7 @@
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -5518,6 +5513,7 @@
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
   runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;
+  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;
   runtime.mutationGate = hkMutationGate;
   runtime.gameBridge = hkGameBridge;
   let clanSkillScanning = false;
@@ -5863,8 +5859,7 @@
     if (updateBox && update?.available && update?.download_url) {
       const latest=escapeHtml(update.latest_version || '?');
       updateBox.style.display='block';
-      updateBox.className=`hk-update${update.required ? ' required' : ''}`;
-      updateBox.innerHTML=`<b>${either('Доступно обновление','Update
+      updateBox.className=`hk-upda
 
 ===== const HK_STAGE2I_BUILDINGS_REV =====
 
@@ -5981,6 +5976,7 @@
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -5992,6 +5988,7 @@
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
   runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;
+  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;
   runtime.mutationGate = hkMutationGate;
   runtime.gameBridge = hkGameBridge;
   let clanSkillScanning = false;
@@ -6338,7 +6335,7 @@
       const latest=escapeHtml(update.latest_version || '?');
       updateBox.style.display='block';
       updateBox.className=`hk-update${update.required ? ' required' : ''}`;
-      updateBox.innerHTML=`<b>${either('Доступно обновление','Update available')} ${latest}</b>${update.notes ? `<small>${esca
+      updateBox.
 
 ===== const HK_STAGE3D_RECIPES_BUREAU_REV =====
 NOT FOUND
@@ -8477,87 +8474,6 @@ NOT FOUND
 
 ===== function renderWars() =====
 
-      'members_influence','membersInfluence','players_influence','playersInfluence',
-      'clans_influence','clansInfluence','influence','total_player_level','totalPlayerLevel',
-      'player_level_sum','playerLevelSum','players_level','playersLevel','player_level','playerLevel'
-    ],
-    alliance_defense:[
-      'total_defense','totalDefense','total_defence','totalDefence','alliance_defense','allianceDefense',
-      'alliance_defence','allianceDefence','defense_points','defensePoints','defence_points','defencePoints',
-      'total_defense_points','totalDefensePoints','total_defence_points','totalDefencePoints',
-      'war_defense','warDefense','war_defence','warDefence','protection_points','protectionPoints',
-      'total_protection','totalProtection','defense','defence','protection'
-    ]
-  };
-
-  function finiteMetric(value) {
-    const parsed=Number(value);
-    return Number.isFinite(parsed)&&parsed>=0?parsed:null;
-  }
-
-  function metricFromObject(value, keys) {
-    if(!value||typeof value!=='object')return null;
-    for(const key of keys){
-      if(!Object.prototype.hasOwnProperty.call(value,key))continue;
-      const parsed=finiteMetric(value[key]);
-      if(parsed!==null)return parsed;
-    }
-    return null;
-  }
-
-  function allianceChildren(row, entity) {
-    const result=[],seen=new Set();
-    for(const source of [entity,row]){
-      if(!source||typeof source!=='object')continue;
-      for(const key of ['clans','alliance_clans','allianceClans','members','items','list','participants']){
-        const list=source[key];
-        if(!Array.isArray(list))continue;
-        for(const child of list){
-          if(!child||typeof child!=='object'||seen.has(child))continue;
-          seen.add(child);result.push(child);
-        }
-      }
-    }
-    return result;
-  }
-
-  function allianceMetric(row, entity, kind) {
-    const keys=ALLIANCE_RATING_METRICS[kind]||[];
-    const direct=metricFromObject(entity,keys) ?? metricFromObject(row,keys);
-    if(direct!==null)return direct;
-    const children=allianceChildren(row,entity);
-    if(!children.length)return null;
-    let total=0,found=0;
-    for(const child of children){
-      const node=child.clan||child.member||child;
-      const value=metricFromObject(node,keys) ?? metricFromObject(child,keys);
-      if(value===null)continue;
-      total+=value;found+=1;
-    }
-    return found?total:null;
-  }
-
-  function allianceCandidateScore(list) {
-    if(!Array.isArray(list)||!list.length)return -1;
-    let score=0;
-    for(const row of list.slice(0,12)){
-      if(!row||typeof row!=='object')continue;
-      const entity=row.alliance||row;
-      const keys=new Set([...Object.keys(row),...Object.keys(entity||{})].map(String));
-      if(row.alliance||keys.has('alliance_id')||keys.has('allianceId')||keys.has('alliance_name')||keys.has('allianceName'))score+=5;
-      if(keys.has('clans')||keys.has('alliance_clans')||keys.has('allianceClans')||keys.has('core_clan')||keys.has('coreClan'))score+=4;
-      for(const metricKeys of Object.values(ALLIANCE_RATING_METRICS)){
-        if(metricKeys.some(key=>keys.has(key))){score+=3;break;}
-      }
-      if(firstText(entity?.name,entity?.title,row.name,row.alliance_name,row.allianceName))score+=1;
-    }
-    return score;
-  }
-
-  function normalizeAllianceRatings(documentValue) {
-    const arrays=leaderboardArrays(documentValue)
-      .map(list=>({list,score:allianceCandidateScore(list)}))
-      .filter(item=>item.score>0)
       .sort((a,b)=>b.score-a.score||b.list.length-a.list.length);
     for(const candidate of arrays){
       const normalized=[],names=new Set();
@@ -8597,6 +8513,8 @@ NOT FOUND
     return licensedServerJson(PUBLIC_SNAPSHOT_API, '', documentValue, retry, 'public-snapshot');
   }
 
+  let bossSnapshot = null;
+  let bossLastReadAt = 0;
   let warSnapshot = null;
   let warLastReadAt = 0;
 
@@ -8616,7 +8534,25 @@ NOT FOUND
     return {read:endpointRead,war:null};
   }
 
-  function renderWars() {
+  function bossStateRows(documentValue = bossSnapshot || hkStateStore.snapshot || playerDocument) {
+        const rows=[]; const add=(kind,value)=>{if(value==null)return;if(Array.isArray(value))value.forEach((row,index)=>rows.push({kind,index,row}));else if(typeof value==='object')rows.push({kind,index:0,row:value});};
+        add('player_bosses',documentValue?.player_bosses); add('player_regional_bosses',documentValue?.player_regional_bosses); add('boss_battle',documentValue?.boss_battle); return rows;
+      }
+      function bossRowLabel(v,i=0){return gameText(v?.name||v?.title||v?.boss?.name||v?.boss_name||v?.regional_boss_id||v?.boss_id||v?.id||(either('Босс ','Boss ')+(i+1)));}
+      function bossRowSummary(v){const f=[[either('Уровень','Level'),v?.level??v?.boss_level??v?.tier],[either('Здоровье','Health'),v?.health??v?.hp??v?.current_health],[either('Макс. здоровье','Max health'),v?.max_health??v?.max_hp],[either('Урон','Damage'),v?.damage??v?.player_damage??v?.total_damage],[either('Попытки','Attempts'),v?.attempts??v?.tries??v?.battle_count],[either('Статус','Status'),v?.status??v?.state]].filter(([,x])=>x!==undefined&&x!==null&&String(x)!=='');return f.map(([k,x])=>'<span><small>'+escapeHtml(k)+'</small><b>'+escapeHtml(typeof x==='number'?Number(x).toLocaleString(locale()):String(x))+'</b></span>').join('');}
+      function renderBosses(){
+        const box=root?.querySelector('#hk-boss-content'); if(!box)return; const rows=bossStateRows(),profile=pitForecastProfile('boss');
+        const body=rows.length?rows.map(({kind,index,row})=>'<article class="hk-boss-row"><div><b>'+escapeHtml(bossRowLabel(row,index))+'</b><small>'+escapeHtml(kind)+'</small></div><div class="hk-boss-stats">'+bossRowSummary(row)+'</div></article>').join(''):'<p class="hk-muted">'+either('Сейчас нет активных данных регионального босса.','There is no active regional boss data right now.')+'</p>';
+        box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Боссы','Bosses')+'</h3><small>'+either('Игровое состояние боссов и Ямы боссов','Game boss state and Boss Pit data')+'</small></div><button id="hk-boss-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><div class="hk-boss-pit"><span><small>'+either('Яма боссов — уровень','Boss Pit level')+'</small><b>'+(Number(profile?.localLevel||0)||'—')+'</b></span><span><small>'+either('Сила','Power')+'</small><b>'+(Number(profile?.playerPower||0)?Number(profile.playerPower).toLocaleString(locale()):'—')+'</b></span></div>'+body+'<p class="hk-muted">'+(bossLastReadAt?either('Обновлено','Updated')+': '+new Date(bossLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):either('Нажмите «Обновить».','Press Refresh.'))+'</p>';
+        box.querySelector('#hk-boss-refresh')?.addEventListener('click',()=>void refreshBosses(true));
+      }
+      async function refreshBosses(force=false){
+        if(!requireLicense())return null;
+        try{playerDocument=await apiJson('/player/me','POST');bossSnapshot=hkStateStore.snapshot||playerDocument;bossLastReadAt=Date.now();renderBosses();if(force)log(either('Данные боссов обновлены','Boss data refreshed'),'ok');return bossSnapshot;}
+        catch(error){log(either('Ошибка чтения боссов','Boss read error')+': '+(error?.message||error),'warn');renderBosses();return null;}
+      }
+    
+      function renderWars() {
     const box=root?.querySelector('#hk-war-content');
     if(!box)return;
     const war=warSnapshot;
@@ -10805,57 +10741,20 @@ NOT FOUND
 
 ===== async function loadFair() =====
 
-        const metrics={
-          alliance_power:allianceMetric(row,entity,'alliance_power'),
-          alliance_influence:allianceMetric(row,entity,'alliance_influence'),
-          alliance_defense:allianceMetric(row,entity,'alliance_defense')
-        };
-        if(Object.values(metrics).every(value=>value===null))continue;
-        names.add(name);normalized.push({name,...metrics});
+      function bossRowSummary(v){const f=[[either('Уровень','Level'),v?.level??v?.boss_level??v?.tier],[either('Здоровье','Health'),v?.health??v?.hp??v?.current_health],[either('Макс. здоровье','Max health'),v?.max_health??v?.max_hp],[either('Урон','Damage'),v?.damage??v?.player_damage??v?.total_damage],[either('Попытки','Attempts'),v?.attempts??v?.tries??v?.battle_count],[either('Статус','Status'),v?.status??v?.state]].filter(([,x])=>x!==undefined&&x!==null&&String(x)!=='');return f.map(([k,x])=>'<span><small>'+escapeHtml(k)+'</small><b>'+escapeHtml(typeof x==='number'?Number(x).toLocaleString(locale()):String(x))+'</b></span>').join('');}
+      function renderBosses(){
+        const box=root?.querySelector('#hk-boss-content'); if(!box)return; const rows=bossStateRows(),profile=pitForecastProfile('boss');
+        const body=rows.length?rows.map(({kind,index,row})=>'<article class="hk-boss-row"><div><b>'+escapeHtml(bossRowLabel(row,index))+'</b><small>'+escapeHtml(kind)+'</small></div><div class="hk-boss-stats">'+bossRowSummary(row)+'</div></article>').join(''):'<p class="hk-muted">'+either('Сейчас нет активных данных регионального босса.','There is no active regional boss data right now.')+'</p>';
+        box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Боссы','Bosses')+'</h3><small>'+either('Игровое состояние боссов и Ямы боссов','Game boss state and Boss Pit data')+'</small></div><button id="hk-boss-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><div class="hk-boss-pit"><span><small>'+either('Яма боссов — уровень','Boss Pit level')+'</small><b>'+(Number(profile?.localLevel||0)||'—')+'</b></span><span><small>'+either('Сила','Power')+'</small><b>'+(Number(profile?.playerPower||0)?Number(profile.playerPower).toLocaleString(locale()):'—')+'</b></span></div>'+body+'<p class="hk-muted">'+(bossLastReadAt?either('Обновлено','Updated')+': '+new Date(bossLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):either('Нажмите «Обновить».','Press Refresh.'))+'</p>';
+        box.querySelector('#hk-boss-refresh')?.addEventListener('click',()=>void refreshBosses(true));
       }
-      if(normalized.length){
-        const result={};
-        for(const kind of Object.keys(ALLIANCE_RATING_METRICS)){
-          const rows=normalized.filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
-            .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name)).slice(0,100)
-            .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
-          if(rows.length)result[kind]=rows;
-        }
-        if(Object.keys(result).length)return result;
+      async function refreshBosses(force=false){
+        if(!requireLicense())return null;
+        try{playerDocument=await apiJson('/player/me','POST');bossSnapshot=hkStateStore.snapshot||playerDocument;bossLastReadAt=Date.now();renderBosses();if(force)log(either('Данные боссов обновлены','Boss data refreshed'),'ok');return bossSnapshot;}
+        catch(error){log(either('Ошибка чтения боссов','Boss read error')+': '+(error?.message||error),'warn');renderBosses();return null;}
       }
-    }
-    try{
-      const objects=deepObjects(documentValue).slice(0,40);
-      const keys=[...new Set(objects.flatMap(value=>Object.keys(value||{})))].filter(key=>/alliance|power|influence|defen|protect|level/i.test(key)).slice(0,80);
-      recordDiagnostic('alliance-rating-schema',{keys});
-    }catch(_){}
-    return {};
-  }
-
-  async function publicSnapshotServerJson(documentValue, retry = true) {
-    return licensedServerJson(PUBLIC_SNAPSHOT_API, '', documentValue, retry, 'public-snapshot');
-  }
-
-  let warSnapshot = null;
-  let warLastReadAt = 0;
-
-  function warTimestamp(value) {
-    const number=Number(value||0);
-    if(!Number.isFinite(number)||number<=0)return '';
-    const ms=number<1e12?number*1000:number;
-    try{return new Date(ms).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(_){return '';}
-  }
-
-  async function readPublicWar() {
-    let endpointRead = false;
-    for (const path of ['/clan/active_battles','/clan/active_defense_wars']) {
-      try { const value = await apiJson(path, 'GET', null, true, 1); endpointRead = true; const war = normalizePublicWar(value); if (war) return {read:true,war}; }
-      catch (_) {}
-    }
-    return {read:endpointRead,war:null};
-  }
-
-  function renderWars() {
+    
+      function renderWars() {
     const box=root?.querySelector('#hk-war-content');
     if(!box)return;
     const war=warSnapshot;
@@ -11985,8 +11884,6 @@ NOT FOUND
 
 ===== GROWTH_GENERAL_BUDGET_ID =====
 
-                const before = Number(current?.hamsterCollection?.unitsCount);
-                try { return originalUpdate.apply(this,args); }
                 finally {
                   const after = Number(current?.hamsterCollection?.unitsCount);
                   refreshHamsterCollection(before,after);
@@ -12053,6 +11950,7 @@ NOT FOUND
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -12064,6 +11962,7 @@ NOT FOUND
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
   runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;
+  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;
   runtime.mutationGate = hkMutationGate;
   runtime.gameBridge = hkGameBridge;
   let clanSkillScanning = false;
@@ -12451,7 +12350,6 @@ NOT FOUND
 
 ===== GROWTH_HAMSTER_BUDGET_ID =====
 
-                const before = Number(current?.hamsterCollection?.unitsCount);
                 try { return originalUpdate.apply(this,args); }
                 finally {
                   const after = Number(current?.hamsterCollection?.unitsCount);
@@ -12519,6 +12417,7 @@ NOT FOUND
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -12530,6 +12429,7 @@ NOT FOUND
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
   runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;
+  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;
   runtime.mutationGate = hkMutationGate;
   runtime.gameBridge = hkGameBridge;
   let clanSkillScanning = false;
@@ -13689,6 +13589,7 @@ NOT FOUND
           updatePitStatus(pitState()); updatePitButtons();
           liveReadOk=true;return playerDocument;
         }
+        if (key === 'bosses') {const value=await refreshBosses(false);liveReadOk=true;return value;}
         if (key === 'wars') {const value=await refreshWars(false);liveReadOk=true;return value;}
         if (key === 'clan') {
           playerDocument = await apiJson('/player/me','POST');
@@ -13736,8 +13637,7 @@ NOT FOUND
     root.querySelector('#hk-runner-fill').style.width=`${percent}%`;
     const pause=root.querySelector('#hk-runner-pause'); const stop=root.querySelector('#hk-runner-stop');
     pause.textContent=state.status==='paused'?either('Продолжить','Continue'):either('Пауза','Pause');
-    pause.disabled=!state.pausable||!['running','paused'].includes(state.status);
-    stop.textContent=either('Остановить','Stop'); stop.disabled=!state.stoppable||!['running
+    pause.disabled=!state.pausable||!['running','paused'].includes(state.
 
 ===== function growthRunPlan( =====
 
@@ -14007,6 +13907,7 @@ NOT FOUND
           updatePitStatus(pitState()); updatePitButtons();
           liveReadOk=true;return playerDocument;
         }
+        if (key === 'bosses') {const value=await refreshBosses(false);liveReadOk=true;return value;}
         if (key === 'wars') {const value=await refreshWars(false);liveReadOk=true;return value;}
         if (key === 'clan') {
           playerDocument = await apiJson('/player/me','POST');
@@ -14054,8 +13955,7 @@ NOT FOUND
     root.querySelector('#hk-runner-fill').style.width=`${percent}%`;
     const pause=root.querySelector('#hk-runner-pause'); const stop=root.querySelector('#hk-runner-stop');
     pause.textContent=state.status==='paused'?either('Продолжить','Continue'):either('Пауза','Pause');
-    pause.disabled=!state.pausable||!['running','paused'].includes(state.status);
-    stop.textContent=either('Остановить','Stop'); stop.disabled=!state.stoppable||!['running','pau
+    pause.disabled=!state.pausable||!['running','paused'].includes(state.status
 
 ===== async function releaseFreeBusinessManagers( =====
 
