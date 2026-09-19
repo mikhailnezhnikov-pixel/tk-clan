@@ -62,12 +62,22 @@ jobs:
             tail -n 40 /tmp/stage1-build.log
           } > audit/hk-stage1-build-test.txt
 
+          cp audit/hk-stage1-build-test.txt /tmp/hk-stage1-build-test.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-stage1-build-test.txt
-          git commit -m "Record Stage 1 build-only test" || true
-          git pull --rebase origin main || true
-          git push origin HEAD:main || true
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p audit
+            cp /tmp/hk-stage1-build-test.txt audit/hk-stage1-build-test.txt
+            git add audit/hk-stage1-build-test.txt
+            if git diff --cached --quiet; then pushed=1; break; fi
+            git commit -m "Record Stage 1 build-only test"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = "1"
 
       - name: Cleanup
         if: always()
