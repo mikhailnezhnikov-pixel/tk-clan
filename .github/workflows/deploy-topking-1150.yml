@@ -106,9 +106,11 @@ jobs:
             echo "verified_by=deploy-topking-1150"
           } > audit/hk-stage1-live-status.txt
 
+          grep -nE -C 10 'const hkRunner|AbortController|waitIfPaused|stopRequested|pitRunning|fairRunning|fairStop|recipeRunning|recipeStop|moduleMutationBusy|const hkStateStore|hkStateStore\.|async function apiJsonCore|async function apiJson\(' /tmp/topking-live-after-deploy.js > audit/hk-stage1-live-snippets.txt || true
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-stage1-live-status.txt
+          git add audit/hk-stage1-live-status.txt audit/hk-stage1-live-snippets.txt
           if ! git diff --cached --quiet; then
             git commit -m "Verify live TopKing 1.15.0 Stage 1 r4"
             git pull --rebase origin main
