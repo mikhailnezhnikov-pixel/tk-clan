@@ -1,0 +1,8 @@
+version=1.16.8
+stage2i=stage2i-buildings-explore-20260919-r1
+modules=buildings,explore
+building_endpoint=/player/building
+explore_endpoints=/game_area/*,/game_area/*/buildings
+syntax=ok
+roundtrip=identical
+sha256=1fe76ca7a7e415545bf097cdb1a241bd2f4cac5efbbca7b9af919cd570874811
