@@ -1,2 +1,3 @@
-capture=2026-09-20T02:40:00+09:00
-scope=login-gate-live-verify
+capture=2026-09-20T02:45:00+09:00
+scope=bureau-resources-build-only
+retry=5
