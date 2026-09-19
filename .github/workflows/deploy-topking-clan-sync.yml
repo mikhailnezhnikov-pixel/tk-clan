@@ -25,6 +25,9 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Materialize tested files
         shell: bash
         run: |
@@ -1736,9 +1739,50 @@ jobs:
           EOF_USER
           tr -d '[:space:]' < /tmp/server.py.gz.b64 | base64 -d | gzip -d > /tmp/server.py
           tr -d '[:space:]' < /tmp/HamsterKingMobile.user.js.gz.b64 | base64 -d | gzip -d > /tmp/HamsterKingMobile.user.js
+          base64 -d deploy/topking/userscript-1.7.66.patch.gz.b64 | gzip -d > /tmp/userscript-1.7.66.patch
+          patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.7.66.patch
           python3 -m py_compile /tmp/server.py
-          grep -q '^// @version      1.7.65$' /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.7.66          grep -q 'submit_clan_full_snapshot' /tmp/server.py
+
+      - name: Upload and activate
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          stamp="$(date +%Y%m%d-%H%M%S)"
+          cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.$stamp"
+          cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp"
+          python3 -m py_compile /tmp/server.py
+          install -m 0644 /tmp/server.py /opt/hamsterking-license/server.py
+          install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+          python3 /opt/hamsterking-license/server.py --self-test
+          install -d -m 755 /etc/systemd/system/hamsterking-license.service.d
+          cat > /etc/systemd/system/hamsterking-license.service.d/min-version.conf <<'EOF_MIN'
+          [Service]
+          Environment="HK_MIN_SCRIPT_VERSION=1.7.66"
+          EOF_MIN
+          systemctl daemon-reload
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+          sleep 2
+          if ! curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config >/tmp/topking-config.json 2>/dev/null; then
+            curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config >/tmp/topking-config.json
+          fi
+          echo "DEPLOY_OK"
+          grep -m1 '^// @version' /opt/hamsterking-license/HamsterKingMobile.user.js
+          cat /tmp/topking-config.json
+          REMOTE
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/*.b64 /tmp/server.py /tmp/HamsterKingMobile.user.js
+ /tmp/HamsterKingMobile.user.js
           grep -q 'uploadClanSnapshot' /tmp/HamsterKingMobile.user.js
+          grep -q 'Общий вклад участников' /tmp/HamsterKingMobile.user.js
           grep -q 'submit_clan_full_snapshot' /tmp/server.py
 
       - name: Upload and activate
