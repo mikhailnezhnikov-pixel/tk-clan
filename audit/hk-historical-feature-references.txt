@@ -3,6 +3,206 @@
 
 ===== index.txt =====
 
+===== server-no-rumors.patch.txt =====
+1---- /mnt/data/topking_live_current/server.py	2026-09-19 08:26:26.000000000 +0000
+2:+++ /mnt/data/rumor_cleanup/server.py	2026-09-19 08:28:56.646329816 +0000
+3-@@ -19,7 +19,7 @@
+4- import urllib.error
+5- import urllib.request
+6- from contextlib import contextmanager
+7--from datetime import datetime, timedelta, timezone
+8-+from datetime import datetime, timezone
+9- from http import HTTPStatus
+10- from http.cookies import SimpleCookie
+11- from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+12-@@ -39,8 +39,6 @@
+13- BUSINESS_CALCULATOR_ICONS = frozenset({"item_bsn_r0t3_dummy_icon.png", "item_bsn_r1t0_perhour_curnuts_icon.png"})
+14- PUBLIC_BASE = os.environ.get("HK_PUBLIC_BASE", "https://hk-license.89.125.1.71.sslip.io").rstrip("/")
+15- RELEASE_NOTES = os.environ.get("HK_RELEASE_NOTES", "Исправления и улучшения Hamster King Mobile.")[:1000]
+16:-RUMOR_UTC_OFFSET = int(os.environ.get("HK_RUMOR_UTC_OFFSET", "9"))
+17:-RUMOR_TIMEZONE = timezone(timedelta(hours=RUMOR_UTC_OFFSET), name=f"UTC{RUMOR_UTC_OFFSET:+d}")
+18- ALLOWED_ORIGINS = {value.strip() for value in os.environ.get(
+19-     "HK_ALLOWED_ORIGINS", "https://app.hamsterking.games,https://app.hamsterking.ru"
+20- ).split(",") if value.strip()}
+21-@@ -68,17 +66,6 @@
+22-     return datetime.fromtimestamp(timestamp, timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+23- 
+24- 
+25:-def active_rumor_route_date(now: datetime | None = None) -> str:
+26--    """Return the route date for the 21:00–20:59 game-day window."""
+27--    moment = now or datetime.now(timezone.utc)
+28--    if moment.tzinfo is None:
+29--        moment = moment.replace(tzinfo=timezone.utc)
+30:-    local = moment.astimezone(RUMOR_TIMEZONE)
+31--    if local.hour < 21:
+32--        local -= timedelta(days=1)
+33--    return local.strftime("%Y-%m-%d")
+34--
+35--
+36- def version_tuple(value: str) -> tuple[int, ...] | None:
+37-     """Parse a numeric dotted version and ignore harmless suffixes."""
+38-     match = re.match(r"^\s*(\d+(?:\.\d+)*)", value or "")
+39-@@ -271,13 +258,6 @@
+40-             );
+41-             CREATE INDEX IF NOT EXISTS idx_access_log_created ON access_log(created_at DESC);
+42-             CREATE INDEX IF NOT EXISTS idx_access_log_identity ON access_log(player_id,device_id,created_at DESC);
+43:-            CREATE TABLE IF NOT EXISTS rumor_routes (
+44--                route_date TEXT PRIMARY KEY,
+45--                source_text TEXT NOT NULL,
+46--                routes_json TEXT NOT NULL,
+47--                published_at INTEGER NOT NULL,
+48--                updated_at INTEGER NOT NULL
+49--            );
+50-             CREATE TABLE IF NOT EXISTS user_settings (
+51-                 player_id TEXT PRIMARY KEY,
+52-                 settings_json TEXT NOT NULL DEFAULT '{}',
+53-@@ -655,36 +635,6 @@
+54-                    (utc_now(), action[:80], target[:128], ip[:64], detail[:500]))
+55- 
+56- 
+57:-def parse_rumor_route(source_text: str) -> tuple[str, list[dict]]:
+58--    """Parse the compact daily route format pasted by the owner."""
+59--    text = str(source_text or "").replace("\r", "")
+60--    date_match = re.search(r"\b(\d{2})\.(\d{2})\.(\d{4})\b", text)
+61--    if not date_match:
+62--        raise ValueError("route date is required")
+63--    day, month, year = date_match.groups()
+64--    route_date = f"{year}-{month}-{day}"
+65--    datetime.strptime(route_date, "%Y-%m-%d")
+66--    group = ""
+67--    rows: list[dict] = []
+68--    for raw_line in text.split("\n"):
+69--        line = raw_line.strip().replace("﹕", ":")
+70--        if not line or line == "᠎":
+71--            continue
+72--        first, *rest = line.split(maxsplit=1)
+73--        coords = re.findall(r"\b(\d{1,2}):(\d{2})\b", first)
+74--        if coords and rest:
+75--            city = rest[0].strip()
+76--            points = [{"x": int(x), "y": int(y)} for x, y in coords]
+77--            if city and points:
+78--                rows.append({"group": group, "city": city[:80], "points": points})
+79--            continue
+80:-        if not re.search(r"\d{1,2}:\d{2}", line) and not re.fullmatch(r"[■\sRUMORSСЛУХИ]+", line, re.I):
+81--            group = line[:120]
+82--    if not rows:
+83:-        raise ValueError("no rumor coordinates found")
+84--    return route_date, rows
+85--
+86--
+87- def record_access(db: sqlite3.Connection, player_id: str, device_id: str, version: str, ip: str) -> None:
+88-     """Keep a compact connection history: one successful entry per device/hour."""
+89-     now = utc_now()
+90-@@ -1012,41 +962,6 @@
+91-     return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
+92- 
+93- 
+94:-def rumor_city_key(value: str) -> str:
+95--    key = re.sub(r"[^a-zа-я0-9]+", " ", str(value or "").casefold().replace("ё", "е")).strip()
+96--    aliases = {
+97--        "москва":"moscow", "санкт петербург":"spb", "saint petersburg":"spb", "st petersburg":"spb",
+98--        "минск":"minsk", "берлин":"berlin", "лондон":"london", "париж":"paris", "дубай":"dubai",
+99--        "токио":"tokyo", "сингапур":"singapore", "нью йорк":"new york", "лос анджелес":"los angeles",
+100--        "бостон":"boston", "вашингтон":"washington", "рио":"rio", "rio de janeiro":"rio",
+101--        "рио де жанейро":"rio", "лагос":"lagos", "сидней":"sydney", "окленд":"auckland",
+102--    }
+103--    return aliases.get(key, key)
+104--
+105--
+106:-def enrich_rumor_routes(db: sqlite3.Connection, routes: list[dict]) -> list[dict]:
+107--    areas = db.execute("SELECT area_id,city_id,city_name,x,y FROM map_areas WHERE x IS NOT NULL AND y IS NOT NULL").fetchall()
+108--    alias_rows = db.execute("SELECT source_area_id,canonical_area_id FROM map_area_aliases").fetchall()
+109--    aliases: dict[str, list[str]] = {}
+110--    for row in alias_rows:
+111--        aliases.setdefault(str(row["canonical_area_id"]), []).append(str(row["source_area_id"]))
+112--    result = json.loads(json.dumps(routes, ensure_ascii=False))
+113--    for route in result:
+114:-        wanted_city = rumor_city_key(route.get("city", ""))
+115--        for point in route.get("points", []):
+116--            matches = []
+117--            for area in areas:
+118:-                city_keys = (rumor_city_key(area["city_name"]), rumor_city_key(area["city_id"]))
+119--                if int(area["x"]) == int(point.get("x", -1)) and int(area["y"]) == int(point.get("y", -1)) and any(
+120--                    wanted_city and (wanted_city in key or key in wanted_city) for key in city_keys if key
+121--                ):
+122--                    canonical = str(area["area_id"])
+123--                    matches.extend(aliases.get(canonical, []))
+124--                    matches.append(canonical)
+125--            point["area_ids"] = list(dict.fromkeys(matches))
+126--    return result
+127--
+128--
+129- def canonical_map_area(db: sqlite3.Connection, area: dict) -> str:
+130-     alias = db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",
+131-                        (area["area_id"],)).fetchone()
+132-@@ -2093,26 +2008,6 @@
+133-                     self.send_json(HTTPStatus.OK if detail else HTTPStatus.NOT_FOUND, {"ok":bool(detail),"detail":detail})
+134-                 else:
+135-                     maps = map_index(); self.send_json(HTTPStatus.OK, {"ok":True,"total":len(maps),"maps":maps})
+136:-            elif path == "/api/v1/rumors/today":
+137--                origin = self.headers.get("Origin", "")
+138--                if origin not in ALLOWED_ORIGINS:
+139--                    self.send_json(HTTPStatus.FORBIDDEN, {"error":"origin_not_allowed"}); return
+140--                if not self.recipe_player():
+141--                    self.send_json(HTTPStatus.UNAUTHORIZED, {"error":"unauthorized"}); return
+142--                self.read_json()
+143:-                today = active_rumor_route_date()
+144--                with db_session() as db:
+145:-                    row = db.execute("SELECT route_date,routes_json,published_at FROM rumor_routes WHERE route_date=?", (today,)).fetchone()
+146--                if not row:
+147--                    self.send_json(HTTPStatus.OK, {"ok": True, "date": today, "routes": []})
+148--                    return
+149--                try:
+150--                    routes = json.loads(row["routes_json"])
+151--                except json.JSONDecodeError:
+152--                    routes = []
+153--                with db_session() as db:
+154:-                    routes = enrich_rumor_routes(db, routes)
+155--                self.send_json(HTTPStatus.OK, {"ok": True, "date": row["route_date"], "published_at": row["published_at"], "routes": routes})
+156-             elif path == "/admin/login":
+157-                 ip = self.client_ip()
+158-                 if not rate_allowed(f"admin-login:{ip}", 5, 900):
+159-@@ -2155,7 +2050,6 @@
+160-             audit_rows = db.execute("SELECT created_at,action,target,ip,detail FROM admin_audit ORDER BY id DESC LIMIT 40").fetchall()
+161-             access_rows = db.execute("""SELECT created_at,player_id,device_id,script_version,ip
+162-                                        FROM access_log ORDER BY id DESC LIMIT 80""").fetchall()
+163:-            rumor_row = db.execute("SELECT route_date,source_text,published_at FROM rumor_routes ORDER BY route_date DESC LIMIT 1").fetchone()
+164-             member_rows = db.execute("""SELECT telegram_id,note,first_name,username,linked_player_id,active,last_login
+165-                                         FROM clan_members ORDER BY active DESC,updated_at DESC""").fetchall()
+166-         table_rows = "".join(f"""<tr><td><b>{html.escape(row['player_id'])}</b><br><small>{html.escape(row['note'])}</small></td>
+167-@@ -2166,10 +2060,7 @@
+168-         audit_html = "".join(f"<tr><td>{iso_time(row['created_at'])}</td><td>{html.escape(row['action'])}</td><td>{html.escape(row['target'])}</td><td>{html.escape(row['ip'])}</td><td>{html.escape(row['detail'])}</td></tr>" for row in audit_rows)
+169-         access_html = "".join(f"<tr><td>{iso_time(row['created_at'])}</td><td><b>{html.escape(row['player_id'])}</b></td><td>{html.escape(row['device_id'][:12])}…{html.escape(row['device_id'][-6:])}</td><td>{html.escape(row['script_version'])}</td><td>{html.escape(row['ip'])}</td></tr>" for row in access_rows)
+170-         members_html = "".join(f"""<tr><td><b>{html.escape(row['telegram_id'])}</b><br><span class=muted>{html.escape(row['first_name'])}{(' · @' + html.escape(row['username'])) if row['username'] else ''}</span></td><td>{html.escape(row['note'])}</td><td>{html.escape(row['linked_player_id'] or '—')}</td><td>{'Разрешён' if row['active'] else 'Заблокирован'}<br><span class=muted>{iso_time(row['last_login'])}</span></td><td><div class=actions><form method=post action=/admin/telegram/toggle><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button>{'Заблокировать' if row['active'] else 'Разрешить'}</button></form><form method=post action=/admin/telegram/delete onsubmit="return confirm('Удалить Telegram ID?')"><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button class=danger>Удалить</button></form></div></td></tr>""" for row in member_rows)
+171:-        rumor_text = html.escape(rumor_row["source_text"] if rumor_row else "", quote=False)
+172:-        rumor_status = f"Опубликован маршрут на <b>{html.escape(rumor_row['route_date'])}</b> · {iso_time(rumor_row['published_at'])}" if rumor_row else "Маршрут ещё не опубликован"
+173-         content = f"""<div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h1>Лицензии Hamster King</h1><p class=muted>Разрешённые игровые ID · опубликована <b>{html.escape(release_version())}</b> · минимальная <b>{html.escape(MIN_SCRIPT_VERSION)}</b> · SHA-256 <b>{html.escape(release_sha256()[:12])}</b></p></div><form method=post action=/admin/logout><button>Выйти</button></form></div>
+174:-        <div class=card><h2>Маршрут слухов на день</h2><p class=muted>{rumor_status}. Вставьте текст целиком: дата, затем строки «координаты Город». Регионы распознаются автоматически.</p><form method=post action=/admin/rumors/publish><textarea name=route_text required rows=18 style="width:100%;box-sizing:border-box;font:14px ui-monospace,monospace">{rumor_text}</textarea><div class=actions style="margin-top:10px"><button class=primary>Опубликовать маршрут</button></div></form></div>
+175-         <div class=card><h2>Доступ в личный кабинет</h2><p class=muted>Только добавленные здесь Telegram ID смогут войти. Игровой ID участник привяжет один раз самостоятельно — лицензия создастся автоматически.</p><form class=grid method=post action=/admin/telegram/add><input name=telegram_id inputmode=numeric pattern="[0-9]{{5,20}}" placeholder="Telegram ID" required maxlength=20><input name=note placeholder="Имя или комментарий"><button class=primary>Разрешить вход</button></form><table><thead><tr><th>Telegram</th><th>Комментарий</th><th>Игровой ID</th><th>Статус / вход</th><th>Действия</th></tr></thead><tbody>{members_html or '<tr><td colspan=5 class=muted>Разрешённых Telegram ID пока нет</td></tr>'}</tbody></table></div>
+176-         <div class=card><h2>Добавить игровой ID вручную</h2><form class=grid method=post action=/admin/add><input name=player_id placeholder="ID игрового аккаунта" required maxlength=128><input name=note placeholder="Комментарий"><input type=date name=expires title="Срок (пусто = бессрочно)"><button class=primary>Добавить</button></form></div>
+177-         <div class=card><table><thead><tr><th>ID / комментарий</th><th>Срок</th><th>Последняя проверка</th><th>Статус</th><th>Действия</th></tr></thead><tbody>{table_rows or '<tr><td colspan=5 class=muted>Пока нет разрешённых ID</td></tr>'}</tbody></table></div>
+178-@@ -2178,20 +2069,6 @@
+179-         self.send_common(HTTPStatus.OK, "text/html; charset=utf-8", page_shell("Лицензии", content))
+180- 
+181-     def admin_action(self, path: str, form: dict[str, str]) -> None:
+182:-        if path == "/admin/rumors/publish":
+183--            try:
+184:-                route_date, routes = parse_rumor_route(form.get("route_text", ""))
+185--                now = utc_now()
+186--                with db_session() as db:
+187:-                    db.execute("""INSERT INTO rumor_routes(route_date,source_text,routes_json,published_at,updated_at)
+188--                                  VALUES(?,?,?,?,?) ON CONFLICT(route_date) DO UPDATE SET source_text=excluded.source_text,
+189--                                  routes_json=excluded.routes_json,published_at=excluded.published_at,updated_at=excluded.updated_at""",
+190--                               (route_date, form.get("route_text", "")[:20000], json.dumps(routes, ensure_ascii=False, separators=(",", ":")), now, now))
+191:-                audit("rumors_publish", route_date, self.client_ip(), f"cities={len(routes)} points={sum(len(row['points']) for row in routes)}")
+192--            except ValueError as error:
+193:-                audit("rumors_publish_failed", "", self.client_ip(), str(error))
+194--            self.redirect("/admin")
+195--            return
+196-         if path.startswith("/admin/telegram/"):
+197-             telegram_id = form.get("telegram_id", "").strip()
+198-             if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+
 ===== userscript-1.10.0.patch.txt =====
 
 ===== userscript-1.11.0.patch.txt =====
