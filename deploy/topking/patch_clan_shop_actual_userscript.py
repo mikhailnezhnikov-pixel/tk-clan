@@ -11,10 +11,11 @@ def sync_version(text):
     if n_meta != 1:
         raise SystemExit("userscript version metadata missing")
     text, n_fallback = re.subn(
-        r"(const BUILD_VERSION = typeof GM_info[\\s\\S]*?: )'[^']+';",
-        r"\\1'1.17.0';",
+        r"(const BUILD_VERSION = typeof GM_info.*?\n\s*: )'[^']+';",
+        r"\1'1.17.0';",
         text,
         count=1,
+        flags=re.S,
     )
     if n_fallback != 1:
         raise SystemExit("BUILD_VERSION fallback missing")
