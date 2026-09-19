@@ -1,0 +1,41 @@
+name: Inspect live clan shop lot classifiers
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-live-clan-shop-lots.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inspect live userscript
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            f=/opt/hamsterking-license/HamsterKingMobile.user.js
+            echo "=== VERSION ==="
+            grep -m1 "^// @version" "$f"
+            echo "=== NORMALIZE SHOP ==="
+            n=$(grep -n "function normalizeRegularShop" "$f" | head -1 | cut -d: -f1 || true)
+            if [ -n "$n" ]; then sed -n "${n},$((n+220))p" "$f"; fi
+            echo "=== CLAN LOT TERMS ==="
+            grep -niE "idol|гуру|guru|s\+|shared|clanGroup|business.*plus|item_bsn|orb|шар" "$f" | head -260 || true
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
