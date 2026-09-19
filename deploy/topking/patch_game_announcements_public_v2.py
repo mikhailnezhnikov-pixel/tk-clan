@@ -3,9 +3,9 @@ import sys
 
 path = Path(sys.argv[1])
 s = path.read_text()
-MARKER = "GAME_ANNOUNCEMENTS_PUBLIC_V2"
+MARKER = "GAME_ANNOUNCEMENTS_PUBLIC_V3"
 if MARKER in s:
-    print("GAME_ANNOUNCEMENTS_PUBLIC_V2_ALREADY_PRESENT")
+    print("GAME_ANNOUNCEMENTS_PUBLIC_V3_ALREADY_PRESENT")
     raise SystemExit(0)
 
 start = s.find("def game_announcements_payload(force: bool = False) -> dict:")
@@ -13,7 +13,7 @@ end = s.find("\n\ndef page_shell(", start)
 if start < 0 or end < 0:
     raise SystemExit("game announcements function anchor missing")
 
-new_function = r'''# GAME_ANNOUNCEMENTS_PUBLIC_V2
+new_function = r'''# GAME_ANNOUNCEMENTS_PUBLIC_V3
 def game_announcements_payload(force: bool = False) -> dict:
     import html as _html
     import re as _re
@@ -47,8 +47,13 @@ def game_announcements_payload(force: bool = False) -> dict:
             if not href.startswith(("https://", "http://")):
                 return
             links = self.current.setdefault("links", [])
-            if not any(str(x.get("url") or "") == href for x in links):
-                links.append({"url": href, "label": str(label or "").strip()[:200]})
+            clean_label = str(label or "").strip()[:200]
+            for existing in links:
+                if str(existing.get("url") or "") == href:
+                    if clean_label and not str(existing.get("label") or "").strip():
+                        existing["label"] = clean_label
+                    return
+            links.append({"url": href, "label": clean_label})
 
         def _image_from_attrs(self, tag, attrs, classes):
             if not self.current or self.current.get("image_url"):
@@ -235,7 +240,8 @@ public_route = '''        elif path == "/api/v1/announcements":
             result = game_announcements_payload()
             self.send_cabinet_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
 '''
-s = s.replace(cabinet_anchor, public_route + cabinet_anchor, 1)
+if 'elif path == "/api/v1/announcements":' not in s:
+    s = s.replace(cabinet_anchor, public_route + cabinet_anchor, 1)
 
 path.write_text(s)
-print("GAME_ANNOUNCEMENTS_PUBLIC_V2_PATCH_OK")
+print("GAME_ANNOUNCEMENTS_PUBLIC_V3_PATCH_OK")
