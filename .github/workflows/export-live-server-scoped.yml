@@ -1,0 +1,38 @@
+name: Export live server for scoped map patch
+
+on:
+  push:
+    paths:
+      - '.github/workflows/export-live-server-scoped.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch server
+        run: |
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py ./server.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scoped-live-server
+          path: server.py
+          retention-days: 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" server.py
