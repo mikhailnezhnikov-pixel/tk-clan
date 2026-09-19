@@ -1,0 +1,92 @@
+name: Inspect Preserved TopKing Sources
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-preserved-topking.yml'
+      - 'deploy/topking/preserved-source-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inspect-preserved-topking
+  cancel-in-progress: true
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inventory preserved userscripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit /tmp/hk-preserved
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' > /tmp/hk-preserved/inventory.txt <<'REMOTE'
+          set -u
+          for f in /opt/hamsterking-license/HamsterKingMobile.user.js* /root/HamsterKingMobile.user.js*; do
+            [ -f "$f" ] || continue
+            v="$(grep -m1 '^// @version' "$f" 2>/dev/null | sed -E 's#^// @version[[:space:]]+##' || true)"
+            [ -n "$v" ] || continue
+            war="$(grep -Eic 'clan.?war|war.?snapshot|war.?score|public-snapshot|clan_war' "$f" 2>/dev/null || true)"
+            rumor="$(grep -Eic 'runDailyRumors|rumors/search|RUMOR_API_BASE' "$f" 2>/dev/null || true)"
+            boss="$(grep -Eic 'regional_boss|boss_battle|player_bosses' "$f" 2>/dev/null || true)"
+            building="$(grep -Eic 'building.?event|open.?building|explore.?building|building.?explore' "$f" 2>/dev/null || true)"
+            realtime="$(grep -Eic 'WebSocket|websocket|socket.io|realtime' "$f" 2>/dev/null || true)"
+            printf '%s\twar=%s\trumor=%s\tboss=%s\tbuilding=%s\trealtime=%s\t%s\n' "$v" "$war" "$rumor" "$boss" "$building" "$realtime" "$f"
+          done | sort -V
+          REMOTE
+
+          {
+            echo "# Preserved userscript feature inventory"
+            echo
+            cat /tmp/hk-preserved/inventory.txt
+          } > audit/hk-preserved-feature-inventory.txt
+
+      - name: Export exact 1.9.6 migration contexts
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js.bak.20260919-061430 \
+            /tmp/hk-preserved/HamsterKingMobile_v1.9.6.user.js
+
+          {
+            echo "# Preserved 1.9.6 war / rumors / planned-feature source"
+            echo
+            grep -nEi -C 55 'clan.?war|war.?snapshot|war.?score|PUBLIC_SNAPSHOT_API|public-snapshot|runDailyRumors|rumors/search|RUMOR_API_BASE|regional_boss|boss_battle|building.?event|open.?building|explore|WebSocket|realtime' \
+              /tmp/hk-preserved/HamsterKingMobile_v1.9.6.user.js || true
+          } > audit/hk-preserved-196-source.txt
+
+      - name: Commit source inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-preserved-feature-inventory.txt audit/hk-preserved-196-source.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Inspect preserved userscript migration sources"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/hk-preserved/HamsterKingMobile_v1.9.6.user.js
