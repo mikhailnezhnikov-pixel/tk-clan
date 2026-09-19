@@ -190,6 +190,7 @@ def sync_version(text):
 
 s = sync_version(s)
 if MARKER in s:
+    s = apply_alliance_ratings_patch(s)
     s = apply_today_hotfix(s)
     s = apply_login_gate(s)
     s = apply_bureau_resources_hotfix(s)
@@ -270,6 +271,7 @@ if old not in s:
     raise SystemExit("buy completion anchor missing")
 s=s.replace(old,new,1)
 
+s = apply_alliance_ratings_patch(s)
 s = apply_today_hotfix(s)
 s = apply_login_gate(s)
 s = apply_bureau_resources_hotfix(s)
