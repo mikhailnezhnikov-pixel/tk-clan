@@ -86,6 +86,7 @@ jobs:
             n=$((n+1))
             curl -fsSL --max-time 25 "$url" -o "/tmp/hk-app/$n.js" || continue
           done </tmp/hk-app/scripts.txt
+          curl -fsSL --max-time 30 https://cdn-prod-front-dist.hwgame.cloud/assets/app_2017.js -o /tmp/hk-app/app_2017.js
           echo "=== ALLIANCE ROUTE STRINGS ==="
           python3 - <<'PY'
           import pathlib,re
