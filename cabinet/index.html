@@ -253,6 +253,8 @@
     .clanshop-table tbody tr:last-child td{border-bottom:0}
     .clanshop-player strong{display:block;color:#fff}
     .clanshop-player small{display:block;margin-top:2px;color:var(--muted)}
+    .clanshop-player .clanshop-inline-history{margin-top:5px;color:#aeb7c3;font-size:11px;line-height:1.35}
+    .clanshop-player .clanshop-inline-history b{display:inline;color:#ffe0a0;font-size:11px}
     .clanshop-select{min-width:76px;padding:7px 9px;border:1px solid rgba(232,182,84,.25);border-radius:9px;background:#0b1017;color:#fff;font-weight:850;text-align:center}
     .clanshop-qty{display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.045);font-weight:850}
     .clanshop-note{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
@@ -758,7 +760,7 @@
             <div class="clanshop-history-head">
               <div>
                 <h3>История покупок</h3>
-                <p>Считаются только опубликованные итоговые списки. Заявки игроков в статистику не входят.</p>
+                <p>История строится по фактическим покупкам общих лотов Clan Shop из игры. План и заявки в статистику не входят.</p>
               </div>
               <div class="clanshop-periods" role="group" aria-label="Период истории покупок">
                 <button class="clanshop-period active" type="button" data-clanshop-period="week">Неделя</button>
@@ -1305,6 +1307,29 @@
     }catch{return 'Опубликовано'}
   }
 
+  function clanShopPlayerActualTotals(row){
+    const rows=Array.isArray(clanShopHistory)?clanShopHistory:[];
+    const playerId=String(row?.player_id||'');
+    const playerKey=String(row?.player_key||'');
+    const nickname=String(row?.nickname||'').trim().toLowerCase();
+    return rows.reduce((totals,item)=>{
+      const sameId=playerId&&String(item.player_id||'')===playerId;
+      const sameKey=playerKey&&String(item.player_key||'')===playerKey;
+      const sameName=!playerId&&!playerKey&&nickname&&String(item.nickname||'').trim().toLowerCase()===nickname;
+      if(sameId||sameKey||sameName){
+        totals.idol_orbs+=Number(item.idol_orbs||0);
+        totals.splus_businesses+=Number(item.splus_businesses||0);
+      }
+      return totals;
+    },{idol_orbs:0,splus_businesses:0});
+  }
+
+  function clanShopPlayerHtml(row){
+    const totals=clanShopPlayerActualTotals(row);
+    return '<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong>'+
+      '<small class="clanshop-inline-history">Куплено: Бизнесы S+ <b>'+totals.splus_businesses+'</b> · Шары <b>'+totals.idol_orbs+'</b></small></div>';
+  }
+
   function renderClanShop(){
     const data=clanShopData;
     const body=$('clanshop-body');
@@ -1373,7 +1398,7 @@
         const requests=participants.filter(row=>Number(row.request_splus_businesses||0)>0);
         if($('clanshop-request-count'))$('clanshop-request-count').textContent=requests.length+' заявок';
         requestsBody.innerHTML=requests.map(row=>{
-          const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong></div>';
+          const player=clanShopPlayerHtml(row);
           const qty=Number(row.request_splus_businesses||0);
           const accepted=Number(row.splus_businesses||0)===qty;
           const requestCell='<div class="clanshop-request-cell"><span class="clanshop-request-label">Запрос: <b class="clanshop-qty">'+qty+'</b></span>'+
@@ -1385,7 +1410,7 @@
     }
 
     body.innerHTML=filtered.map(row=>{
-      const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong></div>';
+      const player=clanShopPlayerHtml(row);
       if(data.can_manage){
         return '<tr data-clanshop-player="'+safe(row.player_key)+'">'+
           '<td>'+player+'</td>'+
@@ -1474,7 +1499,7 @@
           '</div></td></tr>');
       }
     });
-    body.innerHTML=html.join('')||'<tr><td colspan="4" class="muted">Опубликованных покупок за этот период пока нет.</td></tr>';
+    body.innerHTML=html.join('')||'<tr><td colspan="4" class="muted">Фактических покупок за этот период пока нет.</td></tr>';
     const message=$('clanshop-history-message');
     if(message){
       message.textContent=players.length?'Нажмите на игрока, чтобы раскрыть покупки по неделям.':'';
@@ -1488,6 +1513,7 @@
       clanShopHistory=Array.isArray(data.items)?data.items:[];
       clanShopHistoryLoaded=true;
       renderClanShopHistory();
+      renderClanShop();
     }catch{
       setMessage('clanshop-message','Не удалось загрузить историю покупок.','bad');
     }
@@ -2281,7 +2307,7 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/cabinet-i18n.js?v=20260920-8"></script>
+<script src="../assets/cabinet-i18n.js?v=20260920-9"></script>
 <script src="../assets/site-nav.js?v=20260919-9"></script>
 </body>
 </html>
