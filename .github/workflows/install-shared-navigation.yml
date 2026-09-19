@@ -21,17 +21,24 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          nav_version='20260920-3'
+          nav_version='20260920-4'
           for p in Path('.').rglob('index.html'):
               rel=p.as_posix()
               if rel.startswith('.git/') or rel=='maps/moscow-20-19/index.html':
                   continue
               s=p.read_text('utf-8')
-              if 'site-nav.js' in s:
-                  continue
               depth=len(p.parent.parts)
               prefix='../'*depth
-              tag=f'<script src="{prefix}assets/site-nav.js"></script>'
+              tag=f'<script src="{prefix}assets/site-nav.js?v={nav_version}"></script>'
+              if 'site-nav.js' in s:
+                  updated=re.sub(
+                      r'<script src="(?:\.\./)*assets/site-nav\.js(?:\?v=[^"]*)?"></script>',
+                      tag,
+                      s
+                  )
+                  if updated!=s:
+                      p.write_text(updated,'utf-8')
+                  continue
               if '</body>' in s:
                   s=s.replace('</body>',tag+'\n</body>',1)
                   p.write_text(s,'utf-8')
