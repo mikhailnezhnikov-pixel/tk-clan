@@ -35,7 +35,8 @@ jobs:
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          grep -q '^// @version      1.11.0          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
+          grep -q "@version      1.11.0" /tmp/HamsterKingMobile.user.js
+          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
           ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
 
       - name: Build 1.12.0
@@ -45,7 +46,8 @@ jobs:
           base64 -d deploy/topking/userscript-1.12.0.patch.part00.b64 | gzip -d > /tmp/userscript-1.12.0.patch
           patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.12.0.patch
 
-          grep -q '^// @version      1.12.0          grep -q 'growthRunHamsters' /tmp/HamsterKingMobile.user.js
+          grep -q "@version      1.12.0" /tmp/HamsterKingMobile.user.js
+          grep -q 'growthRunHamsters' /tmp/HamsterKingMobile.user.js
           grep -q 'growthRunGenerals' /tmp/HamsterKingMobile.user.js
           grep -q 'growthBuyGeneralContracts' /tmp/HamsterKingMobile.user.js
           grep -q 'data-content="growth-hamsters"' /tmp/HamsterKingMobile.user.js
