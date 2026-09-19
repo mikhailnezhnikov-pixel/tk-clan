@@ -56,9 +56,11 @@ jobs:
             echo "sha256=$live_sha"
           } > audit/hk-stage1-live-probe.txt
 
+          grep -nE -C 45 'growthRunGeneralsCore|growthRunLevelsCore|growthRunRarityCore|growthPitCost|growthCapCost|growthHamsterCostSafe|growthHamsterLevelCostSafe|player_hamster_generals|lvlUp/view|fast_type' /tmp/topking-live.js > audit/hk-growth-live-source.txt || true
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-stage1-live-probe.txt
+          git add audit/hk-stage1-live-probe.txt audit/hk-growth-live-source.txt
           if ! git diff --cached --quiet; then
             git commit -m "Probe current TopKing Stage 1 live"
             git pull --rebase origin main
