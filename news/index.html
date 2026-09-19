@@ -161,7 +161,18 @@ window.TK_PAGE_TRANSLATIONS={
     const title=lines.shift()||'Hamster King Announcement';
     return {title:title.length>180?title.slice(0,177)+'…':title,body:lines.join('\n\n').trim()};
   }
-  function isCyrillic(text){return /[А-Яа-яЁё]/.test(String(text||''))}
+  function looksRussian(text){
+    const sample=String(text||'').replace(/>>>?\s*\[?РУССКАЯ[^\n]*/gi,' ');
+    const cyr=(sample.match(/[А-Яа-яЁё]/g)||[]).length;
+    const lat=(sample.match(/[A-Za-z]/g)||[]).length;
+    return cyr>=30&&cyr>lat*.45;
+  }
+  function looksPersian(text){
+    const sample=String(text||'');
+    const fa=(sample.match(/[\u0600-\u06FF]/g)||[]).length;
+    const lat=(sample.match(/[A-Za-z]/g)||[]).length;
+    return fa>=30&&fa>lat*.45;
+  }
   function findLocalizedLink(item,target){
     const links=Array.isArray(item.links)?item.links:[];
     const candidates=links.filter(x=>/^https?:\/\/telegra\.ph\//i.test(String(x.url||'')));
@@ -193,19 +204,27 @@ window.TK_PAGE_TRANSLATIONS={
         const body=parts.body.length>1200?parts.body.slice(0,1200).trimEnd()+'…':parts.body;
         bodyHtml=body?'<p class="news-text">'+safe(body)+'</p>':'';
       }else if(l==='ru'){
-        if(isCyrillic(raw)){
-          const body=parts.body.length>1200?parts.body.slice(0,1200).trimEnd()+'…':parts.body;
-          bodyHtml=body?'<p class="news-text">'+safe(body)+'</p>':'';
-        }else if(localized){
+        if(localized){
           title='Официальная новость Hamster King';
           bodyHtml='<div class="news-locale-note">'+safe(s.ruAvailable)+'</div>';
+        }else if(looksRussian(raw)){
+          const body=parts.body.length>1200?parts.body.slice(0,1200).trimEnd()+'…':parts.body;
+          bodyHtml=body?'<p class="news-text">'+safe(body)+'</p>':'';
         }else{
           title='Официальная новость Hamster King';
           bodyHtml='<div class="news-locale-note">'+safe(s.ruMissing)+'</div>';
         }
       }else{
-        title='خبر رسمی Hamster King';
-        bodyHtml='<div class="news-locale-note">'+safe(localized?s.ruAvailable:s.ruMissing)+'</div>';
+        if(localized){
+          title='خبر رسمی Hamster King';
+          bodyHtml='<div class="news-locale-note">'+safe(s.ruAvailable)+'</div>';
+        }else if(looksPersian(raw)){
+          const body=parts.body.length>1200?parts.body.slice(0,1200).trimEnd()+'…':parts.body;
+          bodyHtml=body?'<p class="news-text">'+safe(body)+'</p>':'';
+        }else{
+          title='خبر رسمی Hamster King';
+          bodyHtml='<div class="news-locale-note">'+safe(s.ruMissing)+'</div>';
+        }
       }
 
       const image=item.image_url
