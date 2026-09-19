@@ -46,7 +46,8 @@
       const button=document.createElement('button');button.type='button';button.className='nav-group-toggle';
       button.textContent=labels[lang()][group.label]+' ▾';
       button.setAttribute('aria-expanded','false');
-      const menu=document.createElement('div');menu.className='nav-group-menu';
+      button.setAttribute('aria-haspopup','true');
+      const menu=document.createElement('div');menu.className='nav-group-menu';menu.setAttribute('role','menu');
       for(const [key,path] of group.items){
         const a=anchor(key,path,false);
         if(a.classList.contains('active'))button.classList.add('active');
@@ -62,6 +63,43 @@
     const style=document.createElement('style');
     style.id='tk-grouped-nav-style';
     style.textContent=`
+      /* One desktop header geometry on every public page. */
+      @media(min-width:981px){
+        .site-header .shell.header-inner,.topbar .shell.topbar-inner{
+          width:min(1200px,calc(100% - 48px))!important;
+          min-height:78px!important;
+          margin-inline:auto!important;
+          display:grid!important;
+          grid-template-columns:300px minmax(0,1fr) 300px!important;
+          align-items:center!important;
+          gap:0!important;
+          justify-content:initial!important;
+        }
+        .site-header .brand,.topbar .brand{
+          width:auto!important;
+          margin:0!important;
+          justify-self:start!important;
+        }
+        .site-header nav.desktop-nav,.topbar nav.nav{
+          width:100%!important;
+          min-width:0!important;
+          margin:0!important;
+          display:flex!important;
+          align-items:center!important;
+          justify-content:center!important;
+          gap:3px!important;
+          justify-self:center!important;
+        }
+        .site-header .tk-header-actions,.topbar .tk-header-actions{
+          width:300px!important;
+          margin:0!important;
+          display:flex!important;
+          align-items:center!important;
+          justify-content:flex-end!important;
+          gap:12px!important;
+          justify-self:end!important;
+        }
+      }
       .tk-header-actions{display:flex;align-items:center;gap:12px;flex:0 0 auto;margin-inline-start:auto}
       .tk-header-actions .tk-desktop-cabinet{min-height:46px;display:inline-flex;align-items:center;justify-content:center;padding:11px 20px;border:1px solid rgba(232,182,84,.45);border-radius:14px;color:#ffe3a0!important;background:rgba(232,182,84,.08);font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;transition:transform .2s ease,border-color .2s ease,background .2s ease}
       .tk-header-actions .tk-desktop-cabinet:hover,.tk-header-actions .tk-desktop-cabinet.active{color:#fff!important;border-color:rgba(255,220,135,.72);background:rgba(232,182,84,.13);transform:translateY(-1px)}
@@ -69,9 +107,32 @@
       .nav-group{position:relative;display:flex;align-items:center;flex:0 0 auto}
       .nav-group-toggle{min-height:42px;padding:10px 12px;border:0;border-radius:12px;background:transparent;color:#cbd0d8;font:700 14px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;transition:color .2s ease,background .2s ease,transform .2s ease}
       .nav-group-toggle:hover,.nav-group-toggle.active,.nav-group.open>.nav-group-toggle{color:#fff;background:rgba(255,255,255,.075);transform:translateY(-1px)}
-      .nav-group-menu{position:absolute;top:calc(100% + 8px);left:0;z-index:100;display:none;min-width:220px;padding:7px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(8,11,16,.98);box-shadow:0 18px 52px rgba(0,0,0,.42);backdrop-filter:blur(18px) saturate(130%);-webkit-backdrop-filter:blur(18px) saturate(130%)}
+      .nav-group-menu{
+        position:absolute;
+        top:calc(100% + 5px);
+        left:0;
+        z-index:100;
+        display:none;
+        min-width:232px;
+        padding:7px;
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:14px;
+        background:rgba(8,11,16,.985);
+        box-shadow:0 18px 52px rgba(0,0,0,.42);
+        backdrop-filter:blur(18px) saturate(130%);
+        -webkit-backdrop-filter:blur(18px) saturate(130%);
+      }
+      .nav-group-menu::before{
+        content:"";
+        position:absolute;
+        left:-4px;
+        right:-4px;
+        top:-12px;
+        height:14px;
+        background:transparent;
+      }
       .nav-group.open>.nav-group-menu{display:grid;gap:3px}
-      .nav-group-menu a{display:block!important;width:100%;margin:0!important;padding:10px 11px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#cbd0d8!important;font-size:13px!important;white-space:nowrap}
+      .nav-group-menu a{display:block!important;width:100%;margin:0!important;padding:11px 12px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#cbd0d8!important;font-size:13px!important;white-space:nowrap}
       .nav-group-menu a:hover,.nav-group-menu a.active{color:#fff!important;background:rgba(255,255,255,.075)!important;transform:none!important}
       .nav-group-menu a.active{color:#ffe3a0!important;background:rgba(232,182,84,.10)!important}
       @media (hover:hover) and (pointer:fine){
@@ -168,34 +229,70 @@
     document.body.classList.remove('menu-open');
   }
   function wireDesktopGroups(){
+    const closeGroup=group=>{
+      if(!group)return;
+      group.classList.remove('open');
+      group.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded','false');
+    };
+    const closeOthers=currentGroup=>{
+      document.querySelectorAll('.nav-group.open').forEach(other=>{
+        if(other!==currentGroup)closeGroup(other);
+      });
+    };
+
     document.querySelectorAll('.nav-group').forEach(group=>{
       if(group.dataset.tkWired==='1')return;
       group.dataset.tkWired='1';
       const toggle=group.querySelector('.nav-group-toggle');
-      const close=()=>{group.classList.remove('open');toggle?.setAttribute('aria-expanded','false')};
+      let closeTimer=0;
+
+      const cancelClose=()=>{
+        if(closeTimer){clearTimeout(closeTimer);closeTimer=0}
+      };
+      const open=()=>{
+        cancelClose();
+        closeOthers(group);
+        group.classList.add('open');
+        toggle?.setAttribute('aria-expanded','true');
+      };
+      const scheduleClose=(delay=420)=>{
+        cancelClose();
+        closeTimer=setTimeout(()=>{
+          closeTimer=0;
+          if(group.matches(':hover')||group.contains(document.activeElement))return;
+          closeGroup(group);
+        },delay);
+      };
+
       toggle?.addEventListener('click',event=>{
         event.preventDefault();
         event.stopPropagation();
         const next=!group.classList.contains('open');
-        document.querySelectorAll('.nav-group.open').forEach(other=>{
-          if(other!==group){
-            other.classList.remove('open');
-            other.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded','false');
-          }
-        });
-        group.classList.toggle('open',next);
-        toggle.setAttribute('aria-expanded',String(next));
+        if(next)open();else closeGroup(group);
       });
-      group.addEventListener('mouseleave',close);
+
+      // Mouse users get a forgiving corridor and a short grace period.
+      group.addEventListener('pointerenter',()=>{
+        if(matchMedia('(hover:hover) and (pointer:fine)').matches)open();
+      });
+      group.addEventListener('pointerleave',()=>{
+        if(matchMedia('(hover:hover) and (pointer:fine)').matches)scheduleClose(480);
+      });
+
+      // Keyboard navigation keeps the menu open while focus is inside it.
+      group.addEventListener('focusin',open);
+      group.addEventListener('focusout',()=>scheduleClose(180));
     });
+
     if(document.documentElement.dataset.tkDesktopNavClose!=='1'){
       document.documentElement.dataset.tkDesktopNavClose='1';
       document.addEventListener('click',event=>{
         if(event.target.closest('.nav-group'))return;
-        document.querySelectorAll('.nav-group.open').forEach(group=>{
-          group.classList.remove('open');
-          group.querySelector('.nav-group-toggle')?.setAttribute('aria-expanded','false');
-        });
+        document.querySelectorAll('.nav-group.open').forEach(closeGroup);
+      });
+      document.addEventListener('keydown',event=>{
+        if(event.key!=='Escape')return;
+        document.querySelectorAll('.nav-group.open').forEach(closeGroup);
       });
     }
   }
