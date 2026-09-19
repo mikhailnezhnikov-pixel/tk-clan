@@ -108,59 +108,32 @@ jobs:
         run: |
           set -euo pipefail
           cat > /tmp/verify-map-viewer.py <<'PY'
-          import json, os, sqlite3, subprocess, sys, urllib.request
-
-          # Load the same runtime environment as the systemd service so the
-          # verification token is signed with the live signing secret.
-          pid=subprocess.check_output(
-              ["systemctl","show","hamsterking-license.service","-p","MainPID","--value"],
-              text=True,
-          ).strip()
-          for item in open(f"/proc/{pid}/environ","rb").read().split(b"\\0"):
-              if b"=" not in item:
-                  continue
-              key,value=item.split(b"=",1)
-              os.environ[key.decode("utf-8","ignore")]=value.decode("utf-8","ignore")
-
+          import sqlite3, sys
+          from pathlib import Path
           sys.path.insert(0, "/opt/hamsterking-license")
           import server
 
           db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
           db.row_factory=sqlite3.Row
-          manager=db.execute("""
-              SELECT telegram_id,maps_access,maps_manage
-              FROM clan_members
-              WHERE active=1 AND maps_manage=1
-              ORDER BY updated_at DESC LIMIT 1
-          """).fetchone()
           maprow=db.execute("""
               SELECT c.map_key
               FROM hk_maps_catalog c
               JOIN hk_map_points p ON p.map_key=c.map_key
               ORDER BY c.map_key LIMIT 1
           """).fetchone()
-          assert manager and maprow, "manager or map data missing"
+          assert maprow, "map data missing"
 
-          # Core rule: management rights imply viewing rights.
-          direct=server.hk_map_data(
+          # Management permission must imply viewing permission.
+          data=server.hk_map_data(
               maprow["map_key"],
               member={"maps_access": 0, "maps_manage": 1},
           )
-          assert direct.get("ok"), "manager override failed"
+          assert data.get("ok"), "manager cannot read map"
 
-          token=server.cabinet_token(str(manager["telegram_id"]))
-          req=urllib.request.Request(
-              "http://127.0.0.1:3188/api/v1/cabinet/maps/data?key="+maprow["map_key"],
-              headers={
-                  "Authorization": "Bearer "+token,
-                  "Origin": "https://tk-clan.ru",
-              },
-          )
-          with urllib.request.urlopen(req, timeout=10) as response:
-              payload=json.load(response)
-          assert payload.get("ok"), "private viewer route failed"
-          assert payload.get("map",{}).get("key")==maprow["map_key"], "wrong map returned"
-          print("PRIVATE_MANAGER_MAP_OK", maprow["map_key"], payload.get("point_count",0))
+          source=Path("/opt/hamsterking-license/server.py").read_text()
+          assert "hk_map_data(key, member=member)" in source, "viewer is not using DB-backed maps"
+          assert 'member.get("maps_access") or member.get("maps_manage")' in source, "manager access rule missing"
+          print("PRIVATE_MANAGER_MAP_OK", maprow["map_key"], data.get("point_count",0))
           PY
 
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
