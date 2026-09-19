@@ -1,0 +1,44 @@
+name: Validate TopKing 1.13.0
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/validate-topking-113.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Fetch stable live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.11.0$' /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+      - name: Apply 1.13 patch
+        run: |
+          set -euo pipefail
+          cat deploy/topking/userscript-1.13.0.patch.part*.b64 | base64 -d | gzip -d > /tmp/userscript-1.13.0.patch
+          patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.13.0.patch
+          grep -q '^// @version      1.13.0$' /tmp/HamsterKingMobile.user.js
+          grep -q 'growthAutoOpen' /tmp/HamsterKingMobile.user.js
+          grep -q 'growthRunGeneralsCore' /tmp/HamsterKingMobile.user.js
+          grep -q 'growthRunPriorityCopiesCore' /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript-1.13.0.patch
