@@ -39,6 +39,24 @@ jobs:
           grep -Eq '^// @version      (1\.14\.4|1\.15\.0)$' /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
 
+      - name: Record current live runner and state architecture
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          {
+            grep -m1 '^// @version' /tmp/HamsterKingMobile.user.js || true
+            grep -nE -C 12 'const hkRunner|AbortController|waitIfPaused|stopRequested|pitRunning|fairRunning|fairStop|shopRunning|recipeRunning|recipeStop|bureauRunning|moduleMutationBusy|const hkStateStore|hkStateStore\.|async function apiJsonCore|async function apiJson\(' /tmp/HamsterKingMobile.user.js || true
+          } > audit/hk-live-runner-before-stage2.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-live-runner-before-stage2.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Capture live runner architecture before Stage 2"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
       - name: Build and validate Stage 1
         run: |
           set -euo pipefail
