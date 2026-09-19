@@ -38,10 +38,95 @@ jobs:
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js.bak.20260919-105415 /tmp/hk-1.13.0.js
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js.bak-1.7.95 /tmp/hk-1.7.95.js
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js.bak.20260919-100048 /tmp/hk-1.12.0.js
           grep -q '^// @version      1.13.0$' /tmp/hk-1.13.0.js
-          grep -q '^// @version      1.7.95$' /tmp/hk-1.7.95.js
+          grep -q '^// @version      1.7.95
+      - name: Capture feature contexts
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          {
+            echo "# Preserved 1.13.0 Boss source"
+            echo
+            grep -nEi -C 80 'regional_boss|boss_battle|player_bosses|boss|battle_state' /tmp/hk-1.13.0.js || true
+          } > /tmp/hk-boss-source.txt
+
+          {
+            echo "# Preserved 1.7.95 Building / Explore source"
+            echo
+            grep -nEi -C 80 'building.?event|open.?building|explore|building|construction|game_area' /tmp/hk-1.7.95.js || true
+          } > /tmp/hk-building-source.txt
+
+          {
+            echo "# Preserved 1.12.0 War source"
+            echo
+            grep -nEi -C 140 'normalizePublicWar|readPublicWar|active_battles|active_defense_wars|clan.?war|war.?battle|войн' /tmp/hk-1.12.0.js || true
+          } > /tmp/hk-war-source.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p audit
+            cp /tmp/hk-boss-source.txt audit/hk-preserved-113-boss-source.txt
+            cp /tmp/hk-building-source.txt audit/hk-preserved-1795-building-source.txt
+            cp /tmp/hk-war-source.txt audit/hk-preserved-112-war-source.txt
+            git add audit/hk-preserved-113-boss-source.txt audit/hk-preserved-1795-building-source.txt audit/hk-preserved-112-war-source.txt
+            if git diff --cached --quiet; then pushed=1; break; fi
+            git commit -m "Capture preserved Boss and Building sources"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = "1"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/hk-1.13.0.js /tmp/hk-1.7.95.js /tmp/hk-1.12.0.js /tmp/hk-boss-source.txt /tmp/hk-building-source.txt /tmp/hk-war-source.txt
+ /tmp/hk-1.7.95.js
+          grep -q '^// @version      1.12.0
+      - name: Capture feature contexts
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          {
+            echo "# Preserved 1.13.0 Boss source"
+            echo
+            grep -nEi -C 80 'regional_boss|boss_battle|player_bosses|boss|battle_state' /tmp/hk-1.13.0.js || true
+          } > /tmp/hk-boss-source.txt
+
+          {
+            echo "# Preserved 1.7.95 Building / Explore source"
+            echo
+            grep -nEi -C 80 'building.?event|open.?building|explore|building|construction|game_area' /tmp/hk-1.7.95.js || true
+          } > /tmp/hk-building-source.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p audit
+            cp /tmp/hk-boss-source.txt audit/hk-preserved-113-boss-source.txt
+            cp /tmp/hk-building-source.txt audit/hk-preserved-1795-building-source.txt
+            git add audit/hk-preserved-113-boss-source.txt audit/hk-preserved-1795-building-source.txt
+            if git diff --cached --quiet; then pushed=1; break; fi
+            git commit -m "Capture preserved Boss and Building sources"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = "1"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/hk-1.13.0.js /tmp/hk-1.7.95.js /tmp/hk-boss-source.txt /tmp/hk-building-source.txt
+ /tmp/hk-1.12.0.js
           node --check /tmp/hk-1.13.0.js
           node --check /tmp/hk-1.7.95.js
+          node --check /tmp/hk-1.12.0.js
 
       - name: Capture feature contexts
         run: |
