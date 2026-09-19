@@ -11,6 +11,7 @@ on:
       - 'deploy/topking/patch_clan_shop_msk_window.py'
       - 'deploy/topking/patch_clan_shop_business_requests_only.py'
       - 'deploy/topking/patch_clan_shop_history.py'
+      - 'deploy/topking/patch_game_announcements.py'
       - '.github/workflows/deploy-telegram-application-topic.yml'
 
 permissions:
@@ -43,6 +44,7 @@ jobs:
           python3 deploy/topking/patch_clan_shop_msk_window.py /tmp/server.py
           python3 deploy/topking/patch_clan_shop_business_requests_only.py /tmp/server.py
           python3 deploy/topking/patch_clan_shop_history.py /tmp/server.py
+          python3 deploy/topking/patch_game_announcements.py /tmp/server.py
           grep -q 'TELEGRAM_APPLICATION_TOPIC_V1' /tmp/server.py
           grep -q '/setapplications' /tmp/server.py
           grep -q 'message_thread_id' /tmp/server.py
@@ -52,6 +54,7 @@ jobs:
           grep -q 'CLAN_SHOP_MSK_WINDOW_V21' /tmp/server.py
           grep -q 'CLAN_SHOP_BUSINESS_REQUESTS_ONLY_V3' /tmp/server.py
           grep -q 'CLAN_SHOP_HISTORY_V4' /tmp/server.py
+          grep -q 'GAME_ANNOUNCEMENTS_V1' /tmp/server.py
           python3 -m py_compile /tmp/server.py
 
       - name: Deploy backend
@@ -75,6 +78,7 @@ jobs:
             grep -q "CLAN_SHOP_MSK_WINDOW_V21" /opt/hamsterking-license/server.py
             grep -q "CLAN_SHOP_BUSINESS_REQUESTS_ONLY_V3" /opt/hamsterking-license/server.py
             grep -q "CLAN_SHOP_HISTORY_V4" /opt/hamsterking-license/server.py
+            grep -q "GAME_ANNOUNCEMENTS_V1" /opt/hamsterking-license/server.py
             echo TELEGRAM_APPLICATION_TOPIC_BACKEND_OK
             ok=0
             for i in 1 2 3 4 5 6 7 8 9 10; do
