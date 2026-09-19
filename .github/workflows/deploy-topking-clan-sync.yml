@@ -69,7 +69,7 @@ jobs:
               systemctl restart hamsterking-license.service;
               systemctl is-active --quiet hamsterking-license.service;
               sleep 2;
-              curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config;
+              (curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config);
               echo;
               echo DEPLOY_OK;
               grep -m1 "^// @version" /opt/hamsterking-license/HamsterKingMobile.user.js'
