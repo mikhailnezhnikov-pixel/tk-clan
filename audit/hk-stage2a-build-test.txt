@@ -1,0 +1,10 @@
+stage=2A
+revision=stage2a-20260919-r1
+fixture=passed
+patch=passed
+syntax=ok
+validation=passed
+built_version=1.16.0
+deploy=not-enabled
+--- log tail ---
+STAGE2A_RUNNER_FIXTURE_TEST_OK
