@@ -1,2 +1,2 @@
-trigger=2026-09-19T14:20Z
-reason=clean-stage1-build-workflow
+trigger=2026-09-19T14:23Z
+reason=fixed-general-selector-fixture
