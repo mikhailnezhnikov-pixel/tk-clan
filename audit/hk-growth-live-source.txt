@@ -1,0 +1,513 @@
+347-  let recipeFairId = load().recipeFairId || '';
+348-  let currentRecipePlans = [];
+349-  let recipeRunning = false;
+350-  let recipeStop = false;
+351-  let communityRecipes = [];
+352-  let bureauCosts = [];
+353-  let bureauInventory = [];
+354-  let selectedBureauInputs = new Map();
+355-  let bureauSize = 2;
+356-  let bureauTier = 0;
+357-  let bureauRunning = false;
+358-  let mapRows = [];
+359-  let mapSource = 'mine';
+360-  let mapDetail = null;
+361-  let mapGeometry = null;
+362-  let mapZoom = 1;
+363-  let mapPanX = 0;
+364-  let mapPanY = 0;
+365-  let mapPointerMoved = false;
+366-  let mapBuildingAreas = new Map();
+367-  let mapScanning = false;
+368-  let dailyShopRows = [];
+369-  let dailyRunning = false;
+370-  let dailyAdController = null;
+371-  let dailySnapshot = load().today?.snapshot || null;
+372-  let dailySelection = {...{advertisement:true, recruits:false, cartels:false, investments:false}, ...(load().today?.selection || {})};
+373-  delete dailySelection.rumors;
+374-  let dailyPurchaseCounts = {...(load().today?.purchaseCounts || {})};
+375-  let dailyStoreTab = String(load().today?.storeTab || 'regular');
+376-  let sharedPitRows = [];
+377-  let pitCatalogLoaded = false;
+378-  let pitSubmitQueue = [];
+379-  let pitSubmitTimer = null;
+380-  let pitPowerTableOpen = true;
+381-  let lastNetworkPitContext = null;
+382-  const pitSubmittedThisSession = new Set();
+383-  const initialMapResearchAttempted = new Set();
+384-  let root, panel, statusLine, logBox, businessLists, planBox, presetSelect, fairTypes, fairLots, fairSlotRules, fairPresetSelect, shopCards, shopSummary, recipeCards, recipeSummary, recipeDatabaseBox, bureauCards, bureauSummary, mapIndexBox, mapDetailBox, dailyBox, clanBox, resourceBox;
+385-
+386-  // Shared live player state. Full /player/me responses replace complete fields;
+387-  // action responses merge entity rows so a one-hamster response cannot erase
+388-  // the rest of the account. Server timestamps prevent an older concurrent
+389-  // response from overwriting newer state.
+390-  const HK_STATE_MERGE_ROWS = {
+391-    currencies:['currency_id','id'], items:['item_id','id'], buildings:['id','building_id'], business_building:['id'], constructions:['id'],
+392:    playerFactions:['id','faction_id'], playerHamsters:['hamster_id','id'], player_hamster_generals:['hamster_id','id'],
+393-    player_counters:['id','counter_id']
+394-  };
+395-  const HK_STATE_REPLACE_ARRAYS = new Set(['shop_lot_limits','fair','hamsteresses','player_hamsteresses_skill_line','hamsteresses_quest_slots','favorite_building_slots','player_bosses','player_battle_pass_rewards','auth_methods','offers','triggers']);
+396-  const HK_STATE_REPLACE_VALUES = new Set(['advertisement','areas','bonuses','boss_battle','clan','daily_rewards','gameArea','gamearea_recommendation','idler','pit','pit2','pit_generals','pit_pve','player_regional_bosses','quests','referals','rumors']);
+397-  function hkMergeRowsByFields(existing,incoming,fields){
+398-    if(!Array.isArray(incoming)) return Array.isArray(existing)?existing:[];
+399-    const result=(Array.isArray(existing)?existing:[]).map(row=>row&&typeof row==='object'?{...row}:row), positions=new Map();
+400-    for(let i=0;i<result.length;i++) for(const field of fields){const value=result[i]?.[field];if(value!==undefined&&value!==null){positions.set(`${field}:${value}`,i);break;}}
+401-    for(const row of incoming){if(!row||typeof row!=='object')continue;let key='';for(const field of fields){const value=row[field];if(value!==undefined&&value!==null){key=`${field}:${value}`;break;}}if(!key)continue;if(positions.has(key)){const i=positions.get(key);result[i]={...result[i],...row};}else{positions.set(key,result.length);result.push({...row});}}
+402-    return result;
+403-  }
+404-  const hkStateStore = (() => {
+405-    let snapshot = null, updatedAt = 0, revision = 0, fieldTimestamps = Object.create(null);
+406-    const listeners = new Set();
+407-    const clone = value => { if(value==null)return value; try{return structuredClone(value);}catch(_){try{return JSON.parse(JSON.stringify(value));}catch(_){return value;}} };
+408-    const notify = (reason='update',changed=new Set()) => { revision+=1;const event={reason,revision,updatedAt,snapshot,changed};for(const listener of [...listeners]){try{listener(event);}catch(_){}} };
+409-    const applyOne = (state,data,full=false,changed=new Set()) => {
+410-      if(!state||!data||typeof data!=='object') return changed;
+411-      const rawTs=Number(data.timestamp||0), incomingTs=Math.max(0,Number.isFinite(rawTs)?(rawTs>0&&rawTs<1e12?rawTs*1000:rawTs):0);
+412-      const canApply=key=>!incomingTs||!fieldTimestamps[key]||fieldTimestamps[key]<=incomingTs;
+413-      const stamp=key=>{if(incomingTs)fieldTimestamps[key]=incomingTs;changed.add(key);};
+414-      const replaceArray=(key,value)=>{if(!canApply(key)||!Array.isArray(value))return;state[key]=value.map(row=>row&&typeof row==='object'?{...row}:row);stamp(key);};
+415-      const mergeRows=(key,value,fields)=>{if(!canApply(key)||!Array.isArray(value))return;state[key]=hkMergeRowsByFields(state[key],value,fields);stamp(key);};
+416-      if(data.player&&typeof data.player==='object'&&canApply('player')){state.player=state.player&&typeof state.player==='object'?{...state.player,...data.player}:{...data.player};stamp('player');}
+417-      for(const [key,fields] of Object.entries(HK_STATE_MERGE_ROWS)) if(Array.isArray(data[key])) full?replaceArray(key,data[key]):mergeRows(key,data[key],fields);
+418-      for(const key of HK_STATE_REPLACE_ARRAYS) if(Array.isArray(data[key])) replaceArray(key,data[key]);
+419-      if(data.building&&typeof data.building==='object') mergeRows('buildings',[data.building],['id','building_id']);
+420-      for(const key of HK_STATE_REPLACE_VALUES) if(Object.prototype.hasOwnProperty.call(data,key)&&canApply(key)){state[key]=data[key];stamp(key);}
+421-      if(full){
+422-        for(const [key,value] of Object.entries(data)){
+423-          if(key==='player'||key==='building'||key==='timestamp'||changed.has(key)||HK_STATE_MERGE_ROWS[key]||HK_STATE_REPLACE_ARRAYS.has(key)||HK_STATE_REPLACE_VALUES.has(key)||!canApply(key))continue;
+424-          state[key]=value;stamp(key);
+425-        }
+426-      }
+427-      if(incomingTs) state.timestamp=Math.max(Number(state.timestamp||0),incomingTs);
+428-      return changed;
+429-    };
+430-    const candidates = value => [
+431-      value,
+432-      value?.player,
+433-      value?.result,
+434-      value?.result?.player,
+435-      value?.data,
+436-      value?.data?.player
+437-    ].filter((row,index,rows)=>row&&typeof row==='object'&&rows.indexOf(row)===index);
+--
+6355-
+6356-  function growthClonePriority(rows){ return (rows||[]).map(pair=>[Number(pair?.[0]),Number(pair?.[1])]); }
+6357-  function growthNormalizePriority(rows){
+6358-    if(!Array.isArray(rows)) return growthClonePriority(GROWTH_COPY_PRIORITY_DEFAULT);
+6359-    const allowed=new Set(GROWTH_COPY_PRIORITY_DEFAULT.map(pair=>`${pair[0]}/${pair[1]}`)), used=new Set(), out=[];
+6360-    for(const pair of rows){ const key=`${Number(pair?.[0])}/${Number(pair?.[1])}`; if(allowed.has(key)&&!used.has(key)){used.add(key);out.push([Number(pair[0]),Number(pair[1])]);} }
+6361-    return out;
+6362-  }
+6363-
+6364-  function growthSettings() {
+6365-    const saved=load().growth||{};
+6366-    const pct=(value,fallback=100)=>Math.max(10,Math.min(100,Math.round(Number(value??fallback)/10)*10||fallback));
+6367-    const weight=value=>Math.max(1,Math.min(8,Math.floor(Number(value||1))||1));
+6368-    return {
+6369-      runPreparation:saved.runPreparation!==false,
+6370-      runGenerals:saved.runGenerals!==false,
+6371-      runHamsters:saved.runHamsters!==false,
+6372-      buyGeneralContracts:saved.buyGeneralContracts!==false,
+6373-      openAllBalls:saved.openAllBalls!==false,
+6374-      openAllBoxes:saved.openAllBoxes!==false,
+6375-      generalPitPercent:pct(saved.generalPitPercent ?? saved.pitPercent,100),
+6376-      generalMobsterPitWeight:weight(saved.generalMobsterPitWeight),
+6377-      generalLevelUpMode:saved.generalLevelUpMode==='fast10'?'fast10':'x1',
+6378-      capsPercent:pct(saved.capsPercent ?? saved.nutsPercent,100),
+6379-      mobsterPitWeight:weight(saved.mobsterPitWeight),
+6380-      copyPriorityEnabled:saved.copyPriorityEnabled!==false,
+6381-      excludeCurrentEventHamsters:saved.excludeCurrentEventHamsters===true,
+6382-      copyPriority:growthNormalizePriority(saved.copyPriority)
+6383-    };
+6384-  }
+6385-
+6386-  function saveGrowthSettings(patch={}){
+6387-    const next={...growthSettings(),...patch};
+6388-    next.copyPriority=growthNormalizePriority(next.copyPriority);
+6389-    save({growth:next});
+6390-    return next;
+6391-  }
+6392-
+6393-  function growthContainers(documentValue=growthState||hkStateStore.snapshot||playerDocument){
+6394-    const rows=[documentValue,documentValue?.player,documentValue?.result,documentValue?.data,documentValue?.data?.player].filter(value=>value&&typeof value==='object');
+6395-    return [...new Set(rows)];
+6396-  }
+6397-  function growthArray(key,documentValue=growthState||hkStateStore.snapshot||playerDocument){ for(const value of growthContainers(documentValue)) if(Array.isArray(value?.[key])) return value[key]; return []; }
+6398-  function growthResource(id,state=growthState||hkStateStore.snapshot||playerDocument){ return Math.max(0,Number(walletAmount(id,state)||0)); }
+6399-  function growthInventoryMap(state=growthState||hkStateStore.snapshot||playerDocument){ const map=new Map(); for(const row of growthArray('items',state)){const id=String(row?.item_id||row?.id||'');if(id)map.set(id,Math.max(0,Math.floor(Number(row?.quantity||0))));} return map; }
+6400:  function growthCapCost(cost){ return costParts(cost).filter(row=>row.kind==='currencies'&&row.id===GROWTH_HAMSTER_BUDGET_ID).reduce((sum,row)=>sum+Math.max(0,row.quantity),0); }
+6401-  function growthCostText(cost){
+6402-    const parts=costParts(cost).filter(row=>row.id&&row.quantity>0);
+6403-    return parts.length?parts.map(row=>`${Math.trunc(row.quantity).toLocaleString(locale())} ${paymentLabel(row.id)}`).join(' + '):either('без расхода','no cost');
+6404-  }
+6405:  function growthPitCost(cost){ return costParts(cost).filter(row=>row.kind==='items'&&row.id===GROWTH_GENERAL_BUDGET_ID).reduce((sum,row)=>sum+Math.max(0,row.quantity),0); }
+6406-  function growthSafeCost(cost){ return costParts(cost).every(row=>row.id&&row.quantity>0&&!['cur_prem','cur_hard'].includes(row.id)); }
+6407:  function growthHamsterCostSafe(cost){ return growthSafeCost(cost)&&growthPitCost(cost)===0; }
+6408:  function growthHamsterLevelCostSafe(cost){ return growthHamsterCostSafe(cost)&&growthCapCost(cost)>0; }
+6409-  function growthCanAfford(cost,state=growthState||hkStateStore.snapshot||playerDocument){ return growthSafeCost(cost)&&costParts(cost).every(row=>growthResource(row.id,state)>=row.quantity); }
+6410-  function growthHasClanCost(cost){const value=cost?.clan_currency_cost;return Array.isArray(value)?value.length>0:(value&&typeof value==='object'?Object.keys(value).length>0:!!value);}
+6411-  function growthGeneralFragmentCost(itemId){const id=String(itemId||'').toLowerCase();return id.includes('hgen')&&(id.includes('fragment')||id.includes('fragmet'));}
+6412-  function growthTotalPower(state=growthState||hkStateStore.snapshot||playerDocument){ return growthArray('playerFactions',state).reduce((sum,row)=>sum+Number(row?.power||0),0); }
+6413-  function growthHamsterById(state,id){return growthArray('playerHamsters',state).find(row=>String(row?.hamster_id||'')===String(id))||null;}
+6414:  function growthGeneralById(state,id){return growthArray('player_hamster_generals',state).find(row=>String(row?.hamster_id||'')===String(id))||null;}
+6415-
+6416-  function growthStateFrom(value,reason='growth',full=true){
+6417-    if(value&&typeof value==='object') full?hkStateStore.replace(value,reason):hkStateStore.merge(value,reason);
+6418-    growthState=hkStateStore.snapshot||value||growthState||playerDocument;
+6419-    if(growthState) playerDocument=growthState;
+6420-    return growthState;
+6421-  }
+6422-  function growthResponseArray(data,key){ for(const value of growthContainers(data)) if(Array.isArray(value?.[key])) return value[key]; return null; }
+6423-  function growthMergeMutation(data,reason='growth-mutation'){
+6424-    if(data&&typeof data==='object') hkStateStore.merge(data,reason);
+6425-    growthState=hkStateStore.snapshot||growthState||data;
+6426-    if(growthState) playerDocument=growthState;
+6427-    return growthState;
+6428-  }
+6429-  function growthFindNamed(data,name,id){
+6430-    if(Array.isArray(data)){for(const value of data){const found=growthFindNamed(value,name,id);if(found)return found;}return null;}
+6431-    if(!data||typeof data!=='object')return null;
+6432-    if(Array.isArray(data[name])){const found=data[name].find(row=>String(row?.hamster_id||row?.id||'')===String(id));if(found)return found;}
+6433-    for(const value of Object.values(data)){if(value&&typeof value==='object'){const found=growthFindNamed(value,name,id);if(found)return found;}}
+6434-    return null;
+6435-  }
+6436-  function growthResponseHas(data,key){ return !!growthResponseArray(data,key); }
+6437-  function growthResponseHasResource(data,id){
+6438-    const wanted=String(id||'');
+6439-    for(const key of ['items','currencies']){
+6440-      const rows=growthResponseArray(data,key);
+6441-      if(Array.isArray(rows)&&rows.some(row=>String(row?.item_id||row?.currency_id||row?.id||'')===wanted))return true;
+6442-    }
+6443-    return false;
+6444-  }
+6445-  function growthCostSnapshot(cost,state){const map=new Map();for(const part of costParts(cost))if(part.id&&part.quantity>0)map.set(part.id,growthResource(part.id,state));return map;}
+6446-  function growthApplyCostFallback(data,cost,state,before=null){
+6447-    for(const part of costParts(cost)){
+6448-      if(!part.id||part.quantity<=0)continue;
+6449-      const serverReported=growthResponseHasResource(data,part.id), previous=before instanceof Map?before.get(part.id):null, current=growthResource(part.id,state);
+6450-      // A changed live server balance always wins. If a mutation echoes a stale
+6451-      // unchanged resource row, apply the known action cost once locally so the
+6452-      // next affordability check cannot loop on a phantom balance.
+6453-      if(serverReported&&Number.isFinite(previous)&&current<previous)continue;
+6454-      if(serverReported&&before==null)continue;
+6455-      const bucket=part.kind==='items'?'items':'currencies';
+6456-      debitWallet({[bucket]:[{id:part.id,quantity:part.quantity}]},1,state);
+6457-    }
+6458-  }
+6459-  function growthStateError(error){const status=Number(error?.httpStatus||0),text=String(error?.apiData?.description||error?.apiData?.message||error?.message||'').toLowerCase();return [400,409].includes(status)&&(['not enough','insufficient','currency','currencies','item','items','shard','balance','cost','mismatch','not available','cannot afford','already','invalid state'].some(x=>text.includes(x))||status===409);}
+--
+6486-
+6487-  async function growthLoadLive({force=false,loadShop=true,loadConfig=false,silent=true}={}){
+6488-    if(growthLoadPromise)return growthLoadPromise;
+6489-    if(!force&&growthState&&Date.now()-growthLastLoadedAt<8000)return growthState;
+6490-    const task=(async()=>{
+6491-      growthMenuLoading=true;renderGrowth();
+6492-      try{
+6493-        // /player/me is the only mandatory request. Static/shop/event config are
+6494-        // enrichments: their temporary failure must not make the whole Growth
+6495-        // screen look disconnected or block a safe level-up plan.
+6496-        const playerPromise=apiJson('/player/me','POST');
+6497-        const staticPromise=growthEnsureStatic().catch(error=>{recordDiagnostic('growth-static-error',{error:error?.message||error});return null;});
+6498-        const shopPromise=loadShop?apiJson('/shop/view','GET').catch(error=>{recordDiagnostic('growth-shop-error',{error:error?.message||error});return null;}):Promise.resolve(null);
+6499-        const configPromise=loadConfig?apiJson('/client_config','GET').catch(error=>{recordDiagnostic('growth-config-error',{error:error?.message||error});return null;}):Promise.resolve(null);
+6500-        const player=await playerPromise;
+6501-        growthStateFrom(player,'growth-live',true);
+6502-        const [,shop,cfg]=await Promise.all([staticPromise,shopPromise,configPromise]);
+6503-        if(shop)growthShopDocument=shop;
+6504-        if(cfg)growthClientConfigDocument=cfg;
+6505-        growthLastLoadedAt=Date.now();
+6506-        if(!silent)log(either('Данные развития обновлены автоматически','Growth data refreshed automatically'),'ok');
+6507-        renderGrowth();return growthState;
+6508-      }catch(error){log(`${either('Ошибка данных развития','Growth data error')}: ${error?.message||error}`,'bad');return null;}
+6509-      finally{growthMenuLoading=false;growthLoadPromise=null;renderGrowth();}
+6510-    })();
+6511-    growthLoadPromise=task;return task;
+6512-  }
+6513-  function growthAutoOpen(page){
+6514-    const settings=growthSettings();
+6515-    const needsConfig=page==='growth-hamsters'&&settings.excludeCurrentEventHamsters;
+6516-    void growthLoadLive({force:true,loadShop:true,loadConfig:needsConfig,silent:true});
+6517-  }
+6518-  async function growthRecoverState(reason='state-mismatch'){
+6519-    log(either('Состояние изменилось — автоматически перечитываю аккаунт…','State changed — automatically refreshing the account…'),'warn');
+6520-    const fresh=await growthLoadLive({force:true,loadShop:true,loadConfig:false,silent:true});
+6521-    recordDiagnostic('growth-state-recovery',{reason,ok:!!fresh});
+6522-    return fresh||growthState;
+6523-  }
+6524-
+6525-  function growthHamsterMaxLevel(hamster){return Math.max(GROWTH_HAMSTER_BASE_MAX_LEVEL,GROWTH_HAMSTER_BASE_MAX_LEVEL+Math.max(0,Math.floor(Number(hamster?.add_bonus_max_level||0))));}
+6526-  function growthAccountHamsterMaxLevel(state=growthState){let max=GROWTH_HAMSTER_BASE_MAX_LEVEL;for(const hamster of growthArray('playerHamsters',state))max=Math.max(max,growthHamsterMaxLevel(hamster));return max;}
+6527-  function growthCopyPair(hamster){return [Number(hamster?.quantity||0),Number(hamster?.nextUpgrade?.shardsQuantity||0)];}
+6528-  function growthCopyCandidates(state,priority){const index=new Map(priority.map((pair,i)=>[`${pair[0]}/${pair[1]}`,i]));return growthArray('playerHamsters',state).filter(h=>{const pair=growthCopyPair(h);return h?.hamster_id&&h?.nextUpgrade&&index.has(`${pair[0]}/${pair[1]}`);}).sort((a,b)=>index.get(growthCopyPair(a).join('/'))-index.get(growthCopyPair(b).join('/'))||String(a.hamster_id).localeCompare(String(b.hamster_id)));}
+6529-
+6530-  function growthSummaryMarkup(){
+6531:    const state=growthState||hkStateStore.snapshot||playerDocument, hamsters=growthArray('playerHamsters',state), generals=growthArray('player_hamster_generals',state), settings=growthSettings();
+6532-    const caps=growthResource(GROWTH_HAMSTER_BUDGET_ID,state),nuts=growthResource('cur_nut',state),pit=growthResource(GROWTH_GENERAL_BUDGET_ID,state),max=growthAccountHamsterMaxLevel(state),copyTargets=growthCopyCandidates(state,settings.copyPriority).filter(h=>{const [owned,required]=growthCopyPair(h);return required>owned;}).length;
+6533-    const live=growthMenuLoading?either('Считываю…','Loading…'):(growthLastLoadedAt?new Date(growthLastLoadedAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit',second:'2-digit'}):either('ожидание','waiting'));
+6534-    return `<div class="hk-growth-live"><span>● ${either('LIVE','LIVE')} · ${escapeHtml(live)}</span><small>${either('Состояние обновляется автоматически при открытии вкладки и перед запуском.','State refreshes automatically when opening a tab and before a run.')}</small></div><div class="hk-growth-stats"><div><small>${either('Хомяки','Hamsters')}</small><b>${hamsters.length.toLocaleString(locale())}</b></div><div><small>${either('Генералы','Generals')}</small><b>${generals.length.toLocaleString(locale())}</b></div><div><small>${either('Крышки','Caps')}</small><b>${Math.round(caps).toLocaleString(locale())}</b></div><div><small>${either('Орехи','Nuts')}</small><b>${Math.round(nuts).toLocaleString(locale())}</b></div><div><small>${either('Pit Tokens','Pit Tokens')}</small><b>${Math.round(pit).toLocaleString(locale())}</b></div><div><small>${either('AUTO max ур.','AUTO max lvl')}</small><b>${max}</b></div><div><small>${either('Целей копий','Copy targets')}</small><b>${copyTargets}</b></div></div>`;
+6535-  }
+6536-
+6537-  function growthPriorityMarkup(settings=growthSettings()){
+6538-    if(!settings.copyPriority.length)return `<div class="hk-muted">${either('Приоритет пуст. Нажмите «Сбросить».','Priority is empty. Press Reset.')}</div>`;
+6539-    return settings.copyPriority.map((pair,index)=>`<div class="hk-growth-priority" data-growth-priority-index="${index}"><b>${pair[0]} / ${pair[1]}</b><span>${either('копий / нужно для редкости','owned / required for rarity')}</span><div><button class="hk-secondary" data-growth-priority-move="up" ${index===0?'disabled':''}>↑</button><button class="hk-secondary" data-growth-priority-move="down" ${index===settings.copyPriority.length-1?'disabled':''}>↓</button><button class="hk-danger" data-growth-priority-remove>−</button></div></div>`).join('');
+6540-  }
+6541-  function growthPlanText(settings=growthSettings()){
+6542-    const prep=settings.runPreparation?[settings.buyGeneralContracts?either('контракты','contracts'):'',settings.openAllBalls?either('шары','balls'):'',settings.openAllBoxes?either('коробки','boxes'):''].filter(Boolean).join(' → '):either('выкл.','off');
+6543-    const general=settings.runGenerals?`${settings.generalPitPercent}% Pit · ${settings.generalLevelUpMode==='fast10'?'×10':'×1'} · ${either('вес Ямы','Pit weight')} ${settings.generalMobsterPitWeight===1?'—':`×${settings.generalMobsterPitWeight}`}`:either('выкл.','off');
+6544-    const hamster=settings.runHamsters?`${settings.capsPercent}% ${either('Крышек','Caps')} · ${settings.copyPriorityEnabled?either('копии → редкость → уровни','copies → rarity → levels'):either('редкость → уровни','rarity → levels')} · ${either('цена из live costs','cost from live costs')} · ${either('вес Ямы','Pit weight')} ${settings.mobsterPitWeight===1?'—':`×${settings.mobsterPitWeight}`}`:either('выкл.','off');
+6545-    return `<div class="hk-growth-plan"><b>${either('План выполнения','Execution plan')}</b><span>1. ${either('Подготовка','Preparation')}: ${escapeHtml(prep)}</span><span>2. ${either('Генералы','Generals')}: ${escapeHtml(general)}</span><span>3. ${either('Хомяки','Hamsters')}: ${escapeHtml(hamster)}</span><small>${either('Перед стартом состояние считывается заново. После каждого ответа API общий State Store обновляется автоматически.','State is read again before start. Every API response automatically updates the shared State Store.')}</small></div>`;
+6546-  }
+6547-
+6548-  function renderGrowth(){
+6549-    if(!root)return;
+6550-    const settings=growthSettings();
+6551-    root.querySelectorAll('[data-growth-summary]').forEach(box=>box.innerHTML=growthSummaryMarkup());
+6552-    const setCheck=(id,value)=>{const el=root.querySelector(id);if(el)el.checked=!!value;};
+6553-    const setValue=(id,value)=>{const el=root.querySelector(id);if(el)el.value=String(value);};
+6554-    setCheck('#hk-growth-run-prep',settings.runPreparation);setCheck('#hk-growth-run-generals',settings.runGenerals);setCheck('#hk-growth-run-hamsters',settings.runHamsters);
+6555-    setCheck('#hk-growth-contracts',settings.buyGeneralContracts);setCheck('#hk-growth-balls',settings.openAllBalls);setCheck('#hk-growth-boxes',settings.openAllBoxes);
+6556-    setValue('#hk-growth-pit-percent',settings.generalPitPercent);setValue('#hk-growth-general-mode',settings.generalLevelUpMode);setValue('#hk-growth-general-weight',settings.generalMobsterPitWeight);
+6557-    setValue('#hk-growth-caps-percent',settings.capsPercent);setValue('#hk-growth-hamster-weight',settings.mobsterPitWeight);setCheck('#hk-growth-copy-enabled',settings.copyPriorityEnabled);setCheck('#hk-growth-exclude-event',settings.excludeCurrentEventHamsters);
+6558-    const priority=root.querySelector('#hk-growth-copy-priority');if(priority)priority.innerHTML=growthPriorityMarkup(settings);
+6559-    root.querySelectorAll('[data-growth-plan]').forEach(box=>box.innerHTML=growthPlanText(settings));
+6560-    root.querySelectorAll('[data-growth-action]').forEach(button=>button.disabled=growthBusy||growthMenuLoading||hkRunner.running);
+6561-    root.querySelectorAll('.hk-growth-option input,.hk-growth-option select,.hk-growth-check input').forEach(input=>input.disabled=growthBusy||hkRunner.running);
+6562-  }
+6563-
+6564-  function growthReadSettingsFromUi(){
+6565-    const base=growthSettings(),check=id=>root?.querySelector(id)?.checked,value=id=>root?.querySelector(id)?.value;
+6566-    return saveGrowthSettings({
+6567-      runPreparation:check('#hk-growth-run-prep')??base.runPreparation,runGenerals:check('#hk-growth-run-generals')??base.runGenerals,runHamsters:check('#hk-growth-run-hamsters')??base.runHamsters,
+6568-      buyGeneralContracts:check('#hk-growth-contracts')??base.buyGeneralContracts,openAllBalls:check('#hk-growth-balls')??base.openAllBalls,openAllBoxes:check('#hk-growth-boxes')??base.openAllBoxes,
+6569-      generalPitPercent:Number(value('#hk-growth-pit-percent')||base.generalPitPercent),generalLevelUpMode:value('#hk-growth-general-mode')==='fast10'?'fast10':'x1',generalMobsterPitWeight:Number(value('#hk-growth-general-weight')||base.generalMobsterPitWeight),
+6570-      capsPercent:Number(value('#hk-growth-caps-percent')||base.capsPercent),mobsterPitWeight:Number(value('#hk-growth-hamster-weight')||base.mobsterPitWeight),copyPriorityEnabled:check('#hk-growth-copy-enabled')??base.copyPriorityEnabled,excludeCurrentEventHamsters:check('#hk-growth-exclude-event')??base.excludeCurrentEventHamsters
+6571-    });
+6572-  }
+6573-
+6574-  function growthGeneralContractGroups(shop){
+6575-    const rows=(shop?.shop_lots||[]).filter(Boolean),byId=new Map(rows.map(row=>[String(row?.id||''),row])),groups=[];
+6576-    for(const lot of rows){
+--
+6611-    return new Set((growthItemsDocument||[]).filter(row=>row?.type==='lootbox'&&row?.id).flatMap(row=>{const id=String(row.id).toLowerCase();if(id.includes('passive_income'))return[];const ball=id.startsWith('item_h_ball_')||id.startsWith('item_hball_')||id.startsWith('item_hamsters_ball_');if(kind==='balls')return ball?[String(row.id)]:[];return !ball&&/(^|_)(lootbox|box|chest)(_|$)/.test(id)?[String(row.id)]:[];}));
+6612-  }
+6613-  async function growthOpenLootboxFamilyCore(state,kind){
+6614-    await growthEnsureStatic();const defs=growthLootboxDefinitions(kind);if(!defs.size)return state;
+6615-    let inventory=growthInventoryMap(state),blocked=new Set(),retried=new Set();
+6616-    if(![...inventory].some(([id,qty])=>qty>0&&defs.has(id))){log(kind==='balls'?either('Шаров для открытия нет','No balls to open'):either('Коробок для открытия нет','No boxes to open'),'info');return state;}
+6617-    for(let round=0;round<100;round++){
+6618-      const candidates=[...inventory.entries()].filter(([id,qty])=>qty>0&&defs.has(id)&&!blocked.has(id)).sort((a,b)=>a[0].localeCompare(b[0]));if(!candidates.length)break;let didAny=false;
+6619-      for(const [itemId] of candidates){
+6620-        while(Number(inventory.get(itemId)||0)>0&&!blocked.has(itemId)){
+6621-          await growthCheckpoint(`${kind==='balls'?either('Шары','Balls'):either('Коробки','Boxes')} · ${growthDisplayName(itemId)}`);
+6622-          const remaining=Math.floor(Number(inventory.get(itemId)||0)),amount=Math.min(remaining,GROWTH_LOOTBOX_BATCH);
+6623-          try{
+6624-            const data=await apiJson(`/player/boxes/open?item_id=${encodeURIComponent(itemId)}&quantity=${amount}`,'POST',null,true,0),hasItems=growthResponseHas(data,'items');
+6625-            state=growthMergeMutation(data,`growth-${kind}`);didAny=true;
+6626-            if(hasItems){
+6627-              inventory=growthInventoryMap(state);
+6628-              const after=Math.floor(Number(inventory.get(itemId)||0));
+6629-              if(after>=remaining){
+6630-                if(!retried.has(itemId)){
+6631-                  retried.add(itemId);
+6632-                  state=await growthRecoverState(`lootbox-${kind}-no-progress`);
+6633-                  inventory=growthInventoryMap(state);
+6634-                  continue;
+6635-                }
+6636-                blocked.add(itemId);
+6637-                log(`${growthDisplayName(itemId)}: ${either('сервер не подтвердил уменьшение остатка — остановлено','server did not confirm inventory decrease — stopped')}`,'warn');
+6638-                break;
+6639-              }
+6640-              retried.delete(itemId);
+6641-            }else{
+6642-              const left=Math.max(0,remaining-amount);inventory.set(itemId,left);
+6643-              const row=growthArray('items',state).find(x=>String(x?.item_id||x?.id||'')===itemId);if(row)row.quantity=left;
+6644-              retried.delete(itemId);
+6645-            }
+6646-            log(`${growthDisplayName(itemId)} ×${amount}`,'ok');await sleep(350);
+6647-          }catch(error){if(error?.name==='AbortError')throw error;log(`${growthDisplayName(itemId)} ×${amount}: ${error.message}`,'warn');if(!retried.has(itemId)){retried.add(itemId);state=await growthRecoverState(`lootbox-${kind}`);inventory=growthInventoryMap(state);if(Number(inventory.get(itemId)||0)<=0)break;continue;}blocked.add(itemId);break;}
+6648-        }
+6649-      }
+6650-      if(!didAny&&candidates.every(([id])=>blocked.has(id)))break;
+6651-    }
+6652-    return state;
+6653-  }
+6654-
+6655-  async function growthRefreshEntity(id,state,kind='hamster'){
+6656:    try{const data=await apiJson('/player/hamster/lvlUp/view','POST',{hamster_id:id});state=growthMergeMutation(data,'growth-entity-view');return kind==='general'?growthGeneralById(state,id):growthHamsterById(state,id);}catch(_){return null;}
+6657-  }
+6658-
+6659-  function growthGeneralWeightedTarget(id){const meta=growthStaticHamsterMeta(id);if(!meta||meta.is_general!==true)return false;const faction=String(meta.faction_id||'').toLowerCase(),classId=String(meta.class_id||'').toLowerCase();return faction==='idol'||faction==='crypto'||classId==='pitgeneral';}
+6660-  function growthHamsterWeightedTarget(id){const meta=growthStaticHamsterMeta(id);if(meta){if(meta.is_general===true)return false;return ['idol','crypto','pit_helper'].includes(String(meta.faction_id||'').toLowerCase());}const hid=String(id||'').toLowerCase();return hid.startsWith('idol_')||hid.startsWith('pit_helper_')||hid.startsWith('crypto_')||hid.includes('_crypto_');}
+6661-
+6662-  function growthBestGeneral(state,blocked,budget,mode='x1',weightValue=1){
+6663-    let best=null,bestScore=0;const selectedWeight=Math.max(1,Math.min(8,Math.floor(Number(weightValue||1))||1));
+6664:    for(const general of growthArray('player_hamster_generals',state)){
+6665-      const id=String(general?.hamster_id||'');if(!id||blocked.has(id)||!general?.nextLevelUp)continue;
+6666-      let actionType=null,preview=general.nextLevelUp,costs=preview.costs||{};
+6667:      if(mode==='fast10'&&general?.nearest10LevelUp){const fast=general.nearest10LevelUp.costs||{};if(growthCanAfford(fast,state)&&budget.spent+growthPitCost(fast)<=budget.limit){actionType='fast10';preview=general.nearest10LevelUp;costs=fast;}}
+6668:      const pit=growthPitCost(costs);if(pit<=0||!growthCanAfford(costs,state)||budget.spent+pit>budget.limit)continue;
+6669-      const gain=Number(preview.diff||0);if(gain<=0)continue;const efficiency=gain/pit,weight=selectedWeight>1&&growthGeneralWeightedTarget(id)?selectedWeight:1,score=efficiency*weight;
+6670-      if(score>bestScore){bestScore=score;best={id,pit,gain,efficiency,score,weight,costs,actionType,level:Number(general.level||0)};}
+6671-    }
+6672-    return best;
+6673-  }
+6674:  async function growthRunGeneralsCore(state,settings){
+6675-    const startPit=growthResource(GROWTH_GENERAL_BUDGET_ID,state),limit=Math.floor(startPit*settings.generalPitPercent/100),budget={limit,spent:0},blocked=new Set();let safety=0;
+6676-    log(`${either('Бюджет Генералов','General budget')}: ${settings.generalPitPercent}% · ${limit.toLocaleString(locale())}/${startPit.toLocaleString(locale())}`,'info');
+6677-    while(budget.spent<budget.limit&&safety++<GROWTH_ACTION_SAFETY){
+6678-      await growthCheckpoint(either('Оптимизация Генералов','Optimizing Generals'));const best=growthBestGeneral(state,blocked,budget,settings.generalLevelUpMode,settings.generalMobsterPitWeight);if(!best)break;
+6679-      try{
+6680:        const before=Number(growthGeneralById(state,best.id)?.level??best.level??0),payload={hamster_id:best.id};if(best.actionType)payload.fast_type=best.actionType;
+6681:        const costBefore=growthCostSnapshot(best.costs,state),data=await apiJson('/player/hamster/lvlUp','POST',payload,true,0),updated=growthFindNamed(data,'player_hamster_generals',best.id);state=growthMergeMutation(data,'growth-general-level');growthApplyCostFallback(data,best.costs,state,costBefore);budget.spent+=best.pit;
+6682-        let live=growthGeneralById(state,best.id);if(!updated||!updated.nextLevelUp){await growthRefreshEntity(best.id,state,'general');state=growthState||state;live=growthGeneralById(state,best.id);}
+6683-        const after=Number(live?.level??before),weighted=best.weight>1?` · ×${best.weight}`:'';log(`${growthDisplayName(best.id)} · Lv ${before}→${after} · ${growthCostText(best.costs)} · Power +${best.gain.toLocaleString(locale())} · Eff ${best.efficiency.toFixed(3)}${weighted}`,'ok');await sleep(300);
+6684-      }catch(error){if(error?.name==='AbortError')throw error;if(growthStateError(error)){state=await growthRecoverState('general-level');blocked.clear();continue;}log(`${growthDisplayName(best.id)}: ${error.message}`,'warn');blocked.add(best.id);}
+6685-    }
+6686-    log(`${either('Pit Tokens потрачено','Pit Tokens spent')}: ${budget.spent.toLocaleString(locale())}/${limit.toLocaleString(locale())}`,'ok');return state;
+6687-  }
+6688-
+6689-  function growthCopyFamily(id,meta){const group=String(meta?.meta?.group||'').toLowerCase(),faction=String(meta?.faction_id||'').toLowerCase(),vendor=String(meta?.meta?.vendor_page||'').toLowerCase(),hid=String(id||'');if(faction==='crypto'||vendor==='bitquest'||hid.startsWith('crypto_')||hid.includes('_crypto_'))return'crypto';if(group==='1base')return'base';if(group==='2pit')return faction==='pit_helper'?'pit_helper':'pit';if(group==='3event')return'event';if(group==='4influencer')return faction==='building_helper'?'building_helper':'influencer';if(group==='5fair')return'fair';if(group==='6beasthelper')return'beasthelper';if(faction==='idol')return'idol';if(faction==='pit_helper')return'pit_helper';if(faction==='building_helper')return'building_helper';if(['beasthelper','beast_helper'].includes(faction))return'beasthelper';if(hid.startsWith('event_')||vendor==='specialshop')return'event';if(hid.startsWith('pit_helper_'))return'pit_helper';if(hid.startsWith('building_helper_'))return'building_helper';if(hid.startsWith('idol_'))return'idol';if(hid.startsWith('beasthelper_')||hid.startsWith('beast_helper_'))return'beasthelper';return null;}
+6690-  function growthCopyRarity(meta,id){const value=Number(meta?.rarity);if(Number.isFinite(value))return value;const match=String(id||'').match(/_r([1-4])(?:_|$)/);return match?Math.max(0,Number(match[1])-1):null;}
+6691-  function growthCopyLotId(id,meta){const family=growthCopyFamily(id,meta),rarity=growthCopyRarity(meta,id);if(!family||rarity===null)return null;const tier=rarity>=3?'t2_splus_h_ball':rarity===2?'t1_s_h_ball':'t1_h_ball';return `mf_shoplot_hamsters_collection_copy_dust_${tier}_${family}`;}
+6692-  function growthWalkStrings(value,visit,depth=0){if(depth>9||value==null)return;if(typeof value==='string'){visit(value);return;}if(Array.isArray(value)){for(const item of value)growthWalkStrings(item,visit,depth+1);return;}if(typeof value==='object')for(const item of Object.values(value))growthWalkStrings(item,visit,depth+1);}
+6693-  function growthExactIds(value,known,out){growthWalkStrings(value,text=>{if(known.has(text))out.add(text);});}
+6694-  async function growthDiscoverCurrentEventHamsters(){
+6695-    const shop=growthShopDocument||await apiJson('/shop/view','GET');growthShopDocument=shop;const cfg=growthClientConfigDocument||await apiJson('/client_config','GET');growthClientConfigDocument=cfg;
+6696-    const tabs=Array.isArray(cfg?.event?.tabs)?cfg.event.tabs:[];let activeKey=String(tabs.find(tab=>String(tab?.type||'')==='shop'&&tab?.tab)?.tab||'');if(!activeKey){const fallback=tabs.find(tab=>String(tab?.type||'')==='quests'&&String(tab?.zone||'').startsWith('event_'));activeKey=String(fallback?.zone||'');}if(!activeKey)return{activeKey:'',ids:new Set()};
+6697-    const metaRows=growthStaticHamsters(),meta=new Map(metaRows.map(h=>[String(h?.id||''),h])),known=new Set(meta.keys()),ids=new Set(),tokens=new Set([activeKey]),prefix=`${activeKey}_`;
+6698-    for(const [id,row] of meta)if(growthCopyFamily(id,row)==='event'&&(id===activeKey||id.startsWith(prefix)))ids.add(id);
+6699-    for(const row of tabs.filter(tab=>String(tab?.tab||'')===activeKey||String(tab?.zone||'')===activeKey)){growthExactIds(row,known,ids);growthWalkStrings(row,text=>{if(text===activeKey||text.startsWith(prefix))tokens.add(text);});}
+6700-    for(const lot of shop?.shop_lots||[]){if(String(lot?.lot_view?.tab||'')!==activeKey)continue;growthExactIds(lot,known,ids);}
+6701-    for(const [id,row] of meta){if(growthCopyFamily(id,row)!=='event')continue;let matched=false;growthWalkStrings(row,text=>{if(tokens.has(text))matched=true;});if(matched)ids.add(id);}
+6702-    return{activeKey,ids};
+6703-  }
+6704-
+6705-  function growthCombinedCost(...costs){const maps={items:new Map(),currencies:new Map()};for(const cost of costs)for(const kind of ['items','currencies'])for(const row of cost?.[kind]||[]){if(!row?.id)continue;maps[kind].set(String(row.id),Number(maps[kind].get(String(row.id))||0)+Number(row.quantity||0));}return{items:[...maps.items].map(([id,quantity])=>({id,quantity})),currencies:[...maps.currencies].map(([id,quantity])=>({id,quantity}))};}
+6706-  function growthMultiplyCost(cost,multiplier){const out={items:[],currencies:[]};for(const kind of ['items','currencies'])for(const row of cost?.[kind]||[]){const qty=Number(row?.quantity||0)*Math.max(0,Number(multiplier||0));if(row?.id&&qty>0)out[kind].push({id:row.id,quantity:qty});}return out;}
+6707:  function growthBudgetAllows(budget,cost){return budget.spent+growthCapCost(cost)<=budget.limit;}
+6708-
+6709-  async function growthRunPriorityCopiesCore(state,settings,budget){
+6710-    await growthEnsureStatic();const shop=growthShopDocument||await apiJson('/shop/view','GET');growthShopDocument=shop;const lots=new Map((shop?.shop_lots||[]).filter(Boolean).map(lot=>[String(lot.id||''),lot]));
+6711-    const excluded=new Set();if(settings.excludeCurrentEventHamsters){try{const event=await growthDiscoverCurrentEventHamsters();for(const id of event.ids)excluded.add(id);log(excluded.size?`${either('Исключены хомяки текущего события','Current-event Hamsters excluded')}: ${excluded.size}`:either('Точные хомяки текущего события не найдены — ничего не исключено','No exact current-event Hamsters found — nothing excluded'),excluded.size?'info':'warn');}catch(error){log(`${either('Не удалось определить хомяков события','Could not identify event Hamsters')}: ${error.message}`,'warn');}}
+6712-    const allowed=new Set(settings.copyPriority.map(pair=>`${pair[0]}/${pair[1]}`));
+6713-    for(const original of growthCopyCandidates(state,settings.copyPriority)){
+6714-      await growthCheckpoint(either('Приоритет копий Хомяков','Hamster Copy Priority'));const id=String(original.hamster_id);if(excluded.has(id))continue;let hamster=growthHamsterById(state,id);if(!hamster)continue;const [owned,required]=growthCopyPair(hamster),key=`${owned}/${required}`;if(!allowed.has(key)||required<=owned)continue;
+6715:      const missing=required-owned,upgradeCost=hamster.nextUpgrade?.costs||{},meta=growthStaticHamsterMeta(id)||{},lotId=growthCopyLotId(id,meta),lot=lots.get(lotId);if(!lot)continue;const view=lot.lot_view||{};if(view.type!=='hamsters_collection'||lot.is_ad===true||lot.external_cost)continue;const copyCost=lot.cost||{};if((copyCost.currencies||[]).some(row=>['cur_prem','cur_hard'].includes(String(row?.id||'')))||!growthHamsterCostSafe(copyCost))continue;
+6716:      const full=growthCombinedCost(growthMultiplyCost(copyCost,missing),upgradeCost);if(!growthHamsterCostSafe(full)||!growthCanAfford(full,state)||!growthBudgetAllows(budget,full))continue;
+6717-      let failed=false;
+6718-      for(let number=0;number<missing;number++){
+6719-        await growthCheckpoint(`${growthDisplayName(id)} · ${number+1}/${missing}`);if(!growthCanAfford(copyCost,state)){failed=true;break;}
+6720:        try{const before=Number(growthHamsterById(state,id)?.quantity||0),costBefore=growthCostSnapshot(copyCost,state),data=await apiJson('/shop/buy','POST',{shop_lot_id:lotId,payment_type:'INTERNAL',collection_entity_id:id,collection_count:1,lotName:'!!!',lotDescription:'!!!'},true,0);state=growthMergeMutation(data,'growth-copy-buy');growthApplyCostFallback(data,copyCost,state,costBefore);budget.spent+=growthCapCost(copyCost);const live=growthHamsterById(state,id);if(live&&Number(live.quantity||0)<=before)live.quantity=before+1;log(`${growthDisplayName(id)} · ${before}/${required} → ${Number(growthHamsterById(state,id)?.quantity||before+1)}/${required} · ${growthCostText(copyCost)}`,'ok');await sleep(250);}catch(error){if(error?.name==='AbortError')throw error;if(growthStateError(error))state=await growthRecoverState('copy-buy');else log(`${growthDisplayName(id)}: ${error.message}`,'warn');failed=true;break;}
+6721-      }
+6722-      if(failed)continue;
+6723:      hamster=growthHamsterById(state,id);const liveReq=Number(hamster?.nextUpgrade?.shardsQuantity||0),liveQty=Number(hamster?.quantity||0);if(liveQty<liveReq||liveReq!==required)continue;const cost=hamster?.nextUpgrade?.costs||upgradeCost;if(!growthHamsterCostSafe(cost)||!growthCanAfford(cost,state)||!growthBudgetAllows(budget,cost))continue;
+6724:      try{const costBefore=growthCostSnapshot(cost,state),data=await apiJson('/player/hamster/upgrade','POST',{hamster_id:id},true,0),updated=growthFindNamed(data,'playerHamsters',id);state=growthMergeMutation(data,'growth-copy-upgrade');growthApplyCostFallback(data,cost,state,costBefore);budget.spent+=growthCapCost(cost);if(!updated||!updated.nextUpgrade){await growthRefreshEntity(id,state,'hamster');state=growthState||state;}log(`${growthDisplayName(id)} · ${either('редкость повышена','rarity upgraded')} · ${growthCostText(cost)}`,'ok');await sleep(350);}catch(error){if(error?.name==='AbortError')throw error;if(growthStateError(error))state=await growthRecoverState('copy-upgrade');else log(`${growthDisplayName(id)}: ${error.message}`,'warn');}
+6725-    }
+6726-    return state;
+6727-  }
+6728-
+6729:  function growthRarityCandidate(state,blocked,budget){for(const hamster of growthArray('playerHamsters',state)){const id=String(hamster?.hamster_id||'');if(!id||blocked.has(id)||!hamster?.nextUpgrade)continue;const required=Number(hamster.nextUpgrade.shardsQuantity||0),owned=Number(hamster.quantity||0),cost=hamster.nextUpgrade.costs||{};if(owned<required||!growthHamsterCostSafe(cost)||!growthCanAfford(cost,state)||!growthBudgetAllows(budget,cost))continue;return{id,cost,required};}return null;}
+6730:  async function growthRunRarityCore(state,budget){const blocked=new Set();let safety=0;while(safety++<GROWTH_ACTION_SAFETY){await growthCheckpoint(either('Повышение редкости Хомяков','Hamster rarity upgrades'));const target=growthRarityCandidate(state,blocked,budget);if(!target)break;try{const before=Number(growthHamsterById(state,target.id)?.quantity||0),costBefore=growthCostSnapshot(target.cost,state),data=await apiJson('/player/hamster/upgrade','POST',{hamster_id:target.id},true,0),updated=growthFindNamed(data,'playerHamsters',target.id);state=growthMergeMutation(data,'growth-rarity');growthApplyCostFallback(data,target.cost,state,costBefore);budget.spent+=growthCapCost(target.cost);if(!updated||!updated.nextUpgrade){const refreshed=await growthRefreshEntity(target.id,state,'hamster');state=growthState||state;if(!refreshed)blocked.add(target.id);}log(`${growthDisplayName(target.id)} · ${before}/${target.required} · ${either('редкость повышена','rarity upgraded')} · ${growthCostText(target.cost)}`,'ok');await sleep(300);}catch(error){if(error?.name==='AbortError')throw error;if(growthStateError(error)){state=await growthRecoverState('rarity');blocked.clear();continue;}log(`${growthDisplayName(target.id)}: ${error.message}`,'warn');blocked.add(target.id);}}return state;}
+6731-
+6732-  function growthBestHamster(state,blocked,budget,weightValue=1){
+6733-    let best=null,bestScore=0;const selectedWeight=Math.max(1,Math.min(8,Math.floor(Number(weightValue||1))||1));
+6734-    for(const hamster of growthArray('playerHamsters',state)){
+6735:      const id=String(hamster?.hamster_id||'');if(!id||blocked.has(id))continue;const level=Number(hamster.level||0),max=growthHamsterMaxLevel(hamster);if(level>=max){blocked.add(id);continue;}const next=hamster.nextLevelUp;if(!next)continue;const costs=next.costs||{},caps=growthCapCost(costs),gain=Number(next.diff||0);if(!growthHamsterLevelCostSafe(costs)||gain<=0||!growthCanAfford(costs,state)||!growthBudgetAllows(budget,costs))continue;const efficiency=gain/caps,weight=selectedWeight>1&&growthHamsterWeightedTarget(id)?selectedWeight:1,score=efficiency*weight;if(score>bestScore||(score===bestScore&&best&&caps<best.caps)){bestScore=score;best={id,caps,gain,efficiency,score,weight,max};}
+6736-    }
+6737-    return best;
+6738-  }
+6739-  function growthHamsterCurrencyAudit(state=growthState){
+6740-    let cap=0,pit=0,other=0;
+6741:    for(const hamster of growthArray('playerHamsters',state)){const cost=hamster?.nextLevelUp?.costs;if(!cost)continue;if(growthCapCost(cost)>0)cap++;else if(growthPitCost(cost)>0)pit++;else if(costParts(cost).length)other++;}
+6742-    recordDiagnostic('growth-hamster-currency-audit',{cap,pit,other,budgetId:GROWTH_HAMSTER_BUDGET_ID});
+6743-    return {cap,pit,other};
+6744-  }
+6745:  async function growthRunLevelsCore(state,budget,weightValue=1){
+6746-    const blocked=new Set();let safety=0;
+6747-    while(budget.spent<budget.limit&&safety++<GROWTH_ACTION_SAFETY){
+6748-      await growthCheckpoint(either('Лучшее Power / Крышку','Best Power / Cap'));const best=growthBestHamster(state,blocked,budget,weightValue);if(!best)break;
+6749-      let hamster=await growthRefreshEntity(best.id,state,'hamster');state=growthState||state;if(!hamster){blocked.add(best.id);continue;}const current=Number(hamster.level||0),effectiveMax=growthHamsterMaxLevel(hamster),serverMax=Number(hamster.availableMaxLvl||0),next=hamster.nextLevelUp;if(!next||current>=effectiveMax){blocked.add(best.id);continue;}
+6750:      let actionType=null,preview=next,costs=next.costs||{};const itemsOk=cost=>growthHamsterLevelCostSafe(cost)&&growthCanAfford(cost,state)&&growthBudgetAllows(budget,cost),serverRemaining=serverMax>current?serverMax-current:0;
+6751-      if(serverRemaining>1&&serverRemaining<10&&serverMax<=effectiveMax&&hamster.maxLevelUp&&itemsOk(hamster.maxLevelUp.costs||{})){actionType='max';preview=hamster.maxLevelUp;costs=preview.costs||{};}
+6752-      else if(hamster.nearest10LevelUp){const next10=(Math.floor(current/10)+1)*10;if(next10<=effectiveMax&&itemsOk(hamster.nearest10LevelUp.costs||{})){actionType='fast10';preview=hamster.nearest10LevelUp;costs=preview.costs||{};}}
+6753-      if(!itemsOk(costs)){blocked.add(best.id);continue;}
+6754:      try{const powerBefore=growthTotalPower(state),costBefore=growthCostSnapshot(costs,state),payload={hamster_id:best.id};if(actionType)payload.fast_type=actionType;const data=await apiJson('/player/hamster/lvlUp','POST',payload,true,0),hasFactions=growthResponseHas(data,'playerFactions'),updated=growthFindNamed(data,'playerHamsters',best.id);state=growthMergeMutation(data,'growth-hamster-level');growthApplyCostFallback(data,costs,state,costBefore);budget.spent+=growthCapCost(costs);let live=growthHamsterById(state,best.id);if(!updated||!updated.nextLevelUp){await growthRefreshEntity(best.id,state,'hamster');state=growthState||state;live=growthHamsterById(state,best.id);}const after=Number(live?.level??current),actualGain=hasFactions?Math.max(0,growthTotalPower(state)-powerBefore):Number(preview.diff||0),weighted=best.weight>1?` · ×${best.weight}`:'';log(`${growthDisplayName(best.id)} · Lv ${current}→${after} · ${growthCostText(costs)} · Крышки/Power ${growthCapCost(costs).toLocaleString(locale())}/${actualGain.toLocaleString(locale())} · Eff ${best.efficiency.toFixed(3)}${weighted}`,'ok');await sleep(350);}catch(error){if(error?.name==='AbortError')throw error;if(growthStateError(error)){state=await growthRecoverState('hamster-level');blocked.clear();continue;}log(`${growthDisplayName(best.id)}: ${error.message}`,'warn');blocked.add(best.id);}
+6755-    }
+6756-    return state;
+6757-  }
+6758-
+6759-  async function growthRunHamstersCore(state,settings){
+6760-    const startCaps=growthResource(GROWTH_HAMSTER_BUDGET_ID,state),limit=Math.floor(startCaps*settings.capsPercent/100),budget={limit,spent:0};log(`${either('Бюджет Хомяков в Крышках','Hamster Caps budget')}: ${settings.capsPercent}% · ${limit.toLocaleString(locale())}/${startCaps.toLocaleString(locale())}`,'info');
+6761-    if(settings.copyPriorityEnabled)state=await growthRunPriorityCopiesCore(state,settings,budget);else log(either('Приоритет копий выключен','Copy Priority is off'),'info');
+6762:    state=await growthRunRarityCore(state,budget);state=await growthRunLevelsCore(state,budget,settings.mobsterPitWeight);log(`${either('Крышек потрачено','Caps spent')}: ${budget.spent.toLocaleString(locale())}/${limit.toLocaleString(locale())}`,'ok');return state;
+6763-  }
+6764-
+6765-  function growthPhaseCount(settings,scope='all'){
+6766-    let n=0;const all=scope==='all',runPrep=scope==='prep'||(all&&settings.runPreparation),runGenerals=scope==='generals'||(all&&settings.runGenerals),runHamsters=scope==='hamsters'||(all&&settings.runHamsters);
+6767-    if(runPrep){if(settings.buyGeneralContracts)n++;if(settings.openAllBalls)n++;if(settings.openAllBoxes)n++;}if(runGenerals)n++;if(runHamsters)n+=settings.copyPriorityEnabled?3:2;return n;
+6768-  }
+6769-  async function growthRunPlan(scope='all'){
+6770-    if(!requireLicense()||hkRunner.running||growthBusy)return;
+6771-    const settings=growthReadSettingsFromUi();let phases=growthPhaseCount(settings,scope);if(!phases){log(either('В выбранном плане нет активных действий','No active actions in the selected plan'),'warn');return;}
+6772-    hkRunner.start({title:scope==='hamsters'?either('Хомяки','Hamsters'):scope==='generals'?either('Генералы','Generals'):either('Развитие','Growth'),total:phases,step:either('Подготовка актуального состояния','Preparing live state')});growthBusy=true;renderGrowth();
+6773-    let state=null,startPower=0,done=0;
+6774-    try{
+6775-      state=await growthLoadLive({force:true,loadShop:true,loadConfig:settings.excludeCurrentEventHamsters,silent:true});
+6776-      growthAbortCheck();
+6777-      if(!state)throw new Error(either('Не удалось получить актуальное состояние аккаунта','Could not load the current account state'));
+6778-      startPower=growthTotalPower(state);growthHamsterCurrencyAudit(state);
+6779-      const all=scope==='all',runPrep=scope==='prep'||(all&&settings.runPreparation),runGenerals=scope==='generals'||(all&&settings.runGenerals),runHamsters=scope==='hamsters'||(all&&settings.runHamsters);
+6780-      if(runPrep&&settings.buyGeneralContracts){hkRunner.setStep(either('Контракты Генералов','General contracts'),done,phases);state=await growthBuyAllGeneralContractsCore(state);hkRunner.setStep(either('Контракты готовы','Contracts done'),++done,phases);}
+6781-      if(runPrep&&settings.openAllBalls){hkRunner.setStep(either('Открываю шары','Opening balls'),done,phases);state=await growthOpenLootboxFamilyCore(state,'balls');hkRunner.setStep(either('Шары готовы','Balls done'),++done,phases);}
+6782-      if(runPrep&&settings.openAllBoxes){hkRunner.setStep(either('Открываю коробки','Opening boxes'),done,phases);state=await growthOpenLootboxFamilyCore(state,'boxes');hkRunner.setStep(either('Коробки готовы','Boxes done'),++done,phases);}
+6783:      if(runGenerals){hkRunner.setStep(either('Оптимизация Генералов','Optimizing Generals'),done,phases);state=await growthRunGeneralsCore(state,settings);hkRunner.setStep(either('Генералы готовы','Generals done'),++done,phases);}
+6784-      if(runHamsters){
+6785-        const startCaps=growthResource(GROWTH_HAMSTER_BUDGET_ID,state),limit=Math.floor(startCaps*settings.capsPercent/100),budget={limit,spent:0};
+6786-        if(settings.copyPriorityEnabled){hkRunner.setStep(either('Приоритет копий','Copy Priority'),done,phases);state=await growthRunPriorityCopiesCore(state,settings,budget);hkRunner.setStep(either('Копии готовы','Copies done'),++done,phases);}
+6787:        hkRunner.setStep(either('Редкость Хомяков','Hamster rarity'),done,phases);state=await growthRunRarityCore(state,budget);hkRunner.setStep(either('Редкость готова','Rarity done'),++done,phases);
+6788:        hkRunner.setStep(either('Уровни Хомяков','Hamster levels'),done,phases);state=await growthRunLevelsCore(state,budget,settings.mobsterPitWeight);hkRunner.setStep(either('Уровни готовы','Levels done'),++done,phases);log(`${either('Крышек потрачено','Caps spent')}: ${budget.spent.toLocaleString(locale())}/${limit.toLocaleString(locale())}`,'ok');
+6789-      }
+6790-      growthState=state;playerDocument=state;renderGrowth();const gain=Math.max(0,growthTotalPower(state)-startPower);hkRunner.finish(`${either('Готово','Done')} · Power +${gain.toLocaleString(locale())}`);log(`${either('Развитие завершено','Growth completed')} · Power +${gain.toLocaleString(locale())}`,'ok');
+6791-    }catch(error){if(error?.name==='AbortError'){hkRunner.reset();log(either('Операция остановлена','Operation stopped'),'warn');}else{hkRunner.fail(error);log(`${either('Развитие','Growth')}: ${error?.message||error}`,'bad');}}
+6792-    finally{growthBusy=false;renderGrowth();}
+6793-  }
+6794-
+6795-  function growthMovePriority(index,direction){const settings=growthSettings(),rows=growthClonePriority(settings.copyPriority),to=index+(direction==='up'?-1:1);if(index<0||to<0||index>=rows.length||to>=rows.length)return;[rows[index],rows[to]]=[rows[to],rows[index]];saveGrowthSettings({copyPriority:rows});renderGrowth();}
+6796-  function growthRemovePriority(index){const settings=growthSettings(),rows=growthClonePriority(settings.copyPriority);if(index<0||index>=rows.length)return;rows.splice(index,1);saveGrowthSettings({copyPriority:rows});renderGrowth();}
+6797-  function growthResetPriority(){saveGrowthSettings({copyPriority:growthClonePriority(GROWTH_COPY_PRIORITY_DEFAULT)});renderGrowth();}
+6798-
+6799-  let growthRenderTimer = null;
+6800-  function scheduleGrowthRender(){
+6801-    if(!root?.querySelector('.hk-page.active[data-content^="growth"]'))return;
+6802-    if(growthRenderTimer)return;
+6803-    growthRenderTimer=setTimeout(()=>{growthRenderTimer=null;renderGrowth();},hkRunner.running?180:40);
+6804-  }
+6805-  hkStateStore.subscribe(event=>{
+6806-    if(!event?.snapshot)return;growthState=event.snapshot;scheduleGrowthRender();
+6807-  });
+6808-
+6809-  function applyLanguage() {
+6810-    if (!root) return;
+6811-    root.querySelectorAll('[data-i18n]').forEach(element => { element.textContent = tr(element.dataset.i18n); });
+6812-    root.querySelectorAll('[data-i18n-placeholder]').forEach(element => { element.placeholder = tr(element.dataset.i18nPlaceholder); });
+6813-    root.querySelectorAll('[data-nav-ru][data-nav-en]').forEach(element => {
+6814-      const label = language === 'en' ? element.dataset.navEn : element.dataset.navRu;
+6815-      const target = element.querySelector('.hk-tab-label');
+6816-      if (target) target.textContent = label; else if (!element.classList.contains('planned')) element.textContent = label;
+6817-      element.title = label; element.setAttribute('aria-label', label);
+6818-    });
+6819-    root.querySelectorAll('.hk-tab').forEach(element => {
+6820-      const groupId=element.dataset.group; const groupHintKey={today:'navTodayHint',battles:'navBattlesHint',city:'navCityHint',business:'navBusinessHint',growth:'navGrowthHint',trade:'navTradeHint',clan:'navClanHint'}[groupId];
+6821-      const hint=element.querySelector('.hk-tab-hint'); if(hint&&groupHintKey)hint.textContent=tr(groupHintKey);
+6822-    });
+6823-    root.querySelectorAll('[data-lang]').forEach(button => button.classList.toggle('active', button.dataset.lang === language));
+6824-    fillTierFilters();
+6825-    refreshPresets(presetSelect?.value || '');
+6826-    refreshFairPresets(fairPresetSelect?.value || '');
+6827-    renderBusinessLists();
+6828-    renderFair();
+6829-    renderShop();
+6830-    renderRecipes();
+6831-    renderCommunityRecipes();
+6832-    renderProjectBureau();
+6833-    renderMapIndex();
