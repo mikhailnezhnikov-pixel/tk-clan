@@ -1,0 +1,45 @@
+name: Diagnose public war and alliance data
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-data-diagnostic-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Read public data
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -e
+            base=http://127.0.0.1:8787
+            echo "=== HEALTH ==="
+            curl -fsS "$base/health" || true
+            echo
+            echo "=== WAR ==="
+            curl -fsS "$base/api/v1/public/clan-war" || true
+            echo
+            for kind in alliance_power alliance_influence alliance_defense alliances; do
+              echo "=== RATING:$kind ==="
+              curl -fsS "$base/api/v1/public/ratings?kind=$kind&limit=10" || true
+              echo
+            done
+          '
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
