@@ -33,19 +33,55 @@
     document.querySelectorAll('.topbar .brand img').forEach(img=>img.src='https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png');
     document.querySelectorAll('nav.tabs[aria-label="Разделы сайта"]').forEach(n=>n.classList.add('tk-legacy-site-nav'));
   }
+  function portalMobileMenus(){
+    document.querySelectorAll('[data-mobile-nav]').forEach(menu=>{
+      if(menu.parentElement!==document.body){
+        menu.dataset.tkMobilePortal='1';
+        document.body.appendChild(menu);
+      }
+    });
+  }
+  function closeMobileMenu(){
+    const menu=document.querySelector('[data-mobile-nav]');
+    document.querySelectorAll('[data-menu-toggle]').forEach(toggle=>toggle.setAttribute('aria-expanded','false'));
+    if(menu)menu.classList.remove('open');
+    document.body.classList.remove('menu-open');
+  }
   function wireGeneratedMenu(){
-    document.querySelectorAll('.tk-generated-header [data-menu-toggle]').forEach(toggle=>{
+    document.querySelectorAll('[data-menu-toggle]').forEach(toggle=>{
       if(toggle.dataset.tkWired==='1')return;toggle.dataset.tkWired='1';
-      toggle.addEventListener('click',()=>{
-        const header=toggle.closest('header'),menu=header&&header.querySelector('[data-mobile-nav]');if(!menu)return;
-        const open=!menu.classList.contains('open');menu.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open));document.body.classList.toggle('menu-open',open);
+      toggle.addEventListener('click',event=>{
+        event.preventDefault();
+        event.stopPropagation();
+        const menu=document.querySelector('[data-mobile-nav]');if(!menu)return;
+        const open=!menu.classList.contains('open');
+        if(open){
+          menu.classList.add('open');
+          toggle.setAttribute('aria-expanded','true');
+          document.body.classList.add('menu-open');
+          menu.scrollTop=0;
+        }else{
+          closeMobileMenu();
+        }
       });
     });
+    const menu=document.querySelector('[data-mobile-nav]');
+    if(menu&&menu.dataset.tkLinksWired!=='1'){
+      menu.dataset.tkLinksWired='1';
+      menu.addEventListener('click',event=>{
+        if(event.target.closest('a,button'))closeMobileMenu();
+      });
+    }
+    if(document.documentElement.dataset.tkMenuEscape!=='1'){
+      document.documentElement.dataset.tkMenuEscape='1';
+      document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMobileMenu()});
+    }
   }
   function render(){
     ensureTheme();createHeader();normalizeExistingHeader();
     document.querySelectorAll('nav.nav,nav.desktop-nav').forEach(n=>renderContainer(n,false));
     document.querySelectorAll('nav.mobile-nav,.mobile-links').forEach(n=>renderContainer(n,true));
+    portalMobileMenus();
     wireGeneratedMenu();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
