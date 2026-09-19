@@ -2,6 +2,7 @@
 # TopKing 1.17.2 deploy retry after service diagnostics hardening
 from pathlib import Path
 import re
+import runpy
 from patch_today_live_1170 import apply_today_hotfix
 from patch_native_login_gate_1170 import apply_login_gate
 from patch_bureau_resources_live_1171 import apply_hotfix as apply_bureau_resources_hotfix
@@ -10,6 +11,9 @@ from patch_bosses_readonly_1172 import apply_hotfix as apply_bosses_hotfix
 p=Path("/tmp/HamsterKingMobile.user.js")
 s=p.read_text()
 MARKER="HK_CLAN_SHOP_ACTUAL_FACTS_V1"
+
+def apply_alliance_v2_file_patch():
+    runpy.run_path(str(Path(__file__).with_name("patch_alliance_ratings_v2_userscript.py")), run_name="__main__")
 
 
 def apply_alliance_ratings_patch(text):
@@ -315,6 +319,7 @@ if MARKER in s:
     s = apply_bureau_resources_hotfix(s)
     s = apply_bosses_hotfix(s)
     p.write_text(s)
+    apply_alliance_v2_file_patch()
     print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_TODAY_LOGIN_AND_1171")
     raise SystemExit(0)
 
@@ -399,4 +404,5 @@ if 'HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1' not in s:
 s = apply_bureau_resources_hotfix(s)
 s = apply_bosses_hotfix(s)
 p.write_text(s)
+apply_alliance_v2_file_patch()
 print("CLAN_SHOP_USERSCRIPT_PATCH_OK_WITH_LOGIN_GATE_AND_1171")
