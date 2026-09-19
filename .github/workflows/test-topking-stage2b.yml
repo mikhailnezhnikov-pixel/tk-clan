@@ -28,20 +28,28 @@ jobs:
 
       - name: Run Stage 2B chained fixture twice
         run: |
-          set -euo pipefail
-          python3 deploy/topking/test_stage2b_runner_fixture.py
+          set +e
+          python3 deploy/topking/test_stage2b_runner_fixture.py >/tmp/stage2b.log 2>&1
+          status=$?
+          echo "$status" >/tmp/stage2b.status
+          cat /tmp/stage2b.log
+          exit 0
 
       - name: Record passing fixture
         run: |
           set -euo pipefail
           mkdir -p audit
+          code="$(cat /tmp/stage2b.status 2>/dev/null || echo 99)"
+          if [ "$code" = "0" ]; then result=passed; else result=failed; fi
           {
             echo "stage=2B"
             echo "revision=stage2b-20260919-r1"
             echo "modules=shop,recipes,bureau"
             echo "requires=stage2a-20260919-r1"
-            echo "fixture=passed"
+            echo "fixture=$result"
             echo "deploy=not-enabled"
+            echo "--- log tail ---"
+            tail -n 60 /tmp/stage2b.log 2>/dev/null || true
           } > audit/hk-stage2b-test-status.txt
 
           git config user.name "github-actions[bot]"
