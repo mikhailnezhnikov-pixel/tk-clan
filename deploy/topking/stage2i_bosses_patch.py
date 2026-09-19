@@ -1,18 +1,18 @@
 from pathlib import Path
 p=Path('/tmp/HamsterKingMobile.user.js')
 s=p.read_text(encoding='utf-8')
-REV='stage2i-bosses-20260920-r1'
+REV='stage2j-bosses-20260920-r1'
 def req(x,m):
     if x not in s: raise SystemExit(m)
-if '// @version      1.16.7' not in s and '// @version      1.16.8' not in s: raise SystemExit('Stage 2I requires 1.16.7 or 1.16.8')
-req("HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1'",'Stage 2H missing')
-if f"HK_STAGE2I_BOSSES_REV = '{REV}'" not in s:
-    s=s.replace('// @version      1.16.7','// @version      1.16.8',1)
-    s=s.replace(": '1.16.7';",": '1.16.8';",1)
-    a="  const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';"; req(a,'marker')
-    s=s.replace(a,a+f"\n  const HK_STAGE2I_BOSSES_REV = '{REV}';",1)
-    a='  runtime.warsStage = HK_STAGE2H_WARS_REV;'; req(a,'runtime')
-    s=s.replace(a,a+"\n  runtime.bossesStage = HK_STAGE2I_BOSSES_REV;",1)
+if '// @version      1.16.9' not in s and '// @version      1.16.9' not in s: raise SystemExit('Stage 2J requires 1.16.8 or 1.16.9')
+req("HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1'",'Stage 2I Buildings missing')
+if f"HK_STAGE2J_BOSSES_REV = '{REV}'" not in s:
+    s=s.replace('// @version      1.16.9','// @version      1.16.9',1)
+    s=s.replace(": '1.16.8';",": '1.16.9';",1)
+    a="  const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';"; req(a,'marker')
+    s=s.replace(a,a+f"\n  const HK_STAGE2J_BOSSES_REV = '{REV}';",1)
+    a='  runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;'; req(a,'runtime')
+    s=s.replace(a,a+"\n  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;",1)
 if 'let bossSnapshot = null;' not in s:
     a='  let warSnapshot = null;'; req(a,'war state')
     s=s.replace(a,"  let bossSnapshot = null;\n  let bossLastReadAt = 0;\n"+a,1)
@@ -44,7 +44,7 @@ if old in s:s=s.replace(old,new,1)
 elif new not in s:raise SystemExit('nav')
 if 'data-content="bosses"' not in s:
     a='      <div class="hk-page" data-content="pit">';req(a,'pit page')
-    page='''      <div class="hk-page" data-content="bosses"><div id="hk-boss-content" class="hk-cardbox"><h3>\${either('Боссы','Bosses')}</h3><p class="hk-muted">\${either('Откройте вкладку, чтобы считать состояние босса.','Open this tab to read boss state.')}</p></div></div>
+    page='''      <div class="hk-page" data-content="bosses"><div id="hk-boss-content" class="hk-cardbox"><h3>${either('Боссы','Bosses')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать состояние босса.','Open this tab to read boss state.')}</p></div></div>
 '''
     s=s.replace(a,page+a,1)
 if "if (key === 'bosses')" not in s:
@@ -53,5 +53,5 @@ if "if (key === 'bosses')" not in s:
 if "if (finalPage === 'bosses') renderBosses();" not in s:
     a="      if (finalPage === 'wars') renderWars();";req(a,'wars activate')
     s=s.replace(a,a+"\n      if (finalPage === 'bosses') renderBosses();",1)
-for x in ['// @version      1.16.8',f"HK_STAGE2I_BOSSES_REV = '{REV}'","{page:'bosses',ru:'Боссы',en:'Bosses'}",'data-content="bosses"','function bossStateRows(','async function refreshBosses(',"documentValue?.player_bosses","documentValue?.player_regional_bosses","documentValue?.boss_battle","GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'","GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'"]:req(x,'Stage 2I missing '+x)
+for x in ['// @version      1.16.9',f"HK_STAGE2J_BOSSES_REV = '{REV}'","{page:'bosses',ru:'Боссы',en:'Bosses'}",'data-content="bosses"','function bossStateRows(','async function refreshBosses(',"documentValue?.player_bosses","documentValue?.player_regional_bosses","documentValue?.boss_battle","GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'","GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'"]:req(x,'Stage 2I missing '+x)
 p.write_text(s,encoding='utf-8')
