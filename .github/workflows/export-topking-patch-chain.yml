@@ -1,0 +1,53 @@
+name: Export TopKing patch chain
+
+on:
+  push:
+    paths:
+      - '.github/workflows/export-topking-patch-chain.yml'
+      - 'deploy/topking/stage1_runner_patch.py'
+      - 'deploy/topking/stage2_runner_patch.py'
+      - 'deploy/topking/stage2b_runner_patch.py'
+      - 'deploy/topking/stage2c_state_patch.py'
+      - 'deploy/topking/stage2d_resource_business_patch.py'
+      - 'deploy/topking/stage2e_maps_patch.py'
+      - 'deploy/topking/stage2f_clan_patch.py'
+      - 'deploy/topking/stage2g_rumors_patch.py'
+      - 'deploy/topking/stage2h_wars_patch.py'
+      - 'deploy/topking/stage2i_buildings_explore_patch.py'
+      - 'deploy/topking/stage3a_today_verification_patch.py'
+      - 'deploy/topking/stage3b_business_verification_patch.py'
+      - 'deploy/topking/stage3c_fair_shop_verification_patch.py'
+      - 'deploy/topking/stage3d_recipes_bureau_verification_patch.py'
+      - 'deploy/topking/stage3e_resources_verification_patch.py'
+      - 'deploy/topking/stage3f_mutation_retry_safety_patch.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: topking-patch-chain
+          path: |
+            deploy/topking/stage1_runner_patch.py
+            deploy/topking/stage2_runner_patch.py
+            deploy/topking/stage2b_runner_patch.py
+            deploy/topking/stage2c_state_patch.py
+            deploy/topking/stage2d_resource_business_patch.py
+            deploy/topking/stage2e_maps_patch.py
+            deploy/topking/stage2f_clan_patch.py
+            deploy/topking/stage2g_rumors_patch.py
+            deploy/topking/stage2h_wars_patch.py
+            deploy/topking/stage2i_buildings_explore_patch.py
+            deploy/topking/stage3a_today_verification_patch.py
+            deploy/topking/stage3b_business_verification_patch.py
+            deploy/topking/stage3c_fair_shop_verification_patch.py
+            deploy/topking/stage3d_recipes_bureau_verification_patch.py
+            deploy/topking/stage3e_resources_verification_patch.py
+            deploy/topking/stage3f_mutation_retry_safety_patch.py
+          retention-days: 1
