@@ -5,6 +5,7 @@ name: Export TopKing bookmarklet sources
 # verify live 1.11.0
 # verify live 1.12.0
 # inspect live after 1.13 precheck
+# inspect current live before clean 1.13 deploy
 # diagnose current live before 1.13
 # verify live 1.13.0
 
