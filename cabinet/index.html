@@ -192,6 +192,18 @@
     .hkmap-reward span{display:block;color:var(--muted);font-size:11px}
     .hkmap-reward b{display:block;margin-top:4px;color:#9ee3b5;font-size:20px}
     .hkmap-note{margin:12px 0 0;color:var(--muted);font-size:12px}
+    .hkmap-access-admin{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1.3fr);gap:16px;margin:18px 0;padding:17px;border:1px solid rgba(232,182,84,.20);border-radius:16px;background:rgba(232,182,84,.045)}
+    .hkmap-access-admin h3{margin:0 0 6px;color:#fff;font-size:18px}
+    .hkmap-access-admin p{margin:0}
+    .hkmap-members{display:grid;gap:7px}
+    .hkmap-member{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(8,11,16,.42)}
+    .hkmap-member strong{display:block;overflow-wrap:anywhere}
+    .hkmap-member small{display:block;margin-top:2px;color:var(--muted)}
+    .hkmap-toggle{display:inline-flex;align-items:center;gap:7px;color:#dce2e9;font-size:12px;font-weight:800;white-space:nowrap}
+    .hkmap-toggle input{width:18px;height:18px;accent-color:#d6a33d}
+    .hkmap-toggle input:disabled{opacity:.45}
+    .hkmap-published{display:inline-flex;padding:4px 7px;border-radius:999px;background:rgba(65,177,103,.10);color:#9ee3b5;font-size:11px;font-weight:850}
+    .hkmap-private{color:#707986;font-size:11px;font-weight:750}
     @media(max-width:680px){
       .hkmap-card{padding:20px}
       .hkmap-head{display:block}
@@ -201,6 +213,8 @@
       .hkmap-tools{align-items:stretch;flex-direction:column}
       .hkmap-tools input{width:100%}
       .hkmap-detail-box{grid-template-columns:1fr}
+      .hkmap-access-admin{grid-template-columns:1fr}
+      .hkmap-member{grid-template-columns:1fr}
     }
 
     .hidden{display:none!important}
@@ -400,7 +414,7 @@
       <nav class="cab-tabs" aria-label="Разделы личного кабинета">
         <button class="cab-tab active" type="button" data-cab-tab="overview">Обзор</button>
         <button class="cab-tab" type="button" data-cab-tab="players">Статистика игроков</button>
-        <button class="cab-tab" type="button" data-cab-tab="maps">Карты</button>
+        <button class="cab-tab" type="button" data-cab-tab="maps" hidden>Карты</button>
         <button class="cab-tab" type="button" data-cab-tab="install">Установка</button>
       </nav>
 
@@ -526,10 +540,19 @@
             <div class="hkmap-mini"><span>Open подключено</span><b id="hkmap-ready">0</b></div>
           </div>
 
+          <div id="hkmap-access-admin" class="hkmap-access-admin hidden">
+            <div>
+              <h3>Доступ к разделу карт</h3>
+              <p class="muted">Раздел скрыт от остальных участников. Здесь можно разрешить просмотр конкретным участникам кабинета.</p>
+            </div>
+            <div id="hkmap-members" class="hkmap-members"></div>
+          </div>
+
           <div class="hkmap-tools">
             <input id="hkmap-search" type="search" autocomplete="off" placeholder="Поиск города или координат, например New York 23:32">
             <span id="hkmap-count" class="hkmap-count"></span>
           </div>
+          <p id="hkmap-message" class="message" role="status" aria-live="polite"></p>
 
           <div class="hkmap-table-wrap">
             <table class="hkmap-table">
@@ -551,13 +574,14 @@
                   <th data-hkmap-sort="progress">Progress</th>
                   <th data-hkmap-sort="score" data-sort-direction="desc">Score</th>
                   <th>Map</th>
+                  <th>Публикация</th>
                 </tr>
               </thead>
               <tbody id="hkmap-body"></tbody>
             </table>
           </div>
 
-          <p class="hkmap-note">Нажмите строку карты, чтобы увидеть максимальную награду. Кнопки Open подключаются к нашим локальным картам через отдельный реестр — после завершения текущей выгрузки менять сам индекс уже не потребуется.</p>
+          <p class="hkmap-note">Нажмите строку карты, чтобы увидеть максимальную награду. Публикация доступна только управляющим картами. После включения карта автоматически появляется в публичном разделе «Карты».</p>
         </article>
       </section>
 
@@ -627,8 +651,6 @@
   </div>
 </footer>
 
-<script src="./hk-maps-index.js?v=20260919-1"></script>
-<script src="./hk-maps-open.js?v=20260919-1"></script>
 <script>
   const API='https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet';
   const TOKEN_KEY='tk_clan_cabinet_session';
@@ -661,14 +683,59 @@
 
   let hkMapsSort={key:'score',dir:-1};
   let hkMapOpenKey='';
+  let hkMaps=[];
+  let hkMapsMembers=[];
+  let hkMapsCanManage=false;
+  let hkMapsLoaded=false;
+  let currentMapsAccess=false;
 
   function hkMapsData(){
-    return Array.isArray(window.HK_MAPS_INDEX)?window.HK_MAPS_INDEX:[];
+    return hkMaps;
   }
 
   function hkMapSortValue(map,key){
     if(/^c[0-5]$/.test(key))return Number(map.crystals[Number(key.slice(1))]||0);
     return map[key]??'';
+  }
+
+  function renderMapsMembers(){
+    const box=$('hkmap-access-admin'),list=$('hkmap-members');
+    if(!box||!list)return;
+    box.classList.toggle('hidden',!hkMapsCanManage);
+    if(!hkMapsCanManage){list.innerHTML='';return}
+    list.innerHTML=hkMapsMembers.map(member=>{
+      const name=member.first_name||member.username||member.note||'Участник';
+      const suffix=member.username?'@'+member.username:(member.note||'');
+      const locked=!!member.maps_manage;
+      return '<div class="hkmap-member">'+
+        '<div><strong>'+safe(name)+'</strong><small>'+safe(suffix)+(locked?' · управление картами':'')+'</small></div>'+
+        '<label class="hkmap-toggle"><input type="checkbox" data-hkmap-member-access="'+safe(member.telegram_id)+'" '+(member.maps_access?'checked ':'')+(locked?'disabled ':'')+'> Доступ</label>'+
+      '</div>';
+    }).join('')||'<div class="muted">Нет участников для настройки.</div>';
+  }
+
+  async function loadMapsIndex(force=false){
+    if(!currentMapsAccess)return;
+    if(hkMapsLoaded&&!force){renderMapsIndex();return}
+    setMessage('hkmap-message','Загружаю закрытый индекс карт…');
+    try{
+      const data=await request('/maps');
+      hkMaps=Array.isArray(data.maps)?data.maps:[];
+      hkMapsMembers=Array.isArray(data.members)?data.members:[];
+      hkMapsCanManage=!!data.can_manage;
+      hkMapsLoaded=true;
+      renderMapsMembers();
+      renderMapsIndex();
+      setMessage('hkmap-message');
+    }catch(error){
+      if(error.code==='maps_access_denied'){
+        currentMapsAccess=false;
+        document.querySelector('[data-cab-tab="maps"]')?.setAttribute('hidden','');
+        setCabTab('overview');
+        return;
+      }
+      setMessage('hkmap-message','Не удалось загрузить индекс карт.','bad');
+    }
   }
 
   function renderMapsIndex(){
@@ -691,8 +758,7 @@
 
     $('hkmap-total').textContent=formatNumber(source.length);
     $('hkmap-cities').textContent=formatNumber(new Set(source.map(x=>x.city)).size);
-    const openRegistry=window.HK_MAPS_OPEN||{};
-    $('hkmap-ready').textContent=formatNumber(source.filter(x=>openRegistry[x.key]).length);
+    $('hkmap-ready').textContent=formatNumber(source.filter(x=>x.open_url).length);
     $('hkmap-count').textContent=filtered.length+'/'+source.length+' показано';
 
     document.querySelectorAll('[data-hkmap-sort]').forEach(th=>{
@@ -704,10 +770,13 @@
 
     body.innerHTML=filtered.map(map=>{
       const opened=hkMapOpenKey===map.key;
-      const openUrl=openRegistry[map.key]||'';
+      const openUrl=String(map.open_url||'');
       const openControl=openUrl
         ? '<a class="hkmap-open" href="'+safe(openUrl)+'">Open</a>'
         : '<span class="hkmap-open is-disabled" title="Локальная карта ещё не загружена">Open</span>';
+      const publishControl=hkMapsCanManage
+        ? '<label class="hkmap-toggle"><input type="checkbox" data-hkmap-publish="'+safe(map.key)+'" '+(map.published?'checked ':'')+(!openUrl?'disabled ':'')+'>'+(!openUrl?'нет карты':'на сайте')+'</label>'
+        : (map.published?'<span class="hkmap-published">На сайте</span>':'<span class="hkmap-private">Закрыта</span>');
       const progressClass=Number(map.progress)===100?' ready':'';
       return '<tr class="hkmap-row'+(opened?' is-open':'')+'" data-hkmap-key="'+safe(map.key)+'">'+
         '<td><strong>'+safe(map.city)+'</strong></td>'+
@@ -721,9 +790,10 @@
         '<td><span class="hkmap-progress'+progressClass+'">'+Number(map.progress).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%</span></td>'+
         '<td><strong>'+formatNumber(map.score)+'</strong></td>'+
         '<td>'+openControl+'</td>'+
+        '<td>'+publishControl+'</td>'+
       '</tr>'+
       (opened
-        ? '<tr class="hkmap-detail"><td colspan="16"><div class="hkmap-detail-box">'+
+        ? '<tr class="hkmap-detail"><td colspan="17"><div class="hkmap-detail-box">'+
             '<div class="hkmap-reward"><span>Max reward crystals</span><b>'+formatNumber(map.reward?.max||0)+'</b></div>'+
             '<div class="hkmap-reward"><span>Normal reward crystals</span><b>'+formatNumber(map.reward?.normal||0)+'</b></div>'+
             '<div class="hkmap-reward"><span>Investment reward crystals</span><b>'+formatNumber(map.reward?.investment||0)+'</b></div>'+
@@ -742,9 +812,39 @@
       return;
     }
     const row=event.target.closest('[data-hkmap-key]');
-    if(row&&!event.target.closest('a,.hkmap-open')){
+    if(row&&!event.target.closest('a,.hkmap-open,.hkmap-toggle,input')){
       hkMapOpenKey=hkMapOpenKey===row.dataset.hkmapKey?'':row.dataset.hkmapKey;
       renderMapsIndex();
+    }
+  });
+
+  document.addEventListener('change',async event=>{
+    const publish=event.target.closest('[data-hkmap-publish]');
+    if(publish){
+      const checked=publish.checked;
+      publish.disabled=true;
+      try{
+        await request('/maps/publish',{method:'POST',body:JSON.stringify({key:publish.dataset.hkmapPublish,published:checked})});
+        setMessage('hkmap-message',checked?'Карта опубликована на сайте.':'Публикация карты снята.','good');
+        await loadMapsIndex(true);
+      }catch(error){
+        publish.checked=!checked;
+        setMessage('hkmap-message',error.code==='map_not_ready'?'Сначала должна быть загружена локальная карта.':'Не удалось изменить публикацию.','bad');
+      }finally{publish.disabled=false}
+      return;
+    }
+    const memberAccess=event.target.closest('[data-hkmap-member-access]');
+    if(memberAccess){
+      const checked=memberAccess.checked;
+      memberAccess.disabled=true;
+      try{
+        await request('/maps/member-access',{method:'POST',body:JSON.stringify({telegram_id:memberAccess.dataset.hkmapMemberAccess,allowed:checked})});
+        setMessage('hkmap-message',checked?'Доступ участнику открыт.':'Доступ участнику закрыт.','good');
+        await loadMapsIndex(true);
+      }catch{
+        memberAccess.checked=!checked;
+        setMessage('hkmap-message','Не удалось изменить доступ участника.','bad');
+      }finally{memberAccess.disabled=false}
     }
   });
 
@@ -755,7 +855,10 @@
     document.querySelectorAll('[data-cab-tab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.cabTab===name));
     document.querySelectorAll('[data-cab-panel]').forEach(panel=>panel.hidden=panel.dataset.cabPanel!==name);
     if(name==='players')renderPlayerStats();
-    if(name==='maps')renderMapsIndex();
+    if(name==='maps'){
+      if(!currentMapsAccess){setCabTab('overview');return}
+      loadMapsIndex();
+    }
   }
 
   document.addEventListener('click',event=>{
@@ -1223,6 +1326,13 @@
     $('dashboard').classList.remove('hidden');
 
     const m=data.member||{};
+    currentMapsAccess=!!m.maps_access;
+    const mapsTab=document.querySelector('[data-cab-tab="maps"]');
+    if(mapsTab)mapsTab.hidden=!currentMapsAccess;
+    if(!currentMapsAccess){
+      hkMaps=[];hkMapsMembers=[];hkMapsLoaded=false;hkMapsCanManage=false;
+      if(document.querySelector('[data-cab-tab="maps"].active'))setCabTab('overview');
+    }
     $('member-name').textContent=m.first_name||m.note||'Участник Top King';
     $('member-id').textContent='Telegram ID: '+m.telegram_id+(m.username?' · @'+m.username:'');
     const linked=String(m.linked_player_id||'');
