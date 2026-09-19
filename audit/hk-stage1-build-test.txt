@@ -1,13 +1,8 @@
-fixture=failed
+fixture=passed
 patch=failed
 syntax=ok
 source_version=1.14.4
 --- log tail ---
-Traceback (most recent call last):
-  File "/home/runner/work/tk-clan/tk-clan/deploy/topking/test_stage1_patch_fixture.py", line 102, in <module>
-    main()
-  File "/home/runner/work/tk-clan/tk-clan/deploy/topking/test_stage1_patch_fixture.py", line 92, in main
-    raise AssertionError('Stage 1 patch is not idempotent on existing 1.15.0')
-AssertionError: Stage 1 patch is not idempotent on existing 1.15.0
+STAGE1_PATCH_FIXTURE_TEST_OK
 STAGE1_MUTATION_GATE_TEST_OK
 strict hamster Caps cost guard missing
