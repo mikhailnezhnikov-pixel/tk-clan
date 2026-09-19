@@ -1,0 +1,110 @@
+name: Test TopKing Stage 2A Live Build
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/stage2a-build-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: test-topking-stage2a-live-build
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch verified Stage 1 live read only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.15.0$' /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MUTATION_GATE_REV = 'stage1-20260919-r4'" /tmp/HamsterKingMobile.user.js
+          grep -Fq 'growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID])' /tmp/HamsterKingMobile.user.js
+          grep -Fq 'growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])' /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Build Stage 2A and record result
+        run: |
+          set +e
+          : > /tmp/stage2a-build.log
+          python3 deploy/topking/test_stage2_runner_fixture.py >>/tmp/stage2a-build.log 2>&1
+          fixture_status=$?
+          if [ "$fixture_status" -eq 0 ]; then fixture=passed; else fixture=failed; fi
+
+          python3 deploy/topking/stage2_runner_patch.py >>/tmp/stage2a-build.log 2>&1
+          patch_status=$?
+          if [ "$patch_status" -eq 0 ]; then patch=passed; else patch=failed; fi
+
+          node --check /tmp/HamsterKingMobile.user.js >>/tmp/stage2a-build.log 2>&1
+          syntax_status=$?
+          if [ "$syntax_status" -eq 0 ]; then syntax=ok; else syntax=bad; fi
+
+          validation=failed
+          if [ "$patch_status" -eq 0 ] && [ "$syntax_status" -eq 0 ]; then
+            validation=passed
+            grep -q '^// @version      1.16.0$' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq "HK_STAGE2_RUNNER_REV = 'stage2a-20260919-r1'" /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq "HK_MUTATION_GATE_REV = 'stage1-20260919-r4'" /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq "GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'" /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq "GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'" /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID])' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq "title:either('Яма','Pit')" /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq "hkRunner.stop('pit')" /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq "title:either('Ярмарка','Fair')" /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq "hkRunner.stop('fair')" /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'await gameRetryDelay(Math.max(700, settings.interval * 1000));' /tmp/HamsterKingMobile.user.js || validation=failed
+            grep -Fq 'await gameRetryDelay(550);' /tmp/HamsterKingMobile.user.js || validation=failed
+          fi
+
+          {
+            echo 'stage=2A'
+            echo 'revision=stage2a-20260919-r1'
+            echo "fixture=$fixture"
+            echo "patch=$patch"
+            echo "syntax=$syntax"
+            echo "validation=$validation"
+            echo "built_version=$(grep -m1 '^// @version' /tmp/HamsterKingMobile.user.js | sed 's/^\/\/ @version[[:space:]]*//')"
+            echo 'deploy=not-enabled'
+            echo '--- log tail ---'
+            tail -n 60 /tmp/stage2a-build.log
+          } > /tmp/hk-stage2a-build-test.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p audit
+            cp /tmp/hk-stage2a-build-test.txt audit/hk-stage2a-build-test.txt
+            git add audit/hk-stage2a-build-test.txt
+            if git diff --cached --quiet; then pushed=1; break; fi
+            git commit -m "Record Stage 2A live build test"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = "1"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/stage2a-build.log /tmp/hk-stage2a-build-test.txt
