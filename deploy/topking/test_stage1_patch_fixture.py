@@ -22,11 +22,13 @@ FIXTURE = r"""// ==UserScript==
   function growthHamsterLevelCostSafe(cost){ return growthHamsterCostSafe(cost)&&growthCapCost(cost)>0; }
   function growthCanAfford(cost,state){ return true; }
   function growthBestGeneral(state,blocked,budget,mode='x1',weightValue=1){
-    const general={nextLevelUp:{costs:{parts:[{kind:'items',id:GROWTH_GENERAL_BUDGET_ID,quantity:1}]}},nearest10LevelUp:{costs:{parts:[{kind:'items',id:GROWTH_GENERAL_BUDGET_ID,quantity:10}]}}};
-    let actionType=null,preview=general.nextLevelUp,costs=preview.costs||{};
-    if(mode==='fast10'&&general?.nearest10LevelUp){const fast=general.nearest10LevelUp.costs||{};if(growthCanAfford(fast,state)&&budget.spent+growthPitCost(fast)<=budget.limit){actionType='fast10';preview=general.nearest10LevelUp;costs=fast;}}
-    const pit=growthPitCost(costs);if(pit<=0||!growthCanAfford(costs,state)||budget.spent+pit>budget.limit)continue;
-    return {actionType,pit,costs};
+    for(const general of [{nextLevelUp:{costs:{parts:[{kind:'items',id:GROWTH_GENERAL_BUDGET_ID,quantity:1}]}},nearest10LevelUp:{costs:{parts:[{kind:'items',id:GROWTH_GENERAL_BUDGET_ID,quantity:10}]}}}]){
+      let actionType=null,preview=general.nextLevelUp,costs=preview.costs||{};
+      if(mode==='fast10'&&general?.nearest10LevelUp){const fast=general.nearest10LevelUp.costs||{};if(growthCanAfford(fast,state)&&budget.spent+growthPitCost(fast)<=budget.limit){actionType='fast10';preview=general.nearest10LevelUp;costs=fast;}}
+      const pit=growthPitCost(costs);if(pit<=0||!growthCanAfford(costs,state)||budget.spent+pit>budget.limit)continue;
+      return {actionType,pit,costs};
+    }
+    return null;
   }
   function growthRunGeneralsCore() {}
   function growthRunPriorityCopiesCore() {}
