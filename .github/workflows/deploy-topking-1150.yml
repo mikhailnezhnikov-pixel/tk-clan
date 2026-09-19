@@ -10,6 +10,7 @@ on:
       - '.github/workflows/deploy-topking-1150.yml'
       - 'deploy/topking/stage1_runner_patch.py'
       - 'deploy/topking/test_stage1_mutation_gate.js'
+      - 'deploy/topking/test_stage1_patch_fixture.py'
   workflow_dispatch:
 
 permissions:
@@ -41,6 +42,7 @@ jobs:
       - name: Build and validate Stage 1
         run: |
           set -euo pipefail
+          python3 deploy/topking/test_stage1_patch_fixture.py
           python3 deploy/topking/stage1_runner_patch.py
           grep -q '^// @version      1.15.0$' /tmp/HamsterKingMobile.user.js
           grep -q "HK_MUTATION_GATE_REV.*stage1-20260919-r4" /tmp/HamsterKingMobile.user.js
