@@ -425,6 +425,8 @@
     if((m=text.match(/^Клан\s+(.+)$/)))return lang==='fa'?'قبیله '+m[1]:'Clan '+m[1];
     if((m=text.match(/^Telegram ID:\s*(.+)$/)))return lang==='fa'?'شناسه تلگرام: '+m[1]:'Telegram ID: '+m[1];
     if((m=text.match(/^(\d+)\s+ур\.$/)))return lang==='fa'?m[1]+' سطح':m[1]+' lvl';
+    if((m=text.match(/^(\d+)\s+заявок$/)))return lang==='fa'?m[1]+' درخواست':m[1]+' requests';
+    if((m=text.match(/^Опубликовано:\s*(.+)$/)))return lang==='fa'?'منتشر شد: '+m[1]:'Published: '+m[1];
     return d[text]??text;
   }
 
