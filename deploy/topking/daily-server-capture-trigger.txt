@@ -1,2 +1,2 @@
-capture=2026-09-20T02:36:00+09:00
-scope=login-ui-bootstrap-debug
+capture=2026-09-20T02:40:00+09:00
+scope=login-gate-live-verify
