@@ -5,4 +5,4 @@ source_version=1.14.4
 --- log tail ---
 STAGE1_PATCH_FIXTURE_TEST_OK
 STAGE1_MUTATION_GATE_TEST_OK
-strict hamster Caps cost guard missing
+Growth no-progress protection missing
