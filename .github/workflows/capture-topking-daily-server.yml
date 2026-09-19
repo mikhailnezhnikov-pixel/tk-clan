@@ -92,6 +92,26 @@ jobs:
                   out.append(source[start:end])
               out.append("")
           Path('audit/hk-current-daily-source.txt').write_text("\n".join(out), encoding='utf-8')
+          fair_needles=[
+              "function normalizeFairCatalog(",
+              "async function loadFair()",
+              "async function runFair()",
+              "function fairProjectedCosts(",
+              "function recipeState(",
+              "fair_id",
+              "fair_type",
+              "/fair/",
+              "ordinary",
+              "regular",
+          ]
+          fair_out=["# Current live Fair schema anchors",""]
+          for needle in fair_needles:
+              pos=source.find(needle); fair_out.append(f"===== {needle} =====")
+              if pos<0: fair_out.append("NOT FOUND")
+              else:
+                  start=max(0,source.rfind("\n",0,max(0,pos-3500))); end=min(len(source),pos+9000); fair_out.append(source[start:end])
+              fair_out.append("")
+          Path('audit/hk-current-fair-source.txt').write_text("\n".join(fair_out),encoding='utf-8')
 
           server = Path('/tmp/server.py').read_text(encoding='utf-8')
           needles = [
@@ -141,6 +161,26 @@ jobs:
                   start=max(0,source.rfind("\n",0,max(0,pos-6000))); end=min(len(source),pos+18000); out.append(source[start:end])
               out.append("")
           Path('audit/hk-current-daily-source.txt').write_text("\n".join(out),encoding='utf-8')
+          fair_needles=[
+              "function normalizeFairCatalog(",
+              "async function loadFair()",
+              "async function runFair()",
+              "function fairProjectedCosts(",
+              "function recipeState(",
+              "fair_id",
+              "fair_type",
+              "/fair/",
+              "ordinary",
+              "regular",
+          ]
+          fair_out=["# Current live Fair schema anchors",""]
+          for needle in fair_needles:
+              pos=source.find(needle); fair_out.append(f"===== {needle} =====")
+              if pos<0: fair_out.append("NOT FOUND")
+              else:
+                  start=max(0,source.rfind("\n",0,max(0,pos-3500))); end=min(len(source),pos+9000); fair_out.append(source[start:end])
+              fair_out.append("")
+          Path('audit/hk-current-fair-source.txt').write_text("\n".join(fair_out),encoding='utf-8')
 
           server=Path('/tmp/server.py').read_text(encoding='utf-8')
           needles=["from datetime import","PUBLIC_BASE =","def init_db","CREATE TABLE IF NOT EXISTS map_areas","def canonical_map_area","def do_POST",'path == "/api/v1/maps',"def admin_page","def admin_action"]
@@ -153,7 +193,7 @@ jobs:
               out.append("")
           Path('audit/hk-current-server-source.txt').write_text("\n".join(out),encoding='utf-8')
           PY
-            git add audit/hk-current-daily-source.txt audit/hk-current-server-source.txt
+            git add audit/hk-current-daily-source.txt audit/hk-current-server-source.txt audit/hk-current-fair-source.txt
             if git diff --cached --quiet; then pushed=1; break; fi
             git commit -m "Capture current Daily and backend migration anchors"
             if git push origin HEAD:main; then pushed=1; break; fi
