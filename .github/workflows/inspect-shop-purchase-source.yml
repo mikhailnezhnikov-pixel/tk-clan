@@ -1,0 +1,28 @@
+name: Inspect shop purchase source
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-shop-purchase-source.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect captured live source
+        run: |
+          set -euo pipefail
+          f=audit/hk-current-daily-source.txt
+          echo "=== shop/view ==="
+          grep -n -B20 -A80 "/shop/view" "$f" | head -420 || true
+          echo "=== sharedLots ==="
+          grep -n -B30 -A120 "sharedLots" "$f" | head -520 || true
+          echo "=== buySelected ==="
+          grep -n -B30 -A180 "buySelected" "$f" | head -700 || true
+          echo "=== purchase endpoint candidates ==="
+          grep -n -B25 -A100 -Ei "shop.*buy|buy.*shop|purchase|remaining|boughtOut|personalLots" "$f" | head -900 || true
