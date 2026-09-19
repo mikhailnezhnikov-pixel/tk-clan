@@ -7,6 +7,14 @@ s = path.read_text()
 MARKER = "TELEGRAM_APPLICATION_TOPIC_V1"
 GROUP_SILENCE_MARKER = "TELEGRAM_GROUP_SILENCE_V2"
 
+def run_child_patch(name: str) -> None:
+    try:
+        runpy.run_path(str(Path(__file__).with_name(name)), run_name="__main__")
+    except SystemExit as exc:
+        if exc.code not in (None, 0):
+            raise
+
+
 if MARKER in s and GROUP_SILENCE_MARKER not in s:
     anchor = '''        return
 
@@ -30,8 +38,8 @@ if MARKER in s and GROUP_SILENCE_MARKER not in s:
     raise SystemExit(0)
 
 if MARKER in s and GROUP_SILENCE_MARKER in s:
-    runpy.run_path(str(Path(__file__).with_name("patch_application_i18n.py")), run_name="__main__")
-    runpy.run_path(str(Path(__file__).with_name("patch_feedback_topic.py")), run_name="__main__")
+    run_child_patch("patch_application_i18n.py")
+    run_child_patch("patch_feedback_topic.py")
     print("TELEGRAM_APPLICATION_TOPIC_ALREADY_PRESENT")
     raise SystemExit(0)
 
@@ -221,6 +229,6 @@ if old_context not in s:
 s = s.replace(old_context, new_context, 1)
 
 path.write_text(s)
-runpy.run_path(str(Path(__file__).with_name("patch_application_i18n.py")), run_name="__main__")
-runpy.run_path(str(Path(__file__).with_name("patch_feedback_topic.py")), run_name="__main__")
+run_child_patch("patch_application_i18n.py")
+run_child_patch("patch_feedback_topic.py")
 print("TELEGRAM_APPLICATION_TOPIC_PATCH_OK")
