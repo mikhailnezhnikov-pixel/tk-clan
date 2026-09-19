@@ -1,3 +1,4 @@
-diagnose=2026-09-19T15:42:00Z
+diagnose=2026-09-19T15:48:00Z
 version=1.16.8
 modules=buildings,explore
+retry=game-area-anchor
