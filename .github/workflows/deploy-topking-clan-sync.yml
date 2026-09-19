@@ -1,11 +1,10 @@
-name: Deploy TopKing 1.9.9
+name: Deploy TopKing 1.10.0
 
 on:
   push:
     paths:
       - '.github/workflows/deploy-topking-clan-sync.yml'
-      - 'deploy/topking/userscript-1.9.9.patch.gz.b64'
-      - 'deploy/topking/server-no-rumors.patch.gz.b64'
+      - 'deploy/topking/userscript-1.10.0.patch.gz.b64'
   workflow_dispatch:
 
 permissions:
@@ -30,63 +29,52 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Fetch live 1.9.8 sources
+      - name: Fetch live 1.9.9
         shell: bash
         run: |
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
-          grep -q '^// @version      1.9.8$' /tmp/HamsterKingMobile.user.js
-          grep -q '/api/v1/rumors/today' /tmp/server.py
-          grep -q '/admin/rumors/publish' /tmp/server.py
-          grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.9.9$' /tmp/HamsterKingMobile.user.js
+          ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
+          ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
 
-      - name: Build 1.9.9 without rumor collection
+      - name: Build 1.10.0 architecture upgrade
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d deploy/topking/userscript-1.9.9.patch.gz.b64 | gzip -d > /tmp/userscript-1.9.9.patch
-          base64 -d deploy/topking/server-no-rumors.patch.gz.b64 | gzip -d > /tmp/server-no-rumors.patch
-          patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.9.9.patch
-          patch --fuzz=0 /tmp/server.py < /tmp/server-no-rumors.patch
+          base64 -d deploy/topking/userscript-1.10.0.patch.gz.b64 | gzip -d > /tmp/userscript-1.10.0.patch
+          patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.10.0.patch
 
-          grep -q '^// @version      1.9.9$' /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.10.0$' /tmp/HamsterKingMobile.user.js
+          grep -q 'ensureGameAuthorization' /tmp/HamsterKingMobile.user.js
+          grep -q 'createFreshGameAuthorization' /tmp/HamsterKingMobile.user.js
+          grep -q 'licensedServerJson' /tmp/HamsterKingMobile.user.js
+          grep -q 'downloadDiagnosticReport' /tmp/HamsterKingMobile.user.js
+          grep -q '__HK_MOBILE_RUNTIME__' /tmp/HamsterKingMobile.user.js
+          grep -q 'id="hk-health"' /tmp/HamsterKingMobile.user.js
           grep -q 'clanCanonicalSnapshot' /tmp/HamsterKingMobile.user.js
           grep -q 'bootstrapLateGameConnection' /tmp/HamsterKingMobile.user.js
           ! grep -q 'runDailyRumors' /tmp/HamsterKingMobile.user.js
-          ! grep -q 'dailyRumorRoute' /tmp/HamsterKingMobile.user.js
-          ! grep -q 'RUMOR_API_BASE' /tmp/HamsterKingMobile.user.js
           ! grep -q '/rumors/search' /tmp/HamsterKingMobile.user.js
-          ! grep -q '/api/v1/rumors/today' /tmp/server.py
-          ! grep -q '/admin/rumors/publish' /tmp/server.py
-          ! grep -q 'Маршрут слухов на день' /tmp/server.py
           node --check /tmp/HamsterKingMobile.user.js
-          python3 -m py_compile /tmp/server.py
 
-      - name: Deploy userscript and backend
+      - name: Deploy 1.10.0
         shell: bash
         run: |
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/server.py root@89.125.1.71:/tmp/server.py
 
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71 'set -euo pipefail;
               stamp="$(date +%Y%m%d-%H%M%S)";
               cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
-              cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.$stamp";
-              grep -q "^// @version      1.9.9$" /tmp/HamsterKingMobile.user.js;
-              ! grep -q "runDailyRumors" /tmp/HamsterKingMobile.user.js;
-              ! grep -q "/api/v1/rumors/today" /tmp/server.py;
-              python3 -m py_compile /tmp/server.py;
+              grep -q "^// @version      1.10.0$" /tmp/HamsterKingMobile.user.js;
+              node --check /tmp/HamsterKingMobile.user.js;
               install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
-              install -m 0644 /tmp/server.py /opt/hamsterking-license/server.py;
               install -d -m 755 /etc/systemd/system/hamsterking-license.service.d;
-              printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.9.9\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
+              printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.10.0\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
               systemctl daemon-reload;
               systemctl restart hamsterking-license.service;
               systemctl is-active --quiet hamsterking-license.service;
@@ -95,9 +83,10 @@ jobs:
               echo;
               echo DEPLOY_OK;
               grep -m1 "^// @version" /opt/hamsterking-license/HamsterKingMobile.user.js;
-              ! grep -q "Маршрут слухов на день" /opt/hamsterking-license/server.py;
+              grep -q "ensureGameAuthorization" /opt/hamsterking-license/HamsterKingMobile.user.js;
+              grep -q "id=\"hk-health\"" /opt/hamsterking-license/HamsterKingMobile.user.js;
               ! grep -q "runDailyRumors" /opt/hamsterking-license/HamsterKingMobile.user.js'
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/server.py /tmp/userscript-1.9.9.patch /tmp/server-no-rumors.patch
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript-1.10.0.patch
