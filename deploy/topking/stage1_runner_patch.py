@@ -179,8 +179,8 @@ gate = r'''
     );
   }
 '''
-gate = gate.strip('\\n')
-gate_block = "\\n" + gate + "\\n"
+gate = gate.strip('\n')
+gate_block = "\n" + gate + "\n"
 
 # Replace an older Stage 1 gate in-place, or insert it into the verified 1.14.4 base.
 gate_start_token = "\n  const HK_READ_ONLY_POST_PATHS = new Set(["
