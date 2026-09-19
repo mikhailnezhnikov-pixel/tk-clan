@@ -1,0 +1,148 @@
+name: Capture TopKing Daily and Server Sources
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/daily-server-capture-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capture-topking-daily-server
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch current userscript and backend read only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          node --check /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile /tmp/server.py
+
+      - name: Capture exact migration anchors
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          needles = [
+              "const RECIPE_API_BASE",
+              "let dailyShopRows",
+              "function dailyActionRows()",
+              "function renderDailyTasks()",
+              "async function refreshDailyTasks()",
+              "async function runDailySelected()",
+              "async function runDailyClanPurchases()",
+              "const NAV_GROUPS",
+              "data-content=\"daily\"",
+              "root.querySelector('#hk-daily-refresh')",
+          ]
+          out = ["# Current live Daily / Today migration anchors", ""]
+          for needle in needles:
+              pos = source.find(needle)
+              out.append(f"===== {needle} =====")
+              if pos < 0:
+                  out.append("NOT FOUND")
+              else:
+                  start = max(0, source.rfind("\n", 0, max(0,pos-6000)))
+                  end = min(len(source), pos + 18000)
+                  out.append(source[start:end])
+              out.append("")
+          Path('audit/hk-current-daily-source.txt').write_text("\n".join(out), encoding='utf-8')
+
+          server = Path('/tmp/server.py').read_text(encoding='utf-8')
+          needles = [
+              "from datetime import",
+              "PUBLIC_BASE =",
+              "def init_db",
+              "CREATE TABLE IF NOT EXISTS map_areas",
+              "def canonical_map_area",
+              "def do_POST",
+              'path == "/api/v1/maps',
+              "def admin_page",
+              "def admin_action",
+          ]
+          out = ["# Current live server.py migration anchors", ""]
+          for needle in needles:
+              pos = server.find(needle)
+              out.append(f"===== {needle} =====")
+              if pos < 0:
+                  out.append("NOT FOUND")
+              else:
+                  start = max(0, server.rfind("\n", 0, max(0,pos-7000)))
+                  end = min(len(server), pos + 22000)
+                  out.append(server[start:end])
+              out.append("")
+          Path('audit/hk-current-server-source.txt').write_text("\n".join(out), encoding='utf-8')
+          PY
+
+      - name: Commit captured sources
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            # Regenerate after reset because audit files are untracked/overwritten.
+            python3 - <<'PY'
+          from pathlib import Path
+          source = Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          needles = ["const RECIPE_API_BASE","let dailyShopRows","function dailyActionRows()","function renderDailyTasks()","async function refreshDailyTasks()","async function runDailySelected()","async function runDailyClanPurchases()","const NAV_GROUPS",'data-content="daily"',"root.querySelector('#hk-daily-refresh')"]
+          out=["# Current live Daily / Today migration anchors",""]
+          for needle in needles:
+              pos=source.find(needle); out.append(f"===== {needle} =====")
+              if pos<0: out.append("NOT FOUND")
+              else:
+                  start=max(0,source.rfind("\n",0,max(0,pos-6000))); end=min(len(source),pos+18000); out.append(source[start:end])
+              out.append("")
+          Path('audit/hk-current-daily-source.txt').write_text("\n".join(out),encoding='utf-8')
+
+          server=Path('/tmp/server.py').read_text(encoding='utf-8')
+          needles=["from datetime import","PUBLIC_BASE =","def init_db","CREATE TABLE IF NOT EXISTS map_areas","def canonical_map_area","def do_POST",'path == "/api/v1/maps',"def admin_page","def admin_action"]
+          out=["# Current live server.py migration anchors",""]
+          for needle in needles:
+              pos=server.find(needle); out.append(f"===== {needle} =====")
+              if pos<0: out.append("NOT FOUND")
+              else:
+                  start=max(0,server.rfind("\n",0,max(0,pos-7000))); end=min(len(server),pos+22000); out.append(server[start:end])
+              out.append("")
+          Path('audit/hk-current-server-source.txt').write_text("\n".join(out),encoding='utf-8')
+          PY
+            git add audit/hk-current-daily-source.txt audit/hk-current-server-source.txt
+            if git diff --cached --quiet; then pushed=1; break; fi
+            git commit -m "Capture current Daily and backend migration anchors"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = "1"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/server.py
