@@ -180,6 +180,114 @@ def apply_alliance_ratings_patch(text):
         text=text.replace(interval,immediate,1)
     return text
 
+
+def apply_clan_war_hp_patch(text):
+    marker="HK_CLAN_WAR_HP_V1"
+    if marker in text:
+        return text
+    old=r'''  function normalizePublicWar(documentValue) {
+    for (const row of deepObjects(documentValue)) {
+      const ourNode = row.our_clan || row.player_clan || row.my_clan || row.attacker_clan || row.clan;
+      const enemyNode = row.opponent_clan || row.enemy_clan || row.rival_clan || row.defender_clan || row.opponent || row.enemy;
+      const ourClan = firstText(ourNode?.name, ourNode?.title, row.our_clan_name, row.player_clan_name, row.attacker_name);
+      const opponent = firstText(enemyNode?.name, enemyNode?.title, row.opponent_name, row.enemy_name, row.defender_name);
+      if (!ourClan || !opponent) continue;
+      return {
+        our_clan:ourClan, opponent,
+        our_score:firstFinite(row.our_score, row.player_score, row.attacker_score, ourNode?.score, ourNode?.points),
+        opponent_score:firstFinite(row.opponent_score, row.enemy_score, row.defender_score, enemyNode?.score, enemyNode?.points),
+        status:firstText(row.status, row.state) || 'active',
+        started_at:firstFinite(row.started_at, row.start_at, row.start_time, row.started),
+        ends_at:firstFinite(row.ends_at, row.end_at, row.finish_time, row.finished_at),
+      };
+    }
+    return null;
+  }
+'''
+    new=r'''  // HK_CLAN_WAR_HP_V1
+  function publicWarNumber(...values) {
+    for (const value of values) {
+      if (value === null || value === undefined || value === '') continue;
+      const parsed=Number(value);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+    return null;
+  }
+
+  function publicWarHp(node, row, side) {
+    const currentKeys=['hp','current_hp','currentHp','health','current_health','currentHealth','remaining_hp','remainingHp','remaining_health','remainingHealth','hit_points','hitPoints','current_hit_points','currentHitPoints'];
+    const maxKeys=['max_hp','maxHp','total_hp','totalHp','hp_max','hpMax','max_health','maxHealth','total_health','totalHealth','health_max','healthMax','max_hit_points','maxHitPoints','total_hit_points','totalHitPoints'];
+    const direct=(keys,source)=>{
+      if(!source||typeof source!=='object')return null;
+      for(const key of keys){
+        if(!Object.prototype.hasOwnProperty.call(source,key))continue;
+        const value=publicWarNumber(source[key]);
+        if(value!==null)return value;
+      }
+      return null;
+    };
+    const prefixes=side==='our'
+      ? ['our','player','attacker','my','clan']
+      : ['opponent','enemy','defender','rival','target'];
+    const directional=(suffixes)=>{
+      for(const prefix of prefixes){
+        for(const suffix of suffixes){
+          const key=prefix+'_'+suffix;
+          if(Object.prototype.hasOwnProperty.call(row,key)){
+            const value=publicWarNumber(row[key]);
+            if(value!==null)return value;
+          }
+          const camel=prefix+suffix.split('_').map(part=>part ? part[0].toUpperCase()+part.slice(1) : '').join('');
+          if(Object.prototype.hasOwnProperty.call(row,camel)){
+            const value=publicWarNumber(row[camel]);
+            if(value!==null)return value;
+          }
+        }
+      }
+      return null;
+    };
+    return {
+      current:direct(currentKeys,node) ?? directional(['hp','current_hp','health','current_health','remaining_hp','remaining_health','hit_points','current_hit_points']),
+      max:direct(maxKeys,node) ?? directional(['max_hp','total_hp','hp_max','max_health','total_health','health_max','max_hit_points','total_hit_points'])
+    };
+  }
+
+  function normalizePublicWar(documentValue) {
+    for (const row of deepObjects(documentValue)) {
+      const ourNode = row.our_clan || row.player_clan || row.my_clan || row.attacker_clan || row.clan;
+      const enemyNode = row.opponent_clan || row.enemy_clan || row.rival_clan || row.defender_clan || row.opponent || row.enemy;
+      const ourClan = firstText(ourNode?.name, ourNode?.title, row.our_clan_name, row.player_clan_name, row.attacker_name);
+      const opponent = firstText(enemyNode?.name, enemyNode?.title, row.opponent_name, row.enemy_name, row.defender_name);
+      if (!ourClan || !opponent) continue;
+      const ourHp=publicWarHp(ourNode,row,'our');
+      const opponentHp=publicWarHp(enemyNode,row,'opponent');
+      const result={
+        our_clan:ourClan, opponent,
+        our_score:firstFinite(row.our_score, row.player_score, row.attacker_score, ourNode?.score, ourNode?.points),
+        opponent_score:firstFinite(row.opponent_score, row.enemy_score, row.defender_score, enemyNode?.score, enemyNode?.points),
+        status:firstText(row.status, row.state) || 'active',
+        started_at:firstFinite(row.started_at, row.start_at, row.start_time, row.started),
+        ends_at:firstFinite(row.ends_at, row.end_at, row.finish_time, row.finished_at),
+      };
+      if(ourHp.current!==null)result.our_hp=Math.round(ourHp.current);
+      if(ourHp.max!==null)result.our_hp_max=Math.round(ourHp.max);
+      if(opponentHp.current!==null)result.opponent_hp=Math.round(opponentHp.current);
+      if(opponentHp.max!==null)result.opponent_hp_max=Math.round(opponentHp.max);
+      if(!result.our_hp_max && !result.opponent_hp_max){
+        try{
+          const keys=[...new Set([row,ourNode,enemyNode].filter(Boolean).flatMap(value=>Object.keys(value||{})))].filter(key=>/hp|health|life|durab/i.test(key)).slice(0,60);
+          if(keys.length)recordDiagnostic('clan-war-hp-schema',{keys});
+        }catch(_){}
+      }
+      return result;
+    }
+    return null;
+  }
+'''
+    if old not in text:
+        raise SystemExit("normalizePublicWar block missing")
+    return text.replace(old,new,1)
+
 def sync_version(text):
     text, n_meta = re.subn(r"^// @version\s+\S+.*$", "// @version      1.17.0", text, count=1, flags=re.M)
     if n_meta != 1:
@@ -198,6 +306,7 @@ def sync_version(text):
 s = sync_version(s)
 if MARKER in s:
     s = apply_alliance_ratings_patch(s)
+    s = apply_clan_war_hp_patch(s)
     s = apply_today_hotfix(s)
     if 'HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1' not in s:
         s = apply_login_gate(s)
@@ -280,6 +389,7 @@ if old not in s:
 s=s.replace(old,new,1)
 
 s = apply_alliance_ratings_patch(s)
+s = apply_clan_war_hp_patch(s)
 s = apply_today_hotfix(s)
 if 'HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1' not in s:
     s = apply_login_gate(s)
