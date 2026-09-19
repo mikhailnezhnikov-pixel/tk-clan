@@ -46,7 +46,7 @@ jobs:
           grep -q 'bosses-readonly-20260920-r1' /tmp/HamsterKingMobile.user.js
           grep -q 'regular-fair-ui-20260920-r1' /tmp/HamsterKingMobile.user.js
           grep -q 'auto-routines-20260920-r1' /tmp/HamsterKingMobile.user.js
-          grep -q 'HK_PUBLIC_WAR_ALLIANCE_V3' /tmp/HamsterKingMobile.user.js
+          grep -q 'HK_PUBLIC_WAR_ALLIANCE_V4' /tmp/HamsterKingMobile.user.js
           grep -Fq "/clan/active_battles" /tmp/HamsterKingMobile.user.js
           grep -Fq "/alliance/members?alliance_id=" /tmp/HamsterKingMobile.user.js
           grep -Fq "{page:'routines',ru:'Авто-рутины',en:'Auto routines'}" /tmp/HamsterKingMobile.user.js
