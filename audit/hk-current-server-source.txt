@@ -23,7 +23,7 @@ import time
 import urllib.error
 import urllib.request
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -43,6 +43,9 @@ BUSINESS_CALCULATOR_DIR = os.environ.get("HK_BUSINESS_CALCULATOR_DIR", "/opt/ham
 BUSINESS_CALCULATOR_ICONS = frozenset({"item_bsn_r0t3_dummy_icon.png", "item_bsn_r1t0_perhour_curnuts_icon.png"})
 PUBLIC_BASE = os.environ.get("HK_PUBLIC_BASE", "https://hk-license.89.125.1.71.sslip.io").rstrip("/")
 RELEASE_NOTES = os.environ.get("HK_RELEASE_NOTES", "Исправления и улучшения Hamster King Mobile.")[:1000]
+HK_STAGE2G_RUMORS_SERVER_REV = 'stage2g-rumors-server-20260919-r1'
+RUMOR_UTC_OFFSET = int(os.environ.get("HK_RUMOR_UTC_OFFSET", "9"))
+RUMOR_TIMEZONE = timezone(timedelta(hours=RUMOR_UTC_OFFSET), name=f"UTC{RUMOR_UTC_OFFSET:+d}")
 ALLOWED_ORIGINS = {value.strip() for value in os.environ.get(
     "HK_ALLOWED_ORIGINS", "https://app.hamsterking.games,https://app.hamsterking.ru"
 ).split(",") if value.strip()}
@@ -74,6 +77,17 @@ def iso_time(timestamp: int | None) -> str:
     if not timestamp:
         return "—"
     return datetime.fromtimestamp(timestamp, timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+
+
+def active_rumor_route_date(now: datetime | None = None) -> str:
+    """Return the route date for the 21:00-20:59 game-day window."""
+    moment = now or datetime.now(timezone.utc)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    local = moment.astimezone(RUMOR_TIMEZONE)
+    if local.hour < 21:
+        local -= timedelta(days=1)
+    return local.strftime("%Y-%m-%d")
 
 
 def version_tuple(value: str) -> tuple[int, ...] | None:
@@ -268,6 +282,13 @@ def init_db() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_access_log_created ON access_log(created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_access_log_identity ON access_log(player_id,device_id,created_at DESC);
+            CREATE TABLE IF NOT EXISTS rumor_routes (
+                route_date TEXT PRIMARY KEY,
+                source_text TEXT NOT NULL,
+                routes_json TEXT NOT NULL,
+                published_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS user_settings (
                 player_id TEXT PRIMARY KEY,
                 settings_json TEXT NOT NULL DEFAULT '{}',
@@ -455,21 +476,7 @@ def submit_pit_observations(player_id: str, value: object) -> dict:
             db.execute("""INSERT INTO pit_power_observations(
                             pit_type,level,enemy_power,player_power,winrate,contributor_id,samples,first_seen,last_seen)
                           VALUES(?,?,?,?,?,?,1,?,?)
-                          ON CONFLICT(pit_type,level,enemy_power,contributor_id) DO UPDATE SET
-                            player_power=COALESCE(excluded.player_power,pit_power_observations.player_power),
-                            winrate=COALESCE(excluded.winrate,pit_power_observations.winrate),
-                            samples=pit_power_observations.samples+1,last_seen=excluded.last_seen""",
-                       (row["pit_type"], row["level"], row["enemy_power"], row["player_power"],
-                        row["winrate"], contributor, now, now))
-        total = db.execute("SELECT COUNT(*) FROM pit_power_observations").fetchone()[0]
-    return {"ok": True, "accepted": len(observations), "total": total}
-
-
-def pit_power_catalog() -> list[dict]:
-    with db_session() as db:
-        rows = db.execute("""SELECT pit_type,level,enemy_power,
-                              COUNT(DISTINCT contributor_id) AS players,SUM(samples) AS samples,
-                              AVG(winrate) A
+                          ON CONFLICT(pit_type,level,ene
 
 ===== PUBLIC_BASE = =====
 #!/usr/bin/env python3
@@ -494,7 +501,7 @@ import time
 import urllib.error
 import urllib.request
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -514,6 +521,9 @@ BUSINESS_CALCULATOR_DIR = os.environ.get("HK_BUSINESS_CALCULATOR_DIR", "/opt/ham
 BUSINESS_CALCULATOR_ICONS = frozenset({"item_bsn_r0t3_dummy_icon.png", "item_bsn_r1t0_perhour_curnuts_icon.png"})
 PUBLIC_BASE = os.environ.get("HK_PUBLIC_BASE", "https://hk-license.89.125.1.71.sslip.io").rstrip("/")
 RELEASE_NOTES = os.environ.get("HK_RELEASE_NOTES", "Исправления и улучшения Hamster King Mobile.")[:1000]
+HK_STAGE2G_RUMORS_SERVER_REV = 'stage2g-rumors-server-20260919-r1'
+RUMOR_UTC_OFFSET = int(os.environ.get("HK_RUMOR_UTC_OFFSET", "9"))
+RUMOR_TIMEZONE = timezone(timedelta(hours=RUMOR_UTC_OFFSET), name=f"UTC{RUMOR_UTC_OFFSET:+d}")
 ALLOWED_ORIGINS = {value.strip() for value in os.environ.get(
     "HK_ALLOWED_ORIGINS", "https://app.hamsterking.games,https://app.hamsterking.ru"
 ).split(",") if value.strip()}
@@ -545,6 +555,17 @@ def iso_time(timestamp: int | None) -> str:
     if not timestamp:
         return "—"
     return datetime.fromtimestamp(timestamp, timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+
+
+def active_rumor_route_date(now: datetime | None = None) -> str:
+    """Return the route date for the 21:00-20:59 game-day window."""
+    moment = now or datetime.now(timezone.utc)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    local = moment.astimezone(RUMOR_TIMEZONE)
+    if local.hour < 21:
+        local -= timedelta(days=1)
+    return local.strftime("%Y-%m-%d")
 
 
 def version_tuple(value: str) -> tuple[int, ...] | None:
@@ -739,6 +760,13 @@ def init_db() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_access_log_created ON access_log(created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_access_log_identity ON access_log(player_id,device_id,created_at DESC);
+            CREATE TABLE IF NOT EXISTS rumor_routes (
+                route_date TEXT PRIMARY KEY,
+                source_text TEXT NOT NULL,
+                routes_json TEXT NOT NULL,
+                published_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS user_settings (
                 player_id TEXT PRIMARY KEY,
                 settings_json TEXT NOT NULL DEFAULT '{}',
@@ -947,43 +975,10 @@ def pit_power_catalog() -> list[dict]:
     return [dict(row) for row in rows]
 
 
-def normalize_clan_skill_query(clan_key: object, week_key: object) -> tuple[str, str]:
-    clan = str(clan_key or "").strip()
-    week = str(week_key or "").strip()
-    if not ID_RE.fullmatch(clan):
-        raise ValueError("invalid clan key")
-    try:
-        parsed_week = datetime.strptime(week, "%Y-%m-%d")
-    except (TypeError, ValueError) as error:
-        raise ValueError("invalid week key") from error
-    if parsed_week.weekday() != 0:
-        raise ValueError("week key must be Monday")
-    return clan, week
-
-
-def normalize_clan_skill_submission(clan_key: object, week_key: object,
-                                    nickname: object, levels: object) -> tuple[str, str, str, dict[str, int]]:
-    clan, week = normalize_clan_skill_query(clan_key, week_key)
-    name = str(nickname or "").strip()[:100]
-    if not name:
-        raise ValueError("nickname is required")
-    if not isinstance(levels, dict) or len(levels) > 300:
-        raise Va
+def normalize_clan_skill_q
 
 ===== def init_db =====
 
-from datetime import datetime, timezone
-from http import HTTPStatus
-from http.cookies import SimpleCookie
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlsplit
-
-
-PORT = int(os.environ.get("HK_LICENSE_PORT", "3188"))
-DB_PATH = os.environ.get("HK_LICENSE_DB", "/var/lib/hamsterking-license/licenses.db")
-ADMIN_HASH = os.environ.get("HK_ADMIN_PASSWORD_HASH", "")
-SIGNING_SECRET = os.environ.get("HK_SIGNING_SECRET", "")
-MIN_SCRIPT_VERSION = os.environ.get("HK_MIN_SCRIPT_VERSION", "1.2.0").strip() or "1.2.0"
 RELEASE_PATH = os.environ.get("HK_RELEASE_PATH", "/opt/hamsterking-license/HamsterKingMobile.user.js")
 LOADER_PATH = os.environ.get("HK_LOADER_PATH", "/opt/hamsterking-license/HamsterKingMobile.loader.user.js")
 MENU_ICONS_DIR = os.environ.get("HK_MENU_ICONS_DIR", "/opt/hamsterking-license/menu-icons")
@@ -992,6 +987,9 @@ BUSINESS_CALCULATOR_DIR = os.environ.get("HK_BUSINESS_CALCULATOR_DIR", "/opt/ham
 BUSINESS_CALCULATOR_ICONS = frozenset({"item_bsn_r0t3_dummy_icon.png", "item_bsn_r1t0_perhour_curnuts_icon.png"})
 PUBLIC_BASE = os.environ.get("HK_PUBLIC_BASE", "https://hk-license.89.125.1.71.sslip.io").rstrip("/")
 RELEASE_NOTES = os.environ.get("HK_RELEASE_NOTES", "Исправления и улучшения Hamster King Mobile.")[:1000]
+HK_STAGE2G_RUMORS_SERVER_REV = 'stage2g-rumors-server-20260919-r1'
+RUMOR_UTC_OFFSET = int(os.environ.get("HK_RUMOR_UTC_OFFSET", "9"))
+RUMOR_TIMEZONE = timezone(timedelta(hours=RUMOR_UTC_OFFSET), name=f"UTC{RUMOR_UTC_OFFSET:+d}")
 ALLOWED_ORIGINS = {value.strip() for value in os.environ.get(
     "HK_ALLOWED_ORIGINS", "https://app.hamsterking.games,https://app.hamsterking.ru"
 ).split(",") if value.strip()}
@@ -1023,6 +1021,17 @@ def iso_time(timestamp: int | None) -> str:
     if not timestamp:
         return "—"
     return datetime.fromtimestamp(timestamp, timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+
+
+def active_rumor_route_date(now: datetime | None = None) -> str:
+    """Return the route date for the 21:00-20:59 game-day window."""
+    moment = now or datetime.now(timezone.utc)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    local = moment.astimezone(RUMOR_TIMEZONE)
+    if local.hour < 21:
+        local -= timedelta(days=1)
+    return local.strftime("%Y-%m-%d")
 
 
 def version_tuple(value: str) -> tuple[int, ...] | None:
@@ -1217,6 +1226,13 @@ def init_db() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_access_log_created ON access_log(created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_access_log_identity ON access_log(player_id,device_id,created_at DESC);
+            CREATE TABLE IF NOT EXISTS rumor_routes (
+                route_date TEXT PRIMARY KEY,
+                source_text TEXT NOT NULL,
+                routes_json TEXT NOT NULL,
+                published_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS user_settings (
                 player_id TEXT PRIMARY KEY,
                 settings_json TEXT NOT NULL DEFAULT '{}',
@@ -1562,19 +1578,10 @@ def normalize_clan_full_snapshot(value: object) -> dict:
         for branch_index, raw_branch in enumerate(source_branches):
             if not isinstance(raw_branch, dict):
                 continue
-            branch_id = str(raw_branch.get("id") or f"{block_id}-{branch_index}")[:128]
-            branch_title = str(raw_branch.get("title") or raw_branch.get("name") or f"Branch {branch_index + 1}").strip()[:200]
-            branch_icon = str(raw_branch.get("icon") or "").strip()[:1000]
-            try:
-                total = max(0, min(int(raw_branch.get("total") o
+            branch_id = str(raw_branch.get("id") or f"{block_id}-{branch_index}")
 
 ===== CREATE TABLE IF NOT EXISTS map_areas =====
 
-PRIVATE_HK_MAPS_CACHE: dict[str, object] = {"mtime": None, "maps": {}}
-FULL_HK_MAPS_DIR = os.environ.get("HK_FULL_MAPS_DIR", "/opt/hamsterking-license/private-maps/full")
-FULL_HK_MAPS_LOCK = threading.Lock()
-FULL_HK_MAPS_CACHE: dict[str, tuple[float, dict]] = {}
-TELEGRAM_BOT_USERNAME = os.environ.get("HK_TELEGRAM_BOT_USERNAME", "").strip().lstrip("@")
 TELEGRAM_BOT_TOKEN = os.environ.get("HK_TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_WEBHOOK_SECRET = os.environ.get("HK_TELEGRAM_WEBHOOK_SECRET", "").strip()
 TELEGRAM_ADMIN_CHAT_ID = os.environ.get("HK_TELEGRAM_ADMIN_CHAT_ID", "").strip()
@@ -1594,6 +1601,17 @@ def iso_time(timestamp: int | None) -> str:
     if not timestamp:
         return "—"
     return datetime.fromtimestamp(timestamp, timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+
+
+def active_rumor_route_date(now: datetime | None = None) -> str:
+    """Return the route date for the 21:00-20:59 game-day window."""
+    moment = now or datetime.now(timezone.utc)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    local = moment.astimezone(RUMOR_TIMEZONE)
+    if local.hour < 21:
+        local -= timedelta(days=1)
+    return local.strftime("%Y-%m-%d")
 
 
 def version_tuple(value: str) -> tuple[int, ...] | None:
@@ -1788,6 +1806,13 @@ def init_db() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_access_log_created ON access_log(created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_access_log_identity ON access_log(player_id,device_id,created_at DESC);
+            CREATE TABLE IF NOT EXISTS rumor_routes (
+                route_date TEXT PRIMARY KEY,
+                source_text TEXT NOT NULL,
+                routes_json TEXT NOT NULL,
+                published_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS user_settings (
                 player_id TEXT PRIMARY KEY,
                 settings_json TEXT NOT NULL DEFAULT '{}',
@@ -2173,42 +2198,10 @@ def submit_clan_full_snapshot(player_id: str, value: object) -> dict:
     now = utc_now()
     with db_session() as db:
         db.execute("""INSERT INTO clan_skill_full_snapshots(
-                        clan_key,week_key,snapshot_json,source_player_id,captured_at,updated_at)
-                      VALUES(?,?,?,?,?,?)
-                      ON CONFLICT(clan_key,week_key) DO UPDATE SET
-                        snapshot_json=excluded.snapshot_json,
-                        s
+  
 
 ===== def canonical_map_area =====
 
-        item_id = str(item.get("item_id", "")).strip()
-        if not plan_id.startswith(("recipe_", "mf_craftlot_")) or not ID_RE.fullmatch(plan_id) or not ID_RE.fullmatch(item_id):
-            raise ValueError("invalid business plan")
-        if plan_id in seen:
-            continue
-        seen.add(plan_id)
-        tier = item.get("tier")
-        rarity = item.get("rarity")
-        quality = item.get("quality")
-        tier = int(tier) if tier is not None else None
-        rarity = int(rarity) if rarity is not None else None
-        quality = int(quality) if quality is not None else None
-        if tier is not None and not 1 <= tier <= 99:
-            raise ValueError("invalid tier")
-        if rarity is not None and not 0 <= rarity <= 99:
-            raise ValueError("invalid rarity")
-        if quality is not None and not 0 <= quality <= 999:
-            raise ValueError("invalid quality")
-        bonuses = item.get("bonuses") if isinstance(item.get("bonuses"), list) else []
-        bonuses = [{"id":str(row.get("id", ""))[:160], "caption":str(row.get("caption", ""))[:300],
-                    "value":str(row.get("value", ""))[:80], "icon":str(row.get("icon", ""))[:600]}
-                   for row in bonuses[:12] if isinstance(row, dict)]
-        components = item.get("components") if allow_components and isinstance(item.get("components"), list) else []
-        components = normalize_business_plans(components[:8], False) if components else []
-        result.append({"plan_id": plan_id, "item_id": item_id, "tier": tier, "rarity": rarity, "quality": quality,
-                       "name":str(item.get("name", ""))[:300], "description":str(item.get("description", ""))[:1000],
-                       "icon":str(item.get("icon", ""))[:600], "color":str(item.get("color", ""))[:32],
-                       "pluses":max(0, min(9, int(item.get("pluses") or 0))), "bonuses":bonuses,
                        "components":components, "slot_order":max(0, min(99, int(item.get("slot_order") or 0)))})
     return result
 
@@ -2279,6 +2272,41 @@ def normalize_map_area(value: object) -> dict:
 
 def map_city_key(value: str) -> str:
     return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
+
+
+def rumor_city_key(value: str) -> str:
+    key = re.sub(r"[^a-zа-я0-9]+", " ", str(value or "").casefold().replace("ё", "е")).strip()
+    aliases = {
+        "москва":"moscow", "санкт петербург":"spb", "saint petersburg":"spb", "st petersburg":"spb",
+        "минск":"minsk", "берлин":"berlin", "лондон":"london", "париж":"paris", "дубай":"dubai",
+        "токио":"tokyo", "сингапур":"singapore", "нью йорк":"new york", "лос анджелес":"los angeles",
+        "бостон":"boston", "вашингтон":"washington", "рио":"rio", "rio de janeiro":"rio",
+        "рио де жанейро":"rio", "лагос":"lagos", "сидней":"sydney", "окленд":"auckland",
+    }
+    return aliases.get(key, key)
+
+
+def enrich_rumor_routes(db: sqlite3.Connection, routes: list[dict]) -> list[dict]:
+    areas = db.execute("SELECT area_id,city_id,city_name,x,y FROM map_areas WHERE x IS NOT NULL AND y IS NOT NULL").fetchall()
+    alias_rows = db.execute("SELECT source_area_id,canonical_area_id FROM map_area_aliases").fetchall()
+    aliases: dict[str, list[str]] = {}
+    for row in alias_rows:
+        aliases.setdefault(str(row["canonical_area_id"]), []).append(str(row["source_area_id"]))
+    result = json.loads(json.dumps(routes, ensure_ascii=False))
+    for route in result:
+        wanted_city = rumor_city_key(route.get("city", ""))
+        for point in route.get("points", []):
+            matches = []
+            for area in areas:
+                city_keys = (rumor_city_key(area["city_name"]), rumor_city_key(area["city_id"]))
+                if int(area["x"]) == int(point.get("x", -1)) and int(area["y"]) == int(point.get("y", -1)) and any(
+                    wanted_city and (wanted_city in key or key in wanted_city) for key in city_keys if key
+                ):
+                    canonical = str(area["area_id"])
+                    matches.extend(aliases.get(canonical, []))
+                    matches.append(canonical)
+            point["area_ids"] = list(dict.fromkeys(matches))
+    return result
 
 
 def canonical_map_area(db: sqlite3.Connection, area: dict) -> str:
@@ -2602,55 +2630,39 @@ def public_ratings(kind: str) -> dict:
             "rows": [{"rank": row["rank"], "name": row["name"], "value": row["value"]} for row in rows]}
 
 
+# TELEGRAM_APPLICATION_I18N_V1
 APPLICATION_FIELDS = (
-    ("power", "Укажите вашу силу в игре."),
-    ("influence", "Укажите ваше влияние."),
-    ("country", "Укажите страну."),
-    ("timezone", "Укажите часовой пояс, например UTC+9."),
-    ("branches", "Укажите уровни прокачки веток для клана."),
-    ("game_online", "Сколько времени вы онлайн в игре?"),
-    ("chat_online", "Как часто вы онлайн в чатах?"),
+    ("power", "Сила", "Укажите вашу силу в игре."),
+    ("influence", "Влияние", "Укажите ваше влияние."),
+    ("country", "Страна", "Укажите страну."),
+    ("timezone", "Часовой пояс", "Укажите часовой пояс, например UTC+9."),
+    ("branches", "Прокачка веток", "Укажите уровни прокачки веток для клана."),
+    ("game_online", "Онлайн в игре", "Сколько времени вы онлайн в игре?"),
+    ("chat_online", "Онлайн в чатах", "Как часто вы онлайн в чатах?"),
+    ("goals", "Цели", "Каковы ваши цели в игре и в клане?"),
+    ("reason", "Причина перехода", "Почему вы хотите перейти именно в Top King?"),
+    ("expectations", "Ожидания от клана", "Что вы ждёте от клана Top King?"),
+    ("about", "От себя", "Что хотите добавить от себя?\n\nЭто необязательный вопрос — отправьте /skip, чтобы пропустить."),
 )
+APPLICATION_FIELDS_EN = (
+    ("power", "Power", "Enter your power in the game."),
+    ("influence", "Influence", "Enter your influence."),
+    ("country", "Country", "What country are you from?"),
+    ("timezone", "Time zone", "Enter your time zone, for example UTC+9."),
+    ("branches", "Clan branch levels", "Enter your clan branch progression levels."),
+    ("game_online", "In-game activity", "How much time are you online in the game?"),
+    ("chat_online", "Chat activity", "How often are you online in clan chats?"),
+    ("goals", "Goals", "What are your goals in the game and in a clan?"),
+    ("reason", "Reason for joining", "Why do you want to join Top King?"),
+    ("expectations", "Expectations", "What do you expect from Top King?"),
+    ("about", "Anything else", "Anything else you would like to add?\n\nThis question is optional — send /skip to skip it."),
+)
+APPLICATION_OPTIONAL_FIELDS = frozenset({"about"})
 FEEDBACK_TYPES = {"wish": "Пожелание", "suggestion": "Предложение", "question": "Вопрос"}
 
 
-def telegram_api(method: str, payload: dict) -> bool:
-    if not TELEGRAM_BOT_TOKEN:
-        return False
-    request = urllib.request.Request(
-        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}",
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json"}, method="POST")
-    try:
-        with urllib.request.urlopen(request, timeout=10) as response:
-            return response.status == 200
-    except (OSError, urllib.error.URLError):
-        return False
-
-
-def telegram_send(chat_id: str, text: str, buttons: list[list[tuple[str, str]]] | None = None) -> bool:
-    payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML",
-               "disable_web_page_preview": True}
-    if buttons:
-        payload["reply_markup"] = {"inline_keyboard": [
-            [{"text": title, "callback_data": data} for title, data in row] for row in buttons
-        ]}
-    return telegram_api("sendMessage", payload)
-
-
-def telegram_answer_callback(callback_id: str) -> None:
-    if callback_id:
-        telegram_api("answerCallbackQuery", {"callback_query_id": callback_id})
-
-
-def telegram_state(telegram_id: str) -> dict | None:
-    with db_session() as db:
-        row = db.execute("""SELECT chat_id,scenario,step,data_json,updated_at
-                            FROM telegram_conversations WHERE telegram_id=?""", (telegram_id,)).fetchone()
-    if not row:
-        return None
-    try:
-        data
+def application_language(state: dict | None) -> str:
+    if not state or
 
 ===== def do_POST =====
 
@@ -2879,6 +2891,61 @@ def telegram_state(telegram_id: str) -> dict | None:
                     return
                 audit("cabinet_player_linked", member["telegram_id"], self.client_ip(), contributor_id(player_id))
                 self.send_cabinet_json(HTTPStatus.OK, {"ok": True, "player_id": player_id})
+            elif path in ("/api/v1/cabinet/clan-shop/set",
+                             "/api/v1/cabinet/clan-shop/request",
+                             "/api/v1/cabinet/clan-shop/accept-request",
+                             "/api/v1/cabinet/clan-shop/publish"):
+                origin = self.headers.get("Origin", "")
+                if origin not in CABINET_ORIGINS:
+                    self.send_cabinet_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"}); return
+                member = self.cabinet_member()
+                if not member:
+                    self.send_cabinet_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"}); return
+                try:
+                    if path.endswith("/set"):
+                        body = self.read_json(8192)
+                        result = set_clan_shop_allocation(member, body)
+                        audit("cabinet_clan_shop_set", str(body.get("player_key", "")),
+                              self.client_ip(),
+                              f"idols={body.get('idol_orbs',0)} businesses={body.get('splus_businesses',0)}")
+                    elif path.endswith("/request"):
+                        body = self.read_json(4096)
+                        result = set_clan_shop_request(member, body)
+                        audit("cabinet_clan_shop_request", str(member.get("linked_player_id") or ""),
+                              self.client_ip(),
+                              f"idols={body.get('idol_orbs',0)} businesses={body.get('splus_businesses',0)}")
+                    elif path.endswith("/accept-request"):
+                        body = self.read_json(4096)
+                        result = accept_clan_shop_request(member, body)
+                        audit("cabinet_clan_shop_accept_request", str(body.get("player_key", "")),
+                              self.client_ip(), str(body.get("item", "")))
+                    else:
+                        result = publish_clan_shop(member)
+                        audit("cabinet_clan_shop_publish", result["window"]["week_start"],
+                              self.client_ip(),
+                              f"idols={result['totals']['idol_orbs']} businesses={result['totals']['splus_businesses']}")
+                    self.send_cabinet_json(HTTPStatus.OK, result)
+                except PermissionError as exc:
+                    code = "player_link_required" if "player link" in str(exc) else "clan_shop_manage_denied"
+                    self.send_cabinet_json(HTTPStatus.FORBIDDEN, {"error": code})
+                except ValueError:
+                    self.send_cabinet_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_quantity"})
+                except LookupError as exc:
+                    code = "clan_shop_topic_not_configured" if "topic" in str(exc) else "clan_member_not_found"
+                    self.send_cabinet_json(HTTPStatus.NOT_FOUND, {"error": code})
+                except RuntimeError as exc:
+                    code = str(exc)
+                    if code == "idol_limit":
+                        code = "clan_shop_idol_limit"
+                    elif code == "business_limit":
+                        code = "clan_shop_business_limit"
+                    elif code == "empty":
+                        code = "clan_shop_empty"
+                    elif code == "requests_closed":
+                        code = "clan_shop_requests_closed"
+                    self.send_cabinet_json(HTTPStatus.CONFLICT, {"error": code})
+                except OSError:
+                    self.send_cabinet_json(HTTPStatus.BAD_GATEWAY, {"error": "telegram_delivery_failed"})
             elif path in ("/api/v1/cabinet/maps/publish", "/api/v1/cabinet/maps/member-access", "/api/v1/cabinet/maps/access-scope", "/api/v1/cabinet/maps/open-url"):
                 origin = self.headers.get("Origin", "")
                 if origin not in CABINET_ORIGINS:
@@ -3031,58 +3098,22 @@ def telegram_state(telegram_id: str) -> dict | None:
                     self.send_json(HTTPStatus.OK if detail else HTTPStatus.NOT_FOUND, {"ok":bool(detail),"detail":detail})
                 else:
                     maps = map_index(); self.send_json(HTTPStatus.OK, {"ok":True,"total":len(maps),"maps":maps})
-            elif path == "/admin/login":
-                ip = self.client_ip()
-                if not rate_allowed(f"admin-login:{ip}", 5, 900):
-                    audit("admin_login_blocked", "admin", ip, "rate limit")
-                    self.send_common(HTTPStatus.TOO_MANY_REQUESTS, "text/html; charset=utf-8", page_shell("Вход", self.login_html("Слишком много попыток. Повторите через 15 минут.")))
+            elif path == "/api/v1/rumors/today":
+                origin = self.headers.get("Origin", "")
+                if origin not in ALLOWED_ORIGINS:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"error":"origin_not_allowed"}); return
+                if not self.recipe_player():
+                    self.send_json(HTTPStatus.UNAUTHORIZED, {"error":"unauthorized"}); return
+                self.read_json()
+                today = active_rumor_route_date()
+                with db_session() as db:
+                    row = db.execute("SELECT route_date,routes_json,published_at FROM rumor_routes WHERE route_date=?", (today,)).fetchone()
+                if not row:
+                    self.send_json(HTTPStatus.OK, {"ok": True, "date": today, "routes": []})
                     return
-                form = self.read_form()
-                if password_ok(form.get("password", "")):
-                    audit("admin_login_ok", "admin", ip)
-                    self.redirect("/admin", f"hk_admin={sign_token('admin', 43200)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200")
-                else:
-                    audit("admin_login_failed", "admin", ip)
-                    self.send_common(HTTPStatus.UNAUTHORIZED, "text/html; charset=utf-8", page_shell("Вход", self.login_html("Неверный пароль")))
-            elif path == "/admin/logout":
-                if self.admin_ok(): audit("admin_logout", "admin", self.client_ip())
-                self.redirect("/admin", "hk_admin=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0")
-            elif path.startswith("/admin/"):
-                if not self.admin_ok():
-                    self.redirect("/admin")
-                    return
-                self.admin_action(path, self.read_form())
-            else:
-                self.send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
-        except (ValueError, json.JSONDecodeError):
-            self.send_json(HTTPStatus.BAD_REQUEST, {"error": "bad_request"})
-
-    @staticmethod
-    def login_html(error: str = "") -> str:
-        message = f'<p class="bad">{html.escape(error)}</p>' if error else ""
-        return f'<div class="card" style="max-width:430px;margin:12vh auto"><h1>Hamster King</h1><p class=muted>Панель лицензий</p>{message}<form method=post action=/admin/login><input type=password name=password placeholder="Пароль владельца" required style="width:100%;margin-bottom:10px"><button class=primary style="width:100%">Войти</button></form></div>'
-
-    def render_admin(self) -> None:
-        if not self.admin_ok():
-            self.send_common(HTTPStatus.OK, "text/html; charset=utf-8", page_shell("Вход", self.login_html()))
-            return
-        with db_session() as db:
-            rows = db.execute("""SELECT l.*, MAX(d.last_seen) last_seen
-                               FROM licenses l LEFT JOIN devices d ON d.player_id=l.player_id
-                               GROUP BY l.player_id ORDER BY l.created_at DESC""").fetchall()
-            audit_rows = db.execute("SELECT created_at,action,target,ip,detail FROM admin_audit ORDER BY id DESC LIMIT 40").fetchall()
-            access_rows = db.execute("""SELECT created_at,player_id,device_id,script_version,ip
-                                       FROM access_log ORDER BY id DESC LIMIT 80""").fetchall()
-            member_rows = db.execute("""SELECT telegram_id,note,first_name,username,linked_player_id,active,last_login,
-                                               maps_access,maps_manage
-                                        FROM clan_members ORDER BY active DESC,updated_at DESC""").fetchall()
-        table_rows = "".join(f"""<tr><td><b>{html.escape(row['player_id'])}</b><br><small>{html.escape(row['note'])}</small></td>
-            <td>{iso_time(row['expires_at'])}</td><td>{iso_time(row['last_seen'])}</td>
-            <td class={'ok' if row['active'] else 'bad'}>{'Разрешён' if row['active'] else 'Заблокирован'}</td>
-            <td><div class=actions><form method=post action=/admin/toggle><input type=hidden name=player_id value="{html.escape(row['player_id'], quote=True)}"><button>{'Блокировать' if row['active'] else 'Разрешить'}</button></form>
-            <form method=post action=/admin/delete onsubmit="return confirm('Удалить лицензию?')"><input type=hidden name=player_id value="{html.escape(row['player_id'], quote=True)}"><button class=danger>Удалить</button></form></div></td></tr>""" for row in rows)
-        audit_html = "".join(f"<tr><td>{iso_time(row['created_at'])}</td><td>{html.escape(row['action'])}</td><td>{html.escape(row['target'])}</td><td>{html.escape(row['ip'])}</td><td>{html.escape(row['detail'])}</td></tr>" for row in audit_rows)
-        access_html = "".join(f"<tr><td>{iso_time(row['created_at'])}</td><td><b>{html.escape(row['player_id'])}</b></td><td>{html.escape(row['device_id'][:12])}…{html.escape(row['device_id'][-6:
+                try:
+                    routes = json.loads(row["routes_json"])
+                except j
 
 ===== path == "/api/v1/maps =====
 NOT FOUND
@@ -3092,21 +3123,11 @@ NOT FOUND
 
 ===== def admin_action =====
 
-    def login_html(error: str = "") -> str:
-        message = f'<p class="bad">{html.escape(error)}</p>' if error else ""
-        return f'<div class="card" style="max-width:430px;margin:12vh auto"><h1>Hamster King</h1><p class=muted>Панель лицензий</p>{message}<form method=post action=/admin/login><input type=password name=password placeholder="Пароль владельца" required style="width:100%;margin-bottom:10px"><button class=primary style="width:100%">Войти</button></form></div>'
-
-    def render_admin(self) -> None:
-        if not self.admin_ok():
-            self.send_common(HTTPStatus.OK, "text/html; charset=utf-8", page_shell("Вход", self.login_html()))
-            return
-        with db_session() as db:
-            rows = db.execute("""SELECT l.*, MAX(d.last_seen) last_seen
-                               FROM licenses l LEFT JOIN devices d ON d.player_id=l.player_id
                                GROUP BY l.player_id ORDER BY l.created_at DESC""").fetchall()
             audit_rows = db.execute("SELECT created_at,action,target,ip,detail FROM admin_audit ORDER BY id DESC LIMIT 40").fetchall()
             access_rows = db.execute("""SELECT created_at,player_id,device_id,script_version,ip
                                        FROM access_log ORDER BY id DESC LIMIT 80""").fetchall()
+            rumor_row = db.execute("SELECT route_date,source_text,published_at FROM rumor_routes ORDER BY route_date DESC LIMIT 1").fetchone()
             member_rows = db.execute("""SELECT telegram_id,note,first_name,username,linked_player_id,active,last_login,
                                                maps_access,maps_manage
                                         FROM clan_members ORDER BY active DESC,updated_at DESC""").fetchall()
@@ -3118,7 +3139,10 @@ NOT FOUND
         audit_html = "".join(f"<tr><td>{iso_time(row['created_at'])}</td><td>{html.escape(row['action'])}</td><td>{html.escape(row['target'])}</td><td>{html.escape(row['ip'])}</td><td>{html.escape(row['detail'])}</td></tr>" for row in audit_rows)
         access_html = "".join(f"<tr><td>{iso_time(row['created_at'])}</td><td><b>{html.escape(row['player_id'])}</b></td><td>{html.escape(row['device_id'][:12])}…{html.escape(row['device_id'][-6:])}</td><td>{html.escape(row['script_version'])}</td><td>{html.escape(row['ip'])}</td></tr>" for row in access_rows)
         members_html = "".join(f"""<tr><td><b>{html.escape(row['telegram_id'])}</b><br><span class=muted>{html.escape(row['first_name'])}{(' · @' + html.escape(row['username'])) if row['username'] else ''}</span></td><td>{html.escape(row['note'])}</td><td>{html.escape(row['linked_player_id'] or '—')}</td><td>{'Разрешён' if row['active'] else 'Заблокирован'}<br><span class=muted>{iso_time(row['last_login'])}</span><br><span class=muted>Карты: {'доступ' if row['maps_access'] else 'нет'} · {'управление' if row['maps_manage'] else 'просмотр'}</span></td><td><div class=actions><form method=post action=/admin/telegram/maps-access><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button>{'Закрыть карты' if row['maps_access'] else 'Открыть карты'}</button></form><form method=post action=/admin/telegram/maps-manage><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button>{'Снять управление' if row['maps_manage'] else 'Дать управление'}</button></form><form method=post action=/admin/telegram/toggle><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button>{'Заблокировать' if row['active'] else 'Разрешить'}</button></form><form method=post action=/admin/telegram/delete onsubmit="return confirm('Удалить Telegram ID?')"><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button class=danger>Удалить</button></form></div></td></tr>""" for row in member_rows)
+        rumor_text = html.escape(rumor_row["source_text"] if rumor_row else "", quote=False)
+        rumor_status = f"Опубликован маршрут на <b>{html.escape(rumor_row['route_date'])}</b> · {iso_time(rumor_row['published_at'])}" if rumor_row else "Маршрут ещё не опубликован"
         content = f"""<div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h1>Лицензии Hamster King</h1><p class=muted>Разрешённые игровые ID · опубликована <b>{html.escape(release_version())}</b> · минимальная <b>{html.escape(MIN_SCRIPT_VERSION)}</b> · SHA-256 <b>{html.escape(release_sha256()[:12])}</b></p></div><form method=post action=/admin/logout><button>Выйти</button></form></div>
+        <div class=card><h2>Маршрут слухов на день</h2><p class=muted>{rumor_status}. Вставьте текст целиком: дата, затем строки «координаты Город». Регионы распознаются автоматически.</p><form method=post action=/admin/rumors/publish><textarea name=route_text required rows=18 style="width:100%;box-sizing:border-box;font:14px ui-monospace,monospace">{rumor_text}</textarea><div class=actions style="margin-top:10px"><button class=primary>Опубликовать маршрут</button></div></form></div>
         <div class=card><h2>Доступ в личный кабинет</h2><p class=muted>Только добавленные здесь Telegram ID смогут войти. Игровой ID участник привяжет один раз самостоятельно — лицензия создастся автоматически.</p><form class=grid method=post action=/admin/telegram/add><input name=telegram_id inputmode=numeric pattern="[0-9]{{5,20}}" placeholder="Telegram ID" required maxlength=20><input name=note placeholder="Имя или комментарий"><button class=primary>Разрешить вход</button></form><table><thead><tr><th>Telegram</th><th>Комментарий</th><th>Игровой ID</th><th>Статус / вход</th><th>Действия</th></tr></thead><tbody>{members_html or '<tr><td colspan=5 class=muted>Разрешённых Telegram ID пока нет</td></tr>'}</tbody></table></div>
         <div class=card><h2>Добавить игровой ID вручную</h2><form class=grid method=post action=/admin/add><input name=player_id placeholder="ID игрового аккаунта" required maxlength=128><input name=note placeholder="Комментарий"><input type=date name=expires title="Срок (пусто = бессрочно)"><button class=primary>Добавить</button></form></div>
         <div class=card><table><thead><tr><th>ID / комментарий</th><th>Срок</th><th>Последняя проверка</th><th>Статус</th><th>Действия</th></tr></thead><tbody>{table_rows or '<tr><td colspan=5 class=muted>Пока нет разрешённых ID</td></tr>'}</tbody></table></div>
@@ -3127,6 +3151,20 @@ NOT FOUND
         self.send_common(HTTPStatus.OK, "text/html; charset=utf-8", page_shell("Лицензии", content))
 
     def admin_action(self, path: str, form: dict[str, str]) -> None:
+        if path == "/admin/rumors/publish":
+            try:
+                route_date, routes = parse_rumor_route(form.get("route_text", ""))
+                now = utc_now()
+                with db_session() as db:
+                    db.execute("""INSERT INTO rumor_routes(route_date,source_text,routes_json,published_at,updated_at)
+                                  VALUES(?,?,?,?,?) ON CONFLICT(route_date) DO UPDATE SET source_text=excluded.source_text,
+                                  routes_json=excluded.routes_json,published_at=excluded.published_at,updated_at=excluded.updated_at""",
+                               (route_date, form.get("route_text", "")[:20000], json.dumps(routes, ensure_ascii=False, separators=(",", ":")), now, now))
+                audit("rumors_publish", route_date, self.client_ip(), f"cities={len(routes)} points={sum(len(row['points']) for row in routes)}")
+            except ValueError as error:
+                audit("rumors_publish_failed", "", self.client_ip(), str(error))
+            self.redirect("/admin")
+            return
         if path.startswith("/admin/telegram/"):
             telegram_id = form.get("telegram_id", "").strip()
             if not TELEGRAM_ID_RE.fullmatch(telegram_id):

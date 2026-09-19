@@ -4,7 +4,7 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.16.5
+// @version      1.16.8
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
 // @release-note Hotfix версии bookmarklet: metadata и runtime version синхронизированы; аудит валют и live-state сохранён.
 // @match        https://app.hamsterking.games/*
@@ -16,7 +16,7 @@
   'use strict';
   const BUILD_VERSION = typeof GM_info !== 'undefined' && GM_info?.script?.version
     ? String(GM_info.script.version)
-    : '1.16.5';
+    : '1.16.8';
   const previousRuntime = window.__HK_MOBILE_RUNTIME__;
   if (previousRuntime?.active) {
     try { previousRuntime.open?.(); } catch (_) {}
@@ -62,6 +62,7 @@
   const SETTINGS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/settings';
   const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';
   const PUBLIC_SNAPSHOT_API = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-snapshot';
+  const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
   const PUBLIC_SNAPSHOT_INTERVAL_MS = 15 * 60 * 1000;
   const LICENSE_RECHECK_MS = 60 * 60 * 1000;
   const GAME_API_FALLBACK = 'https://hk-game-api.hwgame.cloud';
@@ -219,7 +220,7 @@
       daily:'Today', pit:'Pit', businesses:'Businesses', clan:'Clan', fair:'Fair', shop:'Shop', recipes:'Recipes', maps:'Maps', navToday:'Today', navBattles:'Battles', navCity:'City', navBusiness:'Business', navGrowth:'Growth', navTrade:'Trade', navClan:'Clan', navTodayHint:'tasks and rewards', navBattlesHint:'pits and battles', navCityHint:'maps and buildings', navBusinessHint:'cards and recipes', navGrowthHint:'hamsters and generals', navTradeHint:'fair and shop', navClanHint:'skills and wars', checkingLicense:'Checking license…',
       dailyTasks:'Today', dailyRefresh:'Check only', dailyRun:'Run selected', dailyAdRun:'Watch available ad', dailyClear:'Clear log', dailyOverall:'Overall progress', dailyCurrent:'Current stage', dailyAds:'Ads', dailyClan:'Clan purchases', dailyInvest:'Investment offers', dailyReady:'Ready to start', dailyNoShop:'Open the in-game shop first, then tap “Check only”.',
       dailyBalances:'Balances', dailyStores:'Available purchases', dailyFreeActions:'Free actions', dailyRegularActions:'Regular shop', dailyOrdinaryActions:'Standard shop', dailyClanActions:'Personal clan lots', dailyInvestActions:'Invest deals', dailyPit:'Pit status', pitNormal:'Normal Pit', pitBoss:'Boss Pit', pitGang:'Gang Pit', pitAvailableNow:'available now', pitLimit:'limit', pitDiamondTopUp:'diamond top-up', pitMultipleReady:'already divisible by 5', pitOpenOnce:'Open this Pit section once', pitRun:'Run', pitUseMoves:'Use moves', pitMovePlan:'Optimal', pitNoMoves:'not selected', dailyConsigliere:'Consigliere', dailyPlan:'Execution plan', dailyBudget:'Unified budget', dailyReserve:'Minimum balance', dailyLimit:'Daily limit', weeklyLimit:'Weekly limit', spentToday:'Spent today', spentWeek:'Spent this week', allowPremium:'Allow diamonds', exportSettings:'Export settings', importSettings:'Restore settings', noLimit:'No limit', selectedActions:'Selected actions: {n}', exactPlan:'Review the exact spending plan before running.',
-      targetRound:'Reach round', delay:'Delay, seconds', activationTokens:'Activation tokens', pitCollectOnly:'Collect data onl
+      targetRound:'Reach round', delay:'Delay
 
 ===== let dailyShopRows =====
 
@@ -344,12 +345,13 @@
   let mapPointerMoved = false;
   let mapBuildingAreas = new Map();
   let mapScanning = false;
+  let dailyRumorRoute = [];
+  let dailyAccountAreaIndex = [];
   let dailyShopRows = [];
   let dailyRunning = false;
   let dailyAdController = null;
   let dailySnapshot = load().today?.snapshot || null;
-  let dailySelection = {...{advertisement:true, recruits:false, cartels:false, investments:false}, ...(load().today?.selection || {})};
-  delete dailySelection.rumors;
+  let dailySelection = {...{advertisement:true, rumors:true, recruits:false, cartels:false, investments:false}, ...(load().today?.selection || {})};
   let dailyPurchaseCounts = {...(load().today?.purchaseCounts || {})};
   let dailyStoreTab = String(load().today?.storeTab || 'regular');
   let sharedPitRows = [];
@@ -622,7 +624,8 @@
     };
     const noteMutation = (path, method = 'POST') => {
       const verb = String(method || 'GET').toUpperCase();
-      const route = String(path || '').split('?'
+      const route = String(path || '').split('?')[0];
+      if (['G
 
 ===== function dailyActionRows() =====
 
@@ -723,6 +726,7 @@
   function dailyActionRows() {
     const ad = dailyAdvertisement();
     const actions = [
+      {id:'rumors', label:either('Слухи','Rumors'), kind:'rumors', uiGroup:'free', free:true, available:dailyRumorRoute.length > 0},
       {id:'advertisement', label:tr('dailyAds'), kind:'advertisement', uiGroup:'free', free:true, available:ad.available}
     ];
     for (const row of pitLimitSummaries()) {
@@ -790,6 +794,176 @@
     return `<li class="${available ? 'ready' : ''}"><b>${escapeHtml(title)}</b><span>${message}</span></li>`;
   }
 
+  function dailyCityKey(value) {
+    const key = clean(value).toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]+/g, ' ').trim();
+    const aliases = {
+      'moscow':'moscow','москва':'moscow','spb':'spb','saint petersburg':'spb','st petersburg':'spb','санкт петербург':'spb',
+      'minsk':'minsk','минск':'minsk','berlin':'berlin','берлин':'berlin','london':'london','лондон':'london',
+      'paris':'paris','париж':'paris','dubai':'dubai','дубай':'dubai','tokyo':'tokyo','токио':'tokyo',
+      'singapore':'singapore','сингапур':'singapore','new york':'new york','нью йорк':'new york',
+      'los angeles':'los angeles','лос анджелес':'los angeles','boston':'boston','бостон':'boston',
+      'washington':'washington','вашингтон':'washington','rio':'rio','rio de janeiro':'rio','рио':'rio','рио де жанейро':'rio',
+      'lagos':'lagos','лагос':'lagos','sydney':'sydney','сидней':'sydney','auckland':'auckland','окленд':'auckland'
+    };
+    return aliases[key] || key.replace(/^(?:city|город)\s+/, '');
+  }
+
+  function dailyMapArea(rows, city, point) {
+    const wantedCity = dailyCityKey(city);
+    const wantedX = Number(point?.x), wantedY = Number(point?.y);
+    return rows.find(row => Number(row?.x) === wantedY && Number(row?.y) === wantedX &&
+      [row?.city_name, row?.city_id].some(value => {
+        const cityKey = dailyCityKey(value);
+        return cityKey && wantedCity && (cityKey.includes(wantedCity) || wantedCity.includes(cityKey));
+      }));
+  }
+
+  async function rumorServerJson(path, body = {}, retry = true) {
+    return licensedServerJson(RUMOR_API_BASE, path, body, retry, 'rumors');
+  }
+
+  async function loadRumorRoute() {
+    try {
+      const result = await rumorServerJson('/today');
+      dailyRumorRoute = Array.isArray(result.routes) ? result.routes : [];
+      dailyAccountAreaIndex = [];
+      if (dailyRumorRoute.length) {
+        const points = dailyRumorRoute.reduce((sum,row)=>sum+(Array.isArray(row?.points)?row.points.length:0),0);
+        log(either('Маршрут слухов загружен: ','Rumor route loaded: ') + dailyRumorRoute.length + either(' городов · ',' cities · ') + points + either(' точек',' points'),'ok');
+      }
+      return dailyRumorRoute;
+    } catch (error) {
+      dailyRumorRoute = [];
+      dailyAccountAreaIndex = [];
+      log(either('Ошибка маршрута слухов','Rumor route error') + ': ' + (error?.message || error),'warn');
+      return dailyRumorRoute;
+    }
+  }
+
+  async function loadDailyAccountAreas() {
+    if (dailyAccountAreaIndex.length) return dailyAccountAreaIndex;
+    playerDocument = await apiJson('/player/me','POST');
+    await ensureRecipeMetadata();
+    const citiesValue = await apiJson('/cities','GET');
+    const cities = Array.isArray(citiesValue) ? citiesValue : (Array.isArray(citiesValue?.cities) ? citiesValue.cities : []);
+    const routeCities = new Set(dailyRumorRoute.map(row => dailyCityKey(row?.city)).filter(Boolean));
+    const wantedCities = cities.filter(city => {
+      const key = dailyCityKey(cityLabel(city));
+      return routeCities.has(key) || [...routeCities].some(routeKey => key.includes(routeKey) || routeKey.includes(key));
+    });
+    const rows = [];
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < wantedCities.length) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        const city = wantedCities[cursor++];
+        const cityId = String(city?.id || '');
+        try {
+          const value = await apiJson('/city/' + encodeURIComponent(cityId) + '/game_area','GET');
+          const areas = Array.isArray(value) ? value : (Array.isArray(value?.areas) ? value.areas : []);
+          for (const area of areas) {
+            const info = area?.info || {};
+            const areaId = String(area?.id || area?.gamearea_id || '');
+            const x = info?.x ?? area?.x ?? area?.meta?.gamearea_coords?.x;
+            const y = info?.y ?? area?.y ?? area?.meta?.gamearea_coords?.y;
+            if (areaId && x != null && y != null) rows.push({area_id:areaId,city_id:cityId,city_name:cityLabel(city),x:Number(x),y:Number(y)});
+          }
+        } catch (error) {
+          if (error?.name === 'AbortError') throw error;
+          log(either('Не удалось считать сетку города','Could not read city grid') + ' ' + cityLabel(city) + ': ' + (error?.message || error),'warn');
+        }
+      }
+    };
+    await Promise.all(Array.from({length:Math.min(4,Math.max(1,wantedCities.length))},worker));
+    dailyAccountAreaIndex = rows;
+    return rows;
+  }
+
+  async function runDailyRumors(internal = false) {
+    if (!requireLicense() || (dailyRunning && !internal)) return;
+    if (!dailyRumorRoute.length) await loadRumorRoute();
+    if (!dailyRumorRoute.length) { log(either('Маршрут слухов не опубликован.','The rumor route is not published.'),'warn'); return; }
+    if (!internal) {
+      if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+      hkRunner.start({title:either('Слухи','Rumors'),total:dailyRumorRoute.length,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+      dailyRunning = true;
+      renderDailyTasks();
+    }
+    let collected = 0, completed = 0, checked = 0, completedCities = 0, skippedCities = 0, routeIndex = 0;
+    try {
+      const maps = await loadDailyAccountAreas();
+      for (const route of dailyRumorRoute) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        if (!internal) hkRunner.setStep(route.city || either('Город','City'),routeIndex,dailyRumorRoute.length);
+        routeIndex++;
+        let cityCollected = 0, cityCompleted = 0, cityUnavailable = false;
+        for (const point of route.points || []) {
+          if (cityCompleted >= 3) break;
+          if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+          await hkRunner.waitIfPaused();
+          const area = dailyMapArea(maps,route.city,point);
+          const ids = area?.area_id ? [String(area.area_id)] : [];
+          if (!ids.length) {
+            log(String(route.city || '') + ' ' + Number(point?.x) + ':' + Number(point?.y) + ' — ' + either('район не найден','district not found'),'warn');
+            continue;
+          }
+          let searched = false;
+          for (const gameareaId of ids) {
+            try {
+              playerDocument = await apiJson('/rumors/search','POST',{gamearea_id:gameareaId});
+              collected++; completed++; cityCollected++; cityCompleted++; checked++; searched = true;
+              log(either('★ СЛУХ СОБРАН → ','★ RUMOR COLLECTED → ') + route.city + ' [' + point.x + ':' + point.y + '] (' + cityCompleted + '/3)','ok');
+              break;
+            } catch (error) {
+              if (error?.name === 'AbortError') throw error;
+              const message = String(error?.message || error);
+              if (/player.{0,40}does.{0,20}not.{0,20}have.{0,20}city|does.{0,20}not.{0,20}have.{0,20}city.{0,40}(?:rumor|search)|нет.{0,30}город/i.test(message)) {
+                cityUnavailable = true; searched = true;
+                log('↷ ' + route.city + ' — ' + either('города нет на аккаунте, пропускаю','city is not available on this account, skipping'),'warn');
+                break;
+              }
+              if (/already.{0,50}(?:searched.{0,20}rumor|research|explor)|(?:searched.{0,20}rumor|research|explor).{0,50}already|уже.{0,30}исследован/i.test(message)) {
+                completed++; cityCompleted++; checked++; searched = true;
+                log(either('✓ СЛУХ УЖЕ НАЙДЕН → ','✓ RUMOR ALREADY FOUND → ') + route.city + ' [' + point.x + ':' + point.y + '] (' + cityCompleted + '/3)','warn');
+                break;
+              }
+              if (/no.{0,20}rumor.{0,20}(?:for|in).{0,20}gamearea|object.{0,20}not.{0,20}found/i.test(message)) {
+                checked++; searched = true;
+                log(either('— СЛУХ НЕ НАЙДЕН → ','— NO RUMOR FOUND → ') + route.city + ' [' + point.x + ':' + point.y + ']','warn');
+                break;
+              }
+              throw error;
+            }
+          }
+          if (cityUnavailable) break;
+          if (!searched) checked++;
+          await gameRetryDelay(300);
+        }
+        if (cityUnavailable) { skippedCities++; continue; }
+        if (cityCompleted >= 3) completedCities++;
+        const today = load().today || {};
+        const rumors = {...(today.rumors || {}),[dailyCityKey(route.city)]:{city:route.city,completed:cityCompleted,collected:cityCollected,updatedAt:Date.now(),periodStart:gamePeriodBounds().dayStart}};
+        save({today:{...today,rumors}});
+      }
+      const availableCities = Math.max(0,dailyRumorRoute.length-skippedCities);
+      log(either('Сбор слухов завершён: ','Rumor collection completed: ') + completedCities + '/' + availableCities + either(' городов · новых ',' cities · new ') + collected + either(' · проверено ',' · checked ') + checked, completedCities ? 'ok' : 'warn');
+      if (!internal) hkRunner.finish(either('Слухи собраны','Rumors completed'));
+    } catch (error) {
+      if (!internal && error?.name === 'AbortError') {
+        hkRunner.reset();
+        log(either('Сбор слухов остановлен','Rumor collection stopped'),'warn');
+      } else {
+        if (!internal) hkRunner.fail(error);
+        log(either('Сбор слухов остановлен','Rumor collection stopped') + ': ' + (error?.message || error),'bad');
+        if (internal) throw error;
+      }
+    } finally {
+      if (!internal) { dailyRunning = false; renderDailyTasks(); }
+    }
+  }
+
   function playRewardedAdInPageWorld() {
     return new Promise((resolve, reject) => {
       const bridgeId = `hk-ad-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -856,140 +1030,58 @@
     const selected = selectedDailyActions();
     const totals = dailyPlanTotals(selected);
     const currencies = discoveredCurrencyIds();
-    const ad = dailyAdvertisement();
-    const adTimer = ad.timer?.timestamp || firstTimer(ad.raw);
-    const pit = pitState();
-    const balancesHtml = currencies.map(id => {
-      const amount = walletAmount(id);
-      return `<div class="hk-today-balance">${fairIconHtml(paymentIcon({id,kind:id.startsWith('cur_') ? 'currencies' : 'items'}),'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span><b>${amount === null ? '—' : amount.toLocaleString(locale())}</b></div>`;
-    }).join('');
-    const actionRowHtml = action => {
-      const checked = action.available && dailySelection[action.id] === true;
-      const decision = action.kind === 'purchase' ? budgetDecision(action.cost, action.section, action.count) : {allowed:true,problems:[]};
-      const quantity = action.count > 1 ? `<b class="hk-action-count">×${action.count}</b>` : '';
-      const lotVisual = action.kind === 'purchase' ? shopLotIconHtml(action.row) : '';
-      const quantityControl = action.kind === 'purchase' && !action.boughtOut ? `<label class="hk-today-quantity"><span>${tr('quantity')}</span><select data-daily-quantity="${escapeHtml(action.id)}" ${action.available && !action.mandatory ? '' : 'disabled'}>${quantitySelectOptions(action.row.remaining, action.count)}</select></label>` : '';
-      const availability = action.kind === 'purchase' && action.row && Object.prototype.hasOwnProperty.call(action.row, 'remaining') ?
-        (action.boughtOut ? '' : ` · ${action.row.unlimited ? tr('unlimited') : tr('remaining',{n:action.row.remaining})}`) : '';
-      const price = action.boughtOut ? `<span class="hk-bought-out">${tr('boughtOut')}</span>` :
-        action.kind === 'purchase' ? `${costVisual(action.cost)}${quantity}` : `<span class="hk-free">${either('бесплатно','free')}</span>`;
-      return `<div class="hk-today-action ${lotVisual ? 'has-lot-icon' : ''} ${action.mandatory ? 'mandatory' : ''} ${action.available ? (decision.allowed ? '' : 'budget-warning') : 'locked'}"><input type="checkbox" data-daily-action="${escapeHtml(action.id)}" ${checked ? 'checked' : ''} ${action.available && !action.mandatory ? '' : 'disabled'}>${lotVisual}<span><b>${escapeHtml(action.label)}</b><small>${price}${availability}${action.mandatory ? ` · ${either('обязательный ежедневный лот','required daily lot')}` : ''}${decision.problems.length ? ` · ${escapeHtml(decision.problems.join('; '))}` : ''}</small></span>${quantityControl}</div>`;
-    };
-    const freeRows = actions.filter(action => action.uiGroup === 'free');
-    const paidGroups = [
-      ['regular', tr('dailyRegularActions')], ['ordinary', tr('dailyOrdinaryActions')],
-      ['clan', tr('dailyClanActions')], ['invest', tr('dailyInvestActions')]
-    ].map(([key,title]) => ({key,title,rows:actions.filter(action => action.uiGroup === key)})).filter(group => group.rows.length);
-    if (!paidGroups.some(group => group.key === dailyStoreTab)) dailyStoreTab = paidGroups[0]?.key || 'regular';
-    const activePaid = paidGroups.find(group => group.key === dailyStoreTab);
-    const freeHtml = freeRows.length ? `<details class="hk-today-action-group" open><summary><b>${escapeHtml(tr('dailyFreeActions'))}</b><span>${freeRows.length}</span></summary><div>${freeRows.map(actionRowHtml).join('')}</div></details>` : '';
-    const storeTabs = paidGroups.length ? `<div class="hk-today-store-tabs">${paidGroups.map(group => `<button type="button" data-daily-store-tab="${group.key}" class="${group.key === dailyStoreTab ? 'active' : ''}">${escapeHtml(group.title)} <span>${group.rows.length}</span></button>`).join('')}</div>` : '';
-    const paidHtml = activePaid ? `<div class="hk-today-action-group hk-today-store-page"><div>${activePaid.rows.map(actionRowHtml).join('')}</div></div>` : '';
-    const actionHtml = `${freeHtml}${storeTabs}${paidHtml}`;
-    const planRows = selected.map((action,index) => {
-      const decision = action.kind === 'purchase' ? budgetDecision(action.cost, action.section, action.count) : {allowed:true,problems:[]};
-      return `<li class="${decision.allowed ? '' : 'blocked'}"><b>${index + 1}. ${escapeHtml(action.label)}${action.count > 1 ? ` ×${action.count}` : ''}</b><span>${action.kind === 'purchase' ? costVisual(action.cost) : either('без расходов','no cost')}${decision.problems.length ? `<br>${escapeHtml(decision.problems.join('; '))}` : ''}</span></li>`;
-    }).join('') || `<p class="hk-muted">${either('Отметьте действия выше','Select actions above')}</p>`;
-    const budgetRows = currencies.map(id => {
-      const rules = currencyBudget(id), usage = budgetUsage(id), premium = id === 'cur_prem';
-      return `<div class="hk-budget-row" data-budget-row="${escapeHtml(id)}"><div class="hk-budget-title">${fairIconHtml(paymentIcon({id,kind:id.startsWith('cur_') ? 'currencies' : 'items'}),'hk-price-icon')}<b>${escapeHtml(paymentLabel(id))}</b></div>
-        <label>${tr('dailyReserve')}<input data-budget-field="reserve" type="number" min="0" step="1" value="${rules.reserve}"></label>
-        <label>${tr('dailyLimit')}<input data-budget-field="dailyLimit" type="number" min="0" step="1" value="${rules.dailyLimit}"></label>
-        <label>${tr('weeklyLimit')}<input data-budget-field="weeklyLimit" type="number" min="0" step="1" value="${rules.weeklyLimit}"></label>
-        <small>${tr('spentToday')}: <b>${usage.day.toLocaleString(locale())}</b> · ${tr('spentWeek')}: <b>${usage.week.toLocaleString(locale())}</b></small>
-        <div class="hk-budget-flags"><label><input data-budget-allow="shop" type="checkbox" ${rules.allow.shop ? 'checked' : ''}>${tr('shop')}</label><label><input data-budget-allow="fair" type="checkbox" ${rules.allow.fair ? 'checked' : ''}>${tr('fair')}</label><label><input data-budget-allow="clan" type="checkbox" ${rules.allow.clan ? 'checked' : ''}>${tr('clanShop')}</label>${premium ? `<label class="premium"><input data-budget-premium type="checkbox" ${rules.allowPremium ? 'checked' : ''}>${tr('allowPremium')}</label>` : ''}</div></div>`;
-    }).join('');
-    const journalHtml = expenseJournal().slice(-12).reverse().map(row => `<li class="${row.status === 'ok' ? 'ok' : 'failed'}"><span>${new Date(row.time).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · ${escapeHtml(row.name || row.lotId || '')}</span><b>${Number(row.amount || 0).toLocaleString(locale())} ${escapeHtml(paymentLabel(row.currencyId))}</b><small>${escapeHtml(row.result || row.status || '')}</small></li>`).join('') || `<li><span>${either('Операций пока нет','No operations yet')}</span></li>`;
-    dailyBox.innerHTML = `<div class="hk-daily-progress"><div><b>${tr('dailyCurrent')}</b><span>${dailyRunning ? either('выполняется','running') : dailySnapshot ? `${either('проверено','checked')} ${new Date(dailySnapshot.checkedAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'})}` : tr('dailyReady')}</span></div><i><em style="width:${dailyRunning ? 45 : dailySnapshot ? 100 : 0}%"></em></i></div>
-      <section class="hk-today-section"><h4>${tr('dailyBalances')}</h4><div class="hk-today-balances">${balancesHtml}</div></section>
-      <div class="hk-today-grid"><section class="hk-today-section"><h4>${tr('dailyAds')}</h4><p>${ad.lotId ? (adTimer ? either('Ожидание','Cooldown') : either('Доступна','Available')) : either('Недоступна','Unavailable')}${adTimer ? ` · ${countdownLabel(adTimer)}` : ''}</p></section>
-      <section class="hk-today-section"><h4>${tr('dailyPit')}</h4>${pitLimitsHtml()}${pit.round ? `<p>${tr('round')}: <b>${pit.round}</b>${pit.enemyText ? ` · ${escapeHtml(pit.enemyText)}` : ''}</p>` : ''}</section></div>
-      <section class="hk-today-section"><h4>${tr('dailyStores')}</h4><div class="hk-today-action-groups">${actionHtml}</div></section>
-      <section class="hk-today-section hk-today-plan"><h4>${tr('dailyPlan')}</h4><small>${tr('exactPlan')}</small><ol>${planRows}</ol>${walletForecastHtml(totals)}</section>
-      <details class="hk-today-section hk-budget"><summary>${tr('dailyBudget')}</summary>${budgetRows}<h4>${either('Журнал расходов','Expense journal')}</h4><ul class="hk-expense-journal">${journalHtml}</ul><div class="hk-toolbar"><button id="hk-settings-export">${tr('exportSettings')}</button><button id="hk-settings-import">${tr('importSettings')}</button></div></details>`;
-    installIconFallbacks(dailyBox);
-    const run = root?.querySelector('#hk-daily-run');
-    if (run) run.disabled = dailyRunning || !selected.length;
-    dailyBox.querySelectorAll('[data-pit-moves]').forEach(select => select.onchange = () => {
-      savePitMoves(select.dataset.pitMoves, select.value);
-      renderDailyTasks();
-    });
-    dailyBox.querySelectorAll('[data-pit-enabled]').forEach(input => input.onchange = () => {
-      dailySelection[`pit:${input.dataset.pitEnabled}`] = input.checked;
-      saveDailySelection();
-      renderDailyTasks();
-    });
-    dailyBox.querySelectorAll('[data-daily-action]').forEach(input => input.onchange = () => {
-      dailySelection[input.dataset.dailyAction] = input.checked;
-      if (input.dataset.dailyAction.startsWith('lot:')) {
-        if (input.checked && !(Number(dailyPurchaseCounts[input.dataset.dailyAction]) > 0)) dailyPurchaseCounts[input.dataset.dailyAction] = 1;
-        if (!input.checked) dailyPurchaseCounts[input.dataset.dailyAction] = 0;
-      }
-      saveDailySelection(); renderDailyTasks();
-    });
-    dailyBox.querySelectorAll('[data-daily-quantity]').forEach(select => select.onchange = () => {
-      const id = select.dataset.dailyQuantity;
-      const count = Math.max(0, Math.floor(Number(select.value || 0)));
-      dailyPurchaseCounts[id] = count;
-      dailySelection[id] = count > 0;
-      saveDailySelection(); renderDailyTasks();
-    });
-    dailyBox.querySelectorAll('[data-daily-store-tab]').forEach(button => button.onclick = () => {
-      dailyStoreTab = button.dataset.dailyStoreTab || 'regular';
-      saveDailySelection(); renderDailyTasks();
-    });
-    dailyBox.querySelectorAll('[data-budget-row]').forEach(row => {
-      const id = row.dataset.budgetRow;
-      row.querySelectorAll('[data-budget-field]').forEach(input => input.onchange = () => saveCurrencyBudget(id, {[input.dataset.budgetField]:Math.max(0,Number(input.value || 0))}));
-      r
+    const rumorsStored = load().today?.rumors || {};
+    const rumorPeriodStart = gamePeriodBounds().dayStart;
+    const routeHtml = dailyRumorRoute.length ? '<ul>' + dailyRumorRoute.map(row => {
+      const progress = rumorsStored[dailyCityKey(row.city)];
+      const count = progress?.periodStart === rumorPeriodStart ? Math.min(3,Number(progress.completed || 0)) : 0;
+      const points = (row.points || []).map(point => Number(point.x) + '
 
 ===== function renderDailyTasks() =====
 
-      const mandatory = mandatoryDailyClanLot(row);
-      const savedCount = Math.max(0, Math.floor(Number(dailyPurchaseCounts[actionId] || 0)));
-      const count = mandatory ? Math.max(0, Number(row.remaining || 0)) :
-        Math.min(Math.max(0, Number(row.remaining || 0)), savedCount || (dailySelection[actionId] ? 1 : 0));
-      if (mandatory && row.remaining > 0) {
-        dailySelection[actionId] = true;
-        dailyPurchaseCounts[actionId] = count;
+              if (/player.{0,40}does.{0,20}not.{0,20}have.{0,20}city|does.{0,20}not.{0,20}have.{0,20}city.{0,40}(?:rumor|search)|нет.{0,30}город/i.test(message)) {
+                cityUnavailable = true; searched = true;
+                log('↷ ' + route.city + ' — ' + either('города нет на аккаунте, пропускаю','city is not available on this account, skipping'),'warn');
+                break;
+              }
+              if (/already.{0,50}(?:searched.{0,20}rumor|research|explor)|(?:searched.{0,20}rumor|research|explor).{0,50}already|уже.{0,30}исследован/i.test(message)) {
+                completed++; cityCompleted++; checked++; searched = true;
+                log(either('✓ СЛУХ УЖЕ НАЙДЕН → ','✓ RUMOR ALREADY FOUND → ') + route.city + ' [' + point.x + ':' + point.y + '] (' + cityCompleted + '/3)','warn');
+                break;
+              }
+              if (/no.{0,20}rumor.{0,20}(?:for|in).{0,20}gamearea|object.{0,20}not.{0,20}found/i.test(message)) {
+                checked++; searched = true;
+                log(either('— СЛУХ НЕ НАЙДЕН → ','— NO RUMOR FOUND → ') + route.city + ' [' + point.x + ':' + point.y + ']','warn');
+                break;
+              }
+              throw error;
+            }
+          }
+          if (cityUnavailable) break;
+          if (!searched) checked++;
+          await gameRetryDelay(300);
+        }
+        if (cityUnavailable) { skippedCities++; continue; }
+        if (cityCompleted >= 3) completedCities++;
+        const today = load().today || {};
+        const rumors = {...(today.rumors || {}),[dailyCityKey(route.city)]:{city:route.city,completed:cityCompleted,collected:cityCollected,updatedAt:Date.now(),periodStart:gamePeriodBounds().dayStart}};
+        save({today:{...today,rumors}});
       }
-      actions.push({id:actionId, label:`${label}: ${gameText(row.name) || row.rewardId || row.lotId}`, kind:'purchase',
-        uiGroup:row.group === 'invest' ? 'invest' : row.section, category:row.group || row.section, section, free:false, mandatory,
-        available:row.remaining > 0 && row.affordable, boughtOut:row.remaining <= 0,
-        row, count, cost:row.cost, signature:costSignature(row.cost)});
+      const availableCities = Math.max(0,dailyRumorRoute.length-skippedCities);
+      log(either('Сбор слухов завершён: ','Rumor collection completed: ') + completedCities + '/' + availableCities + either(' городов · новых ',' cities · new ') + collected + either(' · проверено ',' · checked ') + checked, completedCities ? 'ok' : 'warn');
+      if (!internal) hkRunner.finish(either('Слухи собраны','Rumors completed'));
+    } catch (error) {
+      if (!internal && error?.name === 'AbortError') {
+        hkRunner.reset();
+        log(either('Сбор слухов остановлен','Rumor collection stopped'),'warn');
+      } else {
+        if (!internal) hkRunner.fail(error);
+        log(either('Сбор слухов остановлен','Rumor collection stopped') + ': ' + (error?.message || error),'bad');
+        if (internal) throw error;
+      }
+    } finally {
+      if (!internal) { dailyRunning = false; renderDailyTasks(); }
     }
-    return actions;
-  }
-
-  function selectedDailyActions() {
-    return dailyActionRows().filter(action => action.available && (action.kind === 'pit' ? dailySelection[action.id] !== false : dailySelection[action.id] === true) &&
-      (action.kind !== 'purchase' || action.count > 0));
-  }
-
-  function saveDailySelection() {
-    const today = {...(load().today || {}), selection:{...dailySelection}, purchaseCounts:{...dailyPurchaseCounts}, storeTab:dailyStoreTab, snapshot:dailySnapshot};
-    save({today});
-  }
-
-  function dailyPlanTotals(actions = selectedDailyActions()) {
-    const totals = new Map();
-    for (const action of actions.filter(row => row.kind === 'purchase')) for (const part of costParts(action.cost)) addProjectedCost(totals, part, action.count || 1);
-    return totals;
-  }
-
-  function dailyTaskGroups(rows = dailyShopRows) {
-    const clan = rows.filter(row => row.section === 'clan' && row.clanGroup === 'personal' && !excludedDailyClanLot(row));
-    const recruits = clan.filter(dailyRecruitLot);
-    const cartels = clan.filter(dailyCartelLot);
-    const investments = rows.filter(row => row.section === 'ordinary' && row.group === 'invest');
-    return {recruits, cartels, investments};
-  }
-
-  function dailyRowText(rows, title) {
-    const available = rows.filter(row => row.safe && row.remaining > 0 && row.affordable).length;
-    const short = rows.filter(row => row.safe && row.remaining > 0 && !row.affordable).length;
-    const message = available ? `${either('доступно','available')}: ${available}` : short ? either('недостаточно валюты','not enough currency') : either('пока нет доступных','not available yet');
-    return `<li class="${available ? 'ready' : ''}"><b>${escapeHtml(title)}</b><span>${message}</span></li>`;
   }
 
   function playRewardedAdInPageWorld() {
@@ -1058,6 +1150,14 @@
     const selected = selectedDailyActions();
     const totals = dailyPlanTotals(selected);
     const currencies = discoveredCurrencyIds();
+    const rumorsStored = load().today?.rumors || {};
+    const rumorPeriodStart = gamePeriodBounds().dayStart;
+    const routeHtml = dailyRumorRoute.length ? '<ul>' + dailyRumorRoute.map(row => {
+      const progress = rumorsStored[dailyCityKey(row.city)];
+      const count = progress?.periodStart === rumorPeriodStart ? Math.min(3,Number(progress.completed || 0)) : 0;
+      const points = (row.points || []).map(point => Number(point.x) + ':' + String(Number(point.y)).padStart(2,'0')).join(' · ');
+      return '<li><b>' + escapeHtml(row.city) + '</b><span>' + count + '/3 · ' + escapeHtml(points) + '</span></li>';
+    }).join('') + '</ul>' : '<span>' + either('Маршрут слухов не опубликован','Rumor route is not published') + '</span>';
     const ad = dailyAdvertisement();
     const adTimer = ad.timer?.timestamp || firstTimer(ad.raw);
     const pit = pitState();
@@ -1104,6 +1204,7 @@
     const journalHtml = expenseJournal().slice(-12).reverse().map(row => `<li class="${row.status === 'ok' ? 'ok' : 'failed'}"><span>${new Date(row.time).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · ${escapeHtml(row.name || row.lotId || '')}</span><b>${Number(row.amount || 0).toLocaleString(locale())} ${escapeHtml(paymentLabel(row.currencyId))}</b><small>${escapeHtml(row.result || row.status || '')}</small></li>`).join('') || `<li><span>${either('Операций пока нет','No operations yet')}</span></li>`;
     dailyBox.innerHTML = `<div class="hk-daily-progress"><div><b>${tr('dailyCurrent')}</b><span>${dailyRunning ? either('выполняется','running') : dailySnapshot ? `${either('проверено','checked')} ${new Date(dailySnapshot.checkedAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'})}` : tr('dailyReady')}</span></div><i><em style="width:${dailyRunning ? 45 : dailySnapshot ? 100 : 0}%"></em></i></div>
       <section class="hk-today-section"><h4>${tr('dailyBalances')}</h4><div class="hk-today-balances">${balancesHtml}</div></section>
+      <section class="hk-today-section"><h4>${either('Слухи','Rumors')}</h4>${routeHtml}</section>
       <div class="hk-today-grid"><section class="hk-today-section"><h4>${tr('dailyAds')}</h4><p>${ad.lotId ? (adTimer ? either('Ожидание','Cooldown') : either('Доступна','Available')) : either('Недоступна','Unavailable')}${adTimer ? ` · ${countdownLabel(adTimer)}` : ''}</p></section>
       <section class="hk-today-section"><h4>${tr('dailyPit')}</h4>${pitLimitsHtml()}${pit.round ? `<p>${tr('round')}: <b>${pit.round}</b>${pit.enemyText ? ` · ${escapeHtml(pit.enemyText)}` : ''}</p>` : ''}</section></div>
       <section class="hk-today-section"><h4>${tr('dailyStores')}</h4><div class="hk-today-action-groups">${actionHtml}</div></section>
@@ -1158,6 +1259,7 @@
       if (!shopViewDocument) shopViewDocument = await apiJson('/shop/view', 'GET');
       dailyShopRows = shopViewDocument ? normalizeRegularShop() : [];
       if (!shopViewDocument) log(tr('dailyNoShop'), 'warn');
+      await loadRumorRoute();
       fairDocument = playerDocument;
       if (shopViewDocument) fairCatalog = normalizeFairCatalog(shopViewDocument);
       dailySnapshot = {checkedAt:Date.now(), playerId:playerIdentity(playerDocument?.player || {}), periodStart:gamePeriodBounds().dayStart};
@@ -1250,20 +1352,10 @@
     const savedIds = savedResourceBuildingIds();
     const buildingButtons = Object.keys(RESOURCE_BUILDING_TYPES).map(kind => `<button data-resource-kind="${kind}" class="${kind===resourceSelectedKind?'active':''}" ${resourceBusy?'disabled':''}><b>${escapeHtml(resourceTypeName(kind,true))}</b><small>${escapeHtml(resourceTypeName(kind))}${savedIds[kind]?' ✓':''}</small></button>`).join('');
     const activeTier = Math.max(0, Math.trunc(Number(activeBuilding?.tier || 0)));
-    const maximumTier = Math.max(activeTier, Math.trunc(Number(activeBuilding?.maxTier ?? activeTier)));
-    const tierButtons = activeBuilding ? Array.from({length:maximumTier + 1},(_,tier)=>`<button data-resource-tier="${tier}" class="${tier===activeTier?'active':''}" ${resourceBusy?'disabled':''}>${resourceTierLabel(tier)}</button>`).join('') : '';
-    const buildings = resourceBuildings.length ? resourceBuildings.map(building => {
-      const rows = resourceEvents(building);
-      const content = rows.length ? rows.map((row,index) => {
-        const protectedCost = resourceUsesProtectedCost(row);
-        const maximum = Math.max(0, Math.trunc(row.affordable));
-        const planned = protectedCost ? 0 : resourceMaximumMode ? maximum : Math.min(totalCompletions, maximum);
-        const ready = !protectedCost && row.atMax && planned > 0;
-        const reason = protected
+    const ma
 
 ===== async function refreshDailyTasks() =====
 
-      return `<div class="hk-budget-row" data-budget-row="${escapeHtml(id)}"><div class="hk-budget-title">${fairIconHtml(paymentIcon({id,kind:id.startsWith('cur_') ? 'currencies' : 'items'}),'hk-price-icon')}<b>${escapeHtml(paymentLabel(id))}</b></div>
         <label>${tr('dailyReserve')}<input data-budget-field="reserve" type="number" min="0" step="1" value="${rules.reserve}"></label>
         <label>${tr('dailyLimit')}<input data-budget-field="dailyLimit" type="number" min="0" step="1" value="${rules.dailyLimit}"></label>
         <label>${tr('weeklyLimit')}<input data-budget-field="weeklyLimit" type="number" min="0" step="1" value="${rules.weeklyLimit}"></label>
@@ -1273,6 +1365,7 @@
     const journalHtml = expenseJournal().slice(-12).reverse().map(row => `<li class="${row.status === 'ok' ? 'ok' : 'failed'}"><span>${new Date(row.time).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · ${escapeHtml(row.name || row.lotId || '')}</span><b>${Number(row.amount || 0).toLocaleString(locale())} ${escapeHtml(paymentLabel(row.currencyId))}</b><small>${escapeHtml(row.result || row.status || '')}</small></li>`).join('') || `<li><span>${either('Операций пока нет','No operations yet')}</span></li>`;
     dailyBox.innerHTML = `<div class="hk-daily-progress"><div><b>${tr('dailyCurrent')}</b><span>${dailyRunning ? either('выполняется','running') : dailySnapshot ? `${either('проверено','checked')} ${new Date(dailySnapshot.checkedAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'})}` : tr('dailyReady')}</span></div><i><em style="width:${dailyRunning ? 45 : dailySnapshot ? 100 : 0}%"></em></i></div>
       <section class="hk-today-section"><h4>${tr('dailyBalances')}</h4><div class="hk-today-balances">${balancesHtml}</div></section>
+      <section class="hk-today-section"><h4>${either('Слухи','Rumors')}</h4>${routeHtml}</section>
       <div class="hk-today-grid"><section class="hk-today-section"><h4>${tr('dailyAds')}</h4><p>${ad.lotId ? (adTimer ? either('Ожидание','Cooldown') : either('Доступна','Available')) : either('Недоступна','Unavailable')}${adTimer ? ` · ${countdownLabel(adTimer)}` : ''}</p></section>
       <section class="hk-today-section"><h4>${tr('dailyPit')}</h4>${pitLimitsHtml()}${pit.round ? `<p>${tr('round')}: <b>${pit.round}</b>${pit.enemyText ? ` · ${escapeHtml(pit.enemyText)}` : ''}</p>` : ''}</section></div>
       <section class="hk-today-section"><h4>${tr('dailyStores')}</h4><div class="hk-today-action-groups">${actionHtml}</div></section>
@@ -1327,6 +1420,7 @@
       if (!shopViewDocument) shopViewDocument = await apiJson('/shop/view', 'GET');
       dailyShopRows = shopViewDocument ? normalizeRegularShop() : [];
       if (!shopViewDocument) log(tr('dailyNoShop'), 'warn');
+      await loadRumorRoute();
       fairDocument = playerDocument;
       if (shopViewDocument) fairCatalog = normalizeFairCatalog(shopViewDocument);
       dailySnapshot = {checkedAt:Date.now(), playerId:playerIdentity(playerDocument?.player || {}), periodStart:gamePeriodBounds().dayStart};
@@ -1537,7 +1631,7 @@
       const documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(row.id)}&tier=${encodeURIComponent(selectedTier)}`,'POST');
       const proofs=savedResourceBuildingProofs();
       const resourceBuilding=exactResourceBuildingData(documentValue,row.kind,String(proofs[row.kind] || '')===String(row.id));
-      if (!resourceBuilding || resourceBuilding.kind!==row.kind) 
+      if (!resourceBuilding || reso
 
 ===== async function runDailySelected() =====
 
@@ -1647,7 +1741,8 @@
         hkRunner.setStep(action.label, completed + skipped, actions.length);
         try {
           log(`${either('Выполняю','Running')}: ${action.label}`);
-          if (action.kind === 'advertisement') await runDailyAd(true);
+          if (action.kind === 'rumors') await runDailyRumors(true);
+          else if (action.kind === 'advertisement') await runDailyAd(true);
           else if (action.kind === 'pit') await executeDailyPit(action);
           else if (action.kind === 'purchase') await executeDailyPurchase(action);
           completed++;
@@ -1914,13 +2009,10 @@
       : either('Загруженные карты пока отсутствуют.','There are no uploaded maps yet.');
     list.innerHTML=rows.length ? rows.map(row => {
       const gameAreaId = mapSource === 'mine' ? [String(row.area_id || ''), ...(Array.isArray(row.aliases) ? row.aliases.map(String) : [])].find(id => owned.has(id)) : String(row.area_id || '');
-      return `<button class="hk-map-row" data-area="${escapeHtml(row.area_id)}" data-game-area="${escapeHtml(gameAreaId || row.area_id)}"><b>${escapeHtml(row.city_name || row.city_id)}</b><span>${row.x ?? '?'}:${row.y ?? '?'}</span><span>${tr('mapBuildings')}: ${Number(row.opened||0).toLocaleString(locale())}</span><span>${tr('mapUnexplored')}: ${Number(row.unexplored||0).toLocaleString(locale())}</span><span>${tr('mapRooms')}: ${Number(row.total_rooms||0).toLocaleString(locale())}</span><span class="hk-progress">${row.progress}%</span><strong>${row.rating||0} ›</strong></button>`;
-    }).join('') : `<p class="hk-muted">${emptyMessage}</p>`;
-    
+      return `<button class="hk-map-row" data-area="${escapeHtml(row.area_id)}" data-game-area="${escapeHtml(gameAreaId || row.area_id)}"><b>${escapeHtml(row.city_name || row.city_id)}</b><span>${row.x ?? '?'}:${row.y ?? '?'}</span><span>${tr('mapBuildings')}: ${Number(row.opened||0).toLocaleString(locale())}</span><span>${tr('mapUnexplored')}: ${Number(row.unexplored||0).toLocaleString(locale())}</span><span>${tr('mapRooms')}: ${Number(row.total_rooms||0).toLocaleString(locale())}</span><span class="hk-progress">${row.progress}%</span><strong>${row.rating||0} ›</strong></bu
 
 ===== async function runDailyClanPurchases() =====
 
-          if (live.lotId !== action.row.lotId || costSignature(live.cost) !== action.signature) throw new Error(either('лот или цена изменились — покупка пропущена','lot or price changed — purchase skipped'));
           const decision = budgetDecision(live.cost, 'fair', 1, playerDocument);
           if (!decision.allowed) throw new Error(decision.problems.join('; '));
           const before = new Map(costParts(live.cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
@@ -1981,7 +2073,8 @@
         hkRunner.setStep(action.label, completed + skipped, actions.length);
         try {
           log(`${either('Выполняю','Running')}: ${action.label}`);
-          if (action.kind === 'advertisement') await runDailyAd(true);
+          if (action.kind === 'rumors') await runDailyRumors(true);
+          else if (action.kind === 'advertisement') await runDailyAd(true);
           else if (action.kind === 'pit') await executeDailyPit(action);
           else if (action.kind === 'purchase') await executeDailyPurchase(action);
           completed++;
@@ -2328,11 +2421,11 @@
     const NAV_GROUPS = [
       {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
       {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{planned:true,ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
-      {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{planned:true,ru:'Здания',en:'Buildings'},{planned:true,ru:'Исследование',en:'Explore'}]},
+      {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
       {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
-      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{planned:true,ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
     ];
     const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
     root = document.createElement('div'); root.id = 'hk-mobile-root';
@@ -2443,7 +2536,7 @@
         <div class="hk-cardbox"><h3>${either('Развитие','Growth')}</h3><p class="hk-muted">${either('Живое состояние аккаунта загружается автоматически. Открытие вкладки ничего не покупает и не прокачивает.','Live account state loads automatically. Opening the tab never buys or upgrades anything.')}</p><div data-growth-summary></div></div>
         <div class="hk-cardbox"><h3>${either('Что выполнять','What to run')}</h3><div class="hk-growth-options">
           <label class="hk-growth-check"><span><b>${either('Подготовка','Preparation')}</b><small>${either('Контракты → шары → коробки','Contracts → balls → boxes')}</small></span><input id="hk-growth-run-prep" type="checkbox"></label>
-          <label class="hk-growth-check"><span><b>${either('Генералы','Generals')}</b><small>${either('Лучшее Power / Pit Token','Best Power / Pit Token')}</small></span><input id="hk-growth-run-generals" type="checkbox"></l
+          <label class="hk-growth-check"><span><b>${either('Генералы','Generals')}</b><small>${either('Лучшее Power / Pit Token','Best Power / Pit Token')}</small></span><input id="hk-growth-run-generals" type="checkbox
 
 ===== data-content="daily" =====
 
@@ -2454,11 +2547,11 @@
     const NAV_GROUPS = [
       {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
       {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{planned:true,ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
-      {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{planned:true,ru:'Здания',en:'Buildings'},{planned:true,ru:'Исследование',en:'Explore'}]},
+      {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
       {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
-      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{planned:true,ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
     ];
     const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
     root = document.createElement('div'); root.id = 'hk-mobile-root';
@@ -2596,8 +2689,6 @@
 
 ===== root.querySelector('#hk-daily-refresh') =====
 
-    const groupForPage = page => NAV_GROUPS.find(group=>group.modules.some(module=>module.page===page)) || NAV_GROUPS[0];
-    const renderGroupSubnav = (groupId, activePage) => {
       const group=NAV_GROUPS.find(row=>row.id===groupId)||NAV_GROUPS[0];
       const box=root.querySelector('#hk-subnav');
       box.innerHTML=group.modules.map(module=>`<button class="${module.page===activePage?'active ':''}${module.planned?'planned':''}" ${module.page?`data-module="${module.page}"`:''} ${module.planned?'disabled':''} data-nav-ru="${escapeHtml(module.ru)}" data-nav-en="${escapeHtml(module.en)}">${escapeHtml(language==='en'?module.en:module.ru)}${module.planned?` · ${either('скоро','soon')}`:''}</button>`).join('');
@@ -2615,7 +2706,10 @@
       if (finalPage === 'business') { renderBusinessLists(); renderBusinessOptimizerFilters(); }
       if (finalPage === 'daily') renderDailyTasks();
       if (finalPage === 'resources') renderResources();
+      if (finalPage === 'buildings') renderBuildings();
+      if (finalPage === 'explore') renderExplore();
       if (finalPage === 'clan') renderClanSkills();
+      if (finalPage === 'wars') renderWars();
       if (finalPage === 'fair') renderFair();
       if (finalPage === 'shop') renderShop();
       if (finalPage === 'recipes') renderRecipes();
