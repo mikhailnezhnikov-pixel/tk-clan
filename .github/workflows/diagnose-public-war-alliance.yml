@@ -27,9 +27,16 @@ jobs:
           set -euo pipefail
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -e
-            base=http://127.0.0.1:8787
+            base=""
+            for port in 8787 3188; do
+              if curl -fsS --max-time 3 "http://127.0.0.1:$port/health" >/tmp/hk-health.json 2>/dev/null; then
+                base="http://127.0.0.1:$port"
+                break
+              fi
+            done
+            echo "=== BASE === $base"
             echo "=== HEALTH ==="
-            curl -fsS "$base/health" || true
+            cat /tmp/hk-health.json || true
             echo
             echo "=== WAR ==="
             curl -fsS "$base/api/v1/public/clan-war" || true
