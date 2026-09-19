@@ -9,7 +9,6 @@ on:
       - 'deploy/maps/server-map-data-v3.patch.gz.b64'
       - 'deploy/maps/server-map-owner-access.patch.gz.b64'
       - 'deploy/maps/server-full-map.patch.gz.b64'
-      - 'deploy/maps/full/hk_newyork2332.cms.b64.part*'
   workflow_dispatch:
 
 permissions:
@@ -77,31 +76,6 @@ jobs:
             install -m 0600 /tmp/hk_maps_points.bin.gz /opt/hamsterking-license/private-maps/hk_maps_points.bin.gz
             rm -f /tmp/hk-maps-payload.cms /tmp/hk_maps_points.bin.gz
             echo PRIVATE_MAP_PAYLOAD_OK
-          '
-
-      - name: Deploy encrypted full New York geometry
-        shell: bash
-        run: |
-          set -euo pipefail
-          parts=(deploy/maps/full/hk_newyork2332.cms.b64.part*)
-          test "${#parts[@]}" -eq 7
-          cat "${parts[@]}" | base64 -d > /tmp/hk_newyork2332.full.cms
-          test -s /tmp/hk_newyork2332.full.cms
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/hk_newyork2332.full.cms root@89.125.1.71:/tmp/hk_newyork2332.full.cms
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
-            set -euo pipefail
-            openssl cms -decrypt -binary -inform DER \
-              -in /tmp/hk_newyork2332.full.cms \
-              -recip /opt/hamsterking-license/private-maps/upload-cert.pem \
-              -inkey /opt/hamsterking-license/private-maps/upload-key.pem \
-              -out /tmp/hk_newyork2332.full.json.gz
-            gzip -t /tmp/hk_newyork2332.full.json.gz
-            install -d -m 700 /opt/hamsterking-license/private-maps/full
-            install -m 0600 /tmp/hk_newyork2332.full.json.gz \
-              /opt/hamsterking-license/private-maps/full/hk_newyork2332.full.json.gz
-            rm -f /tmp/hk_newyork2332.full.cms /tmp/hk_newyork2332.full.json.gz
-            echo FULL_NEWYORK_PAYLOAD_OK
           '
 
       - name: Build backend with private map-data endpoints
