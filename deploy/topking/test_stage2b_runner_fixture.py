@@ -63,14 +63,10 @@ def main():
   const selectedShopLots=new Set(['lot']),selectedShopCounts=new Map([['lot',1]]);
   const SHOP_UNLIMITED_RUN_MAX=100;
   const budgetDocument=()=>({});
-  const budgetDecision=()=>({allowed:true,problems:[]});
-  const costParts=()=>[];
   const isRenovationBatch=()=>false;
   const renovationBatchCount=(row,count)=>count;
   const renovationBatchMultiplier=()=>1;
   const normalizeRegularShop=()=>[];
-  const walletAmount=()=>0;
-  const appendExpense=()=>{};
   const renderShop=()=>{};
   const language='ru';
   const selectedShopRows=[];
