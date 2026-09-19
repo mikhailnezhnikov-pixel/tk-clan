@@ -1,2 +1,2 @@
-probe=2026-09-19T14:58:00Z
-expected=1.16.5
+probe=2026-09-19T15:31:00Z
+purpose=verify-live-after-rumors-deploy
