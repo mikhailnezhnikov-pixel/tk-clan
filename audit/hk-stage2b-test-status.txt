@@ -2,23 +2,7 @@ stage=2B
 revision=stage2b-20260919-r1
 modules=shop,recipes,bureau
 requires=stage2a-20260919-r1
-fixture=failed
+fixture=passed
 deploy=not-enabled
 --- log tail ---
-/tmp/HamsterKingMobile.user.js:256
-  const safeReroll=()=>true;
-        ^
-
-SyntaxError: Identifier 'safeReroll' has already been declared
-    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
-    at checkSyntax (node:internal/main/check_syntax:78:3)
-
-Node.js v22.23.2
-Traceback (most recent call last):
-  File "/home/runner/work/tk-clan/tk-clan/deploy/topking/test_stage2b_runner_fixture.py", line 203, in <module>
-    main()
-  File "/home/runner/work/tk-clan/tk-clan/deploy/topking/test_stage2b_runner_fixture.py", line 187, in main
-    subprocess.run(['node', '--check', str(TARGET)], check=True)
-  File "/usr/lib/python3.12/subprocess.py", line 571, in run
-    raise CalledProcessError(retcode, process.args,
-subprocess.CalledProcessError: Command '['node', '--check', '/tmp/HamsterKingMobile.user.js']' returned non-zero exit status 1.
+STAGE2B_RUNNER_FIXTURE_TEST_OK
