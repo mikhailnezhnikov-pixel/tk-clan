@@ -1,0 +1,70 @@
+name: Deploy TopKing 1.14.4
+
+on:
+  push:
+    paths:
+      - '.github/workflows/deploy-topking-1144.yml'
+      - 'deploy/topking/userscript-1.14.4.patch.gz.b64'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live 1.14.3
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.14.3$' /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Build 1.14.4
+        run: |
+          set -euo pipefail
+          base64 -d deploy/topking/userscript-1.14.4.patch.gz.b64 | gzip -d > /tmp/userscript-1.14.4.patch
+          patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.14.4.patch
+          grep -q '^// @version      1.14.4$' /tmp/HamsterKingMobile.user.js
+          grep -q ": '1.14.4';" /tmp/HamsterKingMobile.user.js
+          grep -q "GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'" /tmp/HamsterKingMobile.user.js
+          grep -q "GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'" /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          echo '8a7212469cb8598cc3b6b16f523c9aeae2ba33ae91fce3439e920283d2f63abf  /tmp/HamsterKingMobile.user.js' | sha256sum -c -
+
+      - name: Deploy 1.14.4
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -euo pipefail;
+            stamp="$(date +%Y%m%d-%H%M%S)";
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
+            grep -q "^// @version      1.14.4$" /tmp/HamsterKingMobile.user.js;
+            node --check /tmp/HamsterKingMobile.user.js;
+            install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
+            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.14.4\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
+            systemctl daemon-reload;
+            systemctl restart hamsterking-license.service;
+            systemctl is-active --quiet hamsterking-license.service;
+            sleep 2;
+            (curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config);
+            grep -q "^// @version      1.14.4$" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            grep -q ": '\''1.14.4'\'';" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js | grep -q "^8a7212469cb8598cc3b6b16f523c9aeae2ba33ae91fce3439e920283d2f63abf ";
+            echo DEPLOY_OK'
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript-1.14.4.patch
