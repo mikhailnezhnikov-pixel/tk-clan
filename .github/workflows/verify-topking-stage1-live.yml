@@ -51,10 +51,22 @@ jobs:
              grep -Fq 'growthGeneralCostSafe(costs)' /tmp/topking-live.js; then guards=strict; fi
           no_progress=missing
           if grep -Fq 'growth-general-no-progress' /tmp/topking-live.js && grep -Fq 'growth-hamster-no-progress' /tmp/topking-live.js; then no_progress=2; fi
+          stage2a=missing
+          stage2b=missing
+          stage2c=missing
+          stage2d=missing
+          grep -Fq "HK_STAGE2_RUNNER_REV = 'stage2a-20260919-r1'" /tmp/topking-live.js && stage2a=stage2a-20260919-r1 || true
+          grep -Fq "HK_STAGE2B_RUNNER_REV = 'stage2b-20260919-r1'" /tmp/topking-live.js && stage2b=stage2b-20260919-r1 || true
+          grep -Fq "HK_STAGE2_STATE_REV = 'stage2c-state-20260919-r1'" /tmp/topking-live.js && stage2c=stage2c-state-20260919-r1 || true
+          grep -Fq "HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1'" /tmp/topking-live.js && stage2d=stage2d-resource-business-20260919-r1 || true
           live_sha=$(sha256sum /tmp/topking-live.js | awk '{print $1}')
           {
             echo "version=$version"
             echo "revision=$revision"
+            echo "stage2a=$stage2a"
+            echo "stage2b=$stage2b"
+            echo "stage2c=$stage2c"
+            echo "stage2d=$stage2d"
             echo "hamsters=$hamsters"
             echo "generals=$generals"
             echo "growth_guards=$guards"
@@ -63,7 +75,7 @@ jobs:
             echo "sha256=$live_sha"
           } > /tmp/hk-stage1-live-probe.txt
 
-          grep -nE -C 30 'growthRunGeneralsCore|growthRunLevelsCore|growthPitCost|growthCapCost|growthCostOnlyUses|growthGeneralCostSafe|growth-general-no-progress|growth-hamster-no-progress|HK_MUTATION_GATE_REV|async function apiJsonCore|const hkMutationGate' \
+          grep -nE -C 30 'growthRunGeneralsCore|growthRunLevelsCore|growthPitCost|growthCapCost|growthCostOnlyUses|growthGeneralCostSafe|growth-general-no-progress|growth-hamster-no-progress|HK_MUTATION_GATE_REV|HK_STAGE2_RUNNER_REV|HK_STAGE2B_RUNNER_REV|HK_STAGE2_STATE_REV|HK_STAGE2D_RUNNER_REV|async function apiJsonCore|const hkMutationGate' \
             /tmp/topking-live.js > /tmp/hk-growth-live-source.txt || true
           grep -nE -C 45 'resourceBusy|resourceBuildings|loadResources|runResource|executeResource|resourceRepeatCount|RESOURCE_BUILDING_TYPES|businessBusy|refreshBusinessData|runBusiness|applyBusiness|executeBusiness|preparedBusinessPlan|selectedSlots|selectedStock|hk-resource|hk-business' \
             /tmp/topking-live.js > /tmp/hk-resource-business-live-source.txt || true
