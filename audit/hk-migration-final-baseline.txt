@@ -1,0 +1,56 @@
+TopKing migration baseline
+date=2026-09-20
+live_version=1.16.8
+live_status=syntax-ok,roundtrip-identical
+donor_versions=1.7.95,1.9.8,1.12.0,1.13.0,1.14.4
+donor_union_functions=515
+live_functions=525
+missing_donor_functions=11
+missing_real_features=0
+
+Superseded donor functions:
+- growthBestHamsterLevel -> current Growth level/candidate logic
+- growthBuyGeneralContracts -> growthBuyAllGeneralContractsCore
+- growthInventoryQuantity -> growthInventoryMap/growthResource
+- growthItemsCatalog -> current static/live item documents
+- growthRefresh -> growthLoadLive/current refresh flow
+- growthRunGenerals -> growthRunGeneralsCore
+- growthRunHamsters -> growthRunHamstersCore
+- growthRunLootboxes -> growthOpenLootboxFamilyCore
+- growthSetArray -> growthArray/current helpers
+- nutBuildingData -> exactResourceBuildingData
+
+Intentionally not restored:
+- growthNutCost: obsolete and conflicts with approved Hamster budget invariant; Hamsters spend cur_cap, Generals spend item_pit_token.
+
+Audit parser false-positive:
+- /city/{…}/game_area is functionally present in loadDailyAccountAreas through '/city/' + encodeURIComponent(cityId) + '/game_area'.
+
+Donor placeholders, not implemented donor modules:
+- Bosses
+- Neighborhoods
+- Auto routines
+- Regular Fair
+- Rat Hunt
+These were planned:true in donor navigation and had no transferable module implementation.
+
+Transferred live baseline includes:
+- Today
+- Pits
+- Businesses
+- Fair
+- Shop
+- Recipes
+- Project Bureau
+- Shared Runner/Abort/Pause
+- Shared State Store
+- Resource buildings
+- Maps / district research
+- Clan skills
+- Rumors
+- Wars
+- Buildings
+- Explore
+
+Prepared separately but not part of donor-completeness requirement:
+- Bosses read-only UI patch for a future release after live 1.16.8.
