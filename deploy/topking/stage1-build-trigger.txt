@@ -1,2 +1,2 @@
-trigger=2026-09-19T14:15Z
-reason=strict-growth-guards-and-no-progress
+trigger=2026-09-19T14:17Z
+reason=post-migration-no-progress-check
