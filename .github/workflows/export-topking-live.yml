@@ -2,6 +2,7 @@ name: Export TopKing bookmarklet sources
 # export refresh 2026-09-19 rumor cleanup
 # architecture refresh
 # verify live 1.10.0
+# verify live 1.11.0
 
 on:
   push:
