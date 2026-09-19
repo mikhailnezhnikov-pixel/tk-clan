@@ -8,6 +8,7 @@ from patch_native_login_gate_1170 import apply_login_gate
 from patch_bureau_resources_live_1171 import apply_hotfix as apply_bureau_resources_hotfix
 from patch_bosses_readonly_1172 import apply_hotfix as apply_bosses_hotfix
 from patch_regular_fair_1173 import apply_hotfix as apply_regular_fair_hotfix
+from patch_auto_routines_1174 import apply_hotfix as apply_auto_routines_hotfix
 
 p=Path("/tmp/HamsterKingMobile.user.js")
 s=p.read_text()
@@ -320,6 +321,7 @@ if MARKER in s:
     s = apply_bureau_resources_hotfix(s)
     s = apply_bosses_hotfix(s)
     s = apply_regular_fair_hotfix(s)
+    s = apply_auto_routines_hotfix(s)
     p.write_text(s)
     apply_alliance_v2_file_patch()
     print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED_TODAY_LOGIN_AND_1171")
@@ -406,6 +408,7 @@ if 'HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1' not in s:
 s = apply_bureau_resources_hotfix(s)
 s = apply_bosses_hotfix(s)
 s = apply_regular_fair_hotfix(s)
+s = apply_auto_routines_hotfix(s)
 p.write_text(s)
 apply_alliance_v2_file_patch()
 print("CLAN_SHOP_USERSCRIPT_PATCH_OK_WITH_LOGIN_GATE_AND_1171")
