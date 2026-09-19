@@ -4,3 +4,4 @@ inspect alliance detail route from live app bundle
 inspect app bootstrap html
 inspect current client build alliance routes
 inspect app_2017 alliance route strings
+inspect alliance metric field contexts
