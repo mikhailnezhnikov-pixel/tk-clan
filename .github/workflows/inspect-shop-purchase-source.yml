@@ -24,5 +24,7 @@ jobs:
           grep -n -B30 -A120 "sharedLots" "$f" | head -520 || true
           echo "=== buySelected ==="
           grep -n -B30 -A180 "buySelected" "$f" | head -700 || true
-          echo "=== purchase endpoint candidates ==="
-          grep -n -B25 -A100 -Ei "shop.*buy|buy.*shop|purchase|remaining|boughtOut|personalLots" "$f" | head -900 || true
+          echo "=== normalizeRegularShop ==="
+          grep -n -A220 -B20 "function normalizeRegularShop" "$f" | head -280 || true
+          echo "=== shop buy functions ==="
+          grep -n -A180 -B30 -E "async function .*Shop|async function .*Buy|apiJson\('/shop/buy'" "$f" | head -650 || true
