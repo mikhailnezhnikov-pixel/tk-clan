@@ -69,9 +69,50 @@ jobs:
 
           if ! grep -q 'CREATE TABLE IF NOT EXISTS hk_map_points' /tmp/server.py; then
             base64 -d deploy/topking/server-map-points.patch.gz.b64 | gzip -d > /tmp/server-map-points.patch
-            patch --fuzz=0 /tmp/server.py < /tmp/server-map-points.patch
+            patch --batch --forward /tmp/server.py < /tmp/server-map-points.patch || true
           fi
 
+          # The main server is being developed in parallel. Insert only the two
+          # GET routes if the surrounding handler moved since the patch was made.
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('/tmp/server.py')
+          text=path.read_text()
+          if '/api/v1/cabinet/maps/data' not in text:
+              anchor='        elif path == "/api/v1/public/maps":\n'
+              if anchor not in text:
+                  raise SystemExit('public maps route anchor not found')
+              routes='''        elif path == "/api/v1/cabinet/maps/data":
+            origin = self.headers.get("Origin", "")
+            if origin not in CABINET_ORIGINS:
+                self.send_cabinet_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"}); return
+            member = self.cabinet_member()
+            if not member:
+                self.send_cabinet_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"}); return
+            map_key = parse_qs(parsed.query).get("key", [""])[-1]
+            try:
+                self.send_cabinet_json(HTTPStatus.OK, hk_map_data(map_key, member=member))
+            except PermissionError:
+                self.send_cabinet_json(HTTPStatus.FORBIDDEN, {"error": "maps_access_denied"})
+            except (LookupError, ValueError):
+                self.send_cabinet_json(HTTPStatus.NOT_FOUND, {"error": "map_not_found"})
+        elif path == "/api/v1/public/maps/data":
+            origin = self.headers.get("Origin", "")
+            if origin and origin not in PUBLIC_RECIPE_ORIGINS:
+                self.send_public_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"}); return
+            if not rate_allowed(f"public-map-data:{self.client_ip()}", 120, 60):
+                self.send_public_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "rate_limited"}); return
+            map_key = parse_qs(parsed.query).get("key", [""])[-1]
+            try:
+                self.send_public_json(HTTPStatus.OK, hk_map_data(map_key, public=True))
+            except (LookupError, ValueError):
+                self.send_public_json(HTTPStatus.NOT_FOUND, {"error": "map_not_found"})
+'''
+              text=text.replace(anchor,routes+anchor,1)
+              path.write_text(text)
+          PY
+
+          grep -q 'CREATE TABLE IF NOT EXISTS hk_map_points' /tmp/server.py
           grep -q 'def hk_map_data' /tmp/server.py
           grep -q '/api/v1/public/maps/data' /tmp/server.py
           grep -q -- '--import-hk-map-points' /tmp/server.py
