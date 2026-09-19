@@ -181,7 +181,143 @@
     });
     observer.observe(guide,{childList:true,subtree:true});
   }
-  function configureHomepage(){const hero=document.querySelector('main .hero');if(!hero)return;hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');const actions=hero.querySelector('.hero-actions');if(actions)actions.innerHTML='<a class="button primary" href="https://app.hamsterking.games/app.html" target="_blank" rel="noopener" data-i18n="play">Начать играть</a>';if(!document.getElementById('tk-home-responsive')){const style=document.createElement('style');style.id='tk-home-responsive';style.textContent=`.hero{background-image:url("assets/home/top-king-clan-hero-approved.jpg")!important;background-position:50% center!important;background-repeat:no-repeat!important;background-color:#07080b!important}.hero-copy{width:min(540px,45%)!important}.hero-actions .button{min-width:190px}@media(max-width:980px) and (min-width:821px){.hero{background-position:53% center!important}.hero-copy{width:min(520px,52%)!important}}@media(max-width:820px) and (min-width:681px){.hero{min-height:900px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding-top:clamp(410px,58vw,465px)!important;padding-bottom:175px!important}.hero-copy{width:min(620px,88%)!important}}@media(max-width:680px){.hero{min-height:920px!important;align-items:flex-start!important;background-size:100% auto!important;background-position:center top!important}.hero-inner{width:100%!important;padding:clamp(250px,68vw,300px) 16px 270px!important}.hero-copy{width:100%!important}.hero-actions{margin-top:22px!important}.hero-actions .button{width:100%;min-width:0;flex:1 1 100%}.quick-panel{bottom:18px!important}}@media(max-width:420px){.hero{min-height:900px!important}.hero-inner{padding-top:250px!important;padding-bottom:262px!important}.hero h1{font-size:clamp(40px,12vw,50px)!important}.hero .lead{font-size:15px!important;line-height:1.48!important}}`;document.head.append(style)}}
+  function configureHomepage(){
+    const hero=document.querySelector('main .hero');if(!hero)return;
+    hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');
+    const actions=hero.querySelector('.hero-actions');
+    if(actions)actions.innerHTML='<a class="button primary" href="https://app.hamsterking.games/app.html" target="_blank" rel="noopener" data-i18n="play">Начать играть</a>';
+    if(!document.getElementById('tk-home-responsive')){
+      const style=document.createElement('style');
+      style.id='tk-home-responsive';
+      style.textContent=`
+        .hero{
+          background-image:url("assets/home/top-king-clan-hero-approved.jpg")!important;
+          background-position:58% center!important;
+          background-repeat:no-repeat!important;
+          background-size:cover!important;
+          background-color:#07080b!important;
+        }
+        .hero-copy{width:min(540px,45%)!important}
+        .hero-actions .button{min-width:190px}
+        @media(max-width:980px) and (min-width:681px){
+          .hero{background-position:56% center!important}
+          .hero-copy{width:min(540px,54%)!important}
+        }
+        @media(max-width:680px){
+          body{
+            background:
+              radial-gradient(ellipse at 55% 7%,rgba(232,182,84,.08),transparent 30%),
+              linear-gradient(180deg,#08090d 0%,#07080b 54%,#07080b 100%)!important;
+          }
+          .hero{
+            min-height:900px!important;
+            align-items:flex-start!important;
+            overflow:hidden!important;
+            isolation:isolate!important;
+            background-image:none!important;
+            background:
+              radial-gradient(ellipse at 52% 26%,rgba(232,182,84,.09),transparent 36%),
+              linear-gradient(180deg,#090b0f 0%,#07080b 72%)!important;
+          }
+          .hero::before{
+            content:""!important;
+            position:absolute!important;
+            inset:0 0 auto 0!important;
+            height:clamp(350px,78vw,455px)!important;
+            z-index:-2!important;
+            pointer-events:none!important;
+            background:
+              linear-gradient(90deg,rgba(5,7,10,.10),rgba(5,7,10,.02) 48%,rgba(5,7,10,.14)),
+              url("assets/home/top-king-clan-hero-approved.jpg") 56% top / cover no-repeat!important;
+            -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 56%,rgba(0,0,0,.92) 67%,rgba(0,0,0,.56) 80%,transparent 100%)!important;
+            mask-image:linear-gradient(to bottom,#000 0%,#000 56%,rgba(0,0,0,.92) 67%,rgba(0,0,0,.56) 80%,transparent 100%)!important;
+          }
+          .hero::after{
+            content:""!important;
+            position:absolute!important;
+            inset:0!important;
+            z-index:-1!important;
+            pointer-events:none!important;
+            background:
+              radial-gradient(ellipse at 52% 30%,rgba(226,160,48,.12),transparent 30%),
+              linear-gradient(180deg,transparent 0%,rgba(7,8,11,.02) 28%,rgba(7,8,11,.32) 43%,rgba(7,8,11,.82) 57%,#07080b 75%,#07080b 100%)!important;
+            animation:none!important;
+          }
+          .hero-inner{
+            width:100%!important;
+            padding:clamp(315px,72vw,390px) 16px 258px!important;
+          }
+          .hero-copy{
+            width:100%!important;
+            max-width:560px!important;
+          }
+          .hero .eyebrow{
+            margin-bottom:11px!important;
+            font-size:10px!important;
+            letter-spacing:.17em!important;
+          }
+          .hero h1{
+            max-width:540px!important;
+            font-size:clamp(39px,10.9vw,50px)!important;
+            line-height:.96!important;
+            letter-spacing:-.047em!important;
+          }
+          .hero .lead{
+            max-width:540px!important;
+            margin-top:16px!important;
+            font-size:15px!important;
+            line-height:1.52!important;
+          }
+          .hero-actions{margin-top:20px!important}
+          .hero-actions .button{
+            width:100%!important;
+            min-width:0!important;
+            min-height:52px!important;
+            flex:1 1 100%!important;
+          }
+          .quick-panel{
+            bottom:16px!important;
+            width:calc(100% - 32px)!important;
+            gap:8px!important;
+          }
+          .quick-link{
+            min-height:62px!important;
+            border-color:rgba(255,255,255,.10)!important;
+            background:
+              radial-gradient(circle at 93% 0%,rgba(232,182,84,.09),transparent 32%),
+              linear-gradient(145deg,rgba(18,22,29,.76),rgba(8,11,16,.70))!important;
+            box-shadow:0 14px 38px rgba(0,0,0,.16)!important;
+            backdrop-filter:blur(17px) saturate(120%)!important;
+            -webkit-backdrop-filter:blur(17px) saturate(120%)!important;
+          }
+          #sections{
+            margin-top:-1px!important;
+            padding-top:62px!important;
+            background:
+              radial-gradient(ellipse at 50% 0%,rgba(232,182,84,.055),transparent 28%),
+              linear-gradient(180deg,#07080b 0%,rgba(7,8,11,.98) 100%)!important;
+          }
+          .portal-card{
+            border-color:rgba(255,255,255,.10)!important;
+            background:
+              radial-gradient(circle at 94% 3%,rgba(232,182,84,.10),transparent 30%),
+              linear-gradient(145deg,rgba(18,22,29,.78),rgba(8,11,16,.72))!important;
+            box-shadow:0 16px 46px rgba(0,0,0,.17)!important;
+            backdrop-filter:blur(18px) saturate(120%)!important;
+            -webkit-backdrop-filter:blur(18px) saturate(120%)!important;
+          }
+        }
+        @media(max-width:420px){
+          .hero{min-height:875px!important}
+          .hero::before{height:350px!important}
+          .hero-inner{padding-top:300px!important;padding-bottom:252px!important}
+          .hero h1{font-size:clamp(37px,11.3vw,47px)!important}
+          .hero .lead{font-size:14.5px!important}
+        }
+      `;
+      document.head.append(style);
+    }
+  }
   function apply(lang=language){language=supported.includes(lang)?lang:'ru';localStorage.setItem('tk-language',language);const strings=dictionary(language);document.documentElement.lang=language;document.documentElement.dir=language==='fa'?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(node=>{const value=strings[node.dataset.i18n];if(value!=null)node.textContent=value});document.querySelectorAll('[data-i18n-html]').forEach(node=>{const value=strings[node.dataset.i18nHtml];if(value!=null)node.innerHTML=value});document.querySelectorAll('[data-i18n-placeholder]').forEach(node=>{const value=strings[node.dataset.i18nPlaceholder];if(value!=null)node.placeholder=value});document.querySelectorAll('[data-language]').forEach(button=>{const active=button.dataset.language===language;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))});if(strings.pageTitle)document.title=strings.pageTitle;document.dispatchEvent(new CustomEvent('tk-language-change',{detail:{language,strings}}))}
   function init(){document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>apply(button.dataset.language)));const toggle=document.querySelector('[data-menu-toggle]'),menu=document.querySelector('[data-mobile-nav]');if(toggle&&menu)toggle.addEventListener('click',()=>{const open=!menu.classList.contains('open');menu.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))});replaceVisuals();configureHomepage();apply(language);refreshInformationVisuals();watchInformationGuide();document.addEventListener('tk-language-change',()=>setTimeout(refreshInformationVisuals,0))}
   window.TopKingI18n={apply,get language(){return language},strings:()=>dictionary(language)};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
