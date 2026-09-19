@@ -1,2 +1,2 @@
-probe=2026-09-19T14:49:00Z
-purpose=stage2e-f-on-live-1163
+probe=2026-09-19T14:58:00Z
+expected=1.16.5
