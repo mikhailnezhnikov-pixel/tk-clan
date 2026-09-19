@@ -31,6 +31,7 @@ if MARKER in s and GROUP_SILENCE_MARKER not in s:
 
 if MARKER in s and GROUP_SILENCE_MARKER in s:
     runpy.run_path(str(Path(__file__).with_name("patch_application_i18n.py")), run_name="__main__")
+    runpy.run_path(str(Path(__file__).with_name("patch_feedback_topic.py")), run_name="__main__")
     print("TELEGRAM_APPLICATION_TOPIC_ALREADY_PRESENT")
     raise SystemExit(0)
 
@@ -221,4 +222,5 @@ s = s.replace(old_context, new_context, 1)
 
 path.write_text(s)
 runpy.run_path(str(Path(__file__).with_name("patch_application_i18n.py")), run_name="__main__")
+runpy.run_path(str(Path(__file__).with_name("patch_feedback_topic.py")), run_name="__main__")
 print("TELEGRAM_APPLICATION_TOPIC_PATCH_OK")
