@@ -2,92 +2,463 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0a0e14">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07080b">
+  <meta name="color-scheme" content="dark">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; connect-src https://hk-license.89.125.1.71.sslip.io; frame-src https://oauth.telegram.org https://telegram.org https://t.me; object-src 'none'; base-uri 'self'">
   <title>Личный кабинет клана — Top King</title>
   <meta name="description" content="Закрытый личный кабинет участников клана Top King.">
+  <link rel="stylesheet" href="../assets/public.css?v=20260919-3">
+  <link rel="icon" href="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png">
   <style>
-    :root{color-scheme:dark;--bg:#080b10;--panel:rgba(12,18,27,.88);--panel2:rgba(22,32,46,.88);--line:rgba(235,190,101,.25);--gold:#f2c76b;--gold2:#b97825;--text:#f7f4ec;--muted:#aeb8c6;--ok:#66d69d;--bad:#ff8b91}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-    body::before{content:"";position:fixed;inset:0;z-index:-2;background:url("../assets/home/top-king-clan-bg.jpg") 55% top/cover no-repeat}
-    body::after{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(5,8,12,.30),rgba(5,8,12,.88) 48%,#080b10 86%)}
-    a{color:inherit}.topbar{width:min(1120px,calc(100% - 32px));margin:auto;padding:20px 0;display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.1em;text-decoration:none}.mark{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--gold);border-radius:50%;color:var(--gold);background:#080b10aa}.nav{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.nav a,.ghost{padding:9px 13px;border:1px solid transparent;border-radius:999px;color:#dde3eb;text-decoration:none;font-weight:750;font-size:14px}.nav a:hover,.nav a:focus-visible,.ghost:hover{border-color:var(--line);background:#111925cc;outline:none}
-    main{width:min(1040px,calc(100% - 32px));margin:clamp(30px,7vh,88px) auto 80px}.intro{max-width:700px;margin-bottom:26px}.eyebrow{color:var(--gold);font-weight:850;letter-spacing:.14em;text-transform:uppercase;font-size:13px}.intro h1{margin:8px 0 12px;font-size:clamp(38px,7vw,72px);line-height:.98;letter-spacing:-.045em}.intro p{margin:0;color:#d0d7e0;font-size:18px}
-    .panel{border:1px solid var(--line);border-radius:24px;background:linear-gradient(145deg,var(--panel2),var(--panel));box-shadow:0 28px 80px #0009;backdrop-filter:blur(18px)}.login{max-width:600px;padding:28px}.login h2,.card h2{margin:0 0 8px}.muted{color:var(--muted)}.message{min-height:24px;margin:14px 0 0;color:var(--muted)}.message.bad{color:var(--bad)}.telegram-slot{min-height:54px;margin-top:22px;display:flex;align-items:center}.loading{display:inline-block;width:18px;height:18px;border:2px solid #ffffff38;border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{rotate:360deg}}
-    .dashboard{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.card{padding:24px;border:1px solid rgba(255,255,255,.09);border-radius:20px;background:rgba(10,15,23,.82)}.card.wide{grid-column:1/-1}.accountline{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.badge{display:inline-flex;padding:6px 10px;border-radius:999px;background:#58c9901b;color:var(--ok);border:1px solid #58c99045;font-size:13px;font-weight:800}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}.stat{padding:16px;border-radius:15px;background:#182436;border:1px solid #ffffff0d}.stat b{display:block;font-size:24px;color:var(--gold)}
-    label{display:block;margin:18px 0 7px;font-weight:750}.row{display:flex;gap:10px}input{min-width:0;flex:1;padding:13px 14px;border:1px solid #42516a;border-radius:12px;background:#0c131e;color:#fff;font:inherit}button,.button{min-height:48px;padding:12px 18px;border:1px solid var(--gold);border-radius:12px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#171006;font:800 15px inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}button:disabled{opacity:.55;cursor:wait}.secondary{border-color:#42516a;background:#182436;color:#fff}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
-    table{width:100%;border-collapse:collapse;margin-top:16px}th,td{padding:12px 10px;border-bottom:1px solid #ffffff14;text-align:left}th{color:var(--muted);font-size:13px}td:last-child,th:last-child{text-align:right}.guide{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}.guide article{padding:18px;border-radius:16px;background:#121c2a}.guide h3{margin:0 0 10px;color:var(--gold)}ol{margin:0;padding-left:22px}li+li{margin-top:7px}.hidden{display:none!important}.empty{padding:22px;border:1px dashed #ffffff25;border-radius:14px;color:var(--muted);text-align:center}
-    @media(max-width:760px){body::before{background-position:50% top}.topbar{align-items:flex-start}.brand{font-size:14px}.nav a:not(.home){display:none}main{margin-top:230px}.intro h1{font-size:44px}.intro p{font-size:16px}.dashboard{grid-template-columns:1fr}.card.wide{grid-column:auto}.stats{grid-template-columns:1fr}.guide{grid-template-columns:1fr}.row{flex-direction:column}.row button{width:100%}.accountline{flex-direction:column}.card,.login{padding:20px}table{font-size:14px}th:nth-child(2),td:nth-child(2){display:none}}
-    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.loading{animation:none}}
+    .cabinet-head{padding-bottom:24px}
+    .cabinet-head .lead{max-width:680px}
+    .cabinet-content{padding-top:8px}
+    .login-shell{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr);gap:16px;align-items:stretch}
+    .login-card{padding:28px}
+    .login-card h2,.cab-card h2{margin:0;color:#fff}
+    .login-card .muted,.cab-card .muted{color:var(--muted)}
+    .login-visual{min-height:290px;display:flex;flex-direction:column;justify-content:flex-end;padding:28px;overflow:hidden}
+    .login-visual:before{content:"";position:absolute;inset:0;background:
+      linear-gradient(180deg,rgba(7,8,11,.06),rgba(7,8,11,.92)),
+      url("https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png") center 24%/150px auto no-repeat;
+      opacity:.92}
+    .login-visual>*{position:relative;z-index:1}
+    .login-visual h3{margin:0 0 7px;font:700 30px/1.02 Georgia,"Times New Roman",serif}
+    .login-visual p{margin:0;color:var(--muted)}
+    .telegram-slot{min-height:58px;margin-top:22px;display:flex;align-items:center}
+    .loading{display:inline-block;width:19px;height:19px;border:2px solid rgba(255,255,255,.22);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .message{min-height:23px;margin:14px 0 0;color:var(--muted)}
+    .message.bad{color:var(--bad)}
+    .message.good{color:var(--good)}
+
+    .dashboard{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+    .cab-card{grid-column:span 6;padding:26px;overflow:hidden}
+    .cab-card.wide{grid-column:1/-1}
+    .card-kicker{display:flex;align-items:center;gap:10px;margin-bottom:10px;color:var(--gold-light);font-size:11px;font-weight:850;letter-spacing:.16em;text-transform:uppercase}
+    .card-kicker img{width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.35))}
+    .accountline{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+    .account-main{min-width:0}
+    .account-main h2{font-size:28px;line-height:1.05;overflow-wrap:anywhere}
+    .account-meta{margin-top:8px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+    .access-badge{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;padding:7px 11px;border:1px solid rgba(117,216,156,.34);border-radius:999px;color:#a8e9bf;background:rgba(65,177,103,.09);font-size:12px;font-weight:850}
+    .access-badge:before{content:"";width:7px;height:7px;border-radius:50%;background:#7fe0a2;box-shadow:0 0 12px rgba(127,224,162,.6)}
+
+    .profile-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:20px}
+    .profile-actions .button{min-height:44px;padding:10px 14px;font-size:13px}
+    .player-link{margin-top:22px;padding:18px;border:1px solid rgba(255,255,255,.09);border-radius:18px;background:rgba(8,11,16,.44)}
+    .player-link label{display:block;margin:0 0 8px;font-weight:800}
+    .player-link .row{display:flex;gap:9px}
+    .player-link input{flex:1;min-width:0}
+    .player-link .button{min-height:46px}
+    .linked-state{margin-top:22px;padding:18px;border:1px solid rgba(117,216,156,.22);border-radius:18px;background:rgba(65,177,103,.055)}
+    .linked-state strong{display:block;margin-top:4px;color:#fff;font-size:17px;overflow-wrap:anywhere}
+    .linked-state p{margin:8px 0 0}
+
+    .script-card{isolation:isolate}
+    .script-version{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:18px 0 3px}
+    .script-version span{color:var(--muted);font-size:13px}
+    .script-version b{color:var(--gold-light);font:700 34px/1 Georgia,serif}
+    .script-card .actions{margin-top:20px}
+    .script-card .button.primary{width:100%}
+    .script-note{margin:12px 0 0;color:var(--muted);font-size:13px}
+
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:20px}
+    .stat{position:relative;padding:17px;border:1px solid rgba(255,255,255,.09);border-radius:17px;background:rgba(8,11,16,.48);overflow:hidden}
+    .stat:after{content:"";position:absolute;right:-22px;top:-28px;width:86px;height:86px;border-radius:50%;background:radial-gradient(circle,rgba(232,182,84,.13),transparent 70%)}
+    .stat span{display:block;color:var(--muted);font-size:12px}
+    .stat b{display:block;margin-top:4px;color:var(--gold-light);font:700 29px/1 Georgia,serif}
+    .section-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    .section-row .button{min-height:42px;padding:9px 13px;font-size:13px}
+    .progress-wrap{margin-top:18px}
+    .empty{padding:25px;border:1px dashed rgba(255,255,255,.18);border-radius:17px;color:var(--muted);background:rgba(8,11,16,.34);text-align:center}
+    .clan-table{margin-top:0}
+    .clan-table td:first-child{width:auto;color:#fff}
+    .clan-table td:last-child,.clan-table th:last-child{text-align:right}
+    .clan-table .rank{display:inline-flex;width:25px;color:var(--muted)}
+    .clan-table .level{color:var(--gold-light);font-weight:900}
+
+    .guide{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+    .guide-step{padding:20px;border:1px solid rgba(255,255,255,.09);border-radius:19px;background:rgba(8,11,16,.44)}
+    .guide-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .guide-icon{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:14px;background:rgba(232,182,84,.07);font-size:22px}
+    .guide-step h3{margin:0;color:#fff;font-size:18px}
+    .guide-step ol{margin:0;padding-left:20px;color:#cbd1da}
+    .guide-step li+li{margin-top:8px}
+
+    .hidden{display:none!important}
+
+    @media(max-width:820px){
+      .login-shell{grid-template-columns:1fr}
+      .login-visual{min-height:210px}
+      .cab-card{grid-column:1/-1}
+    }
+    @media(max-width:680px){
+      .cabinet-head{padding-bottom:16px}
+      .cabinet-content{padding-top:4px}
+      .login-card,.cab-card{padding:20px!important}
+      .login-shell{gap:12px}
+      .login-visual{min-height:190px;padding:20px}
+      .login-visual:before{background-size:118px auto;background-position:center 18%}
+      .login-visual h3{font-size:25px}
+      .accountline{flex-direction:column}
+      .account-main h2{font-size:24px}
+      .access-badge{order:-1}
+      .player-link{padding:15px}
+      .player-link .row{flex-direction:column}
+      .player-link .button{width:100%}
+      .script-version b{font-size:30px}
+      .stats{grid-template-columns:1fr 1fr}
+      .stat:last-child{grid-column:1/-1}
+      .guide{grid-template-columns:1fr}
+      .profile-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}
+      .profile-actions .button{width:100%}
+      .clan-table th:nth-child(2),.clan-table td:nth-child(2){display:none}
+    }
+    @media(max-width:420px){
+      .profile-actions{grid-template-columns:1fr}
+      .stats{grid-template-columns:1fr}
+      .stat:last-child{grid-column:auto}
+    }
+    @media(prefers-reduced-motion:reduce){.loading{animation:none}}
   </style>
 </head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="../"><span class="mark">♛</span> TOP KING</a>
-    <nav class="nav" aria-label="Навигация"><a class="home" href="../">Главная</a><a href="../calculators/">Калькуляторы</a><a href="../recipes/">Рецепты</a></nav>
-  </header>
-  <main>
-    <section class="intro"><div class="eyebrow">Закрытый раздел клана</div><h1>Личный кабинет</h1><p>Прокачка клана, актуальный скрипт и инструкции — в одном месте.</p></section>
+<body class="tk-main-theme">
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="brand" href="../">
+      <img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png" alt="">
+      <span>TOP KING</span>
+    </a>
+    <nav class="nav" aria-label="Основная навигация"></nav>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Меню">☰</button>
+  </div>
+  <nav class="mobile-nav" data-mobile-nav></nav>
+</header>
 
-    <section id="login" class="panel login">
-      <h2>Войти через Telegram</h2>
-      <p class="muted">Вход доступен только для Telegram ID, которые разрешил владелец клана.</p>
-      <div id="telegram-slot" class="telegram-slot"><span class="loading" aria-label="Загрузка"></span></div>
-      <p id="login-message" class="message" role="status"></p>
+<main>
+  <header class="shell page-head cabinet-head">
+    <p class="eyebrow">Закрытый раздел клана</p>
+    <h1>Личный кабинет</h1>
+    <p class="lead">Доступ к скрипту, привязка игрового ID и актуальная прокачка клана — в одном месте.</p>
+  </header>
+
+  <section class="shell content cabinet-content">
+    <section id="login" class="login-shell">
+      <article class="panel login-card">
+        <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png" alt="">Доступ участника</div>
+        <h2>Войти через Telegram</h2>
+        <p class="muted">Кабинет доступен только Telegram ID, которые разрешены владельцем клана.</p>
+        <div id="telegram-slot" class="telegram-slot"><span class="loading" aria-label="Загрузка"></span></div>
+        <p id="login-message" class="message" role="status" aria-live="polite"></p>
+      </article>
+
+      <article class="panel login-visual" aria-hidden="true">
+        <div>
+          <h3>Всё важное — внутри</h3>
+          <p>Скрипт, лицензия и прогресс клана без лишних переходов.</p>
+        </div>
+      </article>
     </section>
 
     <section id="dashboard" class="dashboard hidden">
-      <article class="card">
-        <div class="accountline"><div><div class="eyebrow">Участник клана</div><h2 id="member-name">Telegram</h2><div id="member-id" class="muted"></div></div><span class="badge">Доступ разрешён</span></div>
-        <div id="link-box">
-          <label for="player-id">Игровой ID</label>
-          <div class="row"><input id="player-id" inputmode="numeric" maxlength="128" placeholder="Введите ID из игры"><button id="link-player" type="button">Привязать</button></div>
-          <p class="muted">Нужно сделать один раз. После привязки лицензия скрипта активируется автоматически.</p>
+      <article class="card cab-card">
+        <div class="accountline">
+          <div class="account-main">
+            <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png" alt="">Участник клана</div>
+            <h2 id="member-name">Telegram</h2>
+            <div id="member-id" class="account-meta"></div>
+          </div>
+          <span class="access-badge">Доступ разрешён</span>
         </div>
-        <div id="linked-box" class="hidden"><p>Игровой ID: <b id="linked-player"></b></p><p class="muted">Лицензия привязана к кабинету. Повторное добавление в базу не требуется.</p></div>
-        <button id="logout" class="secondary" type="button">Выйти</button>
+
+        <div id="link-box" class="player-link">
+          <label for="player-id">Игровой ID</label>
+          <div class="row">
+            <input id="player-id" inputmode="numeric" maxlength="128" autocomplete="off" placeholder="Введите ID из игры">
+            <button id="link-player" class="button primary" type="button">Привязать</button>
+          </div>
+          <p class="muted">Это нужно сделать один раз. После привязки лицензия скрипта активируется автоматически.</p>
+        </div>
+
+        <div id="linked-box" class="linked-state hidden">
+          <span class="muted">Игровой ID привязан</span>
+          <strong id="linked-player"></strong>
+          <p class="muted">Лицензия уже связана с этим кабинетом. Повторная регистрация не требуется.</p>
+        </div>
+
+        <div class="profile-actions">
+          <button id="copy-player" class="button ghost hidden" type="button">Скопировать ID</button>
+          <button id="refresh-dashboard" class="button ghost" type="button">Обновить данные</button>
+          <button id="logout" class="button ghost" type="button">Выйти</button>
+        </div>
+        <p id="profile-message" class="message" role="status" aria-live="polite"></p>
       </article>
 
-      <article class="card">
-        <div class="eyebrow">Hamster King Mobile</div><h2>Доступ к скрипту</h2>
-        <p>Актуальная версия: <b id="script-version">—</b></p><p class="muted">Загрузка доступна только авторизованным участникам.</p>
-        <div class="actions"><button id="download" type="button">Скачать скрипт</button></div><p id="download-message" class="message" role="status"></p>
+      <article class="card cab-card script-card">
+        <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Hamster King Mobile</div>
+        <h2>Скрипт</h2>
+        <div class="script-version"><span>Актуальная версия</span><b id="script-version">—</b></div>
+        <p class="script-note">Файл доступен только авторизованным участникам клана.</p>
+        <div class="actions"><button id="download" class="button primary" type="button">Скачать актуальную версию</button></div>
+        <p id="download-message" class="message" role="status" aria-live="polite"></p>
       </article>
 
-      <article class="card wide">
-        <div class="eyebrow">Прокачка клана</div><h2 id="clan-title">Последние данные</h2>
-        <div class="stats"><div class="stat"><span>Участников</span><b id="participants">0</b></div><div class="stat"><span>Общий уровень</span><b id="total-levels">0</b></div><div class="stat"><span>Неделя</span><b id="week">—</b></div></div>
-        <div id="progress-empty" class="empty">Данные появятся после следующего считывания прокачки клана в скрипте.</div>
-        <div id="progress-table" class="hidden"><table><thead><tr><th>Участник</th><th>Считано</th><th>Уровни</th></tr></thead><tbody id="players"></tbody></table></div>
+      <article class="card cab-card wide">
+        <div class="section-row">
+          <div>
+            <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png" alt="">Прокачка клана</div>
+            <h2 id="clan-title">Последние данные</h2>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><span>Участников</span><b id="participants">0</b></div>
+          <div class="stat"><span>Общий уровень</span><b id="total-levels">0</b></div>
+          <div class="stat"><span>Неделя</span><b id="week">—</b></div>
+        </div>
+
+        <div class="progress-wrap">
+          <div id="progress-empty" class="empty">Данные появятся после следующего считывания прокачки клана в скрипте.</div>
+          <div id="progress-table" class="table-wrap hidden">
+            <table class="data-table clan-table">
+              <thead><tr><th>Участник</th><th>Считано</th><th>Уровни</th></tr></thead>
+              <tbody id="players"></tbody>
+            </table>
+          </div>
+        </div>
       </article>
 
-      <article class="card wide">
-        <div class="eyebrow">Установка</div><h2>Как установить скрипт</h2>
+      <article class="card cab-card wide">
+        <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Установка</div>
+        <h2>Как установить скрипт</h2>
         <div class="guide">
-          <article><h3>Android</h3><ol><li>Установите Firefox и расширение Violentmonkey.</li><li>Скачайте скрипт кнопкой выше и откройте файл в Firefox.</li><li>Подтвердите установку в Violentmonkey.</li><li>Откройте игру и полностью обновите страницу — появится кнопка HK.</li></ol></article>
-          <article><h3>iPhone / iPad</h3><ol><li>Установите приложение Userscripts из App Store.</li><li>В Safari включите расширение Userscripts и доступ к сайту игры.</li><li>Скачайте скрипт и поместите его в выбранную папку Userscripts.</li><li>Откройте игру, включите скрипт и обновите страницу.</li></ol></article>
+          <article class="guide-step">
+            <div class="guide-head"><span class="guide-icon">🤖</span><h3>Android</h3></div>
+            <ol>
+              <li>Установите Firefox и расширение Violentmonkey.</li>
+              <li>Скачайте скрипт кнопкой выше и откройте файл в Firefox.</li>
+              <li>Подтвердите установку в Violentmonkey.</li>
+              <li>Откройте игру и полностью обновите страницу — появится кнопка HK.</li>
+            </ol>
+          </article>
+          <article class="guide-step">
+            <div class="guide-head"><span class="guide-icon"></span><h3>iPhone / iPad</h3></div>
+            <ol>
+              <li>Установите приложение Userscripts из App Store.</li>
+              <li>В Safari включите расширение Userscripts и доступ к сайту игры.</li>
+              <li>Скачайте скрипт и поместите его в выбранную папку Userscripts.</li>
+              <li>Откройте игру, включите скрипт и обновите страницу.</li>
+            </ol>
+          </article>
         </div>
       </article>
     </section>
-  </main>
-  <script>
-    const API='https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet';
-    const TOKEN_KEY='tk_clan_cabinet_session';
-    const $=id=>document.getElementById(id);
-    const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    let session=localStorage.getItem(TOKEN_KEY)||'';
-    async function request(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(session)headers.Authorization='Bearer '+session;const response=await fetch(API+path,{cache:'no-store',...options,headers});let data={};try{data=await response.json()}catch{}if(!response.ok)throw Object.assign(new Error(data.error||'request_failed'),{status:response.status,code:data.error});return data}
-    function showLogin(message='',bad=false){$('login').classList.remove('hidden');$('dashboard').classList.add('hidden');$('login-message').textContent=message;$('login-message').classList.toggle('bad',bad)}
-    function showDashboard(data){$('login').classList.add('hidden');$('dashboard').classList.remove('hidden');const m=data.member||{};$('member-name').textContent=m.first_name||m.note||'Участник Top King';$('member-id').textContent='Telegram ID: '+m.telegram_id+(m.username?' · @'+m.username:'');const linked=String(m.linked_player_id||'');$('link-box').classList.toggle('hidden',!!linked);$('linked-box').classList.toggle('hidden',!linked);$('linked-player').textContent=linked;$('script-version').textContent=data.script?.version||'—';const clan=data.clan||{};$('clan-title').textContent=clan.key?'Клан '+clan.key:'Последние данные';$('participants').textContent=clan.participants||0;$('total-levels').textContent=Number(clan.total_levels||0).toLocaleString('ru-RU');$('week').textContent=clan.week||'—';const players=Array.isArray(clan.players)?clan.players:[];$('progress-empty').classList.toggle('hidden',players.length>0);$('progress-table').classList.toggle('hidden',players.length===0);$('players').innerHTML=players.map((p,i)=>'<tr><td><b>'+(i+1)+'. '+safe(p.nickname)+'</b></td><td>'+new Date(Number(p.scanned_at)*1000).toLocaleDateString('ru-RU')+'</td><td><b>'+Number(p.total||0).toLocaleString('ru-RU')+'</b></td></tr>').join('')}
-    async function loadDashboard(){try{showDashboard(await request('/dashboard'))}catch(error){if(error.status===401){session='';localStorage.removeItem(TOKEN_KEY);showLogin('Сессия закончилась. Войдите снова.',true)}else showLogin('Не удалось загрузить кабинет. Попробуйте позже.',true)}}
-    window.onTelegramAuth=async user=>{try{$('login-message').textContent='Проверяю доступ…';const data=await request('/login',{method:'POST',body:JSON.stringify({telegram:user})});session=data.token;localStorage.setItem(TOKEN_KEY,session);await loadDashboard()}catch(error){showLogin(error.code==='telegram_id_not_allowed'?'Этот Telegram ID ещё не разрешён владельцем клана.':'Не удалось подтвердить вход через Telegram.',true)}};
-    async function init(){if(session){await loadDashboard();return}try{const config=await request('/config');const slot=$('telegram-slot');slot.textContent='';if(!config.enabled||!config.bot_username){slot.textContent='Вход через Telegram пока настраивается.';return}const script=document.createElement('script');script.async=true;script.src='https://telegram.org/js/telegram-widget.js?22';script.dataset.telegramLogin=config.bot_username;script.dataset.size='large';script.dataset.userpic='false';script.dataset.radius='10';script.dataset.onauth='onTelegramAuth(user)';slot.append(script)}catch{$('telegram-slot').textContent='Сервер входа временно недоступен.'}}
-    $('link-player').onclick=async()=>{const button=$('link-player'),playerId=$('player-id').value.trim();if(!playerId){return}button.disabled=true;try{await request('/link-player',{method:'POST',body:JSON.stringify({player_id:playerId})});await loadDashboard()}catch(error){$('login-message').textContent='Не удалось привязать ID.';alert(error.code==='player_linked_to_another_member'?'Этот игровой ID уже привязан к другому кабинету.':'Проверьте игровой ID и попробуйте ещё раз.')}finally{button.disabled=false}};
-    $('download').onclick=async()=>{const button=$('download'),message=$('download-message');button.disabled=true;message.textContent='Готовлю файл…';try{const response=await fetch(API+'/script',{headers:{Authorization:'Bearer '+session},cache:'no-store'});if(!response.ok)throw new Error();const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='HamsterKingMobile.user.js';link.click();setTimeout(()=>URL.revokeObjectURL(url),2000);message.textContent='Скрипт загружен.'}catch{message.textContent='Не удалось скачать скрипт.';message.classList.add('bad')}finally{button.disabled=false}};
-    $('logout').onclick=()=>{session='';localStorage.removeItem(TOKEN_KEY);location.reload()};
-    init();
-  </script>
-<script src="../assets/site-nav.js"></script>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="shell footer-row">
+    <span>Top King · Hamster King</span>
+    <a href="../feedback/">Обратная связь</a>
+  </div>
+</footer>
+
+<script>
+  const API='https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet';
+  const TOKEN_KEY='tk_clan_cabinet_session';
+  const $=id=>document.getElementById(id);
+  const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let session=localStorage.getItem(TOKEN_KEY)||'';
+
+  async function request(path,options={}){
+    const headers={'Content-Type':'application/json',...(options.headers||{})};
+    if(session)headers.Authorization='Bearer '+session;
+    const response=await fetch(API+path,{cache:'no-store',...options,headers});
+    let data={};try{data=await response.json()}catch{}
+    if(!response.ok)throw Object.assign(new Error(data.error||'request_failed'),{status:response.status,code:data.error});
+    return data;
+  }
+
+  function setMessage(id,text='',kind=''){
+    const el=$(id);if(!el)return;
+    el.textContent=text;
+    el.classList.toggle('bad',kind==='bad');
+    el.classList.toggle('good',kind==='good');
+  }
+
+  function showLogin(message='',bad=false){
+    $('login').classList.remove('hidden');
+    $('dashboard').classList.add('hidden');
+    setMessage('login-message',message,bad?'bad':'');
+  }
+
+  function showDashboard(data){
+    $('login').classList.add('hidden');
+    $('dashboard').classList.remove('hidden');
+
+    const m=data.member||{};
+    $('member-name').textContent=m.first_name||m.note||'Участник Top King';
+    $('member-id').textContent='Telegram ID: '+m.telegram_id+(m.username?' · @'+m.username:'');
+    const linked=String(m.linked_player_id||'');
+    $('link-box').classList.toggle('hidden',!!linked);
+    $('linked-box').classList.toggle('hidden',!linked);
+    $('copy-player').classList.toggle('hidden',!linked);
+    $('linked-player').textContent=linked;
+    $('script-version').textContent=data.script?.version||'—';
+
+    const clan=data.clan||{};
+    $('clan-title').textContent=clan.key?'Клан '+clan.key:'Последние данные';
+    $('participants').textContent=clan.participants||0;
+    $('total-levels').textContent=Number(clan.total_levels||0).toLocaleString('ru-RU');
+    $('week').textContent=clan.week||'—';
+
+    const players=Array.isArray(clan.players)?clan.players:[];
+    $('progress-empty').classList.toggle('hidden',players.length>0);
+    $('progress-table').classList.toggle('hidden',players.length===0);
+    $('players').innerHTML=players.map((p,i)=>
+      '<tr><td><span class="rank">'+(i+1)+'.</span><b>'+safe(p.nickname)+'</b></td>'+
+      '<td>'+new Date(Number(p.scanned_at)*1000).toLocaleDateString('ru-RU')+'</td>'+
+      '<td><span class="level">'+Number(p.total||0).toLocaleString('ru-RU')+'</span></td></tr>'
+    ).join('');
+  }
+
+  async function loadDashboard(){
+    try{
+      showDashboard(await request('/dashboard'));
+      setMessage('profile-message');
+    }catch(error){
+      if(error.status===401){
+        session='';
+        localStorage.removeItem(TOKEN_KEY);
+        showLogin('Сессия закончилась. Войдите снова.',true);
+      }else{
+        showLogin('Не удалось загрузить кабинет. Попробуйте позже.',true);
+      }
+    }
+  }
+
+  window.onTelegramAuth=async user=>{
+    try{
+      setMessage('login-message','Проверяю доступ…');
+      const data=await request('/login',{method:'POST',body:JSON.stringify({telegram:user})});
+      session=data.token;
+      localStorage.setItem(TOKEN_KEY,session);
+      await loadDashboard();
+    }catch(error){
+      showLogin(error.code==='telegram_id_not_allowed'
+        ?'Этот Telegram ID ещё не разрешён владельцем клана.'
+        :'Не удалось подтвердить вход через Telegram.',true);
+    }
+  };
+
+  async function init(){
+    if(session){await loadDashboard();return}
+    try{
+      const config=await request('/config');
+      const slot=$('telegram-slot');
+      slot.textContent='';
+      if(!config.enabled||!config.bot_username){
+        slot.textContent='Вход через Telegram пока настраивается.';
+        return;
+      }
+      const script=document.createElement('script');
+      script.async=true;
+      script.src='https://telegram.org/js/telegram-widget.js?22';
+      script.dataset.telegramLogin=config.bot_username;
+      script.dataset.size='large';
+      script.dataset.userpic='false';
+      script.dataset.radius='12';
+      script.dataset.onauth='onTelegramAuth(user)';
+      slot.append(script);
+    }catch{
+      $('telegram-slot').textContent='Сервер входа временно недоступен.';
+    }
+  }
+
+  $('link-player').onclick=async()=>{
+    const button=$('link-player'),playerId=$('player-id').value.trim();
+    if(!playerId){
+      setMessage('profile-message','Введите игровой ID.','bad');
+      return;
+    }
+    button.disabled=true;
+    setMessage('profile-message','Привязываю игровой ID…');
+    try{
+      await request('/link-player',{method:'POST',body:JSON.stringify({player_id:playerId})});
+      await loadDashboard();
+      setMessage('profile-message','Игровой ID успешно привязан.','good');
+    }catch(error){
+      setMessage('profile-message',
+        error.code==='player_linked_to_another_member'
+          ?'Этот игровой ID уже привязан к другому кабинету.'
+          :'Проверьте игровой ID и попробуйте ещё раз.',
+        'bad');
+    }finally{button.disabled=false}
+  };
+
+  $('download').onclick=async()=>{
+    const button=$('download');
+    button.disabled=true;
+    setMessage('download-message','Готовлю файл…');
+    try{
+      const response=await fetch(API+'/script',{headers:{Authorization:'Bearer '+session},cache:'no-store'});
+      if(!response.ok)throw new Error();
+      const blob=await response.blob();
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a');
+      link.href=url;
+      link.download='HamsterKingMobile.user.js';
+      link.click();
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      setMessage('download-message','Скрипт загружен.','good');
+    }catch{
+      setMessage('download-message','Не удалось скачать скрипт.','bad');
+    }finally{button.disabled=false}
+  };
+
+  $('copy-player').onclick=async()=>{
+    const value=$('linked-player').textContent.trim();
+    if(!value)return;
+    try{
+      await navigator.clipboard.writeText(value);
+      setMessage('profile-message','Игровой ID скопирован.','good');
+    }catch{
+      setMessage('profile-message','Не удалось скопировать ID.','bad');
+    }
+  };
+
+  $('refresh-dashboard').onclick=async()=>{
+    const button=$('refresh-dashboard');
+    button.disabled=true;
+    setMessage('profile-message','Обновляю данные…');
+    try{
+      await loadDashboard();
+      setMessage('profile-message','Данные обновлены.','good');
+    }finally{button.disabled=false}
+  };
+
+  $('logout').onclick=()=>{
+    session='';
+    localStorage.removeItem(TOKEN_KEY);
+    location.reload();
+  };
+
+  init();
+</script>
+<script src="../assets/site-nav.js?v=20260919-3"></script>
+<script>
+  const menuToggle=document.querySelector('[data-menu-toggle]');
+  const mobileMenu=document.querySelector('[data-mobile-nav]');
+  if(menuToggle&&mobileMenu){
+    menuToggle.addEventListener('click',()=>{
+      const open=!mobileMenu.classList.contains('open');
+      mobileMenu.classList.toggle('open',open);
+      menuToggle.setAttribute('aria-expanded',String(open));
+      document.body.classList.toggle('menu-open',open);
+    });
+  }
+</script>
 </body>
 </html>
