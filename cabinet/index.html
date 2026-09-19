@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; connect-src https://hk-license.89.125.1.71.sslip.io; frame-src https://oauth.telegram.org https://telegram.org https://t.me; object-src 'none'; base-uri 'self'">
   <title>Личный кабинет клана — Top King</title>
   <meta name="description" content="Закрытый личный кабинет участников клана Top King.">
-  <link rel="stylesheet" href="../assets/public.css?v=20260919-5">
+  <link rel="stylesheet" href="../assets/public.css?v=20260919-6">
   <link rel="icon" href="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png">
   <style>
     .cabinet-head{padding-bottom:24px}
@@ -292,6 +292,16 @@
       .mirror-row b{font-size:15px}
       .player-stat summary{padding:13px 14px}
       .player-detail{padding:0 14px 14px}
+    }
+    @media(max-width:680px){
+      .player-stats-card,.clan-mirror,.mirror-stage,.mirror-branch-content,.mirror-ranking,.player-stat,.player-detail{min-width:0!important;max-width:100%!important}
+      .player-stats-card{overflow:visible!important}
+      .player-name strong{white-space:normal!important;overflow-wrap:anywhere!important}
+      .branch-grid{grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))!important}
+    }
+    @media(max-width:430px){
+      .mirror-row{grid-template-columns:1fr!important}
+      .mirror-row b{justify-self:start}
     }
     @media(prefers-reduced-motion:reduce){.loading{animation:none}.expand-mark{transition:none}}
   </style>
@@ -1075,18 +1085,6 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/site-nav.js?v=20260919-5"></script>
-<script>
-  const menuToggle=document.querySelector('[data-menu-toggle]');
-  const mobileMenu=document.querySelector('[data-mobile-nav]');
-  if(menuToggle&&mobileMenu){
-    menuToggle.addEventListener('click',()=>{
-      const open=!mobileMenu.classList.contains('open');
-      mobileMenu.classList.toggle('open',open);
-      menuToggle.setAttribute('aria-expanded',String(open));
-      document.body.classList.toggle('menu-open',open);
-    });
-  }
-</script>
+<script src="../assets/site-nav.js?v=20260919-6"></script>
 </body>
 </html>
