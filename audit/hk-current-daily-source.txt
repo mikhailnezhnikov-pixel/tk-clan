@@ -11882,6 +11882,1421 @@ NOT FOUND
       const section = ['clan','clan_2'].includes(tab) ? 'clan' : currentEventLot ? 'regular' : 'ordinary';
       const group = section === 'ordinary' ? ordinaryShopGroup(lot) : 
 
+===== data-content="bosses" =====
+
+      .hk-map-source-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0 12px}.hk-map-source-tabs button{border:1px solid #34445b;border-radius:11px;background:#182230;color:#aebbd0;padding:11px 5px;font-size:12px;font-weight:800}.hk-map-source-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-map-controls{display:grid;grid-template-columns:1fr 120px;gap:7px}.hk-map-controls input,.hk-map-controls select,.hk-map-filters select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-map-list{display:grid;gap:7px;margin-top:10px}.hk-map-row{display:grid;grid-template-columns:1.2fr 54px repeat(3,1fr) 58px 48px;gap:6px;align-items:center;text-align:left;background:#111a27;color:white;border:1px solid #35445a;border-radius:11px;padding:10px;font-size:10px}.hk-map-row>b{font-size:12px;color:#ffe083}.hk-map-row strong{color:#35df9e}.hk-progress{background:#35df9e;color:#082117;border-radius:12px;padding:4px;text-align:center;font-weight:900}.hk-map-filters{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:10px 0}.hk-map-legend{display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:#9eabc0;margin:8px 0}.hk-map-legend span{display:flex;align-items:center;gap:4px}.hk-map-dot{width:10px;height:10px;border-radius:3px;display:inline-block}.hk-map-zoom{display:grid;grid-template-columns:44px 82px 44px;gap:6px;justify-content:end;margin:7px 0}.hk-map-zoom button{padding:8px 4px;font-weight:900}.hk-map-zoom #hk-map-zoom-value{color:#ffe083}.hk-map-visual{height:56vh;min-height:360px;max-height:650px;background:#080d14;border:1px solid #304057;border-radius:13px;overflow:hidden;touch-action:none}.hk-map-visual svg{display:block;width:100%;height:100%;touch-action:none;transform-origin:50% 50%;will-change:transform}.hk-map-shape{cursor:pointer;transition:opacity .15s,stroke-width .15s}.hk-map-shape.dim{opacity:.055;pointer-events:none}.hk-map-shape.match{opacity:.94}.hk-map-shape.selected{stroke:#fff!important;stroke-width:3.2!important;opacity:1}.hk-map-selected{display:grid;grid-template-columns:1.1fr 1fr 55px;gap:7px;align-items:center;margin-top:8px;padding:10px;background:#101927;border:1px solid #304057;border-radius:11px}.hk-map-selected small{grid-column:1/4;color:#93a3b8}.hk-map-selected strong{color:#6deaff}.hk-map-match-count{font-size:11px;color:#9eabc0;margin:6px 0}
+      @media(max-width:620px){.hk-map-row{grid-template-columns:1fr 45px 54px}.hk-map-row span:nth-of-type(2),.hk-map-row span:nth-of-type(3){display:none}.hk-map-row strong{grid-column:3}.hk-map-row .hk-progress{grid-column:2}.hk-map-building{grid-template-columns:1fr 55px}.hk-map-building>span{grid-column:1}.hk-map-building small{grid-column:1/3}}
+    `;
+    document.head.appendChild(style);
+    const NAV_GROUPS = [
+      {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
+      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{page:'bosses',ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+      {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
+      {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{planned:true,ru:'Авто-рутины',en:'Auto routines'}]},
+      {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
+      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{planned:true,ru:'Обычная ярмарка',en:'Regular Fair'}]},
+      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+    ];
+    const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
+    root = document.createElement('div'); root.id = 'hk-mobile-root';
+    root.innerHTML = `<button id="hk-fab">HK</button><div id="hk-panel" class="hk-locked">
+      <div id="hk-watermark" aria-hidden="true"></div><div class="hk-head"><h2>Hamster King Mobile <small style="font-size:12px;color:#9aa8bc">v${VERSION}</small></h2><div class="hk-lang"><button data-lang="ru" aria-label="Русский">🇷🇺</button><button data-lang="en" aria-label="English">🇬🇧</button></div><button class="hk-close">×</button></div>
+      <button id="hk-donation" class="hk-donation">❤️ <span data-i18n="donation">${tr('donation')}</span></button>
+      <div id="hk-license-gate" class="hk-license" data-i18n="checkingLicense">${tr('checkingLicense')}</div>
+      <div id="hk-health" class="hk-health">
+        <div class="hk-health-chip" data-health="game"><b>${either('Игра','Game')}</b><small>${either('ожидание','waiting')}</small></div>
+        <div class="hk-health-chip" data-health="auth"><b>${either('Авторизация','Auth')}</b><small>${either('ожидание','waiting')}</small></div>
+        <div class="hk-health-chip" data-health="license"><b>${either('Лицензия','License')}</b><small>${either('ожидание','waiting')}</small></div>
+        <div class="hk-health-chip" data-health="server"><b>${either('Сервер','Server')}</b><small>${either('ожидание','waiting')}</small></div>
+      </div>
+      <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">${either('Диагностика','Diagnostics')}</button></div>
+      <div id="hk-update-banner" class="hk-update"></div>
+      <div class="hk-tabs">${menuTabs}</div>
+      <div id="hk-subnav" class="hk-subnav"></div>
+      <div id="hk-runner" class="hk-runner"><div class="hk-runner-head"><b id="hk-runner-title"></b><span id="hk-runner-state" class="hk-runner-state"></span></div><div id="hk-runner-step" class="hk-runner-step"></div><div class="hk-runner-track"><div id="hk-runner-fill" class="hk-runner-fill"></div></div><div class="hk-runner-actions"><button id="hk-runner-pause" class="hk-secondary"></button><button id="hk-runner-stop" class="hk-danger"></button></div></div>
+      <div class="hk-page active" data-content="daily">
+        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div class="hk-toolbar"><button id="hk-daily-refresh" class="hk-secondary" data-i18n="dailyRefresh">${tr('dailyRefresh')}</button><button id="hk-daily-clear" data-i18n="dailyClear">${tr('dailyClear')}</button></div><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
+      </div>
+      <div class="hk-page" data-content="resources">
+        <div id="hk-resource-content" class="hk-cardbox"></div>
+      </div>
+      <div class="hk-page" data-content="bosses"><div id="hk-boss-content" class="hk-cardbox"><h3>${either('Боссы','Bosses')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать состояние босса.','Open this tab to read boss state.')}</p></div></div>
+          <div class="hk-page" data-content="pit">
+        <div class="hk-cardbox"><div class="hk-grid">
+          <label data-i18n="targetRound">${tr('targetRound')}</label><input id="hk-target" type="number" min="1" value="${settings.target}">
+          <label data-i18n="delay">${tr('delay')}</label><input id="hk-interval" type="number" min="0.7" step="0.1" value="${settings.interval}">
+          <label data-i18n="activationTokens">${tr('activationTokens')}</label><input id="hk-activation-limit" type="number" min="0" value="${settings.activationLimit}">
+          <label data-i18n="restoreTokens">${tr('restoreTokens')}</label><input id="hk-restore-limit" type="number" min="0" value="${settings.restoreLimit}">
+          <label data-i18n="allowTokens">${tr('allowTokens')}</label><input id="hk-allow-tokens" type="checkbox" ${settings.allowTokens ? 'checked' : ''}>
+          <label data-i18n="pitCollectOnly">${tr('pitCollectOnly')}</label><input id="hk-pit-collect-only" type="checkbox" ${settings.collectOnly ? 'checked' : ''}>
+        </div><div id="hk-pit-live" class="hk-live">${tr('round')}: —</div><section id="hk-pit-forecast" class="hk-pit-forecast"></section>
+        <button id="hk-pit-start" class="hk-primary" data-i18n="startBattle">${tr('startBattle')}</button><button id="hk-pit-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
+        <button id="hk-export" class="hk-secondary" data-i18n="exportCsv">${tr('exportCsv')}</button></div>
+      </div>
+      <div class="hk-page" data-content="business">
+        <div class="hk-cardbox"><div class="hk-toolbar"><button id="hk-refresh-game" data-i18n="refreshGame">${tr('refreshGame')}</button><span id="hk-connect">${tr('waiting')}</span></div>
+        <div class="hk-business-tabs"><button class="hk-business-tab active" data-business-tab="regular" data-i18n="businessRegular">${tr('businessRegular')}</button><button class="hk-business-tab" data-business-tab="optimizer" data-i18n="businessOptimizer">${tr('businessOptimizer')}</button></div>
+        <div class="hk-business-pane active" data-business-pane="regular"><div class="hk-toolbar"><select id="hk-preset"><option>${tr('savedSets')}</option></select><button id="hk-save-preset" data-i18n="saveNew">${tr('saveNew')}</button><button id="hk-delete-preset" data-i18n="delete">${tr('delete')}</button></div>
+        <div class="hk-toolbar"><select id="hk-remove-tier"></select><button id="hk-select-remove" data-i18n="selectAll">${tr('selectAll')}</button></div>
+        <div class="hk-toolbar"><select id="hk-insert-tier"></select></div>
+        <div id="hk-business-lists"></div><div id="hk-plan" class="hk-cardbox"></div></div>
+        <div class="hk-business-pane" data-business-pane="optimizer"><section class="hk-optimizer"><h3 data-i18n="optimizer">${tr('optimizer')}</h3><div class="hk-optimizer-controls"><label><span data-i18n="optimizerGoal">${tr('optimizerGoal')}</span><select id="hk-optimizer-goal"><option value="pit" data-i18n="optimizerPit">${tr('optimizerPit')}</option><option value="income" data-i18n="optimizerIncome">${tr('optimizerIncome')}</option><option value="energy" data-i18n="optimizerEnergy">${tr('optimizerEnergy')}</option><option value="buildings" data-i18n="optimizerBuildings">${tr('optimizerBuildings')}</option></select></label></div><div class="hk-optimizer-filter"><b data-i18n="optimizerRemoveTiers">${tr('optimizerRemoveTiers')}</b><div id="hk-optimizer-remove-tiers" class="hk-optimizer-tiers"></div></div><div class="hk-optimizer-filter"><b data-i18n="optimizerInsertTiers">${tr('optimizerInsertTiers')}</b><div id="hk-optimizer-insert-tiers" class="hk-optimizer-tiers"></div></div><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="replaceable" ${optimizerSectionOpen('replaceable')?'open':''}><summary><b data-i18n="optimizerReplaceable">${tr('optimizerReplaceable')}</b></summary><small data-i18n="optimizerReplaceHint">${tr('optimizerReplaceHint')}</small><div id="hk-optimizer-replaceable" class="hk-optimizer-replaceable"></div></details><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="stock" ${optimizerSectionOpen('stock')?'open':''}><summary><b data-i18n="optimizerStockAllowed">${tr('optimizerStockAllowed')}</b></summary><small data-i18n="optimizerStockHint">${tr('optimizerStockHint')}</small><div id="hk-optimizer-stock-allowed" class="hk-optimizer-replaceable"></div></details><div class="hk-optimizer-actions"><button id="hk-optimizer-calculate" class="hk-secondary" data-i18n="optimizerCalculate">${tr('optimizerCalculate')}</button><button id="hk-optimizer-restore" data-i18n="optimizerRestore">${tr('optimizerRestore')}</button></div><div id="hk-optimizer-result" class="hk-optimizer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section>
+        <section class="hk-bonus-analyzer"><h3 data-i18n="bonusAnalyzer">${tr('bonusAnalyzer')}</h3><div id="hk-bonus-analyzer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section></div></div>
+      </div>
+      <div class="hk-page" data-content="clan">
+        <div id="hk-clan-content" class="hk-cardbox"><h3>${either('Навыки клана','Clan skills')}</h3><p class="hk-muted">${either('Данные ещё не считаны','No data has been read yet')}</p></div>
+      </div>
+      <div class="hk-page" data-content="fair">
+        <div class="hk-cardbox"><button id="hk-fair-load" class="hk-secondary" data-i18n="loadFair">${tr('loadFair')}</button>
+          <div class="hk-toolbar" style="margin-top:10px"><select id="hk-fair-preset"><option value="">${tr('fairSavedSettings')}</option></select><button id="hk-fair-save-preset" data-i18n="saveSetting">${tr('saveSetting')}</button></div>
+          <div class="hk-toolbar"><button id="hk-fair-update-preset" data-i18n="updateSetting">${tr('updateSetting')}</button><button id="hk-fair-delete-preset" data-i18n="delete">${tr('delete')}</button></div>
+          <h3 data-i18n="chooseFair">${tr('chooseFair')}</h3><div id="hk-fair-types" class="hk-fair-types"><p class="hk-muted">${tr('readFirst')}</p></div>
+          <div class="hk-toolbar"><input id="hk-fair-search" data-i18n-placeholder="searchLot" placeholder="${tr('searchLot')}"></div>
+          <div id="hk-fair-currencies" class="hk-fair-currencies"></div>
+          <h3 data-i18n="choosePurchases">${tr('choosePurchases')}</h3><div id="hk-fair-lots" class="hk-fair-lots"></div>
+          <div id="hk-fair-selected" class="hk-live">${tr('selectedLots',{n:0})}</div>
+          <div id="hk-fair-slot-rules" style="display:none"></div>
+          <div class="hk-fair-controls"><label data-i18n="fairExactLots">${tr('fairExactLots')}</label><select id="hk-fair-exact-lots"><option value="0">${tr('no')}</option><option value="3">3</option><option value="6">6</option><option value="9">9</option></select></div>
+          <div id="hk-fair-bonus-lots" class="hk-fair-bonus-lots"></div>
+          <div class="hk-fair-controls"><label data-i18n="totalPurchases">${tr('totalPurchases')}</label><input id="hk-fair-buy-limit" type="number" min="1" max="999" value="1">
+            <label data-i18n="maxRerolls">${tr('maxRerolls')}</label><input id="hk-fair-reroll-limit" type="number" min="0" max="10000" value="50"></div>
+          <label class="hk-check"><input id="hk-fair-premium-reroll" type="checkbox"><span data-i18n="allowDiamonds">${tr('allowDiamonds')}</span></label>
+          <button id="hk-fair-start" class="hk-primary" data-i18n="findBuy" disabled>${tr('findBuy')}</button><button id="hk-fair-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
+          <p class="hk-muted" data-i18n="fairWarning">${tr('fairWarning')}</p>
+        </div>
+      </div>
+      <div class="hk-page" data-content="shop">
+        <div class="hk-cardbox"><h3 data-i18n="shop">${tr('shop')}</h3>
+          <div class="hk-shop-tabs"><button class="active" data-shop-section="regular" data-i18n="regularShop">${tr('regularShop')}</button><button data-shop-section="ordinary" data-i18n="ordinaryShop">${tr('ordinaryShop')}</button><button data-shop-section="clan" data-i18n="clanShop">${tr('clanShop')}</button></div>
+          <div id="hk-shop-groups" class="hk-shop-groups" style="display:none"><button class="active" data-shop-group="resources" data-i18n="resourcesShop">${tr('resourcesShop')}</button><button data-shop-group="renovation" data-i18n="renovationShop">${tr('renovationShop')}</button><button data-shop-group="invest" data-i18n="investShop">${tr('investShop')}</button></div>
+          <button id="hk-shop-load" class="hk-secondary" data-i18n="readShop">${tr('readShop')}</button>
+          <button id="hk-shop-select" class="hk-secondary" data-i18n="selectAvailable">${tr('selectAvailable')}</button>
+          <div id="hk-shop-cards" class="hk-shop-lots" style="margin-top:10px"><p class="hk-muted">${tr('shopReadFirst')}</p></div>
+          <div id="hk-shop-summary" class="hk-live">${tr('selectedPurchases',{n:0})}</div>
+          <button id="hk-shop-buy" class="hk-primary" data-i18n="buySelected" disabled>${tr('buySelected')}</button>
+          <p class="hk-muted" data-i18n="shopWarning">${tr('shopWarning')}</p>
+        </div>
+      </div>
+      <div class="hk-page" data-content="recipes">
+        <div class="hk-cardbox"><div class="hk-recipe-tabs"><button class="active" data-recipe-pane="spin" data-i18n="recipeSpin">${tr('recipeSpin')}</button><button data-recipe-pane="database" data-i18n="recipeDatabase">${tr('recipeDatabase')}</button><button data-recipe-pane="bureau" data-i18n="projectBureau">${tr('projectBureau')}</button></div>
+          <div class="hk-recipe-pane active" data-recipe-content="spin">
+            <button id="hk-recipe-load" class="hk-secondary" data-i18n="readRecipes">${tr('readRecipes')}</button>
+            <h3 data-i18n="currentRecipePlans">${tr('currentRecipePlans')}</h3><div id="hk-recipe-cards" class="hk-recipe-plans"><p class="hk-muted">${tr('recipeReadFirst')}</p></div>
+            <div class="hk-grid"><label data-i18n="recipeAttempts">${tr('recipeAttempts')}</label><input id="hk-recipe-attempts" type="number" min="1" max="100" value="1"></div>
+            <div id="hk-recipe-summary" class="hk-live">${tr('recipeReadFirst')}</div>
+            <button id="hk-recipe-run" class="hk-primary" data-i18n="spinRecipes" disabled>${tr('spinRecipes')}</button><button id="hk-recipe-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
+          </div>
+          <div class="hk-recipe-pane" data-recipe-content="database">
+            <button id="hk-recipe-db-load" class="hk-secondary" data-i18n="loadRecipeDatabase">${tr('loadRecipeDatabase')}</button>
+            <div id="hk-recipe-db-count" class="hk-live">${tr('uniqueRecipes',{n:0})}</div><div id="hk-recipe-database" class="hk-recipe-plans"><p class="hk-muted">${tr('recipeDatabaseEmpty')}</p></div>
+            <p class="hk-muted" data-i18n="recipeSharedHint">${tr('recipeSharedHint')}</p>
+          </div>
+          <div class="hk-recipe-pane" data-recipe-content="bureau">
+            <button id="hk-bureau-load" class="hk-secondary" data-i18n="readBureau">${tr('readBureau')}</button>
+            <h3 data-i18n="bureauSize">${tr('bureauSize')}</h3><div id="hk-bureau-sizes" class="hk-bureau-sizes"></div>
+            <div class="hk-grid"><label data-i18n="bureauTier">${tr('bureauTier')}</label><select id="hk-bureau-tier"><option value="0">${tr('bureauAllTiers')}</option></select></div>
+            <div id="hk-bureau-cards" class="hk-bureau-list"><p class="hk-muted">${tr('readBureau')}</p></div>
+            <div class="hk-grid"><label data-i18n="bureauAttempts">${tr('bureauAttempts')}</label><input id="hk-bureau-attempts" type="number" min="1" max="100" value="1"></div>
+            <div id="hk-bureau-summary" class="hk-live">${tr('bureauSelected',{n:0,max:2})}</div>
+            <button id="hk-bureau-run" class="hk-primary" data-i18n="createBusinessPlan" disabled>${tr('createBusinessPlan')}</button>
+            <p class="hk-muted" data-i18n="bureauHint">${tr('bureauHint')}</p>
+          </div>
+        </div>
+      </div>
+      <div class="hk-page" data-content="growth">
+        <div class="hk-cardbox"><h3>${either('Развитие','Growth')}</h3><p class="hk-muted">${either('Живое состояние аккаунта загружается автоматически. Открытие вкладки ничего не покупает и не прокачивает.','Live account state loads automatically. Opening the tab never buys or upgrades anything.')}</p><div data-growth-summary></div></div>
+        <div class="hk-cardbox"><h3>${either('Что выполнять','What to run')}</h3><div class="hk-growth-options">
+          <label class="hk-growth-check"><span><b>${either('Подготовка','Preparation')}</b><small>${either('Контракты → шары → коробки','Contracts → balls → boxes')}</small></span><input id="hk-growth-run-prep" type="checkbox"></label>
+          <label class="hk-growth-check"><span><b>${either('Генералы','Generals')}</b><small>${either('Лучшее Power / Pit Token','Best Power / Pit Token')}</small></span><input id="hk-growth-run-generals" type="checkbox"></label>
+          <label class="hk-growth-check"><span><b>${either('Хомяки','Hamsters')}</b><small>${either('Копии → редкость → уровни','Copies → rarity → levels')}</small></span><input id="hk-growth-run-hamsters" type="checkbox"></label>
+        </div></div>
+        <div class="hk-cardbox"><h3>${either('Подготовка','Preparation')}</h3><div class="hk-growth-options">
+          <label class="hk-growth-check"><span><b>${either('Купить все контракты Генералов','Buy all General contracts')}</b><small>${either('Только контракты за фрагменты. Валюты/PREM не расходуются.','Fragment-only contracts. No currency/PREM spending.')}</small></span><input id="hk-growth-contracts" type="checkbox"></label>
+          <label class="hk-growth-check"><span><b>${either('Открыть все шары','Open all balls')}</b><small>${either('Все распознанные шары Хомяков/Генералов','All recognized Hamster/General balls')}</small></span><input id="hk-growth-balls" type="checkbox"></label>
+          <label class="hk-growth-check"><span><b>${either('Открыть все коробки','Open all boxes')}</b><small>${either('Коробки/lootbox/chest, кроме пассивного дохода','Boxes/lootboxes/chests except passive-income boxes')}</small></span><input id="hk-growth-boxes" type="checkbox"></label>
+        </div></div>
+        <div class="hk-cardbox"><div data-growth-plan></div><button class="hk-primary" data-growth-action="all">${either('Запустить полный план','Run full plan')}</button></div>
+      </div>
+      <div class="hk-page" data-content="growth-hamsters">
+        <div class="hk-cardbox"><h3>${either('Хомяки','Hamsters')}</h3><p class="hk-muted">${either('Состояние, магазин и справочник Хомяков считываются автоматически. Максимальный уровень определяется из live-данных каждого Хомяка.','State, shop and Hamster metadata are read automatically. Maximum level is derived from each Hamster’s live data.')}</p><div data-growth-summary></div>
+          <div class="hk-growth-options">
+            <label class="hk-growth-option"><span><b>${either('Бюджет Крышек','Caps budget')}</b><small>${either('Доля текущего баланса Крышек на фазу Хомяков','Share of current Caps balance for the Hamster phase')}</small></span><select id="hk-growth-caps-percent">${[10,20,30,40,50,60,70,80,90,100].map(v=>`<option value="${v}">${v}%</option>`).join('')}</select></label>
+            <label class="hk-growth-option"><span><b>${either('Вес Mobster Pit','Mobster Pit weight')}</b><small>${either('Idol / Crypto / помощники Ямы. «—» = ×1','Idol / Crypto / Pit helpers. “—” = ×1')}</small></span><select id="hk-growth-hamster-weight">${[1,2,3,4,5,6,7,8].map(v=>`<option value="${v}">${v===1?'—':'×'+v}</option>`).join('')}</select></label>
+            <label class="hk-growth-check"><span><b>${either('Hamster Copy Priority','Hamster Copy Priority')}</b><small>${either('Сначала докупает недостающие копии в заданном порядке, затем повышает редкость','Buys missing copies in the selected order, then upgrades rarity')}</small></span><input id="hk-growth-copy-enabled" type="checkbox"></label>
+            <label class="hk-growth-check"><span><b>${either('Исключить Хомяков текущего события','Exclude current-event Hamsters')}</b><small>${either('Определяются автоматически через активное событие игры','Detected automatically from the active game event')}</small></span><input id="hk-growth-exclude-event" type="checkbox"></label>
+          </div>
+        </div>
+        <div class="hk-cardbox"><div class="hk-growth-priority-head"><h3>${either('Приоритет копий','Copy Priority')}</h3><button class="hk-secondary" data-growth-action="reset-priority">${either('Сбросить','Reset')}</button></div><p class="hk-muted">${either('Порядок пар «есть / нужно». Стрелками меняется приоритет, «−» исключает пару.','Order of “owned / required” pairs. Arrows reorder; “−” removes a pair.')}</p><div id="hk-growth-copy-priority" class="hk-growth-priority-list"></div></div>
+        <div class="hk-cardbox"><div data-growth-plan></div><button class="hk-primary" data-growth-action="hamsters">${either('Запустить Хомяков','Run Hamsters')}</button></div>
+      </div>
+      <div class="hk-page" data-content="growth-generals">
+        <div class="hk-cardbox"><h3>${either('Генералы','Generals')}</h3><p class="hk-muted">${either('Перед каждым запуском баланс и доступные улучшения считываются заново.','Balance and available upgrades are read again before every run.')}</p><div data-growth-summary></div>
+          <div class="hk-growth-options">
+            <label class="hk-growth-option"><span><b>${either('Бюджет Pit Tokens','Pit Token budget')}</b><small>${either('Доля текущего баланса для Генералов','Share of current balance
+
+===== async function refreshBosses( =====
+
+      if(keys.has('clans')||keys.has('alliance_clans')||keys.has('allianceClans')||keys.has('core_clan')||keys.has('coreClan'))score+=4;
+      for(const metricKeys of Object.values(ALLIANCE_RATING_METRICS)){
+        if(metricKeys.some(key=>keys.has(key))){score+=3;break;}
+      }
+      if(firstText(entity?.name,entity?.title,row.name,row.alliance_name,row.allianceName))score+=1;
+    }
+    return score;
+  }
+
+  function normalizeAllianceRatings(documentValue) {
+    const arrays=leaderboardArrays(documentValue)
+      .map(list=>({list,score:allianceCandidateScore(list)}))
+      .filter(item=>item.score>0)
+      .sort((a,b)=>b.score-a.score||b.list.length-a.list.length);
+    for(const candidate of arrays){
+      const normalized=[],names=new Set();
+      for(const row of candidate.list){
+        if(!row||typeof row!=='object')continue;
+        const entity=row.alliance||row;
+        const name=firstText(entity?.name,entity?.title,entity?.alliance_name,entity?.allianceName,row.alliance_name,row.allianceName,row.name,row.title);
+        if(!name||names.has(name))continue;
+        const metrics={
+          alliance_power:allianceMetric(row,entity,'alliance_power'),
+          alliance_influence:allianceMetric(row,entity,'alliance_influence'),
+          alliance_defense:allianceMetric(row,entity,'alliance_defense')
+        };
+        if(Object.values(metrics).every(value=>value===null))continue;
+        names.add(name);normalized.push({name,...metrics});
+      }
+      if(normalized.length){
+        const result={};
+        for(const kind of Object.keys(ALLIANCE_RATING_METRICS)){
+          const rows=normalized.filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+            .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name)).slice(0,100)
+            .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+          if(rows.length)result[kind]=rows;
+        }
+        if(Object.keys(result).length)return result;
+      }
+    }
+    try{
+      const objects=deepObjects(documentValue).slice(0,40);
+      const keys=[...new Set(objects.flatMap(value=>Object.keys(value||{})))].filter(key=>/alliance|power|influence|defen|protect|level/i.test(key)).slice(0,80);
+      recordDiagnostic('alliance-rating-schema',{keys});
+    }catch(_){}
+    return {};
+  }
+
+  async function publicSnapshotServerJson(documentValue, retry = true) {
+    return licensedServerJson(PUBLIC_SNAPSHOT_API, '', documentValue, retry, 'public-snapshot');
+  }
+
+  let bossSnapshot = null;
+  let bossLastReadAt = 0;
+  let warSnapshot = null;
+  let warLastReadAt = 0;
+
+  function warTimestamp(value) {
+    const number=Number(value||0);
+    if(!Number.isFinite(number)||number<=0)return '';
+    const ms=number<1e12?number*1000:number;
+    try{return new Date(ms).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(_){return '';}
+  }
+
+  async function readPublicWar() {
+    let endpointRead = false;
+    for (const path of ['/clan/active_battles','/clan/active_defense_wars']) {
+      try { const value = await apiJson(path, 'GET', null, true, 1); endpointRead = true; const war = normalizePublicWar(value); if (war) return {read:true,war}; }
+      catch (_) {}
+    }
+    return {read:endpointRead,war:null};
+  }
+
+  function bossStateRows(documentValue = bossSnapshot || hkStateStore.snapshot || playerDocument) {
+        const rows=[]; const add=(kind,value)=>{if(value==null)return;if(Array.isArray(value))value.forEach((row,index)=>rows.push({kind,index,row}));else if(typeof value==='object')rows.push({kind,index:0,row:value});};
+        add('player_bosses',documentValue?.player_bosses); add('player_regional_bosses',documentValue?.player_regional_bosses); add('boss_battle',documentValue?.boss_battle); return rows;
+      }
+      function bossRowLabel(v,i=0){return gameText(v?.name||v?.title||v?.boss?.name||v?.boss_name||v?.regional_boss_id||v?.boss_id||v?.id||(either('Босс ','Boss ')+(i+1)));}
+      function bossRowSummary(v){const f=[[either('Уровень','Level'),v?.level??v?.boss_level??v?.tier],[either('Здоровье','Health'),v?.health??v?.hp??v?.current_health],[either('Макс. здоровье','Max health'),v?.max_health??v?.max_hp],[either('Урон','Damage'),v?.damage??v?.player_damage??v?.total_damage],[either('Попытки','Attempts'),v?.attempts??v?.tries??v?.battle_count],[either('Статус','Status'),v?.status??v?.state]].filter(([,x])=>x!==undefined&&x!==null&&String(x)!=='');return f.map(([k,x])=>'<span><small>'+escapeHtml(k)+'</small><b>'+escapeHtml(typeof x==='number'?Number(x).toLocaleString(locale()):String(x))+'</b></span>').join('');}
+      function renderBosses(){
+        const box=root?.querySelector('#hk-boss-content'); if(!box)return; const rows=bossStateRows(),profile=pitForecastProfile('boss');
+        const body=rows.length?rows.map(({kind,index,row})=>'<article class="hk-boss-row"><div><b>'+escapeHtml(bossRowLabel(row,index))+'</b><small>'+escapeHtml(kind)+'</small></div><div class="hk-boss-stats">'+bossRowSummary(row)+'</div></article>').join(''):'<p class="hk-muted">'+either('Сейчас нет активных данных регионального босса.','There is no active regional boss data right now.')+'</p>';
+        box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Боссы','Bosses')+'</h3><small>'+either('Игровое состояние боссов и Ямы боссов','Game boss state and Boss Pit data')+'</small></div><button id="hk-boss-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><div class="hk-boss-pit"><span><small>'+either('Яма боссов — уровень','Boss Pit level')+'</small><b>'+(Number(profile?.localLevel||0)||'—')+'</b></span><span><small>'+either('Сила','Power')+'</small><b>'+(Number(profile?.playerPower||0)?Number(profile.playerPower).toLocaleString(locale()):'—')+'</b></span></div>'+body+'<p class="hk-muted">'+(bossLastReadAt?either('Обновлено','Updated')+': '+new Date(bossLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):either('Нажмите «Обновить».','Press Refresh.'))+'</p>';
+        box.querySelector('#hk-boss-refresh')?.addEventListener('click',()=>void refreshBosses(true));
+      }
+      async function refreshBosses(force=false){
+        if(!requireLicense())return null;
+        try{playerDocument=await apiJson('/player/me','POST');bossSnapshot=hkStateStore.snapshot||playerDocument;bossLastReadAt=Date.now();renderBosses();if(force)log(either('Данные боссов обновлены','Boss data refreshed'),'ok');return bossSnapshot;}
+        catch(error){log(either('Ошибка чтения боссов','Boss read error')+': '+(error?.message||error),'warn');renderBosses();return null;}
+      }
+    
+      function renderWars() {
+    const box=root?.querySelector('#hk-war-content');
+    if(!box)return;
+    const war=warSnapshot;
+    if(!war){
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
+    }else{
+      const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
+      const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
+      const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
+        '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong></div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong></div></div>'+
+        '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
+    }
+    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
+  }
+
+  async function refreshWars(force=false) {
+    if(!requireLicense())return null;
+    try{
+      const result=await readPublicWar();
+      warSnapshot=result?.war||null;
+      warLastReadAt=Date.now();
+      renderWars();
+      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
+      return warSnapshot;
+    }catch(error){
+      log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
+      renderWars();
+      return null;
+    }
+  }
+
+  async function readPublicRatings() {
+    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
+    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
+      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
+      catch (_) {}
+    }
+    try {
+      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
+      Object.assign(ratings, normalizeAllianceRatings(value));
+    } catch (_) {}
+    return ratings;
+  }
+
+  async function collectPublicSnapshot(force = false) {
+    if (publicSnapshotPromise || !licenseState.allowed || !licenseState.token || !apiHeaders.Authorization) return publicSnapshotPromise;
+    if (!force && Date.now() - lastPublicSnapshot < PUBLIC_SNAPSHOT_INTERVAL_MS) return null;
+    publicSnapshotPromise = (async () => {
+      try {
+        const [warResult, ratings] = await Promise.all([readPublicWar(), readPublicRatings()]);
+        const payload = {ratings}; if (warResult.read) payload.war = warResult.war;
+        if (!warResult.read && !Object.keys(ratings).length) return;
+        await publicSnapshotServerJson(payload); lastPublicSnapshot = Date.now();
+      } catch (error) { console.warn('[HK] public snapshot failed', error); }
+      finally { publicSnapshotPromise = null; }
+    })();
+    return publicSnapshotPromise;
+  }
+
+  async function loadFair() {
+    if (!requireLicense()) return;
+    try {
+      log('Считываю ярмарки…');
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const visibleFairs = visibleFairStates();
+      if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
+      selectedFairLots.clear();
+      selectedFairSlotRules.clear();
+      renderFair();
+      log(`Ярмарка считана: ${visibleFairs.length} разделов, ${fairCatalog.length} лотов`, 'ok');
+    } catch (error) { log(`Ошибка ярмарки: ${error.message}`, 'bad'); }
+  }
+
+  function costVisual(cost, multiplier = 1) {
+    const parts = costParts(cost);
+    if (!parts.length) return '<span>0</span>';
+    return parts.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${(part.quantity * multiplier).toLocaleString(locale())}</b>`).join('');
+  }
+
+  function addProjectedCost(target, part, multiplier = 1) {
+    if (!part?.id) return;
+    const key = `${part.kind}|${part.id}`;
+    const current = target.get(key) || {...part, quantity:0};
+    current.quantity += Math.max(0, Number(part.quantity || 0)) * Math.max(0, Number(multiplier || 0));
+    target.set(key, current);
+  }
+
+  function walletForecastHtml(parts) {
+    const values = [...parts.values()].filter(part => part?.id).sort((a, b) => a.id.localeCompare(b.id));
+    if (!values.length) return '';
+    return `<div class="hk-wallet-forecast">${values.map(part => {
+      const balance = walletAmount(part.id);
+      const spend = Math.max(0, Number(part.quantity || 0));
+      const known = balance !== null;
+      return `<div class="hk-wallet-row">
+        <span class="hk-wallet-currency">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${escapeHtml(paymentLabel(part.id))}</b></span>
+        <span>${tr('balance')}: <b>${known ? balance.toLocaleString(locale()) : '—'}</b> · ${either('Макс. возможный расход','Maximum possible spend')}: <b>${spend.toLocaleString(locale())}</b></span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function fairProjectedCosts() {
+    const totals = new Map();
+    const state = fairState(selectedFairId);
+    const rows = fairRowsForState(state);
+    const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
+    const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
+    const rerollLimit = Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0));
+    const relevantRows = selectedRows.length ? selectedRows : rows;
+    const maximumLots = new Map();
+    for (const row of relevantRows) for (const part of costParts(row.cost)) {
+      const key = `${part.kind}|${part.id}`;
+      const current = maximumLots.get(key);
+      if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
+    }
+    for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
+    for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollLimit);
+    return totals;
+  }
+
+  function renderFair() {
+    if (!fairTypes || !fairLots) return;
+    if (!fairCatalog.length) {
+      fairTypes.innerHTML = `<p class="hk-muted">${tr('readFirst')}</p>`;
+      fairLots.innerHTML = '';
+      const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
+      updateFairControls(); return;
+    }
+    const states = visibleFairStates();
+    fairTypes.innerHTML = states.map(state => {
+      const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
+      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
+        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
+    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
+    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
+      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
+    });
+    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
+    const allRows = fairRowsForState(fairState(selectedFairId));
+    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
+    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
+    const currencyBar = root?.querySelector('#hk-fair-currencies');
+    if (currencyBar) {
+      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
+        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
+        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
+      }).join('');
+      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
+    }
+    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
+      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
+    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
+      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('blocked')}</small>`}</button>`).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
+    fairLots.querySelectorAll('[data-lot]').forEach(button => button.onclick = () => {
+      const row = fairCatalog.find(value => value.lotId === button.dataset.lot);
+      if (!row?.safe) { log(either('Этот лот заблокирован: неизвестная валюта', 'This lot is blocked: unknown currency'), 'warn'); return; }
+      if (selectedFairLots.has(row.lotId)) {
+        selectedFairLots.delete(row.lotId);
+        selectedFairSlotRules.delete(row.lotId);
+      } else {
+        selectedFairLots.add(row.lotId);
+        const options = fairSlotOptions();
+        selectedFairSlotRules.set(row.lotId, {regular:options.some(value => !value.vip), vip:options.some(value => value.vip)});
+      }
+      renderFair();
+    });
+    renderFairSlotRules();
+    updateFairControls();
+  }
+
+  function fairSlotOptions(state = fairState(selectedFairId)) {
+    const fairConfigs = shopViewDocument?.fairs || shopViewDocument?.fair || [];
+    const config = (Array.isArray(fairConfigs) ? fairConfigs : []).find(value => String(value?.id) === String(state?.id));
+    const metaById = new Map((config?.fair_slots || []).map(slot => [String(slot?.id), slot]));
+    return [...(state?.fair_slots || [])]
+      .sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0))
+      .map((slot, index) => ({slot, index, key:String(index), vip:Boolean(slot?.is_vip || metaById.get(String(slot?.id))?.is_vip)}));
+  }
+
+  function renderFairSlotRules() {
+    if (!fairSlotRules) return;
+    const slots = fairSlotOptions();
+    if (!selectedFairLots.size || !slots.length) {
+      fairSlotRules.innerHTML = '';
+      fairSlotRules.style.display = 'none';
+      return;
+    }
+    fairSlotRules.style.display = '';
+    const hasRegular = slots.some(value => !value.vip);
+    const hasVip = slots.some(value => value.vip);
+    for (const lotId of selectedFairLots) {
+      if (!selectedFairSlotRules.has(lotId)) selectedFairSlotRules.set(lotId, {regular:hasRegular, vip:hasVip});
+    }
+    fairSlotRules.innerHTML = `<h3>${tr('allowedCells')}</h3><p class="hk-muted">${tr('selectCellsHint')}</p>` +
+      [...selectedFairLots].map(lotId => {
+        const row = fairCatalog.find(value => value.lotId === lotId);
+        const allowed = selectedFairSlotRules.get(lotId) || {regular:hasRegular, vip:hasVip};
+        return `<div class="hk-slot-rule"><div class="hk-slot-product">${fairIconHtml(row?.icon || '', 'hk-price-icon')}<b>×${Number(row?.rewardQuantity || 0).toLocaleString(locale())}</b></div>
+          <div class="hk-slot-buttons"><button class="${allowed.regular ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="regular" ${hasRegular ? '' : 'disabled'}>${tr('regularSlots')}: ${tr(allowed.regular ? 'yes' : 'no')}</button>
+          <button class="vip ${allowed.vip ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="vip" ${hasVip ? '' : 'disabled'}>♛ ${tr('vipSlots')}: ${tr(allowed.vip ? 'yes' : 'no')}</button></div></div>`;
+      }).join('');
+    fairSlotRules.querySelectorAll('[data-rule-lot]').forEach(button => button.onclick = () => {
+      const allowed = selectedFairSlotRules.get(button.dataset.ruleLot) || {regular:hasRegular, vip:hasVip};
+      allowed[button.dataset.ruleGroup] = !allowed[button.dataset.ruleGroup];
+      selectedFairSlotRules.set(button.dataset.ruleLot, allowed);
+      renderFairSlotRules(); updateFairControls();
+    });
+  }
+
+  function updateFairControls() {
+    const selected = root?.querySelector('#hk-fair-selected');
+    if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
+    const start = root?.querySelector('#hk-fair-start');
+    const rulesValid = [...selectedFairLots].every(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
+    });
+    if (start) start.disabled = fairRunning || !selectedFairId || !selectedFairLots.size || !rulesValid;
+    const stop = root?.querySelector('#hk-fair-stop');
+    if (stop) stop.disabled = !fairRunning;
+  }
+
+  function fairComboSettings() {
+    return {
+      exactLots:Math.max(0, Number(root?.querySelector('#hk-fair-exact-lots')?.value || 0))
+    };
+  }
+
+  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
+    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
+  }
+
+  function renderFairBonusChoices() {
+    const box = root?.querySelector('#hk-fair-bonus-lots'); if (!box) return;
+    const available = new Set(availableFairBonusLots());
+    box.innerHTML = `<span>${tr('fairBonusLots')}</span><div>${[5,10,30].map(quantity =>
+      `<label class="hk-check ${available.has(quantity) ? 'available' : 'unavailable'}"><input type="checkbox" data-fair-bonus="${quantity}" ${selectedFairBonusLots.has(quantity) ? 'checked' : ''} ${available.has(quantity) ? '' : 'disabled'}><b>×${quantity}</b></label>`).join('')}</div>`;
+    box.querySelectorAll('[data-fair-bonus]').forEach(input => input.onchange = () => {
+      const quantity = Number(input.dataset.fairBonus);
+      if (input.checked) selectedFairBonusLots.add(quantity); else selectedFairBonusLots.delete(quantity);
+    });
+  }
+
+  function fairPresets() {
+    const value = load().fairPresets;
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  }
+
+  function refreshFairPresets(selectName = '') {
+    if (!fairPresetSelect) return;
+    const names = Object.keys(fairPresets()).sort((a, b) => a.localeCompare(b, locale()));
+    fairPresetSelect.innerHTML = `<option value="">${tr('fairSavedSettings')}</option>` +
+      names.map(name => `<option value="${escapeHtml(name)}" ${name === selectName ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
+  }
+
+  function fairPresetSnapshot() {
+    return {
+      fairId:selectedFairId,
+      lots:[...selectedFairLots],
+      slotGroups:Object.fromEntries([...selectedFairSlotRules].map(([lotId, groups]) => [lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)}])),
+      currency:selectedFairCurrency,
+      exactLots:fairComboSettings().exactLots, bonusLots:[...selectedFairBonusLots],
+      buyLimit:Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1)),
+      rerollLimit:Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0)),
+      premiumReroll:Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)
+    };
+  }
+
+  function saveFairPreset(existingName = '') {
+    if (!selectedFairId || !selectedFairLots.size) {
+      alert(either('Сначала выберите ярмарку и хотя бы один товар', 'Choose a fair and at least one item first')); return;
+    }
+    const name = existingName || prompt(tr('settingName'));
+    if (!name?.trim()) return;
+    const normalized = name.trim();
+    const all = fairPresets();
+    all[normalized] = fairPresetSnapshot();
+    save({fairPresets:all});
+    refreshFairPresets(normalized);
+    log(tr('settingSaved', {name:normalized}), 'ok');
+  }
+
+  function loadFairPreset(name) {
+    const preset = fairPresets()[name];
+    if (!preset) return;
+    if (!fairCatalog.length) {
+      alert(either('Сначала нажмите «Считать ярмарку»', 'Press “Read fair” first'));
+      refreshFairPresets(); return;
+    }
+    if (fairStates().some(state => String(state.id) === String(preset.fairId))) selectedFairId = String(preset.fairId);
+    const availabl
+
+===== function bossStateRows( =====
+
+      'clans_influence','clansInfluence','influence','total_player_level','totalPlayerLevel',
+      'player_level_sum','playerLevelSum','players_level','playersLevel','player_level','playerLevel'
+    ],
+    alliance_defense:[
+      'total_defense','totalDefense','total_defence','totalDefence','alliance_defense','allianceDefense',
+      'alliance_defence','allianceDefence','defense_points','defensePoints','defence_points','defencePoints',
+      'total_defense_points','totalDefensePoints','total_defence_points','totalDefencePoints',
+      'war_defense','warDefense','war_defence','warDefence','protection_points','protectionPoints',
+      'total_protection','totalProtection','defense','defence','protection'
+    ]
+  };
+
+  function finiteMetric(value) {
+    const parsed=Number(value);
+    return Number.isFinite(parsed)&&parsed>=0?parsed:null;
+  }
+
+  function metricFromObject(value, keys) {
+    if(!value||typeof value!=='object')return null;
+    for(const key of keys){
+      if(!Object.prototype.hasOwnProperty.call(value,key))continue;
+      const parsed=finiteMetric(value[key]);
+      if(parsed!==null)return parsed;
+    }
+    return null;
+  }
+
+  function allianceChildren(row, entity) {
+    const result=[],seen=new Set();
+    for(const source of [entity,row]){
+      if(!source||typeof source!=='object')continue;
+      for(const key of ['clans','alliance_clans','allianceClans','members','items','list','participants']){
+        const list=source[key];
+        if(!Array.isArray(list))continue;
+        for(const child of list){
+          if(!child||typeof child!=='object'||seen.has(child))continue;
+          seen.add(child);result.push(child);
+        }
+      }
+    }
+    return result;
+  }
+
+  function allianceMetric(row, entity, kind) {
+    const keys=ALLIANCE_RATING_METRICS[kind]||[];
+    const direct=metricFromObject(entity,keys) ?? metricFromObject(row,keys);
+    if(direct!==null)return direct;
+    const children=allianceChildren(row,entity);
+    if(!children.length)return null;
+    let total=0,found=0;
+    for(const child of children){
+      const node=child.clan||child.member||child;
+      const value=metricFromObject(node,keys) ?? metricFromObject(child,keys);
+      if(value===null)continue;
+      total+=value;found+=1;
+    }
+    return found?total:null;
+  }
+
+  function allianceCandidateScore(list) {
+    if(!Array.isArray(list)||!list.length)return -1;
+    let score=0;
+    for(const row of list.slice(0,12)){
+      if(!row||typeof row!=='object')continue;
+      const entity=row.alliance||row;
+      const keys=new Set([...Object.keys(row),...Object.keys(entity||{})].map(String));
+      if(row.alliance||keys.has('alliance_id')||keys.has('allianceId')||keys.has('alliance_name')||keys.has('allianceName'))score+=5;
+      if(keys.has('clans')||keys.has('alliance_clans')||keys.has('allianceClans')||keys.has('core_clan')||keys.has('coreClan'))score+=4;
+      for(const metricKeys of Object.values(ALLIANCE_RATING_METRICS)){
+        if(metricKeys.some(key=>keys.has(key))){score+=3;break;}
+      }
+      if(firstText(entity?.name,entity?.title,row.name,row.alliance_name,row.allianceName))score+=1;
+    }
+    return score;
+  }
+
+  function normalizeAllianceRatings(documentValue) {
+    const arrays=leaderboardArrays(documentValue)
+      .map(list=>({list,score:allianceCandidateScore(list)}))
+      .filter(item=>item.score>0)
+      .sort((a,b)=>b.score-a.score||b.list.length-a.list.length);
+    for(const candidate of arrays){
+      const normalized=[],names=new Set();
+      for(const row of candidate.list){
+        if(!row||typeof row!=='object')continue;
+        const entity=row.alliance||row;
+        const name=firstText(entity?.name,entity?.title,entity?.alliance_name,entity?.allianceName,row.alliance_name,row.allianceName,row.name,row.title);
+        if(!name||names.has(name))continue;
+        const metrics={
+          alliance_power:allianceMetric(row,entity,'alliance_power'),
+          alliance_influence:allianceMetric(row,entity,'alliance_influence'),
+          alliance_defense:allianceMetric(row,entity,'alliance_defense')
+        };
+        if(Object.values(metrics).every(value=>value===null))continue;
+        names.add(name);normalized.push({name,...metrics});
+      }
+      if(normalized.length){
+        const result={};
+        for(const kind of Object.keys(ALLIANCE_RATING_METRICS)){
+          const rows=normalized.filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+            .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name)).slice(0,100)
+            .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+          if(rows.length)result[kind]=rows;
+        }
+        if(Object.keys(result).length)return result;
+      }
+    }
+    try{
+      const objects=deepObjects(documentValue).slice(0,40);
+      const keys=[...new Set(objects.flatMap(value=>Object.keys(value||{})))].filter(key=>/alliance|power|influence|defen|protect|level/i.test(key)).slice(0,80);
+      recordDiagnostic('alliance-rating-schema',{keys});
+    }catch(_){}
+    return {};
+  }
+
+  async function publicSnapshotServerJson(documentValue, retry = true) {
+    return licensedServerJson(PUBLIC_SNAPSHOT_API, '', documentValue, retry, 'public-snapshot');
+  }
+
+  let bossSnapshot = null;
+  let bossLastReadAt = 0;
+  let warSnapshot = null;
+  let warLastReadAt = 0;
+
+  function warTimestamp(value) {
+    const number=Number(value||0);
+    if(!Number.isFinite(number)||number<=0)return '';
+    const ms=number<1e12?number*1000:number;
+    try{return new Date(ms).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(_){return '';}
+  }
+
+  async function readPublicWar() {
+    let endpointRead = false;
+    for (const path of ['/clan/active_battles','/clan/active_defense_wars']) {
+      try { const value = await apiJson(path, 'GET', null, true, 1); endpointRead = true; const war = normalizePublicWar(value); if (war) return {read:true,war}; }
+      catch (_) {}
+    }
+    return {read:endpointRead,war:null};
+  }
+
+  function bossStateRows(documentValue = bossSnapshot || hkStateStore.snapshot || playerDocument) {
+        const rows=[]; const add=(kind,value)=>{if(value==null)return;if(Array.isArray(value))value.forEach((row,index)=>rows.push({kind,index,row}));else if(typeof value==='object')rows.push({kind,index:0,row:value});};
+        add('player_bosses',documentValue?.player_bosses); add('player_regional_bosses',documentValue?.player_regional_bosses); add('boss_battle',documentValue?.boss_battle); return rows;
+      }
+      function bossRowLabel(v,i=0){return gameText(v?.name||v?.title||v?.boss?.name||v?.boss_name||v?.regional_boss_id||v?.boss_id||v?.id||(either('Босс ','Boss ')+(i+1)));}
+      function bossRowSummary(v){const f=[[either('Уровень','Level'),v?.level??v?.boss_level??v?.tier],[either('Здоровье','Health'),v?.health??v?.hp??v?.current_health],[either('Макс. здоровье','Max health'),v?.max_health??v?.max_hp],[either('Урон','Damage'),v?.damage??v?.player_damage??v?.total_damage],[either('Попытки','Attempts'),v?.attempts??v?.tries??v?.battle_count],[either('Статус','Status'),v?.status??v?.state]].filter(([,x])=>x!==undefined&&x!==null&&String(x)!=='');return f.map(([k,x])=>'<span><small>'+escapeHtml(k)+'</small><b>'+escapeHtml(typeof x==='number'?Number(x).toLocaleString(locale()):String(x))+'</b></span>').join('');}
+      function renderBosses(){
+        const box=root?.querySelector('#hk-boss-content'); if(!box)return; const rows=bossStateRows(),profile=pitForecastProfile('boss');
+        const body=rows.length?rows.map(({kind,index,row})=>'<article class="hk-boss-row"><div><b>'+escapeHtml(bossRowLabel(row,index))+'</b><small>'+escapeHtml(kind)+'</small></div><div class="hk-boss-stats">'+bossRowSummary(row)+'</div></article>').join(''):'<p class="hk-muted">'+either('Сейчас нет активных данных регионального босса.','There is no active regional boss data right now.')+'</p>';
+        box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Боссы','Bosses')+'</h3><small>'+either('Игровое состояние боссов и Ямы боссов','Game boss state and Boss Pit data')+'</small></div><button id="hk-boss-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><div class="hk-boss-pit"><span><small>'+either('Яма боссов — уровень','Boss Pit level')+'</small><b>'+(Number(profile?.localLevel||0)||'—')+'</b></span><span><small>'+either('Сила','Power')+'</small><b>'+(Number(profile?.playerPower||0)?Number(profile.playerPower).toLocaleString(locale()):'—')+'</b></span></div>'+body+'<p class="hk-muted">'+(bossLastReadAt?either('Обновлено','Updated')+': '+new Date(bossLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):either('Нажмите «Обновить».','Press Refresh.'))+'</p>';
+        box.querySelector('#hk-boss-refresh')?.addEventListener('click',()=>void refreshBosses(true));
+      }
+      async function refreshBosses(force=false){
+        if(!requireLicense())return null;
+        try{playerDocument=await apiJson('/player/me','POST');bossSnapshot=hkStateStore.snapshot||playerDocument;bossLastReadAt=Date.now();renderBosses();if(force)log(either('Данные боссов обновлены','Boss data refreshed'),'ok');return bossSnapshot;}
+        catch(error){log(either('Ошибка чтения боссов','Boss read error')+': '+(error?.message||error),'warn');renderBosses();return null;}
+      }
+    
+      function renderWars() {
+    const box=root?.querySelector('#hk-war-content');
+    if(!box)return;
+    const war=warSnapshot;
+    if(!war){
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
+    }else{
+      const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
+      const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
+      const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
+        '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong></div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong></div></div>'+
+        '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
+    }
+    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
+  }
+
+  async function refreshWars(force=false) {
+    if(!requireLicense())return null;
+    try{
+      const result=await readPublicWar();
+      warSnapshot=result?.war||null;
+      warLastReadAt=Date.now();
+      renderWars();
+      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
+      return warSnapshot;
+    }catch(error){
+      log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
+      renderWars();
+      return null;
+    }
+  }
+
+  async function readPublicRatings() {
+    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
+    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
+      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
+      catch (_) {}
+    }
+    try {
+      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
+      Object.assign(ratings, normalizeAllianceRatings(value));
+    } catch (_) {}
+    return ratings;
+  }
+
+  async function collectPublicSnapshot(force = false) {
+    if (publicSnapshotPromise || !licenseState.allowed || !licenseState.token || !apiHeaders.Authorization) return publicSnapshotPromise;
+    if (!force && Date.now() - lastPublicSnapshot < PUBLIC_SNAPSHOT_INTERVAL_MS) return null;
+    publicSnapshotPromise = (async () => {
+      try {
+        const [warResult, ratings] = await Promise.all([readPublicWar(), readPublicRatings()]);
+        const payload = {ratings}; if (warResult.read) payload.war = warResult.war;
+        if (!warResult.read && !Object.keys(ratings).length) return;
+        await publicSnapshotServerJson(payload); lastPublicSnapshot = Date.now();
+      } catch (error) { console.warn('[HK] public snapshot failed', error); }
+      finally { publicSnapshotPromise = null; }
+    })();
+    return publicSnapshotPromise;
+  }
+
+  async function loadFair() {
+    if (!requireLicense()) return;
+    try {
+      log('Считываю ярмарки…');
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const visibleFairs = visibleFairStates();
+      if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
+      selectedFairLots.clear();
+      selectedFairSlotRules.clear();
+      renderFair();
+      log(`Ярмарка считана: ${visibleFairs.length} разделов, ${fairCatalog.length} лотов`, 'ok');
+    } catch (error) { log(`Ошибка ярмарки: ${error.message}`, 'bad'); }
+  }
+
+  function costVisual(cost, multiplier = 1) {
+    const parts = costParts(cost);
+    if (!parts.length) return '<span>0</span>';
+    return parts.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${(part.quantity * multiplier).toLocaleString(locale())}</b>`).join('');
+  }
+
+  function addProjectedCost(target, part, multiplier = 1) {
+    if (!part?.id) return;
+    const key = `${part.kind}|${part.id}`;
+    const current = target.get(key) || {...part, quantity:0};
+    current.quantity += Math.max(0, Number(part.quantity || 0)) * Math.max(0, Number(multiplier || 0));
+    target.set(key, current);
+  }
+
+  function walletForecastHtml(parts) {
+    const values = [...parts.values()].filter(part => part?.id).sort((a, b) => a.id.localeCompare(b.id));
+    if (!values.length) return '';
+    return `<div class="hk-wallet-forecast">${values.map(part => {
+      const balance = walletAmount(part.id);
+      const spend = Math.max(0, Number(part.quantity || 0));
+      const known = balance !== null;
+      return `<div class="hk-wallet-row">
+        <span class="hk-wallet-currency">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${escapeHtml(paymentLabel(part.id))}</b></span>
+        <span>${tr('balance')}: <b>${known ? balance.toLocaleString(locale()) : '—'}</b> · ${either('Макс. возможный расход','Maximum possible spend')}: <b>${spend.toLocaleString(locale())}</b></span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function fairProjectedCosts() {
+    const totals = new Map();
+    const state = fairState(selectedFairId);
+    const rows = fairRowsForState(state);
+    const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
+    const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
+    const rerollLimit = Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0));
+    const relevantRows = selectedRows.length ? selectedRows : rows;
+    const maximumLots = new Map();
+    for (const row of relevantRows) for (const part of costParts(row.cost)) {
+      const key = `${part.kind}|${part.id}`;
+      const current = maximumLots.get(key);
+      if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
+    }
+    for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
+    for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollLimit);
+    return totals;
+  }
+
+  function renderFair() {
+    if (!fairTypes || !fairLots) return;
+    if (!fairCatalog.length) {
+      fairTypes.innerHTML = `<p class="hk-muted">${tr('readFirst')}</p>`;
+      fairLots.innerHTML = '';
+      const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
+      updateFairControls(); return;
+    }
+    const states = visibleFairStates();
+    fairTypes.innerHTML = states.map(state => {
+      const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
+      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
+        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
+    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
+    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
+      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
+    });
+    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
+    const allRows = fairRowsForState(fairState(selectedFairId));
+    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
+    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
+    const currencyBar = root?.querySelector('#hk-fair-currencies');
+    if (currencyBar) {
+      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
+        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
+        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
+      }).join('');
+      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
+    }
+    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
+      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
+    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
+      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('blocked')}</small>`}</button>`).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
+    fairLots.querySelectorAll('[data-lot]').forEach(button => button.onclick = () => {
+      const row = fairCatalog.find(value => value.lotId === button.dataset.lot);
+      if (!row?.safe) { log(either('Этот лот заблокирован: неизвестная валюта', 'This lot is blocked: unknown currency'), 'warn'); return; }
+      if (selectedFairLots.has(row.lotId)) {
+        selectedFairLots.delete(row.lotId);
+        selectedFairSlotRules.delete(row.lotId);
+      } else {
+        selectedFairLots.add(row.lotId);
+        const options = fairSlotOptions();
+        selectedFairSlotRules.set(row.lotId, {regular:options.some(value => !value.vip), vip:options.some(value => value.vip)});
+      }
+      renderFair();
+    });
+    renderFairSlotRules();
+    updateFairControls();
+  }
+
+  function fairSlotOptions(state = fairState(selectedFairId)) {
+    const fairConfigs = shopViewDocument?.fairs || shopViewDocument?.fair || [];
+    const config = (Array.isArray(fairConfigs) ? fairConfigs : []).find(value => String(value?.id) === String(state?.id));
+    const metaById = new Map((config?.fair_slots || []).map(slot => [String(slot?.id), slot]));
+    return [...(state?.fair_slots || [])]
+      .sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0))
+      .map((slot, index) => ({slot, index, key:String(index), vip:Boolean(slot?.is_vip || metaById.get(String(slot?.id))?.is_vip)}));
+  }
+
+  function renderFairSlotRules() {
+    if (!fairSlotRules) return;
+    const slots = fairSlotOptions();
+    if (!selectedFairLots.size || !slots.length) {
+      fairSlotRules.innerHTML = '';
+      fairSlotRules.style.display = 'none';
+      return;
+    }
+    fairSlotRules.style.display = '';
+    const hasRegular = slots.some(value => !value.vip);
+    const hasVip = slots.some(value => value.vip);
+    for (const lotId of selectedFairLots) {
+      if (!selectedFairSlotRules.has(lotId)) selectedFairSlotRules.set(lotId, {regular:hasRegular, vip:hasVip});
+    }
+    fairSlotRules.innerHTML = `<h3>${tr('allowedCells')}</h3><p class="hk-muted">${tr('selectCellsHint')}</p>` +
+      [...selectedFairLots].map(lotId => {
+        const row = fairCatalog.find(value => value.lotId === lotId);
+        const allowed = selectedFairSlotRules.get(lotId) || {regular:hasRegular, vip:hasVip};
+        return `<div class="hk-slot-rule"><div class="hk-slot-product">${fairIconHtml(row?.icon || '', 'hk-price-icon')}<b>×${Number(row?.rewardQuantity || 0).toLocaleString(locale())}</b></div>
+          <div class="hk-slot-buttons"><button class="${allowed.regular ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="regular" ${hasRegular ? '' : 'disabled'}>${tr('regularSlots')}: ${tr(allowed.regular ? 'yes' : 'no')}</button>
+          <button class="vip ${allowed.vip ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="vip" ${hasVip ? '' : 'disabled'}>♛ ${tr('vipSlots')}: ${tr(allowed.vip ? 'yes' : 'no')}</button></div></div>`;
+      }).join('');
+    fairSlotRules.querySelectorAll('[data-rule-lot]').forEach(button => button.onclick = () => {
+      const allowed = selectedFairSlotRules.get(button.dataset.ruleLot) || {regular:hasRegular, vip:hasVip};
+      allowed[button.dataset.ruleGroup] = !allowed[button.dataset.ruleGroup];
+      selectedFairSlotRules.set(button.dataset.ruleLot, allowed);
+      renderFairSlotRules(); updateFairControls();
+    });
+  }
+
+  function updateFairControls() {
+    const selected = root?.querySelector('#hk-fair-selected');
+    if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
+    const start = root?.querySelector('#hk-fair-start');
+    const rulesValid = [...selectedFairLots].every(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
+    });
+    if (start) start.disabled = fairRunning || !selectedFairId || !selectedFairLots.size || !rulesValid;
+    const stop = root?.querySelector('#hk-fair-stop');
+    if (stop) stop.disabled = !fairRunning;
+  }
+
+  function fairComboSettings() {
+    return {
+      exactLots:Math.max(0, Number(root?.querySelector('#hk-fair-exact-lots')?.value || 0))
+    };
+  }
+
+  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
+    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
+  }
+
+  function renderFairBonusChoices() {
+    const box = root?.querySelector('#hk-fair-bonus-lots'); if (!box) return;
+    const available = new Set(availa
+
+===== HK_STAGE2J_BOSSES_REV =====
+
+        for (const value of [fiber.memoizedProps?.value, fiber.pendingProps?.value]) {
+          try {
+            if (value?.generalViewStore && typeof value.generalViewStore === 'object') generalViewStore = value.generalViewStore;
+            if (setPlayer(value?.appStore?.player)) {
+              recordDiagnostic('game-bridge-discovered',{scanned,discoveries});
+              return true;
+            }
+          } catch (_) {}
+        }
+        if (fiber.child) stack.push(fiber.child);
+        if (fiber.sibling) stack.push(fiber.sibling);
+        if (fiber.alternate) stack.push(fiber.alternate);
+      }
+      return ready();
+    };
+    const refreshHamsterCollection = (beforeUnits, afterUnits) => {
+      if (!Number.isFinite(beforeUnits) || !Number.isFinite(afterUnits) || beforeUnits === afterUnits) return;
+      const collection = generalViewStore?.hamsterCollection;
+      if (!collection || typeof collection.mount !== 'function' || !/\/hamsters(?:[/?#]|$)/i.test(String(location.href || ''))) return;
+      try { collection.mount(false); } catch (_) {}
+    };
+    const flush = async (force = false) => {
+      if (flushing) { while (flushing) await sleep(50); return !dirty; }
+      if (!force && !dirty) return true;
+      flushing = true;
+      clearTimer();
+      try {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (!discover(attempt > 0)) { failures += 1; return false; }
+          const current = player, task = refreshTask, taskThis = refreshThis;
+          const originalUpdate = current?.update, originalDelete = current?.deleteVipStatus;
+          if (typeof originalUpdate !== 'function' || typeof task !== 'function') { player=null; refreshTask=null; refreshThis=null; failures += 1; continue; }
+          const updated = await new Promise(resolve => {
+            let settled = false, timeout = null, wrapped = null;
+            const settle = ok => {
+              if (settled) return; settled = true;
+              if (timeout) clearTimeout(timeout);
+              try { if (current.update === wrapped) current.update = originalUpdate; } catch (_) {}
+              try { if (typeof originalDelete === 'function') current.deleteVipStatus = originalDelete; } catch (_) {}
+              resolve(ok);
+            };
+            try {
+              wrapped = function(...args) {
+                const before = Number(current?.hamsterCollection?.unitsCount);
+                try { return originalUpdate.apply(this,args); }
+                finally {
+                  const after = Number(current?.hamsterCollection?.unitsCount);
+                  refreshHamsterCollection(before,after);
+                  settle(true);
+                }
+              };
+              current.update = wrapped;
+              if (typeof originalDelete === 'function') current.deleteVipStatus = () => {};
+              let returned;
+              try { returned = task.call(taskThis); }
+              finally { try { if (typeof originalDelete === 'function') current.deleteVipStatus = originalDelete; } catch (_) {} }
+              if (returned?.catch) returned.catch(() => settle(false));
+              if (!settled) timeout = setTimeout(() => settle(false), 8000);
+            } catch (_) { settle(false); }
+          });
+          if (updated) {
+            dirty = false; lastFlushAt = Date.now(); flushes += 1;
+            recordDiagnostic('game-bridge-flush',{attempt:attempt+1,flushes});
+            return true;
+          }
+          failures += 1;
+          player=null; refreshTask=null; refreshThis=null;
+          await sleep(attempt ? 1800 : 700);
+        }
+        return false;
+      } finally { flushing = false; }
+    };
+    const schedule = (delay = 180) => {
+      if (!dirty) return;
+      clearTimer();
+      timer = setTimeout(() => { timer=null; if (dirty && !hkRunner.running) void flush(false); }, Math.max(0,Number(delay)||0));
+    };
+    const noteMutation = (path, method = 'POST') => {
+      const verb = String(method || 'GET').toUpperCase();
+      const route = String(path || '').split('?')[0];
+      if (['GET','HEAD','OPTIONS'].includes(verb) || route === '/player/me' || route === '/rumors/search' || route === '/regional_boss/battle_state') return;
+      dirty = true;
+      recordDiagnostic('game-bridge-dirty',{path:route,method:verb});
+      if (!hkRunner.running) schedule(180);
+    };
+    const summary = () => ({ready:ready(),dirty,flushing,lastDiscoveryAt,lastFlushAt,discoveries,flushes,failures,hasGeneralViewStore:!!generalViewStore});
+    return {discover,flush,schedule,noteMutation,summary,get ready(){return ready();},get dirty(){return dirty;}};
+  })();
+
+  // Runner completion is the safest place to refresh the game's visible React
+  // state after a batch. Individual requests only mark the bridge dirty.
+  const hkRunnerFinishBase = hkRunner.finish.bind(hkRunner);
+  hkRunner.finish = step => { hkRunnerFinishBase(step); if (hkGameBridge.dirty) void hkGameBridge.flush(true); };
+  const hkRunnerFailBase = hkRunner.fail.bind(hkRunner);
+  hkRunner.fail = error => { hkRunnerFailBase(error); if (hkGameBridge.dirty) hkGameBridge.schedule(250); };
+
+  runtime.stateStore = hkStateStore;
+  const HK_STAGE2_RUNNER_REV = 'stage2a-20260919-r1';
+  // HK_PIT_LIVE_VERIFY_V1 pit-live-verify-20260920-r1
+  // HK_BUSINESS_LIVE_VERIFY_V1 business-live-verify-20260920-r1
+  // HK_FAIR_SHOP_LIVE_VERIFY_V1 fair-shop-live-verify-20260920-r1
+  // HK_RECIPES_LIVE_VERIFY_V1 recipes-live-20260920-r1
+  // HK_MUTATION_RETRY_LIVE_V1 mutation-retry-live-20260920-r1
+  const HK_STAGE2B_RUNNER_REV = 'stage2b-20260919-r1';
+  const HK_STAGE2_STATE_REV = 'stage2c-state-20260919-r1';
+  const HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1';
+  const HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1';
+  const HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1';
+  const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
+  const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
+  const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
+  runtime.runner = hkRunner;
+  runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
+  runtime.legacyRunnerStageB = HK_STAGE2B_RUNNER_REV;
+  runtime.stateMigrationStage = HK_STAGE2_STATE_REV;
+  runtime.resourceBusinessRunnerStage = HK_STAGE2D_RUNNER_REV;
+  runtime.mapRunnerStage = HK_STAGE2E_RUNNER_REV;
+  runtime.clanRunnerStage = HK_STAGE2F_RUNNER_REV;
+  runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
+  runtime.warsStage = HK_STAGE2H_WARS_REV;
+  runtime.buildingsExploreStage = HK_STAGE2I_BUILDINGS_REV;
+  runtime.bossesStage = HK_STAGE2J_BOSSES_REV;
+  runtime.mutationGate = hkMutationGate;
+  runtime.gameBridge = hkGameBridge;
+  let clanSkillScanning = false;
+  let clanSkillRefreshing = false;
+  let resourceBuildings = [];
+  let resourceBusy = false;
+  let resourceRepeatCount = Math.max(1, Math.min(10, Math.trunc(Number(load().resourceRepeatCount || 1))));
+  let resourceMaximumMode = false;
+  let resourceSelectedKind = String(load().resourceSelectedKind || 'nut');
+  const RESOURCE_BUILDING_TYPES = {
+    nut:{marker:'cur_nut', eventMarker:'mf_evts_main_nut', generatorMarker:'resources_1', nameRu:'Ореховая', nameEn:'Nut Station', buildingRu:'Станция снабжения', buildingEn:'Supply Station'},
+    build:{marker:'cur_build', eventMarker:'mf_evts_main_build', generatorMarker:'resources_2', nameRu:'Инструментовая', nameEn:'Tool Workshop', buildingRu:'Индустриальный узел', buildingEn:'Industrial Hub'},
+    pit:{marker:'cur_pit_pass', eventMarker:'mf_evts_main_pittoken', generatorMarker:'resources_3', nameRu:'Жетоновая', nameEn:'Token Workshop', buildingRu:'Павильон спорта', buildingEn:'Sports Pavilion'}
+  };
+  if (!RESOURCE_BUILDING_TYPES[resourceSelectedKind]) resourceSelectedKind = 'nut';
+  const RESOURCE_PROTECTED_COST_IDS = new Set(['cur_fame','cur_power','cur_daily_combat_hamsters']);
+
+  // Growth module (HK 1.13): live state is loaded automatically when a Growth
+  // tab opens and is refreshed again before a run. Opening a tab never spends
+  // resources; mutations start only from an explicit Run action.
+  const GROWTH_STATIC_API = 'https://cdn-prod-static-api.hwgame.cloud';
+  const GROWTH_ACTION_SAFETY = 5000;
+  const GROWTH_LOOTBOX_BATCH = 1000;
+  const GROWTH_GENERAL_BALL_PREFIX = 'item_hball_hgen_';
+  const GROWTH_HAMSTER_BASE_MAX_LEVEL = 150;
+  const GROWTH_HAMSTER_BUDGET_ID = 'cur_cap';
+  const GROWTH_GENERAL_BUDGET_ID = 'item_pit_token';
+  const GROWTH_COPY_PRIORITY_DEFAULT = [[19,20],[18,20],[4,5],[11,12],[1,2],[7,8],[3,5],[17,20],[10,12],[2,5],[9,12],[6,8]];
+  let growthState = null;
+  let growthBusy = false;
+  let growthMenuLoading = false;
+  let growthLoadPromise = null;
+  let growthItemsDocument = null;
+  let growthHamstersStaticDocument = null;
+  let growthShopDocument = null;
+  let growthClientConfigDocument = null;
+  let growthLastLoadedAt = 0;
+
+  function log(message, type = '') {
+    message = localizeMessage(message);
+    const time = new Date().toLocaleTimeString(locale(), {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    if (logBox) {
+      const row = document.createElement('div');
+      row.className = type ? `hk-log-${type}` : '';
+      row.textContent = `[${time}] ${message}`;
+      logBox.prepend(row);
+      while (logBox.children.length > 80) logBox.lastElementChild.remove();
+    }
+    if (statusLine) statusLine.textContent = message;
+  }
+
+  function headersToObject(headers) {
+    const result = {};
+    try { new Headers(headers || {}).forEach((value, key) => result[key] = value); } catch (_) {}
+    return result;
+  }
+
+  function captureAuthorization(url, headers) {
+    if (!url) return false;
+    const resolvedUrl = new URL(url, location.href);
+    // The shared catalog has its own bearer token. Never let that request
+    // replace the captured Hamster King API address and game authorization.
+    if (resolvedUrl.origin === new URL(LICENSE_URL).origin) return false;
+    const auth = Object.entries(headers || {}).find(([key]) => key.toLowerCase() === 'authorization');
+    if (!auth?.[1]) return false;
+    apiBase = resolvedUrl.origin;
+    apiHeaders = {Authorization: auth[1], Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json'};
+    authUpdatedAt = Date.now();
+    return true;
+  }
+
+  function jwtPayload(token) {
+    try {
+      const encoded = String(token || '').replace(/^Bearer\s+/i,'').split('.')[1];
+      if (!encoded) return null;
+      const padded = encoded.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(encoded.length/4)*4,'=');
+      return JSON.parse(atob(padded));
+    } catch (_) { return null; }
+  }
+
+  function jwtExpiration(token) {
+    return Number(jwtPayload(token)?.exp || 0) * 1000;
+  }
+
+  function gameBearerPlayerId(token) {
+    const payload = jwtPayload(token) || {};
+    return clean(payload.id ?? payload.player_id ?? payload.playerId ?? payload.user_id ?? payload.sub ?? '');
+  }
+
+  function sameGameJwt(currentToken, candidateToken) {
+    const current = jwtPayload(currentToken);
+    const candidate = jwtPayload(candidateToken);
+    if (!current || !candidate) return false;
+    const currentId = gameBearerPlayerId(currentToken);
+    const candidateId = gameBearerPlayerId(candidateToken);
+    if (currentId && candidateId) return currentId === candidateId;
+    const stableClaims = ['sub','iss','aud'];
+    let compared = 0;
+    for (const claim of stableClaims) {
+      if (current[claim] == null || candidate[claim] == null) continue;
+      compared += 1;
+      if (JSON.stringify(current[claim]) !== JSON.stringify(candidate[claim])) return false;
+    }
+    return compared > 0;
+  }
+
+  function currentGameBearer() {
+    return String(apiHeaders.Authorization || '').replace(/^Bearer\s+/i,'').trim();
+  }
+
+  function refreshStoredGameAuthorization() {
+    let newest = '', newestExpiration = 0;
+    const pattern = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g;
+    const currentAuthorization = apiHeaders.Authorization || '';
+    for (const storage of [sessionStorage, localStorage]) {
+      try {
+        for (let index = 0; index < storage.length; index += 1) {
+          const raw = String(storage.getItem(storage.key(index)) || '');
+          if (!raw || raw.length > 1_000_000) continue;
+          for (const token of raw.match(pattern) || []) {
+            if (currentAuthorization && !sameGameJwt(currentAuthorization, token)) continue;
+            const expiration = jwtExpiration(token);
+            if (expiration > newestExpiration && expiration > Date.now() + 5000) {
+              newest = token; newestExpiration = expiration;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    if (!newest) return false;
+    const authorization = `Bearer ${newest}`;
+    if (apiHeaders.Authorization === authorization) return false;
+    apiHeaders = {...apiHeaders, Authorization:authorization, Accept:'application/json, text/plain, */*', 'Content-Type':'application/json'};
+    authUpdatedAt = Date.now();
+    setHealth('auth', true, 'токен восстановлен из браузера');
+    recordDiagnostic('auth-restored',{fingerprint:diagnosticFingerprint(newest), expiresAt:newestExpiration});
+    return true;
+  }
+
+  function readNativeGameAuthParams() {
+    try {
+      const webApp = window.Telegram?.WebApp;
+      const initData = String(webApp?.initData || '');
+      if (webApp && webApp.platform && webApp.platform !== 'unknown' && initData) {
+        return {authType:'MiniApp', authData:initData.replaceAll('&','%26'), platform:'TG', source:'telegram'};
+      }
+    } catch (_) {}
+    try {
+      const stored = JSON.parse(localStorage.getItem('auth-data') || 'null');
+      const authType = clean(stored?.params?.auth_type);
+      const authData = clean(stored?.params?.auth_data);
+      const remembered = clean(localStorage.getItem('remember-me'));
+      if (!authType || !authData || remembered !== authType) return null;
+      return {authType, authData, platform:'WEB', source:'browser'};
+    } catch (_) { return null; }
+  }
+
+  async function refreshGoogleAuthData(params) {
+    if (String(params?.authType || '') !== 'Google') return params;
+    const expiration = jwtExpiration(params.authData);
+    if (expiration > Date.now() + GAME_AUTH_REFRESH_EARLY_MS) return params;
+    const previous = String(params.authData || '');
+    const prompt = window.google?.accounts?.id?.prompt;
+    if (typeof prompt !== 'function') return null;
+    try { prompt.call(window.google.accounts.id); } catch (_) { return null; }
+    const deadline = Date.now() + 6500;
+    while (Date.now() < deadline) {
+      await sleep(250);
+      const next = readNativeGameAuthParams();
+      if (next?.authType !== 'Google' || !next.authData || next.authData === previous) continue;
+      if (jwtExpiration(next.authData) > Date.now() + 5000) return next;
+    }
+    return null;
+  }
+
+  async function checkGameBearer(token) {
+    if (!token) return false;
+    const request = nativeNetworkFetch || window.fetch.bind(window);
+    const base = apiBase || GAME_API_FALLBACK;
+    try {
+      const {response}=await gameFetchText(request,`${base}/auth/check`,{method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${token}`,Accept:'application/json, text/plain, */*'}},12000);
+      recordDiagnostic('auth-check',{status:response.status, ok:response.ok, fingerprint:diagnosticFingerprint(token)});
+      return response.ok;
+    } catch (error) {
+      recordDiagnostic('auth-check-network-error',{error:error?.message || error});
+      return false;
+    }
+  }
+
+  async function createFreshGameAuthorization(reason = 'refresh', expectedToken = '') {
+    if (authCreatePromise) return authCreatePromise;
+    authCreatePromise = (async () => {
+      let params = readNativeGameAuthParams();
+      if (!params) { recordDiagnostic('auth-create-unavailable',{reason}); return ''; }
+      if (params.authType === 'Google') {
+        params = await refreshGoogleAuthData(params);
+        if (!params) { recordDiagnostic('auth-google-refresh-unavailable',{reason}); return ''; }
+      }
+      const base = apiBase || GAME_API_FALLBACK;
+      const url = new URL(`${base}/auth/create`);
+      url.searchParams.set('auth_type', params.authType);
+      url.searchParams.set('auth_data', params.authData);
+      url.searchParams.set('platform', params.platform);
+      recordDiagnostic('auth-create-start',{reason, authType:params.authType, platform:params.platform, source:params.source});
+      const request = nativeNetworkFetch || window.fetch.bind(window);
+      try {
+        const {response,text}=await gameFetchText(request,url,{method:'POST',cache:'no-store',headers:{Accept:'application/json, text/plain, */*'}},15000);
+        let data=null;try{data=JSON.parse(text);}catch(_){}
+        const token = clean(data?.token);
+        if (!response.ok || !token) { recordDiagnostic('auth-create-failed',{reason,status:response.status}); return ''; }
+        if (expectedToken && !sameGameJwt(expectedToken, token)) {
+          recordDiagnostic('auth-identity-mismatch',{reason, expectedPlayerId:gameBearerPlayerId(expectedToken), receivedPlayerId:gameBearerPlayerId(token)});
+          setHealth('auth', false, 'сменился игровой аккаунт');
+          return '';
+        }
+        const knownPlayerId = playerIdentity(playerDocument?.player || {});
+        const receivedPlayerId = gameBearerPlayerId(token);
+        if (knownPlayerId && receivedPlayerId && knownPlayerId !== receivedPlayerId) {
+          recordDiagnostic('auth-player-mismatch',{reason, expectedPlayerId:knownPlayerId, receivedPlayerId});
+          setHealth('auth', false, 'аккаунт не совпадает');
+          return '';
+        }
+        try { sessionStorage.setItem('token', token); } catch (_) {}
+        apiBase = base;
+        apiHeaders = {...apiHeaders, Authorization:`Bearer ${token}`, Accept:'application/json, text/plain, */*', 'Content-Type':'application/json'};
+        authUpdatedAt = Date.now();
+        setHealth('auth', true, 'токен обновлён');
+        recordDiagnostic('auth-create-success',{reason, fingerprint:diagnosticFingerprint(token), playerId:gameBearerPlayerId(token), expiresAt:jwtExpiration(token)});
+        return token;
+      } catch (error) {
+        recordDiagnostic('auth-create-network-error',{reason,error:error?.message || error});
+        return '';
+      }
+    })();
+    try { return await authCreatePromise; } finally { authCreatePromise = null; }
+  }
+
+  async function ensureGameAuthorization(force = false, reason = 'runtime') {
+    restoreGameApiBaseFromPerformance();
+    if (!apiBase) apiBase = GAME_API_FALLBACK;
+    refreshStoredGameAuthorization();
+    let token = currentGameBearer();
+    const expiresAt = jwtExpiration(token);
+    if (!force && token && expiresAt > Date.now() + GAME_AUTH_REFRESH_EARLY_MS) {
+      setHealth('auth', true, 'токен активен');
+      return true;
+    }
+    if (token && !force && expiresAt > Date.now() + 5000) {
+      const valid = await checkGameBearer(token);
+      if (valid) { setHealth('auth', true, 'токен проверен'); return true; }
+    }
+    const fresh = await createFreshGameAuthorization(reason, token);
+    token = fresh || currentGameBearer();
+    const ok = !!token && jwtExpiration(token) > Date.now() + 5000;
+    setHealth('auth', ok, ok ? 'авторизация активна' : 'нужен повторный вход');
+    return ok;
+  }
+
+  function restoreGameApiBaseFromPerformance() {
+    if (apiBase) return true;
+    try {
+      const entries = performance.getEntriesByType('resource').slice().reverse();
+      const useful = new Set(['/player/me','/shop/view','/items','/business_items','/events','/client_config']);
+      for (const entry of entries) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.origin === new URL(LICENSE_URL).origin) continue;
+        if (!useful.has(url.pathname) && !url.pathname.startsWith('/localization/')) continue;
+        apiBase = url.origin;
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  async function bootstrapLateGameConnection() {
+    if (playerDocument && apiBase && apiHeaders.Authorization) { setHealth('game', true, 'игра подключена'); return true; }
+    const authorized = await ensureGameAuthorization(false, 'late-bootstrap');
+    if (!apiBase || !authorized) { setHealth('game', false, 'нет подключения к игре'); return false; }
+    try {
+      const documentValue = await apiJson('/player/me', 'POST', null, true, 2);
+      acceptPlayerState(`${apiBase}/player/me`, apiHeaders, documentValue, false);
+      setHealth('game', true, 'игра отвечает');
+      return true;
+    } catch (error) {
+      recordDiagnostic('late-bootstrap-failed',{error:error?.message || error});
+      setHealth('game', false, 'игра не отвечает');
+      console.warn('[HK] late connection bootstrap failed', error);
+      return false;
+    }
+  }
+
+  function acceptPlayerState(url, headers, documentValue, partial = false) {
+    if (!documentValue || typeof documentValue !== 'object') return;
+    if (!captureAuthorization(url, headers)) return;
+    // /player/me with `arguments` returns only the requested sections. Keep
+    // the rest of the last full response (advertisement, currencies, pits,
+    // etc.) instead of replacing it with that partial document.
+    setHealth('game', true, 'данные игрока получены');
+    setHealth('auth', true, 'игровая сессия активна');
+    playerDocument = partial && playerDocument ? {
+      ...playerDocument,
+      ...documentValue,
+      ...(playerDocument.player || documentValue.player ? {player:{...(playerDocument.player || {}), ...(documentValue.player || {})}} : {}),
+      ...(playerDocument.data || documentValue.data ? {data:{...(playerDocument.data || {}), ...(documentValue.data || {})}} : {})
+    } : documentValue;
+    if (partial) hkStateStore.merge(documentValue, 'player/me-partial');
+    else hkStateStore.replace(playerDocument, 'player/me');
+    playerDocument = hkStateStore.snapshot || playerDocument;
+    refreshBusinessData();
+    const player = playerDocument.player || {};
+    log(`Подключено${player.nickname ? `: ${player.nickname}` : ''}`);
+    // Checking access is required to unlock the panel. This does not scan
+    // districts or submit any map data; those actions remain manual.
+    checkLicense(player);
+    // Never scan or upload map areas automatically. The player must explicitly
+    // press "Считать карты аккаунта" in the Maps tab for that operation.
+  }
+
+  function getDeviceId() {
+    const stored = load().deviceId;
+    if (stored) return stored;
+    const value = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}_${Math.random()}`).replace(/[^A-Za-z0-9_-]/g, '');
+    save({deviceId:value});
+    return value;
+  }
+
+  function playerIdentity(player) {
+    return clean(player?.id ?? player?.player_id ?? player?.uuid ?? player?.nickname ?? '');
+  }
+
+  function licenseReason(code) {
+    return ({not_allowed:'ID не добавлен владельцем', blocked:'Лицензия заблокирована', expired:'Срок лицензии истёк',
+      device_limit:'Достигнут лимит устройств', origin_not_allowed:'Домен игры не разрешён', invalid_identity:'Не удалось определить аккаунт',
+      update_required:'Требуется обязательное обновление'}[code] || code || 'Проверка не пройдена');
+  }
+
+  function updateLicenseUI() {
+    setHealth('license', !!licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : (licenseState.checked ? licenseState.reason : 'ожидание'));
+    if (!panel) return;
+    const gate = root.querySelector('#hk-license-gate');
+    const updateBox = root.querySelector('#hk-update-banner');
+    const update = licenseState.update;
+    if (updateBox && update?.available && update?.download_url) {
+      const latest=escapeHtml(update.latest_version || '?');
+      updateBox.style.display='block';
+      updateBox.className=`hk-update${update.required ? ' required' : ''}`;
+      updateBox.innerHTML=`<b>${either('Доступно обновление','Update available')} ${latest}</b>${u
+
 ===== GROWTH_GENERAL_BUDGET_ID =====
 
                 finally {
