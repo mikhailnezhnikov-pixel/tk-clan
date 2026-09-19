@@ -1,10 +1,9 @@
-name: Deploy Clan Shop actual purchase telemetry
+name: Deploy TopKing userscript 1.17.1
 
 on:
   push:
     paths:
       - 'deploy/topking/patch_clan_shop_actual_userscript.py'
-      - '.github/workflows/deploy-clan-shop-facts-userscript.yml'
   workflow_dispatch:
 
 permissions:
@@ -36,9 +35,13 @@ jobs:
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           python3 deploy/topking/patch_clan_shop_actual_userscript.py
-          grep -q '^// @version      1.17.0$' /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.17.1$' /tmp/HamsterKingMobile.user.js
           grep -q 'HK_CLAN_SHOP_ACTUAL_FACTS_V1' /tmp/HamsterKingMobile.user.js
           grep -q '/clan-shop-facts/submit' /tmp/HamsterKingMobile.user.js
+          grep -q 'HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1' /tmp/HamsterKingMobile.user.js
+          grep -q 'HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1' /tmp/HamsterKingMobile.user.js
+          grep -Fq "const liveBureauCost = bureauCost();" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const freshEvents = allResourceEvents();" /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
 
       - name: Deploy userscript
@@ -52,14 +55,24 @@ jobs:
             node --check /tmp/HamsterKingMobile.user.js
             cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp"
             install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
-            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.0\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.1\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
             systemctl daemon-reload
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
-            grep -q "^// @version      1.17.0$" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -q "^// @version      1.17.1$" /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -q "HK_CLAN_SHOP_ACTUAL_FACTS_V1" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -q "HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -q "HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1" /opt/hamsterking-license/HamsterKingMobile.user.js
             node --check /opt/hamsterking-license/HamsterKingMobile.user.js
           '
+
+      - name: Round-trip verify userscript
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.live-after.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.live-after.js
+          node --check /tmp/HamsterKingMobile.live-after.js
 
       - name: Verify service
         run: |
@@ -80,4 +93,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.live-after.js
