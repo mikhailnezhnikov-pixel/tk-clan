@@ -1,2 +1,2 @@
-trigger=2026-09-19T14:17Z
-reason=post-migration-no-progress-check
+trigger=2026-09-19T14:18Z
+reason=realistic-growth-fixture
