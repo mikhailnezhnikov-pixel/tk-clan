@@ -28,7 +28,7 @@ anchor="  async function loadShop() {\n"
 helper=r"""  // HK_CLAN_SHOP_ACTUAL_FACTS_V1
   function clanShopActualFactType(row) {
     if (row?.section !== 'clan' || row?.clanGroup !== 'shared') return '';
-    const label = clean(\`\${gameText(row?.name || '')} \${row?.name || ''} \${row?.rewardId || ''} \${row?.lotId || ''}\`).toLowerCase();
+    const label = clean(String(gameText(row?.name || '') || '') + ' ' + String(row?.name || '') + ' ' + String(row?.rewardId || '') + ' ' + String(row?.lotId || '')).toLowerCase();
     if (/шар.{0,24}идол|идол.{0,24}шар|idol.{0,24}ball|ball.{0,24}idol|guru.{0,24}ball|ball.{0,24}guru/.test(label)) return 'idol_orbs';
     if (/s\s*\+.{0,24}бизнес|бизнес.{0,24}s\s*\+|s\s*\+.{0,24}business|business.{0,24}s\s*\+|splus.{0,24}business|business.{0,24}splus/.test(label)) return 'splus_businesses';
     return '';
