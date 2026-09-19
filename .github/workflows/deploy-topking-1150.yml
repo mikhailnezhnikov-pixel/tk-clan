@@ -10,8 +10,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: deploy-topking-1150
-  cancel-in-progress: true
+  group: deploy-topking-userscript
+  cancel-in-progress: false
 
 jobs:
   deploy:
