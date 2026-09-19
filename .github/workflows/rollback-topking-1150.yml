@@ -32,7 +32,7 @@ jobs:
             backup="$(ls -1t /opt/hamsterking-license/HamsterKingMobile.user.js.bak.* | head -1)";
             test -n "$backup";
             grep -q "^// @version      1.14.4$" "$backup";
-            node --check "$backup";
+            cp "$backup" /tmp/rollback-1144.js; node --check /tmp/rollback-1144.js;
             cp -a "$current" "$current.failed-1.15.0.$(date +%Y%m%d-%H%M%S)";
             install -m 0644 "$backup" "$current";
             printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.14.4\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf;
@@ -42,7 +42,7 @@ jobs:
             sleep 2;
             (curl -fsS --max-time 10 http://127.0.0.1:8787/api/v1/cabinet/config || curl -fsS --max-time 10 http://127.0.0.1:3188/api/v1/cabinet/config) >/tmp/cabinet.json;
             grep -q "^// @version      1.14.4$" "$current";
-            node --check "$current";
+            cp "$current" /tmp/current-1144.js; node --check /tmp/current-1144.js;
             echo ROLLBACK_OK'
       - name: Cleanup
         if: always()
