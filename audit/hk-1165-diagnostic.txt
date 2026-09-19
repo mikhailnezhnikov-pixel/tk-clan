@@ -1,11 +1,10 @@
-stage2a=failed
-stage2b=not-run
-stage2c=not-run
-stage2d=not-run
-stage2e=not-run
-stage2f=not-run
-syntax=not-run
-result_code=1
-built=// @version      1.16.3
+stage2a=already-live
+stage2b=already-live
+stage2c=already-live
+stage2d=already-live
+stage2e=passed
+stage2f=passed
+syntax=ok
+result_code=0
+built=// @version      1.16.5
 --- log tail ---
-Stage 2 requires verified Stage 1 1.15.0 / r4 or the same Stage 2 revision
