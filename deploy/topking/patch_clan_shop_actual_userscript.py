@@ -5,14 +5,26 @@ import re
 p=Path("/tmp/HamsterKingMobile.user.js")
 s=p.read_text()
 MARKER="HK_CLAN_SHOP_ACTUAL_FACTS_V1"
-if MARKER in s:
-    print("CLAN_SHOP_USERSCRIPT_ALREADY_PATCHED")
-    raise SystemExit(0)
 
-s_version, n_version = re.subn(r"^// @version\s+\S+.*$", "// @version      1.17.0", s, count=1, flags=re.M)
-if n_version != 1:
-    raise SystemExit("userscript version metadata missing")
-s = s_version
+def sync_version(text):
+    text, n_meta = re.subn(r"^// @version\s+\S+.*$", "// @version      1.17.0", text, count=1, flags=re.M)
+    if n_meta != 1:
+        raise SystemExit("userscript version metadata missing")
+    text, n_fallback = re.subn(
+        r"(const BUILD_VERSION = typeof GM_info[\\s\\S]*?: )'[^']+';",
+        r"\\1'1.17.0';",
+        text,
+        count=1,
+    )
+    if n_fallback != 1:
+        raise SystemExit("BUILD_VERSION fallback missing")
+    return text
+
+s = sync_version(s)
+if MARKER in s:
+    p.write_text(s)
+    print("CLAN_SHOP_USERSCRIPT_VERSION_SYNCED")
+    raise SystemExit(0)
 
 anchor="  const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';\n"
 if anchor not in s:
