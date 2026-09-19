@@ -1,0 +1,27 @@
+name: Probe full New York map source
+
+on:
+  push:
+    paths:
+      - '.github/workflows/probe-full-map-source.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe source
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://kokkaras.com/hk_maps/hk_newyork2332.php'
+          curl -fL --compressed --retry 3 --connect-timeout 20 --max-time 120 \
+            -A 'Mozilla/5.0' "$url" -o /tmp/map.html
+          echo "BYTES=$(wc -c < /tmp/map.html)"
+          for token in 'const buildingsGeoJSON' 'const roadsGeoJSON' 'const landuseGeoJSON' 'const waterGeoJSON'; do
+            grep -q "$token" /tmp/map.html
+            echo "FOUND=$token"
+          done
