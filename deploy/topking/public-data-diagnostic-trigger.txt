@@ -1,1 +1,2 @@
 diagnose public war/alliance data
+retry with service port fallback
