@@ -1,0 +1,12 @@
+version=1.16.3
+stage1=stage1-20260919-r4
+stage2a=stage2a-20260919-r1
+stage2b=stage2b-20260919-r1
+stage2c=stage2c-state-20260919-r1
+stage2d=stage2d-resource-business-20260919-r1
+modules=pit,fair,shop,recipes,bureau,state-store,resources,business
+hamsters=cur_cap
+generals=item_pit_token
+syntax=ok
+roundtrip=identical
+sha256=24736385e049989d0141f2e7c3b1d7fe26ed8ac7b2bf3a864df2ea83371fc8a9
