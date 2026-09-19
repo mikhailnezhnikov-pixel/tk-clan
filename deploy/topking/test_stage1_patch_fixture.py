@@ -13,11 +13,14 @@ FIXTURE = r"""// ==UserScript==
   const SOME_RUNTIME_VERSION = true ? 'fixture' : '1.14.4';
   const GROWTH_HAMSTER_BUDGET_ID = 'cur_cap';
   const GROWTH_GENERAL_BUDGET_ID = 'item_pit_token';
-  const GROWTH_NO_PROGRESS_LIMIT = 2;
   class HKNetworkTimeout extends Error {}
-  function growthCostOnlyUses(cost, allowed) { return true; }
-  function growthHamsterCostSafe(cost) { return growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID]); }
-  function growthGeneralCostSafe(cost) { return growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID]); }
+  function costParts(cost) { return Array.isArray(cost?.parts) ? cost.parts : []; }
+  function growthCapCost(cost){ return costParts(cost).filter(row=>row.kind==='currencies'&&row.id===GROWTH_HAMSTER_BUDGET_ID).reduce((sum,row)=>sum+Math.max(0,row.quantity),0); }
+  function growthPitCost(cost){ return costParts(cost).filter(row=>row.kind==='items'&&row.id===GROWTH_GENERAL_BUDGET_ID).reduce((sum,row)=>sum+Math.max(0,row.quantity),0); }
+  function growthSafeCost(cost){ return costParts(cost).every(row=>row.id&&row.quantity>0&&!['cur_prem','cur_hard'].includes(row.id)); }
+  function growthHamsterCostSafe(cost){ return growthSafeCost(cost)&&growthPitCost(cost)===0; }
+  function growthHamsterLevelCostSafe(cost){ return growthHamsterCostSafe(cost)&&growthCapCost(cost)>0; }
+  function growthBestGeneral(state,blocked,budget,mode='x1',weightValue=1){ return null; }
   function growthRunGeneralsCore() {}
   function growthRunPriorityCopiesCore() {}
   function growthRunLevelsCore() {}
@@ -69,6 +72,12 @@ def validate(text: str):
         raise AssertionError('Hamster Caps invariant lost')
     if "GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'" not in text:
         raise AssertionError('General Pit Token invariant lost')
+    if "growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID])" not in text:
+        raise AssertionError('fixture did not migrate Hamsters to strict Caps-only costs')
+    if "growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])" not in text:
+        raise AssertionError('fixture did not migrate Generals to strict Pit-Token-only costs')
+    if text.count('GROWTH_NO_PROGRESS_LIMIT') < 1:
+        raise AssertionError('fixture did not add no-progress protection')
     core_start = text.index('async function apiJsonCore(')
     gate_start = text.index("const HK_MUTATION_GATE_REV = 'stage1-20260919-r4';", core_start)
     core = text[core_start:gate_start]
@@ -83,10 +92,12 @@ def main():
         run_patch()
         first = TARGET.read_text(encoding='utf-8')
         validate(first)
+        subprocess.run(['node', '--check', str(TARGET)], check=True)
 
         run_patch()
         second = TARGET.read_text(encoding='utf-8')
         validate(second)
+        subprocess.run(['node', '--check', str(TARGET)], check=True)
 
         if first != second:
             import difflib
