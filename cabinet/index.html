@@ -228,6 +228,34 @@
     .hkmap-manager-note{padding:10px 12px;color:#9ee3b5;font-size:12px;font-weight:800}
     .hkmap-published{display:inline-flex;padding:4px 7px;border-radius:999px;background:rgba(65,177,103,.10);color:#9ee3b5;font-size:11px;font-weight:850}
     .hkmap-private{color:#707986;font-size:11px;font-weight:750}
+    .clanshop-card{overflow:hidden}
+    .clanshop-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}
+    .clanshop-head h2{margin:5px 0 6px;font-size:30px}
+    .clanshop-head p{margin:0}
+    .clanshop-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+    .clanshop-meta>div,.clanshop-limit{padding:13px 14px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(255,255,255,.025)}
+    .clanshop-meta span,.clanshop-limit span{display:block;color:var(--muted);font-size:11px}
+    .clanshop-meta b,.clanshop-limit b{display:block;margin-top:4px;font-size:18px;color:#fff}
+    .clanshop-limits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0 14px}
+    .clanshop-limit b{font-size:24px;color:#ffe0a0}
+    .clanshop-limit.is-full b{color:#9ee3b5}
+    .clanshop-limit.is-over b{color:#ff9aa7}
+    .clanshop-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
+    .clanshop-tools input{width:min(420px,100%);padding:11px 13px;border:1px solid rgba(255,255,255,.11);border-radius:11px;background:#0c1118;color:#f4f6f8}
+    .clanshop-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .clanshop-published{color:#9ee3b5;font-size:12px;font-weight:800}
+    .clanshop-topic-warning{margin:10px 0;padding:11px 13px;border:1px solid rgba(232,182,84,.28);border-radius:11px;background:rgba(232,182,84,.07);color:#e9d399;font-size:12px;line-height:1.5}
+    .clanshop-table-wrap{overflow:auto;border:1px solid rgba(255,255,255,.08);border-radius:13px}
+    .clanshop-table{width:100%;border-collapse:collapse;min-width:560px}
+    .clanshop-table th,.clanshop-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.065);text-align:center}
+    .clanshop-table th{position:sticky;top:0;background:#0d1118;color:#c7a75f;font-size:12px;z-index:1}
+    .clanshop-table th:first-child,.clanshop-table td:first-child{text-align:left}
+    .clanshop-table tbody tr:last-child td{border-bottom:0}
+    .clanshop-player strong{display:block;color:#fff}
+    .clanshop-player small{display:block;margin-top:2px;color:var(--muted)}
+    .clanshop-select{min-width:76px;padding:7px 9px;border:1px solid rgba(232,182,84,.25);border-radius:9px;background:#0b1017;color:#fff;font-weight:850;text-align:center}
+    .clanshop-qty{display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.045);font-weight:850}
+    .clanshop-note{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
     @media(max-width:680px){
       .hkmap-card{padding:20px}
       .hkmap-head{display:block}
@@ -241,6 +269,11 @@
       .hkmap-member>summary,.hkmap-city>summary{grid-template-columns:minmax(0,1fr) auto}
       .hkmap-member>summary .hkmap-chevron,.hkmap-city>summary .hkmap-chevron{display:none}
       .hkmap-map-list{grid-template-columns:1fr 1fr}
+      .clanshop-head{display:block}
+      .clanshop-meta,.clanshop-limits{grid-template-columns:1fr}
+      .clanshop-tools{align-items:stretch;flex-direction:column}
+      .clanshop-tools input{width:100%}
+      .clanshop-actions{justify-content:space-between}
     }
 
     .hidden{display:none!important}
@@ -441,6 +474,7 @@
         <button class="cab-tab active" type="button" data-cab-tab="overview">Обзор</button>
         <button class="cab-tab" type="button" data-cab-tab="players">Статистика игроков</button>
         <button class="cab-tab" type="button" data-cab-tab="maps" hidden>Карты</button>
+        <button class="cab-tab" type="button" data-cab-tab="clan-shop">Clan Shop</button>
         <button class="cab-tab" type="button" data-cab-tab="install">Установка</button>
       </nav>
 
@@ -546,6 +580,54 @@
               </section>
             </div>
           </div>
+        </article>
+      </section>
+
+
+      <section class="cab-panel" data-cab-panel="clan-shop" hidden>
+        <article class="card cab-card wide clanshop-card">
+          <div class="clanshop-head">
+            <div>
+              <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Clan Shop</div>
+              <h2>Покупки на следующую неделю</h2>
+              <p class="stats-sub">Список формируется до воскресенья 21:00 GMT+9. Значение 0 в публикацию не попадает; заполнять весь лимит не обязательно.</p>
+            </div>
+          </div>
+
+          <div class="clanshop-meta">
+            <div><span>Неделя покупок</span><b id="clanshop-week">—</b></div>
+            <div><span>Дедлайн</span><b id="clanshop-deadline">—</b></div>
+          </div>
+
+          <div class="clanshop-limits">
+            <div id="clanshop-idol-box" class="clanshop-limit"><span>Шары идолов</span><b><span id="clanshop-idols">0</span> / 14</b></div>
+            <div id="clanshop-business-box" class="clanshop-limit"><span>Бизнесы S+</span><b><span id="clanshop-businesses">0</span> / 30</b></div>
+          </div>
+
+          <div class="clanshop-tools">
+            <input id="clanshop-search" type="search" autocomplete="off" placeholder="Поиск участника">
+            <div id="clanshop-manager-actions" class="clanshop-actions hidden">
+              <span id="clanshop-published" class="clanshop-published"></span>
+              <button id="clanshop-publish" class="button primary" type="button">Опубликовать</button>
+            </div>
+          </div>
+
+          <div id="clanshop-topic-warning" class="clanshop-topic-warning hidden"></div>
+          <p id="clanshop-message" class="message" role="status" aria-live="polite"></p>
+
+          <div class="clanshop-table-wrap">
+            <table class="clanshop-table">
+              <thead>
+                <tr>
+                  <th>Участник</th>
+                  <th>Шары идолов</th>
+                  <th>Бизнесы S+</th>
+                </tr>
+              </thead>
+              <tbody id="clanshop-body"></tbody>
+            </table>
+          </div>
+          <p class="clanshop-note">Для каждого участника можно поставить от 1 до 3 единиц каждого типа. Ноль означает «не покупать». Общий недельный лимит: 14 шаров идолов и 30 бизнесов S+.</p>
         </article>
       </section>
 
@@ -721,6 +803,8 @@
   let hkMapsLoaded=false;
   let currentMapsAccess=false;
   let initialCabTabApplied=false;
+  let clanShopData=null;
+  let clanShopLoaded=false;
 
   function hkMapsData(){
     return hkMaps;
@@ -977,6 +1061,143 @@
   $('hkmap-search')?.addEventListener('input',renderMapsIndex);
 
 
+  function clanShopOptionList(selected){
+    return [0,1,2,3].map(value=>'<option value="'+value+'" '+(Number(selected)===value?'selected':'')+'>'+value+'</option>').join('');
+  }
+
+  function clanShopPublishedLabel(timestamp){
+    if(!timestamp)return 'Ещё не опубликовано';
+    try{
+      return 'Опубликовано: '+new Date(Number(timestamp)*1000).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    }catch{return 'Опубликовано'}
+  }
+
+  function renderClanShop(){
+    const data=clanShopData;
+    const body=$('clanshop-body');
+    if(!data||!body)return;
+    const participants=Array.isArray(data.participants)?data.participants:[];
+    const limits=data.limits||{};
+    const totals=data.totals||{};
+    const query=String($('clanshop-search')?.value||'').trim().toLowerCase();
+    const filtered=participants.filter(row=>!query||String(row.nickname||'').toLowerCase().includes(query));
+
+    $('clanshop-week').textContent=data.window?.week_label||'—';
+    $('clanshop-deadline').textContent=data.window?.deadline_label||'—';
+    $('clanshop-idols').textContent=Number(totals.idol_orbs||0);
+    $('clanshop-businesses').textContent=Number(totals.splus_businesses||0);
+
+    const idolBox=$('clanshop-idol-box'),businessBox=$('clanshop-business-box');
+    idolBox?.classList.toggle('is-full',Number(totals.idol_orbs||0)===Number(limits.idol_orbs||14));
+    businessBox?.classList.toggle('is-full',Number(totals.splus_businesses||0)===Number(limits.splus_businesses||30));
+
+    const actions=$('clanshop-manager-actions');
+    actions?.classList.toggle('hidden',!data.can_manage);
+    if($('clanshop-published'))$('clanshop-published').textContent=clanShopPublishedLabel(data.published_at);
+
+    const topicWarning=$('clanshop-topic-warning');
+    if(topicWarning){
+      const show=!!data.can_manage&&!data.topic_configured;
+      topicWarning.classList.toggle('hidden',!show);
+      topicWarning.textContent=show
+        ?'Тема Clan Shop ещё не привязана. Откройте нужную тему Telegram и отправьте /setclanshop@TopKingClanCabinetBot.'
+        :'';
+    }
+    const publish=$('clanshop-publish');
+    if(publish){
+      const total=Number(totals.idol_orbs||0)+Number(totals.splus_businesses||0);
+      publish.disabled=!data.can_manage||!data.topic_configured||total===0;
+      publish.textContent=data.published_at?'Опубликовать обновление':'Опубликовать';
+    }
+
+    body.innerHTML=filtered.map(row=>{
+      const player='<div class="clanshop-player"><strong>'+safe(row.nickname||'—')+'</strong>'+
+        (row.player_id?'<small>ID: '+safe(row.player_id)+'</small>':'')+'</div>';
+      if(data.can_manage){
+        return '<tr data-clanshop-player="'+safe(row.player_key)+'">'+
+          '<td>'+player+'</td>'+
+          '<td><select class="clanshop-select" data-clanshop-field="idol_orbs" data-player-key="'+safe(row.player_key)+'">'+clanShopOptionList(row.idol_orbs)+'</select></td>'+
+          '<td><select class="clanshop-select" data-clanshop-field="splus_businesses" data-player-key="'+safe(row.player_key)+'">'+clanShopOptionList(row.splus_businesses)+'</select></td>'+
+        '</tr>';
+      }
+      return '<tr><td>'+player+'</td>'+
+        '<td><span class="clanshop-qty">'+Number(row.idol_orbs||0)+'</span></td>'+
+        '<td><span class="clanshop-qty">'+Number(row.splus_businesses||0)+'</span></td></tr>';
+    }).join('')||'<tr><td colspan="3" class="muted">Участники клана пока не загружены.</td></tr>';
+  }
+
+  async function loadClanShop(force=false){
+    if(clanShopLoaded&&!force){renderClanShop();return}
+    setMessage('clanshop-message','Загружаю Clan Shop…');
+    try{
+      clanShopData=await request('/clan-shop');
+      clanShopLoaded=true;
+      renderClanShop();
+      setMessage('clanshop-message');
+    }catch{
+      setMessage('clanshop-message','Не удалось загрузить Clan Shop.','bad');
+    }
+  }
+
+  $('clanshop-search')?.addEventListener('input',renderClanShop);
+
+  document.addEventListener('change',async event=>{
+    const input=event.target.closest('[data-clanshop-field]');
+    if(!input||!clanShopData?.can_manage)return;
+    const playerKey=String(input.dataset.playerKey||'');
+    const row=(clanShopData.participants||[]).find(item=>String(item.player_key)===playerKey);
+    if(!row)return;
+    const field=input.dataset.clanshopField;
+    const idol=field==='idol_orbs'?Number(input.value):Number(row.idol_orbs||0);
+    const business=field==='splus_businesses'?Number(input.value):Number(row.splus_businesses||0);
+    input.disabled=true;
+    setMessage('clanshop-message','Сохраняю…');
+    try{
+      clanShopData=await request('/clan-shop/set',{method:'POST',body:JSON.stringify({
+        player_key:playerKey,
+        idol_orbs:idol,
+        splus_businesses:business
+      })});
+      clanShopLoaded=true;
+      renderClanShop();
+      setMessage('clanshop-message','Сохранено.','good');
+    }catch(error){
+      await loadClanShop(true);
+      const msg=error.code==='clan_shop_idol_limit'
+        ?'Лимит шаров идолов — максимум 14 на неделю.'
+        :error.code==='clan_shop_business_limit'
+          ?'Лимит бизнесов S+ — максимум 30 на неделю.'
+          :'Не удалось сохранить изменение.';
+      setMessage('clanshop-message',msg,'bad');
+    }
+  });
+
+  $('clanshop-publish')?.addEventListener('click',async()=>{
+    const button=$('clanshop-publish');
+    if(!button||!clanShopData?.can_manage)return;
+    button.disabled=true;
+    setMessage('clanshop-message','Публикую список в Telegram…');
+    try{
+      clanShopData=await request('/clan-shop/publish',{method:'POST',body:'{}'});
+      clanShopLoaded=true;
+      renderClanShop();
+      setMessage('clanshop-message','Список Clan Shop опубликован.','good');
+    }catch(error){
+      const msg=error.code==='clan_shop_topic_not_configured'
+        ?'Сначала привяжите тему командой /setclanshop@TopKingClanCabinetBot.'
+        :error.code==='clan_shop_empty'
+          ?'Нечего публиковать: все значения равны 0.'
+          :error.code==='telegram_delivery_failed'
+            ?'Telegram не принял сообщение. Проверьте права бота в теме Clan Shop.'
+            :'Не удалось опубликовать список.';
+      setMessage('clanshop-message',msg,'bad');
+    }finally{
+      if(button)button.disabled=false;
+      renderClanShop();
+    }
+  });
+
+
   function setCabTab(name,syncUrl=true){
     document.querySelectorAll('[data-cab-tab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.cabTab===name));
     document.querySelectorAll('[data-cab-panel]').forEach(panel=>panel.hidden=panel.dataset.cabPanel!==name);
@@ -991,6 +1212,7 @@
       if(!currentMapsAccess){setCabTab('overview',syncUrl);return}
       loadMapsIndex();
     }
+    if(name==='clan-shop')loadClanShop();
   }
 
   document.addEventListener('click',event=>{
@@ -1490,6 +1712,7 @@
       const requested=new URL(location.href).searchParams.get('tab');
       if(requested==='maps'&&currentMapsAccess)setCabTab('maps',false);
       else if(requested==='players')setCabTab('players',false);
+      else if(requested==='clan-shop')setCabTab('clan-shop',false);
     }
   }
 
@@ -1622,7 +1845,7 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
-<script src="../assets/cabinet-i18n.js?v=20260919-2"></script>
+<script src="../assets/cabinet-i18n.js?v=20260920-1"></script>
 <script src="../assets/site-nav.js?v=20260919-9"></script>
 </body>
 </html>
