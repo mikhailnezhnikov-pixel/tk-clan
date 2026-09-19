@@ -1,0 +1,46 @@
+name: Verify game announcements feed
+
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-game-announcements.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Verify live feed parser
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            cd /opt/hamsterking-license
+            python3 - <<'"'"'PY'"'"'
+import importlib.util
+spec=importlib.util.spec_from_file_location("hk_server","/opt/hamsterking-license/server.py")
+mod=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+data=mod.game_announcements_payload(force=True)
+items=data.get("items") or []
+print("GAME_ANNOUNCEMENTS_OK", bool(data.get("ok")), "items="+str(len(items)), "stale="+str(bool(data.get("stale"))))
+if items:
+    first=items[0]
+    print("LATEST_POST", first.get("id"), (first.get("text") or "")[:100].replace("\n"," "))
+if not data.get("ok") or not items:
+    raise SystemExit(1)
+PY
+          '
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
