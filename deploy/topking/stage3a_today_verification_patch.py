@@ -59,6 +59,30 @@ if old in s:
 elif new not in s:
     raise SystemExit('Today stop completion anchor missing')
 
+
+# Daily Pit launched from Today must honor Pause inside a single Pit action,
+# not only between top-level Today actions.
+old="    while (!pitRaceFinished(state)) {\n      if (++battles > 1000)"
+new="    while (!pitRaceFinished(state)) {\n      if (hkRunner.running) await hkRunner.waitIfPaused();\n      if (++battles > 1000)"
+if old in s:
+    s=s.replace(old,new,1)
+elif new not in s:
+    raise SystemExit('Daily Pit battle pause anchor missing')
+
+old="    for (let attempt = 0; attempt < 3; attempt++) {\n      try {"
+new="    for (let attempt = 0; attempt < 3; attempt++) {\n      if (hkRunner.running) await hkRunner.waitIfPaused();\n      try {"
+if old in s:
+    s=s.replace(old,new,1)
+elif new not in s:
+    raise SystemExit('Daily Pit finish pause anchor missing')
+
+old="    for (const part of pitMovePlan(remainingRequested)) for (let index = 0; index < part.count; index++) {\n      // Re-read the wallet before every batch."
+new="    for (const part of pitMovePlan(remainingRequested)) for (let index = 0; index < part.count; index++) {\n      if (hkRunner.running) await hkRunner.waitIfPaused();\n      // Re-read the wallet before every batch."
+if old in s:
+    s=s.replace(old,new,1)
+elif new not in s:
+    raise SystemExit('Daily Pit batch pause anchor missing')
+
 checks=[
     ('// @version      1.16.9','version missing'),
     (f"HK_STAGE3A_TODAY_REV = '{REV}'",'marker missing'),
@@ -66,6 +90,7 @@ checks=[
     ("if (error?.name === 'AbortError' || hkRunner.signal?.aborted) break;",'abort break missing'),
     ("if (stopped) hkRunner.reset();",'pre-reconciliation reset missing'),
     ("if (!stopped) hkRunner.finish(either('План выполнен','Plan completed'));",'clean stop completion missing'),
+    ("if (hkRunner.running) await hkRunner.waitIfPaused();",'Daily Pit pause checkpoint missing'),
     ("GROWTH_HAMSTER_BUDGET_ID = 'cur_cap'",'Hamster Caps invariant lost'),
     ("GROWTH_GENERAL_BUDGET_ID = 'item_pit_token'",'General Pit Token invariant lost'),
 ]
