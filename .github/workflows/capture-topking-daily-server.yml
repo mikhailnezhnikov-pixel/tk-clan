@@ -164,18 +164,15 @@ jobs:
       - name: Optional 1.17.1 Bureau Resources build-only verification
         run: |
           set -euo pipefail
-          if ! grep -q '^scope=bureau-resources-build-only
- deploy/topking/daily-server-capture-trigger.txt; then
+          if ! grep -Fq 'scope=bureau-resources-build-only' deploy/topking/daily-server-capture-trigger.txt; then
             echo "Skipping 1.17.1 build-only check for this capture"
             exit 0
           fi
           cp /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.live.js
-          grep -q '^// @version      1.17.0
- /tmp/HamsterKingMobile.user.js
+          grep -Fq '// @version      1.17.0' /tmp/HamsterKingMobile.user.js
           python3 -m py_compile deploy/topking/patch_bureau_resources_live_1171.py
           python3 deploy/topking/patch_bureau_resources_live_1171.py
-          grep -q '^// @version      1.17.1
- /tmp/HamsterKingMobile.user.js
+          grep -Fq '// @version      1.17.1' /tmp/HamsterKingMobile.user.js
           grep -Fq 'HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1' /tmp/HamsterKingMobile.user.js
           grep -Fq "const liveBureauCost = bureauCost();" /tmp/HamsterKingMobile.user.js
           grep -Fq "budgetDecision(liveBureauCost, 'bureau', attempts" /tmp/HamsterKingMobile.user.js
