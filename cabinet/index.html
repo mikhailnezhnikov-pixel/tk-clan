@@ -8,12 +8,13 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; connect-src https://hk-license.89.125.1.71.sslip.io; frame-src https://oauth.telegram.org https://telegram.org https://t.me; object-src 'none'; base-uri 'self'">
   <title>Личный кабинет клана — Top King</title>
   <meta name="description" content="Закрытый личный кабинет участников клана Top King.">
-  <link rel="stylesheet" href="../assets/public.css?v=20260919-3">
+  <link rel="stylesheet" href="../assets/public.css?v=20260919-4">
   <link rel="icon" href="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png">
   <style>
     .cabinet-head{padding-bottom:24px}
-    .cabinet-head .lead{max-width:680px}
+    .cabinet-head .lead{max-width:720px}
     .cabinet-content{padding-top:8px}
+
     .login-shell{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr);gap:16px;align-items:stretch}
     .login-card{padding:28px}
     .login-card h2,.cab-card h2{margin:0;color:#fff}
@@ -33,7 +34,13 @@
     .message.bad{color:var(--bad)}
     .message.good{color:var(--good)}
 
-    .dashboard{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+    .cab-tabs{position:sticky;top:calc(var(--header) + 10px);z-index:20;display:flex;gap:8px;margin:0 0 18px;padding:7px;border:1px solid rgba(255,255,255,.09);border-radius:17px;background:rgba(8,11,16,.82);backdrop-filter:blur(18px) saturate(130%);-webkit-backdrop-filter:blur(18px) saturate(130%);box-shadow:0 16px 44px rgba(0,0,0,.18)}
+    .cab-tab{flex:1;min-height:44px;padding:10px 14px;border:1px solid transparent;border-radius:12px;background:transparent;color:#cbd1da;font-weight:850;cursor:pointer}
+    .cab-tab:hover{background:rgba(255,255,255,.045);color:#fff}
+    .cab-tab.active{border-color:rgba(232,182,84,.38);color:#1b1205;background:linear-gradient(135deg,#ffe3a0,#d79b36);box-shadow:0 8px 24px rgba(196,128,32,.18)}
+    .cab-panel[hidden]{display:none!important}
+
+    .dashboard-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
     .cab-card{grid-column:span 6;padding:26px;overflow:hidden}
     .cab-card.wide{grid-column:1/-1}
     .card-kicker{display:flex;align-items:center;gap:10px;margin-bottom:10px;color:var(--gold-light);font-size:11px;font-weight:850;letter-spacing:.16em;text-transform:uppercase}
@@ -69,15 +76,40 @@
     .stat:after{content:"";position:absolute;right:-22px;top:-28px;width:86px;height:86px;border-radius:50%;background:radial-gradient(circle,rgba(232,182,84,.13),transparent 70%)}
     .stat span{display:block;color:var(--muted);font-size:12px}
     .stat b{display:block;margin-top:4px;color:var(--gold-light);font:700 29px/1 Georgia,serif}
-    .section-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-    .section-row .button{min-height:42px;padding:9px 13px;font-size:13px}
-    .progress-wrap{margin-top:18px}
-    .empty{padding:25px;border:1px dashed rgba(255,255,255,.18);border-radius:17px;color:var(--muted);background:rgba(8,11,16,.34);text-align:center}
-    .clan-table{margin-top:0}
-    .clan-table td:first-child{width:auto;color:#fff}
-    .clan-table td:last-child,.clan-table th:last-child{text-align:right}
-    .clan-table .rank{display:inline-flex;width:25px;color:var(--muted)}
-    .clan-table .level{color:var(--gold-light);font-weight:900}
+
+    .clan-overview-actions{margin-top:18px}
+    .clan-overview-actions .button{width:100%}
+
+    .player-stats-card{padding:26px}
+    .stats-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+    .stats-head h2{font-size:30px}
+    .stats-sub{max-width:680px;margin:8px 0 0;color:var(--muted)}
+    .stats-tools{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(180px,.8fr) minmax(180px,.9fr);gap:10px;margin:20px 0 12px}
+    .stats-tools input,.stats-tools select{width:100%;min-width:0}
+    .stats-source-note{margin:12px 0 0;padding:13px 15px;border:1px solid rgba(232,182,84,.24);border-radius:14px;color:#e6d2a1;background:rgba(232,182,84,.055);font-size:13px}
+    .players-list{display:grid;gap:9px;margin-top:16px}
+    .player-stat{border:1px solid rgba(255,255,255,.10);border-radius:18px;background:rgba(8,11,16,.43);overflow:hidden}
+    .player-stat[open]{border-color:rgba(232,182,84,.30);background:rgba(12,15,21,.62)}
+    .player-stat summary{list-style:none;cursor:pointer;padding:15px 17px}
+    .player-stat summary::-webkit-details-marker{display:none}
+    .player-summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:14px}
+    .player-name{min-width:0;display:flex;align-items:center;gap:10px}
+    .player-rank{display:grid;place-items:center;width:30px;height:30px;flex:0 0 auto;border:1px solid rgba(255,255,255,.10);border-radius:10px;color:var(--muted);font-size:12px;font-weight:900;background:rgba(255,255,255,.035)}
+    .player-name strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .player-scan{display:block;margin-top:2px;color:var(--muted);font-size:12px}
+    .player-total{text-align:right}
+    .player-total span{display:block;color:var(--muted);font-size:11px}
+    .player-total b{display:block;color:var(--gold-light);font:700 24px/1 Georgia,serif}
+    .expand-mark{width:30px;height:30px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.10);border-radius:10px;color:var(--gold-light);transition:transform .2s ease}
+    .player-stat[open] .expand-mark{transform:rotate(180deg)}
+    .player-detail{padding:0 17px 17px;border-top:1px solid rgba(255,255,255,.07)}
+    .branch-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding-top:14px}
+    .branch-item{padding:12px 13px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.027)}
+    .branch-item span{display:block;overflow:hidden;color:var(--muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+    .branch-item b{display:block;margin-top:3px;color:#fff;font-size:17px}
+    .branch-item.highlight{border-color:rgba(232,182,84,.34);background:rgba(232,182,84,.055)}
+    .branch-item.highlight b{color:var(--gold-light)}
+    .no-branches{padding:14px 0 2px;color:var(--muted);font-size:13px}
 
     .guide{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
     .guide-step{padding:20px;border:1px solid rgba(255,255,255,.09);border-radius:19px;background:rgba(8,11,16,.44)}
@@ -89,6 +121,11 @@
 
     .hidden{display:none!important}
 
+    @media(max-width:900px){
+      .branch-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .stats-tools{grid-template-columns:1fr 1fr}
+      .stats-tools input{grid-column:1/-1}
+    }
     @media(max-width:820px){
       .login-shell{grid-template-columns:1fr}
       .login-visual{min-height:210px}
@@ -97,11 +134,13 @@
     @media(max-width:680px){
       .cabinet-head{padding-bottom:16px}
       .cabinet-content{padding-top:4px}
-      .login-card,.cab-card{padding:20px!important}
+      .login-card,.cab-card,.player-stats-card{padding:20px!important}
       .login-shell{gap:12px}
       .login-visual{min-height:190px;padding:20px}
       .login-visual:before{background-size:118px auto;background-position:center 18%}
       .login-visual h3{font-size:25px}
+      .cab-tabs{top:calc(var(--header) + 7px);gap:5px;padding:5px;margin-bottom:14px;border-radius:14px;overflow-x:auto}
+      .cab-tab{flex:0 0 auto;min-height:40px;padding:8px 12px;font-size:13px;white-space:nowrap}
       .accountline{flex-direction:column}
       .account-main h2{font-size:24px}
       .access-badge{order:-1}
@@ -114,14 +153,24 @@
       .guide{grid-template-columns:1fr}
       .profile-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}
       .profile-actions .button{width:100%}
-      .clan-table th:nth-child(2),.clan-table td:nth-child(2){display:none}
+      .stats-head{display:block}
+      .stats-head h2{font-size:26px}
+      .stats-tools{grid-template-columns:1fr}
+      .stats-tools input{grid-column:auto}
+      .player-summary{grid-template-columns:minmax(0,1fr) auto}
+      .player-total{grid-column:2;grid-row:1}
+      .expand-mark{display:none}
+      .branch-grid{grid-template-columns:1fr 1fr}
     }
     @media(max-width:420px){
       .profile-actions{grid-template-columns:1fr}
       .stats{grid-template-columns:1fr}
       .stat:last-child{grid-column:auto}
+      .branch-grid{grid-template-columns:1fr}
+      .player-stat summary{padding:13px 14px}
+      .player-detail{padding:0 14px 14px}
     }
-    @media(prefers-reduced-motion:reduce){.loading{animation:none}}
+    @media(prefers-reduced-motion:reduce){.loading{animation:none}.expand-mark{transition:none}}
   </style>
 </head>
 <body class="tk-main-theme">
@@ -141,7 +190,7 @@
   <header class="shell page-head cabinet-head">
     <p class="eyebrow">Закрытый раздел клана</p>
     <h1>Личный кабинет</h1>
-    <p class="lead">Доступ к скрипту, привязка игрового ID и актуальная прокачка клана — в одном месте.</p>
+    <p class="lead">Доступ к скрипту, статистика участников и актуальная прокачка клана — в одном месте.</p>
   </header>
 
   <section class="shell content cabinet-content">
@@ -162,98 +211,131 @@
       </article>
     </section>
 
-    <section id="dashboard" class="dashboard hidden">
-      <article class="card cab-card">
-        <div class="accountline">
-          <div class="account-main">
-            <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png" alt="">Участник клана</div>
-            <h2 id="member-name">Telegram</h2>
-            <div id="member-id" class="account-meta"></div>
+    <section id="dashboard" class="hidden">
+      <nav class="cab-tabs" aria-label="Разделы личного кабинета">
+        <button class="cab-tab active" type="button" data-cab-tab="overview">Обзор</button>
+        <button class="cab-tab" type="button" data-cab-tab="players">Статистика игроков</button>
+        <button class="cab-tab" type="button" data-cab-tab="install">Установка</button>
+      </nav>
+
+      <section class="cab-panel dashboard-grid" data-cab-panel="overview">
+        <article class="card cab-card">
+          <div class="accountline">
+            <div class="account-main">
+              <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-members-icon.png" alt="">Участник клана</div>
+              <h2 id="member-name">Telegram</h2>
+              <div id="member-id" class="account-meta"></div>
+            </div>
+            <span class="access-badge">Доступ разрешён</span>
           </div>
-          <span class="access-badge">Доступ разрешён</span>
-        </div>
 
-        <div id="link-box" class="player-link">
-          <label for="player-id">Игровой ID</label>
-          <div class="row">
-            <input id="player-id" inputmode="numeric" maxlength="128" autocomplete="off" placeholder="Введите ID из игры">
-            <button id="link-player" class="button primary" type="button">Привязать</button>
+          <div id="link-box" class="player-link">
+            <label for="player-id">Игровой ID</label>
+            <div class="row">
+              <input id="player-id" inputmode="numeric" maxlength="128" autocomplete="off" placeholder="Введите ID из игры">
+              <button id="link-player" class="button primary" type="button">Привязать</button>
+            </div>
+            <p class="muted">Это нужно сделать один раз. После привязки лицензия скрипта активируется автоматически.</p>
           </div>
-          <p class="muted">Это нужно сделать один раз. После привязки лицензия скрипта активируется автоматически.</p>
-        </div>
 
-        <div id="linked-box" class="linked-state hidden">
-          <span class="muted">Игровой ID привязан</span>
-          <strong id="linked-player"></strong>
-          <p class="muted">Лицензия уже связана с этим кабинетом. Повторная регистрация не требуется.</p>
-        </div>
-
-        <div class="profile-actions">
-          <button id="copy-player" class="button ghost hidden" type="button">Скопировать ID</button>
-          <button id="refresh-dashboard" class="button ghost" type="button">Обновить данные</button>
-          <button id="logout" class="button ghost" type="button">Выйти</button>
-        </div>
-        <p id="profile-message" class="message" role="status" aria-live="polite"></p>
-      </article>
-
-      <article class="card cab-card script-card">
-        <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Hamster King Mobile</div>
-        <h2>Скрипт</h2>
-        <div class="script-version"><span>Актуальная версия</span><b id="script-version">—</b></div>
-        <p class="script-note">Файл доступен только авторизованным участникам клана.</p>
-        <div class="actions"><button id="download" class="button primary" type="button">Скачать актуальную версию</button></div>
-        <p id="download-message" class="message" role="status" aria-live="polite"></p>
-      </article>
-
-      <article class="card cab-card wide">
-        <div class="section-row">
-          <div>
-            <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png" alt="">Прокачка клана</div>
-            <h2 id="clan-title">Последние данные</h2>
+          <div id="linked-box" class="linked-state hidden">
+            <span class="muted">Игровой ID привязан</span>
+            <strong id="linked-player"></strong>
+            <p class="muted">Лицензия уже связана с этим кабинетом. Повторная регистрация не требуется.</p>
           </div>
-        </div>
 
-        <div class="stats">
-          <div class="stat"><span>Участников</span><b id="participants">0</b></div>
-          <div class="stat"><span>Общий уровень</span><b id="total-levels">0</b></div>
-          <div class="stat"><span>Неделя</span><b id="week">—</b></div>
-        </div>
-
-        <div class="progress-wrap">
-          <div id="progress-empty" class="empty">Данные появятся после следующего считывания прокачки клана в скрипте.</div>
-          <div id="progress-table" class="table-wrap hidden">
-            <table class="data-table clan-table">
-              <thead><tr><th>Участник</th><th>Считано</th><th>Уровни</th></tr></thead>
-              <tbody id="players"></tbody>
-            </table>
+          <div class="profile-actions">
+            <button id="copy-player" class="button ghost hidden" type="button">Скопировать ID</button>
+            <button id="refresh-dashboard" class="button ghost" type="button">Обновить данные</button>
+            <button id="logout" class="button ghost" type="button">Выйти</button>
           </div>
-        </div>
-      </article>
+          <p id="profile-message" class="message" role="status" aria-live="polite"></p>
+        </article>
 
-      <article class="card cab-card wide">
-        <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Установка</div>
-        <h2>Как установить скрипт</h2>
-        <div class="guide">
-          <article class="guide-step">
-            <div class="guide-head"><span class="guide-icon">🤖</span><h3>Android</h3></div>
-            <ol>
-              <li>Установите Firefox и расширение Violentmonkey.</li>
-              <li>Скачайте скрипт кнопкой выше и откройте файл в Firefox.</li>
-              <li>Подтвердите установку в Violentmonkey.</li>
-              <li>Откройте игру и полностью обновите страницу — появится кнопка HK.</li>
-            </ol>
-          </article>
-          <article class="guide-step">
-            <div class="guide-head"><span class="guide-icon"></span><h3>iPhone / iPad</h3></div>
-            <ol>
-              <li>Установите приложение Userscripts из App Store.</li>
-              <li>В Safari включите расширение Userscripts и доступ к сайту игры.</li>
-              <li>Скачайте скрипт и поместите его в выбранную папку Userscripts.</li>
-              <li>Откройте игру, включите скрипт и обновите страницу.</li>
-            </ol>
-          </article>
-        </div>
-      </article>
+        <article class="card cab-card script-card">
+          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/inventory.png" alt="">Hamster King Mobile</div>
+          <h2>Скрипт</h2>
+          <div class="script-version"><span>Актуальная версия</span><b id="script-version">—</b></div>
+          <p class="script-note">Файл доступен только авторизованным участникам клана.</p>
+          <div class="actions"><button id="download" class="button primary" type="button">Скачать актуальную версию</button></div>
+          <p id="download-message" class="message" role="status" aria-live="polite"></p>
+        </article>
+
+        <article class="card cab-card wide">
+          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png" alt="">Прокачка клана</div>
+          <h2 id="clan-title">Последние данные</h2>
+          <div class="stats">
+            <div class="stat"><span>Участников</span><b id="participants">0</b></div>
+            <div class="stat"><span>Общий уровень</span><b id="total-levels">0</b></div>
+            <div class="stat"><span>Неделя</span><b id="week">—</b></div>
+          </div>
+          <div class="clan-overview-actions">
+            <button class="button ghost" type="button" data-open-player-stats>Открыть статистику игроков</button>
+          </div>
+        </article>
+      </section>
+
+      <section class="cab-panel" data-cab-panel="players" hidden>
+        <article class="card cab-card wide player-stats-card">
+          <div class="stats-head">
+            <div>
+              <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png" alt="">Клан · участники</div>
+              <h2>Статистика игроков</h2>
+              <p class="stats-sub">Общий вклад каждого участника и детализация по отдельным веткам прокачки — по тем же данным, которые собирает вкладка «Клан» в скрипте.</p>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat"><span>Участников</span><b id="players-participants">0</b></div>
+            <div class="stat"><span>Общий вклад</span><b id="players-total">0</b></div>
+            <div class="stat"><span>Неделя</span><b id="players-week">—</b></div>
+          </div>
+
+          <div class="stats-tools">
+            <input id="players-search" type="search" autocomplete="off" placeholder="Найти участника">
+            <select id="players-branch" aria-label="Ветка прокачки">
+              <option value="">Все ветки</option>
+            </select>
+            <select id="players-sort" aria-label="Сортировка">
+              <option value="total-desc">Общий вклад ↓</option>
+              <option value="total-asc">Общий вклад ↑</option>
+              <option value="name">По имени</option>
+              <option value="scan">По дате считывания</option>
+            </select>
+          </div>
+
+          <div id="stats-source-note" class="stats-source-note hidden"></div>
+          <div id="players-empty" class="empty">Данные появятся после следующего считывания вкладки «Клан» в скрипте.</div>
+          <div id="players-list" class="players-list hidden"></div>
+        </article>
+      </section>
+
+      <section class="cab-panel" data-cab-panel="install" hidden>
+        <article class="card cab-card wide">
+          <div class="card-kicker"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/info-stars.png" alt="">Установка</div>
+          <h2>Как установить скрипт</h2>
+          <div class="guide">
+            <article class="guide-step">
+              <div class="guide-head"><span class="guide-icon">🤖</span><h3>Android</h3></div>
+              <ol>
+                <li>Установите Firefox и расширение Violentmonkey.</li>
+                <li>Скачайте скрипт во вкладке «Обзор» и откройте файл в Firefox.</li>
+                <li>Подтвердите установку в Violentmonkey.</li>
+                <li>Откройте игру и полностью обновите страницу — появится кнопка HK.</li>
+              </ol>
+            </article>
+            <article class="guide-step">
+              <div class="guide-head"><span class="guide-icon"></span><h3>iPhone / iPad</h3></div>
+              <ol>
+                <li>Установите приложение Userscripts из App Store.</li>
+                <li>В Safari включите расширение Userscripts и доступ к сайту игры.</li>
+                <li>Скачайте скрипт во вкладке «Обзор» и поместите его в выбранную папку Userscripts.</li>
+                <li>Откройте игру, включите скрипт и обновите страницу.</li>
+              </ol>
+            </article>
+          </div>
+        </article>
+      </section>
     </section>
   </section>
 </main>
@@ -270,7 +352,10 @@
   const TOKEN_KEY='tk_clan_cabinet_session';
   const $=id=>document.getElementById(id);
   const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const formatNumber=value=>Number(value||0).toLocaleString('ru-RU');
   let session=localStorage.getItem(TOKEN_KEY)||'';
+  let clanPlayers=[];
+  let clanInfo={};
 
   async function request(path,options={}){
     const headers={'Content-Type':'application/json',...(options.headers||{})};
@@ -288,11 +373,197 @@
     el.classList.toggle('good',kind==='good');
   }
 
+  function setCabTab(name){
+    document.querySelectorAll('[data-cab-tab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.cabTab===name));
+    document.querySelectorAll('[data-cab-panel]').forEach(panel=>panel.hidden=panel.dataset.cabPanel!==name);
+    if(name==='players')renderPlayerStats();
+  }
+
+  document.addEventListener('click',event=>{
+    const tab=event.target.closest('[data-cab-tab]');
+    if(tab){setCabTab(tab.dataset.cabTab);return}
+    if(event.target.closest('[data-open-player-stats]'))setCabTab('players');
+  });
+
   function showLogin(message='',bad=false){
     $('login').classList.remove('hidden');
     $('dashboard').classList.add('hidden');
     setMessage('login-message',message,bad?'bad':'');
   }
+
+  const metaKeys=new Set([
+    'nickname','name','player_id','playerId','id','telegram_id','telegramId','scanned_at','scannedAt',
+    'updated_at','updatedAt','created_at','createdAt','timestamp','time','date','total','total_levels',
+    'totalLevels','week','clan','clan_id','clanId','rank','position','power','influence'
+  ]);
+  const containerKeys=[
+    'branches','branch_levels','branchLevels','levels','progress','clan_progress','clanProgress',
+    'contributions','contribution','trees','tree','skills','upgrades','categories','stats'
+  ];
+
+  function numeric(value){
+    if(typeof value==='number'&&Number.isFinite(value))return value;
+    if(typeof value==='string'&&value.trim()!==''&&Number.isFinite(Number(value)))return Number(value);
+    return null;
+  }
+
+  function prettyBranchName(value){
+    return String(value||'')
+      .replace(/^(branches|branch levels|levels|progress|clan progress|contributions|trees|skills|upgrades|categories|stats)[ .·:_-]*/i,'')
+      .replace(/[_-]+/g,' ')
+      .replace(/([a-zа-я])([A-ZА-Я])/g,'$1 $2')
+      .replace(/\s+/g,' ')
+      .trim()
+      .replace(/^./,s=>s.toUpperCase());
+  }
+
+  function collectNode(node,prefix,out,depth){
+    if(node==null||depth>4)return;
+    if(Array.isArray(node)){
+      node.forEach((item,index)=>{
+        if(item&&typeof item==='object'&&!Array.isArray(item)){
+          const label=item.label??item.title??item.name??item.branch_name??item.branchName??item.key??item.id;
+          const value=numeric(item.total??item.levels??item.level??item.value??item.count??item.delta??item.gain);
+          if(label!=null&&value!=null){
+            out.push({name:prettyBranchName(label),value});
+          }else{
+            collectNode(item,prefix?prefix+' '+(index+1):String(index+1),out,depth+1);
+          }
+        }else{
+          const value=numeric(item);
+          if(value!=null)out.push({name:prettyBranchName(prefix?prefix+' '+(index+1):String(index+1)),value});
+        }
+      });
+      return;
+    }
+    if(typeof node!=='object')return;
+
+    const descriptor=node.label??node.title??node.name??node.branch_name??node.branchName??node.key;
+    const direct=numeric(node.total??node.levels??node.level??node.value??node.count??node.delta??node.gain);
+    if(descriptor!=null&&direct!=null){
+      out.push({name:prettyBranchName(descriptor),value:direct});
+      return;
+    }
+
+    Object.entries(node).forEach(([key,value])=>{
+      if(metaKeys.has(key))return;
+      const n=numeric(value);
+      const name=prefix?prefix+' · '+key:key;
+      if(n!=null){
+        out.push({name:prettyBranchName(name),value:n});
+      }else if(value&&typeof value==='object'){
+        collectNode(value,name,out,depth+1);
+      }
+    });
+  }
+
+  function getPlayerBranches(player){
+    const out=[];
+    let foundContainer=false;
+    containerKeys.forEach(key=>{
+      if(player&&player[key]!=null){
+        foundContainer=true;
+        collectNode(player[key],'',out,0);
+      }
+    });
+
+    if(!foundContainer&&player&&typeof player==='object'){
+      Object.entries(player).forEach(([key,value])=>{
+        if(metaKeys.has(key)||containerKeys.includes(key))return;
+        const n=numeric(value);
+        if(n!=null)out.push({name:prettyBranchName(key),value:n});
+      });
+    }
+
+    const map=new Map();
+    out.forEach(item=>{
+      if(!item.name)return;
+      if(!map.has(item.name))map.set(item.name,item.value);
+      else map.set(item.name,Math.max(map.get(item.name),item.value));
+    });
+    return [...map.entries()].map(([name,value])=>({name,value})).sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+  }
+
+  function branchValue(player,name){
+    const item=getPlayerBranches(player).find(x=>x.name===name);
+    return item?Number(item.value||0):0;
+  }
+
+  function allBranchNames(players){
+    const set=new Set();
+    players.forEach(player=>getPlayerBranches(player).forEach(branch=>set.add(branch.name)));
+    return [...set].sort((a,b)=>a.localeCompare(b,'ru'));
+  }
+
+  function renderBranchFilter(){
+    const select=$('players-branch');
+    const previous=select.value;
+    const names=allBranchNames(clanPlayers);
+    select.innerHTML='<option value="">Все ветки</option>'+names.map(name=>'<option value="'+safe(name)+'">'+safe(name)+'</option>').join('');
+    if(names.includes(previous))select.value=previous;
+    select.disabled=names.length===0;
+    const note=$('stats-source-note');
+    if(clanPlayers.length&&names.length===0){
+      note.textContent='Сейчас сервер кабинета передаёт по участнику только общий итог. Интерфейс для веток уже готов; детализация появится автоматически, как только API начнёт отдавать данные веток из вкладки «Клан» скрипта.';
+      note.classList.remove('hidden');
+    }else{
+      note.classList.add('hidden');
+      note.textContent='';
+    }
+  }
+
+  function renderPlayerStats(){
+    const list=$('players-list'),empty=$('players-empty');
+    if(!list||!empty)return;
+
+    $('players-participants').textContent=clanInfo.participants||clanPlayers.length||0;
+    $('players-total').textContent=formatNumber(clanInfo.total_levels||clanPlayers.reduce((sum,p)=>sum+Number(p.total||0),0));
+    $('players-week').textContent=clanInfo.week||'—';
+
+    renderBranchFilter();
+
+    const query=$('players-search').value.trim().toLowerCase();
+    const branch=$('players-branch').value;
+    const sort=$('players-sort').value;
+    let players=clanPlayers.filter(p=>String(p.nickname||p.name||'').toLowerCase().includes(query));
+
+    players=players.slice().sort((a,b)=>{
+      const av=branch?branchValue(a,branch):Number(a.total||0);
+      const bv=branch?branchValue(b,branch):Number(b.total||0);
+      if(sort==='total-asc')return av-bv;
+      if(sort==='name')return String(a.nickname||a.name||'').localeCompare(String(b.nickname||b.name||''),'ru');
+      if(sort==='scan')return Number(b.scanned_at||b.scannedAt||0)-Number(a.scanned_at||a.scannedAt||0);
+      return bv-av;
+    });
+
+    empty.classList.toggle('hidden',players.length>0);
+    list.classList.toggle('hidden',players.length===0);
+
+    list.innerHTML=players.map((p,index)=>{
+      const nickname=p.nickname||p.name||'Без имени';
+      const scanned=Number(p.scanned_at||p.scannedAt||0);
+      const scannedText=scanned?new Date(scanned*1000).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'дата не указана';
+      const branches=getPlayerBranches(p);
+      const displayValue=branch?branchValue(p,branch):Number(p.total||0);
+      const valueLabel=branch?branch:'Общий вклад';
+      const branchHtml=branches.length
+        ?branches.map(item=>'<div class="branch-item'+(branch&&item.name===branch?' highlight':'')+'"><span title="'+safe(item.name)+'">'+safe(item.name)+'</span><b>'+formatNumber(item.value)+'</b></div>').join('')
+        :'<div class="no-branches">По этому участнику сервер пока не передал разбивку по веткам.</div>';
+
+      return '<details class="player-stat">'+
+        '<summary><div class="player-summary">'+
+          '<div class="player-name"><span class="player-rank">'+(index+1)+'</span><div><strong>'+safe(nickname)+'</strong><span class="player-scan">Считано: '+safe(scannedText)+'</span></div></div>'+
+          '<div class="player-total"><span>'+safe(valueLabel)+'</span><b>'+formatNumber(displayValue)+'</b></div>'+
+          '<span class="expand-mark">⌄</span>'+
+        '</div></summary>'+
+        '<div class="player-detail"><div class="branch-grid">'+branchHtml+'</div></div>'+
+      '</details>';
+    }).join('');
+  }
+
+  $('players-search').addEventListener('input',renderPlayerStats);
+  $('players-branch').addEventListener('change',renderPlayerStats);
+  $('players-sort').addEventListener('change',renderPlayerStats);
 
   function showDashboard(data){
     $('login').classList.add('hidden');
@@ -308,20 +579,13 @@
     $('linked-player').textContent=linked;
     $('script-version').textContent=data.script?.version||'—';
 
-    const clan=data.clan||{};
-    $('clan-title').textContent=clan.key?'Клан '+clan.key:'Последние данные';
-    $('participants').textContent=clan.participants||0;
-    $('total-levels').textContent=Number(clan.total_levels||0).toLocaleString('ru-RU');
-    $('week').textContent=clan.week||'—';
-
-    const players=Array.isArray(clan.players)?clan.players:[];
-    $('progress-empty').classList.toggle('hidden',players.length>0);
-    $('progress-table').classList.toggle('hidden',players.length===0);
-    $('players').innerHTML=players.map((p,i)=>
-      '<tr><td><span class="rank">'+(i+1)+'.</span><b>'+safe(p.nickname)+'</b></td>'+
-      '<td>'+new Date(Number(p.scanned_at)*1000).toLocaleDateString('ru-RU')+'</td>'+
-      '<td><span class="level">'+Number(p.total||0).toLocaleString('ru-RU')+'</span></td></tr>'
-    ).join('');
+    clanInfo=data.clan||{};
+    clanPlayers=Array.isArray(clanInfo.players)?clanInfo.players:[];
+    $('clan-title').textContent=clanInfo.key?'Клан '+clanInfo.key:'Последние данные';
+    $('participants').textContent=clanInfo.participants||clanPlayers.length||0;
+    $('total-levels').textContent=formatNumber(clanInfo.total_levels||clanPlayers.reduce((sum,p)=>sum+Number(p.total||0),0));
+    $('week').textContent=clanInfo.week||'—';
+    renderPlayerStats();
   }
 
   async function loadDashboard(){
@@ -329,7 +593,7 @@
       showDashboard(await request('/dashboard'));
       setMessage('profile-message');
     }catch(error){
-      if(error.status===401){
+      if(error.status===401||error.status===403){
         session='';
         localStorage.removeItem(TOKEN_KEY);
         showLogin('Сессия закончилась. Войдите снова.',true);
@@ -447,7 +711,7 @@
 
   init();
 </script>
-<script src="../assets/site-nav.js?v=20260919-3"></script>
+<script src="../assets/site-nav.js?v=20260919-4"></script>
 <script>
   const menuToggle=document.querySelector('[data-menu-toggle]');
   const mobileMenu=document.querySelector('[data-mobile-nav]');
