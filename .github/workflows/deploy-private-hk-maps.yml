@@ -121,6 +121,10 @@ jobs:
           grep -q 'def load_full_hk_map' /tmp/server.py
           grep -q '"render": "full"' /tmp/server.py
           grep -q 'hk_map_data(key, member=member)' /tmp/server.py
+          echo '=== PRIVATE MAP ROUTE SOURCE ==='
+          grep -n -C 22 '/api/v1/cabinet/maps/data' /tmp/server.py || true
+          echo '=== MAP DATA CALL SITES ==='
+          grep -n -E 'private_hk_map_data\(key\)|hk_map_data\(key' /tmp/server.py || true
           python3 -m py_compile /tmp/server.py
 
           cat > /tmp/set-hk-map-open.py <<'PY'
