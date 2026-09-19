@@ -1,8 +1,8 @@
 (()=>{
   const CORE={
-    ru:{home:'Главная',calculators:'Калькуляторы',recipes:'Рецепты',wars:'Клановые войны',ratings:'Рейтинг',information:'Информация',feedback:'Обратная связь',cabinet:'Личный кабинет',menu:'Меню',footer:'Top King · Hamster King',play:'Начать играть',loading:'Загрузка…',updated:'Обновлено',noData:'Данных пока нет',error:'Не удалось загрузить данные.'},
-    en:{home:'Home',calculators:'Calculators',recipes:'Recipes',wars:'Clan wars',ratings:'Rankings',information:'Information',feedback:'Feedback',cabinet:'Member area',menu:'Menu',footer:'Top King · Hamster King',play:'Play now',loading:'Loading…',updated:'Updated',noData:'No data yet',error:'Could not load data.'},
-    fa:{home:'خانه',calculators:'محاسبه‌گرها',recipes:'دستورها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',information:'اطلاعات',feedback:'بازخورد',cabinet:'پنل اعضا',menu:'منو',footer:'Top King · Hamster King',play:'شروع بازی',loading:'در حال بارگذاری…',updated:'به‌روزرسانی',noData:'هنوز داده‌ای وجود ندارد',error:'بارگذاری داده‌ها ممکن نشد.'}
+    ru:{home:'Главная',calculators:'Калькуляторы',recipes:'Рецепты',wars:'Клановые войны',ratings:'Рейтинг',information:'Гайд по игре',feedback:'Обратная связь',cabinet:'Личный кабинет',menu:'Меню',footer:'Top King · Hamster King',play:'Начать играть',loading:'Загрузка…',updated:'Обновлено',noData:'Данных пока нет',error:'Не удалось загрузить данные.'},
+    en:{home:'Home',calculators:'Calculators',recipes:'Recipes',wars:'Clan wars',ratings:'Rankings',information:'Game guide',feedback:'Feedback',cabinet:'Member area',menu:'Menu',footer:'Top King · Hamster King',play:'Play now',loading:'Loading…',updated:'Updated',noData:'No data yet',error:'Could not load data.'},
+    fa:{home:'خانه',calculators:'محاسبه‌گرها',recipes:'دستورها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',information:'راهنمای بازی',feedback:'بازخورد',cabinet:'پنل اعضا',menu:'منو',footer:'Top King · Hamster King',play:'شروع بازی',loading:'در حال بارگذاری…',updated:'به‌روزرسانی',noData:'هنوز داده‌ای وجود ندارد',error:'بارگذاری داده‌ها ممکن نشد.'}
   };
   const supported=['ru','en','fa'];
   const saved=localStorage.getItem('tk-language');
