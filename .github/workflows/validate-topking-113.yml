@@ -1,4 +1,4 @@
-name: Validate TopKing 1.13.0
+name: Validate live TopKing 1.13.0
 
 on:
   workflow_dispatch:
@@ -14,7 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
       - name: Prepare SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
@@ -23,22 +22,19 @@ jobs:
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
-      - name: Fetch stable live
+
+      - name: Validate live 1.13.0
         run: |
           set -euo pipefail
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          grep -q '^// @version      1.11.0$' /tmp/HamsterKingMobile.user.js
-          node --check /tmp/HamsterKingMobile.user.js
-      - name: Apply 1.13 patch
-        run: |
-          set -euo pipefail
-          cat deploy/topking/userscript-1.13.0.patch.part00.b64 deploy/topking/userscript-1.13.0.patch.part01.b64 deploy/topking/userscript-1.13.0.patch.tail00.b64 deploy/topking/userscript-1.13.0.patch.tail01.b64 deploy/topking/userscript-1.13.0.patch.tail02.b64 deploy/topking/userscript-1.13.0.patch.tail03.b64 deploy/topking/userscript-1.13.0.patch.tail04.b64 deploy/topking/userscript-1.13.0.patch.tail05.b64 deploy/topking/userscript-1.13.0.patch.tail06.b64 | base64 -d | gzip -d > /tmp/userscript-1.13.0.patch
-          patch --fuzz=0 /tmp/HamsterKingMobile.user.js < /tmp/userscript-1.13.0.patch
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           grep -q '^// @version      1.13.0$' /tmp/HamsterKingMobile.user.js
           grep -q 'growthAutoOpen' /tmp/HamsterKingMobile.user.js
           grep -q 'growthRunGeneralsCore' /tmp/HamsterKingMobile.user.js
           grep -q 'growthRunPriorityCopiesCore' /tmp/HamsterKingMobile.user.js
+          grep -q 'const HK_STATE_MERGE_ROWS' /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
+
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/userscript-1.13.0.patch
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js
