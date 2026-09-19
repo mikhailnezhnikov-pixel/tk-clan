@@ -1,3 +1,4 @@
+# Deploy trigger: actual Clan Shop telemetry v1
 from pathlib import Path
 
 p=Path("/tmp/HamsterKingMobile.user.js")
