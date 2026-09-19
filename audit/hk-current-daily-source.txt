@@ -3257,6 +3257,131 @@
     return [];
   }
 
+  // HK_ALLIANCE_RATINGS_V1
+  const ALLIANCE_RATING_METRICS = {
+    alliance_power:[
+      'total_power','totalPower','overall_power','overallPower','alliance_power','alliancePower',
+      'hamsters_power','hamstersPower','hamster_power','hamsterPower','members_power','membersPower',
+      'players_power','playersPower','clans_power','clansPower','power'
+    ],
+    alliance_influence:[
+      'total_influence','totalInfluence','alliance_influence','allianceInfluence',
+      'members_influence','membersInfluence','players_influence','playersInfluence',
+      'clans_influence','clansInfluence','influence','total_player_level','totalPlayerLevel',
+      'player_level_sum','playerLevelSum','players_level','playersLevel','player_level','playerLevel'
+    ],
+    alliance_defense:[
+      'total_defense','totalDefense','total_defence','totalDefence','alliance_defense','allianceDefense',
+      'alliance_defence','allianceDefence','defense_points','defensePoints','defence_points','defencePoints',
+      'total_defense_points','totalDefensePoints','total_defence_points','totalDefencePoints',
+      'war_defense','warDefense','war_defence','warDefence','protection_points','protectionPoints',
+      'total_protection','totalProtection','defense','defence','protection'
+    ]
+  };
+
+  function finiteMetric(value) {
+    const parsed=Number(value);
+    return Number.isFinite(parsed)&&parsed>=0?parsed:null;
+  }
+
+  function metricFromObject(value, keys) {
+    if(!value||typeof value!=='object')return null;
+    for(const key of keys){
+      if(!Object.prototype.hasOwnProperty.call(value,key))continue;
+      const parsed=finiteMetric(value[key]);
+      if(parsed!==null)return parsed;
+    }
+    return null;
+  }
+
+  function allianceChildren(row, entity) {
+    const result=[],seen=new Set();
+    for(const source of [entity,row]){
+      if(!source||typeof source!=='object')continue;
+      for(const key of ['clans','alliance_clans','allianceClans','members','items','list','participants']){
+        const list=source[key];
+        if(!Array.isArray(list))continue;
+        for(const child of list){
+          if(!child||typeof child!=='object'||seen.has(child))continue;
+          seen.add(child);result.push(child);
+        }
+      }
+    }
+    return result;
+  }
+
+  function allianceMetric(row, entity, kind) {
+    const keys=ALLIANCE_RATING_METRICS[kind]||[];
+    const direct=metricFromObject(entity,keys) ?? metricFromObject(row,keys);
+    if(direct!==null)return direct;
+    const children=allianceChildren(row,entity);
+    if(!children.length)return null;
+    let total=0,found=0;
+    for(const child of children){
+      const node=child.clan||child.member||child;
+      const value=metricFromObject(node,keys) ?? metricFromObject(child,keys);
+      if(value===null)continue;
+      total+=value;found+=1;
+    }
+    return found?total:null;
+  }
+
+  function allianceCandidateScore(list) {
+    if(!Array.isArray(list)||!list.length)return -1;
+    let score=0;
+    for(const row of list.slice(0,12)){
+      if(!row||typeof row!=='object')continue;
+      const entity=row.alliance||row;
+      const keys=new Set([...Object.keys(row),...Object.keys(entity||{})].map(String));
+      if(row.alliance||keys.has('alliance_id')||keys.has('allianceId')||keys.has('alliance_name')||keys.has('allianceName'))score+=5;
+      if(keys.has('clans')||keys.has('alliance_clans')||keys.has('allianceClans')||keys.has('core_clan')||keys.has('coreClan'))score+=4;
+      for(const metricKeys of Object.values(ALLIANCE_RATING_METRICS)){
+        if(metricKeys.some(key=>keys.has(key))){score+=3;break;}
+      }
+      if(firstText(entity?.name,entity?.title,row.name,row.alliance_name,row.allianceName))score+=1;
+    }
+    return score;
+  }
+
+  function normalizeAllianceRatings(documentValue) {
+    const arrays=leaderboardArrays(documentValue)
+      .map(list=>({list,score:allianceCandidateScore(list)}))
+      .filter(item=>item.score>0)
+      .sort((a,b)=>b.score-a.score||b.list.length-a.list.length);
+    for(const candidate of arrays){
+      const normalized=[],names=new Set();
+      for(const row of candidate.list){
+        if(!row||typeof row!=='object')continue;
+        const entity=row.alliance||row;
+        const name=firstText(entity?.name,entity?.title,entity?.alliance_name,entity?.allianceName,row.alliance_name,row.allianceName,row.name,row.title);
+        if(!name||names.has(name))continue;
+        const metrics={
+          alliance_power:allianceMetric(row,entity,'alliance_power'),
+          alliance_influence:allianceMetric(row,entity,'alliance_influence'),
+          alliance_defense:allianceMetric(row,entity,'alliance_defense')
+        };
+        if(Object.values(metrics).every(value=>value===null))continue;
+        names.add(name);normalized.push({name,...metrics});
+      }
+      if(normalized.length){
+        const result={};
+        for(const kind of Object.keys(ALLIANCE_RATING_METRICS)){
+          const rows=normalized.filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+            .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name)).slice(0,100)
+            .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+          if(rows.length)result[kind]=rows;
+        }
+        if(Object.keys(result).length)return result;
+      }
+    }
+    try{
+      const objects=deepObjects(documentValue).slice(0,40);
+      const keys=[...new Set(objects.flatMap(value=>Object.keys(value||{})))].filter(key=>/alliance|power|influence|defen|protect|level/i.test(key)).slice(0,80);
+      recordDiagnostic('alliance-rating-schema',{keys});
+    }catch(_){}
+    return {};
+  }
+
   async function publicSnapshotServerJson(documentValue, retry = true) {
     return licensedServerJson(PUBLIC_SNAPSHOT_API, '', documentValue, retry, 'public-snapshot');
   }
@@ -3319,8 +3444,10 @@
       try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
       catch (_) {}
     }
-    try { const value = await apiJson('/alliance/list', 'GET', null, true, 1); const rows = normalizePublicRanking(value, 'alliances'); if (rows.length) ratings.alliances = rows; }
-    catch (_) {}
+    try {
+      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
+      Object.assign(ratings, normalizeAllianceRatings(value));
+    } catch (_) {}
     return ratings;
   }
 
@@ -3352,90 +3479,7 @@
       selectedFairLots.clear();
       selectedFairSlotRules.clear();
       renderFair();
-      log(`Ярмарка считана: ${visibleFairs.length} разделов, ${fairCatalog.length} лотов`, 'ok');
-    } catch (error) { log(`Ошибка ярмарки: ${error.message}`, 'bad'); }
-  }
-
-  function costVisual(cost, multiplier = 1) {
-    const parts = costParts(cost);
-    if (!parts.length) return '<span>0</span>';
-    return parts.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${(part.quantity * multiplier).toLocaleString(locale())}</b>`).join('');
-  }
-
-  function addProjectedCost(target, part, multiplier = 1) {
-    if (!part?.id) return;
-    const key = `${part.kind}|${part.id}`;
-    const current = target.get(key) || {...part, quantity:0};
-    current.quantity += Math.max(0, Number(part.quantity || 0)) * Math.max(0, Number(multiplier || 0));
-    target.set(key, current);
-  }
-
-  function walletForecastHtml(parts) {
-    const values = [...parts.values()].filter(part => part?.id).sort((a, b) => a.id.localeCompare(b.id));
-    if (!values.length) return '';
-    return `<div class="hk-wallet-forecast">${values.map(part => {
-      const balance = walletAmount(part.id);
-      const spend = Math.max(0, Number(part.quantity || 0));
-      const known = balance !== null;
-      return `<div class="hk-wallet-row">
-        <span class="hk-wallet-currency">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${escapeHtml(paymentLabel(part.id))}</b></span>
-        <span>${tr('balance')}: <b>${known ? balance.toLocaleString(locale()) : '—'}</b> · ${either('Макс. возможный расход','Maximum possible spend')}: <b>${spend.toLocaleString(locale())}</b></span>
-      </div>`;
-    }).join('')}</div>`;
-  }
-
-  function fairProjectedCosts() {
-    const totals = new Map();
-    const state = fairState(selectedFairId);
-    const rows = fairRowsForState(state);
-    const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
-    const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
-    const rerollLimit = Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0));
-    const relevantRows = selectedRows.length ? selectedRows : rows;
-    const maximumLots = new Map();
-    for (const row of relevantRows) for (const part of costParts(row.cost)) {
-      const key = `${part.kind}|${part.id}`;
-      const current = maximumLots.get(key);
-      if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
-    }
-    for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
-    for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollLimit);
-    return totals;
-  }
-
-  function renderFair() {
-    if (!fairTypes || !fairLots) return;
-    if (!fairCatalog.length) {
-      fairTypes.innerHTML = `<p class="hk-muted">${tr('readFirst')}</p>`;
-      fairLots.innerHTML = '';
-      const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
-      updateFairControls(); return;
-    }
-    const states = visibleFairStates();
-    fairTypes.innerHTML = states.map(state => {
-      const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
-      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
-        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
-    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
-    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
-      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
-    });
-    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
-    const allRows = fairRowsForState(fairState(selectedFairId));
-    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
-    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
-    const currencyBar = root?.querySelector('#hk-fair-currencies');
-    if (currencyBar) {
-      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
-        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
-        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
-      }).join('');
-      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
-    }
-    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
-      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
-    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
-      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('bl
+      log(`Яр
 
 ===== const HK_STAGE2B_RUNNER_REV =====
 
@@ -8432,121 +8476,120 @@ NOT FOUND
 
 ===== function renderWars() =====
 
-        // calling runner. A paused Growth task must not freeze unrelated modules.
-        // Internal apiJsonCore retries remain inside this same queue turn.
-        const value = await task();
-        state.completed += 1;
-        safeDiagnostic('mutation-finish', {
-          id,
-          path: normalizedPath,
-          durationMs: Date.now() - active.startedAt
-        });
-        return value;
-      } catch (error) {
-        state.failed += 1;
-        safeDiagnostic('mutation-error', {
-          id,
-          path: normalizedPath,
-          error: error?.message || String(error)
-        });
-        throw error;
-      } finally {
-        active = null;
-        state.activePath = '';
-        release();
-      }
-    };
+      'members_influence','membersInfluence','players_influence','playersInfluence',
+      'clans_influence','clansInfluence','influence','total_player_level','totalPlayerLevel',
+      'player_level_sum','playerLevelSum','players_level','playersLevel','player_level','playerLevel'
+    ],
+    alliance_defense:[
+      'total_defense','totalDefense','total_defence','totalDefence','alliance_defense','allianceDefense',
+      'alliance_defence','allianceDefence','defense_points','defensePoints','defence_points','defencePoints',
+      'total_defense_points','totalDefensePoints','total_defence_points','totalDefencePoints',
+      'war_defense','warDefense','war_defence','warDefence','protection_points','protectionPoints',
+      'total_protection','totalProtection','defense','defence','protection'
+    ]
+  };
 
-    return {
-      revision: HK_MUTATION_GATE_REV,
-      state,
-      run,
-      get active() { return active; }
-    };
-  })();
-
-  async function apiJson(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3) {
-    if (!hkIsMutationRequest(path, method)) {
-      return apiJsonCore(path, method, body, retryAuthorization, retryNetwork);
-    }
-    return hkMutationGate.run(
-      path,
-      () => apiJsonCore(path, method, body, retryAuthorization, 0)
-    );
+  function finiteMetric(value) {
+    const parsed=Number(value);
+    return Number.isFinite(parsed)&&parsed>=0?parsed:null;
   }
 
-  async function hkAuthoritativePlayerRead(reason='mutation-group') {
-    const value = await apiJson('/player/me','POST');
-    playerDocument = hkStateStore.snapshot || value || playerDocument;
-    recordDiagnostic('authoritative-player-read',{reason,revision:hkStateStore.exportSummary().revision});
-    return playerDocument;
-  }
-
-  function deepObjects(value, depth = 0, output = []) {
-    if (depth > 6 || value == null) return output;
-    if (Array.isArray(value)) { for (const item of value) deepObjects(item, depth + 1, output); return output; }
-    if (typeof value !== 'object') return output;
-    output.push(value);
-    for (const child of Object.values(value)) if (child && typeof child === 'object') deepObjects(child, depth + 1, output);
-    return output;
-  }
-
-  function firstText(...values) {
-    for (const value of values) { const text = clean(value); if (text) return text.slice(0, 100); }
-    return '';
-  }
-
-  function firstFinite(...values) {
-    for (const value of values) { const parsed = Number(value); if (Number.isFinite(parsed) && parsed >= 0) return parsed; }
-    return 0;
-  }
-
-  function normalizePublicWar(documentValue) {
-    for (const row of deepObjects(documentValue)) {
-      const ourNode = row.our_clan || row.player_clan || row.my_clan || row.attacker_clan || row.clan;
-      const enemyNode = row.opponent_clan || row.enemy_clan || row.rival_clan || row.defender_clan || row.opponent || row.enemy;
-      const ourClan = firstText(ourNode?.name, ourNode?.title, row.our_clan_name, row.player_clan_name, row.attacker_name);
-      const opponent = firstText(enemyNode?.name, enemyNode?.title, row.opponent_name, row.enemy_name, row.defender_name);
-      if (!ourClan || !opponent) continue;
-      return {
-        our_clan:ourClan, opponent,
-        our_score:firstFinite(row.our_score, row.player_score, row.attacker_score, ourNode?.score, ourNode?.points),
-        opponent_score:firstFinite(row.opponent_score, row.enemy_score, row.defender_score, enemyNode?.score, enemyNode?.points),
-        status:firstText(row.status, row.state) || 'active',
-        started_at:firstFinite(row.started_at, row.start_at, row.start_time, row.started),
-        ends_at:firstFinite(row.ends_at, row.end_at, row.finish_time, row.finished_at),
-      };
+  function metricFromObject(value, keys) {
+    if(!value||typeof value!=='object')return null;
+    for(const key of keys){
+      if(!Object.prototype.hasOwnProperty.call(value,key))continue;
+      const parsed=finiteMetric(value[key]);
+      if(parsed!==null)return parsed;
     }
     return null;
   }
 
-  function leaderboardArrays(documentValue) {
-    const arrays = [];
-    function walk(value, depth = 0) {
-      if (depth > 6 || value == null) return;
-      if (Array.isArray(value)) { if (value.some(row => row && typeof row === 'object')) arrays.push(value); for (const row of value) walk(row, depth + 1); return; }
-      if (typeof value === 'object') for (const child of Object.values(value)) walk(child, depth + 1);
+  function allianceChildren(row, entity) {
+    const result=[],seen=new Set();
+    for(const source of [entity,row]){
+      if(!source||typeof source!=='object')continue;
+      for(const key of ['clans','alliance_clans','allianceClans','members','items','list','participants']){
+        const list=source[key];
+        if(!Array.isArray(list))continue;
+        for(const child of list){
+          if(!child||typeof child!=='object'||seen.has(child))continue;
+          seen.add(child);result.push(child);
+        }
+      }
     }
-    walk(documentValue); return arrays.sort((a,b) => b.length - a.length);
+    return result;
   }
 
-  function normalizePublicRanking(documentValue, kind) {
-    const arrays = leaderboardArrays(documentValue);
-    for (const list of arrays) {
-      const rows = list.map((row,index) => {
-        if (!row || typeof row !== 'object') return null;
-        const entity = row.player || row.user || row.clan || row.alliance || row.member || row;
-        const name = firstText(entity.nickname, entity.name, entity.title, row.nickname, row.name, row.clan_name, row.alliance_name);
-        const rank = Math.trunc(firstFinite(row.rank, row.place, row.position, entity.rank) || index + 1);
-        const preferred = kind === 'power' ? [row.power, entity.power, row.value, row.score]
-          : kind === 'influence' ? [row.influence, entity.influence, row.level, entity.level, row.value, row.score]
-          : [row.score, row.points, row.value, entity.score, entity.points, entity.power, entity.level];
-        const value = firstFinite(...preferred);
-        return name && rank >= 1 && rank <= 100 ? {rank,name,value} : null;
-      }).filter(Boolean).slice(0,100);
-      if (rows.length) return rows;
+  function allianceMetric(row, entity, kind) {
+    const keys=ALLIANCE_RATING_METRICS[kind]||[];
+    const direct=metricFromObject(entity,keys) ?? metricFromObject(row,keys);
+    if(direct!==null)return direct;
+    const children=allianceChildren(row,entity);
+    if(!children.length)return null;
+    let total=0,found=0;
+    for(const child of children){
+      const node=child.clan||child.member||child;
+      const value=metricFromObject(node,keys) ?? metricFromObject(child,keys);
+      if(value===null)continue;
+      total+=value;found+=1;
     }
-    return [];
+    return found?total:null;
+  }
+
+  function allianceCandidateScore(list) {
+    if(!Array.isArray(list)||!list.length)return -1;
+    let score=0;
+    for(const row of list.slice(0,12)){
+      if(!row||typeof row!=='object')continue;
+      const entity=row.alliance||row;
+      const keys=new Set([...Object.keys(row),...Object.keys(entity||{})].map(String));
+      if(row.alliance||keys.has('alliance_id')||keys.has('allianceId')||keys.has('alliance_name')||keys.has('allianceName'))score+=5;
+      if(keys.has('clans')||keys.has('alliance_clans')||keys.has('allianceClans')||keys.has('core_clan')||keys.has('coreClan'))score+=4;
+      for(const metricKeys of Object.values(ALLIANCE_RATING_METRICS)){
+        if(metricKeys.some(key=>keys.has(key))){score+=3;break;}
+      }
+      if(firstText(entity?.name,entity?.title,row.name,row.alliance_name,row.allianceName))score+=1;
+    }
+    return score;
+  }
+
+  function normalizeAllianceRatings(documentValue) {
+    const arrays=leaderboardArrays(documentValue)
+      .map(list=>({list,score:allianceCandidateScore(list)}))
+      .filter(item=>item.score>0)
+      .sort((a,b)=>b.score-a.score||b.list.length-a.list.length);
+    for(const candidate of arrays){
+      const normalized=[],names=new Set();
+      for(const row of candidate.list){
+        if(!row||typeof row!=='object')continue;
+        const entity=row.alliance||row;
+        const name=firstText(entity?.name,entity?.title,entity?.alliance_name,entity?.allianceName,row.alliance_name,row.allianceName,row.name,row.title);
+        if(!name||names.has(name))continue;
+        const metrics={
+          alliance_power:allianceMetric(row,entity,'alliance_power'),
+          alliance_influence:allianceMetric(row,entity,'alliance_influence'),
+          alliance_defense:allianceMetric(row,entity,'alliance_defense')
+        };
+        if(Object.values(metrics).every(value=>value===null))continue;
+        names.add(name);normalized.push({name,...metrics});
+      }
+      if(normalized.length){
+        const result={};
+        for(const kind of Object.keys(ALLIANCE_RATING_METRICS)){
+          const rows=normalized.filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+            .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name)).slice(0,100)
+            .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+          if(rows.length)result[kind]=rows;
+        }
+        if(Object.keys(result).length)return result;
+      }
+    }
+    try{
+      const objects=deepObjects(documentValue).slice(0,40);
+      const keys=[...new Set(objects.flatMap(value=>Object.keys(value||{})))].filter(key=>/alliance|power|influence|defen|protect|level/i.test(key)).slice(0,80);
+      recordDiagnostic('alliance-rating-schema',{keys});
+    }catch(_){}
+    return {};
   }
 
   async function publicSnapshotServerJson(documentValue, retry = true) {
@@ -8611,8 +8654,10 @@ NOT FOUND
       try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
       catch (_) {}
     }
-    try { const value = await apiJson('/alliance/list', 'GET', null, true, 1); const rows = normalizePublicRanking(value, 'alliances'); if (rows.length) ratings.alliances = rows; }
-    catch (_) {}
+    try {
+      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
+      Object.assign(ratings, normalizeAllianceRatings(value));
+    } catch (_) {}
     return ratings;
   }
 
@@ -8871,7 +8916,7 @@ NOT FOUND
     for (const lotId of selectedFairLots) {
       const groups = preset.slotGroups?.[lotId];
       if (groups && typeof groups === 'object') {
-        selectedFairSlotRules.set(lotId, {regular:Boolean(groups.regul
+        selectedFairSlotRules.set(lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)});
 
 ===== async function readBuildingStudy( =====
 
@@ -9615,3 +9660,2324 @@ NOT FOUND
   function acceptSharedGameResponse(url,documentValue){
     if(!documentValue||typeof documentValue!=='object'||!isGameApiRequest(url))return;
     let path='';try{path=new URL(String(url||''),locati
+
+===== function fairProjectedCosts( =====
+
+    const box=root?.querySelector('#hk-war-content');
+    if(!box)return;
+    const war=warSnapshot;
+    if(!war){
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
+    }else{
+      const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
+      const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
+      const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
+        '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong></div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong></div></div>'+
+        '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
+    }
+    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
+  }
+
+  async function refreshWars(force=false) {
+    if(!requireLicense())return null;
+    try{
+      const result=await readPublicWar();
+      warSnapshot=result?.war||null;
+      warLastReadAt=Date.now();
+      renderWars();
+      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
+      return warSnapshot;
+    }catch(error){
+      log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
+      renderWars();
+      return null;
+    }
+  }
+
+  async function readPublicRatings() {
+    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
+    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
+      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
+      catch (_) {}
+    }
+    try {
+      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
+      Object.assign(ratings, normalizeAllianceRatings(value));
+    } catch (_) {}
+    return ratings;
+  }
+
+  async function collectPublicSnapshot(force = false) {
+    if (publicSnapshotPromise || !licenseState.allowed || !licenseState.token || !apiHeaders.Authorization) return publicSnapshotPromise;
+    if (!force && Date.now() - lastPublicSnapshot < PUBLIC_SNAPSHOT_INTERVAL_MS) return null;
+    publicSnapshotPromise = (async () => {
+      try {
+        const [warResult, ratings] = await Promise.all([readPublicWar(), readPublicRatings()]);
+        const payload = {ratings}; if (warResult.read) payload.war = warResult.war;
+        if (!warResult.read && !Object.keys(ratings).length) return;
+        await publicSnapshotServerJson(payload); lastPublicSnapshot = Date.now();
+      } catch (error) { console.warn('[HK] public snapshot failed', error); }
+      finally { publicSnapshotPromise = null; }
+    })();
+    return publicSnapshotPromise;
+  }
+
+  async function loadFair() {
+    if (!requireLicense()) return;
+    try {
+      log('Считываю ярмарки…');
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const visibleFairs = visibleFairStates();
+      if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
+      selectedFairLots.clear();
+      selectedFairSlotRules.clear();
+      renderFair();
+      log(`Ярмарка считана: ${visibleFairs.length} разделов, ${fairCatalog.length} лотов`, 'ok');
+    } catch (error) { log(`Ошибка ярмарки: ${error.message}`, 'bad'); }
+  }
+
+  function costVisual(cost, multiplier = 1) {
+    const parts = costParts(cost);
+    if (!parts.length) return '<span>0</span>';
+    return parts.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${(part.quantity * multiplier).toLocaleString(locale())}</b>`).join('');
+  }
+
+  function addProjectedCost(target, part, multiplier = 1) {
+    if (!part?.id) return;
+    const key = `${part.kind}|${part.id}`;
+    const current = target.get(key) || {...part, quantity:0};
+    current.quantity += Math.max(0, Number(part.quantity || 0)) * Math.max(0, Number(multiplier || 0));
+    target.set(key, current);
+  }
+
+  function walletForecastHtml(parts) {
+    const values = [...parts.values()].filter(part => part?.id).sort((a, b) => a.id.localeCompare(b.id));
+    if (!values.length) return '';
+    return `<div class="hk-wallet-forecast">${values.map(part => {
+      const balance = walletAmount(part.id);
+      const spend = Math.max(0, Number(part.quantity || 0));
+      const known = balance !== null;
+      return `<div class="hk-wallet-row">
+        <span class="hk-wallet-currency">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${escapeHtml(paymentLabel(part.id))}</b></span>
+        <span>${tr('balance')}: <b>${known ? balance.toLocaleString(locale()) : '—'}</b> · ${either('Макс. возможный расход','Maximum possible spend')}: <b>${spend.toLocaleString(locale())}</b></span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function fairProjectedCosts() {
+    const totals = new Map();
+    const state = fairState(selectedFairId);
+    const rows = fairRowsForState(state);
+    const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
+    const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
+    const rerollLimit = Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0));
+    const relevantRows = selectedRows.length ? selectedRows : rows;
+    const maximumLots = new Map();
+    for (const row of relevantRows) for (const part of costParts(row.cost)) {
+      const key = `${part.kind}|${part.id}`;
+      const current = maximumLots.get(key);
+      if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
+    }
+    for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
+    for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollLimit);
+    return totals;
+  }
+
+  function renderFair() {
+    if (!fairTypes || !fairLots) return;
+    if (!fairCatalog.length) {
+      fairTypes.innerHTML = `<p class="hk-muted">${tr('readFirst')}</p>`;
+      fairLots.innerHTML = '';
+      const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
+      updateFairControls(); return;
+    }
+    const states = visibleFairStates();
+    fairTypes.innerHTML = states.map(state => {
+      const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
+      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
+        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
+    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
+    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
+      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
+    });
+    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
+    const allRows = fairRowsForState(fairState(selectedFairId));
+    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
+    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
+    const currencyBar = root?.querySelector('#hk-fair-currencies');
+    if (currencyBar) {
+      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
+        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
+        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
+      }).join('');
+      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
+    }
+    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
+      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
+    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
+      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('blocked')}</small>`}</button>`).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
+    fairLots.querySelectorAll('[data-lot]').forEach(button => button.onclick = () => {
+      const row = fairCatalog.find(value => value.lotId === button.dataset.lot);
+      if (!row?.safe) { log(either('Этот лот заблокирован: неизвестная валюта', 'This lot is blocked: unknown currency'), 'warn'); return; }
+      if (selectedFairLots.has(row.lotId)) {
+        selectedFairLots.delete(row.lotId);
+        selectedFairSlotRules.delete(row.lotId);
+      } else {
+        selectedFairLots.add(row.lotId);
+        const options = fairSlotOptions();
+        selectedFairSlotRules.set(row.lotId, {regular:options.some(value => !value.vip), vip:options.some(value => value.vip)});
+      }
+      renderFair();
+    });
+    renderFairSlotRules();
+    updateFairControls();
+  }
+
+  function fairSlotOptions(state = fairState(selectedFairId)) {
+    const fairConfigs = shopViewDocument?.fairs || shopViewDocument?.fair || [];
+    const config = (Array.isArray(fairConfigs) ? fairConfigs : []).find(value => String(value?.id) === String(state?.id));
+    const metaById = new Map((config?.fair_slots || []).map(slot => [String(slot?.id), slot]));
+    return [...(state?.fair_slots || [])]
+      .sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0))
+      .map((slot, index) => ({slot, index, key:String(index), vip:Boolean(slot?.is_vip || metaById.get(String(slot?.id))?.is_vip)}));
+  }
+
+  function renderFairSlotRules() {
+    if (!fairSlotRules) return;
+    const slots = fairSlotOptions();
+    if (!selectedFairLots.size || !slots.length) {
+      fairSlotRules.innerHTML = '';
+      fairSlotRules.style.display = 'none';
+      return;
+    }
+    fairSlotRules.style.display = '';
+    const hasRegular = slots.some(value => !value.vip);
+    const hasVip = slots.some(value => value.vip);
+    for (const lotId of selectedFairLots) {
+      if (!selectedFairSlotRules.has(lotId)) selectedFairSlotRules.set(lotId, {regular:hasRegular, vip:hasVip});
+    }
+    fairSlotRules.innerHTML = `<h3>${tr('allowedCells')}</h3><p class="hk-muted">${tr('selectCellsHint')}</p>` +
+      [...selectedFairLots].map(lotId => {
+        const row = fairCatalog.find(value => value.lotId === lotId);
+        const allowed = selectedFairSlotRules.get(lotId) || {regular:hasRegular, vip:hasVip};
+        return `<div class="hk-slot-rule"><div class="hk-slot-product">${fairIconHtml(row?.icon || '', 'hk-price-icon')}<b>×${Number(row?.rewardQuantity || 0).toLocaleString(locale())}</b></div>
+          <div class="hk-slot-buttons"><button class="${allowed.regular ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="regular" ${hasRegular ? '' : 'disabled'}>${tr('regularSlots')}: ${tr(allowed.regular ? 'yes' : 'no')}</button>
+          <button class="vip ${allowed.vip ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="vip" ${hasVip ? '' : 'disabled'}>♛ ${tr('vipSlots')}: ${tr(allowed.vip ? 'yes' : 'no')}</button></div></div>`;
+      }).join('');
+    fairSlotRules.querySelectorAll('[data-rule-lot]').forEach(button => button.onclick = () => {
+      const allowed = selectedFairSlotRules.get(button.dataset.ruleLot) || {regular:hasRegular, vip:hasVip};
+      allowed[button.dataset.ruleGroup] = !allowed[button.dataset.ruleGroup];
+      selectedFairSlotRules.set(button.dataset.ruleLot, allowed);
+      renderFairSlotRules(); updateFairControls();
+    });
+  }
+
+  function updateFairControls() {
+    const selected = root?.querySelector('#hk-fair-selected');
+    if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
+    const start = root?.querySelector('#hk-fair-start');
+    const rulesValid = [...selectedFairLots].every(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
+    });
+    if (start) start.disabled = fairRunning || !selectedFairId || !selectedFairLots.size || !rulesValid;
+    const stop = root?.querySelector('#hk-fair-stop');
+    if (stop) stop.disabled = !fairRunning;
+  }
+
+  function fairComboSettings() {
+    return {
+      exactLots:Math.max(0, Number(root?.querySelector('#hk-fair-exact-lots')?.value || 0))
+    };
+  }
+
+  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
+    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
+  }
+
+  function renderFairBonusChoices() {
+    const box = root?.querySelector('#hk-fair-bonus-lots'); if (!box) return;
+    const available = new Set(availableFairBonusLots());
+    box.innerHTML = `<span>${tr('fairBonusLots')}</span><div>${[5,10,30].map(quantity =>
+      `<label class="hk-check ${available.has(quantity) ? 'available' : 'unavailable'}"><input type="checkbox" data-fair-bonus="${quantity}" ${selectedFairBonusLots.has(quantity) ? 'checked' : ''} ${available.has(quantity) ? '' : 'disabled'}><b>×${quantity}</b></label>`).join('')}</div>`;
+    box.querySelectorAll('[data-fair-bonus]').forEach(input => input.onchange = () => {
+      const quantity = Number(input.dataset.fairBonus);
+      if (input.checked) selectedFairBonusLots.add(quantity); else selectedFairBonusLots.delete(quantity);
+    });
+  }
+
+  function fairPresets() {
+    const value = load().fairPresets;
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  }
+
+  function refreshFairPresets(selectName = '') {
+    if (!fairPresetSelect) return;
+    const names = Object.keys(fairPresets()).sort((a, b) => a.localeCompare(b, locale()));
+    fairPresetSelect.innerHTML = `<option value="">${tr('fairSavedSettings')}</option>` +
+      names.map(name => `<option value="${escapeHtml(name)}" ${name === selectName ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
+  }
+
+  function fairPresetSnapshot() {
+    return {
+      fairId:selectedFairId,
+      lots:[...selectedFairLots],
+      slotGroups:Object.fromEntries([...selectedFairSlotRules].map(([lotId, groups]) => [lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)}])),
+      currency:selectedFairCurrency,
+      exactLots:fairComboSettings().exactLots, bonusLots:[...selectedFairBonusLots],
+      buyLimit:Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1)),
+      rerollLimit:Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0)),
+      premiumReroll:Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)
+    };
+  }
+
+  function saveFairPreset(existingName = '') {
+    if (!selectedFairId || !selectedFairLots.size) {
+      alert(either('Сначала выберите ярмарку и хотя бы один товар', 'Choose a fair and at least one item first')); return;
+    }
+    const name = existingName || prompt(tr('settingName'));
+    if (!name?.trim()) return;
+    const normalized = name.trim();
+    const all = fairPresets();
+    all[normalized] = fairPresetSnapshot();
+    save({fairPresets:all});
+    refreshFairPresets(normalized);
+    log(tr('settingSaved', {name:normalized}), 'ok');
+  }
+
+  function loadFairPreset(name) {
+    const preset = fairPresets()[name];
+    if (!preset) return;
+    if (!fairCatalog.length) {
+      alert(either('Сначала нажмите «Считать ярмарку»', 'Press “Read fair” first'));
+      refreshFairPresets(); return;
+    }
+    if (fairStates().some(state => String(state.id) === String(preset.fairId))) selectedFairId = String(preset.fairId);
+    const available = new Set(fairRowsForState(fairState(selectedFairId)).map(row => row.lotId));
+    selectedFairLots = new Set((preset.lots || []).map(String).filter(id => available.has(id)));
+    selectedFairSlotRules.clear();
+    const options = fairSlotOptions();
+    for (const lotId of selectedFairLots) {
+      const groups = preset.slotGroups?.[lotId];
+      if (groups && typeof groups === 'object') {
+        selectedFairSlotRules.set(lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)});
+      } else {
+        const oldCells = new Set(Array.isArray(preset.slotRules?.[lotId]) ? preset.slotRules[lotId].map(String) : options.map(value => value.key));
+        selectedFairSlotRules.set(lotId, {
+          regular:options.some(value => !value.vip && oldCells.has(value.key)),
+          vip:options.some(value => value.vip && oldCells.has(value.key))
+        });
+      }
+    }
+    selectedFairCurrency = String(preset.currency || '');
+    const buy = root?.querySelector('#hk-fair-buy-limit'); if (buy) buy.value = Math.max(1, Number(preset.buyLimit || 1));
+    const reroll = root?.querySelector('#hk-fair-reroll-limit'); if (reroll) reroll.value = Math.max(0, Number(preset.rerollLimit || 0));
+    const premium = root?.querySelector('#hk-fair-premium-reroll'); if (premium) premium.checked = Boolean(preset.premiumReroll);
+    selectedFairBonusLots = new Set(Array.isArray(preset.bonusLots) ? preset.bonusLots.map(Number).filter(value => [5,10,30].includes(value)) : [5,10,30]);
+    renderFair();
+    const exact=root?.querySelector('#hk-fair-exact-lots'); if(exact) exact.value=['0','3','6','9'].includes(String(preset.exactLots)) ? String(preset.exactLots) : '0';
+    renderFairBonusChoices();
+    refreshFairPresets(name);
+    log(tr('settingLoaded', {name}), 'ok');
+  }
+
+  function deleteFairPreset() {
+    const name = fairPresetSelect?.value;
+    if (!name || !confirm(tr('deleteSetting', {name}))) return;
+    const all = fairPresets(); delete all[name]; save({fairPresets:all}); refreshFairPresets();
+  }
+
+  function costDocumentFromParts(parts) {
+    const result = {items:[], currencies:[]};
+    for (const part of parts || []) if (part?.id && part.quantity > 0) result[part.kind === 'currencies' ? 'currencies' : 'items'].push({id:part.id, quantity:part.quantity});
+    return result;
+  }
+
+  async function executeFairPurchase(row, slot, allowPremium = false) {
+    // Event fairs have their own currency/amount controls in this tab. Do not
+    // let the global daily budget reject the whole event run because one of
+    // the selected variants costs diamonds. The normal fair remains covered
+    // by the unified budget.
+    if (!isEventFairState(fairState(selectedFairId))) {
+      const decision = budgetDecision(row.cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+      if (!decision.allowed) throw new Error(decision.problems.join('; '));
+    }
+    const beforeDoc = playerDocument;
+    const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, beforeDoc)]));
+    fairDocument = await apiJson('/shop/buy', 'POST', {shop_lot_id:row.lotId, payment_type:'INTERNAL', fair_id:selectedFairId, slot_id:slot.id, lotName:row.name, lotDescription:''});
+    updateWalletFromResponse(fairDocument, row.cost);
+    for (const part of costParts(row.cost)) appendExpense({section:'fair', lotId:row.lotId, name:gameText(row.name) || row.name,
+      currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'purchased'});
+  }
+
+  async function runFair() {
+    if (!requireLicense() || fairRunning || !selectedFairLots.size) return;
+    if ([...selectedFairLots].some(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return !(rule?.regular || rule?.vip);
+    })) {
+      alert(tr('noCells')); return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
+        return;
+      }
+    } catch (error) {
+      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
+        return;
+      }
+    } catch (error) {
+      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    const buyLimit = Math.max(1, Number(root.querySelector('#hk-fair-buy-limit').value || 1));
+    const rerollLimit = Math.max(0, Number(root.querySelector('#hk-fair-reroll-limit').value || 0));
+    const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
+    const combo = fairComboSettings();
+    let state = fairState(selectedFairId);
+    if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
+    const cost = costParts(state?.fair_reroll_cost)[0];
+    const worst = cost ? `${cost.quantity * rerollLimit} ${cost.id}` : '0';
+    const maximumCrystalLotCost = fairCatalog.filter(row => selectedFairLots.has(row.lotId))
+      .flatMap(row => costParts(row.cost)).filter(part => part.kind === 'currencies' && part.id === 'cur_prem')
+      .reduce((maximum, part) => Math.max(maximum, part.quantity), 0) * buyLimit;
+    const crystalNotice = maximumCrystalLotCost
+      ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maxi
+
+===== function normalizeRegularShop( =====
+
+        if (!combo.exactLots) for (const {slot, vip} of options) {
+          if (fairStop || bought >= buyLimit || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) continue;
+          const allowedGroups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+          if (allowedGroups && !(vip ? allowedGroups.vip : allowedGroups.regular)) continue;
+          const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+          if (!row?.safe) continue;
+          log(`Лот найден. Покупка ${bought + 1}/${buyLimit}…`);
+          try {
+            await executeFairPurchase(row, slot, allowPremium);
+            bought++; purchased = true; authRetries = 0; log(`Куплено ${bought}/${buyLimit}`, 'ok');
+          } catch (error) {
+            if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+            throw error;
+          }
+        }
+        if (purchased) continue;
+        if (rerolls >= rerollLimit) { log(`Достигнут лимит прокруток: ${rerollLimit}`, 'warn'); break; }
+        if (!safeReroll(state.fair_reroll_cost, allowPremium)) throw new Error('Цена прокрутки изменилась и стала небезопасной');
+        log(`Лота нет. Прокрутка ${rerolls + 1}/${rerollLimit}…`);
+        try {
+          if (!isEventFairState(state)) {
+            const rerollDecision = budgetDecision(state.fair_reroll_cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+            if (!rerollDecision.allowed) throw new Error(rerollDecision.problems.join('; '));
+          }
+          const before = new Map(costParts(state.fair_reroll_cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+          const rerollCost = state.fair_reroll_cost;
+          fairDocument = await apiJson('/fair/reroll', 'POST', {fair_id:selectedFairId});
+          updateWalletFromResponse(fairDocument, rerollCost);
+          for (const part of costParts(state.fair_reroll_cost)) appendExpense({section:'fair', lotId:`reroll:${selectedFairId}`, name:either('Прокрутка ярмарки','Fair reroll'),
+            currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'rerolled'});
+          rerolls++; authRetries = 0;
+        }
+        catch (error) {
+          if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+          throw error;
+        }
+        await gameRetryDelay(550);
+      }
+      playerDocument = await hkAuthoritativePlayerRead('fair-complete');
+      fairDocument = playerDocument;
+      hkRunner.finish(either('Ярмарка завершена','Fair completed'));
+      log(`Ярмарка завершена: выбранных покупок ${bought}, бонусных ${bonusBought}, прокруток ${rerolls}`, 'ok');
+    } catch (error) {
+      if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Ярмарка остановлена','Fair stopped'),'warn'); }
+      else { hkRunner.fail(error); log(`Аварийная остановка ярмарки: ${error.message}`, 'bad'); }
+    } finally { fairRunning = false; fairStop = false; renderFair(); }
+  }
+
+  function ordinaryShopGroup(lot) {
+    const lotId = String(lot?.id || '').toLowerCase();
+    // Each Resources card has one visible base lot plus three real hidden
+    // package commands (_10, _50 and _100). They are separate shop_lot_id
+    // values, not a quantity parameter on the base purchase.
+    if (/^mf_shoplot_itempack_[1-5](?:_(?:10|50|100))?$/.test(lotId)) return 'resources';
+    // Renovation contains the ten individual materials (two materials per tier).
+    // The combined mf_shoplot_pit_remort_all pack is intentionally excluded.
+    if (/^mf_shoplot_pit_remort_(?:beams|nails)_[1-5]$/.test(lotId)) return 'renovation';
+    // Invest Deals contains the two daily building-helper offers only.
+    if (/^mf_shoplot_building_helpers_offer_0[12]$/.test(lotId)) return 'invest';
+    return '';
+  }
+
+  function quantitySelectOptions(maximum, selected) {
+    const max = Math.max(0, Math.trunc(Number(maximum || 0)));
+    const current = Math.min(max, Math.max(0, Math.trunc(Number(selected || 0))));
+    const values = new Set([0, current, max]);
+    for (let value = 1; value <= Math.min(max, 20); value++) values.add(value);
+    for (const value of [25, 50, 100, 250, 500]) if (value <= max) values.add(value);
+    return [...values].sort((a, b) => a - b).map(value => `<option value="${value}" ${value === current ? 'selected' : ''}>${value}</option>`).join('');
+  }
+
+  function captureActiveEventCode() {
+    let code = '';
+    const activeIcon = document.querySelector('.picture-counter.special-counter img[src*="/special_events/icons/timer_event_"]');
+    const iconMatch = String(activeIcon?.getAttribute('src') || '').match(/timer_event_([^/?]+?)_icon(?:\.|\?)/i);
+    if (iconMatch?.[1]) code = iconMatch[1].toLowerCase();
+    // On a first installation the player may already be inside the current
+    // event page. Use its visible cards only until the map icon has supplied
+    // and persisted the authoritative current event code.
+    if (!code && !activeEventCode) {
+      const visibleCard = [...document.querySelectorAll('[data-lot-id^="mf_shoplot_"]')].find(element =>
+        visible(element) && /^mf_shoplot_(?:daily_|finite_|infinite_)?event_[^_]+_/i.test(String(element.getAttribute('data-lot-id') || '')));
+      const cardMatch = String(visibleCard?.getAttribute('data-lot-id') || '').match(/^mf_shoplot_(?:daily_|finite_|infinite_)?event_([^_]+)_/i);
+      if (cardMatch?.[1]) code = cardMatch[1].toLowerCase();
+    }
+    if (code && code !== activeEventCode) {
+      activeEventCode = code;
+      save({activeEventCode:code});
+      if (shopViewDocument) {
+        shopRows = normalizeRegularShop();
+        if (root && selectedShopSection === 'regular') renderShop();
+      }
+    }
+    return activeEventCode;
+  }
+
+  function normalizeRegularShop(shopDocument = shopViewDocument, playerDoc = playerDocument) {
+    const currentEventCode = captureActiveEventCode();
+    const limits = new Map();
+    const playerLimits = playerDoc?.shop_lot_limits || playerDoc?.player?.shop_lot_limits || [];
+    for (const item of playerLimits) limits.set(String(item?.shop_lot_id || ''), Math.max(0, Number(item?.number_of_purchase || 0)));
+    const shopLots = shopDocument?.shop_lots || [];
+    const lotsById = new Map(shopLots.map(lot => [String(lot?.id || ''), lot]));
+    return shopLots.flatMap(lot => {
+      const rawView = lot?.lot_view || {};
+      const lotId = String(lot.id || '');
+      const currentEventLot = Boolean(currentEventCode) &&
+        lotId.toLowerCase().includes(`_event_${currentEventCode}_`);
+      const resourceMatch = lotId.match(/^(mf_shoplot_itempack_[1-5])(?:_(10|50|100))?$/i);
+      const resourceBaseLot = resourceMatch ? lotsById.get(resourceMatch[1]) : null;
+      const resourceBaseView = resourceBaseLot?.lot_view || {};
+      const declaredMultiplier = Boolean(resourceMatch?.[2]) &&
+        (resourceBaseView.multiplier_lots || []).map(String).includes(lotId);
+      // Hidden multiplier lots contain only their resulting package quantity.
+      // Reuse the visible parent card for its name/icon/content, while keeping
+      // the child's own lot ID, cost and package quantity for the purchase.
+      if (resourceMatch?.[2] && !declaredMultiplier) return [];
+      const view = declaredMultiplier ? resourceBaseView : rawView;
+      if (String(view.type || '').toLowerCase() === 'fair' || lot.external_cost) return [];
+      const lotLimits = lot.limit || [];
+      // The standard Resources and Renovation cards have no daily purchase
+      // limit in the game. Keep only our explicitly allow-listed ordinary
+      // lots when a server-side limit is absent.
+      const unlimited = !lotLimits.length && (Boolean(ordinaryShopGroup(lot)) || currentEventLot);
+      if (!lotLimits.length && !unlimited) return [];
+      const playerLimit = lotLimits.find(value => String(value?.type || '').toUpperCase() === 'PLAYER');
+      const sharedLimit = lotLimits.find(value => ['CLAN','GLOBAL'].includes(String(value?.type || '').toUpperCase()));
+      const remainingValues = [];
+      if (playerLimit) remainingValues.push(Math.max(0, Number(playerLimit.limit || 0) + Number(playerLimit.bonus || 0) - (limits.get(String(lot.id || '')) || 0)));
+      if (sharedLimit) remainingValues.push(Math.max(0, Number(sharedLimit.limit || 0) + Number(sharedLimit.bonus || 0) - Number(sharedLimit.value || 0)));
+      if (!remainingValues.length && !unlimited) return [];
+      const bought = limits.get(lotId) || 0;
+      const remaining = unlimited ? SHOP_UNLIMITED_RUN_MAX : Math.min(...remainingValues);
+      const parts = costParts(lot.cost);
+      const content = (view.content_view || [])[0] || {};
+      const rewardId = String(content.id || '');
+      const rewardQuantity = resourceMatch
+        ? Math.max(0, Number(rawView.quantity || view.quantity || 0))
+        : Math.max(0, Number(content.quantity || view.quantity || 0));
+      const tab = String(view.tab || 'default').toLowerCase();
+      // The shop catalog and the player's limit list both retain past events.
+      // Include every internal lot of the active event: the updated game uses
+      // daily_event, finite_event, event and infinite_event prefixes together.
+      // If the current event cannot be identified, fail closed and show none.
+      const section = ['clan','clan_2'].includes(tab) ? 'clan' : currentEventLot ? 'regular' : 'ordinary';
+      const group = section === 'ordinary' ? ordinaryShopGroup(lot) : '';
+      const clanGroup = section === 'clan' ? (sharedLimit ? 'shared' : 'personal') : '';
+      if (section === 'ordinary' && !group) return [];
+      const premium = premiumPurchase(lot.cost);
+      const safe = parts.length > 0 && parts.every(part => part.quantity > 0 &&
+        (part.kind === 'items' ? part.id.startsWith('item_') :
+          ['cur_gold', 'cur_cap'].includes(part.id) || (section === 'clan' && part.id === 'cur_prem')));
+      return [{lotId, name:String(view.name || rewardId || lotId), rewardId,
+        rewardQuantity, resourceTier:resourceMatch ? Number(resourceMatch[1].slice(-1)) : 0,
+        cost:lot.cost || {}, safe, affordable:canAffordCost(lot.cost || {}, playerDoc), premium, group,
+        bought, maximum:bought + remaining, remaining, unlimited, section, clanGroup,
+        sharedPurchased:sharedLimit ? Math.max(0, Number(sharedLimit.value || 0)) : 0,
+        sharedMaximum:sharedLimit ? Math.max(0, Number(sharedLimit.limit || 0) + Number(sharedLimit.bonus || 0)) : 0,
+        icon:mediaUrl(view.icon_card || view.icon || content.icon_card || content.icon, rewardId)}];
+    }).sort((a, b) => Number(b.remaining > 0) - Number(a.remaining > 0) ||
+      (a.group === 'resources' && b.group === 'resources'
+        ? a.resourceTier - b.resourceTier || a.rewardQuantity - b.rewardQuantity
+        : a.lotId.localeCompare(b.lotId)));
+  }
+
+  // HK_CLAN_SHOP_ACTUAL_FACTS_V1
+  function clanShopActualFactType(row) {
+    if (row?.section !== 'clan' || row?.clanGroup !== 'shared') return '';
+    const label = clean(String(gameText(row?.name || '') || '') + ' ' + String(row?.name || '') + ' ' + String(row?.rewardId || '') + ' ' + String(row?.lotId || '')).toLowerCase();
+    if (/шар.{0,24}идол|идол.{0,24}шар|idol.{0,24}ball|ball.{0,24}idol|guru.{0,24}ball|ball.{0,24}guru/.test(label)) return 'idol_orbs';
+    if (/s\s*\+.{0,24}бизнес|бизнес.{0,24}s\s*\+|s\s*\+.{0,24}business|business.{0,24}s\s*\+|splus.{0,24}business|business.{0,24}splus/.test(label)) return 'splus_businesses';
+    return '';
+  }
+
+  async function reportClanShopActualFacts() {
+    const rows = shopRows.flatMap(row => {
+      const itemType = clanShopActualFactType(row);
+      if (!itemType) return [];
+      return [{
+        lot_id:String(row.lotId || ''),
+        item_type:itemType,
+        lot_name:gameText(row.name || '') || String(row.name || ''),
+        reward_id:String(row.rewardId || ''),
+        shared_purchased:Math.max(0, Number(row.sharedPurchased || 0)),
+        shared_maximum:Math.max(0, Number(row.sharedMaximum || 0)),
+        player_purchased:Math.max(0, Number(row.bought || 0))
+      }];
+    });
+    if (!rows.length || !licenseState.allowed) return;
+    try {
+      await licensedServerJson(CLAN_SHOP_FACT_API_BASE, '/clan-shop-facts/submit', {rows}, false, 'clan-shop-facts');
+    } catch (error) {
+      console.warn('[HK] Clan Shop actual facts sync failed', error);
+    }
+  }
+
+  async function loadShop() {
+    if (!requireLicense()) return;
+    try {
+      log(either('Считываю магазин…', 'Reading shop…'));
+      playerDocument = await apiJson('/player/me', 'POST');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      shopRows = normalizeRegularShop();
+      void reportClanShopActualFacts();
+      selectedShopLots = new Set([...selectedShopLots].filter(id => shopRows.some(row => row.lotId === id && row.safe && row.remaining > 0)));
+      selectedShopCounts = new Map([...selectedShopCounts].flatMap(([id, count]) => {
+        const row = shopRows.find(value => value.lotId === id && value.safe && value.remaining > 0);
+        return row ? [[id, Math.min(row.remaining, Math.max(0, Number(count || 0)))]] : [];
+      }));
+      renderShop();
+      log(either(`Магазин считан: ${shopRows.length} лотов`, `Shop loaded: ${shopRows.length} lots`), 'ok');
+    } catch (error) { log(`${either('Ошибка магазина', 'Shop error')}: ${error.message}`, 'bad'); }
+  }
+
+  function defaultShopPurchaseCount(row) {
+    if (!row) return 0;
+    const remaining = Math.max(0, Number(row.remaining || 0));
+    if (isRenovationBatch(row)) return remaining >= renovationBatchMultiplier(row) ? renovationBatchMultiplier(row) : 0;
+    return Math.min(remaining, 1);
+  }
+
+  function isRenovationBatch(row) {
+    return row?.section === 'ordinary' && row?.group === 'renovation';
+  }
+
+  function renovationBatchMultiplier(row) {
+    return Math.ceil(500 / Math.max(1, Number(row?.rewardQuantity || 0)));
+  }
+
+  function renovationBatchCount(row, count) {
+    return Math.floor(Math.max(0, Number(count || 0)) / renovationBatchMultiplier(row));
+  }
+
+  function renovationBatchMaximum(row) {
+    return Math.floor(Math.min(SHOP_UNLIMITED_RUN_MAX, Math.max(0, Number(row?.remaining || 0))) / renovationBatchMultiplier(row));
+  }
+
+  function renderShop() {
+    if (!shopCards || !shopSummary) return;
+    if (!shopRows.length) {
+      shopCards.innerHTML = `<p class="hk-muted">${tr('shopReadFirst')}</p>`;
+      shopSummary.textContent = tr('selectedPurchases', {n:0});
+      const buy = root?.querySelector('#hk-shop-buy'); if (buy) buy.disabled = true;
+      return;
+    }
+    const groupBar = root?.querySelector('#hk-shop-groups');
+    if (groupBar) {
+      const groups = selectedShopSection === 'ordinary'
+        ? [['resources','resourcesShop'],['renovation','renovationShop'],['invest','investShop']]
+        : selectedShopSection === 'clan'
+          ? [['personal','personalLots'],['shared','sharedLots']]
+          : [];
+      groupBar.style.display = groups.length ? '' : 'none';
+      groupBar.innerHTML = groups.map(([id, label]) => `<button class="${selectedShopGroup === id ? 'active' : ''}" data-shop-group="${id}" data-i18n="${label}">${tr(label)}</button>`).join('');
+      groupBar.querySelectorAll('[data-shop-group]').forEach(button => button.onclick = () => {
+        selectedShopGroup = button.dataset.shopGroup; selectedShopLots.clear(); selectedShopCounts.clear(); renderShop();
+      });
+    }
+    const visibleRows = shopRows.filter(row => row.section === selectedShopSection &&
+      (selectedShopSection === 'ordinary' ? row.group === selectedShopGroup :
+        selectedShopSection === 'clan' ? row.clanGroup === selectedShopGroup : true));
+    shopCards.innerHTML = visibleRows.map(row => {
+      const selectable = row.safe && row.remaining > 0 && (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0);
+      const count = selectable ? Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0))) : 0;
+      const shownRewardQuantity = count && row.group === 'renovation' ? row.rewardQuantity * count : row.rewardQuantity;
+      const selectedBatches = isRenovationBatch(row) ? renovationBatchCount(row, count) : 0;
+      const maximumBatches = isRenovationBatch(row) ? renovationBatchMaximum(row) : 0;
+      return `<div class="hk-shop-lot ${count ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${selectable ? '' : 'locked'}">
+        ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}<label class="hk-shop-pick"><input type="checkbox" data-shop-lot="${escapeHtml(row.lotId)}" ${count ? 'checked' : ''} ${selectable ? '' : 'disabled'}>
+        ${fairIconHtml(row.icon)}<b>×${shownRewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost, count && row.group === 'renovation' ? count : 1)}</span></label>
+        <small>${row.unlimited ? tr('unlimited') : row.remaining > 0 ? tr('remaining',{n:row.remaining}) : tr('boughtOut')}</small>
+        ${isRenovationBatch(row)
+          ? `<label class="hk-shop-quantity"><span>${either('Пакетов ×500','×500 packages')}</span><select data-shop-batches="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>${Array.from({length:maximumBatches + 1}, (_, n) => `<option value="${n}" ${n === selectedBatches ? 'selected' : ''}>${n} × 500</option>`).join('')}</select></label>`
+          : `<label class="hk-shop-quantity"><span>${tr('quantity')}</span><input data-shop-qty="${escapeHtml(row.lotId)}" type="number" inputmode="numeric" min="0" max="${row.remaining}" value="${count}" ${selectable ? '' : 'disabled'}><button type="button" data-shop-max="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>MAX</button></label>`}</div>`;
+    }).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
+    shopCards.querySelectorAll('[data-shop-lot]').forEach(input => input.onchange = () => {
+      const id = input.dataset.shopLot;
+      const row = visibleRows.find(value => value.lotId === id);
+      const count = input.checked ? Math.max(defaultShopPurchaseCount(row), Number(selectedShopCounts.get(id) || 0)) : 0;
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, Math.min(row?.remaining || 0, count)); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-qty]').forEach(input => input.onchange = () => {
+      const id = input.dataset.shopQty;
+      const row = visibleRows.find(value => value.lotId === id);
+      const count = Math.min(row?.remaining || 0, Math.max(0, Math.trunc(Number(input.value || 0))));
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-batches]').forEach(select => select.onchange = () => {
+      const id = select.dataset.shopBatches;
+      const row = visibleRows.find(value => value.lotId === id);
+      const batches = Math.min(renovationBatchMaximum(row), Math.max(0, Math.trunc(Number(select.value || 0))));
+      const count = batches * renovationBatchMultiplier(row);
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-max]').forEach(button => button.onclick = () => {
+      const id = button.dataset.shopMax;
+      const row = visibleRows.find(value => value.lotId === id);
+      const count = Math.min(SHOP_UNLIMITED_RUN_MAX, Math.max(0, Math.trunc(Number(row?.remaining || 0))));
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    const selected = visibleRows.filter(row => selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
+      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+    const purchaseCount = selected.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
+    const totals = new Map();
+    for (const row of visibleRows) for (const part of costParts(row.cost)) addProjectedCost(totals, part, 0);
+    for (const {row, count} of selected) for (const part of costParts(row.cost)) addProjectedCost(totals, part, count);
+    const spending = [...totals.values()].filter(part => part.quantity > 0);
+    const totalVisual = spending.length ? spending.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${part.quantity.toLocaleString(locale())}</b>`).join(' ') : '0';
+    shopSummary.innerHTML = `<b>${tr('selectedPurchases',{n:purchaseCount})}</b><br><small>${tr('maxCost')}: ${totalVisual}</small>${walletForecastHtml(totals)}`;
+    const buy = root?.querySelector('#hk-shop-buy'); if (buy) buy.disabled = shopRunning || !purchaseCount;
+  }
+
+  async function buyRegularShop() {
+    if (!requireLicense() || shopRunning) return;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      shopRows = normalizeRegularShop();
+    } catch (error) {
+      log(either('Не удалось обновить магазин перед покупкой','Could not refresh the shop before purchase') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    const plan = shopRows.filter(row => row.section === selectedShopSection &&
+      (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
+      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+    if (!plan.length) return;
+    const count = plan.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
+    const budgetSection = selectedShopSection === 'clan' ? 'clan' : 'shop';
+    const projectedProblems = plan.flatMap(item => budgetDecision(item.row.cost, budgetSection, item.count, playerDocument).problems);
+    if (projectedProblems.length) {
+      alert(`${either('Покупка заблокирована единым бюджетом','Purchase blocked by unified budget')}:\n\n${[...new Set(projectedProblems)].join('\n')}`);
+      return;
+    }
+    const crystalCost = plan.reduce((sum, item) => sum + costParts(item.row.cost)
+      .filter(part => part.kind === 'currencies' && part.id === 'cur_prem').reduce((value, part) => value + part.quantity * item.count, 0), 0);
+    if (!confirm(language === 'en'
+      ? `Buy ${count} selected items?${crystalCost ? `\n\nCrystal cost: ${crystalCost.toLocaleString(locale())} 💎` : ''}\n\nPurchases are irreversible. External payments are blocked.`
+      : `Выкупить выбранные товары: ${count}?${crystalCost ? `\n\nСтоимость: ${crystalCost.toLocaleString(locale())} 💎` : ''}\n\nПокупки необратимы. Внешняя оплата заблокирована.`)) return;
+    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+    hkRunner.start({title:either('Магазин','Shop'),total:count,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    shopRunning = true; renderShop();
+    let completed = 0;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      for (const {row, count:rowCount} of plan) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
+        const requestCount = Math.min(
+
+===== async function loadShop() =====
+
+      const rawView = lot?.lot_view || {};
+      const lotId = String(lot.id || '');
+      const currentEventLot = Boolean(currentEventCode) &&
+        lotId.toLowerCase().includes(`_event_${currentEventCode}_`);
+      const resourceMatch = lotId.match(/^(mf_shoplot_itempack_[1-5])(?:_(10|50|100))?$/i);
+      const resourceBaseLot = resourceMatch ? lotsById.get(resourceMatch[1]) : null;
+      const resourceBaseView = resourceBaseLot?.lot_view || {};
+      const declaredMultiplier = Boolean(resourceMatch?.[2]) &&
+        (resourceBaseView.multiplier_lots || []).map(String).includes(lotId);
+      // Hidden multiplier lots contain only their resulting package quantity.
+      // Reuse the visible parent card for its name/icon/content, while keeping
+      // the child's own lot ID, cost and package quantity for the purchase.
+      if (resourceMatch?.[2] && !declaredMultiplier) return [];
+      const view = declaredMultiplier ? resourceBaseView : rawView;
+      if (String(view.type || '').toLowerCase() === 'fair' || lot.external_cost) return [];
+      const lotLimits = lot.limit || [];
+      // The standard Resources and Renovation cards have no daily purchase
+      // limit in the game. Keep only our explicitly allow-listed ordinary
+      // lots when a server-side limit is absent.
+      const unlimited = !lotLimits.length && (Boolean(ordinaryShopGroup(lot)) || currentEventLot);
+      if (!lotLimits.length && !unlimited) return [];
+      const playerLimit = lotLimits.find(value => String(value?.type || '').toUpperCase() === 'PLAYER');
+      const sharedLimit = lotLimits.find(value => ['CLAN','GLOBAL'].includes(String(value?.type || '').toUpperCase()));
+      const remainingValues = [];
+      if (playerLimit) remainingValues.push(Math.max(0, Number(playerLimit.limit || 0) + Number(playerLimit.bonus || 0) - (limits.get(String(lot.id || '')) || 0)));
+      if (sharedLimit) remainingValues.push(Math.max(0, Number(sharedLimit.limit || 0) + Number(sharedLimit.bonus || 0) - Number(sharedLimit.value || 0)));
+      if (!remainingValues.length && !unlimited) return [];
+      const bought = limits.get(lotId) || 0;
+      const remaining = unlimited ? SHOP_UNLIMITED_RUN_MAX : Math.min(...remainingValues);
+      const parts = costParts(lot.cost);
+      const content = (view.content_view || [])[0] || {};
+      const rewardId = String(content.id || '');
+      const rewardQuantity = resourceMatch
+        ? Math.max(0, Number(rawView.quantity || view.quantity || 0))
+        : Math.max(0, Number(content.quantity || view.quantity || 0));
+      const tab = String(view.tab || 'default').toLowerCase();
+      // The shop catalog and the player's limit list both retain past events.
+      // Include every internal lot of the active event: the updated game uses
+      // daily_event, finite_event, event and infinite_event prefixes together.
+      // If the current event cannot be identified, fail closed and show none.
+      const section = ['clan','clan_2'].includes(tab) ? 'clan' : currentEventLot ? 'regular' : 'ordinary';
+      const group = section === 'ordinary' ? ordinaryShopGroup(lot) : '';
+      const clanGroup = section === 'clan' ? (sharedLimit ? 'shared' : 'personal') : '';
+      if (section === 'ordinary' && !group) return [];
+      const premium = premiumPurchase(lot.cost);
+      const safe = parts.length > 0 && parts.every(part => part.quantity > 0 &&
+        (part.kind === 'items' ? part.id.startsWith('item_') :
+          ['cur_gold', 'cur_cap'].includes(part.id) || (section === 'clan' && part.id === 'cur_prem')));
+      return [{lotId, name:String(view.name || rewardId || lotId), rewardId,
+        rewardQuantity, resourceTier:resourceMatch ? Number(resourceMatch[1].slice(-1)) : 0,
+        cost:lot.cost || {}, safe, affordable:canAffordCost(lot.cost || {}, playerDoc), premium, group,
+        bought, maximum:bought + remaining, remaining, unlimited, section, clanGroup,
+        sharedPurchased:sharedLimit ? Math.max(0, Number(sharedLimit.value || 0)) : 0,
+        sharedMaximum:sharedLimit ? Math.max(0, Number(sharedLimit.limit || 0) + Number(sharedLimit.bonus || 0)) : 0,
+        icon:mediaUrl(view.icon_card || view.icon || content.icon_card || content.icon, rewardId)}];
+    }).sort((a, b) => Number(b.remaining > 0) - Number(a.remaining > 0) ||
+      (a.group === 'resources' && b.group === 'resources'
+        ? a.resourceTier - b.resourceTier || a.rewardQuantity - b.rewardQuantity
+        : a.lotId.localeCompare(b.lotId)));
+  }
+
+  // HK_CLAN_SHOP_ACTUAL_FACTS_V1
+  function clanShopActualFactType(row) {
+    if (row?.section !== 'clan' || row?.clanGroup !== 'shared') return '';
+    const label = clean(String(gameText(row?.name || '') || '') + ' ' + String(row?.name || '') + ' ' + String(row?.rewardId || '') + ' ' + String(row?.lotId || '')).toLowerCase();
+    if (/шар.{0,24}идол|идол.{0,24}шар|idol.{0,24}ball|ball.{0,24}idol|guru.{0,24}ball|ball.{0,24}guru/.test(label)) return 'idol_orbs';
+    if (/s\s*\+.{0,24}бизнес|бизнес.{0,24}s\s*\+|s\s*\+.{0,24}business|business.{0,24}s\s*\+|splus.{0,24}business|business.{0,24}splus/.test(label)) return 'splus_businesses';
+    return '';
+  }
+
+  async function reportClanShopActualFacts() {
+    const rows = shopRows.flatMap(row => {
+      const itemType = clanShopActualFactType(row);
+      if (!itemType) return [];
+      return [{
+        lot_id:String(row.lotId || ''),
+        item_type:itemType,
+        lot_name:gameText(row.name || '') || String(row.name || ''),
+        reward_id:String(row.rewardId || ''),
+        shared_purchased:Math.max(0, Number(row.sharedPurchased || 0)),
+        shared_maximum:Math.max(0, Number(row.sharedMaximum || 0)),
+        player_purchased:Math.max(0, Number(row.bought || 0))
+      }];
+    });
+    if (!rows.length || !licenseState.allowed) return;
+    try {
+      await licensedServerJson(CLAN_SHOP_FACT_API_BASE, '/clan-shop-facts/submit', {rows}, false, 'clan-shop-facts');
+    } catch (error) {
+      console.warn('[HK] Clan Shop actual facts sync failed', error);
+    }
+  }
+
+  async function loadShop() {
+    if (!requireLicense()) return;
+    try {
+      log(either('Считываю магазин…', 'Reading shop…'));
+      playerDocument = await apiJson('/player/me', 'POST');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      shopRows = normalizeRegularShop();
+      void reportClanShopActualFacts();
+      selectedShopLots = new Set([...selectedShopLots].filter(id => shopRows.some(row => row.lotId === id && row.safe && row.remaining > 0)));
+      selectedShopCounts = new Map([...selectedShopCounts].flatMap(([id, count]) => {
+        const row = shopRows.find(value => value.lotId === id && value.safe && value.remaining > 0);
+        return row ? [[id, Math.min(row.remaining, Math.max(0, Number(count || 0)))]] : [];
+      }));
+      renderShop();
+      log(either(`Магазин считан: ${shopRows.length} лотов`, `Shop loaded: ${shopRows.length} lots`), 'ok');
+    } catch (error) { log(`${either('Ошибка магазина', 'Shop error')}: ${error.message}`, 'bad'); }
+  }
+
+  function defaultShopPurchaseCount(row) {
+    if (!row) return 0;
+    const remaining = Math.max(0, Number(row.remaining || 0));
+    if (isRenovationBatch(row)) return remaining >= renovationBatchMultiplier(row) ? renovationBatchMultiplier(row) : 0;
+    return Math.min(remaining, 1);
+  }
+
+  function isRenovationBatch(row) {
+    return row?.section === 'ordinary' && row?.group === 'renovation';
+  }
+
+  function renovationBatchMultiplier(row) {
+    return Math.ceil(500 / Math.max(1, Number(row?.rewardQuantity || 0)));
+  }
+
+  function renovationBatchCount(row, count) {
+    return Math.floor(Math.max(0, Number(count || 0)) / renovationBatchMultiplier(row));
+  }
+
+  function renovationBatchMaximum(row) {
+    return Math.floor(Math.min(SHOP_UNLIMITED_RUN_MAX, Math.max(0, Number(row?.remaining || 0))) / renovationBatchMultiplier(row));
+  }
+
+  function renderShop() {
+    if (!shopCards || !shopSummary) return;
+    if (!shopRows.length) {
+      shopCards.innerHTML = `<p class="hk-muted">${tr('shopReadFirst')}</p>`;
+      shopSummary.textContent = tr('selectedPurchases', {n:0});
+      const buy = root?.querySelector('#hk-shop-buy'); if (buy) buy.disabled = true;
+      return;
+    }
+    const groupBar = root?.querySelector('#hk-shop-groups');
+    if (groupBar) {
+      const groups = selectedShopSection === 'ordinary'
+        ? [['resources','resourcesShop'],['renovation','renovationShop'],['invest','investShop']]
+        : selectedShopSection === 'clan'
+          ? [['personal','personalLots'],['shared','sharedLots']]
+          : [];
+      groupBar.style.display = groups.length ? '' : 'none';
+      groupBar.innerHTML = groups.map(([id, label]) => `<button class="${selectedShopGroup === id ? 'active' : ''}" data-shop-group="${id}" data-i18n="${label}">${tr(label)}</button>`).join('');
+      groupBar.querySelectorAll('[data-shop-group]').forEach(button => button.onclick = () => {
+        selectedShopGroup = button.dataset.shopGroup; selectedShopLots.clear(); selectedShopCounts.clear(); renderShop();
+      });
+    }
+    const visibleRows = shopRows.filter(row => row.section === selectedShopSection &&
+      (selectedShopSection === 'ordinary' ? row.group === selectedShopGroup :
+        selectedShopSection === 'clan' ? row.clanGroup === selectedShopGroup : true));
+    shopCards.innerHTML = visibleRows.map(row => {
+      const selectable = row.safe && row.remaining > 0 && (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0);
+      const count = selectable ? Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0))) : 0;
+      const shownRewardQuantity = count && row.group === 'renovation' ? row.rewardQuantity * count : row.rewardQuantity;
+      const selectedBatches = isRenovationBatch(row) ? renovationBatchCount(row, count) : 0;
+      const maximumBatches = isRenovationBatch(row) ? renovationBatchMaximum(row) : 0;
+      return `<div class="hk-shop-lot ${count ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${selectable ? '' : 'locked'}">
+        ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}<label class="hk-shop-pick"><input type="checkbox" data-shop-lot="${escapeHtml(row.lotId)}" ${count ? 'checked' : ''} ${selectable ? '' : 'disabled'}>
+        ${fairIconHtml(row.icon)}<b>×${shownRewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost, count && row.group === 'renovation' ? count : 1)}</span></label>
+        <small>${row.unlimited ? tr('unlimited') : row.remaining > 0 ? tr('remaining',{n:row.remaining}) : tr('boughtOut')}</small>
+        ${isRenovationBatch(row)
+          ? `<label class="hk-shop-quantity"><span>${either('Пакетов ×500','×500 packages')}</span><select data-shop-batches="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>${Array.from({length:maximumBatches + 1}, (_, n) => `<option value="${n}" ${n === selectedBatches ? 'selected' : ''}>${n} × 500</option>`).join('')}</select></label>`
+          : `<label class="hk-shop-quantity"><span>${tr('quantity')}</span><input data-shop-qty="${escapeHtml(row.lotId)}" type="number" inputmode="numeric" min="0" max="${row.remaining}" value="${count}" ${selectable ? '' : 'disabled'}><button type="button" data-shop-max="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>MAX</button></label>`}</div>`;
+    }).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
+    shopCards.querySelectorAll('[data-shop-lot]').forEach(input => input.onchange = () => {
+      const id = input.dataset.shopLot;
+      const row = visibleRows.find(value => value.lotId === id);
+      const count = input.checked ? Math.max(defaultShopPurchaseCount(row), Number(selectedShopCounts.get(id) || 0)) : 0;
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, Math.min(row?.remaining || 0, count)); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-qty]').forEach(input => input.onchange = () => {
+      const id = input.dataset.shopQty;
+      const row = visibleRows.find(value => value.lotId === id);
+      const count = Math.min(row?.remaining || 0, Math.max(0, Math.trunc(Number(input.value || 0))));
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-batches]').forEach(select => select.onchange = () => {
+      const id = select.dataset.shopBatches;
+      const row = visibleRows.find(value => value.lotId === id);
+      const batches = Math.min(renovationBatchMaximum(row), Math.max(0, Math.trunc(Number(select.value || 0))));
+      const count = batches * renovationBatchMultiplier(row);
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-max]').forEach(button => button.onclick = () => {
+      const id = button.dataset.shopMax;
+      const row = visibleRows.find(value => value.lotId === id);
+      const count = Math.min(SHOP_UNLIMITED_RUN_MAX, Math.max(0, Math.trunc(Number(row?.remaining || 0))));
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    const selected = visibleRows.filter(row => selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
+      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+    const purchaseCount = selected.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
+    const totals = new Map();
+    for (const row of visibleRows) for (const part of costParts(row.cost)) addProjectedCost(totals, part, 0);
+    for (const {row, count} of selected) for (const part of costParts(row.cost)) addProjectedCost(totals, part, count);
+    const spending = [...totals.values()].filter(part => part.quantity > 0);
+    const totalVisual = spending.length ? spending.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${part.quantity.toLocaleString(locale())}</b>`).join(' ') : '0';
+    shopSummary.innerHTML = `<b>${tr('selectedPurchases',{n:purchaseCount})}</b><br><small>${tr('maxCost')}: ${totalVisual}</small>${walletForecastHtml(totals)}`;
+    const buy = root?.querySelector('#hk-shop-buy'); if (buy) buy.disabled = shopRunning || !purchaseCount;
+  }
+
+  async function buyRegularShop() {
+    if (!requireLicense() || shopRunning) return;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      shopRows = normalizeRegularShop();
+    } catch (error) {
+      log(either('Не удалось обновить магазин перед покупкой','Could not refresh the shop before purchase') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    const plan = shopRows.filter(row => row.section === selectedShopSection &&
+      (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
+      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+    if (!plan.length) return;
+    const count = plan.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
+    const budgetSection = selectedShopSection === 'clan' ? 'clan' : 'shop';
+    const projectedProblems = plan.flatMap(item => budgetDecision(item.row.cost, budgetSection, item.count, playerDocument).problems);
+    if (projectedProblems.length) {
+      alert(`${either('Покупка заблокирована единым бюджетом','Purchase blocked by unified budget')}:\n\n${[...new Set(projectedProblems)].join('\n')}`);
+      return;
+    }
+    const crystalCost = plan.reduce((sum, item) => sum + costParts(item.row.cost)
+      .filter(part => part.kind === 'currencies' && part.id === 'cur_prem').reduce((value, part) => value + part.quantity * item.count, 0), 0);
+    if (!confirm(language === 'en'
+      ? `Buy ${count} selected items?${crystalCost ? `\n\nCrystal cost: ${crystalCost.toLocaleString(locale())} 💎` : ''}\n\nPurchases are irreversible. External payments are blocked.`
+      : `Выкупить выбранные товары: ${count}?${crystalCost ? `\n\nСтоимость: ${crystalCost.toLocaleString(locale())} 💎` : ''}\n\nПокупки необратимы. Внешняя оплата заблокирована.`)) return;
+    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+    hkRunner.start({title:either('Магазин','Shop'),total:count,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    shopRunning = true; renderShop();
+    let completed = 0;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      for (const {row, count:rowCount} of plan) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
+        const requestCount = Math.min(rowCount, row.remaining, SHOP_UNLIMITED_RUN_MAX);
+        const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+        const requestBody = {shop_lot_id:row.lotId, payment_type:'INTERNAL', lotName:row.name, lotDescription:''};
+        let purchasedRow = 0;
+        try {
+          if (isRenovationBatch(row)) {
+            const decision = budgetDecision(row.cost, budgetSection, requestCount, playerDocument);
+            if (!decision.allowed) throw new Error(decision.problems.join('; '));
+            const batchMultiplier = renovationBatchMultiplier(row);
+            const batchCount = renovationBatchCount(row, requestCount);
+            for (let batch = 0; batch < batchCount; batch += 1) {
+              log(either(`Пакетная покупка ×500: ${batch + 1}/${batchCount}…`, `Batch purchase ×500: ${batch + 1}/${batchCount}…`));
+              if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+              await hkRunner.waitIfPaused();
+              hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
+              playerDocument = await apiJson('/shop/buy', 'POST', {
+                ...requestBody,
+                collection_entity_id:row.rewardId,
+                collection_count:batchMultiplier
+              }, true, 0);
+              purchasedRow += batchMultiplier;
+              completed += 1;
+            }
+          } else for (let index = 0; index < requestCount; index += 1) {
+            const decision = budgetDecision(row.cost, budgetSection, 1, playerDocument);
+            if (!decision.allowed) throw new Error(decision.problems.join('; '));
+            if (index === 0 || (index + 1) % 25 === 0 || index + 1 === requestCount) {
+              log(either(`Покупка по ×1: ${index + 1}/${requestCount}…`, `Buying ×1: ${index + 1}/${requestCount}…`));
+            }
+            // Start the next purchase immediately after the previous response.
+            // Network retries are disabled because repeating an irreversible
+            // request after a lost response could buy an extra copy.
+            if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+            await hkRunner.waitIfPaused();
+            hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
+            playerDocument = await apiJson('/shop/buy', 'POST', requestBody, true, 0);
+            purchasedRow += 1;
+            completed += 1;
+          }
+        } finally {
+          if (purchasedRow) for (const part of costParts(row.cost)) appendExpense({section:budgetSection, lotId:row.lotId, name:gameText(row.name) || row.name,
+            currencyId:part.id, amount:part.quantity * purchasedRow, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:`purchased ${purchasedRow}/${requestCount}`});
+        }
+      }
+      await hkAuthoritativePlayerRead('shop-complete');
+      try { shopViewDocument = await apiJson('/shop/view', 'GET'); } catch (_) {}
+      shopRows = normalizeRegularShop();
+      void reportClanShopActualFacts();
+      hkRunner.finish(either('Покупки завершены','Purchases completed'));
+      selectedShopLots.clear();
+      selectedShopCounts.clear();
+      log(either(`Покупки завершены: ${completed}`, `Purchases completed: ${completed}`), 'ok');
+    } catch (error) {
+      if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Магазин остановлен','Shop stopped'),'warn'); }
+      else { hkRunner.fail(error); log(either('Остановка магазина','Shop stopped') + ': ' + (error?.message || error), 'bad'); }
+    } finally {
+      shopRunning = false;
+      shopRows = normalizeRegularShop();
+      renderShop();
+    }
+  }
+
+  function dailyLabel(row) {
+    return clean(`${gameText(row?.name || '')} ${row?.name || ''} ${row?.rewardId || ''}`).toLowerCase();
+  }
+
+  function dailyRecruitLot(row) {
+    const label = dailyLabel(row);
+    return /пополнени[ея]\s+рекрут|recruit\s+(?:replenishment|refill)|replenish(?:ment)?\s+recruit|нов(?:ые|ых)\s+рекрут|new\s+recruits?|салаг|rookies?/.test(label);
+  }
+
+  function dailyCartelLot(row) {
+    const label = dailyLabel(row);
+    return /пополнени[ея]\s+картел|cartel\s+(?:replenishment|refill)|replenish(?:ment)?\s+cartel/.test(label);
+  }
+
+  function excludedDailyClanLot(row) {
+    if (row?.section !== 'clan' || row?.clanGroup !== 'personal') return false;
+    const label = dailyLabel(row);
+    const excludedByName = /хомячий\s+шар\s+идол|idol(?:s)?\s+hamster\s+ball|случайный\s+s\+?\s+бизнес|random\s+s\+?\s+business/.test(label);
+    const excludedByCurrency = costParts(row.cost).some(part => {
+      const currencyId = String(part.id || '').toLowerCase().replace(/[\s-]+/g, '_');
+      return /pit_?rat_?tokens?/.test(currencyId);
+    });
+    return excludedByName || excludedByCurrency;
+  }
+
+  function mandatoryDailyClanLot(row) {
+    // Recruit and cartel replenishment are obligatory personal clan lots.
+    // Hamster balls and random S/S+ businesses remain excluded from Today.
+    if (row?.section !== 'clan' || row?.clanGroup !== 'personal') return false;
+    return dailyRecruitLot(row) || dailyCartelLot(row);
+  }
+
+  function clanSkillPointLot(row) {
+    if (row?.section !== 'clan' || row?.clanGroup !== 'personal') return false;
+    const label = clean(`${gameText(row?.name || '')} ${row?.name || ''}`).toLowerCase();
+    return /очки\s+навыков(?:\s+клана)?|clan\s+skill\s+points?|skill\s+points?/.test(label);
+  }
+
+  function gamePeriodBounds(now = new Date()) {
+    const dayStart = new Date(now);
+    dayStart.setHours(21, 0, 0, 0);
+    if (now < dayStart) dayStart.setDate(dayStart.getDate() - 1);
+    const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
+    const weekStart = new Date(dayStart);
+    const daysSinceMonday = (weekStart.getDay() + 6) % 7;
+    weekStart.setDate(weekStart.getDate() - daysSinceMonday);
+    const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
+    return {dayStart:dayStart.getTime(), dayEnd:dayEnd.getTime(), weekStart:weekStart.getTime(), weekEnd:weekEnd.getTime()};
+  }
+
+  function budgetDocument() {
+    const stored = load().budget || {};
+    const periods = gamePeriodBounds();
+    return {currencies:{...(stored.currencies || {})}, periods, timezone:Intl.DateTimeFormat().resolvedOptions().timeZone || ''};
+  }
+
+  function currencyBudget(id) {
+    const value = budgetDocument().currencies[String(id)] || {};
+    const premium = String(id) === 'cur_prem';
+    return {
+      reserve:Math.max(0, Number(value.reserve |
+
+===== async function loadFair() =====
+
+        const metrics={
+          alliance_power:allianceMetric(row,entity,'alliance_power'),
+          alliance_influence:allianceMetric(row,entity,'alliance_influence'),
+          alliance_defense:allianceMetric(row,entity,'alliance_defense')
+        };
+        if(Object.values(metrics).every(value=>value===null))continue;
+        names.add(name);normalized.push({name,...metrics});
+      }
+      if(normalized.length){
+        const result={};
+        for(const kind of Object.keys(ALLIANCE_RATING_METRICS)){
+          const rows=normalized.filter(row=>Number.isFinite(row[kind])&&row[kind]>0)
+            .sort((a,b)=>b[kind]-a[kind]||a.name.localeCompare(b.name)).slice(0,100)
+            .map((row,index)=>({rank:index+1,name:row.name,value:row[kind]}));
+          if(rows.length)result[kind]=rows;
+        }
+        if(Object.keys(result).length)return result;
+      }
+    }
+    try{
+      const objects=deepObjects(documentValue).slice(0,40);
+      const keys=[...new Set(objects.flatMap(value=>Object.keys(value||{})))].filter(key=>/alliance|power|influence|defen|protect|level/i.test(key)).slice(0,80);
+      recordDiagnostic('alliance-rating-schema',{keys});
+    }catch(_){}
+    return {};
+  }
+
+  async function publicSnapshotServerJson(documentValue, retry = true) {
+    return licensedServerJson(PUBLIC_SNAPSHOT_API, '', documentValue, retry, 'public-snapshot');
+  }
+
+  let warSnapshot = null;
+  let warLastReadAt = 0;
+
+  function warTimestamp(value) {
+    const number=Number(value||0);
+    if(!Number.isFinite(number)||number<=0)return '';
+    const ms=number<1e12?number*1000:number;
+    try{return new Date(ms).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(_){return '';}
+  }
+
+  async function readPublicWar() {
+    let endpointRead = false;
+    for (const path of ['/clan/active_battles','/clan/active_defense_wars']) {
+      try { const value = await apiJson(path, 'GET', null, true, 1); endpointRead = true; const war = normalizePublicWar(value); if (war) return {read:true,war}; }
+      catch (_) {}
+    }
+    return {read:endpointRead,war:null};
+  }
+
+  function renderWars() {
+    const box=root?.querySelector('#hk-war-content');
+    if(!box)return;
+    const war=warSnapshot;
+    if(!war){
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
+    }else{
+      const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
+      const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
+      const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
+      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
+        '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong></div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong></div></div>'+
+        '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
+    }
+    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
+  }
+
+  async function refreshWars(force=false) {
+    if(!requireLicense())return null;
+    try{
+      const result=await readPublicWar();
+      warSnapshot=result?.war||null;
+      warLastReadAt=Date.now();
+      renderWars();
+      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
+      return warSnapshot;
+    }catch(error){
+      log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
+      renderWars();
+      return null;
+    }
+  }
+
+  async function readPublicRatings() {
+    const ratings = {}, definitions = {influence:'player_level_lb',power:'hamsters_power_lb',clans:'clan_player_level_lb'};
+    for (const [kind, leaderboard_type] of Object.entries(definitions)) {
+      try { const value = await apiJson('/leaderboard', 'POST', {leaderboard_type}, true, 1); const rows = normalizePublicRanking(value, kind); if (rows.length) ratings[kind] = rows; }
+      catch (_) {}
+    }
+    try {
+      const value = await apiJson('/alliance/list', 'GET', null, true, 1);
+      Object.assign(ratings, normalizeAllianceRatings(value));
+    } catch (_) {}
+    return ratings;
+  }
+
+  async function collectPublicSnapshot(force = false) {
+    if (publicSnapshotPromise || !licenseState.allowed || !licenseState.token || !apiHeaders.Authorization) return publicSnapshotPromise;
+    if (!force && Date.now() - lastPublicSnapshot < PUBLIC_SNAPSHOT_INTERVAL_MS) return null;
+    publicSnapshotPromise = (async () => {
+      try {
+        const [warResult, ratings] = await Promise.all([readPublicWar(), readPublicRatings()]);
+        const payload = {ratings}; if (warResult.read) payload.war = warResult.war;
+        if (!warResult.read && !Object.keys(ratings).length) return;
+        await publicSnapshotServerJson(payload); lastPublicSnapshot = Date.now();
+      } catch (error) { console.warn('[HK] public snapshot failed', error); }
+      finally { publicSnapshotPromise = null; }
+    })();
+    return publicSnapshotPromise;
+  }
+
+  async function loadFair() {
+    if (!requireLicense()) return;
+    try {
+      log('Считываю ярмарки…');
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const visibleFairs = visibleFairStates();
+      if (!visibleFairs.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
+      selectedFairLots.clear();
+      selectedFairSlotRules.clear();
+      renderFair();
+      log(`Ярмарка считана: ${visibleFairs.length} разделов, ${fairCatalog.length} лотов`, 'ok');
+    } catch (error) { log(`Ошибка ярмарки: ${error.message}`, 'bad'); }
+  }
+
+  function costVisual(cost, multiplier = 1) {
+    const parts = costParts(cost);
+    if (!parts.length) return '<span>0</span>';
+    return parts.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${(part.quantity * multiplier).toLocaleString(locale())}</b>`).join('');
+  }
+
+  function addProjectedCost(target, part, multiplier = 1) {
+    if (!part?.id) return;
+    const key = `${part.kind}|${part.id}`;
+    const current = target.get(key) || {...part, quantity:0};
+    current.quantity += Math.max(0, Number(part.quantity || 0)) * Math.max(0, Number(multiplier || 0));
+    target.set(key, current);
+  }
+
+  function walletForecastHtml(parts) {
+    const values = [...parts.values()].filter(part => part?.id).sort((a, b) => a.id.localeCompare(b.id));
+    if (!values.length) return '';
+    return `<div class="hk-wallet-forecast">${values.map(part => {
+      const balance = walletAmount(part.id);
+      const spend = Math.max(0, Number(part.quantity || 0));
+      const known = balance !== null;
+      return `<div class="hk-wallet-row">
+        <span class="hk-wallet-currency">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${escapeHtml(paymentLabel(part.id))}</b></span>
+        <span>${tr('balance')}: <b>${known ? balance.toLocaleString(locale()) : '—'}</b> · ${either('Макс. возможный расход','Maximum possible spend')}: <b>${spend.toLocaleString(locale())}</b></span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function fairProjectedCosts() {
+    const totals = new Map();
+    const state = fairState(selectedFairId);
+    const rows = fairRowsForState(state);
+    const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
+    const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
+    const rerollLimit = Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0));
+    const relevantRows = selectedRows.length ? selectedRows : rows;
+    const maximumLots = new Map();
+    for (const row of relevantRows) for (const part of costParts(row.cost)) {
+      const key = `${part.kind}|${part.id}`;
+      const current = maximumLots.get(key);
+      if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
+    }
+    for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
+    for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollLimit);
+    return totals;
+  }
+
+  function renderFair() {
+    if (!fairTypes || !fairLots) return;
+    if (!fairCatalog.length) {
+      fairTypes.innerHTML = `<p class="hk-muted">${tr('readFirst')}</p>`;
+      fairLots.innerHTML = '';
+      const currencyBar = root?.querySelector('#hk-fair-currencies'); if (currencyBar) currencyBar.innerHTML = '';
+      updateFairControls(); return;
+    }
+    const states = visibleFairStates();
+    fairTypes.innerHTML = states.map(state => {
+      const firstLot = fairRowsForState(state).find(row => (state.fair_slots || []).some(slot => slot.shop_lot_id === row.lotId)) || fairRowsForState(state)[0];
+      return `<button class="hk-fair-type ${state.id === selectedFairId ? 'selected' : ''}" data-fair="${escapeHtml(state.id)}">
+        ${fairIconHtml(firstLot?.icon || '')}<span>${costVisual(state.fair_reroll_cost)}</span></button>`;
+    }).join('') || `<p class="hk-muted">${tr('noFairs')}</p>`;
+    fairTypes.querySelectorAll('[data-fair]').forEach(button => button.onclick = () => {
+      selectedFairId = button.dataset.fair; selectedFairLots.clear(); selectedFairSlotRules.clear(); selectedFairCurrency = ''; renderFair();
+    });
+    const query = clean(root?.querySelector('#hk-fair-search')?.value).toLowerCase();
+    const allRows = fairRowsForState(fairState(selectedFairId));
+    const currencyIds = [...new Set(allRows.flatMap(row => costParts(row.cost).map(part => part.id)).filter(Boolean))];
+    if (selectedFairCurrency && !currencyIds.includes(selectedFairCurrency)) selectedFairCurrency = '';
+    const currencyBar = root?.querySelector('#hk-fair-currencies');
+    if (currencyBar) {
+      currencyBar.innerHTML = `<button class="${selectedFairCurrency ? '' : 'selected'}" data-currency="">${tr('all')}</button>` + currencyIds.map(id => {
+        const part = allRows.flatMap(row => costParts(row.cost)).find(value => value.id === id);
+        return `<button class="${selectedFairCurrency === id ? 'selected' : ''}" data-currency="${escapeHtml(id)}">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span></button>`;
+      }).join('');
+      currencyBar.querySelectorAll('[data-currency]').forEach(button => button.onclick = () => { selectedFairCurrency = button.dataset.currency; renderFair(); });
+    }
+    const rows = allRows.filter(row => (!selectedFairCurrency || costParts(row.cost).some(part => part.id === selectedFairCurrency)) &&
+      (!query || `${row.name} ${row.rewardId} ${row.lotId}`.toLowerCase().includes(query)));
+    fairLots.innerHTML = rows.map(row => `<button class="hk-lot ${selectedFairLots.has(row.lotId) ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${row.safe ? '' : 'locked'}" data-lot="${escapeHtml(row.lotId)}">
+      ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}${fairIconHtml(row.icon)}<b>×${row.rewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost)}</span>${row.safe ? '' : `<small>${tr('blocked')}</small>`}</button>`).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
+    fairLots.querySelectorAll('[data-lot]').forEach(button => button.onclick = () => {
+      const row = fairCatalog.find(value => value.lotId === button.dataset.lot);
+      if (!row?.safe) { log(either('Этот лот заблокирован: неизвестная валюта', 'This lot is blocked: unknown currency'), 'warn'); return; }
+      if (selectedFairLots.has(row.lotId)) {
+        selectedFairLots.delete(row.lotId);
+        selectedFairSlotRules.delete(row.lotId);
+      } else {
+        selectedFairLots.add(row.lotId);
+        const options = fairSlotOptions();
+        selectedFairSlotRules.set(row.lotId, {regular:options.some(value => !value.vip), vip:options.some(value => value.vip)});
+      }
+      renderFair();
+    });
+    renderFairSlotRules();
+    updateFairControls();
+  }
+
+  function fairSlotOptions(state = fairState(selectedFairId)) {
+    const fairConfigs = shopViewDocument?.fairs || shopViewDocument?.fair || [];
+    const config = (Array.isArray(fairConfigs) ? fairConfigs : []).find(value => String(value?.id) === String(state?.id));
+    const metaById = new Map((config?.fair_slots || []).map(slot => [String(slot?.id), slot]));
+    return [...(state?.fair_slots || [])]
+      .sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0))
+      .map((slot, index) => ({slot, index, key:String(index), vip:Boolean(slot?.is_vip || metaById.get(String(slot?.id))?.is_vip)}));
+  }
+
+  function renderFairSlotRules() {
+    if (!fairSlotRules) return;
+    const slots = fairSlotOptions();
+    if (!selectedFairLots.size || !slots.length) {
+      fairSlotRules.innerHTML = '';
+      fairSlotRules.style.display = 'none';
+      return;
+    }
+    fairSlotRules.style.display = '';
+    const hasRegular = slots.some(value => !value.vip);
+    const hasVip = slots.some(value => value.vip);
+    for (const lotId of selectedFairLots) {
+      if (!selectedFairSlotRules.has(lotId)) selectedFairSlotRules.set(lotId, {regular:hasRegular, vip:hasVip});
+    }
+    fairSlotRules.innerHTML = `<h3>${tr('allowedCells')}</h3><p class="hk-muted">${tr('selectCellsHint')}</p>` +
+      [...selectedFairLots].map(lotId => {
+        const row = fairCatalog.find(value => value.lotId === lotId);
+        const allowed = selectedFairSlotRules.get(lotId) || {regular:hasRegular, vip:hasVip};
+        return `<div class="hk-slot-rule"><div class="hk-slot-product">${fairIconHtml(row?.icon || '', 'hk-price-icon')}<b>×${Number(row?.rewardQuantity || 0).toLocaleString(locale())}</b></div>
+          <div class="hk-slot-buttons"><button class="${allowed.regular ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="regular" ${hasRegular ? '' : 'disabled'}>${tr('regularSlots')}: ${tr(allowed.regular ? 'yes' : 'no')}</button>
+          <button class="vip ${allowed.vip ? 'selected' : ''}" data-rule-lot="${escapeHtml(lotId)}" data-rule-group="vip" ${hasVip ? '' : 'disabled'}>♛ ${tr('vipSlots')}: ${tr(allowed.vip ? 'yes' : 'no')}</button></div></div>`;
+      }).join('');
+    fairSlotRules.querySelectorAll('[data-rule-lot]').forEach(button => button.onclick = () => {
+      const allowed = selectedFairSlotRules.get(button.dataset.ruleLot) || {regular:hasRegular, vip:hasVip};
+      allowed[button.dataset.ruleGroup] = !allowed[button.dataset.ruleGroup];
+      selectedFairSlotRules.set(button.dataset.ruleLot, allowed);
+      renderFairSlotRules(); updateFairControls();
+    });
+  }
+
+  function updateFairControls() {
+    const selected = root?.querySelector('#hk-fair-selected');
+    if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
+    const start = root?.querySelector('#hk-fair-start');
+    const rulesValid = [...selectedFairLots].every(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
+    });
+    if (start) start.disabled = fairRunning || !selectedFairId || !selectedFairLots.size || !rulesValid;
+    const stop = root?.querySelector('#hk-fair-stop');
+    if (stop) stop.disabled = !fairRunning;
+  }
+
+  function fairComboSettings() {
+    return {
+      exactLots:Math.max(0, Number(root?.querySelector('#hk-fair-exact-lots')?.value || 0))
+    };
+  }
+
+  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
+    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
+  }
+
+  function renderFairBonusChoices() {
+    const box = root?.querySelector('#hk-fair-bonus-lots'); if (!box) return;
+    const available = new Set(availableFairBonusLots());
+    box.innerHTML = `<span>${tr('fairBonusLots')}</span><div>${[5,10,30].map(quantity =>
+      `<label class="hk-check ${available.has(quantity) ? 'available' : 'unavailable'}"><input type="checkbox" data-fair-bonus="${quantity}" ${selectedFairBonusLots.has(quantity) ? 'checked' : ''} ${available.has(quantity) ? '' : 'disabled'}><b>×${quantity}</b></label>`).join('')}</div>`;
+    box.querySelectorAll('[data-fair-bonus]').forEach(input => input.onchange = () => {
+      const quantity = Number(input.dataset.fairBonus);
+      if (input.checked) selectedFairBonusLots.add(quantity); else selectedFairBonusLots.delete(quantity);
+    });
+  }
+
+  function fairPresets() {
+    const value = load().fairPresets;
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  }
+
+  function refreshFairPresets(selectName = '') {
+    if (!fairPresetSelect) return;
+    const names = Object.keys(fairPresets()).sort((a, b) => a.localeCompare(b, locale()));
+    fairPresetSelect.innerHTML = `<option value="">${tr('fairSavedSettings')}</option>` +
+      names.map(name => `<option value="${escapeHtml(name)}" ${name === selectName ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
+  }
+
+  function fairPresetSnapshot() {
+    return {
+      fairId:selectedFairId,
+      lots:[...selectedFairLots],
+      slotGroups:Object.fromEntries([...selectedFairSlotRules].map(([lotId, groups]) => [lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)}])),
+      currency:selectedFairCurrency,
+      exactLots:fairComboSettings().exactLots, bonusLots:[...selectedFairBonusLots],
+      buyLimit:Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1)),
+      rerollLimit:Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0)),
+      premiumReroll:Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)
+    };
+  }
+
+  function saveFairPreset(existingName = '') {
+    if (!selectedFairId || !selectedFairLots.size) {
+      alert(either('Сначала выберите ярмарку и хотя бы один товар', 'Choose a fair and at least one item first')); return;
+    }
+    const name = existingName || prompt(tr('settingName'));
+    if (!name?.trim()) return;
+    const normalized = name.trim();
+    const all = fairPresets();
+    all[normalized] = fairPresetSnapshot();
+    save({fairPresets:all});
+    refreshFairPresets(normalized);
+    log(tr('settingSaved', {name:normalized}), 'ok');
+  }
+
+  function loadFairPreset(name) {
+    const preset = fairPresets()[name];
+    if (!preset) return;
+    if (!fairCatalog.length) {
+      alert(either('Сначала нажмите «Считать ярмарку»', 'Press “Read fair” first'));
+      refreshFairPresets(); return;
+    }
+    if (fairStates().some(state => String(state.id) === String(preset.fairId))) selectedFairId = String(preset.fairId);
+    const available = new Set(fairRowsForState(fairState(selectedFairId)).map(row => row.lotId));
+    selectedFairLots = new Set((preset.lots || []).map(String).filter(id => available.has(id)));
+    selectedFairSlotRules.clear();
+    const options = fairSlotOptions();
+    for (const lotId of selectedFairLots) {
+      const groups = preset.slotGroups?.[lotId];
+      if (groups && typeof groups === 'object') {
+        selectedFairSlotRules.set(lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)});
+      } else {
+        const oldCells = new Set(Array.isArray(preset.slotRules?.[lotId]) ? preset.slotRules[lotId].map(String) : options.map(value => value.key));
+        selectedFairSlotRules.set(lotId, {
+          regular:options.some(value => !value.vip && oldCells.has(value.key)),
+          vip:options.some(value => value.vip && oldCells.has(value.key))
+        });
+      }
+    }
+    selectedFairCurrency = String(preset.currency || '');
+    const buy = root?.querySelector('#hk-fair-buy-limit'); if (buy) buy.value = Math.max(1, Number(preset.buyLimit || 1));
+    const reroll = root?.querySelector('#hk-fair-reroll-limit'); if (reroll) reroll.value = Math.max(0, Number(preset.rerollLimit || 0));
+    const premium = root?.querySelector('#hk-fair-premium-reroll'); if (premium) premium.checked = Boolean(preset.premiumReroll);
+    selectedFairBonusLots = new Set(Array.isArray(preset.bonusLots) ? preset.bonusLots.map(Number).filter(value => [5,10,30].includes(value)) : [5,10,30]);
+    renderFair();
+    const exact=root?.querySelector('#hk-fair-exact-lots'); if(exact) exact.value=['0','3','6','9'].includes(String(preset.exactLots)) ? String(preset.exactLots) : '0';
+    renderFairBonusChoices();
+    refreshFairPresets(name);
+    log(tr('settingLoaded', {name}), 'ok');
+  }
+
+  function deleteFairPreset() {
+    const name = fairPresetSelect?.value;
+    if (!name || !confirm(tr('deleteSetting', {name}))) return;
+    const all = fairPresets(); delete all[name]; save({fairPresets:all}); refreshFairPresets();
+  }
+
+  function costDocumentFromParts(parts) {
+    const result = {items:[], currencies:[]};
+    for (const part of parts || []) if (part?.id && part.quantity > 0) result[part.kind === 'currencies' ? 'currencies' : 'items'].push({id:part.id, quantity:part.quantity});
+    return result;
+  }
+
+  async function executeFairPurchase(row, slot, allowPremium = false) {
+    // Event fairs have their own currency/amount controls in this tab. Do not
+    // let the global daily budget reject the whole event run because one of
+    // the selected variants costs diamonds. The normal fair remains covered
+    // by the unified budget.
+    if (!isEventFairState(fairState(selectedFairId))) {
+      const decision = budgetDecision(row.cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+      if (!decision.allowed) throw new Error(decision.problems.join('; '));
+    }
+    const beforeDoc = playerDocument;
+    const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, beforeDoc)]));
+    fairDocument = await apiJson('/shop/buy', 'POST', {shop_lot_id:row.lotId, payment_type:'INTERNAL', fair_id:selectedFairId, slot_id:slot.id, lotName:row.name, lotDescription:''});
+    updateWalletFromResponse(fairDocument, row.cost);
+    for (const part of costParts(row.cost)) appendExpense({section:'fair', lotId:row.lotId, name:gameText(row.name) || row.name,
+      currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'purchased'});
+  }
+
+  async function runFair() {
+    if (!requireLicense() || fairRunning || !selectedFairLots.size) return;
+    if ([...selectedFairLots].some(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return !(rule?.regular || rule?.vip);
+    })) {
+      alert(tr('noCells')); return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','Th
+
+===== async function buyRegularShop() =====
+
+      groupBar.innerHTML = groups.map(([id, label]) => `<button class="${selectedShopGroup === id ? 'active' : ''}" data-shop-group="${id}" data-i18n="${label}">${tr(label)}</button>`).join('');
+      groupBar.querySelectorAll('[data-shop-group]').forEach(button => button.onclick = () => {
+        selectedShopGroup = button.dataset.shopGroup; selectedShopLots.clear(); selectedShopCounts.clear(); renderShop();
+      });
+    }
+    const visibleRows = shopRows.filter(row => row.section === selectedShopSection &&
+      (selectedShopSection === 'ordinary' ? row.group === selectedShopGroup :
+        selectedShopSection === 'clan' ? row.clanGroup === selectedShopGroup : true));
+    shopCards.innerHTML = visibleRows.map(row => {
+      const selectable = row.safe && row.remaining > 0 && (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0);
+      const count = selectable ? Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0))) : 0;
+      const shownRewardQuantity = count && row.group === 'renovation' ? row.rewardQuantity * count : row.rewardQuantity;
+      const selectedBatches = isRenovationBatch(row) ? renovationBatchCount(row, count) : 0;
+      const maximumBatches = isRenovationBatch(row) ? renovationBatchMaximum(row) : 0;
+      return `<div class="hk-shop-lot ${count ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${selectable ? '' : 'locked'}">
+        ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}<label class="hk-shop-pick"><input type="checkbox" data-shop-lot="${escapeHtml(row.lotId)}" ${count ? 'checked' : ''} ${selectable ? '' : 'disabled'}>
+        ${fairIconHtml(row.icon)}<b>×${shownRewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost, count && row.group === 'renovation' ? count : 1)}</span></label>
+        <small>${row.unlimited ? tr('unlimited') : row.remaining > 0 ? tr('remaining',{n:row.remaining}) : tr('boughtOut')}</small>
+        ${isRenovationBatch(row)
+          ? `<label class="hk-shop-quantity"><span>${either('Пакетов ×500','×500 packages')}</span><select data-shop-batches="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>${Array.from({length:maximumBatches + 1}, (_, n) => `<option value="${n}" ${n === selectedBatches ? 'selected' : ''}>${n} × 500</option>`).join('')}</select></label>`
+          : `<label class="hk-shop-quantity"><span>${tr('quantity')}</span><input data-shop-qty="${escapeHtml(row.lotId)}" type="number" inputmode="numeric" min="0" max="${row.remaining}" value="${count}" ${selectable ? '' : 'disabled'}><button type="button" data-shop-max="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>MAX</button></label>`}</div>`;
+    }).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
+    shopCards.querySelectorAll('[data-shop-lot]').forEach(input => input.onchange = () => {
+      const id = input.dataset.shopLot;
+      const row = visibleRows.find(value => value.lotId === id);
+      const count = input.checked ? Math.max(defaultShopPurchaseCount(row), Number(selectedShopCounts.get(id) || 0)) : 0;
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, Math.min(row?.remaining || 0, count)); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-qty]').forEach(input => input.onchange = () => {
+      const id = input.dataset.shopQty;
+      const row = visibleRows.find(value => value.lotId === id);
+      const count = Math.min(row?.remaining || 0, Math.max(0, Math.trunc(Number(input.value || 0))));
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-batches]').forEach(select => select.onchange = () => {
+      const id = select.dataset.shopBatches;
+      const row = visibleRows.find(value => value.lotId === id);
+      const batches = Math.min(renovationBatchMaximum(row), Math.max(0, Math.trunc(Number(select.value || 0))));
+      const count = batches * renovationBatchMultiplier(row);
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-max]').forEach(button => button.onclick = () => {
+      const id = button.dataset.shopMax;
+      const row = visibleRows.find(value => value.lotId === id);
+      const count = Math.min(SHOP_UNLIMITED_RUN_MAX, Math.max(0, Math.trunc(Number(row?.remaining || 0))));
+      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
+      else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    const selected = visibleRows.filter(row => selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
+      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+    const purchaseCount = selected.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
+    const totals = new Map();
+    for (const row of visibleRows) for (const part of costParts(row.cost)) addProjectedCost(totals, part, 0);
+    for (const {row, count} of selected) for (const part of costParts(row.cost)) addProjectedCost(totals, part, count);
+    const spending = [...totals.values()].filter(part => part.quantity > 0);
+    const totalVisual = spending.length ? spending.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${part.quantity.toLocaleString(locale())}</b>`).join(' ') : '0';
+    shopSummary.innerHTML = `<b>${tr('selectedPurchases',{n:purchaseCount})}</b><br><small>${tr('maxCost')}: ${totalVisual}</small>${walletForecastHtml(totals)}`;
+    const buy = root?.querySelector('#hk-shop-buy'); if (buy) buy.disabled = shopRunning || !purchaseCount;
+  }
+
+  async function buyRegularShop() {
+    if (!requireLicense() || shopRunning) return;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      shopRows = normalizeRegularShop();
+    } catch (error) {
+      log(either('Не удалось обновить магазин перед покупкой','Could not refresh the shop before purchase') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    const plan = shopRows.filter(row => row.section === selectedShopSection &&
+      (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
+      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+    if (!plan.length) return;
+    const count = plan.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
+    const budgetSection = selectedShopSection === 'clan' ? 'clan' : 'shop';
+    const projectedProblems = plan.flatMap(item => budgetDecision(item.row.cost, budgetSection, item.count, playerDocument).problems);
+    if (projectedProblems.length) {
+      alert(`${either('Покупка заблокирована единым бюджетом','Purchase blocked by unified budget')}:\n\n${[...new Set(projectedProblems)].join('\n')}`);
+      return;
+    }
+    const crystalCost = plan.reduce((sum, item) => sum + costParts(item.row.cost)
+      .filter(part => part.kind === 'currencies' && part.id === 'cur_prem').reduce((value, part) => value + part.quantity * item.count, 0), 0);
+    if (!confirm(language === 'en'
+      ? `Buy ${count} selected items?${crystalCost ? `\n\nCrystal cost: ${crystalCost.toLocaleString(locale())} 💎` : ''}\n\nPurchases are irreversible. External payments are blocked.`
+      : `Выкупить выбранные товары: ${count}?${crystalCost ? `\n\nСтоимость: ${crystalCost.toLocaleString(locale())} 💎` : ''}\n\nПокупки необратимы. Внешняя оплата заблокирована.`)) return;
+    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+    hkRunner.start({title:either('Магазин','Shop'),total:count,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    shopRunning = true; renderShop();
+    let completed = 0;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      for (const {row, count:rowCount} of plan) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
+        const requestCount = Math.min(rowCount, row.remaining, SHOP_UNLIMITED_RUN_MAX);
+        const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+        const requestBody = {shop_lot_id:row.lotId, payment_type:'INTERNAL', lotName:row.name, lotDescription:''};
+        let purchasedRow = 0;
+        try {
+          if (isRenovationBatch(row)) {
+            const decision = budgetDecision(row.cost, budgetSection, requestCount, playerDocument);
+            if (!decision.allowed) throw new Error(decision.problems.join('; '));
+            const batchMultiplier = renovationBatchMultiplier(row);
+            const batchCount = renovationBatchCount(row, requestCount);
+            for (let batch = 0; batch < batchCount; batch += 1) {
+              log(either(`Пакетная покупка ×500: ${batch + 1}/${batchCount}…`, `Batch purchase ×500: ${batch + 1}/${batchCount}…`));
+              if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+              await hkRunner.waitIfPaused();
+              hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
+              playerDocument = await apiJson('/shop/buy', 'POST', {
+                ...requestBody,
+                collection_entity_id:row.rewardId,
+                collection_count:batchMultiplier
+              }, true, 0);
+              purchasedRow += batchMultiplier;
+              completed += 1;
+            }
+          } else for (let index = 0; index < requestCount; index += 1) {
+            const decision = budgetDecision(row.cost, budgetSection, 1, playerDocument);
+            if (!decision.allowed) throw new Error(decision.problems.join('; '));
+            if (index === 0 || (index + 1) % 25 === 0 || index + 1 === requestCount) {
+              log(either(`Покупка по ×1: ${index + 1}/${requestCount}…`, `Buying ×1: ${index + 1}/${requestCount}…`));
+            }
+            // Start the next purchase immediately after the previous response.
+            // Network retries are disabled because repeating an irreversible
+            // request after a lost response could buy an extra copy.
+            if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+            await hkRunner.waitIfPaused();
+            hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
+            playerDocument = await apiJson('/shop/buy', 'POST', requestBody, true, 0);
+            purchasedRow += 1;
+            completed += 1;
+          }
+        } finally {
+          if (purchasedRow) for (const part of costParts(row.cost)) appendExpense({section:budgetSection, lotId:row.lotId, name:gameText(row.name) || row.name,
+            currencyId:part.id, amount:part.quantity * purchasedRow, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:`purchased ${purchasedRow}/${requestCount}`});
+        }
+      }
+      await hkAuthoritativePlayerRead('shop-complete');
+      try { shopViewDocument = await apiJson('/shop/view', 'GET'); } catch (_) {}
+      shopRows = normalizeRegularShop();
+      void reportClanShopActualFacts();
+      hkRunner.finish(either('Покупки завершены','Purchases completed'));
+      selectedShopLots.clear();
+      selectedShopCounts.clear();
+      log(either(`Покупки завершены: ${completed}`, `Purchases completed: ${completed}`), 'ok');
+    } catch (error) {
+      if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Магазин остановлен','Shop stopped'),'warn'); }
+      else { hkRunner.fail(error); log(either('Остановка магазина','Shop stopped') + ': ' + (error?.message || error), 'bad'); }
+    } finally {
+      shopRunning = false;
+      shopRows = normalizeRegularShop();
+      renderShop();
+    }
+  }
+
+  function dailyLabel(row) {
+    return clean(`${gameText(row?.name || '')} ${row?.name || ''} ${row?.rewardId || ''}`).toLowerCase();
+  }
+
+  function dailyRecruitLot(row) {
+    const label = dailyLabel(row);
+    return /пополнени[ея]\s+рекрут|recruit\s+(?:replenishment|refill)|replenish(?:ment)?\s+recruit|нов(?:ые|ых)\s+рекрут|new\s+recruits?|салаг|rookies?/.test(label);
+  }
+
+  function dailyCartelLot(row) {
+    const label = dailyLabel(row);
+    return /пополнени[ея]\s+картел|cartel\s+(?:replenishment|refill)|replenish(?:ment)?\s+cartel/.test(label);
+  }
+
+  function excludedDailyClanLot(row) {
+    if (row?.section !== 'clan' || row?.clanGroup !== 'personal') return false;
+    const label = dailyLabel(row);
+    const excludedByName = /хомячий\s+шар\s+идол|idol(?:s)?\s+hamster\s+ball|случайный\s+s\+?\s+бизнес|random\s+s\+?\s+business/.test(label);
+    const excludedByCurrency = costParts(row.cost).some(part => {
+      const currencyId = String(part.id || '').toLowerCase().replace(/[\s-]+/g, '_');
+      return /pit_?rat_?tokens?/.test(currencyId);
+    });
+    return excludedByName || excludedByCurrency;
+  }
+
+  function mandatoryDailyClanLot(row) {
+    // Recruit and cartel replenishment are obligatory personal clan lots.
+    // Hamster balls and random S/S+ businesses remain excluded from Today.
+    if (row?.section !== 'clan' || row?.clanGroup !== 'personal') return false;
+    return dailyRecruitLot(row) || dailyCartelLot(row);
+  }
+
+  function clanSkillPointLot(row) {
+    if (row?.section !== 'clan' || row?.clanGroup !== 'personal') return false;
+    const label = clean(`${gameText(row?.name || '')} ${row?.name || ''}`).toLowerCase();
+    return /очки\s+навыков(?:\s+клана)?|clan\s+skill\s+points?|skill\s+points?/.test(label);
+  }
+
+  function gamePeriodBounds(now = new Date()) {
+    const dayStart = new Date(now);
+    dayStart.setHours(21, 0, 0, 0);
+    if (now < dayStart) dayStart.setDate(dayStart.getDate() - 1);
+    const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
+    const weekStart = new Date(dayStart);
+    const daysSinceMonday = (weekStart.getDay() + 6) % 7;
+    weekStart.setDate(weekStart.getDate() - daysSinceMonday);
+    const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
+    return {dayStart:dayStart.getTime(), dayEnd:dayEnd.getTime(), weekStart:weekStart.getTime(), weekEnd:weekEnd.getTime()};
+  }
+
+  function budgetDocument() {
+    const stored = load().budget || {};
+    const periods = gamePeriodBounds();
+    return {currencies:{...(stored.currencies || {})}, periods, timezone:Intl.DateTimeFormat().resolvedOptions().timeZone || ''};
+  }
+
+  function currencyBudget(id) {
+    const value = budgetDocument().currencies[String(id)] || {};
+    const premium = String(id) === 'cur_prem';
+    return {
+      reserve:Math.max(0, Number(value.reserve || 0)),
+      dailyLimit:Math.max(0, Number(value.dailyLimit || 0)),
+      weeklyLimit:Math.max(0, Number(value.weeklyLimit || 0)),
+      allow:{shop:value.allow?.shop !== false, fair:value.allow?.fair !== false, clan:value.allow?.clan !== false},
+      allowPremium:premium && value.allowPremium === true
+    };
+  }
+
+  function saveCurrencyBudget(id, patch) {
+    const budget = budgetDocument();
+    budget.currencies[String(id)] = {...currencyBudget(id), ...patch,
+      allow:{...currencyBudget(id).allow, ...(patch.allow || {})}};
+    save({budget});
+  }
+
+  function expenseJournal() {
+    return Array.isArray(load().expenseJournal) ? load().expenseJournal : [];
+  }
+
+  function budgetUsage(id, now = Date.now()) {
+    const periods = gamePeriodBounds(new Date(now));
+    const rows = expenseJournal().filter(row => row?.status === 'ok' && String(row.currencyId) === String(id));
+    return {
+      day:rows.filter(row => Number(row.time || 0) >= periods.dayStart).reduce((sum, row) => sum + Math.max(0, Number(row.amount || 0)), 0),
+      week:rows.filter(row => Number(row.time || 0) >= periods.weekStart).reduce((sum, row) => sum + Math.max(0, Number(row.amount || 0)), 0)
+    };
+  }
+
+  function appendExpense(entry) {
+    const rows = [...expenseJournal(), {time:Date.now(), ...entry}].slice(-300);
+    save({expenseJournal:rows});
+  }
+
+  function costSignature(cost) {
+    return costParts(cost).filter(part => part.id && part.quantity > 0)
+      .sort((a,b) => `${a.kind}:${a.id}`.localeCompare(`${b.kind}:${b.id}`))
+      .map(part => `${part.kind}:${part.id}:${part.quantity}`).join('|');
+  }
+
+  function budgetDecision(cost, section, multiplier = 1, documentValue = playerDocument, options = {}) {
+    const problems = [];
+    for (const part of costParts(cost)) {
+      const amount = Math.max(0, Number(part.quantity || 0) * multiplier);
+      const rules = currencyBudget(part.id);
+      const usage = budgetUsage(part.id);
+      const balance = walletAmount(part.id, documentValue);
+      if (balance === null) problems.push(`${paymentLabel(part.id)}: ${either('баланс не определён','balance is unknown')}`);
+      if (rules.allow?.[section] === false) problems.push(`${paymentLabel(part.id)}: ${either('раздел запрещён','section is disabled')}`);
+      if (part.id === 'cur_prem' && !rules.allowPremium && !options.allowPremiumOverride) problems.push(`${paymentLabel(part.id)}: ${either('алмазы запрещены','diamonds are disabled')}`);
+      if (balance !== null && balance - amount < rules.reserve) problems.push(`${paymentLabel(part.id)}: ${either('нарушается остаток','minimum balance would be breached')}`);
+      if (rules.dailyLimit > 0 && usage.day + amount > rules.dailyLimit) problems.push(`${paymentLabel(part.id)}: ${either('превышен дневной лимит','daily limit exceeded')}`);
+      if (rules.weeklyLimit > 0 && usage.week + amount > rules.weeklyLimit) problems.push(`${paymentLabel(part.id)}: ${either('превышен недельный лимит','weekly limit exceeded')}`);
+      if (balance !== null && balance < amount) problems.push(`${paymentLabel(part.id)}: ${either('недостаточно средств','insufficient balance')}`);
+    }
+    return {allowed:!problems.length, problems};
+  }
+
+  function discoveredCurrencyIds() {
+    // Only universal currencies and currencies of the event that is active
+    // right now belong in Today. Feature tokens and archived event balances
+    // remain in the player's inventory, but must not clutter this screen.
+    const ids = new Set(['cur_prem','cur_gold','cur_cap','item_invest_cur','item_business_dust','item_clan_cur']);
+    const currentShopRows = dailyShopRows.length ? dailyShopRows : shopRows;
+    for (const row of currentShopRows.filter(value => value?.safe && value.remaining > 0 && value.section === 'regular')) {
+      for (const part of costParts(row.cost)) if (part.id) ids.add(part.id);
+    }
+    for (const state of visibleFairStates(playerDocument).filter(value => String(value?.id) === 'fair_event_base')) {
+      for (const part of costParts(state?.fair_reroll_cost)) if (part.id) ids.add(part.id);
+      for (const slot of state.fair_slots || []) {
+        if (slot?.is_bought) continue;
+        const row = fairCatalog.find(value => value.lotId === String(slot?.shop_lot_id || ''));
+        for (const part of costParts(row?.cost)) if (part.id) ids.add(part.id);
+      }
+    }
+    return [...ids].sort((a,b) => Number(a !== 'cur_prem') - Number(b !== 'cur_prem') || paymentLabel(a).localeCompare(paymentLabel(b), locale()));
+  }
+
+  function timestampFrom(value) {
+    if (value == null) return null;
+    const numberValue = Number(value);
+    if (Number.isFinite(numberValue) && numberValue > 0) return numberValue < 1e12 ? numberValue * 1000 : numberValue;
+    const parsed = Date.parse(String(value));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function firstTimer(value) {
+    const candidates = [value?.timer?.timestamp, value?.timestamp, value?.end, value?.ends_at, value?.finish_at, value?.expires_at, value?.expired_at];
+    for (const candidate of candidates) { const result = timestampFrom(candidate); if (result && result > Date.now()) return result; }
+    return null;
+  }
+
+  function countdownLabel(timestamp) {
+    if (!timestamp) return '—';
+    const seconds = Math.max(0, Math.floor((timestamp - Date.now()) / 1000));
+    const days = Math.floor(seconds / 86400), hours = Math.floor(seconds % 86400 / 3600), minutes = Math.floor(seconds % 3600 / 60);
+    return days ? `${days}${either('д','d')} ${hours}${either('ч','h')}` : `${hours}${either('ч','h')} ${minutes}${either('м','m')}`;
+  }
+
+  function dailyAdvertisement(documentValue = playerDocument) {
+    const candidates = [
+      documentValue?.advertisement, documentValue?.player?.advertisement,
+      documentValue?.data?.advertisement, documentValue?.data?.player?.advertisement
+    ];
+    const wrapper = candidates.find(value => value && typeof value === 'object') || {};
+    const raw = wrapper.$ && typeof wrapper.$ === 'object' ? wrapper.$ : wrapper;
+    const card = [...document.querySelectorAll('.ribbon-ad-card[data-lot-id],.simple-ad-card[data-lot-id]')].find(visible);
+    const lotId = String(raw.shop_lot_id ?? raw.lot_id ?? raw.lotId ?? raw.shopLotId ?? card?.dataset?.lotId ?? '');
+    const watchedAt = Math.max(Number(sessionStorage.getItem('timestamp-ad') || 0), Number(localStorage.getItem('timestamp-ad') || 0));
+    const cooldownUntil = watchedAt > 0 ? watchedAt + 1000 : 0;
+    const timer = cooldownUntil > Date.now() ? {timestamp:cooldownUntil} : null;
+    return {raw, lotId, type:String(raw.type || (card ? 'external' : '')).toLowerCase(), timer, available:!!lotId && !timer};
+  }
+
+  function dailyActionRows() {
+    const ad = dailyAdvertisement();
+    const actions = [
+      {id:'rumors', label:either('Слухи','Rumors'), kind:'rumors', uiGroup:'free', free:true, available:dailyRumorRoute.length > 0},
+      {id:'advertisement', label:tr('dailyAds'), kind:'advertisement', uiGroup:'free', free:true, available:ad.available}
+    ];
+    for (const row of pitLimitSummaries()) {
+      const count = selectedPitMoves(row.id, row.current);
+      if (count > 0) actions.push({id:`pit:${row.id}`, label:tr(row.textKey), textKey:row.textKey, kind:'pit', uiGroup:'pit',
+        free:true, available:true, pitType:row.id, count});
+    }
+    const rows = dailyShopRows.filter(row => row.safe && !excludedDailyClanLot(row) && (
+      // Keep every lot of the current regular event visible, including lots
+      // already bought today. Required recruit/cartel cards also remain visible
+      // after purchase so the Today page shows their complete daily state.
+      row.section === 'regular' || row.group === 'invest' || mandatoryDailyClanLot(row) || clanSkillPointLot(row) || (row.remaining > 0 && (
+        (row.section === 'ordinary' && !row.unlimited) || (row.section === 'clan' && row.clanGroup === 'personal')
+      ))
+    ));
+    for (const row of rows) {
+      const label = row.section === 'regular' ? tr('regularShop') : row.section === 'clan' ? tr('clanShop') :
+        row.group === 'invest' ? tr('investShop') : row.group === 'resources' ? tr('resourcesShop') : tr('renovationShop');
+      const section = row.section === 'clan' ? 'clan' : 'shop';
+      const actionId = `lot:${row.lotId}`;
+      const mandatory = mandatoryDailyClanLot(row);
+      const savedCount = Math.max(0, Math.floor(Number(dailyPurchaseCounts[actionId] || 0)));
+      const count = mandatory ? Math.max(0, Number(row.remaining || 0)) :
+        Math.min(Math.max(0, Number(row.remaining || 0)), savedCount || (dailySelection[actionId] ? 1 : 0));
+      if (mandatory && row.r
+
+===== async function runFair() =====
+
+    box.querySelectorAll('[data-fair-bonus]').forEach(input => input.onchange = () => {
+      const quantity = Number(input.dataset.fairBonus);
+      if (input.checked) selectedFairBonusLots.add(quantity); else selectedFairBonusLots.delete(quantity);
+    });
+  }
+
+  function fairPresets() {
+    const value = load().fairPresets;
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  }
+
+  function refreshFairPresets(selectName = '') {
+    if (!fairPresetSelect) return;
+    const names = Object.keys(fairPresets()).sort((a, b) => a.localeCompare(b, locale()));
+    fairPresetSelect.innerHTML = `<option value="">${tr('fairSavedSettings')}</option>` +
+      names.map(name => `<option value="${escapeHtml(name)}" ${name === selectName ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
+  }
+
+  function fairPresetSnapshot() {
+    return {
+      fairId:selectedFairId,
+      lots:[...selectedFairLots],
+      slotGroups:Object.fromEntries([...selectedFairSlotRules].map(([lotId, groups]) => [lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)}])),
+      currency:selectedFairCurrency,
+      exactLots:fairComboSettings().exactLots, bonusLots:[...selectedFairBonusLots],
+      buyLimit:Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1)),
+      rerollLimit:Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0)),
+      premiumReroll:Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)
+    };
+  }
+
+  function saveFairPreset(existingName = '') {
+    if (!selectedFairId || !selectedFairLots.size) {
+      alert(either('Сначала выберите ярмарку и хотя бы один товар', 'Choose a fair and at least one item first')); return;
+    }
+    const name = existingName || prompt(tr('settingName'));
+    if (!name?.trim()) return;
+    const normalized = name.trim();
+    const all = fairPresets();
+    all[normalized] = fairPresetSnapshot();
+    save({fairPresets:all});
+    refreshFairPresets(normalized);
+    log(tr('settingSaved', {name:normalized}), 'ok');
+  }
+
+  function loadFairPreset(name) {
+    const preset = fairPresets()[name];
+    if (!preset) return;
+    if (!fairCatalog.length) {
+      alert(either('Сначала нажмите «Считать ярмарку»', 'Press “Read fair” first'));
+      refreshFairPresets(); return;
+    }
+    if (fairStates().some(state => String(state.id) === String(preset.fairId))) selectedFairId = String(preset.fairId);
+    const available = new Set(fairRowsForState(fairState(selectedFairId)).map(row => row.lotId));
+    selectedFairLots = new Set((preset.lots || []).map(String).filter(id => available.has(id)));
+    selectedFairSlotRules.clear();
+    const options = fairSlotOptions();
+    for (const lotId of selectedFairLots) {
+      const groups = preset.slotGroups?.[lotId];
+      if (groups && typeof groups === 'object') {
+        selectedFairSlotRules.set(lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)});
+      } else {
+        const oldCells = new Set(Array.isArray(preset.slotRules?.[lotId]) ? preset.slotRules[lotId].map(String) : options.map(value => value.key));
+        selectedFairSlotRules.set(lotId, {
+          regular:options.some(value => !value.vip && oldCells.has(value.key)),
+          vip:options.some(value => value.vip && oldCells.has(value.key))
+        });
+      }
+    }
+    selectedFairCurrency = String(preset.currency || '');
+    const buy = root?.querySelector('#hk-fair-buy-limit'); if (buy) buy.value = Math.max(1, Number(preset.buyLimit || 1));
+    const reroll = root?.querySelector('#hk-fair-reroll-limit'); if (reroll) reroll.value = Math.max(0, Number(preset.rerollLimit || 0));
+    const premium = root?.querySelector('#hk-fair-premium-reroll'); if (premium) premium.checked = Boolean(preset.premiumReroll);
+    selectedFairBonusLots = new Set(Array.isArray(preset.bonusLots) ? preset.bonusLots.map(Number).filter(value => [5,10,30].includes(value)) : [5,10,30]);
+    renderFair();
+    const exact=root?.querySelector('#hk-fair-exact-lots'); if(exact) exact.value=['0','3','6','9'].includes(String(preset.exactLots)) ? String(preset.exactLots) : '0';
+    renderFairBonusChoices();
+    refreshFairPresets(name);
+    log(tr('settingLoaded', {name}), 'ok');
+  }
+
+  function deleteFairPreset() {
+    const name = fairPresetSelect?.value;
+    if (!name || !confirm(tr('deleteSetting', {name}))) return;
+    const all = fairPresets(); delete all[name]; save({fairPresets:all}); refreshFairPresets();
+  }
+
+  function costDocumentFromParts(parts) {
+    const result = {items:[], currencies:[]};
+    for (const part of parts || []) if (part?.id && part.quantity > 0) result[part.kind === 'currencies' ? 'currencies' : 'items'].push({id:part.id, quantity:part.quantity});
+    return result;
+  }
+
+  async function executeFairPurchase(row, slot, allowPremium = false) {
+    // Event fairs have their own currency/amount controls in this tab. Do not
+    // let the global daily budget reject the whole event run because one of
+    // the selected variants costs diamonds. The normal fair remains covered
+    // by the unified budget.
+    if (!isEventFairState(fairState(selectedFairId))) {
+      const decision = budgetDecision(row.cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+      if (!decision.allowed) throw new Error(decision.problems.join('; '));
+    }
+    const beforeDoc = playerDocument;
+    const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, beforeDoc)]));
+    fairDocument = await apiJson('/shop/buy', 'POST', {shop_lot_id:row.lotId, payment_type:'INTERNAL', fair_id:selectedFairId, slot_id:slot.id, lotName:row.name, lotDescription:''});
+    updateWalletFromResponse(fairDocument, row.cost);
+    for (const part of costParts(row.cost)) appendExpense({section:'fair', lotId:row.lotId, name:gameText(row.name) || row.name,
+      currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'purchased'});
+  }
+
+  async function runFair() {
+    if (!requireLicense() || fairRunning || !selectedFairLots.size) return;
+    if ([...selectedFairLots].some(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return !(rule?.regular || rule?.vip);
+    })) {
+      alert(tr('noCells')); return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
+        return;
+      }
+    } catch (error) {
+      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
+        return;
+      }
+    } catch (error) {
+      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    const buyLimit = Math.max(1, Number(root.querySelector('#hk-fair-buy-limit').value || 1));
+    const rerollLimit = Math.max(0, Number(root.querySelector('#hk-fair-reroll-limit').value || 0));
+    const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
+    const combo = fairComboSettings();
+    let state = fairState(selectedFairId);
+    if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
+    const cost = costParts(state?.fair_reroll_cost)[0];
+    const worst = cost ? `${cost.quantity * rerollLimit} ${cost.id}` : '0';
+    const maximumCrystalLotCost = fairCatalog.filter(row => selectedFairLots.has(row.lotId))
+      .flatMap(row => costParts(row.cost)).filter(part => part.kind === 'currencies' && part.id === 'cur_prem')
+      .reduce((maximum, part) => Math.max(maximum, part.quantity), 0) * buyLimit;
+    const crystalNotice = maximumCrystalLotCost
+      ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`)
+      : '';
+    if (!confirm(language === 'en'
+      ? `Start searching for selected lots?\n\nTotal purchases: ${buyLimit}\nMaximum rerolls: ${rerollLimit}\nMaximum reroll cost: ${worst}${crystalNotice}`
+      : `Запустить поиск выбранных лотов?\n\nВсего покупок: ${buyLimit}\nМаксимум прокруток: ${rerollLimit}\nМаксимальная цена прокруток: ${worst}${crystalNotice}`)) return;
+    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+    hkRunner.start({title:either('Ярмарка','Fair'),total:buyLimit,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    fairRunning = true; fairStop = false; updateFairControls();
+    let bought = 0, bonusBought = 0, rerolls = 0, authRetries = 0;
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      while (!fairStop && bought < buyLimit) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep(either('Поиск и покупка лотов','Searching and buying lots'), bought, buyLimit);
+        if (combo.exactLots && buyLimit - bought < 3) {
+          log(either(`Остаток лимита ${buyLimit - bought}: для комбинации требуется минимум 3 покупки.`, `Remaining limit ${buyLimit - bought}: a combination requires at least 3 purchases.`), 'warn');
+          break;
+        }
+        state = fairState(selectedFairId);
+        if (!state) throw new Error('Выбранная ярмарка больше недоступна');
+        let purchased = false;
+        const options = fairSlotOptions(state);
+        const targets = options.filter(({slot, vip, index}) => {
+          // A combination spans all nine main cells: six regular and three
+          // VIP. Encrypted bonus cells start after them and never count toward
+          // the 3/6/9 group itself.
+          if (index >= 9 || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) return false;
+          const groups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+          return !groups || (vip ? groups.vip : groups.regular);
+        });
+        const maximumGroup = combo.exactLots
+          ? Math.floor(Math.min(combo.exactLots, buyLimit - bought) / 3) * 3
+          : 0;
+        const matchedTargets = maximumGroup ? targets.slice(0, maximumGroup) : [];
+        const groupSize = Math.floor(matchedTargets.length / 3) * 3;
+        const purchaseTargets = matchedTargets.slice(0, groupSize);
+        if (combo.exactLots && groupSize >= 3) {
+          const totalCosts = new Map();
+          for (const {slot} of purchaseTargets) {
+            const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+            for (const part of costParts(row?.cost)) totalCosts.set(part.id, (totalCosts.get(part.id) || 0) + part.quantity);
+          }
+          const insufficient = [...totalCosts].filter(([id, amount]) => {
+            const balance = walletAmount(id, playerDocument);
+            return balance === null || balance < amount;
+          }).map(([id, amount]) => {
+            const balance = walletAmount(id, playerDocument);
+            return `${paymentLabel(id)}: ${balance === null ? either('остаток не определён','balance is unknown') : `${balance.toLocaleString(locale())} / ${amount.toLocaleString(locale())}`}`;
+          });
+          if (insufficient.length) {
+            log(either(`Комбинация ${purchaseTargets.length} не выкуплена — не хватает средств: ${insufficient.join('; ')}`,
+              `Combination ${purchaseTargets.length} was not purchased — insufficient funds: ${insufficient.join('; ')}`), 'warn');
+          } else {
+            for (const {slot} of purchaseTargets) {
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              if (!row?.safe) continue;
+              log(`Лоты ${purchaseTargets.length}: покупка…`);
+              await executeFairPurchase(row, slot, allowPremium);
+              bought++; purchased = true; authRetries = 0;
+            }
+            // The last /shop/buy response may still contain the previous set
+            // of encrypted cells. Refresh once after the completed group so
+            // newly opened bonus slots are visible before we try to buy them.
+            playerDocument = await apiJson('/player/me', 'POST');
+            fairDocument = playerDocument;
+            state = fairState(selectedFairId);
+            const collars = fairSlotOptions(state).filter(({slot,index}) => {
+              if (index < 9 || index >= 9 + groupSize / 3 || slot.is_bought) return false;
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              return selectedFairBonusLots.has(Number(row?.rewardQuantity || 0));
+            });
+            for (const {slot} of collars) {
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              if (!row?.safe) continue;
+              log(`Открытый слот ${Number(slot.id) + 1}: покупка…`);
+              await executeFairPurchase(row, slot, allowPremium);
+              bonusBought++; purchased = true; authRetries = 0;
+            }
+          }
+        }
+        if (!combo.exactLots) for (const {slot, vip} of options) {
+          if (fairStop || bought >= buyLimit || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) continue;
+          const allowedGroups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+          if (allowedGroups && !(vip ? allowedGroups.vip : allowedGroups.regular)) continue;
+          const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+          if (!row?.safe) continue;
+          log(`Лот найден. Покупка ${bought + 1}/${buyLimit}…`);
+          try {
+            await executeFairPurchase(row, slot, allowPremium);
+            bought++; purchased = true; authRetries = 0; log(`Куплено ${bought}/${buyLimit}`, 'ok');
+          } catch (error) {
+            if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+            throw error;
+          }
+        }
+        if (purchased) continue;
+        if (rerolls >= rerollLimit) { log(`Достигнут лимит прокруток: ${rerollLimit}`, 'warn'); break; }
+        if (!safeReroll(state.fair_reroll_cost, allowPremium)) throw new Error('Цена прокрутки изменилась и стала небезопасной');
+        log(`Лота нет. Прокрутка ${rerolls + 1}/${rerollLimit}…`);
+        try {
+          if (!isEventFairState(state)) {
+            const rerollDecision = budgetDecision(state.fair_reroll_cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+            if (!rerollDecision.allowed) throw new Error(rerollDecision.problems.join('; '));
+          }
+          const before = new Map(costParts(state.fair_reroll_cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+          const rerollCost = state.fair_reroll_cost;
+          fairDocument = await apiJson('/fair/reroll', 'POST', {fair_id:selectedFairId});
+          updateWalletFromResponse(fairDocument, rerollCost);
+          for (const part of costParts(state.fair_reroll_cost)) appendExpense({section:'fair', lotId:`reroll:${selectedFairId}`, name:either('Прокрутка ярмарки','Fair reroll'),
+            currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'rerolled'});
+          rerolls++; authRetries = 0;
+        }
+        catch (error) {
+          if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+          throw error;
+        }
+        await gameRetryDelay(550);
+      }
+      playerDocument = await hkAuthoritativePlayerRead('fair-complete');
+      fairDocument = playerDocument;
+      hkRunner.finish(either('Ярмарка завершена','Fair completed'));
+      log(`Ярмарка завершена: выбранных покупок ${bought}, бонусных ${bonusBought}, прокруток ${rerolls}`, 'ok');
+    } catch (error) {
+      if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Ярмарка остановлена','Fair stopped'),'warn'); }
+      else { hkRunner.fail(error); log(`Аварийная остановка ярмарки: ${error.message}`, 'bad'); }
+    } finally { fairRunning = false; fairStop = false; renderFair(); }
+  }
+
+  function ordinaryShopGroup(lot) {
+    const lotId = String(lot?.id || '').toLowerCase();
+    // Each Resources card has one visible base lot plus three real hidden
+    // package commands (_10, _50 and _100). They are separate shop_lot_id
+    // values, not a quantity parameter on the base purchase.
+    if (/^mf_shoplot_itempack_[1-5](?:_(?:10|50|100))?$/.test(lotId)) return 'resources';
+    // Renovation contains the ten individual materials (two materials per tier).
+    // The combined mf_shoplot_pit_remort_all pack is intentionally excluded.
+    if (/^mf_shoplot_pit_remort_(?:beams|nails)_[1-5]$/.test(lotId)) return 'renovation';
+    // Invest Deals contains the two daily building-helper offers only.
+    if (/^mf_shoplot_building_helpers_offer_0[12]$/.test(lotId)) return 'invest';
+    return '';
+  }
+
+  function quantitySelectOptions(maximum, selected) {
+    const max = Math.max(0, Math.trunc(Number(maximum || 0)));
+    const current = Math.min(max, Math.max(0, Math.trunc(Number(selected || 0))));
+    const values = new Set([0, current, max]);
+    for (let value = 1; value <= Math.min(max, 20); value++) values.add(value);
+    for (const value of [25, 50, 100, 250, 500]) if (value <= max) values.add(value);
+    return [...values].sort((a, b) => a - b).map(value => `<option value="${value}" ${value === current ? 'selected' : ''}>${value}</option>`).join('');
+  }
+
+  function captureActiveEventCode() {
+    let code = '';
+    const activeIcon = document.querySelector('.picture-counter.special-counter img[src*="/special_events/icons/timer_event_"]');
+    const iconMatch = String(activeIcon?.getAttribute('src') || '').match(/timer_event_([^/?]+?)_icon(?:\.|\?)/i);
+    if (iconMatch?.[1]) code = iconMatch[1].toLowerCase();
+    // On a first installation the player may already be inside the current
+    // event page. Use its visible cards only until the map icon has supplied
+    // and persisted the authoritative current event code.
+    if (!code && !activeEventCode) {
+      const visibleCard = [...document.querySelectorAll('[data-lot-id^="mf_shoplot_"]')].find(element =>
+        visible(element) && /^mf_shoplot_(?:daily_|finite_|infinite_)?event_[^_]+_/i.test(String(element.getAttribute('data-lot-id') || '')));
+      const cardMatch = String(visibleCard?.getAttribute('data-lot-id') || '').match(/^mf_shoplot_(?:daily_|finite_|infinite_)?event_([^_]+)_/i);
+      if (cardMatch?.[1]) code = cardMatch[1].toLowerCase();
+    }
+    if (code && code !== activeEventCode) {
+      activeEventCode = code;
+      save({activeEventCode:code});
+      if (shopViewDocument) {
+        shopRows = normalizeRegularShop();
+        if (root && selectedShopSection === 'regular') renderShop();
+      }
+    }
+    return activeEventCode;
+  }
+
+  function normalizeRegularShop(shopDocument = shopViewDocument, playerDoc = playerDocument) {
+    const currentEventCode = captureActiveEventCode();
+    const limits = new Map();
+    const playerLimits = playerDoc?.shop_lot_limits || playerDoc?.player?.shop_lot_limits || [];
+    for (const item of playerLimits) limits.set(String(item?.shop_lot_id || ''), Math.max(0, Number(item?.number_of_purchase || 0)));
+    const shopLots = shopDocument?.shop_lots || [];
+    const lotsById = new Map(shopLots.map(lot => [String(lot?.id || ''), lot]));
+    return shopLots.flatMap(lot => {
+      const rawView = lot?.lot_view || {};
+      const lotId = String(lot.id || '');
+      const currentEventLot = Boolean(currentEventCode) &&
+        lotId.toLowerCase().includes(`_event_${currentEventCode}_`);
+      const resourceMatch = lotId.match(/^(mf_shoplot_itempack_[1-5])(?:_(10|50|100))?$/i);
+      const resourceBaseLot = resourceMatch ? lotsById.get(resourceMatch[1]) : null;
+      const resourceBaseView = resourceBaseLot?.lot_view || {};
+      const declaredMultiplier = Boolean(resourceMatch?.[2]) &&
+        (resourceBaseView.multiplier_lots || []).map(String).includes(lotId);
+      // Hidden multiplier lots contain only their resulting package quantity.
+      // Reuse the visible parent card for its name/icon/content, while keeping
+      // the child's own lot ID, cost and package quantity for the purchase.
+      if (resourceMatch?.[2] && !declaredMultiplier) return [];
+      const view = declaredMultiplier ? resourceBaseView : rawView;
+      if (String(view.type || '').toLowerCase() === 'fair' || lot.external_cost) return [];
+      const lotLimits = lot.limit || [];
+      // The standard Resources and Renovation cards have no daily purchase
+      // limit in the game. Keep only our explicitly allow-listed ordinary
+      // lots when a server-side limit is absent.
+      const unlimited = !lotLimits.length && (Boolean(ordinaryShopGroup(lot)) || currentEventLot);
+      if (!lotLimits.length && !unlimited) return [];
+      const playerLimit = lotLimits.find(value => String(value?.type || '').toUpperCase() === 'PLAYER');
+      const sharedLimit = lotLimits.find(value => ['CLAN','GLOBAL'].includes(String(value?.type || '').toUpperCase()));
+      const remainingValues = [];
+      if (playerLimit) remainingValues.push(Math.max(0, Number(playerLimit.limit || 0) + Number(playerLimit.bonus || 0) - (limits.get(String(lot.id || '')) || 0)));
+      if (sharedLimit) remainingValues.push(Math.max(0, Number(sharedLimit.limit || 0) + Number(sharedLimit.bonus || 0) - Number(sharedLimit.value || 0)));
+      if (!remainingValues.length && !unlimited) return [];
+      const bought = limits.get(lotId) || 0;
+      const remaining = unlimited ? SHOP_UNLIMITED_RUN_MAX : Math.min(...remainingValues);
+      const parts = costParts(lot.cost);
+      const content = (view.content_view || [])[0] || {};
+      const rewardId = String(content.id || '');
+      const rewardQuantity = resourceMatch
+        ? Math.max(0, Number(rawView.quantity || view.quantity || 0))
+        : Math.max(0, Number(content.quantity || view.quantity || 0));
+      const tab = String(view.tab || 'default').toLowerCase();
+      // The shop catalog and the player's limit list both retain past events.
+      // Include every internal lot of the active event: the updated game uses
+      // daily_event, finite_event, event and infinite_event prefixes together.
+      // If the current event cannot be identified, fail closed and show none.
+      const section = ['clan','clan_2'].includes(tab) ? 'clan' : currentEventLot ? 'regular' : 'ordinary';
+      const group = section === 'ordinary' ? ordinaryShopGroup(lot) : 
