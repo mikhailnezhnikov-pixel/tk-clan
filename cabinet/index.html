@@ -122,10 +122,14 @@
     .mirror-block-tabs{display:grid;grid-template-columns:repeat(5,minmax(90px,1fr));gap:8px;margin:0 0 12px}
     .mirror-block-tab{min-height:70px;padding:9px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(10,20,32,.60);color:#d7dde6;font-weight:850;cursor:pointer;overflow:hidden;text-overflow:ellipsis}
     .mirror-block-tab.active{border-color:rgba(232,182,84,.78);background:rgba(130,82,13,.28);color:#fff0c4}
+    .mirror-block-tab img{width:52px;height:52px;object-fit:contain;display:block;margin:auto}
+    .mirror-block-tab .mirror-fallback{display:grid;place-items:center;width:52px;height:52px;margin:auto;border-radius:12px;background:rgba(255,255,255,.05);font-size:18px}
     .mirror-stage{display:grid;grid-template-columns:66px minmax(0,1fr);gap:12px;padding:12px;border:1px solid rgba(255,255,255,.10);border-radius:18px;background:rgba(8,11,16,.46)}
     .mirror-branch-tabs{display:grid;align-content:start;gap:8px}
     .mirror-branch-tab{min-height:58px;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:13px;background:rgba(10,20,32,.62);color:#d9dee8;font-weight:850;cursor:pointer;overflow:hidden}
     .mirror-branch-tab.active{border-color:rgba(232,182,84,.75);background:rgba(130,82,13,.28);color:#fff0c4}
+    .mirror-branch-tab img{width:42px;height:42px;object-fit:contain;display:block;margin:auto}
+    .mirror-branch-tab .mirror-fallback{display:grid;place-items:center;width:42px;height:42px;margin:auto;border-radius:10px;background:rgba(255,255,255,.05)}
     .mirror-branch-content{min-width:0}
     .mirror-branch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:4px 2px 8px}
     .mirror-branch-head h3{margin:3px 0 0;color:#fff;font-size:20px}
@@ -585,7 +589,8 @@
       title,
       total:total!=null?total:members.reduce((sum,x)=>sum+x.value,0),
       participants:numeric(node?.participants_count??node?.participantsCount??node?.participants)??members.length,
-      members
+      members,
+      icon:String(node?.icon??node?.image??node?.meta?.icon??'')
     };
   }
 
@@ -593,7 +598,7 @@
     const title=String(node?.title??node?.label??node?.name??node?.block_name??node?.blockName??node?.localization_key??node?.localizationKey??node?.key??node?.id??('Блок '+(index+1)));
     let rawBranches=getArray(node,['branches','items','skills','upgrades','children','tabs','nodes']);
     if(!rawBranches.length&&getContributors(node).length)rawBranches=[node];
-    return {title,branches:rawBranches.map(normalizeBranch).filter(x=>x.members.length||x.total)};
+    return {title,icon:String(node?.icon??node?.image??node?.meta?.icon??''),branches:rawBranches.map(normalizeBranch).filter(x=>x.members.length||x.total)};
   }
 
   function clanSnapshot(){
@@ -627,8 +632,10 @@
     });
     return [...blocks.entries()].map(([title,branches])=>({
       title,
+      icon:'',
       branches:[...branches.entries()].map(([branchTitle,members])=>({
         title:branchTitle,
+        icon:'',
         total:members.reduce((sum,x)=>sum+x.value,0),
         participants:members.length,
         members:members.sort((a,b)=>b.value-a.value)
@@ -695,13 +702,17 @@
     if(selectedClanBlock>=blocks.length)selectedClanBlock=0;
 
     $('block-tabs').innerHTML=blocks.map((block,index)=>
-      '<button class="mirror-block-tab'+(index===selectedClanBlock?' active':'')+'" type="button" data-block-index="'+index+'" title="'+safe(block.title)+'">'+safe(block.title)+'</button>'
+      '<button class="mirror-block-tab'+(index===selectedClanBlock?' active':'')+'" type="button" data-block-index="'+index+'" title="'+safe(block.title)+'">'+
+      (block.icon?'<img src="'+safe(block.icon)+'" alt="'+safe(block.title)+'">':'<span class="mirror-fallback">'+(index+1)+'</span>')+
+      '</button>'
     ).join('');
 
     const block=blocks[selectedClanBlock];
     if(selectedClanBranch>=block.branches.length)selectedClanBranch=0;
     $('branch-tabs').innerHTML=block.branches.map((branch,index)=>
-      '<button class="mirror-branch-tab'+(index===selectedClanBranch?' active':'')+'" type="button" data-branch-index="'+index+'" title="'+safe(branch.title)+'">'+(index+1)+'</button>'
+      '<button class="mirror-branch-tab'+(index===selectedClanBranch?' active':'')+'" type="button" data-branch-index="'+index+'" title="'+safe(branch.title)+'">'+
+      (branch.icon?'<img src="'+safe(branch.icon)+'" alt="'+safe(branch.title)+'">':'<span class="mirror-fallback">'+(index+1)+'</span>')+
+      '</button>'
     ).join('');
 
     document.querySelectorAll('[data-block-index]').forEach(btn=>btn.onclick=()=>{
@@ -740,7 +751,9 @@
     clanPlayers=Array.isArray(clanInfo.players)?clanInfo.players:[];
     $('clan-title').textContent=clanInfo.key?'Клан '+clanInfo.key:'Последние данные';
     $('participants').textContent=clanInfo.participants||clanPlayers.length||0;
-    $('total-levels').textContent=formatNumber(clanInfo.total_levels||clanPlayers.reduce((sum,p)=>sum+Number(p.total||0),0));
+    const liveBlocks=structuredClanBlocks();
+    const accumulatedTotal=liveBlocks.reduce((sum,block)=>sum+block.branches.reduce((branchSum,branch)=>branchSum+Number(branch.total||0),0),0);
+    $('total-levels').textContent=formatNumber(accumulatedTotal||clanInfo.total_levels||clanPlayers.reduce((sum,p)=>sum+Number(p.total||0),0));
     $('week').textContent=clanInfo.week||'—';
     renderPlayerStats();
   }
