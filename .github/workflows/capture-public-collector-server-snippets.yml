@@ -1,0 +1,50 @@
+name: Capture Public Collector Server Snippets
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-snippets-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Capture safe source snippets
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -e
+            echo "=== PUBLIC SNAPSHOT STORAGE ==="
+            sed -n "2230,2395p" /opt/hamsterking-license/server.py
+            echo "=== SERVER HTTP CLIENT ==="
+            sed -n "2550,2635p" /opt/hamsterking-license/server.py
+            echo "=== PUBLIC ROUTES ==="
+            sed -n "4095,4140p" /opt/hamsterking-license/server.py
+            sed -n "4250,4300p" /opt/hamsterking-license/server.py
+          ' > /tmp/public-collector-server-snippets.txt
+      - name: Save snippets
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/public-collector-server-snippets.txt audit/hk-public-collector-server-snippets.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-public-collector-server-snippets.txt
+          git commit -m "audit: capture public snapshot server snippets" || true
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/public-collector-server-snippets.txt
