@@ -518,3 +518,87 @@ After user UI/read-only confirmation:
 **E3 — single-building canonical action core**.
 
 Do not implement E3 automatically before E2 user confirmation.
+
+## E2 r2 — donor alignment checkpoint
+
+Status: **TECHNICAL PASS / LIVE CANDIDATE / USER UI CHECK PENDING**
+
+Marker:
+`HK_EXPLORE_CANON_REV = 'explore-readonly-plan-20260920-r2'`
+
+Live/baseline sync commit:
+`1842d260c9d061331a8702bd603d881dd45e8f45`
+
+### Donor re-check
+
+The pinned donor Explore was re-read before the r2 deploy. E2 was aligned to the donor-specific read-only selection behavior:
+
+- target tier starts at donor value `1` (Tier 2); Tier 1 is not a target option;
+- target values remain Tier 2..MAX plus Instant MAX (`1..8`);
+- starting-tier controls are limited by the selected target;
+- target-tier exploration/battle toggles are available only for target values `1..6`;
+- target-tier cache now uses a building-state fingerprint:
+  `tier | level | next_tier_level | max_battle_level | has_events`;
+- stale cached completion data is ignored when the building summary changes;
+- target-tier queue keeps the donor cache-aware ordering for `level=max`;
+- in the ordinary non-target-tier path, `maxBuildings` is applied before optional total-events reordering, matching donor `runExploreBuildings`.
+
+### Safety / scope
+
+E2 remains read-only.
+
+Explore r2 contains no calls to:
+
+- `/player/building/fast_completion`;
+- `/player/battle/fast`;
+- `/player/building/remort`;
+- `/player/building/fast_remort`;
+- `/shop/buy`.
+
+Detailed target-tier inspection remains limited to:
+`POST /player/building?building_id=...`
+
+The action button remains disabled. E3 action mechanics were not implemented.
+
+No Maps backend/schema/scanner changes were made by the E2 r2 deploy.
+
+### Race-safe live verification
+
+Before install the deploy fetched the then-current live script and patched only the Explore block.
+The live SHA was checked again immediately before installation, so a concurrent live change would have aborted the deploy.
+
+Result:
+
+- source live SHA256: `c32fc068e4bcf89748419ecaa207c6fe165660097c3c4b922abcf2a0b1d9bf9f`;
+- deployed/public SHA256: `6a40137d505248ff5525bed0136b185b0b1c7273147fa0d283cb65397039563a`;
+- service restart: PASS;
+- JS syntax: PASS;
+- public byte equality: PASS;
+- Explore mutation endpoint scan: 0;
+- target tier minimum: donor-compatible value `1`;
+- target cache fingerprint: PASS;
+- donor max-buildings queue order: PASS;
+- run action: disabled.
+
+Evidence:
+`audit/hk-stage2-explore-e2-r2-live-status.txt`
+
+The first r2 workflow registration attempt failed at workflow/YAML validation and therefore made no live change. The corrected workflow then completed successfully.
+
+### E2 stop gate
+
+Do not start E3 from this checkpoint.
+
+User UI/read-only confirmation still required:
+
+1. reload game → HK → Исследование;
+2. confirm district and building-type filters;
+3. confirm starting tiers disable correctly as target changes;
+4. confirm target list begins at Tier 2 and includes MAX / Instant MAX;
+5. confirm target-tier toggles;
+6. confirm account capability summary and priorities;
+7. click **Рассчитать план**;
+8. inspect candidate count/order.
+
+Only after that confirmation may E2 be promoted from technical/live-candidate status to final E2 PASS and E3 be considered.
+
