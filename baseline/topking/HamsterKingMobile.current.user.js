@@ -4605,7 +4605,7 @@
   const HK_BOSS_REGIONAL_PASS_CURRENCY_ID='cur_regional_boss_pass';
   const HK_BOSS_AREA_LOOTBOX_ITEM_ID='item_boss_lootbox';
   const HK_BOSS_AREA_TARGET_LEVELS=Object.freeze([95,120,140,145,155,160,165,175,185,195,200]);
-  const HK_BOSSES_CANON_REV='bosses-canon-core-20260920-r1';
+  const HK_BOSSES_CANON_REV='bosses-area-target-20260920-r2';
   const HK_BOSSES_TARGET_REV='bosses-area-target-20260920-r2';
   const bossCanonDecisionBudget={remember:false,remaining:0};
   const bossCanonState={
