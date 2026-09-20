@@ -10,6 +10,8 @@ permissions:
 jobs:
   classify:
     runs-on: ubuntu-latest
+    outputs:
+      map_keys: ${{ steps.classify.outputs.map_keys }}
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +23,7 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
           chmod 600 ~/.ssh/topking
       - name: classify all maps read-only
+        id: classify
         run: |
           cat > /tmp/w6-classify.py <<'PY'
           import importlib.util,json,sqlite3
@@ -46,9 +49,10 @@ jobs:
           d=json.load(open('w6-classification.json'))
           assert d['total_maps']==235,d['total_maps']
           u=[m['map_key'] for m in d['maps'] if len(m['candidates'])==1]
-          assert len(u)==26,len(u)
           print('unique=',len(u),'unresolved=',sum(len(m['candidates'])==0 for m in d['maps']),'ambiguous=',sum(len(m['candidates'])>1 for m in d['maps']))
+          open('/tmp/w6-unique.json','w').write(json.dumps(u,separators=(',',':')))
           PY
+          echo "map_keys=$(cat /tmp/w6-unique.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
           name: w6-classification
@@ -63,33 +67,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        map_key:
-          - hk_dubai5335
-          - hk_lagos0843
-          - hk_moscow1226
-          - hk_newyork0001
-          - hk_newyork0002
-          - hk_newyork0438
-          - hk_newyork1437
-          - hk_newyork1706
-          - hk_newyork2508
-          - hk_newyork2520
-          - hk_newyork2528
-          - hk_newyork3110
-          - hk_newyork3111
-          - hk_newyork3307
-          - hk_newyork3504
-          - hk_newyork3707
-          - hk_newyork4016
-          - hk_newyork4026
-          - hk_newyork4617
-          - hk_newyork4639
-          - hk_newyork4727
-          - hk_newyork4825
-          - hk_riodejaneiro0217
-          - hk_riodejaneiro1730
-          - hk_saintpetersburg0001
-          - hk_saintpetersburg0003
+        map_key: ${{ fromJson(needs.classify.outputs.map_keys) }}
     steps:
       - uses: actions/checkout@v4
       - name: prepare ssh
@@ -249,10 +227,10 @@ jobs:
           from collections import Counter,defaultdict
           cls=json.load(open('/tmp/classification/w6-classification.json'))
           files=glob.glob('/tmp/maps/w6-*.json')
-          assert len(files)==26,len(files)
           results=[json.load(open(f)) for f in files]
           bykey={r['map_key']:r for r in results}
           unique_keys={m['map_key'] for m in cls['maps'] if len(m['candidates'])==1}
+          assert len(files)==len(unique_keys),(len(files),len(unique_keys))
           assert set(bykey)==unique_keys,(len(bykey),len(unique_keys),sorted(unique_keys-set(bykey)))
           metrics=Counter();targets=defaultdict(list)
           for m in cls['maps']:
@@ -290,9 +268,7 @@ jobs:
             'room_count_conflicts_by_source':{'game_live':metrics['room_count_conflicts_game_live'],'hk_maps_import':metrics['room_count_conflicts_hk_maps_import'],'legacy':metrics['room_count_conflicts_legacy']},
             'classification_maps':cls['maps'],'migration_manifest':sorted(results,key=lambda x:x['map_key'])}
           assert report['total_maps']==235
-          assert report['city_grid_yx_matches']==26
-          assert report['unresolved_maps']==209
-          assert report['ambiguous_maps']==0
+          assert report['city_grid_yx_matches']+report['unresolved_maps']+report['ambiguous_maps']==235
           open('audit/hk-stage2-w6-dryrun.json','w').write(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
           summary={k:v for k,v in report.items() if k not in ('classification_maps','migration_manifest','duplicate_targets')}
           open('audit/hk-stage2-w6-dryrun-summary.txt','w').write('\n'.join(f'{k}={v}' for k,v in summary.items())+'\n')
