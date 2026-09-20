@@ -924,6 +924,36 @@ PASS gate:
 - reopening the website map shows the same updated room counts automatically;
 - no manual export/import is needed.
 
+#### W4 result — PASS (2026-09-20)
+
+- audit evidence: `audit/HK_STAGE2_W4_MAPS_SHARED_KB_WEBSITE.md`;
+- live status: `audit/hk-stage2-maps-shared-kb-w4-live-status.txt`;
+- live server SHA: `c1c583230f632ed38c654a00541809b1a7cb2f2bf0296708f4c44b2456ad46ce`;
+- new pilot relation: `hk_map_point_links(map_key,point_index,building_id,match_method,linked_at)`;
+- pilot: `hk_moscow1226 → 9ea6ff78-b881-45b3-b92d-a8f1da8eca05`;
+- safe point→building links: **29/32**; unique canonical buildings: **29**; match method `osm_point_in_polygon`;
+- 3 W3-unmatched points remain source fallback;
+- `hk_map_data()` point mode now keeps delta geometry from `hk_map_points` and overlays current `map_buildings.room_count` at response time;
+- stored pilot geometry remains point_count **32**, SHA256 `58ead2cc505d010b676ff5aac55b230c9609809600b69681c99f793d593c6cd6`;
+- geometry rewrite/duplication: **NO**;
+- W4 writes to `map_buildings`: **0**;
+- live website render histogram from shared canonical knowledge: `0:26, 1:1, 2:3, 3:2`;
+- investment bit preserved: **3** investment points;
+- dynamic regression: changing canonical `room_count` changes the next `hk_map_data()` response while stored `hk_map_points` stays unchanged — PASS;
+- no manual export/import is required after canonical knowledge changes;
+- duplicate pilot district: **NO**;
+- bulk migration: **NO**;
+- build/regression run `35511398010`: W4 code/tests PASS; audit push later lost a branch race only;
+- live run `35511455366`: build/precheck/deploy/link/website canonical-response verification PASS; final client assertion failed only because it expected obsolete scanner r5;
+- current Maps scanner is now `maps-parallel-read-20260920-r6-safe5` with **5** read-only workers, per the user's requested throttle;
+- current coordinate marker remains `maps-coordinates-column-row-20260920-r2`;
+- current public userscript after parallel Explore r5: `df677e603e0a180e0e2e2b5ce27af268ab788ced12e4e6b2036d4c9b23c78115`;
+- parallel Explore r5 explicitly verified `map_concurrency_5_preserved=PASS`;
+- W4 changed userscript: **NO**;
+- pilot is point-mode; full-contour generalized overlay is not claimed in W4;
+- **W5 NOT STARTED**; stop here until explicit user instruction.
+
+
 ### Stage W5 — Source provenance and conflict rules
 
 Add/normalize provenance for building knowledge.
@@ -995,7 +1025,7 @@ Verify:
 - source priority;
 - rerun/idempotency;
 - Personal Cabinet display;
-- scanner still uses 10 read-only workers and safe active-building intersection.
+- scanner still uses 5 read-only workers (`maps-parallel-read-20260920-r6-safe5`) and safe active-building intersection.
 
 Only after user confirmation:
 - mark Website ↔ Maps shared knowledge link PASS;
