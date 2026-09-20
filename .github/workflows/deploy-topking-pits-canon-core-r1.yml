@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           cat deploy/topking/pits-canon-core-r1.parts/*.b64 | base64 -d > /tmp/patch_pits.py
-          test "$(sha256sum /tmp/patch_pits.py | awk '{print $1}')" = "c1243fb03b65195ab137cc46414e0f6ed972ab2a610fbcdf5c78307155de7447"
+          test "$(sha256sum /tmp/patch_pits.py | awk '{print $1}')" = "6aae30d52492c11d9e85afae56a62abd76189c2ba967ada3791ab5b11f49d57e"
           python3 -m py_compile /tmp/patch_pits.py
           echo "PATCH_PAYLOAD=PASS"
 
