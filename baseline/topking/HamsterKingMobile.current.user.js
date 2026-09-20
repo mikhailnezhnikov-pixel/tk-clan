@@ -755,7 +755,9 @@
   const HK_STAGE2_STATE_REV = 'stage2c-state-20260919-r1';
   const HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1';
   const HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1';
-  const HK_MAP_SCANNER_REV = 'maps-active-intersection-20260920-r3';
+  const HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r4';
+  const HK_MAP_READ_CONCURRENCY = 6;
+  const HK_MAP_SUBMIT_BATCH = 100;
   const HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1';
   const HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1';
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
@@ -7921,6 +7923,44 @@
     }
   }
 
+  async function mapSubmitBuildingStudyBatch(areaId,rows) {
+    const area=String(areaId||'');
+    const cleanRows=(Array.isArray(rows)?rows:[]).filter(row=>row?.buildingId&&row?.roomCount!=null);
+    if(!area||!cleanRows.length)return {submitted:0,failed:0};
+    const areaRow=((hkStateStore.snapshot||playerDocument)?.areas?.areas||[]).find(row=>String(row?.gamearea_id||row?.area_id||'')===area);
+    if(!areaRow)return {submitted:0,failed:cleanRows.length};
+    let submitted=0,failed=0;
+    for(let offset=0;offset<cleanRows.length;offset+=HK_MAP_SUBMIT_BATCH){
+      const chunk=cleanRows.slice(offset,offset+HK_MAP_SUBMIT_BATCH);
+      try{
+        await mapServerJson('/submit',{area:{
+          area_id:area,
+          city_id:String(areaRow?.city_id||''),
+          expected_buildings:0,
+          buildings:chunk.map(row=>({
+            building_id:String(row.buildingId),
+            opened:true,
+            room_count:Number(row.roomCount),
+            has_events:!!row.hasEvents
+          }))
+        }});
+        const now=Date.now();
+        for(const row of chunk){
+          mapBuildingStudySubmitDedupe.set(`${area}:${row.buildingId}:${Number(row.roomCount)}`,now);
+        }
+        submitted+=chunk.length;
+      }catch(_){
+        // Preserve reliability: only a failed batch falls back to the old
+        // one-building submit path.
+        for(const row of chunk){
+          if(await mapSubmitBuildingStudy(row.buildingId,area,row.roomCount,row.hasEvents))submitted+=1;
+          else failed+=1;
+        }
+      }
+    }
+    return {submitted,failed};
+  }
+
   async function mapBackfillActiveBuildingStudies(selectedAreaIds=null) {
     const state=hkStateStore.snapshot||playerDocument||{};
     const active=activePlayerBuildingIds(state);
@@ -7939,33 +7979,57 @@
       rows.push({buildingId,areaId});
     }
     const unique=[...new Map(rows.map(row=>[row.buildingId,row])).values()];
-    let studied=0,known=0,failed=0;
+    let studied=0,known=0,failed=0,completed=0,cursor=0;
+    const observations=[];
     const baseDone=hkRunner.state.done||0;
     const total=baseDone+unique.length;
     hkRunner.setStep(either('Считываю открытые здания','Reading active buildings'),baseDone,total);
-    for(let index=0;index<unique.length;index++){
+
+    const worker=async()=>{
+      while(true){
+        if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        const index=cursor++;
+        if(index>=unique.length)return;
+        const {buildingId,areaId}=unique[index];
+        try{
+          let value=buildingStudyCache.get(buildingId)||null;
+          let roomCount=value?crystalRoomCount(value,crystalIds):null;
+          if(roomCount==null){
+            value=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}`,'POST');
+            buildingStudyCache.set(buildingId,value);
+            roomCount=crystalRoomCount(value,crystalIds);
+          }else known+=1;
+          if(roomCount!=null){
+            const rooms=buildingRooms(value);
+            observations.push({buildingId,areaId,roomCount,hasEvents:rooms.length>0||roomCount>0});
+          }else failed+=1;
+        }catch(error){
+          if(error?.name==='AbortError')throw error;
+          failed+=1;
+        }finally{
+          completed+=1;
+          hkRunner.setStep(`${either('Считано зданий','Buildings read')}: ${completed}/${unique.length}`,baseDone+completed,total);
+        }
+      }
+    };
+
+    const workers=Math.min(HK_MAP_READ_CONCURRENCY,Math.max(1,unique.length));
+    await Promise.all(Array.from({length:workers},()=>worker()));
+
+    const grouped=new Map();
+    for(const row of observations){
+      if(!grouped.has(row.areaId))grouped.set(row.areaId,[]);
+      grouped.get(row.areaId).push(row);
+    }
+    for(const [areaId,areaRows] of grouped){
       if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
       await hkRunner.waitIfPaused();
-      const {buildingId,areaId}=unique[index];
-      hkRunner.setStep(`${either('Считываю здание','Reading building')} ${index+1}/${unique.length}`,baseDone+index,total);
-      try{
-        let value=buildingStudyCache.get(buildingId)||null;
-        let roomCount=value?crystalRoomCount(value):null;
-        if(roomCount==null){
-          value=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}`,'POST');
-          buildingStudyCache.set(buildingId,value);
-          roomCount=crystalRoomCount(value,crystalIds);
-        }else known+=1;
-        if(roomCount!=null){
-          const rooms=buildingRooms(value);
-          await mapSubmitBuildingStudy(buildingId,areaId,roomCount,rooms.length>0||roomCount>0);
-          studied+=1;
-        }else failed+=1;
-      }catch(_){failed+=1;}
-      hkRunner.setStep(`${either('Считано зданий','Buildings read')}: ${index+1}/${unique.length}`,baseDone+index+1,total);
-      if(index+1<unique.length)await gameRetryDelay(180);
+      const result=await mapSubmitBuildingStudyBatch(areaId,areaRows);
+      studied+=result.submitted;
+      failed+=result.failed;
     }
-    return {total:unique.length,studied,known,failed};
+    return {total:unique.length,studied,known,failed,workers};
   }
 
   async function mapAreaPayload(area, cities = []) {
