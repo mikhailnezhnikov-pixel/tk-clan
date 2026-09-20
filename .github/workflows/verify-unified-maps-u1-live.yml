@@ -1,0 +1,194 @@
+name: Verify unified maps runtime U1 live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/unified-maps-u1-verify-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+
+      - name: Read deployed files and verify hashes
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.live.py
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.live.user.js
+          python3 -m py_compile /tmp/server.live.py
+          node --check /tmp/HamsterKingMobile.live.user.js
+          server_sha="$(sha256sum /tmp/server.live.py | cut -d' ' -f1)"
+          client_sha="$(sha256sum /tmp/HamsterKingMobile.live.user.js | cut -d' ' -f1)"
+          echo "server_sha=$server_sha"
+          echo "client_sha=$client_sha"
+          test "$server_sha" = "f8b10a30a42d7dbb19ea11ee746eaccd89704a70ddb577631bf72c6ecca26df3"
+          test "$client_sha" = "46c6b95688a589e7d4b02a10403c9bd32c5012a8e92b6e0e768364aad54d55b5"
+          grep -Fq HK_MAP_UNIFIED_RUNTIME_U1_V1 /tmp/server.live.py
+          grep -Fq maps-shared-runtime-20260921-r7-safe5 /tmp/HamsterKingMobile.live.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5" /tmp/HamsterKingMobile.live.user.js
+          grep -Fq "if(!areaId||(selected&&!selected.has(areaId)))continue;" /tmp/HamsterKingMobile.live.user.js
+          grep -Fq "const pending=mapSharedKnowledgeEnabled()?unique.filter" /tmp/HamsterKingMobile.live.user.js
+          grep -Fq "id=\"hk-map-shared-knowledge\"" /tmp/HamsterKingMobile.live.user.js
+
+      - name: Verify deployed backend on temporary DB
+        run: |
+          cat > /tmp/u1-verify.py <<'PY'
+          import importlib.util,os,tempfile
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          fd,path=tempfile.mkstemp(prefix='u1-verify-',suffix='.db');os.close(fd)
+          def poly(cx,cy,d=.0003):
+              return {'type':'Polygon','coordinates':[[[cx-d,cy-d],[cx+d,cy-d],[cx+d,cy+d],[cx-d,cy+d],[cx-d,cy-d]]]}
+          def cat(key,city,grid):
+              return {'key':key,'city':city,'grid':grid,'invest':0,'buildings':1,'unknown':0,'crystals':[0,0,0,1,0,0],
+                      'eventBuildings':1,'totalEvents':1,'progress':100,'score':3,'reward':{}}
+          try:
+              s.DB_PATH=path;s.init_db()
+              mgr={'telegram_id':'mgr','maps_manage':1,'maps_access':1}
+              # website-only + canonical scan -> combined.
+              s.import_hk_maps_index([cat('hk_verify0403','Verify','04:03')])
+              s.import_hk_map_points([['hk_verify0403',[3000000,4000000,3]]])
+              payload={'area_id':'verify-area','city_id':'verify-city','city_name':'Verify','coord_revision':'column-row-v1','x':3,'y':4,
+                       'invest_count':0,'expected_buildings':1,
+                       'buildings':[{'building_id':'way9901','opened':False,'room_count':None,'has_events':False,'is_invest':False,'tier':None,'faction':'','building_type':''}],
+                       '_website_hydrate':True,
+                       '_website_geometry':{'type':'FeatureCollection','features':[{'type':'Feature','id':'way9901','geometry':poly(30,40),'properties':{'building_id':'way9901'}}]}}
+              r=s.submit_map_area('player-live',payload)
+              h=r.get('website_hydration') or {}
+              assert h.get('status')=='hydrated' and h.get('map_key')=='hk_verify0403',h
+              d=s.map_detail('verify-area');b=d['buildings'][0]
+              assert b['room_count']==3 and b['knowledge_source']=='hk_maps_import',b
+              cab=s.cabinet_maps(mgr)
+              row=[x for x in cab['maps'] if x.get('canonical_area_id')=='verify-area']
+              assert len(row)==1 and row[0]['source_kind']=='combined',row
+
+              # script-only row must appear once.
+              s.submit_map_area('player-live',{'area_id':'script-area','city_id':'script-city','city_name':'Script','coord_revision':'column-row-v1','x':7,'y':8,
+                'invest_count':0,'expected_buildings':1,'buildings':[{'building_id':'way9902','opened':True,'room_count':2,'has_events':True,'is_invest':False,'tier':1,'faction':'','building_type':''}]})
+              cab2=s.cabinet_maps(mgr)
+              sr=[x for x in cab2['maps'] if x.get('canonical_area_id')=='script-area']
+              assert len(sr)==1 and sr[0]['source_kind']=='script',sr
+
+              # game live must win over imported value.
+              payload2={**payload,'buildings':[{'building_id':'way9901','opened':True,'room_count':5,'has_events':True,'is_invest':False,'tier':1,'faction':'','building_type':''}]}
+              s.submit_map_area('player-live',payload2)
+              b2=s.map_detail('verify-area')['buildings'][0]
+              assert b2['room_count']==5 and b2['knowledge_source']=='game_live',b2
+              print('U1_VERIFY_COMBINED_ROW=PASS')
+              print('U1_VERIFY_SCRIPT_ONLY_ROW=PASS')
+              print('U1_VERIFY_LEGACY_HYDRATION=PASS')
+              print('U1_VERIFY_GAME_PRIORITY=PASS')
+          finally:
+              try:os.remove(path)
+              except OSError:pass
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/u1-verify.py root@89.125.1.71:/tmp/u1-verify.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/u1-verify.py'
+
+      - name: Read-only production verification
+        run: |
+          cat > /tmp/u1-live-read.py <<'PY'
+          import importlib.util,json,sqlite3
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          out={
+            'catalog':db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0],
+            'points':db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0],
+            'area_links':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
+            'point_links':db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0],
+            'areas':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
+            'buildings':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0],
+          }
+          assert out['catalog']==235,out
+          assert out['points']==235,out
+          assert out['area_links']>=25,out
+          assert out['point_links']>=2007,out
+          # Exercise unified list read-only against real production data.
+          mgr={'telegram_id':'u1-audit','maps_manage':1,'maps_access':1}
+          cab=s.cabinet_maps(mgr)
+          assert cab.get('unified') is True,cab
+          assert len(cab.get('maps') or [])>=235,len(cab.get('maps') or [])
+          out['unified_rows']=len(cab['maps'])
+          out['source_counts']=cab.get('source_counts')
+          print(json.dumps(out,sort_keys=True))
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/u1-live-read.py root@89.125.1.71:/tmp/u1-live-read.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/u1-live-read.py' | tee /tmp/u1-live-state.json
+
+      - name: Verify public userscript
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?u1verify=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          test "$(sha256sum /tmp/public.js | cut -d' ' -f1)" = "46c6b95688a589e7d4b02a10403c9bd32c5012a8e92b6e0e768364aad54d55b5"
+          grep -Fq maps-shared-runtime-20260921-r7-safe5 /tmp/public.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5" /tmp/public.js
+          grep -Fq "const pending=mapSharedKnowledgeEnabled()?unique.filter" /tmp/public.js
+          grep -Fq "_website_hydrate:mapSharedKnowledgeEnabled()" /tmp/public.js
+          echo U1_PUBLIC_USERSCRIPT=PASS
+
+      - name: Verify Personal Cabinet live UI
+        run: |
+          set -euo pipefail
+          ok=0
+          for i in 1 2 3 4 5 6 7 8; do
+            curl -fsSL "https://tk-clan.ru/cabinet/?u1verify=$(date +%s)-$i" -o /tmp/cabinet-live.html || true
+            if grep -Fq "sourceKind=String(map.source_kind" /tmp/cabinet-live.html && grep -Fq "Только скрипт" /tmp/cabinet-live.html; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
+          echo U1_CABINET_UI=PASS
+
+      - name: Sync baseline and record live status
+        run: |
+          set -euo pipefail
+          cp /tmp/HamsterKingMobile.live.user.js baseline/topking/HamsterKingMobile.current.user.js
+          state="$(cat /tmp/u1-live-state.json)"
+          {
+            echo "UNIFIED_MAPS_RUNTIME_U1_LIVE=PASS"
+            echo "server_sha256=f8b10a30a42d7dbb19ea11ee746eaccd89704a70ddb577631bf72c6ecca26df3"
+            echo "client_sha256=46c6b95688a589e7d4b02a10403c9bd32c5012a8e92b6e0e768364aad54d55b5"
+            echo "unified_personal_cabinet=PASS"
+            echo "legacy_website_auto_hydration=PASS"
+            echo "shared_preload_default_on=PASS"
+            echo "known_active_buildings_skip_direct_read=PASS"
+            echo "safe_active_intersection=PASS"
+            echo "read_concurrency=5"
+            echo "game_live_priority=PASS"
+            echo "bulk_force_link_210=NO"
+            echo "production_test_rows=0"
+            echo "production_state=$state"
+          } > audit/hk-stage2-unified-maps-u1-live-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-stage2-unified-maps-u1-live-status.txt
+          git commit -m "baseline: sync unified maps runtime U1 live"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/u1-verify.py /tmp/u1-live-read.py' || true
+          rm -f ~/.ssh/topking /tmp/server.live.py /tmp/HamsterKingMobile.live.user.js /tmp/u1-live-state.json /tmp/public.js /tmp/cabinet-live.html
