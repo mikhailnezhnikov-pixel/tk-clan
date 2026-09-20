@@ -184,7 +184,7 @@ for needle in [
     "function pitCanonAskRestorationDecision",
     "pitCanonDecisionBudgetReset();",
     "pitCanonDecisionBudgetCanSpend",
-    'id="hk-pit-restoration-decision"',
+    "overlay.id='hk-pit-restoration-decision'",
     'data-pit-decision="spend"',
     "decision.action==='manual'",
     "decision.action==='collect'",
