@@ -3211,6 +3211,7 @@
         base={definition:row.definition,planId:plan.id,steps:chunks.map(chunk=>({chunk,payment:plan.paymentMode,source:'base'})),target:pitCanonWhole(target?.level),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:false,crystalBudget:pitCanonWhole(plan.crystalCost),itemPassBudget:pitCanonWhole(plan.itemCost),sniper:false,sniperPayment:''};
       }
       if(!base)return null;
+      base.startLevel=pitCanonWhole(row.activeState?.level ?? row.state?.level);
       if(reward.enabled&&reward.steps.length){
         base.steps.push(...reward.steps.map(step=>({...step})));
         base.itemPassBudget+=pitCanonWhole(reward.itemCost);
@@ -3231,6 +3232,24 @@
     }).filter(config=>config?.steps?.length);
   }
 
+  function pitCanonModeLabel(config){
+    return config?.resume?either('Продолжить активную Яму','Continue active Pit'):(config?.sniper?either('Режим снайпера','Sniper mode'):either('Обычный','Normal'));
+  }
+  function pitCanonLogPlan(configs){
+    const rounds=configs.reduce((n,c)=>n+(c.steps?.length||0),0);
+    const crystals=configs.reduce((n,c)=>n+pitCanonWhole(c.crystalBudget),0);
+    const passes=configs.reduce((n,c)=>n+pitCanonWhole(c.itemPassBudget),0);
+    const paws=configs.reduce((n,c)=>n+(pitCanonWhole(c.maxRestoration)*(c.steps?.length||0)),0);
+    pitCanonRunnerLog('━━ '+either('План выполнения','Execution plan')+' ━━','info');
+    pitCanonRunnerLog(either('Выбранные Ямы','Selected Pits')+': '+configs.length+' · '+either('Всего раундов','Total rounds')+': '+rounds,'info');
+    pitCanonRunnerLog(either('Максимальная стоимость','Maximum cost')+': 💎 '+crystals+' · 🎟 '+passes+' · 🐾 '+paws,'info');
+    configs.forEach((c,i)=>pitCanonRunnerLog((i+1)+'. '+pitCanonDefinitionName(c.definition)+' · '+either('Старт','Start')+': '+pitCanonWhole(c.startLevel)+' · '+either('Режим','Mode')+': '+pitCanonModeLabel(c)+' · '+either('Раунды','Rounds')+': '+(c.steps||[]).map(x=>'×'+pitCanonWhole(x.chunk)).join(' + '),'info'));
+  }
+  function pitCanonLogTotals(config,stats){
+    pitCanonRunnerLog('━━ '+pitCanonDefinitionName(config.definition)+' — '+either('Итоги Ямы','Pit totals')+' ━━','info');
+    pitCanonRunnerLog(either('Режим','Mode')+': '+pitCanonModeLabel(config)+' · '+either('Раунды','Rounds')+': '+stats.rounds+'/'+(config.steps?.length||0)+' · '+either('Пропуски','Passes')+': '+stats.passesUsed+' · 💎 '+stats.crystals+' · 🎟 '+stats.itemPasses+' · 🐾 '+stats.restoration,'ok');
+  }
+
   function pitCanonRunnerLog(message,type='') { log(message,type); hkRunner.note(message,type); }
 
   async function pitCanonRunOne(config,progress) {
@@ -3238,6 +3257,7 @@
     if(!api)throw new Error(`${pitCanonDefinitionName(def)}: ${either('неизвестный тип Ямы','unknown Pit type')}`);
     playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:before`);
     let state=pitRaceSnapshot(def.id,playerDocument),spentCrystals=0,spentItems=0;
+    const stats={rounds:0,passesUsed:0,crystals:0,itemPasses:0,restoration:0};
     for(let index=0;index<config.steps.length;index++){
       await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
       let step=config.steps[index],chunk=pitCanonWhole(step.chunk);
@@ -3280,6 +3300,7 @@
         pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('запуск раунда','starting round')} ×${chunk} · ${either('оплата','payment')}: ${payment}`,'info');
         if(payment==='FREE')await apiJson(api.start,'POST',{mass_multiplier:chunk});else await apiJson(api.pass,'POST',{mass_multiplier:chunk,payment_type:payment});
         spentCrystals+=pitCanonWhole(premCost);spentItems+=pitCanonWhole(itemCost);
+        stats.passesUsed+=chunk;stats.crystals=spentCrystals;stats.itemPasses=spentItems;
         playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-start`);state=pitRaceSnapshot(def.id,playerDocument);
         if(!pitCanonActiveState(def.id,playerDocument))throw new Error(`${pitCanonDefinitionName(def)}: ${either('Яма не запустилась','Pit did not start')}`);
       }
@@ -3318,7 +3339,7 @@
           }
           hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('восстановление','restoration')} 🐾 ${cost}`,progress.done,progress.total);
           pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('восстановление','restoration')}: 🐾 ${cost} · ${either('потрачено скриптом','spent by script')}: ${restorationSpent+cost}`,'warn');
-          const respawnResponse=await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;
+          const respawnResponse=await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;stats.restoration+=cost;
           if(rememberedAllowed||pitCanonDecisionBudget.remember)pitCanonDecisionBudgetConsume(cost);
           {
             const mutation=pitCanonStateAfterMutation(def,respawnResponse,`pits:${def.id}:after-respawn`);
@@ -3344,7 +3365,7 @@
         await sleep(pitCanonFastCycleDelay(def,config.sniper));
       }
       state=pitRaceSnapshot(def.id,playerDocument);
-      if(leaveManual)return;
+      if(leaveManual)return stats;
       if(state&&state.is_finish===false&&(config.autofinish||forceFinish)){
         hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('завершение','finish')}`,progress.done,progress.total);
         pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('завершение раунда','finishing round')} · ${either('уровень','level')} ${pitCanonWhole(state.level)}`,'info');
@@ -3352,7 +3373,7 @@
         playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-finish`);
         pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)} — ${either('раунд завершён','round completed')}`,'ok');
       }
-      progress.done+=1;hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('раунд завершён','round completed')}`,progress.done,progress.total);pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)}: ×${chunk} · 🐾 ${restorationSpent}${config.autofinish?` · ${either('автозавершение','auto-finish')}`:''}`,'ok');
+      progress.done+=1;stats.rounds+=1;hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('раунд завершён','round completed')}`,progress.done,progress.total);pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)}: ×${chunk} · 🐾 ${restorationSpent}${config.autofinish?` · ${either('автозавершение','auto-finish')}`:''}`,'ok');
       if(config.rewardMinScore>0){
         const liveScore=await pitCanonLiveLeaderboardScore(def);
         if(liveScore!==null){
@@ -3373,6 +3394,8 @@
       }
       if(!config.autofinish)break;
     }
+    stats.crystals=spentCrystals;stats.itemPasses=spentItems;
+    return stats;
   }
 
   async function runPitsCanonical() {
@@ -3383,6 +3406,7 @@
     hkRunner.start({title:either('Ямы','Pits'),step:either('Подготовка','Preparing'),total,pausable:true,stoppable:true});
     pitCanonDecisionBudgetReset();
     pitCanonSetBusy(true);
+    pitCanonLogPlan(configs);
     pitCanonRunnerLog(either('Ямы — запуск выбранного плана','Pits — starting selected plan'),'info');
     recordDiagnostic('pits-run-config-snapshot',{pits:configs.map(config=>({id:config.definition?.id,planId:config.planId,steps:config.steps?.length||0,sniper:!!config.sniper,target:config.target,rewardMinScore:config.rewardMinScore||0,rewardSteps:config.steps?.filter(step=>step.source==='reward').reduce((sum,step)=>sum+pitCanonWhole(step.chunk),0)||0}))});
     try{
@@ -3390,7 +3414,14 @@
       if(configs.some(config=>pitCanonWhole(config.rewardMinScore)>0)&&pitCanonResourceQuantity(playerDocument,HK_PIT_LOOTBOX_ITEM_ID,'item')>=HK_PIT_LOOTBOX_OPEN_BATCH){
         await pitCanonOpenRewardLootboxes();
       }
-      for(const config of configs)await pitCanonRunOne(config,progress);
+      const totals={pits:0,rounds:0,passesUsed:0,crystals:0,itemPasses:0,restoration:0};
+      for(const config of configs){
+        const stats=await pitCanonRunOne(config,progress)||{rounds:0,passesUsed:0,crystals:0,itemPasses:0,restoration:0};
+        totals.pits+=1;totals.rounds+=pitCanonWhole(stats.rounds);totals.passesUsed+=pitCanonWhole(stats.passesUsed);totals.crystals+=pitCanonWhole(stats.crystals);totals.itemPasses+=pitCanonWhole(stats.itemPasses);totals.restoration+=pitCanonWhole(stats.restoration);
+        pitCanonLogTotals(config,stats);
+      }
+      pitCanonRunnerLog('━━ '+either('Итоги всех выбранных Ям','All selected Pits totals')+' ━━','info');
+      pitCanonRunnerLog(either('Обработано Ям','Pits processed')+': '+totals.pits+'/'+configs.length+' · '+either('Раунды','Rounds')+': '+totals.rounds+'/'+progress.total+' · '+either('Пропуски','Passes')+': '+totals.passesUsed+' · 💎 '+totals.crystals+' · 🎟 '+totals.itemPasses+' · 🐾 '+totals.restoration,'ok');
       playerDocument=await hkAuthoritativePlayerRead('pits:complete');pitCanonRender();hkRunner.finish(either('Ямы завершены','Pits completed'));pitCanonRunnerLog(either('Выбранные Ямы завершены.','Selected Pits completed.'),'ok');
     }catch(error){
       if(error?.name==='AbortError'){hkRunner.reset();pitCanonRunnerLog(either('Ямы остановлены пользователем','Pits stopped by user'),'warn');}else{hkRunner.fail(error);pitCanonRunnerLog(`${either('Ошибка Ям','Pits error')}: ${error?.message||error}`,'bad');}
@@ -6294,6 +6325,7 @@
   const HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11';
   const HK_PITS_REWARD_REV = 'pits-reward-planner-core-20260920-r12';
   const HK_PITS_REWARD_EXEC_REV = 'pits-reward-execution-20260920-r13';
+  const HK_PITS_SUMMARY_REV = 'pits-plan-totals-20260920-r14';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
