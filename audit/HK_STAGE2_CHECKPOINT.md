@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: ACTION_RETEST_PENDING
+- current module status: RESPAWN_RETEST_PENDING
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -174,3 +174,22 @@ Current module status:
 **ACTION_RETEST_PENDING**
 
 Do not advance to Bosses until action → state update → rerun is confirmed.
+
+## Pits respawn r6
+
+User action reached battle/restoration and exposed a missing helper:
+`pitCanonRespawnCost is not defined`.
+
+- Start button/action entry is therefore confirmed working.
+- r6 transfers donor-compatible respawn-cost calculation.
+- marker: `pits-respawn-cost-20260920-r6`;
+- deploy run: `35493832589` — PASS;
+- live/public SHA256: `f8644b37332e2b8d9d763ef80ff00768f932fae31e88963bac51f8791946d895`.
+- static Pit action-path function audit: no other undefined canonical helper calls found.
+
+Current module status:
+**RESPAWN_RETEST_PENDING**
+
+Next:
+resume/re-run the selected active Pit and verify restoration → state update → completion/rerun.
+Do not advance to Bosses yet.
