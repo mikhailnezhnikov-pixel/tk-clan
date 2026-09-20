@@ -137,7 +137,7 @@
   const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';
   const CLAN_SHOP_FACT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1';
   const PUBLIC_SNAPSHOT_API = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-snapshot';
-  const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-snapshot-3h-20260920-r1';
+  const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2';
   const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
   const PUBLIC_SNAPSHOT_INTERVAL_MS = 3 * 60 * 60 * 1000;
   const LICENSE_RECHECK_MS = 60 * 60 * 1000;
@@ -6204,18 +6204,8 @@
   }
 
   async function collectPublicSnapshot(force = false) {
-    if (publicSnapshotPromise || !licenseState.allowed || !licenseState.token || !apiHeaders.Authorization) return publicSnapshotPromise;
-    if (!force && Date.now() - lastPublicSnapshot < PUBLIC_SNAPSHOT_INTERVAL_MS) return null;
-    publicSnapshotPromise = (async () => {
-      try {
-        const [warResult, ratings] = await Promise.all([readPublicWarV4(), readPublicRatingsV4()]);
-        const payload = {ratings}; if (warResult.read) payload.war = warResult.war;
-        if (!warResult.read && !Object.keys(ratings).length) return;
-        await publicSnapshotServerJson(payload); lastPublicSnapshot = Date.now();
-      } catch (error) { console.warn('[HK] public snapshot failed', error); }
-      finally { publicSnapshotPromise = null; }
-    })();
-    return publicSnapshotPromise;
+    recordDiagnostic('public-snapshot-server-only',{force:!!force,revision:HK_PUBLIC_SNAPSHOT_CLIENT_REV});
+    return null;
   }
 
   async function loadFair() {
@@ -11827,7 +11817,6 @@
     setTimeout(() => hkGameBridge.discover(false), 1500);
     setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
     setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
-    setInterval(() => collectPublicSnapshot(), PUBLIC_SNAPSHOT_INTERVAL_MS);
     recordDiagnostic('native-login-gate-open',{revision:'login-gate-20260920-r1'});
   }
 
