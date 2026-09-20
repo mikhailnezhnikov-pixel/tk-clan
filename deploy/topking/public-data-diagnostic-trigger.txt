@@ -15,3 +15,4 @@ query db with python after v4 snapshot
 inspect live loader version and service minimum
 inspect live license version gate
 inspect exact map room source fields
+inspect live map crystal room source
