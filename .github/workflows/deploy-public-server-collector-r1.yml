@@ -137,19 +137,19 @@ jobs:
           test "$(grep -Fo 'collectPublicSnapshot(' /tmp/public.js | wc -l)" -eq 1
           ! grep -Fq "setInterval(() => collectPublicSnapshot()" /tmp/public.js
 
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
-            set -euo pipefail
-            systemctl is-active --quiet hamsterking-public-collector.timer
-            echo "timer_active=PASS"
-            echo -n "collector_state="
-            if [ -f /var/lib/hamsterking-license/public-collector-status.json ]; then
-              sed -n 's/.*"state":"\([^"]*\)".*/\1/p' /var/lib/hamsterking-license/public-collector-status.json
-            else
-              echo missing
-            fi
-            echo -n "next_timer="
-            systemctl show hamsterking-public-collector.timer -p NextElapseUSecRealtime --value
-          ' > /tmp/collector-runtime.txt
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "set -euo pipefail; systemctl is-active --quiet hamsterking-public-collector.timer; echo timer_active=PASS; echo -n next_timer=; systemctl show hamsterking-public-collector.timer -p NextElapseUSecRealtime --value" \
+            > /tmp/collector-runtime.txt
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/var/lib/hamsterking-license/public-collector-status.json /tmp/collector-status.json 2>/dev/null || printf '{}' > /tmp/collector-status.json
+          python3 - <<'PY' >> /tmp/collector-runtime.txt
+import json
+try:
+    data=json.load(open('/tmp/collector-status.json'))
+    print('collector_state='+str(data.get('state','missing')))
+except Exception:
+    print('collector_state=missing')
+PY
           cat /tmp/collector-runtime.txt
 
           {
@@ -189,4 +189,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/source.sha /tmp/candidate.sha /tmp/collector-token-state /tmp/collector-runtime.txt /tmp/public-server-collector-r1-live-status.txt /tmp/hamsterking-public-collector.env
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/source.sha /tmp/candidate.sha /tmp/collector-token-state /tmp/collector-runtime.txt /tmp/collector-status.json /tmp/public-server-collector-r1-live-status.txt /tmp/hamsterking-public-collector.env
