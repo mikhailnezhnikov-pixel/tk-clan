@@ -757,7 +757,7 @@
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
-  const HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1';
+  const HK_STAGE2J_BOSSES_REV = 'bosses-canon-core-20260920-r1';
   const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   const HK_AUTO_ROUTINES_REV = 'auto-routines-20260920-r1';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
@@ -4212,6 +4212,7 @@
     '/bonuses/view',
     '/alliance/list',
     '/clan/skill_lines/stats',
+    '/regional_boss/battle_state',
   ]);
 
   function hkNormalizedApiPath(path) {
@@ -4593,24 +4594,257 @@
   }
 
   function bossStateRows(documentValue = bossSnapshot || hkStateStore.snapshot || playerDocument) {
-        const rows=[]; const add=(kind,value)=>{if(value==null)return;if(Array.isArray(value))value.forEach((row,index)=>rows.push({kind,index,row}));else if(typeof value==='object')rows.push({kind,index:0,row:value});};
-        add('player_bosses',documentValue?.player_bosses); add('player_regional_bosses',documentValue?.player_regional_bosses); add('boss_battle',documentValue?.boss_battle); return rows;
-      }
-      function bossRowLabel(v,i=0){return gameText(v?.name||v?.title||v?.boss?.name||v?.boss_name||v?.regional_boss_id||v?.boss_id||v?.id||(either('Босс ','Boss ')+(i+1)));}
-      function bossRowSummary(v){const f=[[either('Уровень','Level'),v?.level??v?.boss_level??v?.tier],[either('Здоровье','Health'),v?.health??v?.hp??v?.current_health],[either('Макс. здоровье','Max health'),v?.max_health??v?.max_hp],[either('Урон','Damage'),v?.damage??v?.player_damage??v?.total_damage],[either('Попытки','Attempts'),v?.attempts??v?.tries??v?.battle_count],[either('Статус','Status'),v?.status??v?.state]].filter(([,x])=>x!==undefined&&x!==null&&String(x)!=='');return f.map(([k,x])=>'<span><small>'+escapeHtml(k)+'</small><b>'+escapeHtml(typeof x==='number'?Number(x).toLocaleString(locale()):String(x))+'</b></span>').join('');}
-      function renderBosses(){
-        const box=root?.querySelector('#hk-boss-content'); if(!box)return; const rows=bossStateRows(),profile=pitForecastProfile('boss');
-        const body=rows.length?rows.map(({kind,index,row})=>'<article class="hk-boss-row"><div><b>'+escapeHtml(bossRowLabel(row,index))+'</b><small>'+escapeHtml(kind)+'</small></div><div class="hk-boss-stats">'+bossRowSummary(row)+'</div></article>').join(''):'<p class="hk-muted">'+either('Сейчас нет активных данных регионального босса.','There is no active regional boss data right now.')+'</p>';
-        box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Боссы','Bosses')+'</h3><small>'+either('Игровое состояние боссов и Ямы боссов','Game boss state and Boss Pit data')+'</small></div><button id="hk-boss-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><div class="hk-boss-pit"><span><small>'+either('Яма боссов — уровень','Boss Pit level')+'</small><b>'+(Number(profile?.localLevel||0)||'—')+'</b></span><span><small>'+either('Сила','Power')+'</small><b>'+(Number(profile?.playerPower||0)?Number(profile.playerPower).toLocaleString(locale()):'—')+'</b></span></div>'+body+'<p class="hk-muted">'+(bossLastReadAt?either('Обновлено','Updated')+': '+new Date(bossLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):either('Нажмите «Обновить».','Press Refresh.'))+'</p>';
-        box.querySelector('#hk-boss-refresh')?.addEventListener('click',()=>void refreshBosses(true));
-      }
-      async function refreshBosses(force=false){
-        if(!requireLicense())return null;
-        try{playerDocument=await apiJson('/player/me','POST');bossSnapshot=hkStateStore.snapshot||playerDocument;bossLastReadAt=Date.now();renderBosses();if(force)log(either('Данные боссов обновлены','Boss data refreshed'),'ok');return bossSnapshot;}
-        catch(error){log(either('Ошибка чтения боссов','Boss read error')+': '+(error?.message||error),'warn');renderBosses();return null;}
-      }
-    
-      function renderWars() {
+    const rows=[]; const add=(kind,value)=>{if(value==null)return;if(Array.isArray(value))value.forEach((row,index)=>rows.push({kind,index,row}));else if(typeof value==='object')rows.push({kind,index:0,row:value});};
+    add('player_bosses',documentValue?.player_bosses); add('player_regional_bosses',documentValue?.player_regional_bosses); add('boss_battle',documentValue?.boss_battle); return rows;
+  }
+
+  const HK_BOSS_AREA_TOKEN_ITEM_ID='item_boss_pass_ticket';
+  const HK_BOSS_REGIONAL_TOKEN_ITEM_ID='item_regboss_pass_ticket';
+  const HK_BOSS_RESTORATION_ITEM_ID='item_pit_health_ticket';
+  const HK_BOSS_AREA_PASS_CURRENCY_ID='cur_area_boss_pass';
+  const HK_BOSS_REGIONAL_PASS_CURRENCY_ID='cur_regional_boss_pass';
+  const HK_BOSSES_CANON_REV='bosses-canon-core-20260920-r1';
+  const bossCanonDecisionBudget={remember:false,remaining:0};
+  const bossCanonState={
+    loaded:false,view:null,preview:null,areaBosses:[],regionalBosses:[],regionalBattleState:null,regionalBattleStateBossId:'',
+    area:{enabled:false,bossLevel:'',planId:'',maxRestoration:0,autofinish:true},
+    regional:{enabled:false,bossId:'',planId:'',maxRestoration:0,autofinish:true}
+  };
+
+  function bossCanonWhole(value){return pitCanonWhole(value);}
+  function bossCanonResource(documentValue,id,kind='item'){return pitCanonResourceQuantity(documentValue,id,kind);}
+  function bossCanonDecisionReset(){bossCanonDecisionBudget.remember=false;bossCanonDecisionBudget.remaining=0;}
+  function bossCanonDecisionCanSpend(cost,hasPaws){if(!bossCanonDecisionBudget.remember||!hasPaws)return false;return !Number.isFinite(bossCanonDecisionBudget.remaining)||bossCanonDecisionBudget.remaining>=bossCanonWhole(cost);}
+  function bossCanonDecisionApply(decision){if(decision?.action!=='spend')return;if(decision.remember){bossCanonDecisionBudget.remember=true;bossCanonDecisionBudget.remaining=decision.extraLimit>0?bossCanonWhole(decision.extraLimit):Number.POSITIVE_INFINITY;}else bossCanonDecisionReset();}
+  function bossCanonDecisionConsume(cost){if(!bossCanonDecisionBudget.remember||!Number.isFinite(bossCanonDecisionBudget.remaining))return;bossCanonDecisionBudget.remaining=Math.max(0,bossCanonDecisionBudget.remaining-bossCanonWhole(cost));if(!bossCanonDecisionBudget.remaining)bossCanonDecisionReset();}
+
+  function bossCanonStored(){
+    const saved=load().bossCanonSettings||{};
+    for(const kind of ['area','regional']){
+      const source=saved?.[kind]; if(!source||typeof source!=='object')continue;
+      bossCanonState[kind].enabled=!!source.enabled;
+      bossCanonState[kind].planId=String(source.planId||'');
+      bossCanonState[kind].maxRestoration=bossCanonWhole(source.maxRestoration);
+      bossCanonState[kind].autofinish=source.autofinish!==false;
+    }
+    if(saved?.area?.bossLevel!==undefined)bossCanonState.area.bossLevel=String(saved.area.bossLevel||'');
+    if(saved?.regional?.bossId!==undefined)bossCanonState.regional.bossId=String(saved.regional.bossId||'');
+  }
+  function bossCanonSave(){
+    save({bossCanonSettings:{
+      area:{enabled:!!bossCanonState.area.enabled,bossLevel:String(bossCanonState.area.bossLevel||''),planId:String(bossCanonState.area.planId||''),maxRestoration:bossCanonWhole(bossCanonState.area.maxRestoration),autofinish:!!bossCanonState.area.autofinish},
+      regional:{enabled:!!bossCanonState.regional.enabled,bossId:String(bossCanonState.regional.bossId||''),planId:String(bossCanonState.regional.planId||''),maxRestoration:bossCanonWhole(bossCanonState.regional.maxRestoration),autofinish:!!bossCanonState.regional.autofinish}
+    }});
+  }
+
+  function bossCanonRegionalStatusMap(documentValue=playerDocument){
+    return new Map(((documentValue?.player_regional_bosses?.bosses)||[]).filter(row=>row?.regional_boss_id).map(row=>[String(row.regional_boss_id),row]));
+  }
+  function bossCanonSpecies(id){const value=String(id||'');return value.startsWith('regboss_cat_')?'🐱':value.startsWith('regboss_dog_')?'🐶':value.startsWith('regboss_pigeon_')?'🐦':'';}
+  function bossCanonBuildAreaBosses(view,preview){
+    const pmap=new Map((preview?.winrates||[]).filter(row=>row?.has_been_defeated===true).map(row=>[Number(row.boss_level),row]));
+    const result=[];
+    for(const boss of view?.area_bosses||[]){
+      const p=pmap.get(Number(boss.level)); if(!p)continue;
+      const reward=boss?.repeat_reward_view||{};
+      const score=(reward?.battle_pass_score||[]).find(row=>String(row?.id||'').startsWith('bp_personal_area_boss')); if(!score)continue;
+      const box=(reward?.items||[]).find(row=>String(row?.id||'')==='item_boss_lootbox');
+      result.push({level:Number(boss.level),points:bossCanonWhole(score.count),boxes:bossCanonWhole(box?.count),winrate:Number(p?.winrate||0),power:Number(p?.boss_power||0),nameKey:String(boss?.meta?.boss_name||''),definition:boss,preview:p});
+    }
+    return result.sort((a,b)=>b.points-a.points||b.level-a.level);
+  }
+  function bossCanonBuildRegionalBosses(view,documentValue=playerDocument){
+    const statuses=bossCanonRegionalStatusMap(documentValue),result=[];
+    for(const definition of view?.regional_bosses||[]){
+      const id=String(definition?.id||''),status=statuses.get(id); if(!id||definition?.can_repeat_battle!==true||status?.has_been_defeated!==true)continue;
+      result.push({id,power:bossCanonWhole(definition?.repeat_power??definition?.power),nameKey:String(definition?.meta?.boss_name||''),definition,status});
+    }
+    return result.sort((a,b)=>b.power-a.power||a.id.localeCompare(b.id));
+  }
+  function bossCanonAreaName(row){return `${either('Босс района','Area Boss')} · ${either('ур.','Lv')} ${bossCanonWhole(row?.level)}`;}
+  function bossCanonRegionalName(row){const name=gameText(row?.nameKey||row?.id||'');return `${bossCanonSpecies(row?.id)} ${name||row?.id}${row?.power?` · ✊ ${bossCanonWhole(row.power).toLocaleString(locale())}`:''}`.trim();}
+  function bossCanonRetryCost(kind,documentValue=playerDocument){
+    const retry=kind==='area'?documentValue?.boss_battle?.retry_costs:documentValue?.player_regional_bosses?.retry_costs;
+    const currencies=Array.isArray(retry?.currencies)?retry.currencies:[],items=Array.isArray(retry?.items)?retry.items:[];
+    if(items.length||currencies.length!==1)return null;
+    const expected=kind==='area'?HK_BOSS_AREA_PASS_CURRENCY_ID:HK_BOSS_REGIONAL_PASS_CURRENCY_ID,row=currencies[0];
+    if(String(row?.id||row?.currency_id||'')!==expected)return null;
+    const quantity=bossCanonWhole(row?.quantity); return quantity>0?quantity:null;
+  }
+  function bossCanonFreePasses(kind,documentValue=playerDocument){
+    const cost=bossCanonRetryCost(kind,documentValue),id=kind==='area'?HK_BOSS_AREA_PASS_CURRENCY_ID:HK_BOSS_REGIONAL_PASS_CURRENCY_ID;
+    return cost?Math.floor(bossCanonResource(documentValue,id,'currency')/cost):0;
+  }
+  function bossCanonSelectedArea(){return bossCanonState.areaBosses.find(row=>String(row.level)===String(bossCanonState.area.bossLevel||''))||null;}
+  function bossCanonSelectedRegional(){return bossCanonState.regionalBosses.find(row=>String(row.id)===String(bossCanonState.regional.bossId||''))||null;}
+  function bossCanonRegionalStatus(id=bossCanonState.regional.bossId){return bossCanonRegionalStatusMap(playerDocument).get(String(id||''))||null;}
+  function bossCanonPassState(kind){
+    return kind==='area'?playerDocument?.boss_battle:(String(bossCanonState.regionalBattleStateBossId)===String(bossCanonState.regional.bossId||'')?bossCanonState.regionalBattleState:null);
+  }
+  function bossCanonPassCostRows(kind){const state=bossCanonPassState(kind);return Array.isArray(state?.pass_costs)?state.pass_costs:[];}
+  function bossCanonMasses(kind){
+    const rows=[];
+    if(kind==='area')rows.push(...(playerDocument?.boss_battle?.mass_multipliers||[]));else rows.push(...(playerDocument?.player_regional_bosses?.mass_multipliers||[]));
+    for(const row of bossCanonPassCostRows(kind))rows.push({mass_multiplier:row?.mass_multiplier,available:true});
+    return [...new Set(rows.filter(row=>row?.available!==false).map(row=>bossCanonWhole(row?.mass_multiplier)).filter(Boolean))].sort((a,b)=>b-a);
+  }
+  function bossCanonGreedy(total,masses){let remaining=bossCanonWhole(total),result=[];for(const batch of [...new Set(masses)].sort((a,b)=>b-a)){while(batch>0&&remaining>=batch){result.push(batch);remaining-=batch;}}return remaining===0?result:[];}
+  function bossCanonExclusiveCost(row,payment,primaryItemId){
+    const cost=row?.cost||{},currencies=(cost?.currencies||[]).filter(x=>bossCanonWhole(x?.quantity)>0),items=(cost?.items||[]).filter(x=>bossCanonWhole(x?.quantity)>0);
+    if(payment==='PREM'){
+      if(items.length||currencies.length!==1||String(currencies[0]?.id||currencies[0]?.currency_id||'')!=='cur_prem')return null;
+      return bossCanonWhole(currencies[0]?.quantity)||null;
+    }
+    if(currencies.length||items.length!==1||String(items[0]?.id||items[0]?.item_id||'')!==String(primaryItemId))return null;
+    return bossCanonWhole(items[0]?.quantity)||null;
+  }
+  function bossCanonActivePlan(kind){
+    if(kind==='area'){
+      const active=playerDocument?.boss_battle; if(active?.is_finish!==false)return null;
+      const mass=Math.max(1,bossCanonWhole(active?.mass_multiplier));return{id:'active',total:mass,paymentMode:'ACTIVE',steps:[{chunk:mass,payment:'ACTIVE'}],crystalCost:0,itemCost:0,freePasses:0,paidPasses:0,affordable:true};
+    }
+    const status=bossCanonRegionalStatus(); if(status?.is_finished!==false)return null;
+    const mass=Math.max(1,bossCanonWhole(bossCanonState.regionalBattleState?.mass_multiplier||status?.mass_multiplier||1));return{id:'active',total:mass,paymentMode:'ACTIVE',steps:[{chunk:mass,payment:'ACTIVE'}],crystalCost:0,itemCost:0,freePasses:0,paidPasses:0,affordable:true};
+  }
+  function bossCanonBuildPlans(kind){
+    const active=bossCanonActivePlan(kind); if(active)return[active];
+    const available=bossCanonFreePasses(kind),masses=bossCanonMasses(kind),primary=kind==='area'?HK_BOSS_AREA_TOKEN_ITEM_ID:HK_BOSS_REGIONAL_TOKEN_ITEM_ID,plans=[];
+    const freeChunks=bossCanonGreedy(available,masses); if(available>0&&freeChunks.reduce((a,b)=>a+b,0)===available)plans.push({id:'free-exact',total:available,paymentMode:'FREE',steps:freeChunks.map(chunk=>({chunk,payment:'FREE'})),crystalCost:0,itemCost:0,freePasses:available,paidPasses:0,affordable:true});
+    for(const row of bossCanonPassCostRows(kind)){
+      const mass=bossCanonWhole(row?.mass_multiplier); if(!mass)continue; const payment=row?.is_prem===true?'PREM':'ITEM',cost=bossCanonExclusiveCost(row,payment,primary); if(cost===null)continue;
+      const balance=bossCanonResource(playerDocument,payment==='PREM'?'cur_prem':primary,payment==='PREM'?'currency':'item');
+      plans.push({id:`direct-${payment.toLowerCase()}-${mass}`,total:mass,paymentMode:payment,steps:[{chunk:mass,payment}],crystalCost:payment==='PREM'?cost:0,itemCost:payment==='ITEM'?cost:0,freePasses:Math.min(available,mass),paidPasses:Math.max(0,mass-available),affordable:balance>=cost});
+    }
+    return plans;
+  }
+  function bossCanonPlanLabel(kind,plan){
+    if(!plan)return''; if(plan.paymentMode==='ACTIVE')return `${either('Продолжить активный бой','Continue active battle')} — ×${plan.total}`;
+    if(plan.paymentMode==='FREE')return `${either('Точные доступные проходы','Exact available passes')} — ${plan.steps.map(s=>'×'+s.chunk).join(' + ')}`;
+    if(plan.paymentMode==='ITEM')return `${either('Приглашения','Tickets')} — ×${plan.total} · 🎟 ${plan.itemCost}`;
+    return `${either('Кристаллы','Crystals')} — ×${plan.total} · 💎 ${plan.crystalCost}`;
+  }
+  function bossCanonSelectedPlan(kind){const row=bossCanonState[kind],plans=bossCanonBuildPlans(kind);return plans.find(plan=>plan.id===row.planId)||plans.find(plan=>plan.affordable)||plans[0]||null;}
+  function bossCanonClamp(){
+    const areaSet=new Set(bossCanonState.areaBosses.map(row=>String(row.level))),activeArea=playerDocument?.boss_battle?.is_finish===false?playerDocument.boss_battle:null;
+    if(activeArea&&areaSet.has(String(activeArea.level)))bossCanonState.area.bossLevel=String(activeArea.level);else if(!areaSet.has(String(bossCanonState.area.bossLevel||'')))bossCanonState.area.bossLevel=bossCanonState.areaBosses[0]?String(bossCanonState.areaBosses[0].level):'';
+    const regionalSet=new Set(bossCanonState.regionalBosses.map(row=>String(row.id)));if(!regionalSet.has(String(bossCanonState.regional.bossId||'')))bossCanonState.regional.bossId=bossCanonState.regionalBosses[0]?.id||'';
+    for(const kind of ['area','regional']){const plans=bossCanonBuildPlans(kind),selected=plans.find(plan=>plan.id===bossCanonState[kind].planId);if(!selected||selected.affordable===false)bossCanonState[kind].planId=plans.find(plan=>plan.affordable)?.id||plans[0]?.id||'';}
+    if(!bossCanonState.areaBosses.length)bossCanonState.area.enabled=false;if(!bossCanonState.regionalBosses.length)bossCanonState.regional.enabled=false;
+    const paws=bossCanonResource(playerDocument,HK_BOSS_RESTORATION_ITEM_ID,'item');for(const kind of ['area','regional'])bossCanonState[kind].maxRestoration=Math.min(bossCanonWhole(bossCanonState[kind].maxRestoration),paws);
+  }
+  async function bossCanonLoadRegionalState(id=bossCanonState.regional.bossId){
+    const bossId=String(id||''); if(!bossId){bossCanonState.regionalBattleState=null;bossCanonState.regionalBattleStateBossId='';return null;}
+    const data=await apiJson('/regional_boss/battle_state','POST',{regional_boss_id:bossId});bossCanonState.regionalBattleState=data?.regional_boss_battle_state||null;bossCanonState.regionalBattleStateBossId=bossCanonState.regionalBattleState?bossId:'';return data;
+  }
+  async function bossCanonLoadData(){
+    playerDocument=await hkAuthoritativePlayerRead('bosses:load');bossSnapshot=playerDocument;
+    const [view,preview]=await Promise.all([apiJson('/bosses/view','GET'),apiJson('/player/area_boss_battle_preview','GET').catch(()=>null)]);
+    bossCanonState.view=view;bossCanonState.preview=preview;bossCanonState.areaBosses=bossCanonBuildAreaBosses(view,preview);bossCanonState.regionalBosses=bossCanonBuildRegionalBosses(view,playerDocument);
+    if(!bossCanonState.loaded)bossCanonStored();bossCanonState.loaded=true;bossCanonClamp();
+    if(bossCanonState.regional.bossId){try{await bossCanonLoadRegionalState();}catch(_){bossCanonState.regionalBattleState=null;bossCanonState.regionalBattleStateBossId='';}}
+    bossCanonClamp();bossCanonSave();bossLastReadAt=Date.now();return playerDocument;
+  }
+
+  function bossCanonRespawnCost(state){
+    for(const option of state?.respawn_costs||[]){
+      if(option?.is_prem===true)continue;const currencies=(option?.cost?.currencies||[]).filter(x=>bossCanonWhole(x?.quantity)>0),items=(option?.cost?.items||[]).filter(x=>bossCanonWhole(x?.quantity)>0);if(currencies.length||items.length!==1)continue;
+      if(String(items[0]?.id||items[0]?.item_id||'')===HK_BOSS_RESTORATION_ITEM_ID){const q=bossCanonWhole(items[0]?.quantity);if(q>0)return q;}
+    }
+    return null;
+  }
+  function bossCanonAskDecision({kind,name,cost,paws}){
+    return new Promise(resolve=>{
+      root?.querySelector('#hk-boss-restoration-decision')?.remove();const overlay=document.createElement('div');overlay.id='hk-boss-restoration-decision';overlay.className='hk-pit-decision-overlay';
+      overlay.innerHTML=`<div class="hk-pit-decision-card"><div class="hk-pit-decision-head"><div><small>${either('Боссы · требуется решение','Bosses · decision required')}</small><h3>${escapeHtml(name)}</h3></div><span>🐾</span></div><p class="hk-pit-decision-intro">${either('Для продолжения боя нужны дополнительные Лапы восстановления.','Additional Restoration Paws are required to continue.')}</p><div class="hk-pit-decision-grid"><div><span>${either('Нужно сейчас','Required now')}</span><b>🐾 ${cost}</b></div><div><span>${either('Доступно','Available')}</span><b>🐾 ${paws}</b></div><div><span>${either('Останется','Remaining')}</span><b>🐾 ${Math.max(0,paws-cost)}</b></div></div><div class="hk-pit-decision-budget"><label><span>${either('Максимум дополнительных Лап с этого момента','Maximum additional Paws from now')}</span><input id="hk-boss-decision-limit" type="number" min="0" max="${paws}" value="0"></label><label class="hk-pit-decision-remember"><input id="hk-boss-decision-remember" type="checkbox"><span>${either('Запомнить выбор для этого запуска','Remember for this run')}</span></label></div><div class="hk-pit-decision-actions"><button data-boss-decision="spend" class="hk-primary" ${paws<cost?'disabled':''}>${either('Потратить Лапы и продолжить','Spend Paws and continue')} (🐾 ${cost})</button>${kind==='regional'?`<button data-boss-decision="leave" class="hk-secondary">${either('Оставить раненым и продолжить дальше','Leave wounded and continue')}</button>`:''}<button data-boss-decision="stop" class="hk-danger">${either('Остановить скрипт','Stop script')}</button></div></div>`;
+      root?.appendChild(overlay);let done=false,timer=null;const finish=action=>{if(done)return;done=true;if(timer)clearInterval(timer);const extraLimit=bossCanonWhole(overlay.querySelector('#hk-boss-decision-limit')?.value),remember=action==='spend'&&(overlay.querySelector('#hk-boss-decision-remember')?.checked===true||extraLimit>0);overlay.remove();resolve({action,remember,extraLimit});};
+      overlay.querySelectorAll('[data-boss-decision]').forEach(button=>button.onclick=()=>finish(String(button.dataset.bossDecision||'stop')));timer=setInterval(()=>{if(hkRunner.signal?.aborted)finish('stop');},150);
+    });
+  }
+
+  async function bossCanonFinishAreaAttempt({bossLevel,mass,maxRestoration,name}){
+    let spent=0,safety=0;
+    while(true){
+      await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');if(++safety>1000)throw new Error(either('Защитный лимит боёв босса','Boss battle safety limit'));
+      playerDocument=await hkAuthoritativePlayerRead('bosses:area:continue');let state=playerDocument?.boss_battle;if(!state||state.is_finish!==false)return{finished:true,spent};
+      if(bossCanonWhole(state.health)>0){hkRunner.setStep(`${name} · ${either('бой','battle')}`);const data=await apiJson('/bosses/battle','POST',{boss_level:Number(bossLevel),mass_multiplier:Math.max(1,bossCanonWhole(mass))});const won=data?.battle_result?.isWin===true||data?.boss_battle?.is_finish===true;log(`${won?'✓':'✗'} ${name} · ${either('бой','battle')} · ${either('HP','HP')} ${bossCanonWhole(data?.boss_battle?.health)}`,won?'ok':'warn');continue;}
+      const cost=bossCanonRespawnCost(state);if(cost===null){log(`${name}: ${either('нет допустимого восстановления','no valid restoration option')}`,'warn');return{finished:false,spent};}
+      const paws=bossCanonResource(playerDocument,HK_BOSS_RESTORATION_ITEM_ID,'item'),within=spent+cost<=bossCanonWhole(maxRestoration),remembered=!within&&bossCanonDecisionCanSpend(cost,paws>=cost);let extra=false;
+      if(!within&&!remembered){const decision=await bossCanonAskDecision({kind:'area',name,cost,paws});if(decision.action==='stop'){hkRunner.stop('boss-restoration-decision');throw new DOMException('Aborted','AbortError');}if(decision.action!=='spend')return{finished:false,spent};bossCanonDecisionApply(decision);extra=true;}
+      if(paws<cost)return{finished:false,spent};hkRunner.setStep(`${name} · ${either('восстановление','restoration')} 🐾 ${cost}`);await apiJson('/bosses/respawn','POST',{payment_type:'ITEM'});spent+=cost;if(extra||remembered)bossCanonDecisionConsume(cost);log(`↻ ${name} · 🐾 ${cost} · ${either('потрачено','spent')}: ${spent}`,'warn');
+    }
+  }
+  async function bossCanonFinishRegionalAttempt({bossId,maxRestoration,name}){
+    let spent=0,safety=0;
+    while(true){
+      await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');if(++safety>1000)throw new Error(either('Защитный лимит боёв босса','Boss battle safety limit'));
+      playerDocument=await hkAuthoritativePlayerRead('bosses:regional:continue');const data=await bossCanonLoadRegionalState(bossId),state=data?.regional_boss_battle_state||{},status=bossCanonRegionalStatusMap(playerDocument).get(String(bossId));if(data?.battle_result?.isWin===true||status?.is_finished===true)return{finished:true,spent};
+      const cost=bossCanonRespawnCost(state);if(cost===null){log(`${name}: ${either('нет допустимого восстановления','no valid restoration option')}`,'warn');return{finished:false,spent};}
+      const paws=bossCanonResource(playerDocument,HK_BOSS_RESTORATION_ITEM_ID,'item'),within=spent+cost<=bossCanonWhole(maxRestoration),remembered=!within&&bossCanonDecisionCanSpend(cost,paws>=cost);let extra=false;
+      if(!within&&!remembered){const decision=await bossCanonAskDecision({kind:'regional',name,cost,paws});if(decision.action==='stop'){hkRunner.stop('boss-restoration-decision');throw new DOMException('Aborted','AbortError');}if(decision.action!=='spend')return{finished:false,spent};bossCanonDecisionApply(decision);extra=true;}
+      if(paws<cost)return{finished:false,spent};const historyBefore=Array.isArray(state?.history)?state.history.length:0;hkRunner.setStep(`${name} · ${either('восстановление','restoration')} 🐾 ${cost}`);const next=await apiJson('/regional_boss/battle','POST',{regional_boss_id:String(bossId),payment_type:'ITEM'});spent+=cost;if(extra||remembered)bossCanonDecisionConsume(cost);const history=next?.regional_boss_battle_state?.history||[],fresh=history.slice(historyBefore);fresh.forEach((row,index)=>log(`${row?.isWin===true?'✓':'✗'} ${name} · ${either('бой','fight')} ${historyBefore+index+1}${Number.isFinite(Number(row?.winrate))?` · ${either('шанс игры','game winrate')}: ${Number(row.winrate)}%`:''}`,row?.isWin===true?'ok':'warn'));log(`↻ ${name} · 🐾 ${cost} · ${either('потрачено','spent')}: ${spent}`,'warn');
+    }
+  }
+
+  function bossCanonPlanMatches(config,plan){return !!plan&&String(plan.id)===String(config.planId)&&bossCanonWhole(plan.total)===bossCanonWhole(config.total)&&String(plan.paymentMode)===String(config.paymentMode)&&bossCanonWhole(plan.crystalCost)===bossCanonWhole(config.crystalBudget)&&bossCanonWhole(plan.itemCost)===bossCanonWhole(config.itemPassBudget)&&plan.affordable!==false;}
+  async function bossCanonRunArea(config,progress){
+    await bossCanonLoadData();const selected=bossCanonState.areaBosses.find(row=>Number(row.level)===Number(config.bossLevel));if(!selected)throw new Error(either('План босса изменился','Boss plan changed'));const name=bossCanonAreaName(selected),active=playerDocument?.boss_battle;
+    if(config.paymentMode==='ACTIVE'){
+      if(active?.is_finish!==false||bossCanonWhole(active.level)!==bossCanonWhole(config.bossLevel))throw new Error(either('План босса изменился','Boss plan changed'));const mass=Math.max(1,bossCanonWhole(active.mass_multiplier));log(`▶ ${name} · ${either('продолжение активного боя','continuing active battle')} ×${mass}`,'info');if(!config.autofinish)return false;const result=await bossCanonFinishAreaAttempt({bossLevel:config.bossLevel,mass,maxRestoration:config.maxRestoration,name});progress.done+=1;return result.finished;
+    }
+    if(active?.is_finish===false){if(!config.autofinish)return false;const mass=Math.max(1,bossCanonWhole(active.mass_multiplier));const resumed=await bossCanonFinishAreaAttempt({bossLevel:bossCanonWhole(active.level),mass,maxRestoration:config.maxRestoration,name:`${either('Босс района','Area Boss')} · ${either('ур.','Lv')} ${bossCanonWhole(active.level)}`});if(!resumed.finished)return false;await bossCanonLoadData();}
+    const livePlan=bossCanonBuildPlans('area').find(plan=>plan.id===config.planId);if(!bossCanonPlanMatches(config,livePlan))throw new Error(either('План босса изменился','Boss plan changed'));
+    if(livePlan.paymentMode==='FREE'){
+      const retry=bossCanonRetryCost('area');if(!retry)throw new Error(either('Стоимость прохода изменилась','Pass cost changed'));
+      for(const step of livePlan.steps){await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');playerDocument=await hkAuthoritativePlayerRead('bosses:area:free-pre');const chunk=Math.max(1,bossCanonWhole(step.chunk)),passes=bossCanonResource(playerDocument,HK_BOSS_AREA_PASS_CURRENCY_ID,'currency');if(passes<retry*chunk)throw new Error(either('Количество бесплатных проходов изменилось','Free passes changed'));hkRunner.setStep(`${name} · ${either('бой','battle')} ×${chunk}`,progress.done,progress.total);const data=await apiJson('/bosses/battle','POST',{boss_level:Number(config.bossLevel),mass_multiplier:chunk});log(`▶ ${name} · ×${chunk} · ${either('бесплатные проходы','free passes')}`,'info');playerDocument=await hkAuthoritativePlayerRead('bosses:area:after-battle');if(playerDocument?.boss_battle?.is_finish===false){if(!config.autofinish)return false;const finish=await bossCanonFinishAreaAttempt({bossLevel:config.bossLevel,mass:chunk,maxRestoration:config.maxRestoration,name});if(!finish.finished)return false;}progress.done+=chunk;log(`✓ ${name} · ${either('раунд завершён','round completed')} ×${chunk}`,'ok');}
+      return true;
+    }
+    if(!['ITEM','PREM'].includes(livePlan.paymentMode))throw new Error(either('План босса изменился','Boss plan changed'));const resourceId=livePlan.paymentMode==='PREM'?'cur_prem':HK_BOSS_AREA_TOKEN_ITEM_ID,kind=livePlan.paymentMode==='PREM'?'currency':'item',need=livePlan.paymentMode==='PREM'?livePlan.crystalCost:livePlan.itemCost;if(bossCanonResource(playerDocument,resourceId,kind)<need)throw new Error(either('Недостаточно ресурсов для плана','Not enough resources for plan'));hkRunner.setStep(`${name} · ${either('запуск','start')} ×${livePlan.total}`,progress.done,progress.total);log(`▶ ${name} · ×${livePlan.total} · ${livePlan.paymentMode} · ${livePlan.paymentMode==='PREM'?'💎':'🎟'} ${need}`,'info');await apiJson('/bosses/pass','POST',{boss_level:Number(config.bossLevel),mass_multiplier:bossCanonWhole(livePlan.total),payment_type:String(livePlan.paymentMode)});playerDocument=await hkAuthoritativePlayerRead('bosses:area:after-pass');let completed=true;if(playerDocument?.boss_battle?.is_finish===false){if(config.autofinish){const finish=await bossCanonFinishAreaAttempt({bossLevel:config.bossLevel,mass:livePlan.total,maxRestoration:config.maxRestoration,name});completed=finish.finished;}else completed=false;}progress.done+=bossCanonWhole(livePlan.total);if(completed)log(`✓ ${name} · ${either('бой завершён','battle completed')}`,'ok');return completed;
+  }
+  async function bossCanonRunRegional(config,progress){
+    await bossCanonLoadData();const selected=bossCanonState.regionalBosses.find(row=>String(row.id)===String(config.bossId));if(!selected)throw new Error(either('План босса изменился','Boss plan changed'));const name=bossCanonRegionalName(selected);await bossCanonLoadRegionalState(config.bossId);let status=bossCanonRegionalStatus(config.bossId);
+    if(config.paymentMode==='ACTIVE'){
+      if(status?.is_finished!==false)throw new Error(either('План босса изменился','Boss plan changed'));log(`▶ ${name} · ${either('продолжение активного боя','continuing active battle')}`,'info');if(!config.autofinish)return false;const result=await bossCanonFinishRegionalAttempt({bossId:config.bossId,maxRestoration:config.maxRestoration,name});progress.done+=1;return result.finished;
+    }
+    if(status?.is_finished===false){if(!config.autofinish)return false;const resumed=await bossCanonFinishRegionalAttempt({bossId:config.bossId,maxRestoration:config.maxRestoration,name});if(!resumed.finished)return false;await bossCanonLoadData();await bossCanonLoadRegionalState(config.bossId);status=bossCanonRegionalStatus(config.bossId);}
+    const retry=bossCanonRetryCost('regional');if(retry===null||retry!==bossCanonWhole(config.passCost))throw new Error(either('Стоимость регионального прохода изменилась','Regional pass cost changed'));const livePlan=bossCanonBuildPlans('regional').find(plan=>plan.id===config.planId);if(!bossCanonPlanMatches(config,livePlan))throw new Error(either('План босса изменился','Boss plan changed'));
+    if(livePlan.paymentMode==='FREE'){
+      for(const step of livePlan.steps){await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');playerDocument=await hkAuthoritativePlayerRead('bosses:regional:free-pre');const chunk=Math.max(1,bossCanonWhole(step.chunk)),passes=bossCanonResource(playerDocument,HK_BOSS_REGIONAL_PASS_CURRENCY_ID,'currency');if(passes<retry*chunk)throw new Error(either('Количество бесплатных проходов изменилось','Free passes changed'));const stateBefore=await bossCanonLoadRegionalState(config.bossId),historyBefore=Array.isArray(stateBefore?.regional_boss_battle_state?.history)?stateBefore.regional_boss_battle_state.history.length:0;hkRunner.setStep(`${name} · ${either('бой','battle')} ×${chunk}`,progress.done,progress.total);const data=await apiJson('/regional_boss/battle','POST',{regional_boss_id:String(config.bossId),mass_multiplier:chunk});const history=data?.regional_boss_battle_state?.history||[],fresh=history.slice(historyBefore);fresh.forEach((row,index)=>log(`${row?.isWin===true?'✓':'✗'} ${name} · ${either('бой','fight')} ${historyBefore+index+1}${Number.isFinite(Number(row?.winrate))?` · ${either('шанс игры','game winrate')}: ${Number(row.winrate)}%`:''}`,row?.isWin===true?'ok':'warn'));playerDocument=await hkAuthoritativePlayerRead('bosses:regional:after-battle');if(data?.battle_result?.isWin!==true){if(config.autofinish){const finish=await bossCanonFinishRegionalAttempt({bossId:config.bossId,maxRestoration:config.maxRestoration,name});if(!finish.finished)return false;}else return false;}progress.done+=chunk;log(`✓ ${name} · ${either('бой завершён','battle completed')} ×${chunk}`,'ok');}
+      return true;
+    }
+    if(!['ITEM','PREM'].includes(livePlan.paymentMode))throw new Error(either('План босса изменился','Boss plan changed'));const resourceId=livePlan.paymentMode==='PREM'?'cur_prem':HK_BOSS_REGIONAL_TOKEN_ITEM_ID,kind=livePlan.paymentMode==='PREM'?'currency':'item',need=livePlan.paymentMode==='PREM'?livePlan.crystalCost:livePlan.itemCost;if(bossCanonResource(playerDocument,resourceId,kind)<need)throw new Error(either('Недостаточно ресурсов для плана','Not enough resources for plan'));const stateBefore=await bossCanonLoadRegionalState(config.bossId),historyBefore=Array.isArray(stateBefore?.regional_boss_battle_state?.history)?stateBefore.regional_boss_battle_state.history.length:0;hkRunner.setStep(`${name} · ${either('запуск','start')} ×${livePlan.total}`,progress.done,progress.total);log(`▶ ${name} · ×${livePlan.total} · ${livePlan.paymentMode} · ${livePlan.paymentMode==='PREM'?'💎':'🎟'} ${need}`,'info');const data=await apiJson('/player/regional_boss/pass','POST',{regional_boss_id:String(config.bossId),payment_type:String(livePlan.paymentMode),mass_multiplier:bossCanonWhole(livePlan.total)});const history=data?.regional_boss_battle_state?.history||[],fresh=history.slice(historyBefore);fresh.forEach((row,index)=>log(`${row?.isWin===true?'✓':'✗'} ${name} · ${either('бой','fight')} ${historyBefore+index+1}${Number.isFinite(Number(row?.winrate))?` · ${either('шанс игры','game winrate')}: ${Number(row.winrate)}%`:''}`,row?.isWin===true?'ok':'warn'));playerDocument=await hkAuthoritativePlayerRead('bosses:regional:after-pass');let completed=data?.battle_result?.isWin===true;if(!completed){if(config.autofinish){const finish=await bossCanonFinishRegionalAttempt({bossId:config.bossId,maxRestoration:config.maxRestoration,name});completed=finish.finished;}else completed=false;}progress.done+=bossCanonWhole(livePlan.total);if(completed)log(`✓ ${name} · ${either('бой завершён','battle completed')}`,'ok');return completed;
+  }
+
+  function bossCanonReadRunConfigs(){
+    if(!bossCanonState.loaded)return[];const result=[];
+    for(const kind of ['area','regional']){const row=bossCanonState[kind],selected=kind==='area'?bossCanonSelectedArea():bossCanonSelectedRegional(),plan=bossCanonSelectedPlan(kind);if(!row.enabled||!selected||!plan||plan.affordable===false)continue;result.push({kind,bossLevel:kind==='area'?Number(row.bossLevel):undefined,bossId:kind==='regional'?String(row.bossId):undefined,planId:plan.id,total:plan.total,steps:plan.steps.map(step=>({...step})),paymentMode:plan.paymentMode,crystalBudget:plan.crystalCost,itemPassBudget:plan.itemCost,freePasses:plan.freePasses,paidPasses:plan.paidPasses,maxRestoration:Math.min(bossCanonWhole(row.maxRestoration),bossCanonResource(playerDocument,HK_BOSS_RESTORATION_ITEM_ID,'item')),autofinish:!!row.autofinish,passCost:kind==='regional'?bossCanonRetryCost('regional'):null});}
+    return result;
+  }
+  async function runBossesCanonical(){
+    if(!requireLicense())return;if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}const configs=bossCanonReadRunConfigs();if(!configs.length){alert(either('Выберите хотя бы одного босса','Select at least one boss'));return;}const progress={done:0,total:configs.reduce((sum,row)=>sum+Math.max(1,bossCanonWhole(row.total)),0)};hkRunner.start({title:either('Боссы','Bosses'),step:either('Подготовка','Preparing'),total:progress.total,pausable:true,stoppable:true});bossCanonDecisionReset();log(either('Боссы — запуск выбранного плана','Bosses — starting selected plan'),'info');recordDiagnostic('bosses-run-config-snapshot',{revision:HK_BOSSES_CANON_REV,configs});
+    try{for(const config of configs){if(config.kind==='area')await bossCanonRunArea(config,progress);else await bossCanonRunRegional(config,progress);}playerDocument=await hkAuthoritativePlayerRead('bosses:complete');await bossCanonLoadData();renderBosses();hkRunner.finish(either('Боссы завершены','Bosses completed'));log(either('Выбранные бои боссов завершены','Selected boss battles completed'),'ok');}
+    catch(error){if(error?.name==='AbortError'){hkRunner.reset();log(either('Боссы остановлены пользователем','Bosses stopped by user'),'warn');}else{hkRunner.fail(error);log(`${either('Ошибка Боссов','Bosses error')}: ${error?.message||error}`,'bad');}try{await bossCanonLoadData();renderBosses();}catch(_){}}
+    finally{bossCanonDecisionReset();}
+  }
+
+  function bossCanonPlanMeta(kind,plan){if(!plan)return'';const free=bossCanonFreePasses(kind),retry=bossCanonRetryCost(kind),primary=kind==='area'?HK_BOSS_AREA_TOKEN_ITEM_ID:HK_BOSS_REGIONAL_TOKEN_ITEM_ID;return `<div class="hk-muted" style="margin-top:6px">${either('Доступно бесплатных проходов','Free passes available')}: <b>${free}</b>${retry?` · ${either('стоимость одного','cost per pass')}: ${retry}`:''} · 🎟 ${bossCanonResource(playerDocument,primary,'item')} · 💎 ${bossCanonResource(playerDocument,'cur_prem','currency')}</div>`;}
+  function bossCanonSection(kind){
+    const area=kind==='area',row=bossCanonState[kind],selected=area?bossCanonSelectedArea():bossCanonSelectedRegional(),plans=bossCanonBuildPlans(kind),plan=bossCanonSelectedPlan(kind),paws=bossCanonResource(playerDocument,HK_BOSS_RESTORATION_ITEM_ID,'item');
+    const options=(area?bossCanonState.areaBosses:bossCanonState.regionalBosses).map(item=>area?`<option value="${item.level}"${String(item.level)===String(row.bossLevel)?' selected':''}>${escapeHtml(`${either('Уровень','Level')} ${item.level} · ${item.points} ${either('очк.','pts')} · ${item.boxes} 📦 · ${Number(item.winrate||0).toFixed(2)}%`)}</option>`:`<option value="${escapeHtml(item.id)}"${String(item.id)===String(row.bossId)?' selected':''}>${escapeHtml(bossCanonRegionalName(item))}</option>`).join('');
+    const planOptions=plans.map(item=>`<option value="${escapeHtml(item.id)}"${item.id===row.planId?' selected':''}${item.affordable===false?' disabled':''}>${escapeHtml(bossCanonPlanLabel(kind,item))}</option>`).join('');
+    const title=area?either('Боссы районов','Area Bosses'):either('Региональные боссы','Regional Bosses');
+    return `<section class="hk-cardbox"><div class="hk-clan-head"><div><h3>${title}</h3><small>${area?either('Повторные бои по доступным уровням','Replay unlocked Area Boss levels'):either('Повторные Beast Boss бои','Replay defeated Beast Bosses')}</small></div><label style="display:flex;align-items:center;gap:6px"><input data-boss-canon-enable="${kind}" type="checkbox" ${row.enabled?'checked':''}> ${either('Запускать','Run')}</label></div>${options?`<div class="hk-grid"><span>${either('Босс','Boss')}</span><select data-boss-canon-select="${kind}">${options}</select><span>${either('План проходов','Pass plan')}</span><select data-boss-canon-plan="${kind}">${planOptions}</select><span>${either('Максимум Лап восстановления','Max Restoration Paws')}</span><input data-boss-canon-paws="${kind}" type="number" min="0" max="${paws}" value="${Math.min(row.maxRestoration,paws)}"><span>${either('Автозавершение','Auto finish')}</span><input data-boss-canon-autofinish="${kind}" type="checkbox" ${row.autofinish?'checked':''}></div>${bossCanonPlanMeta(kind,plan)}`:`<p class="hk-muted">${area?either('Нет доступных повторных Area Boss боёв.','No unlocked Area Boss replays available.'):either('Нет доступных повторных региональных боссов.','No regional boss replays available.')}</p>`}</section>`;
+  }
+  function renderBosses(){
+    const box=root?.querySelector('#hk-boss-content');if(!box)return;if(!bossCanonState.loaded){box.innerHTML=`<p class="hk-muted">${either('Загрузка Боссов…','Loading Bosses…')}</p>`;return;}bossCanonClamp();const configs=bossCanonReadRunConfigs();box.innerHTML=`<div class="hk-clan-head"><div><h3>${either('Боссы','Bosses')}</h3><small>${either('Канонический Area + Regional runner','Canonical Area + Regional runner')} · ${HK_BOSSES_CANON_REV}</small></div><button id="hk-boss-refresh" class="hk-secondary">${either('Обновить','Refresh')}</button></div><div class="hk-muted" style="margin:4px 0 10px">🐾 ${bossCanonResource(playerDocument,HK_BOSS_RESTORATION_ITEM_ID,'item')} · ${bossLastReadAt?either('обновлено','updated')+' '+new Date(bossLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''}</div>${bossCanonSection('area')}${bossCanonSection('regional')}<button id="hk-boss-start" class="hk-primary" ${configs.length?'':'disabled'}>${either('Запустить выбранных Боссов','Start selected Bosses')}</button>`;
+    box.querySelector('#hk-boss-refresh')?.addEventListener('click',()=>void refreshBosses(true));box.querySelector('#hk-boss-start')?.addEventListener('click',()=>void runBossesCanonical());
+    box.querySelectorAll('[data-boss-canon-enable],[data-boss-canon-plan],[data-boss-canon-paws],[data-boss-canon-autofinish]').forEach(control=>control.onchange=()=>{const kind=String(control.dataset.bossCanonEnable||control.dataset.bossCanonPlan||control.dataset.bossCanonPaws||control.dataset.bossCanonAutofinish||'');if(!['area','regional'].includes(kind))return;const row=bossCanonState[kind];if(control.dataset.bossCanonEnable!==undefined)row.enabled=!!control.checked;else if(control.dataset.bossCanonPlan!==undefined)row.planId=String(control.value||'');else if(control.dataset.bossCanonPaws!==undefined)row.maxRestoration=Math.min(bossCanonWhole(control.value),bossCanonResource(playerDocument,HK_BOSS_RESTORATION_ITEM_ID,'item'));else row.autofinish=!!control.checked;bossCanonClamp();bossCanonSave();renderBosses();});
+    box.querySelectorAll('[data-boss-canon-select]').forEach(control=>control.onchange=async()=>{const kind=String(control.dataset.bossCanonSelect||'');if(kind==='area'){bossCanonState.area.bossLevel=String(control.value||'');bossCanonState.area.planId='';bossCanonClamp();bossCanonSave();renderBosses();return;}bossCanonState.regional.bossId=String(control.value||'');bossCanonState.regional.planId='';bossCanonSave();renderBosses();try{await bossCanonLoadRegionalState();bossCanonClamp();bossCanonSave();renderBosses();}catch(error){log(either('Ошибка чтения Regional Boss','Regional Boss read error')+': '+(error?.message||error),'warn');}});
+  }
+  async function refreshBosses(force=false){
+    if(!requireLicense())return null;try{await bossCanonLoadData();renderBosses();if(force)log(either('Данные боссов обновлены','Boss data refreshed'),'ok');return playerDocument;}catch(error){log(either('Ошибка чтения боссов','Boss read error')+': '+(error?.message||error),'warn');renderBosses();return null;}
+  }
+
+            function renderWars() {
     const box=root?.querySelector('#hk-war-content');
     if(!box)return;
     const war=warSnapshot;
