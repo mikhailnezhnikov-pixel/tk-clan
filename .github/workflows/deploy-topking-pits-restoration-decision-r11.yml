@@ -43,7 +43,7 @@ jobs:
           node --check /tmp/HamsterKingMobile.user.js
           grep -Fq "HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11'" /tmp/HamsterKingMobile.user.js
           grep -Fq "function pitCanonAskRestorationDecision" /tmp/HamsterKingMobile.user.js
-          grep -Fq 'id="hk-pit-restoration-decision"' /tmp/HamsterKingMobile.user.js
+          grep -Fq "overlay.id='hk-pit-restoration-decision'" /tmp/HamsterKingMobile.user.js
           grep -Fq 'data-pit-decision="spend"' /tmp/HamsterKingMobile.user.js
           grep -Fq "decision.action==='manual'" /tmp/HamsterKingMobile.user.js
           grep -Fq "decision.action==='collect'" /tmp/HamsterKingMobile.user.js
