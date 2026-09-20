@@ -1,0 +1,36 @@
+=== SERVICE ENV NAMES ===
+HK_MIN_SCRIPT_VERSION=[SET]
+=== SERVER PUBLIC ROUTES ===
+396:            CREATE TABLE IF NOT EXISTS public_clan_war_snapshot (
+402:            CREATE TABLE IF NOT EXISTS public_rating_snapshots (
+412:                ON public_rating_snapshots(kind, rank);
+2251:RATING_KINDS = frozenset({
+2269:def normalize_clan_war(value: object) -> dict | None:
+2300:    if kind not in RATING_KINDS or not isinstance(value, list) or len(value) > 100:
+2330:            war = normalize_clan_war(document.get("war"))
+2331:            db.execute("DELETE FROM public_clan_war_snapshot")
+2333:                db.execute("""INSERT INTO public_clan_war_snapshot
+2343:                if kind not in RATING_KINDS:
+2346:                db.execute("DELETE FROM public_rating_snapshots WHERE kind=?", (kind,))
+2347:                db.executemany("""INSERT INTO public_rating_snapshots
+2360:        row = db.execute("SELECT snapshot_json,updated_at FROM public_clan_war_snapshot WHERE singleton=1").fetchone()
+2374:    if kind not in RATING_KINDS:
+2377:        rows = db.execute("""SELECT rank,name,value,updated_at FROM public_rating_snapshots
+4114:        elif path == "/api/v1/public/clan-war":
+4121:        elif path == "/api/v1/public/ratings":
+4272:            elif path == "/api/v1/public-snapshot":
+4279:                if not rate_allowed(f"public-snapshot:{player_id}", 12, 900):
+=== SERVER NETWORK/HTTP CLIENTS ===
+20:import urllib.error
+21:import urllib.request
+27:from urllib.parse import parse_qs, urlsplit
+2589:    request = urllib.request.Request(
+2594:        with urllib.request.urlopen(request, timeout=10) as response:
+2596:    except (OSError, urllib.error.URLError):
+3520:    import urllib.parse as _urlparse
+3521:    import urllib.request as _urlrequest
+3932:        authorization = self.headers.get("Authorization", "")
+3943:        authorization = self.headers.get("Authorization", "")
+3961:            "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization",
+=== SYSTEMD TIMERS ===
+Mon 2026-09-21 03:43:34 UTC      13h Sun 2026-09-20 03:39:29 UTC      10h ago hamsterking-license-backup.timer hamsterking-license-backup.service
