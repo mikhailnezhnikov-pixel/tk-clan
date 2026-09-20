@@ -1,0 +1,84 @@
+name: Assemble War HQ Artwork
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/war-hq-parts/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: topking-war-hq-artwork
+  cancel-in-progress: false
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refresh current main and assemble
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          for n in 0 1 2 3 4 5; do
+            test -s "deploy/topking/war-hq-parts/part$n.b64"
+          done
+          cat deploy/topking/war-hq-parts/part{0,1,2,3,4,5}.b64 > /tmp/war-hq.b64
+          base64 -d /tmp/war-hq.b64 > /tmp/hamster-clan-battle-hq.webp
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/hamster-clan-battle-hq.webp')
+          b=p.read_bytes()
+          assert len(b) > 80000, len(b)
+          assert b[:4] == b'RIFF' and b[8:12] == b'WEBP', b[:16]
+          print('war_hq_bytes='+str(len(b)))
+          PY
+
+      - name: Race-safe publish HQ artwork
+        run: |
+          set -euo pipefail
+          pushed=0
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p assets/war
+            cp /tmp/hamster-clan-battle-hq.webp assets/war/hamster-clan-battle-hq.webp
+            python3 - <<'PY'
+          from pathlib import Path
+          p=Path('wars/index.html')
+          s=p.read_text()
+          old='../assets/war/hamster-clan-battle-static.webp'
+          new='../assets/war/hamster-clan-battle-hq.webp'
+          if old in s:
+              s=s.replace(old,new)
+          assert new in s
+          p.write_text(s)
+          PY
+            rm -rf deploy/topking/war-hq-parts
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add assets/war/hamster-clan-battle-hq.webp wars/index.html
+            git add -A deploy/topking/war-hq-parts
+            git commit -m "ui: publish high-quality clan war artwork" || true
+            if git push origin HEAD:main; then
+              pushed=1
+              break
+            fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Verify repo candidate
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git show origin/main:wars/index.html | grep -Fq "hamster-clan-battle-hq.webp"
+          bytes="$(git cat-file -s origin/main:assets/war/hamster-clan-battle-hq.webp)"
+          test "$bytes" -gt 80000
+          echo "war_hq_repo_bytes=$bytes"
