@@ -1,0 +1,79 @@
+name: Deploy Public Ratings Server Only
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-ratings-server-only-trigger.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refresh current main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Patch current live server
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-source.sha
+          python3 deploy/topking/patch_public_ratings_server_only_r3.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq PUBLIC_SNAPSHOT_SERVER_ONLY_R3 /tmp/server.py
+          grep -Fq PUBLIC_RATINGS_SERVER_ONLY_R3 /tmp/server.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.ratings-server-only-r3.py
+          source_sha="$(cat /tmp/server-source.sha)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "
+            set -euo pipefail
+            current=\$(sha256sum /opt/hamsterking-license/server.py | awk '{print \$1}')
+            test \"\$current\" = \"$source_sha\" || { echo LIVE_SERVER_CHANGED_BEFORE_RATINGS_FILTER; exit 42; }
+            stamp=\$(date +%Y%m%d-%H%M%S)
+            cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.ratings-server-only-r3.\$stamp
+            install -m 0644 /tmp/server.ratings-server-only-r3.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          "
+
+      - name: Verify public endpoints
+        run: |
+          set -euo pipefail
+          sleep 2
+          curl -fsS --retry 3 --retry-delay 1 https://hk-license.89.125.1.71.sslip.io/api/v1/public/ratings/alliance_defense -o /tmp/def.json
+          curl -fsS --retry 3 --retry-delay 1 https://hk-license.89.125.1.71.sslip.io/api/v1/public/ratings/alliance_influence -o /tmp/inf.json
+          curl -fsS --retry 3 --retry-delay 1 https://hk-license.89.125.1.71.sslip.io/api/v1/public/ratings/alliance_power -o /tmp/pow.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/def.json')); i=json.load(open('/tmp/inf.json')); p=json.load(open('/tmp/pow.json'))
+          assert len(d.get('rows',[]))==100, len(d.get('rows',[]))
+          assert len(i.get('rows',[]))==0, len(i.get('rows',[]))
+          assert len(p.get('rows',[]))==0, len(p.get('rows',[]))
+          print('alliance_defense_public_count=100')
+          print('alliance_influence_public_count=0_waiting_server_refresh')
+          print('alliance_power_public_count=0_waiting_server_refresh')
+          PY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/server-source.sha /tmp/*.json
