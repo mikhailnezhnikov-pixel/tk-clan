@@ -756,6 +756,7 @@
   const HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1';
   const HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1';
   const HK_MAP_SCANNER_REV = 'maps-building-scan-20260920-r2';
+  const HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1';
   const HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1';
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
@@ -772,6 +773,7 @@
   runtime.resourceBusinessRunnerStage = HK_STAGE2D_RUNNER_REV;
   runtime.mapRunnerStage = HK_STAGE2E_RUNNER_REV;
   runtime.mapScannerStage = HK_MAP_SCANNER_REV;
+  runtime.mapCoordsStage = HK_MAP_COORDS_REV;
   runtime.clanRunnerStage = HK_STAGE2F_RUNNER_REV;
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
@@ -7951,8 +7953,10 @@
         is_invest:invest.has(id), tier:state?.tier ?? null, faction:String(row?.faction || ''), building_type:String(row?.meta?.building_generator || row?.meta?.building_type || '')};
     });
     const city = cities.find(row => String(row?.id) === cityId) || {};
-    return {area_id:areaId, city_id:cityId, city_name:cityLabel(city), x:full?.info?.x ?? full?.meta?.gamearea_coords?.x,
-      y:full?.info?.y ?? full?.meta?.gamearea_coords?.y, invest_count:Number(full?.info?.invest_count || invest.size),
+    // Game API exposes district grid axes as row/column. Public/user-facing
+    // coordinates are X:Y = column:row, so canonical map storage must swap them.
+    return {area_id:areaId, city_id:cityId, city_name:cityLabel(city), x:full?.info?.y ?? full?.meta?.gamearea_coords?.y,
+      y:full?.info?.x ?? full?.meta?.gamearea_coords?.x, invest_count:Number(full?.info?.invest_count || invest.size),
       expected_buildings:Math.max(buildings.length, Number(full?.meta?.buildings_total || 0)), buildings};
   }
 
