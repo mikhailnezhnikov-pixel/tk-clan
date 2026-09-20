@@ -48,7 +48,7 @@ jobs:
 
           def cat(i):
               key=f'hk_test{i:03d}'
-              city='Test'
+              city=f'Test{i}'
               y=i//100
               x=i%100
               grid=f'{y:02d}:{x:02d}'
@@ -74,7 +74,7 @@ jobs:
                         VALUES(?,?,?,?,?,?)""",(key,city,grid,'',0,now))
 
               # Existing canonical target for map 0, already linked.
-              a0={'area_id':'area0','city_id':'city0','city_name':'Test','coord_revision':'column-row-v1',
+              a0={'area_id':'area0','city_id':'city0','city_name':'Test0','coord_revision':'column-row-v1',
                   'x':0,'y':0,'invest_count':0,'expected_buildings':3,'buildings':[
                     {'building_id':'way000a','opened':True,'room_count':5,'has_events':True,'is_invest':False,'tier':1,'faction':'live','building_type':'live'},
                     {'building_id':'way000b','opened':False,'room_count':None,'has_events':False,'is_invest':True,'tier':None,'faction':'','building_type':''},
@@ -84,7 +84,7 @@ jobs:
               s.link_hk_map_area('hk_test000','area0')
 
               # Existing canonical target for map 1, no website link yet.
-              a1={'area_id':'area1','city_id':'city1','city_name':'Test','coord_revision':'column-row-v1',
+              a1={'area_id':'area1','city_id':'city1','city_name':'Test1','coord_revision':'column-row-v1',
                   'x':1,'y':0,'invest_count':0,'expected_buildings':3,'buildings':[
                     {'building_id':'way001a','opened':False,'room_count':None,'has_events':False,'is_invest':False,'tier':None,'faction':'','building_type':''},
                     {'building_id':'way001b','opened':False,'room_count':None,'has_events':False,'is_invest':True,'tier':None,'faction':'','building_type':''},
@@ -176,7 +176,7 @@ jobs:
               # A future live game scan with a different area_id joins synthetic area by exact building IDs
               # and is allowed to correct trusted coordinates.
               synthetic='hkfull'+hashlib.sha256('hk_test010'.encode()).hexdigest()[:32]
-              live={'area_id':'real-game-area-10','city_id':'real-city','city_name':'Test','coord_revision':'column-row-v1',
+              live={'area_id':'real-game-area-10','city_id':'real-city','city_name':'Test10','coord_revision':'column-row-v1',
                     'x':77,'y':88,'invest_count':0,'expected_buildings':3,'buildings':[
                       {'building_id':'way010a','opened':True,'room_count':4,'has_events':True,'is_invest':False,'tier':1,'faction':'','building_type':''},
                       {'building_id':'way010b','opened':True,'room_count':2,'has_events':True,'is_invest':True,'tier':1,'faction':'','building_type':''},
