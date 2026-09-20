@@ -1,1 +1,1 @@
-trigger 2026-09-20 W3 stored source partial decode 2\n
+trigger 2026-09-20 W3 unpack source pack 3\n
