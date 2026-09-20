@@ -1,1 +1,1 @@
-2026-09-21T00:22+09:00 inspect public collector R2 failure
+2026-09-21T00:31+09:00 inspect war snapshot after throttled run
