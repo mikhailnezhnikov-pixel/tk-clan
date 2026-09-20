@@ -143,3 +143,35 @@ Still pending before Bosses LIVE PASS:
 3. donor Area Boss Calculator / rewards view is still not transferred.
 
 Do not advance to Maps yet.
+
+
+## Final live confirmation — Stage 2.03 PASS
+
+User confirmed the current Bosses implementation works correctly in live use.
+
+Confirmed live:
+- canonical Area Boss runner: PASS;
+- canonical Regional Boss runner: PASS;
+- FREE / PREM / ITEM execution: PASS;
+- active battle resume: PASS;
+- Restoration Paws / decision flow: PASS;
+- resulting state refresh: PASS;
+- rerun reads resulting state correctly: PASS;
+- Area Boss target / reward continuation r2: PASS.
+
+Scope decision:
+- Area Boss Calculator / rewards view is intentionally **not part of the userscript module**;
+- the calculator already exists on the website and must not be duplicated into HK;
+- this item is therefore removed from the Bosses parity blocker list by explicit user decision.
+
+Final Bosses revision:
+- `HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2'`;
+- `HK_BOSSES_CANON_REV='bosses-area-target-20260920-r2'`;
+- `HK_BOSSES_TARGET_REV='bosses-area-target-20260920-r2'`;
+- live/public SHA256: `0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7`;
+- no additional Bosses patch required.
+
+Final status:
+**LIVE PASS**
+
+Stage 2.03 Bosses is closed. Next module: Stage 2.04 Maps / Карты.
