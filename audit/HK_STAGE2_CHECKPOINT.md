@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Today / Сегодня
 - current module file: audit/hk-stage2-01-today.md
-- current module status: TECHNICAL_CHECK_RUNNING
+- current module status: LIVE_CANDIDATE_PENDING_USER_UI_CHECK
 - next module after LIVE PASS: Pits / Ямы
 - do not advance until Today is LIVE PASS or has a concrete bug ticket
 
@@ -43,3 +43,12 @@ Each module:
 16. Shop / Магазин
 17. Clan Skills / Навыки клана
 18. Wars / Войны
+
+
+## Today candidate
+
+- marker: `today-kokkaras-order-20260920-r1`
+- version: `1.17.4`
+- live SHA256: `73a8da55150892cabbf2f5bf9f5d2a22fcaa8ad228ff1bee3d793b3429f3c21b`
+- technical deploy/public verification: PASS
+- user UI confirmation: PENDING
