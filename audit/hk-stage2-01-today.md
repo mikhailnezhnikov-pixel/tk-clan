@@ -1,6 +1,6 @@
 # HK Stage 2.01 — Today / Сегодня
 
-status: LIVE_CANDIDATE_R3_PENDING_USER_UI_CHECK
+status: LIVE_PASS
 
 ## Donor reference
 
@@ -145,3 +145,23 @@ Verification:
 - public round-trip: PASS
 - auto-refresh path retained: PASS
 - live/public SHA256: `303f6813d6e001751b53b32d83c6098f307aeedcee6a3cf320887bc93a07a117`
+
+
+## User UI confirmation — PASS
+
+User confirmed the final Today r3 layout and behavior:
+- canonical order is correct;
+- Event Regular Deals are filtered correctly;
+- reward actions are clear;
+- redundant top buttons were removed;
+- visual style is accepted.
+
+Final Today marker stack:
+- `today-kokkaras-order-20260920-r1`
+- `today-kokkaras-filter-20260920-r2`
+- `today-toolbar-clean-20260920-r3`
+
+Final live/public SHA256:
+`303f6813d6e001751b53b32d83c6098f307aeedcee6a3cf320887bc93a07a117`
+
+**Stage 2.01 Today: LIVE PASS**
