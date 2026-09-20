@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: RESPAWN_RETEST_PENDING
+status: RESTORATION_DECISION_LIVE_CANDIDATE_PENDING_USER_CHECK
 
 ## Required Stage 2 chain
 
@@ -452,3 +452,65 @@ Next user check:
 - compare battle → result → respawn cadence;
 - confirm no `player state is locked` errors;
 - continue action → state update → rerun verification.
+
+
+## Action flow confirmation + restoration decision r11
+
+User confirmation after r10:
+- battle/respawn speed: OK;
+- highlighted runner/history: OK;
+- Pits execution continues normally;
+- no new player-state-lock issue reported.
+
+Therefore the previously pending action-path regression is considered resolved for the tested path:
+- Start button/action entry: PASS;
+- battle loop: PASS;
+- respawn path: PASS;
+- visible progress: PASS;
+- fast mutation/state path: PASS in user test.
+
+Remaining Stage 2.02 donor functionality is now handled as separate advanced blocks, starting with the restoration decision flow.
+
+r11 donor behavior transferred:
+- when the configured Restoration Paws limit is exhausted before target completion, do not silently stop;
+- show current level, selected target, required Paws, available Paws and post-spend balance;
+- actions:
+  - spend Paws and continue;
+  - finish current round and continue;
+  - leave current Pit for manual collection and continue;
+  - stop the whole Pits runner;
+- optional remember-choice behavior for the current run;
+- optional additional Paws budget from the decision point;
+- remembered budget is consumed only by subsequent restoration decisions in the same run;
+- Stop integrates with the existing HK runner abort path.
+
+Pinned donor reference:
+- exact uploaded Kokkaras source;
+- restoration decision semantics verified against `askPitRestorationDecision()` + shared battle decision flow.
+
+Marker:
+`HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11'`
+
+Deploy:
+- workflow: `Deploy TopKing Pits Restoration Decision R11`;
+- successful run: `35495418034`;
+- Python patch compile: PASS;
+- JS syntax: PASS;
+- backup/deploy: PASS;
+- service active: PASS;
+- public round-trip byte equality: PASS;
+- live/public SHA256: `d2667d1fec05456cdb7e7bba0f0da2854d3fccf6275cf5df991b44942d05e52c`.
+
+Baseline sync:
+- run: `35495453299` — SUCCESS.
+
+Current status:
+**RESTORATION_DECISION_LIVE_CANDIDATE_PENDING_USER_CHECK**
+
+User check:
+- set a deliberately low Restoration Paws limit for one Pit;
+- let the Pit reach the next required restoration;
+- expected: the decision modal appears instead of silent stop;
+- verify one safe branch first (recommended: `Потратить Лапы и продолжить` with a small known amount).
+
+Do not advance to tournament reward planning until this r11 decision path is visually/action confirmed.
