@@ -3131,6 +3131,10 @@
     return state&&state.is_finish===false?state:null;
   }
 
+  function pitCanonRewardOnlyPlan(){
+    return {id:'reward-0',kind:'reward-zero',total:0,chunks:[],paymentMode:'NONE',crystalCost:0,itemCost:0,affordable:true};
+  }
+
   function pitCanonRowRunnable(row) {
     if(!row)return false;
     if(row.active)return !!row.state;
@@ -3138,6 +3142,10 @@
       if(row.sniperPayment==='FREE')return pitCanonWhole(row.available)>0;
       if(row.sniperPayment==='ITEM')return row.sniperItemCost!==null&&pitCanonWhole(row.itemPasses)>=pitCanonWhole(row.sniperItemCost);
       return row.sniperPayment==='PREM'&&row.sniperCrystalCost!==null;
+    }
+    if(row.planId==='reward-0'&&pitCanonWhole(row.rewardTargetMin)>0){
+      const reward=pitCanonRewardPlan(row,row.rewardTargetMin);
+      return !!reward?.valid;
     }
     const plan=row.plans?.find(x=>x.id===row.planId);
     if(!plan)return false;
@@ -3164,7 +3172,7 @@
       const maximum=Math.max(available,pitCanonCurrencyMax(documentValue,def.currencyId));
       const plans=active?[]:pitCanonPlans(state,available,itemPasses);
       const old=saved.pits?.[def.id]||{};
-      const selectedPlan=plans.find(row=>row.id===String(old.planId||''))||plans.find(row=>row.kind==='exact')||plans.find(row=>row.affordable)||plans[0]||null;
+      let selectedPlan=plans.find(row=>row.id===String(old.planId||''))||plans.find(row=>row.kind==='exact')||plans.find(row=>row.affordable)||plans[0]||null;
       const targets=pitCanonTargetChoices(state);
       const savedTarget=String(old.targetId||'any');
       const target=targets.find(row=>row.id===savedTarget)||targets[0];
@@ -3186,6 +3194,7 @@
       const tournamentActive=String(leaderboard?.status||'').toUpperCase()==='ACTUAL';
       const rewardTiers=pitCanonRewardTiers(leaderboard);
       const rewardTargetMin=tournamentActive&&rewardTiers.some(tier=>tier.minScore===pitCanonWhole(old.rewardTargetMin))?pitCanonWhole(old.rewardTargetMin):0;
+      if(!active&&!sniper&&String(old.planId||'')==='reward-0'&&rewardTargetMin>0)selectedPlan=pitCanonRewardOnlyPlan();
       const row={definition:def,state,activeState,active,available,maximum,itemPasses,paws,plans,targets,sniperTargets,
         enabled:false,planId:selectedPlan?.id||'',targetId:target?.id||'any',
         maxRestoration:Math.min(paws,pitCanonWhole(old.maxRestoration)),autofinish:!!old.autofinish,
@@ -3202,6 +3211,7 @@
 
   function pitCanonPlanLabel(plan) {
     if(!plan)return either('Нет доступного плана','No available plan');
+    if(plan.kind==='reward-zero')return either('Только цель награды — 0 базовых запусков','Reward target only — 0 base runs');
     const batch=pitCanonDecompose(plan.total).map(value=>`×${value}`).join(' + ');
     if(plan.kind==='exact')return `${either('Точно по доступным пропускам','Exact available passes')}: ${batch}`;
     if(plan.kind==='rounded')return `${either('Округлить вверх','Round up')}: ${batch}${plan.crystalCost?` · 💎 ${plan.crystalCost}`:''}`;
@@ -3260,7 +3270,7 @@
           ? `<option value="sniper-1" selected>×1</option>`
           : row.active
             ? `<option value="active">${either('Продолжить активную Яму','Continue active Pit')} ×${activeBatch||1}</option>`
-            : row.plans.map(plan=>`<option value="${escapeHtml(plan.id)}" ${plan.id===row.planId?'selected':''} ${plan.paymentMode==='ITEM'&&!plan.affordable?'disabled':''}>${escapeHtml(pitCanonPlanLabel(plan))}</option>`).join('');
+            : `${row.rewardTargetMin>0?`<option value="reward-0" ${row.planId==='reward-0'?'selected':''}>${escapeHtml(pitCanonPlanLabel(pitCanonRewardOnlyPlan()))}</option>`:''}${row.plans.map(plan=>`<option value="${escapeHtml(plan.id)}" ${plan.id===row.planId?'selected':''} ${plan.paymentMode==='ITEM'&&!plan.affordable?'disabled':''}>${escapeHtml(pitCanonPlanLabel(plan))}</option>`).join('')}`;
         const targetRows=standaloneSniper?row.sniperTargets:row.targets;
         const targetOptions=targetRows.map(target=>`<option value="${escapeHtml(target.id)}" ${standaloneSniper?(target.level===row.sniperTarget?'selected':''):(target.id===row.targetId?'selected':'')}>${target.level?`≥ ${target.level}`:either('Неважно — идти как можно дальше','Go as far as possible')}${standaloneSniper&&target.level===row.recommendedSniperTarget?` — ${either('Рекомендуется','Recommended')}`:''}</option>`).join('');
         const paymentOptions=`<option value="FREE" ${row.sniperPayment==='FREE'?'selected':''} ${row.available>0?'':'disabled'}>${either('Бесплатный пропуск','Free pass')}</option><option value="PREM" ${row.sniperPayment==='PREM'?'selected':''} ${row.sniperCrystalCost===null?'disabled':''}>${either('Кристаллы','Crystals')} — 💎 ${pitCanonWhole(row.sniperCrystalCost)}</option><option value="ITEM" ${row.sniperPayment==='ITEM'?'selected':''} ${row.sniperItemCost===null||itemPasses<pitCanonWhole(row.sniperItemCost)?'disabled':''}>${either('Пропуск Ямы','Pit Pass')} — 🎟 ${pitCanonWhole(row.sniperItemCost)}</option>`;
@@ -3294,8 +3304,9 @@
         if(!pitCanonRowRunnable(row))return null;
         base={definition:row.definition,planId:'sniper-1',steps:[{chunk:1,payment:row.sniperPayment||'FREE',source:'base'}],target:pitCanonWhole(row.sniperTarget),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:false,crystalBudget:row.sniperPayment==='PREM'?pitCanonWhole(row.sniperCrystalCost):0,itemPassBudget:row.sniperPayment==='ITEM'?pitCanonWhole(row.sniperItemCost):0,sniper:true,sniperPayment:row.sniperPayment};
       }else{
-        const plan=row.plans.find(x=>x.id===row.planId);if(!plan)return null;
-        const chunks=row.autofinish?[...plan.chunks]:plan.chunks.slice(0,1);
+        const plan=row.planId==='reward-0'&&pitCanonWhole(row.rewardTargetMin)>0?pitCanonRewardOnlyPlan():row.plans.find(x=>x.id===row.planId);
+        if(!plan)return null;
+        const chunks=plan.kind==='reward-zero'?[]:(row.autofinish?[...plan.chunks]:plan.chunks.slice(0,1));
         base={definition:row.definition,planId:plan.id,steps:chunks.map(chunk=>({chunk,payment:plan.paymentMode,source:'base'})),target:pitCanonWhole(target?.level),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:false,crystalBudget:pitCanonWhole(plan.crystalCost),itemPassBudget:pitCanonWhole(plan.itemCost),sniper:false,sniperPayment:''};
       }
       if(!base)return null;
@@ -6415,6 +6426,7 @@
   const HK_PITS_REWARD_EXEC_REV = 'pits-reward-execution-20260920-r13';
   const HK_PITS_SUMMARY_REV = 'pits-plan-totals-20260920-r14';
   const HK_PITS_SHARED_FORECAST_REV = 'pits-shared-reward-forecast-20260920-r15';
+  const HK_PITS_REWARD_ONLY_REV = 'pits-reward-only-plan-20260920-r16';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
