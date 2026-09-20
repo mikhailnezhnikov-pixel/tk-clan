@@ -1,1 +1,1 @@
-2026-09-20T23:43+09:00 isolate public collector retry after workflow yaml fix
+2026-09-20T23:47+09:00 isolated public collector verify retry
