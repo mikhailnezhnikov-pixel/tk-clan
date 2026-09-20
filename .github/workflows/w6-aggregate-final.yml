@@ -1,0 +1,161 @@
+name: W6 aggregate final dry-run
+on:
+  push:
+    paths: ['deploy/topking/w6-aggregate-trigger.txt']
+permissions:
+  actions: read
+  contents: write
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: download current classification
+        uses: actions/download-artifact@v4
+        with:
+          name: w6-classification
+          path: /tmp/classification
+          github-token: ${{ github.token }}
+          repository: mikhailnezhnikov-pixel/tk-clan
+          run-id: 35516211518
+      - name: download 20 regular resolved maps
+        uses: actions/download-artifact@v4
+        with:
+          pattern: w6-map-*
+          merge-multiple: true
+          path: /tmp/regular
+          github-token: ${{ github.token }}
+          repository: mikhailnezhnikov-pixel/tk-clan
+          run-id: 35516211518
+      - name: download 5 stubborn resolved maps
+        uses: actions/download-artifact@v4
+        with:
+          pattern: w6-osm-api-*
+          merge-multiple: true
+          path: /tmp/stubborn
+          github-token: ${{ github.token }}
+          repository: mikhailnezhnikov-pixel/tk-clan
+          run-id: 35518466801
+      - name: aggregate and build migration manifest
+        run: |
+          python3 - <<'PY'
+          import glob,json,os
+          cls=json.load(open('/tmp/classification/w6-classification.json'))
+          unique_maps={m['map_key']:m for m in cls['maps'] if len(m.get('candidates') or [])==1}
+          unresolved=[m for m in cls['maps'] if len(m.get('candidates') or [])==0]
+          ambiguous=[m for m in cls['maps'] if len(m.get('candidates') or [])>1]
+          target_to_maps={}
+          for key,m in unique_maps.items():
+              area=m['candidates'][0]
+              target_to_maps.setdefault(area,[]).append(key)
+          duplicate_targets={a:ks for a,ks in target_to_maps.items() if len(ks)>1}
+
+          results={}
+          for path in glob.glob('/tmp/regular/*.json')+glob.glob('/tmp/stubborn/*.json'):
+              r=json.load(open(path))
+              key=r.get('map_key')
+              if key in unique_maps:
+                  # Stubborn OSM-API artifacts should override any older attempt.
+                  if key not in results or '/tmp/stubborn/' in path:
+                      results[key]=r
+          missing=sorted(set(unique_maps)-set(results))
+          extra=sorted(set(results)-set(unique_maps))
+          assert not missing,('missing resolved artifacts',missing)
+          assert not extra,('extra artifacts',extra)
+          assert len(results)==25,len(results)
+
+          stats={
+            'source_points':0,'point_unique_matches':0,'point_unmatched':0,'point_ambiguous':0,
+            'building_rows_to_add':0,'building_rows_already_known':0,'existing_null_fill_candidates':0,
+            'room_count_same':0,'room_count_conflicts_total':0,
+            'room_count_conflicts_game_live':0,'room_count_conflicts_hk_maps_import':0,'room_count_conflicts_legacy':0,
+          }
+          manifest=[]
+          per_map=[]
+          for key in sorted(results):
+              r=results[key];m=unique_maps[key]
+              assert r['canonical_area_id']==m['candidates'][0],(key,r['canonical_area_id'],m['candidates'])
+              stats['source_points']+=int(r['point_count'])
+              stats['point_unique_matches']+=len(r['points'])
+              stats['point_unmatched']+=len(r['unmatched'])
+              stats['point_ambiguous']+=len(r['ambiguous'])
+              safe_points=[]
+              for p in r['points']:
+                  if p.get('existing'):
+                      stats['building_rows_already_known']+=1
+                      cur=p.get('canonical_room_count')
+                      if cur is None:
+                          stats['existing_null_fill_candidates']+=1
+                      elif int(cur)==int(p['room_count']):
+                          stats['room_count_same']+=1
+                      else:
+                          stats['room_count_conflicts_total']+=1
+                          src=str(p.get('canonical_source') or 'legacy')
+                          k='room_count_conflicts_'+src
+                          if k in stats:stats[k]+=1
+                      safe_points.append({
+                        'point_index':int(p['point_index']),
+                        'building_id':str(p['building_id']),
+                        'room_count':int(p['room_count']),
+                      })
+                  else:
+                      stats['building_rows_to_add']+=1
+              manifest.append({
+                'map_key':key,
+                'canonical_area_id':r['canonical_area_id'],
+                'area_match_method':'city_grid_yx',
+                'safe_existing_points':safe_points,
+                'reported_new_building_rows':sum(1 for p in r['points'] if not p.get('existing')),
+              })
+              per_map.append({
+                'map_key':key,'canonical_area_id':r['canonical_area_id'],
+                'point_count':r['point_count'],'unique_matches':len(r['points']),
+                'safe_existing_matches':len(safe_points),'unmatched':len(r['unmatched']),
+                'ambiguous':len(r['ambiguous']),
+                'new_building_rows':sum(1 for p in r['points'] if not p.get('existing')),
+              })
+
+          existing_links=cls.get('existing_links') or []
+          report={
+            'stage':'W6','dry_run':True,'total_maps':cls['total_maps'],
+            'exact_area_id_matches':sum(1 for x in existing_links if x.get('match_method')=='exact_area_id'),
+            'city_grid_yx_matches':len(unique_maps),
+            'unresolved_maps':len(unresolved),'ambiguous_maps':len(ambiguous),
+            'duplicate_target_groups':len(duplicate_targets),
+            'duplicate_target_maps':sum(len(v) for v in duplicate_targets.values()),
+            'existing_links_before':len(existing_links),
+            'resolved_map_keys':sorted(unique_maps),
+            'unresolved_map_keys':sorted(m['map_key'] for m in unresolved),
+            'ambiguous_map_keys':sorted(m['map_key'] for m in ambiguous),
+            'duplicate_targets':duplicate_targets,
+            'room_count_conflicts_by_source':{
+              'game_live':stats['room_count_conflicts_game_live'],
+              'hk_maps_import':stats['room_count_conflicts_hk_maps_import'],
+              'legacy':stats['room_count_conflicts_legacy'],
+            },
+            **{k:v for k,v in stats.items() if not k.startswith('room_count_conflicts_') or k=='room_count_conflicts_total'},
+            'maps':per_map,
+          }
+          assert report['total_maps']==235
+          assert report['city_grid_yx_matches']==25
+          assert report['unresolved_maps']==210
+          assert report['ambiguous_maps']==0
+          assert report['duplicate_target_groups']==0
+          os.makedirs('audit',exist_ok=True)
+          open('audit/hk-stage2-w6-final-dryrun.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
+          open('deploy/topking/hk-w6-migration-manifest.json','w',encoding='utf-8').write(json.dumps(manifest,ensure_ascii=False,indent=2,sort_keys=True))
+          summary={k:v for k,v in report.items() if k not in ('maps','resolved_map_keys','unresolved_map_keys','ambiguous_map_keys','duplicate_targets')}
+          open('audit/hk-stage2-w6-final-dryrun-summary.txt','w',encoding='utf-8').write('\n'.join(f'{k}={v}' for k,v in summary.items())+'\n')
+          print(json.dumps(summary,indent=2,sort_keys=True))
+          print('manifest_maps=',len(manifest),'safe_points=',sum(len(m['safe_existing_points']) for m in manifest))
+          PY
+      - name: commit W6 final dry-run
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-w6-final-dryrun.json audit/hk-stage2-w6-final-dryrun-summary.txt deploy/topking/hk-w6-migration-manifest.json
+          git commit -m "audit: complete W6 final dry-run"
+          git pull --rebase origin main
+          git push origin HEAD:main
