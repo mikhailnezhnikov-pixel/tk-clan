@@ -97,7 +97,7 @@ jobs:
           node --check /tmp/HamsterKingMobile.user.js
           grep -Fq "HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" /tmp/HamsterKingMobile.user.js
           grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
-          grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-snapshot-3h-20260920-r1'" /tmp/HamsterKingMobile.user.js
+          grep -Eq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = '(public-snapshot-3h-20260920-r1|public-server-only-20260920-r2)'" /tmp/HamsterKingMobile.user.js
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/source.sha
           python3 deploy/topking/patch_public_snapshot_server_only_r2.py
           node --check /tmp/HamsterKingMobile.user.js
@@ -143,7 +143,7 @@ jobs:
             echo "timer_active=PASS"
             echo -n "collector_state="
             if [ -f /var/lib/hamsterking-license/public-collector-status.json ]; then
-              python3 -c "import json;d=json.load(open('/var/lib/hamsterking-license/public-collector-status.json'));print(d.get('state','unknown'))"
+              sed -n 's/.*"state":"\([^"]*\)".*/\1/p' /var/lib/hamsterking-license/public-collector-status.json
             else
               echo missing
             fi
