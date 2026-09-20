@@ -215,4 +215,70 @@ for marker in (
 ):
     require(marker, "missing W5 marker: " + marker)
 
+
+merge_anchor = '''                    db.execute("""INSERT INTO map_buildings(area_id,building_id,opened,room_count,has_events,is_invest,tier,faction,building_type,last_player_id,last_seen)
+                                VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(area_id,building_id) DO UPDATE SET
+                                opened=MAX(map_buildings.opened,excluded.opened),room_count=COALESCE(map_buildings.room_count,excluded.room_count),
+                                has_events=MAX(map_buildings.has_events,excluded.has_events),is_invest=MAX(map_buildings.is_invest,excluded.is_invest),
+                                tier=COALESCE(map_buildings.tier,excluded.tier),faction=CASE WHEN map_buildings.faction='' THEN excluded.faction ELSE map_buildings.faction END,
+                                building_type=CASE WHEN map_buildings.building_type='' THEN excluded.building_type ELSE map_buildings.building_type END,
+                                last_player_id=CASE WHEN map_buildings.room_count IS NULL AND excluded.room_count IS NOT NULL THEN excluded.last_player_id ELSE map_buildings.last_player_id END,
+                                last_seen=MAX(map_buildings.last_seen,excluded.last_seen)""",
+                               (winner,row["building_id"],row["opened"],row["room_count"],row["has_events"],row["is_invest"],row["tier"],
+                                row["faction"],row["building_type"],row["last_player_id"],row["last_seen"]))
+'''
+merge_new = '''                    db.execute("""INSERT INTO map_buildings(
+                                area_id,building_id,opened,room_count,has_events,is_invest,tier,faction,building_type,
+                                last_player_id,last_seen,knowledge_source,knowledge_observed_at)
+                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(area_id,building_id) DO UPDATE SET
+                                opened=MAX(map_buildings.opened,excluded.opened),
+                                room_count=CASE
+                                  WHEN excluded.room_count IS NULL THEN map_buildings.room_count
+                                  WHEN map_buildings.room_count IS NULL THEN excluded.room_count
+                                  WHEN excluded.knowledge_source='game_live'
+                                   AND (map_buildings.knowledge_source<>'game_live'
+                                        OR excluded.knowledge_observed_at>map_buildings.knowledge_observed_at)
+                                  THEN excluded.room_count
+                                  ELSE map_buildings.room_count END,
+                                has_events=CASE
+                                  WHEN excluded.room_count IS NOT NULL
+                                   AND (map_buildings.room_count IS NULL
+                                        OR (excluded.knowledge_source='game_live'
+                                            AND (map_buildings.knowledge_source<>'game_live'
+                                                 OR excluded.knowledge_observed_at>map_buildings.knowledge_observed_at)))
+                                  THEN excluded.has_events
+                                  ELSE MAX(map_buildings.has_events,excluded.has_events) END,
+                                is_invest=MAX(map_buildings.is_invest,excluded.is_invest),
+                                tier=COALESCE(map_buildings.tier,excluded.tier),
+                                faction=CASE WHEN map_buildings.faction='' THEN excluded.faction ELSE map_buildings.faction END,
+                                building_type=CASE WHEN map_buildings.building_type='' THEN excluded.building_type ELSE map_buildings.building_type END,
+                                last_player_id=CASE
+                                  WHEN excluded.room_count IS NOT NULL
+                                   AND (map_buildings.room_count IS NULL
+                                        OR (excluded.knowledge_source='game_live'
+                                            AND (map_buildings.knowledge_source<>'game_live'
+                                                 OR excluded.knowledge_observed_at>map_buildings.knowledge_observed_at)))
+                                  THEN excluded.last_player_id ELSE map_buildings.last_player_id END,
+                                last_seen=MAX(map_buildings.last_seen,excluded.last_seen),
+                                knowledge_source=CASE
+                                  WHEN excluded.room_count IS NOT NULL
+                                   AND (map_buildings.room_count IS NULL
+                                        OR (excluded.knowledge_source='game_live'
+                                            AND (map_buildings.knowledge_source<>'game_live'
+                                                 OR excluded.knowledge_observed_at>map_buildings.knowledge_observed_at)))
+                                  THEN excluded.knowledge_source ELSE map_buildings.knowledge_source END,
+                                knowledge_observed_at=CASE
+                                  WHEN excluded.room_count IS NOT NULL
+                                   AND (map_buildings.room_count IS NULL
+                                        OR (excluded.knowledge_source='game_live'
+                                            AND (map_buildings.knowledge_source<>'game_live'
+                                                 OR excluded.knowledge_observed_at>map_buildings.knowledge_observed_at)))
+                                  THEN excluded.knowledge_observed_at ELSE map_buildings.knowledge_observed_at END""",
+                               (winner,row["building_id"],row["opened"],row["room_count"],row["has_events"],row["is_invest"],row["tier"],
+                                row["faction"],row["building_type"],row["last_player_id"],row["last_seen"],
+                                row["knowledge_source"],row["knowledge_observed_at"]))
+'''
+require(merge_anchor, "merge provenance anchor missing")
+s = s.replace(merge_anchor, merge_new, 1)
+
 TARGET.write_text(s, encoding="utf-8")
