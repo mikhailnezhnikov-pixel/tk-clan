@@ -1,0 +1,173 @@
+name: Deploy TopKing Maps Shared KB W2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-shared-kb-w2-deploy-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-maps-shared-kb-w2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact live inputs and verify pilot candidate
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile /tmp/server.py
+          node --check /tmp/HamsterKingMobile.user.js
+          test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1"
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "python3 - <<'PY'
+          import sqlite3
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          m=db.execute("SELECT city,grid FROM hk_maps_catalog WHERE map_key='hk_moscow1226'").fetchone()
+          assert m and m['city']=='Moscow' and m['grid']=='12:26', dict(m) if m else None
+          rows=db.execute("SELECT area_id,city_name,x,y FROM map_areas WHERE x=26 AND y=12").fetchall()
+          exact=[r for r in rows if str(r['city_name']).strip().casefold()=='moscow']
+          assert len(exact)==1,[dict(r) for r in rows]
+          assert exact[0]['area_id']=='9ea6ff78-b881-45b3-b92d-a8f1da8eca05',dict(exact[0])
+          print('W2_PILOT_PRECHECK=PASS')
+          db.close()
+          PY"
+
+      - name: Apply verified W2 patch
+        run: |
+          set -euo pipefail
+          test "$(grep '^candidate_server_sha256=' audit/hk-stage2-maps-shared-kb-w2-build-status.txt | cut -d= -f2)" = "1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e"
+          python3 -m py_compile deploy/topking/patch_server_maps_shared_kb_w2.py
+          python3 deploy/topking/patch_server_maps_shared_kb_w2.py
+          python3 -m py_compile /tmp/server.py
+          test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e"
+
+      - name: Backup and deploy server only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.maps-shared-kb-w2.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            python3 -m py_compile /tmp/server.maps-shared-kb-w2.py
+            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.maps-shared-kb-w2.$stamp"
+            install -m 0644 /tmp/server.maps-shared-kb-w2.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+
+      - name: Persist one W2 pilot link only
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "python3 /opt/hamsterking-license/server.py --link-hk-map-area hk_moscow1226" > /tmp/w2-link.json
+          cat /tmp/w2-link.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open('/tmp/w2-link.json',encoding='utf-8'))
+          link=data['link']
+          assert data['ok'] is True,data
+          assert link['map_key']=='hk_moscow1226',link
+          assert link['canonical_area_id']=='9ea6ff78-b881-45b3-b92d-a8f1da8eca05',link
+          assert link['match_method']=='city_grid_yx',link
+          assert data['candidates']==['9ea6ff78-b881-45b3-b92d-a8f1da8eca05'],data
+          print('W2_PILOT_LINK=PASS')
+          PY
+
+      - name: Verify live W2 state
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "python3 - <<'PY'
+          import sqlite3
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          table=db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hk_map_area_links'").fetchone()
+          assert table
+          links=db.execute("SELECT map_key,canonical_area_id,match_method FROM hk_map_area_links ORDER BY map_key").fetchall()
+          assert len(links)==1,[dict(r) for r in links]
+          row=links[0]
+          assert row['map_key']=='hk_moscow1226',dict(row)
+          assert row['canonical_area_id']=='9ea6ff78-b881-45b3-b92d-a8f1da8eca05',dict(row)
+          assert row['match_method']=='city_grid_yx',dict(row)
+          district=db.execute("SELECT area_id,city_name,x,y FROM map_areas WHERE area_id=?",(row['canonical_area_id'],)).fetchone()
+          assert district and district['city_name']=='Moscow' and (district['x'],district['y'])==(26,12),dict(district) if district else None
+          same=db.execute("SELECT area_id FROM map_areas WHERE x=26 AND y=12 AND lower(trim(city_name))='moscow'").fetchall()
+          assert len(same)==1,[r[0] for r in same]
+          alias=db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",(row['canonical_area_id'],)).fetchone()
+          assert alias and alias['canonical_area_id']==row['canonical_area_id'],dict(alias) if alias else None
+          assert db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0]==235
+          assert db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0]==235
+          print('W2_SCHEMA_LIVE=PASS')
+          print('W2_SINGLE_LINK_LIVE=PASS')
+          print('W2_NO_DUPLICATE_DISTRICT_LIVE=PASS')
+          print('W2_ALIAS_LIVE=PASS')
+          print('W2_GEOMETRY_COUNTS_UNCHANGED=PASS')
+          db.close()
+          PY"
+          test "$(ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "sha256sum /opt/hamsterking-license/server.py | awk '{print \$1}'")" = "1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e"
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?w2=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          test "$(sha256sum /tmp/public.js | awk '{print $1}')" = "1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6"
+
+      - name: Record W2 live status
+        run: |
+          set -euo pipefail
+          {
+            echo "MAPS_SHARED_KB_W2_LIVE=PASS"
+            echo "server_sha256=1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e"
+            echo "client_sha256=1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6"
+            echo "pilot_map_key=hk_moscow1226"
+            echo "pilot_canonical_area_id=9ea6ff78-b881-45b3-b92d-a8f1da8eca05"
+            echo "match_method=city_grid_yx"
+            echo "bridge_rows=1"
+            echo "duplicate_districts=0"
+            echo "alias_resolution=PASS"
+            echo "hk_maps_catalog=235"
+            echo "hk_map_points=235"
+            echo "building_migration=NO"
+            echo "userscript_changed=NO"
+            echo "explore_changed=NO"
+          } > audit/hk-stage2-maps-shared-kb-w2-live-status.txt
+
+      - name: Commit live status
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w2-live-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: record Maps shared KB W2 live PASS"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/w2-link.json
