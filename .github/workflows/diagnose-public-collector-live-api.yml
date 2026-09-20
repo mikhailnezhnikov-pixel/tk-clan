@@ -1,0 +1,137 @@
+name: Diagnose Public Collector Live API
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-diagnose-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Diagnose live API safely
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 - <<'"'"'PY'"'"'
+import json, os, urllib.request, urllib.error, urllib.parse, re
+ENV="/etc/hamsterking-public-collector.env"
+env={}
+for line in open(ENV,encoding="utf-8"):
+    line=line.strip()
+    if not line or line.startswith("#") or "=" not in line: continue
+    k,v=line.split("=",1); env[k]=v
+token=env.get("HK_PUBLIC_COLLECTOR_GAME_TOKEN","").strip()
+base=env.get("HK_PUBLIC_COLLECTOR_GAME_API","https://hk-game-api.hwgame.cloud").rstrip("/")
+if token.lower().startswith("bearer "): token=token[7:]
+assert token, "TOKEN_MISSING"
+
+def req(path,method="GET",body=None):
+    headers={"Authorization":"Bearer "+token,"Accept":"application/json","User-Agent":"TopKing-Public-Diagnose/1"}
+    data=None
+    if body is not None:
+        data=json.dumps(body,separators=(",",":")).encode()
+        headers["Content-Type"]="application/json"
+    r=urllib.request.Request(base+path,data=data,headers=headers,method=method)
+    try:
+        with urllib.request.urlopen(r,timeout=20) as resp:
+            return resp.status,json.loads(resp.read(2500000).decode())
+    except urllib.error.HTTPError as e:
+        raw=e.read(2000).decode(errors="replace")
+        return e.code,{"_error":raw[:500]}
+
+def keys(v):
+    return sorted(v.keys()) if isinstance(v,dict) else []
+
+def safe_name(v):
+    if not isinstance(v,dict): return ""
+    for k in ("name","title","nickname","clan_name","alliance_name"):
+        x=v.get(k)
+        if isinstance(x,str) and x.strip(): return re.sub(r"\s+"," ",x.strip())[:100]
+    return ""
+
+def summarize(path,method="GET",body=None):
+    status,v=req(path,method,body)
+    print("ENDPOINT",path,"STATUS",status,"TYPE",type(v).__name__,"KEYS",keys(v)[:80])
+    if isinstance(v,dict):
+        for k,val in v.items():
+            if isinstance(val,list):
+                print(" LIST",k,"LEN",len(val),"ITEM_KEYS",keys(val[0])[:80] if val and isinstance(val[0],dict) else [])
+            elif isinstance(val,dict):
+                print(" OBJ",k,"KEYS",keys(val)[:80],"NAME",safe_name(val))
+    return v
+
+me=summarize("/player/me","POST",{})
+if isinstance(me,dict):
+    p=me.get("player") if isinstance(me.get("player"),dict) else {}
+    c=p.get("clan") if isinstance(p.get("clan"),dict) else (me.get("clan") if isinstance(me.get("clan"),dict) else {})
+    print("PLAYER_CLAN",safe_name(c) or p.get("clan_name") or "")
+
+active=summarize("/clan/active_battles")
+summarize("/clan/active_defense_wars")
+alli=summarize("/alliance/list")
+
+rows=[]
+if isinstance(alli,dict):
+    rows=alli.get("result") if isinstance(alli.get("result"),list) else []
+    if not rows and isinstance(alli.get("data"),dict) and isinstance(alli["data"].get("result"),list):
+        rows=alli["data"]["result"]
+for row in rows[:3]:
+    aid=str(row.get("id") or "")
+    print("ALLIANCE_ROW",safe_name(row),"ID_PRESENT",bool(aid),"KEYS",keys(row)[:80])
+    if aid:
+        summarize("/alliance/members?alliance_id="+urllib.parse.quote(aid))
+
+for lb in ("player_level_lb","hamsters_power_lb","clan_player_level_lb","clan_hamsters_power_lb","clan_hamster_power_lb","clan_power_lb","clans_hamsters_power_lb"):
+    v=summarize("/leaderboard","POST",{"leaderboard_type":lb})
+    # print one safe sample shape only
+    if isinstance(v,dict):
+        for k,val in v.items():
+            if isinstance(val,list) and val:
+                x=val[0]
+                print(" LB_SAMPLE",lb,"CONTAINER",k,"NAME",safe_name(x if isinstance(x,dict) else {}),"KEYS",keys(x)[:80] if isinstance(x,dict) else [])
+                break
+
+status_path=env.get("HK_PUBLIC_COLLECTOR_STATUS","/var/lib/hamsterking-license/public-collector-status.json")
+if os.path.exists(status_path):
+    print("COLLECTOR_STATUS",open(status_path,encoding="utf-8").read()[:2000])
+
+db_path=env.get("HK_PUBLIC_COLLECTOR_DB","/var/lib/hamsterking-license/licenses.db")
+import sqlite3
+db=sqlite3.connect(db_path)
+try:
+    print("DB_WAR",db.execute("select snapshot_json,updated_at,source_player_id from public_clan_war_snapshot limit 1").fetchall())
+    print("DB_RATING_COUNTS",db.execute("select kind,count(*),max(updated_at),min(source_player_id) from public_rating_snapshots group by kind order by kind").fetchall())
+finally:
+    db.close()
+PY' > /tmp/public-collector-live-api.txt
+          cat /tmp/public-collector-live-api.txt
+
+      - name: Save diagnosis
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/public-collector-live-api.txt audit/hk-public-collector-live-api.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-public-collector-live-api.txt
+          git commit -m "audit: diagnose live public collector API" || true
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/public-collector-live-api.txt
