@@ -401,3 +401,120 @@ During Explore implementation:
 - do not refactor shared map APIs;
 - rebase/re-read current baseline before every Explore deploy;
 - patch Explore-specific code only.
+
+
+## E2 — donor-equivalent UI + read-only plan
+
+Status: **LIVE CANDIDATE / USER UI CHECK PENDING**
+
+Marker:
+`HK_EXPLORE_CANON_REV = 'explore-readonly-plan-20260920-r1'`
+
+### Implemented
+
+- replaced the incorrect district-map Explore UI with Explore Buildings planning;
+- fresh authoritative player read for plan calculation;
+- settings persistence;
+- district filter;
+- building type filter: all / normal / investment;
+- starting tiers T1..MAX;
+- target tiers T1..MAX + Instant MAX;
+- target-tier exploration toggle;
+- target-tier battle-completion toggle;
+- max buildings 1..5000;
+- donor priority controls:
+  - battle level;
+  - building level;
+  - next-tier level;
+  - total events;
+- donor delay settings are visible/stored for E3/E4 but not executed;
+- future missing beams/nails purchase toggle is visible/stored but inactive in E2;
+- account capability display:
+  - player level;
+  - Remort Consigliere;
+  - max automatic-battle tier;
+  - per-tier manual/auto/fast capability;
+- exact donor candidate eligibility rules;
+- stable donor priority ordering;
+- target-tier progress cache;
+- target-tier read-only scan of already active buildings only;
+- plan preview with first 20 selected candidates and total count;
+- warnings for unmapped buildings, unknown investment type, and unavailable exact total-events values.
+
+### Metadata source
+
+Donor uses its own `buildings_api.php?mode=explore_metadata`.
+
+Our E2 does not depend on donor infrastructure. Equivalent metadata is built read-only from:
+
+- authoritative player state;
+- persisted/current `building_id → area_id` mapping;
+- `GET /cities`;
+- `GET /game_area/{areaId}`;
+- `GET /game_area/{areaId}/buildings`;
+- `invest_building_list`;
+- exact cached/full event data when available.
+
+If exact `total_events` is unavailable for any candidate, E2 does not invent a value and does not apply the total-events priority.
+
+### Safety
+
+E2 Explore block contains **zero** mutation/action endpoints.
+
+Explicitly absent from the new Explore block:
+
+- `/player/building/fast_completion`;
+- `/player/battle/fast`;
+- `/player/building/remort`;
+- `/player/building/fast_remort`;
+- `/shop/buy`.
+
+The only detailed building request in E2 is:
+
+`POST /player/building?building_id=...`
+
+and it is called only for rows that already come from the player's active/owned `buildings` state during the target-tier read-only scan.
+
+The action button is deliberately disabled and states that Run becomes available in E3.
+
+### Build verification
+
+- source live SHA256: `1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6`;
+- build candidate SHA256: `c32fc068e4bcf89748419ecaa207c6fe165660097c3c4b922abcf2a0b1d9bf9f`;
+- JS syntax: PASS;
+- Explore mutation endpoint scan: PASS (0);
+- build evidence: `audit/hk-stage2-explore-e2-build-status.txt`.
+
+### Live verification
+
+- deploy: PASS;
+- service: PASS;
+- public byte equality: PASS;
+- live/public SHA256:
+  `c32fc068e4bcf89748419ecaa207c6fe165660097c3c4b922abcf2a0b1d9bf9f`;
+- baseline sync: PASS;
+- live evidence: `audit/hk-stage2-explore-e2-live-status.txt`.
+
+### User check required
+
+Reload game → HK → Исследование.
+
+Check only:
+
+1. district/type filters;
+2. starting tiers;
+3. target tier / Instant MAX;
+4. target-tier toggles;
+5. account capability summary;
+6. priorities and limits;
+7. click **Рассчитать план**;
+8. inspect candidate list/count.
+
+Do not expect or attempt building actions in E2.
+
+### Next
+
+After user UI/read-only confirmation:
+**E3 — single-building canonical action core**.
+
+Do not implement E3 automatically before E2 user confirmation.
