@@ -50,7 +50,8 @@ jobs:
           grep -Fq "HK_PITS_REWARD_ONLY_REV = 'pits-reward-only-plan-20260920-r16'" /tmp/live.js
           grep -Fq "HK_PITS_PREVIEW_REV = 'pits-runtime-preview-20260920-r17'" /tmp/live.js
           grep -Fq "HK_PITS_REWARD_FIT_REV = 'pits-reward-fit-available-20260920-r18'" /tmp/live.js
-          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "8f76e1d6ef11e15765c499807552d2e1b6c8bea7ee5f76d6e0d9eb06d0dabd6b"
+          grep -Fq "HK_PITS_PREFLIGHT_REV = 'pits-aggregate-preflight-20260920-r19'" /tmp/live.js
+          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "0c13faad6e3a85b6105e62d8b9e764077724063947c047e13a377b1d8c0fe71a"
           cp /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
       - name: Commit current snapshot
         run: |
@@ -59,7 +60,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js
           if ! git diff --cached --quiet; then
-            git commit -m "stage2: sync Pits reward fit r18 live candidate"
+            git commit -m "stage2: sync Pits aggregate preflight r19 live candidate"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
