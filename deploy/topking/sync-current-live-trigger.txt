@@ -1,1 +1,1 @@
-2026-09-20 sync pits start r5 live candidate
+2026-09-20 sync pits respawn r6 live candidate
