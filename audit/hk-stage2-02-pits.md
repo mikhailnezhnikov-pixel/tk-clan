@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: PASSPLAN_SNIPER_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
+status: UI_LIVE_READ_PASS_ACTION_PENDING
 
 ## Required Stage 2 chain
 
@@ -215,3 +215,58 @@ Required user check:
    - target list starts at the recommended Sniper level and allows higher targets.
 
 Do not advance to tournament reward planning, restoration decision logic, or Bosses until this UI/live-read check is confirmed.
+
+
+## Toolbar clean r4 + user UI confirmation
+
+User confirmation:
+- Pass plan: visually OK;
+- Sniper mode/payment/target UI: visually OK;
+- remaining requested UI change: remove redundant `Обновить данные` button.
+
+r4 change:
+- removed only the manual `Обновить данные` / `Refresh live data` button from Pits;
+- removed its click handler;
+- automatic live refresh on module open remains unchanged;
+- no Pits calculation/action logic changed.
+
+Marker:
+`HK_PITS_TOOLBAR_REV = 'pits-toolbar-clean-20260920-r4'`
+
+Workflow:
+`Deploy TopKing Pits Toolbar Clean R4`
+
+Successful run:
+`35493415188`
+
+Technical result:
+- exact pre-deploy r3 SHA verification: PASS;
+- Python patch compile: PASS;
+- JS syntax: PASS;
+- backup/deploy: PASS;
+- service active: PASS;
+- public round-trip: PASS;
+- live/public byte equality: PASS;
+- live/public SHA256: `003c3a2a47bc2dc97e1e073b14744a57463d936e1fdc20b02e6041b124842223`.
+
+Baseline sync:
+- run: `35493446456`;
+- result: SUCCESS.
+
+Current Stage 2.02 status:
+**UI_LIVE_READ_PASS_ACTION_PENDING**
+
+Passed:
+- UI;
+- live read;
+- normal Pass plan selection;
+- Sniper mode/payment/target configuration;
+- r4 toolbar cleanup.
+
+Still required before Pits LIVE PASS:
+- action execution;
+- authoritative state update after action;
+- rerun from the resulting state;
+- remaining planned donor Pits functionality if still in Stage 2.02 scope.
+
+Do not advance to Bosses yet.
