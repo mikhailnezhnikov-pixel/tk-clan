@@ -719,3 +719,80 @@ Deploy:
 
 Baseline sync:
 - run `35497344758` — PASS.
+
+
+## Runtime preview r17
+
+Transferred from pinned Kokkaras donor:
+- runtime Pit preview endpoints:
+  - normal: `pit/preview`;
+  - boss: `pit_2/preview`;
+  - gang: `pit_pve/preview`;
+- exact game winrate is captured from start/pass/respawn/battle responses when present;
+- fallback preview GET is used when mutation response does not contain preview;
+- runner/log show `шанс игры` from live preview;
+- existing stored-power forecast remains fallback only when live preview is unavailable.
+
+Marker:
+`HK_PITS_PREVIEW_REV = 'pits-runtime-preview-20260920-r17'`
+
+Deploy:
+- run `35497432303` — PASS;
+- live/public SHA256: `8a461d0627209a55eff885c039ecb92356feb51519e2e1e4e3c3660d0266afd1`;
+- public byte equality: PASS.
+
+Baseline sync:
+- run `35497472469` — PASS.
+
+## Adaptive reward fit r18
+
+Transferred from donor `battleFitRewardStepToAvailable` behavior:
+- before cancelling an unaffordable reward step, try the largest supported smaller ITEM batch that fits the actual Pit Pass balance;
+- decompose the remainder into supported batches;
+- keep the same total required multiplier;
+- update runner total and ITEM budget to the replacement step set;
+- if no safe decomposition exists, retain the existing safe-stop behavior.
+
+Marker:
+`HK_PITS_REWARD_FIT_REV = 'pits-reward-fit-available-20260920-r18'`
+
+Deploy:
+- run `35497591634` — PASS;
+- live/public SHA256: `8f76e1d6ef11e15765c499807552d2e1b6c8bea7ee5f76d6e0d9eb06d0dabd6b`;
+- public byte equality: PASS.
+
+Baseline sync:
+- run `35497639381` — PASS.
+
+## Aggregate preflight r19
+
+Transferred from donor selected-budget validation boundary:
+- full selected configuration is checked before the first Pit mutation;
+- aggregate crystal budget is compared with live crystals;
+- aggregate configured Restoration Paws ceiling is compared with live Paws;
+- current Pit Pass / Tribute Box pool is simulated across all selected base and reward steps;
+- full x100 Tribute Box expected returns are included in preflight;
+- adaptive reward batch decomposition is included in the shared pass simulation;
+- if the combined plan is not affordable, execution stops before the first spend;
+- successful preflight is logged and recorded as `pits-preflight`.
+
+Marker:
+`HK_PITS_PREFLIGHT_REV = 'pits-aggregate-preflight-20260920-r19'`
+
+Deploy:
+- run `35497775963` — PASS;
+- live/public SHA256: `0c13faad6e3a85b6105e62d8b9e764077724063947c047e13a377b1d8c0fe71a`;
+- public byte equality: PASS.
+
+Baseline sync:
+- run `35497815376` — PASS.
+
+Current functional status:
+**FINAL_LIVE_CHECKS_PENDING**
+
+Remaining before Pits LIVE PASS:
+1. r11 restoration decision modal: user-path check at a deliberately low Paws limit;
+2. reward execution chain (r13 + r18 + r19): one controlled live run with reward target, live recalculation, optional adaptive reward batch, and rerun/state confirmation;
+3. verify r17 live `шанс игры` appears when the game preview endpoint supplies winrate.
+
+Do not advance to Bosses until these checks pass.
