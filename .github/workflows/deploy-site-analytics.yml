@@ -1,0 +1,83 @@
+name: Deploy site analytics
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_site_analytics.py'
+      - '.github/workflows/deploy-site-analytics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-topking-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Patch live backend
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          python3 deploy/topking/patch_site_analytics.py /tmp/server.py
+          grep -q 'SITE_ANALYTICS_V1' /tmp/server.py
+          grep -q '/api/v1/site-analytics/view' /tmp/server.py
+          grep -q '/api/v1/cabinet/site-stats' /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+
+      - name: Deploy backend
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/site-analytics-server.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            python3 -m py_compile /tmp/site-analytics-server.py
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.$stamp"
+            install -m 0644 /tmp/site-analytics-server.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            for port in 8787 3188; do
+              if curl -fsS --max-time 4 "http://127.0.0.1:$port/health" >/tmp/hk-health.json 2>/dev/null; then
+                cat /tmp/hk-health.json
+                exit 0
+              fi
+            done
+            systemctl status hamsterking-license.service --no-pager -l || true
+            exit 1
+          '
+
+      - name: Verify public analytics endpoint
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 15 \
+            -H 'Origin: https://tk-clan.ru' \
+            -H 'Content-Type: application/json' \
+            --data '{"path":"/__analytics_verify__/","title":"analytics verify","referrer_host":"","language":"ru","device":"desktop"}' \
+            'https://hk-license.89.125.1.71.sslip.io/api/v1/site-analytics/view' > /tmp/analytics.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open('/tmp/analytics.json'))
+          assert data.get('ok') is True, data
+          print('SITE_ANALYTICS_ENDPOINT_OK')
+          PY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/analytics.json
