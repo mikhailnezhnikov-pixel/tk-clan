@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: PASSPLAN_SNIPER_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
+- current module status: UI_LIVE_READ_PASS_ACTION_PENDING
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -140,3 +140,21 @@ Next action:
 user reloads game → HK → Ямы and visually checks Pass plan + Sniper only.
 Do not press Start yet.
 Do not begin tournament reward planning / restoration decision / Bosses before this check.
+
+
+## Pits toolbar r4 + UI/live-read PASS
+
+- user confirmed current Pits UI/pass-plan/sniper configuration is OK;
+- requested cleanup: removed `Обновить данные` button only;
+- automatic refresh on opening Pits remains;
+- r4 marker: `pits-toolbar-clean-20260920-r4`;
+- deploy run: `35493415188` — PASS;
+- live/public SHA256: `003c3a2a47bc2dc97e1e073b14744a57463d936e1fdc20b02e6041b124842223`;
+- baseline sync run: `35493446456` — SUCCESS.
+
+Current module status:
+**UI_LIVE_READ_PASS_ACTION_PENDING**
+
+Next required chain:
+action → authoritative state update → rerun.
+Do not advance to Bosses until Pits reaches LIVE PASS.
