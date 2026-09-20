@@ -1,0 +1,5 @@
+MAPS_COORDS_R1_BUILD=PASS
+source_live_sha256=a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0cec177e
+candidate_sha256=f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290
+syntax=PASS
+deployed=no
