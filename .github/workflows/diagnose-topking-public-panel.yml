@@ -1,0 +1,77 @@
+name: Diagnose TopKing Public Panel Delivery
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-panel-diagnostic-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch server and public panel
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/server.js
+          curl -fsSL --retry 2 --connect-timeout 15 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?diag=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/server.js
+          node --check /tmp/public.js
+
+      - name: Compare delivery chain
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          server_sha="$(sha256sum /tmp/server.js | awk '{print $1}')"
+          public_sha="$(sha256sum /tmp/public.js | awk '{print $1}')"
+          {
+            echo "server_sha256=$server_sha"
+            echo "public_sha256=$public_sha"
+            if cmp -s /tmp/server.js /tmp/public.js; then echo "server_public_identical=PASS"; else echo "server_public_identical=FAIL"; fi
+            echo -n "server_version="; grep -m1 '^// @version' /tmp/server.js || true
+            echo -n "public_version="; grep -m1 '^// @version' /tmp/public.js || true
+            for marker in \
+              "HK_LAUNCHER_REV = 'launcher-hotfix-20260920-r1'" \
+              "HK_NATIVE_LOGIN_GATE_REV = 'login-gate-hotfix-20260920-r2'" \
+              "HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3'" \
+              "HK_LAUNCHER_HANDOFF_REV = 'launcher-handoff-20260920-r4'"; do
+              key="$(printf '%s' "$marker" | sed 's/[^A-Za-z0-9]/_/g')"
+              if grep -Fq "$marker" /tmp/server.js; then echo "server_$key=PASS"; else echo "server_$key=FAIL"; fi
+              if grep -Fq "$marker" /tmp/public.js; then echo "public_$key=PASS"; else echo "public_$key=FAIL"; fi
+            done
+          } > audit/hk-public-panel-delivery-status.txt
+
+      - name: Commit diagnostic
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-public-panel-delivery-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Diagnose HK public panel delivery"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.js /tmp/public.js
