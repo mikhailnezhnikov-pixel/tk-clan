@@ -1740,7 +1740,7 @@
     }
   }
 
-  const HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r5-filters';
+  const HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r6-fresh-meta';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -1755,7 +1755,18 @@
     {min:100000,tier:2,mode:'auto'},{min:100000,tier:0,mode:'fast'},
     {min:30000,tier:1,mode:'auto'},{min:5000,tier:0,mode:'auto'}
   ]);
-  let explorePlan=null,exploreBusy=false,exploreMeta=null;
+  let explorePlan=null,exploreBusy=false,exploreMeta=null,explorePlayerState=null;
+
+  function exploreState(){return explorePlayerState&&typeof explorePlayerState==='object'?explorePlayerState:{};}
+  async function exploreReadFreshPlayer(reason='explore'){
+    const value=await apiJson('/player/me','POST');
+    const hasBuildings=Array.isArray(value?.buildings)||Array.isArray(value?.player?.buildings);
+    if(!value?.player||!hasBuildings)throw new Error(either('Игра не вернула полное состояние аккаунта','Game did not return a complete account state'));
+    explorePlayerState=value;
+    playerDocument=value;
+    recordDiagnostic('explore-fresh-player',{reason,buildings:buildingCanonActiveRows(value).length,playerLevel:Number(value?.player?.level||0)});
+    return value;
+  }
 
   function exploreTierLabel(v){v=Number(v);return v===8?either('Мгновенно MAX','Instant MAX'):(EXPLORE_TIERS.find(r=>r.value===v)?.label||('Tier '+(v+1)));}
   function explorePriority(v){return ['min','max','any'].includes(String(v||''))?String(v):'any';}
@@ -1800,7 +1811,7 @@
       exploreTargetBattles:!!b.querySelector('#hk-ex-target-battles')?.checked
     });
   }
-  function exploreConsigliere(st=hkStateStore.snapshot||playerDocument||{}){
+  function exploreConsigliere(st=exploreState()){
     const lists=[st?.player_hamsteresses_skill_line,st?.player?.player_hamsteresses_skill_line,st?.hamsteresses_skill_line,st?.playerHamsteressesSkillLine];
     const rows=lists.find(Array.isArray)||[];
     return rows.find(r=>r&&r.hamsteress_id==='hamsteress_remort'&&r.id==='hamsteress_remort_line_01')||rows.find(r=>r&&r.hamsteress_id==='hamsteress_remort')||null;
@@ -1809,7 +1820,7 @@
   function exploreTierModes(level){
     const out={};for(const t of EXPLORE_TIERS.map(r=>r.value)){const ok=EXPLORE_LEVEL_RULES.filter(r=>r.tier===t&&Number(level)>=r.min);out[t]=ok.some(r=>r.mode==='fast')?'fast':ok.some(r=>r.mode==='auto')?'auto':'manual';}return out;
   }
-  function exploreActive(st=hkStateStore.snapshot||playerDocument||{}){
+  function exploreActive(st=exploreState()){
     return buildingCanonActiveRows(st).map(r=>({...r,id:String(r?.id||r?.building_id||''),tier:Number(r?.chosen_tier??r?.tier??0),
       level:Number(r?.level||0),next_tier_level:Number(r?.next_tier_level||0),battle_level:Number(r?.battle_level||0),max_battle_level:Number(r?.max_battle_level||0)}));
   }
@@ -1821,8 +1832,18 @@
       if(e)return e.reduce((n,r)=>n+1+(Array.isArray(r?.side_events)?r.side_events.length:0),0);
     }return null;
   }
-  async function exploreLoadMeta(force=false){
-    const st=hkStateStore.snapshot||playerDocument||{},pk=String(playerIdentity(st?.player||{})||'');
+  function exploreBuildingType(...src){
+    for(const x of src){if(!x||typeof x!=='object')continue;
+      for(const raw of [x?.building_type,x?.buildingType,x?.meta?.building_type,x?.meta?.buildingType]){
+        const value=String(raw||'').trim().toLowerCase();
+        if(value==='normal'||value==='investment')return value;
+      }
+    }
+    const total=exploreTotalEvents(...src);
+    return total===null||total===undefined?'':(Number(total)>20?'normal':'investment');
+  }
+  async function exploreLoadMeta(force=false,sourceState=exploreState()){
+    const st=sourceState||{},pk=String(playerIdentity(st?.player||{})||'');
     if(!force&&exploreMeta?.playerKey===pk&&Date.now()-Number(exploreMeta.loadedAt||0)<600000)return exploreMeta;
     mapHydrateBuildingAreas();await mapEnsureOwnedBuildingAreaIndex(false);
     const active=exploreActive(st),owned=(st?.areas?.areas||[]).filter(r=>r?.gamearea_id||r?.area_id),ownedMap=new Map(owned.map(r=>[String(r?.gamearea_id||r?.area_id||''),r]));
@@ -1835,25 +1856,25 @@
       const cityId=String(own?.city_id||full?.info?.city_id||''),city=cities.find(r=>String(r?.id||'')===cityId)||{};
       const x=full?.info?.y??full?.meta?.gamearea_coords?.y??null,y=full?.info?.x??full?.meta?.gamearea_coords?.x??null;
       districts.push({areaId,label:(cityLabel(city)||cityId||areaId)+(x==null||y==null?'':' · '+x+':'+y)});
-      const list=full?.info?.invest_building_list,known=Array.isArray(list),invest=new Set((known?list:[]).map(String)),dm=new Map(defs.map(r=>[String(r?.building_id||''),r]));
-      for(const row of active){if(String(mapBuildingAreas.get(row.id)||'')!==areaId)continue;const d=dm.get(row.id)||null;let isInvest=null;
-        if(known)isInvest=invest.has(row.id);else if(typeof row?.is_investment==='boolean')isInvest=!!row.is_investment;else if(typeof row?.is_invest==='boolean')isInvest=!!row.is_invest;
-        buildingMeta[row.id]={areaId,isInvest,totalEvents:exploreTotalEvents(buildingStudyCache.get(row.id),row,d)};if(d)mapRememberBuildingArea(row.id,areaId);}
+      const dm=new Map(defs.map(r=>[String(r?.building_id||''),r]));
+      for(const row of active){if(String(mapBuildingAreas.get(row.id)||'')!==areaId)continue;const d=dm.get(row.id)||null,study=buildingStudyCache.get(row.id)||null;
+        const totalEvents=exploreTotalEvents(study,row,d),buildingType=exploreBuildingType(d,row,study);
+        buildingMeta[row.id]={areaId,buildingType,isInvest:buildingType==='investment'?true:buildingType==='normal'?false:null,totalEvents};if(d)mapRememberBuildingArea(row.id,areaId);}
     }};
     await Promise.all(Array.from({length:Math.min(4,Math.max(1,areaIds.length))},()=>worker()));
-    for(const r of active)if(!buildingMeta[r.id]){let isInvest=null;if(typeof r?.is_investment==='boolean')isInvest=!!r.is_investment;else if(typeof r?.is_invest==='boolean')isInvest=!!r.is_invest;
-      buildingMeta[r.id]={areaId:String(mapBuildingAreas.get(r.id)||''),isInvest,totalEvents:exploreTotalEvents(buildingStudyCache.get(r.id),r)};}
+    for(const r of active)if(!buildingMeta[r.id]){const study=buildingStudyCache.get(r.id)||null,totalEvents=exploreTotalEvents(study,r),buildingType=exploreBuildingType(r,study);
+      buildingMeta[r.id]={areaId:String(mapBuildingAreas.get(r.id)||''),buildingType,isInvest:buildingType==='investment'?true:buildingType==='normal'?false:null,totalEvents};}
     districts.sort((a,b)=>a.label.localeCompare(b.label));
-    exploreMeta={playerKey:pk,loadedAt:Date.now(),districts,buildingMeta,errors,unmapped:active.filter(r=>!buildingMeta[r.id]?.areaId).length,unknownType:active.filter(r=>buildingMeta[r.id]?.isInvest===null).length};return exploreMeta;
+    exploreMeta={playerKey:pk,loadedAt:Date.now(),districts,buildingMeta,errors,unmapped:active.filter(r=>!buildingMeta[r.id]?.areaId).length,unknownType:active.filter(r=>!buildingMeta[r.id]?.buildingType).length};return exploreMeta;
   }
   function exploreStable(rows,key,dir){if(dir==='any')return rows;const f=dir==='max'?-1:1;return rows.map((row,i)=>({row,i})).sort((a,b)=>(Number(key(a.row)||0)-Number(key(b.row)||0))*f||a.i-b.i).map(x=>x.row);}
   function exploreFiltered(settings,st,meta){return exploreActive(st).filter(r=>{const m=meta?.buildingMeta?.[r.id]||{};if(settings.districtId!=='all'&&String(m.areaId||'')!==settings.districtId)return false;
-    if(settings.buildingType==='investment'&&m.isInvest!==true)return false;if(settings.buildingType==='normal'&&m.isInvest!==false)return false;return true;});}
+    if(settings.buildingType!=='all'&&String(m.buildingType||'')!==settings.buildingType)return false;return true;});}
   function exploreBasic(settings,st,meta){
     const allowed=new Set(settings.startTiers.map(Number));let rows=exploreFiltered(settings,st,meta).filter(r=>{const t=Number(r.tier),b=Number(r.battle_level||0),mb=Number(r.max_battle_level||0),l=Number(r.level||0),n=Number(r.next_tier_level||0);
       if(settings.targetTier===8)return allowed.has(t)&&t<7;if(settings.targetTier===7)return allowed.has(t)&&t<7&&b<=mb&&(t===0||(l>0&&(n>0||t===6)));
       if(settings.exploreTargetTier&&t===settings.targetTier)return allowed.has(t)&&b<=mb;return allowed.has(t)&&t<settings.targetTier&&b<=mb&&(t===0||(l>0&&(n>0||t===6)));})
-      .map(r=>{const m=meta?.buildingMeta?.[r.id]||{};return {...r,areaId:String(m.areaId||''),isInvest:m.isInvest,totalEvents:m.totalEvents};});
+      .map(r=>{const m=meta?.buildingMeta?.[r.id]||{};return {...r,areaId:String(m.areaId||''),buildingType:String(m.buildingType||''),isInvest:m.isInvest,totalEvents:m.totalEvents};});
     rows=exploreStable(rows,r=>r.next_tier_level,settings.nextTierLevel);rows=exploreStable(rows,r=>r.level,settings.level);
     const known=rows.every(r=>r.totalEvents!==null&&r.totalEvents!==undefined);if(settings.totalEvents!=='any'&&known)rows=exploreStable(rows,r=>r.totalEvents,settings.totalEvents);
     rows=exploreStable(rows,r=>r.battle_level,settings.battleLevel);return {rows,totalEventsKnown:known};
@@ -1862,7 +1883,7 @@
     const add=v=>{total++;if(Number(v?.level||0)>=Number(v?.max_level||0))done++;};for(const e of events){add(e);for(const x of (Array.isArray(e?.side_events)?e.side_events:[]))add(x);}
     return {total,completed:done,remaining:Math.max(0,total-done),finished:done>=total};}
   function exploreFingerprint(r){return [Number(r?.tier||0),Number(r?.level||0),Number(r?.next_tier_level||0),Number(r?.max_battle_level||0),r?.has_events===undefined?'':(r.has_events?1:0)].join('|');}
-  function exploreCache(){const pk=String(playerIdentity((hkStateStore.snapshot||playerDocument)?.player||{})||''),rootCache=load().exploreCanonProgressByPlayer;
+  function exploreCache(){const pk=String(playerIdentity(exploreState()?.player||{})||''),rootCache=load().exploreCanonProgressByPlayer;
     return {pk,cache:rootCache&&typeof rootCache==='object'&&rootCache[pk]&&typeof rootCache[pk]==='object'?{...rootCache[pk]}:{}};}
   function exploreSaveCache(pk,cache){if(!pk)return;const st=load(),r=st.exploreCanonProgressByPlayer&&typeof st.exploreCanonProgressByPlayer==='object'?st.exploreCanonProgressByPlayer:{};
     localStorage.setItem(STORE,JSON.stringify({...st,exploreCanonProgressByPlayer:{...r,[pk]:cache}}));}
@@ -1881,11 +1902,11 @@
   }
   function exploreCounts(rows){const o=Object.fromEntries(EXPLORE_TIERS.map(t=>[t.value,{all:0,battles:0}]));for(const r of rows){const t=Number(r.tier);if(!o[t])continue;o[t].all++;if(Number(r.battle_level||0)>=Number(r.max_battle_level||0))o[t].battles++;}return o;}
   async function exploreBuildPlan(){
-    playerDocument=await hkAuthoritativePlayerRead('explore:plan');const settings=exploreSettings(),meta=await exploreLoadMeta(false),basic=exploreBasic(settings,playerDocument,meta),scan=await exploreScanTarget(basic.rows,settings);
+    const state=await exploreReadFreshPlayer('explore:plan'),settings=exploreSettings(),meta=await exploreLoadMeta(false,state),basic=exploreBasic(settings,state,meta),scan=await exploreScanTarget(basic.rows,settings);
     let candidates=scan.rows;if(!settings.exploreTargetTier)candidates=candidates.slice(0,settings.maxBuildings);
     if(settings.totalEvents!=='any'&&basic.totalEventsKnown){candidates=exploreStable(candidates,r=>r.next_tier_level,settings.nextTierLevel);candidates=exploreStable(candidates,r=>r.level,settings.level);
       candidates=exploreStable(candidates,r=>r.totalEvents,settings.totalEvents);candidates=exploreStable(candidates,r=>r.battle_level,settings.battleLevel);}
-    const filtered=exploreFiltered(settings,playerDocument,meta),c=exploreConsigliere(playerDocument),level=Number(playerDocument?.player?.level||0);
+    const filtered=exploreFiltered(settings,state,meta),c=exploreConsigliere(state),level=Number(state?.player?.level||0);
     return {settings,meta,candidates,selected:settings.exploreTargetTier?candidates.slice(0,settings.maxBuildings):candidates,filteredCount:filtered.length,tierCounts:exploreCounts(filtered),consigliere:c,autoMaxTier:exploreAutoTier(c),playerLevel:level,tierModes:exploreTierModes(level),targetScan:scan,totalEventsKnown:basic.totalEventsKnown};
   }
   async function explorePreparePlan(){
@@ -1896,12 +1917,12 @@
   function exploreDistrictOptions(v){return ['<option value="all">'+either('Все районы','All districts')+'</option>'].concat((exploreMeta?.districts||[]).map(r=>'<option value="'+escapeHtml(r.areaId)+'" '+(String(v)===String(r.areaId)?'selected':'')+'>'+escapeHtml(r.label)+'</option>')).join('');}
 
   function renderExplore(){
-    const box=root?.querySelector('#hk-explore-content');if(!box)return;const s=exploreSettings(),p=explorePlan,st=hkStateStore.snapshot||playerDocument||{},active=exploreActive(st),c=p?.consigliere||exploreConsigliere(st);
-    const auto=p?.autoMaxTier??exploreAutoTier(c),level=p?.playerLevel??Number(st?.player?.level||0),modes=p?.tierModes||exploreTierModes(level),counts=p?.tierCounts||exploreCounts(active),targetOk=s.targetTier>=1&&s.targetTier<=6;
+    const box=root?.querySelector('#hk-explore-content');if(!box)return;const s=exploreSettings(),p=explorePlan,st=exploreState(),ready=!!st?.player&&(Array.isArray(st?.buildings)||Array.isArray(st?.player?.buildings)),active=ready?exploreActive(st):[],c=p?.consigliere||(ready?exploreConsigliere(st):null);
+    const auto=p?.autoMaxTier??(ready?exploreAutoTier(c):-1),level=p?.playerLevel??(ready?Number(st?.player?.level||0):null),modes=p?.tierModes||(ready?exploreTierModes(level):{}),counts=p?.tierCounts||exploreCounts(active),targetOk=s.targetTier>=1&&s.targetTier<=6;
     const maxStart=targetOk&&s.exploreTargetTier?s.targetTier:Math.min(s.targetTier,7)-1;
     const tiers=EXPLORE_TIERS.map(t=>'<label class="hk-ex-check"><input type="checkbox" data-ex-tier="'+t.value+'" '+(s.startTiers.includes(t.value)?'checked':'')+' '+(t.value>maxStart?'disabled':'')+'><span>'+t.label+'</span><small class="hk-muted"><span data-ex-count="'+t.value+'">'+(counts[t.value]?.all||0)+'</span> / <span data-ex-battles="'+t.value+'">'+(counts[t.value]?.battles||0)+'</span></small></label>').join('');
     const targets=EXPLORE_TIERS.filter(t=>t.value>=1).map(t=>'<option value="'+t.value+'" '+(s.targetTier===t.value?'selected':'')+'>'+t.label+'</option>').join('')+'<option value="8" '+(s.targetTier===8?'selected':'')+'>'+either('Мгновенно MAX','Instant MAX')+'</option>';
-    const modeLine=EXPLORE_TIERS.map(t=>'<span><b>'+t.label+'</b> '+(modes[t.value]==='fast'?either('быстро','fast'):modes[t.value]==='auto'?either('авто','auto'):either('вручную','manual'))+'</span>').join('');
+    const modeLine=EXPLORE_TIERS.map(t=>'<span><b>'+t.label+'</b> '+(!ready?'—':modes[t.value]==='fast'?either('быстро','fast'):modes[t.value]==='auto'?either('авто','auto'):either('вручную','manual'))+'</span>').join('');
     const rows=(p?.selected||[]).slice(0,20).map((r,i)=>'<div class="hk-card"><div class="hk-business-info"><b>'+(i+1)+'. '+escapeHtml(r.id)+'</b><small>'+escapeHtml(r.areaId||either('район неизвестен','district unknown'))+' · '+exploreTierLabel(r.tier)+' · '+either('ур.','Lv')+' '+Number(r.level||0)+' · '+either('бой','battle')+' '+Number(r.battle_level||0)+'/'+Number(r.max_battle_level||0)+' · '+either('события','events')+' '+(r.targetRemaining!=null?(r.targetRemaining+'/'+r.targetTotal):(r.totalEvents==null?'?':r.totalEvents))+(r.isInvest===true?' · ◆ '+either('инвест','investment'):r.isInvest===false?' · '+either('обычное','normal'):'')+'</small></div><strong>→ '+exploreTierLabel(s.targetTier)+'</strong></div>').join('');
     const planHtml=p?'<div class="hk-cardbox"><b>'+either('Read-only план','Read-only plan')+'</b><p class="hk-muted">'+either('После фильтров','After filters')+': '+p.filteredCount+' · '+either('кандидатов','candidates')+': '+p.candidates.length+' · '+either('к обработке','to process')+': '+p.selected.length+'</p>'+
       (p.targetScan.checked?'<p class="hk-muted">'+either('Проверено на целевом тире','Checked at target tier')+': '+p.targetScan.checked+' · '+either('готовых пропущено','finished skipped')+': '+p.targetScan.skipped+(p.targetScan.errors?' · '+either('ошибок','errors')+': '+p.targetScan.errors:'')+'</p>':'')+
@@ -1936,11 +1957,11 @@
       '</style>'+
       '<div class="hk-clan-head"><div><h3>'+either('Исследование зданий','Explore Buildings')+'</h3><small>'+either('E2 · только чтение и расчёт','E2 · read-only planning')+'</small></div><button id="hk-ex-refresh" class="hk-secondary" '+(exploreBusy?'disabled':'')+'>'+either('Обновить','Refresh')+'</button></div>'+
       '<div class="hk-ex-main">'+
-        '<div class="hk-cardbox"><b>'+either('Возможности аккаунта','Account capabilities')+'</b><p class="hk-muted" style="margin:6px 0 0">'+either('Уровень','Level')+': '+Number(level).toLocaleString(locale())+' · Remort Consigliere: '+(c?(Number(c.level||0)+' · '+(c.status==='ACTIVE'?either('активен','active'):either('заблокирован','locked'))):either('не найден','not found'))+' · '+either('Автобои','Auto battles')+': '+(auto>=0?either('до ','up to ')+exploreTierLabel(auto):either('нет','none'))+'</p><div class="hk-ex-modes">'+modeLine+'</div></div>'+
+        '<div class="hk-cardbox"><b>'+either('Возможности аккаунта','Account capabilities')+'</b><p class="hk-muted" style="margin:6px 0 0">'+either('Уровень','Level')+': '+(ready?Number(level).toLocaleString(locale()):'—')+' · Remort Consigliere: '+(!ready?'—':c?(Number(c.level||0)+' · '+(c.status==='ACTIVE'?either('активен','active'):either('заблокирован','locked'))):either('не найден','not found'))+' · '+either('Автобои','Auto battles')+': '+(!ready?'—':auto>=0?either('до ','up to ')+exploreTierLabel(auto):either('нет','none'))+'</p><div class="hk-ex-modes">'+modeLine+'</div></div>'+
         '<div class="hk-cardbox"><b>'+either('Фильтры зданий','Building filters')+'</b>'+
           '<div class="hk-ex-filter-grid">'+
             '<label class="hk-ex-field"><span>'+either('Район','District')+'</span><select id="hk-ex-district">'+exploreDistrictOptions(s.districtId)+'</select></label>'+
-            '<label class="hk-ex-field"><span>'+either('Тип здания','Building type')+'</span><select id="hk-ex-type"><option value="all" '+(s.buildingType==='all'?'selected':'')+'>'+either('Все','All')+'</option><option value="normal" '+(s.buildingType==='normal'?'selected':'')+'>'+either('Обычные','Normal')+'</option><option value="investment" '+(s.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные','Investment')+'</option></select></label>'+
+            '<label class="hk-ex-field"><span>'+either('Тип здания','Building type')+'</span><select id="hk-ex-type"><option value="all" '+(s.buildingType==='all'?'selected':'')+'>'+either('Все','All')+'</option><option value="normal" '+(s.buildingType==='normal'?'selected':'')+'>'+either('Обычные (>20 событий)','Normal (>20 events)')+'</option><option value="investment" '+(s.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные (до 20 событий)','Investment (up to 20 events)')+'</option></select></label>'+
             '<label class="hk-ex-field"><span>'+either('Целевой тир','Target tier')+'</span><select id="hk-ex-target">'+targets+'</select></label>'+
             '<label class="hk-ex-field"><span>'+either('Максимум зданий','Maximum buildings')+'</span><input id="hk-ex-max" type="number" min="1" max="5000" value="'+s.maxBuildings+'"></label>'+
           '</div>'+
@@ -1974,7 +1995,7 @@
 
     const dirty=()=>{const n=box.querySelector('#hk-ex-dirty');if(n)n.textContent=either('Настройки изменены — пересчитайте план','Settings changed — recalculate plan');const r=box.querySelector('#hk-ex-plan-result');if(r)r.innerHTML='<div class="hk-cardbox hk-ex-hint">'+either('Настройки изменены. Нажмите «Рассчитать план».','Settings changed. Press “Calculate plan”.')+'</div>';};
     const updateFilterPreview=(settings=exploreSettings())=>{
-      const state=hkStateStore.snapshot||playerDocument||{},summary=box.querySelector('#hk-ex-filter-summary'),ready=!!state?.player&&Array.isArray(state?.buildings),metaReady=!!exploreMeta;
+      const state=exploreState(),summary=box.querySelector('#hk-ex-filter-summary'),ready=!!state?.player&&(Array.isArray(state?.buildings)||Array.isArray(state?.player?.buildings)),metaReady=!!exploreMeta&&exploreMeta.playerKey===String(playerIdentity(state?.player||{})||'');
       if(!ready){
         for(const t of EXPLORE_TIERS){const cEl=box.querySelector('[data-ex-count="'+t.value+'"]'),bEl=box.querySelector('[data-ex-battles="'+t.value+'"]');if(cEl)cEl.textContent='—';if(bEl)bEl.textContent='—';}
         if(summary)summary.textContent=either('Данные аккаунта ещё загружаются. Нажмите «Обновить», если значения не появятся.','Account data is still loading. Press “Refresh” if values do not appear.');
@@ -2012,9 +2033,9 @@
     updateFilterPreview(s);
   }
   async function refreshExplore(force=false){
-    if(!requireLicense())return null;if(exploreBusy)return playerDocument;exploreBusy=true;renderExplore();
-    try{playerDocument=await hkAuthoritativePlayerRead('explore:view');exploreMeta=await exploreLoadMeta(force);explorePlan=null;if(force)log(either('Исследование обновлено','Explore refreshed'),'ok');return playerDocument;}
-    catch(e){log(either('Ошибка чтения исследования','Explore read error')+': '+(e?.message||e),'warn');return null;}finally{exploreBusy=false;renderExplore();}
+    if(!requireLicense())return null;if(exploreBusy)return explorePlayerState;exploreBusy=true;renderExplore();
+    try{const state=await exploreReadFreshPlayer('explore:view');exploreMeta=await exploreLoadMeta(force,state);explorePlan=null;if(force)log(either('Исследование обновлено','Explore refreshed'),'ok');return state;}
+    catch(e){explorePlayerState=null;exploreMeta=null;log(either('Ошибка чтения исследования','Explore read error')+': '+(e?.message||e),'warn');return null;}finally{exploreBusy=false;renderExplore();}
   }
 
   async function acceptBuildingStudy(url, headers, documentValue) {
