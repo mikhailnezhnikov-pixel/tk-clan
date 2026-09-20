@@ -642,3 +642,14 @@ Live/public SHA256: `a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0ce
 
 Current status: **SCANNER_R2_LIVE_CANDIDATE**.
 Buildings r1 remains deployed but its live confirmation is paused until Maps scanner r2 is confirmed. Explore remains blocked.
+
+
+## Maps canonical coordinate fix r1
+
+- reversed district coordinate labels confirmed;
+- canonical map submission now converts raw game row/column to user-facing X:Y = column:row;
+- marker: `maps-coordinates-column-row-20260920-r1`;
+- technical live verification: PASS;
+- live/public SHA256: `f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290`.
+
+Maps remains **SCANNER_R2_LIVE_CANDIDATE** pending user confirmation after a fresh account-map scan.
