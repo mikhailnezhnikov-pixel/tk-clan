@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: REWARD_EXECUTION_R13_LIVE_CANDIDATE_PENDING_USER_CHECK
+- current module status: FINAL_LIVE_CHECKS_PENDING
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -458,3 +458,21 @@ Required user live checks:
 - reward execution/recalculation/adaptive fit + rerun;
 - r17 runtime exact winrate.
 Only after these: mark Pits LIVE PASS and proceed to Bosses.
+
+
+## Pits handoff revalidation after r20
+
+- pinned donor revalidated from the current uploaded `скрипт Kokkaras,.txt`;
+- raw upload SHA256: `8a5aece8b10dfbaf0b3dd2890de600a9505aa523783cbe0c97ea81331d7e0c7d`;
+- CRLF -> LF canonical SHA256: `28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1` — exact REFERENCE match;
+- current baseline re-read: Pits markers r1-r20 present;
+- active canonical runner: `runPitsCanonical()`;
+- legacy `pitLoop()` remains defined but is not the active Pits start path;
+- no Pits code change made during this revalidation;
+- module status remains **FINAL_LIVE_CHECKS_PENDING**.
+
+Remaining live-only checks:
+1. r11 Restoration decision: exceed configured Paws limit, choose spend+continue, verify state change;
+2. reward execution/recalculation: r13 + r18 + r19 controlled run and resulting state;
+3. r17 exact runtime winrate from game preview;
+4. rerun and confirm the resulting state is read correctly.
