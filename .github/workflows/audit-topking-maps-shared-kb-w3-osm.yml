@@ -1,0 +1,204 @@
+name: Audit TopKing W3 OSM Building Recovery
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-shared-kb-w3-osm-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Export pilot rows read-only
+        run: |
+          cat > /tmp/w3-export.py <<'PY'
+          import json,sqlite3
+          PILOT='hk_moscow1226'
+          AREA='9ea6ff78-b881-45b3-b92d-a8f1da8eca05'
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          p=db.execute("SELECT points_json FROM hk_map_points WHERE map_key=?",(PILOT,)).fetchone()
+          rows=[dict(r) for r in db.execute(
+              "SELECT building_id,room_count,last_player_id,last_seen FROM map_buildings WHERE area_id=? ORDER BY building_id",
+              (AREA,)
+          )]
+          print(json.dumps({'flat':json.loads(p['points_json']),'buildings':rows},ensure_ascii=False))
+          db.close()
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w3-export.py root@89.125.1.71:/tmp/w3-export.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w3-export.py' > /tmp/w3-input.json
+
+      - name: Recover OSM building IDs for positive points
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,math,urllib.parse,urllib.request,time
+          data=json.load(open('/tmp/w3-input.json',encoding='utf-8'))
+          flat=data['flat']; rows=data['buildings']
+          lng=lat=0; points=[]
+          for i in range(0,len(flat),3):
+              lng+=int(flat[i]); lat+=int(flat[i+1]); flag=int(flat[i+2])
+              inv=flag>=7
+              crystals=flag-8 if inv else flag
+              points.append({'lon':lng/1e5,'lat':lat/1e5,'crystals':crystals,'investment':inv})
+          assert len(points)==32, len(points)
+          hist={}
+          for p in points: hist[str(p['crystals'])]=hist.get(str(p['crystals']),0)+1
+          assert hist=={'1':17,'2':12,'3':3},hist
+
+          ids=[str(r['building_id']) for r in rows]
+          clauses=[]
+          for bid in ids:
+              if bid.startswith('way') and bid[3:].isdigit():
+                  clauses.append(f"way({int(bid[3:])});")
+              elif bid.startswith('relation') and bid[8:].isdigit():
+                  clauses.append(f"relation({int(bid[8:])});")
+          query='[out:json][timeout:60];('+''.join(clauses)+');out geom;'
+          body=urllib.parse.urlencode({'data':query}).encode()
+          response=None; errors=[]
+          for endpoint in ('https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'):
+              try:
+                  req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W3-audit/1.0'})
+                  with urllib.request.urlopen(req,timeout=90) as r:
+                      response=json.load(r)
+                  break
+              except Exception as e:
+                  errors.append(endpoint+':'+repr(e))
+          if response is None:
+              raise SystemExit('overpass failed: '+' | '.join(errors))
+
+          def ring_contains(ring, x, y):
+              if len(ring)<3:return False
+              inside=False
+              j=len(ring)-1
+              for i in range(len(ring)):
+                  xi,yi=ring[i]; xj,yj=ring[j]
+                  if ((yi>y)!=(yj>y)):
+                      cross=(xj-xi)*(y-yi)/(yj-yi)+xi
+                      if x<cross: inside=not inside
+                  j=i
+              return inside
+
+          features={}
+          for e in response.get('elements',[]):
+              typ=e.get('type'); eid=e.get('id')
+              if typ not in ('way','relation') or eid is None: continue
+              bid=('way' if typ=='way' else 'relation')+str(eid)
+              polys=[]
+              if typ=='way':
+                  geom=e.get('geometry') or []
+                  ring=[(float(n['lon']),float(n['lat'])) for n in geom if 'lon' in n and 'lat' in n]
+                  if len(ring)>=3: polys.append(ring)
+              else:
+                  for m in e.get('members') or []:
+                      if m.get('role')!='outer': continue
+                      geom=m.get('geometry') or []
+                      ring=[(float(n['lon']),float(n['lat'])) for n in geom if 'lon' in n and 'lat' in n]
+                      if len(ring)>=3: polys.append(ring)
+              features[bid]=polys
+
+          matches=[]
+          for idx,p in enumerate(points):
+              cand=[]
+              for bid,polys in features.items():
+                  if any(ring_contains(r,p['lon'],p['lat']) for r in polys):
+                      cand.append(bid)
+              matches.append({'index':idx,'point':p,'candidates':sorted(cand)})
+
+          unique=[m for m in matches if len(m['candidates'])==1]
+          unmatched=[m for m in matches if len(m['candidates'])==0]
+          ambiguous=[m for m in matches if len(m['candidates'])>1]
+          unique_ids=[m['candidates'][0] for m in unique]
+          rowmap={str(r['building_id']):r for r in rows}
+          current_hist={}
+          source_hist={}
+          for bid in unique_ids:
+              r=rowmap[bid]
+              k='null' if r['room_count'] is None else str(r['room_count'])
+              current_hist[k]=current_hist.get(k,0)+1
+              src=str(r['last_player_id']); source_hist[src]=source_hist.get(src,0)+1
+          report={
+              'decoded_hist':hist,
+              'decoded_investment_count':sum(1 for p in points if p['investment']),
+              'canonical_ids':len(ids),
+              'overpass_elements':len(response.get('elements',[])),
+              'overpass_canonical_features':len(features),
+              'unique_matches':len(unique),
+              'unique_building_ids':len(set(unique_ids)),
+              'unmatched':len(unmatched),
+              'ambiguous':len(ambiguous),
+              'current_room_hist_for_matches':current_hist,
+              'source_hist_for_matches':source_hist,
+              'matches':matches,
+          }
+          open('/tmp/w3-osm-report.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
+          print(json.dumps({k:v for k,v in report.items() if k!='matches'},ensure_ascii=False,indent=2,sort_keys=True))
+          print('UNMATCHED='+json.dumps(unmatched,ensure_ascii=False))
+          print('AMBIGUOUS='+json.dumps(ambiguous,ensure_ascii=False))
+          PY
+
+      - name: Record audit evidence
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w3-osm-report.json',encoding='utf-8'))
+          lines=[
+            'MAPS_SHARED_KB_W3_OSM_RECOVERY_AUDIT=PASS',
+            'pilot=hk_moscow1226',
+            'decoded_hist='+json.dumps(d['decoded_hist'],sort_keys=True,separators=(',',':')),
+            f"decoded_investment_count={d['decoded_investment_count']}",
+            f"canonical_ids={d['canonical_ids']}",
+            f"overpass_elements={d['overpass_elements']}",
+            f"overpass_canonical_features={d['overpass_canonical_features']}",
+            f"unique_matches={d['unique_matches']}",
+            f"unique_building_ids={d['unique_building_ids']}",
+            f"unmatched={d['unmatched']}",
+            f"ambiguous={d['ambiguous']}",
+            'current_room_hist_for_matches='+json.dumps(d['current_room_hist_for_matches'],sort_keys=True,separators=(',',':')),
+            'source_hist_for_matches='+json.dumps(d['source_hist_for_matches'],sort_keys=True,separators=(',',':')),
+            'live_mutation=NO',
+          ]
+          if d['unmatched'] or d['ambiguous']:
+              bad=[m for m in d['matches'] if len(m['candidates'])!=1]
+              lines.append('nonunique_points='+json.dumps(bad,ensure_ascii=False,separators=(',',':')))
+          else:
+              mapped=[{'building_id':m['candidates'][0],**m['point']} for m in d['matches']]
+              lines.append('mapped_points='+json.dumps(mapped,ensure_ascii=False,separators=(',',':')))
+          open('audit/hk-stage2-maps-shared-kb-w3-osm-recovery.txt','w',encoding='utf-8').write('\n'.join(lines)+'\n')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w3-osm-recovery.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: recover W3 pilot building IDs"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'rm -f /tmp/w3-export.py' || true
+          rm -f "$HOME/.ssh/topking" /tmp/w3-export.py /tmp/w3-input.json /tmp/w3-osm-report.json
