@@ -29,17 +29,26 @@ Historical versions of our own script are implementation history, not automatica
 
 ## Current status
 
-The exact external donor script has **not yet been captured into this repository**.
+The exact donor is now **pinned by metadata** in `reference/topking/REFERENCE.json`.
 
-Past work refers to another script/source that was used to copy behavior, and for alliance metrics the user explicitly referred to the external Patreon source as the reference for how totals are determined. However, there is currently no exact donor filename/URL/content committed here.
+Pinned source:
+- name: Kokkaras HK Control Panel;
+- File Library title: `Вставленный текст.txt`;
+- pinned SHA256: `28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1`;
+- donor version: `5.3.22-ui-icons-pit-dim`;
+- source URL embedded in donor: `https://kokkaras.com/hk_maps/panel.js`.
 
-Until the exact donor is captured, do not substitute our current or historical HamsterKingMobile scripts for it.
+Important: the public URL is mutable and changed after the user's capture. **Never replace the pinned uploaded revision with whatever the live URL currently returns.**
 
-## Intended files
+## Mandatory stage preflight
 
-Once the exact donor is available, store:
+When the user says `начни этап N` or `продолжи этап N`:
 
-- `REFERENCE.json` — source name/version/SHA/origin;
-- `donor.current.js` or the exact original filename;
-- immutable snapshot with version/SHA;
-- optional `NOTES.md` describing provenance only, not reinterpreting mechanics.
+1. Read `reference/topking/REFERENCE.json`.
+2. Locate the pinned donor in ChatGPT File Library using the exact title/file id and identity anchors.
+3. Read the donor code relevant to the requested stage.
+4. Only then read `baseline/topking/BASELINE.json` and `baseline/topking/HamsterKingMobile.current.user.js`.
+5. Read only the requested stage in `docs/HK_MASTER_ROADMAP.md`.
+6. Execute only that stage.
+
+If the exact donor cannot be located, report `DONOR SOURCE NOT FOUND` and do not reconstruct behavior from memory, screenshots, roadmap prose or old HK builds.
