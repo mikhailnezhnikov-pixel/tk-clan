@@ -1,0 +1,107 @@
+name: Reapply TopKing Maps Two Fixes
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-two-fixes-reapply-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Verify current rolled-back live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/current-live.js
+          node --check /tmp/current-live.js
+          ! grep -Fq "maps-building-scan-20260920-r2" /tmp/current-live.js
+          ! grep -Fq "maps-coordinates-column-row-20260920-r1" /tmp/current-live.js
+          test "$(sha256sum /tmp/current-live.js | awk '{print $1}')" = "0931ee3eb65a16f9dd768fe51b9a84b897620e011c51ee9e0226d92f37b9e686"
+
+      - name: Restore exact verified two-fix candidate
+        run: |
+          set -euo pipefail
+          git show b52fb38306b76a22544aeb8f29a767f8cbde61c8:baseline/topking/HamsterKingMobile.current.user.js > /tmp/HamsterKingMobile.maps-two-fixes.user.js
+          node --check /tmp/HamsterKingMobile.maps-two-fixes.user.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-building-scan-20260920-r2'" /tmp/HamsterKingMobile.maps-two-fixes.user.js
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1'" /tmp/HamsterKingMobile.maps-two-fixes.user.js
+          grep -Fq "HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1'" /tmp/HamsterKingMobile.maps-two-fixes.user.js
+          grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2'" /tmp/HamsterKingMobile.maps-two-fixes.user.js
+          grep -Fq "HK_PITS_REWARD_PICKER_REV = 'pits-reward-picker-20260920-r20'" /tmp/HamsterKingMobile.maps-two-fixes.user.js
+          test "$(sha256sum /tmp/HamsterKingMobile.maps-two-fixes.user.js | awk '{print $1}')" = "f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290"
+
+      - name: Backup and deploy
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.maps-two-fixes.user.js root@89.125.1.71:/tmp/HamsterKingMobile.maps-two-fixes.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            node --check /tmp/HamsterKingMobile.maps-two-fixes.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.before-reapply-map-fixes.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.maps-two-fixes.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+
+      - name: Verify public round trip
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?reapply-map-fixes=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.maps-two-fixes.user.js /tmp/public.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-building-scan-20260920-r2'" /tmp/public.js
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1'" /tmp/public.js
+          sha="$(sha256sum /tmp/public.js | awk '{print $1}')"
+          test "$sha" = "f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290"
+          {
+            echo "MAPS_TWO_FIXES_REAPPLY=PASS"
+            echo "live_sha256=$sha"
+            echo "public_sha256=$sha"
+            echo "public_byte_equality=PASS"
+            echo "syntax=PASS"
+            echo "scanner_r2=present"
+            echo "coords_r1=present"
+          } > audit/hk-stage2-maps-two-fixes-reapply-status.txt
+
+      - name: Sync verified baseline
+        run: |
+          set -euo pipefail
+          cp /tmp/HamsterKingMobile.maps-two-fixes.user.js baseline/topking/HamsterKingMobile.current.user.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-stage2-maps-two-fixes-reapply-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "stage2: reapply both Maps fixes"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/current-live.js /tmp/HamsterKingMobile.maps-two-fixes.user.js /tmp/public.js
