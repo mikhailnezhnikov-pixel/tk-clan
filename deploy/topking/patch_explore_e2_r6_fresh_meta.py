@@ -133,8 +133,8 @@ s=s.replace(
 1
 )
 s=s.replace(
-"<option value="normal" '+(s.buildingType==='normal'?'selected':'')+'>'+either('Обычные','Normal')+'</option><option value="investment" '+(s.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные','Investment')+'</option>",
-"<option value="normal" '+(s.buildingType==='normal'?'selected':'')+'>'+either('Обычные (>20 событий)','Normal (>20 events)')+'</option><option value="investment" '+(s.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные (до 20 событий)','Investment (up to 20 events)')+'</option>",
+"""<option value="normal" '+(s.buildingType==='normal'?'selected':'')+'>'+either('Обычные','Normal')+'</option><option value="investment" '+(s.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные','Investment')+'</option>""",
+"""<option value="normal" '+(s.buildingType==='normal'?'selected':'')+'>'+either('Обычные (>20 событий)','Normal (>20 events)')+'</option><option value="investment" '+(s.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные (до 20 событий)','Investment (up to 20 events)')+'</option>""",
 1
 )
 s=s.replace(
