@@ -2820,9 +2820,13 @@
 
   async function runPitsCanonical() {
     if(!requireLicense())return;if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
+    const configs=pitCanonReadRunConfigs();
+    if(!configs.length){alert(either('Выберите хотя бы одну Яму','Select at least one Pit'));return;}
+    const total=configs.reduce((sum,row)=>sum+row.steps.length,0),progress={done:0,total};
+    hkRunner.start({title:either('Ямы','Pits'),step:either('Подготовка','Preparing'),total,pausable:true,stoppable:true});
+    recordDiagnostic('pits-run-config-snapshot',{pits:configs.map(config=>({id:config.definition?.id,planId:config.planId,steps:config.steps?.length||0,sniper:!!config.sniper,target:config.target}))});
     try{
-      playerDocument=await hkAuthoritativePlayerRead('pits:prepare');pitCanonRender();const configs=pitCanonReadRunConfigs();if(!configs.length){alert(either('Выберите хотя бы одну Яму','Select at least one Pit'));return;}
-      const total=configs.reduce((sum,row)=>sum+row.steps.length,0),progress={done:0,total};hkRunner.start({title:either('Ямы','Pits'),step:either('Подготовка','Preparing'),total,pausable:true,stoppable:true});
+      playerDocument=await hkAuthoritativePlayerRead('pits:prepare');
       for(const config of configs)await pitCanonRunOne(config,progress);
       playerDocument=await hkAuthoritativePlayerRead('pits:complete');pitCanonRender();hkRunner.finish(either('Ямы завершены','Pits completed'));log(either('Выбранные Ямы завершены.','Selected Pits completed.'),'ok');
     }catch(error){
@@ -5716,6 +5720,7 @@
   const HK_PITS_UI_REV = 'pits-ui-align-20260920-r2';
   const HK_PITS_SNIPER_REV = 'pits-passplan-sniper-20260920-r3';
   const HK_PITS_TOOLBAR_REV = 'pits-toolbar-clean-20260920-r4';
+  const HK_PITS_START_REV = 'pits-start-config-snapshot-20260920-r5';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
