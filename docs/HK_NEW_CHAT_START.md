@@ -8,11 +8,19 @@
 
 ## Перед работой открыть
 
-1. `reference/topking/README.md`
-2. точный donor/reference script из `reference/topking/` — если он уже сохранён
-3. `baseline/topking/BASELINE.json`
-4. `baseline/topking/HamsterKingMobile.current.user.js`
-5. `docs/HK_MASTER_ROADMAP.md` — только для текущего этапа
+### Автоматический SOURCE PREFLIGHT
+
+Если пользователь пишет **«начни этап N»** или **«продолжи этап N»**, сначала обязательно:
+
+1. открыть `reference/topking/REFERENCE.json`;
+2. найти указанный там pinned donor в ChatGPT File Library;
+3. сверить donor по версии/source anchors;
+4. прочитать относящийся к этапу donor-код;
+5. открыть `baseline/topking/BASELINE.json`;
+6. открыть `baseline/topking/HamsterKingMobile.current.user.js`;
+7. открыть `docs/HK_MASTER_ROADMAP.md` и выполнять только указанный этап.
+
+Текущий pinned donor задаётся **только** `REFERENCE.json`. Живой URL Kokkaras не заменяет закреплённую ревизию.
 
 ## Роли источников
 
@@ -66,4 +74,16 @@
 
 ## Команда для нового чата
 
-> Работай по `docs/HK_NEW_CHAT_START.md`. Для переносимой механики сначала используй точный donor/reference script из `reference/topking/`, а наш `baseline/topking/HamsterKingMobile.current.user.js` используй только как текущую реализацию для интеграции. Не придумывай механику по тексту. Затем выполняй указанный этап из `docs/HK_MASTER_ROADMAP.md`.
+Достаточно написать:
+
+> Начни этап N.
+
+или:
+
+> Продолжи этап N.
+
+Это автоматически означает: выполнить SOURCE PREFLIGHT из `reference/topking/REFERENCE.json`, затем работать только по соответствующему этапу `docs/HK_MASTER_ROADMAP.md`.
+
+Расширенная команда, если нужно явно повторить правило:
+
+> Работай по `docs/HK_NEW_CHAT_START.md`. Сначала выполни SOURCE PREFLIGHT из `reference/topking/REFERENCE.json`, используй pinned donor как источник существующей механики, current baseline — только для интеграции, затем выполняй только указанный этап `docs/HK_MASTER_ROADMAP.md`.
