@@ -166,8 +166,6 @@ render=r'''  function pitCanonRender() {
   }
 
 ''';
-// Fix the literal source expression for the any-target label inside the generated JS.
-render=render.replace('${JSON.stringify("either(\'Неважно — идти как можно дальше\',\'Go as far as possible\')")}',"${either('Неважно — идти как можно дальше','Go as far as possible')}");
 s=replace_block(s,"  function pitCanonRender() {","  function pitCanonReadRunConfigs() {",render,"render")
 
 read_configs=r'''  function pitCanonReadRunConfigs() {
