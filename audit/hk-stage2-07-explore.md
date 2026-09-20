@@ -830,3 +830,76 @@ User should reload Explore and verify:
 
 Do not start E3 automatically.
 
+## E2 r7 — active-building area/type mapping fix
+
+Status: **LIVE CANDIDATE / USER FILTER CHECK PENDING**
+
+Marker:
+`HK_EXPLORE_CANON_REV = 'explore-readonly-plan-20260920-r7-area-types'`
+
+Live/baseline sync commit:
+`e152c741852e57282d96111b7133bc6f6373a6d0`
+
+### User report
+
+With r6:
+- All buildings returned the expected active-building population;
+- Ordinary and Investment both returned zero.
+
+This proved that the selector itself worked, but active buildings had no resolved type metadata.
+
+### Root cause
+
+Explore r6 read the fresh player state correctly, but its building→area lookup still depended on shared map helpers whose cache key can prefer the global state store. That prevented the Explore metadata loader from resolving areas for the fresh Explore snapshot.
+
+Without area IDs, the district metadata could not provide exact investment membership, so type-specific filters saw every active building as unknown.
+
+The r6 event-count fallback was also removed. Donor filtering uses explicit metadata `building_type`; event count is not a valid substitute for building type.
+
+### r7 fix
+
+- Explore now builds its own read-only building→area index using the saved `mapBuildingAreasByPlayer` entry for the **current Explore player ID**;
+- direct area fields and already-known in-memory map mappings remain safe fallbacks;
+- for each resolved district, Explore reads the exact district metadata already used by Maps;
+- building type priority is now:
+  1. explicit `building_type = normal|investment`;
+  2. explicit boolean investment field;
+  3. exact membership in district `invest_building_list`;
+- no event-count heuristic remains;
+- UI labels are again simply Ordinary / Investment.
+
+This matches the donor contract: the donor filters by exact per-building `building_type`, not by candidate event count. fileciteturn183file0
+
+### Safety / scope
+
+- E3 actions added: **NO**;
+- Explore mutation endpoints: **0**;
+- Maps backend/schema changed: **NO**;
+- map scanner concurrency remains **5**;
+- patch outside the Explore block: byte-identical.
+
+### Live verification
+
+- source live SHA256: `2855b2bf6a4ad714838e8b89b7460ad22e99afcf39430b34edd37b527d52a5af`;
+- deployed/public SHA256: `4b58e9866bdf77fc3a298b47743da6c7e80f5eb618fb5f25f07c1e648e2e7584`;
+- syntax: PASS;
+- service/deploy: PASS;
+- public byte equality: PASS;
+- exact/current-player area index: PASS;
+- explicit/invest-list building type: PASS;
+- event-count type heuristic: REMOVED;
+- map concurrency 5 preserved: PASS.
+
+Evidence:
+`audit/hk-stage2-explore-e2-r7-area-types-live-status.txt`
+
+### Stop gate
+
+Reload Explore and verify that:
+- All still shows the full active population;
+- Ordinary and Investment now split that population into non-zero groups where both types are owned;
+- tier counters update immediately when switching type;
+- Calculate Plan respects the selected type.
+
+Do not start E3 automatically.
+
