@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Today / Сегодня
 - current module file: audit/hk-stage2-01-today.md
-- current module status: LIVE_CANDIDATE_PENDING_USER_UI_CHECK
+- current module status: LIVE_CANDIDATE_R2_PENDING_USER_UI_CHECK
 - next module after LIVE PASS: Pits / Ямы
 - do not advance until Today is LIVE PASS or has a concrete bug ticket
 
@@ -49,6 +49,10 @@ Each module:
 
 - marker: `today-kokkaras-order-20260920-r1`
 - version: `1.17.4`
-- live SHA256: `73a8da55150892cabbf2f5bf9f5d2a22fcaa8ad228ff1bee3d793b3429f3c21b`
+- live SHA256: `3bcf43a3fbc805d81d4e64cd41d13ca0ee1fccd85fded13f877a66c05bbfabae`
 - technical deploy/public verification: PASS
 - user UI confirmation: PENDING
+
+- r2 marker: `today-kokkaras-filter-20260920-r2`
+- donor-exact Event Regular filter: PASS
+- reward rows use explicit "Собрать" wording
