@@ -1,1 +1,1 @@
-2026-09-21T00:31+09:00 inspect war snapshot after throttled run
+2026-09-21T00:44+09:00 inspect war recognition after transport fix
