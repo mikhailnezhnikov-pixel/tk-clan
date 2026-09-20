@@ -1,1 +1,1 @@
-w6 12m dryrun 6
+w6 dynamic 12m dryrun 7
