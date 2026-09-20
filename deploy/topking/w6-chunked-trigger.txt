@@ -1,1 +1,1 @@
-w6 point-local dryrun 5
+w6 12m dryrun 6
