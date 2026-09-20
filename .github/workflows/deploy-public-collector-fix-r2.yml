@@ -21,7 +21,7 @@ jobs:
       - name: Validate collector
         run: |
           set -euo pipefail
-          python3 -m py_compile deploy/topking/public_collector.py
+          python3 -m py_compile deploy/topking/public_collector.py deploy/topking/verify_public_collector_r2.py
           grep -Fq "ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py ratings" deploy/topking/hamsterking-public-collector.service
           grep -Fq "OnCalendar=*-*-* 00/3:15:00" deploy/topking/hamsterking-public-collector.timer
           grep -Fq "ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py war" deploy/topking/hamsterking-public-war.service
@@ -41,7 +41,7 @@ jobs:
       - name: Install collector R2
         run: |
           set -euo pipefail
-          for file in public_collector.py hamsterking-public-collector.service hamsterking-public-collector.timer hamsterking-public-war.service hamsterking-public-war.timer; do
+          for file in public_collector.py verify_public_collector_r2.py hamsterking-public-collector.service hamsterking-public-collector.timer hamsterking-public-war.service hamsterking-public-war.timer; do
             scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
               "deploy/topking/$file" "root@89.125.1.71:/tmp/$file"
           done
@@ -50,11 +50,12 @@ jobs:
             test -s /etc/hamsterking-public-collector.env
             grep -q "^HK_PUBLIC_COLLECTOR_GAME_TOKEN=." /etc/hamsterking-public-collector.env
             install -m 0755 /tmp/public_collector.py /opt/hamsterking-license/public_collector.py
+            install -m 0755 /tmp/verify_public_collector_r2.py /opt/hamsterking-license/verify_public_collector_r2.py
             install -m 0644 /tmp/hamsterking-public-collector.service /etc/systemd/system/hamsterking-public-collector.service
             install -m 0644 /tmp/hamsterking-public-collector.timer /etc/systemd/system/hamsterking-public-collector.timer
             install -m 0644 /tmp/hamsterking-public-war.service /etc/systemd/system/hamsterking-public-war.service
             install -m 0644 /tmp/hamsterking-public-war.timer /etc/systemd/system/hamsterking-public-war.timer
-            python3 -m py_compile /opt/hamsterking-license/public_collector.py
+            python3 -m py_compile /opt/hamsterking-license/public_collector.py /opt/hamsterking-license/verify_public_collector_r2.py
             systemctl daemon-reload
             systemctl enable --now hamsterking-public-collector.timer
             systemctl enable --now hamsterking-public-war.timer
@@ -71,34 +72,17 @@ jobs:
             systemctl start hamsterking-public-war.service
           '
 
-      - name: Verify DB and public endpoints
+      - name: Verify DB
         run: |
           set -euo pipefail
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 -c "
-import json, sqlite3
-db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db')
-war=db.execute('select snapshot_json,source_player_id,updated_at from public_clan_war_snapshot where singleton=1').fetchone()
-assert war, 'war snapshot missing'
-doc=json.loads(war[0])
-assert doc.get('opponent'), doc
-assert war[1]=='server-collector', war[1]
-print('war_opponent='+str(doc.get('opponent')))
-print('war_source='+str(war[1]))
-print('war_updated_at='+str(war[2]))
-for kind in ('alliance_defense','alliance_influence','alliance_power'):
-    count,source,updated=db.execute('select count(*),min(source_player_id),max(updated_at) from public_rating_snapshots where kind=?',(kind,)).fetchone()
-    print(f'{kind}_count={count}')
-    print(f'{kind}_source={source}')
-    print(f'{kind}_updated_at={updated}')
-    assert count>0, kind
-    assert source=='server-collector', (kind,source)
-print('top_alliance_defense='+json.dumps(db.execute('select rank,name,value from public_rating_snapshots where kind=? order by rank limit 5',('alliance_defense',)).fetchall(),ensure_ascii=False))
-print('top_alliance_influence='+json.dumps(db.execute('select rank,name,value from public_rating_snapshots where kind=? order by rank limit 5',('alliance_influence',)).fetchall(),ensure_ascii=False))
-print('top_alliance_power='+json.dumps(db.execute('select rank,name,value from public_rating_snapshots where kind=? order by rank limit 5',('alliance_power',)).fetchall(),ensure_ascii=False))
-db.close()
-"' > /tmp/public-collector-r2-db.txt
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /opt/hamsterking-license/verify_public_collector_r2.py' \
+            > /tmp/public-collector-r2-db.txt
           cat /tmp/public-collector-r2-db.txt
 
+      - name: Verify public endpoints and timers
+        run: |
+          set -euo pipefail
           curl -fsSL --retry 4 --connect-timeout 15 --max-time 30 \
             "https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war?verify=$(date +%s)" \
             -o /tmp/public-war.json
@@ -108,15 +92,15 @@ db.close()
             curl -fsSL --retry 4 --connect-timeout 15 --max-time 30 \
               "https://hk-license.89.125.1.71.sslip.io/api/v1/public/ratings?kind=$kind&verify=$(date +%s)" \
               -o "/tmp/$kind.json"
-            KIND="$kind" python3 -c "import json,os; d=json.load(open('/tmp/'+os.environ['KIND']+'.json')); assert len(d.get('rows',[]))>0,d; print(os.environ['KIND']+'_public_count='+str(len(d['rows'])))"
+            KIND="$kind" python3 -c "import json,os; k=os.environ['KIND']; d=json.load(open('/tmp/'+k+'.json')); assert len(d.get('rows',[]))>0,d; print(k+'_public_count='+str(len(d['rows'])))"
           done
 
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             systemctl is-active --quiet hamsterking-public-collector.timer
             systemctl is-active --quiet hamsterking-public-war.timer
-            grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = '''public-server-only-20260920-r2'''" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "HK_EXPLORE_CANON_REV='''explore-e3-single-20260920-r9-runner'''" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "public-server-only-20260920-r2" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "explore-e3-single-20260920-r9-runner" /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /opt/hamsterking-license/HamsterKingMobile.user.js
             echo "ratings_timer=PASS"
             echo "war_timer=PASS"
