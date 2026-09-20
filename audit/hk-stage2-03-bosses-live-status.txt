@@ -1,0 +1,6 @@
+checked_utc=2026-09-20T08:23:47Z
+marker=BOSSES_READONLY
+live_sha256=c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb
+public_sha256=c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb
+public_byte_equality=PASS
+syntax=PASS
