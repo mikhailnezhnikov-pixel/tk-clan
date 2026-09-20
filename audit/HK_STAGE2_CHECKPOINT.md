@@ -372,3 +372,39 @@ Do not advance to Bosses yet.
 Still pending before Pits LIVE PASS:
 - r11 restoration decision user-path check;
 - r13 reward execution/recalculation user-path check.
+
+
+## Pits r17–r19 final donor mechanics
+
+### r17 — runtime preview
+- exact game preview / winrate transferred;
+- normal `pit/preview`, boss `pit_2/preview`, gang `pit_pve/preview`;
+- exact `шанс игры` preferred; stored-power forecast is fallback;
+- deploy `35497432303` — PASS;
+- SHA256 `8a461d0627209a55eff885c039ecb92356feb51519e2e1e4e3c3660d0266afd1`;
+- sync `35497472469` — PASS.
+
+### r18 — adaptive reward batch fit
+- reward ITEM step can shrink to the largest supported affordable batch and decompose the remainder;
+- total reward multiplier is preserved;
+- deploy `35497591634` — PASS;
+- SHA256 `8f76e1d6ef11e15765c499807552d2e1b6c8bea7ee5f76d6e0d9eb06d0dabd6b`;
+- sync `35497639381` — PASS.
+
+### r19 — aggregate preflight
+- checks total crystals, configured Paws ceiling and shared Pit Pass/Tribute Box economy before first mutation;
+- failure stops before spending;
+- marker `pits-aggregate-preflight-20260920-r19`;
+- deploy `35497775963` — PASS;
+- live/public SHA256 `0c13faad6e3a85b6105e62d8b9e764077724063947c047e13a377b1d8c0fe71a`;
+- sync `35497815376` — PASS.
+
+Current module status:
+**FINAL_LIVE_CHECKS_PENDING**
+
+No Bosses yet.
+
+Required final Pits checks:
+- r11 restoration-decision live path;
+- reward target execution/recalculation + final state/rerun;
+- runtime exact winrate visibility when preview supplies data.
