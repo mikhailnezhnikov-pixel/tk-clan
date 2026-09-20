@@ -2588,6 +2588,17 @@
     box.classList.toggle('hk-pits-busy',!!busy);
   }
 
+  function pitCanonFastCycleDelay(def,sniper=false) {
+    if(sniper)return def?.id==='gang'?120:80;
+    return def?.id==='gang'?180:120;
+  }
+
+  function pitCanonStateAfterMutation(def,response,reason) {
+    playerDocument=hkStateStore.snapshot||playerDocument;
+    let state=pitRaceSnapshot(def.id,playerDocument)||pitRaceSnapshot(def.id,response);
+    return {state,needsReread:!state,reason};
+  }
+
   function pitCanonBattleTelemetry(def,level) {
     const type=def?.id;
     const numericLevel=pitCanonWhole(level);
@@ -2856,19 +2867,29 @@
           if(cost<=0||restorationSpent+cost>config.maxRestoration||paws<cost){pitCanonRunnerLog(`${pitCanonDefinitionName(def)}: ${either('остановка по лимиту Лап восстановления','Restoration Paws limit reached')} (${restorationSpent}/${config.maxRestoration})`,'warn');break;}
           hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('восстановление','restoration')} 🐾 ${cost}`,progress.done,progress.total);
           pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('восстановление','restoration')}: 🐾 ${cost} · ${either('потрачено скриптом','spent by script')}: ${restorationSpent+cost}/${config.maxRestoration}`,'warn');
-          await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;
-          playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-respawn`);state=pitRaceSnapshot(def.id,playerDocument);
+          const respawnResponse=await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;
+          {
+            const mutation=pitCanonStateAfterMutation(def,respawnResponse,`pits:${def.id}:after-respawn`);
+            state=mutation.state;
+            if(mutation.needsReread){playerDocument=await hkAuthoritativePlayerRead(mutation.reason);state=pitRaceSnapshot(def.id,playerDocument);}
+          }
           pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)} — ${either('восстановлено','restored')} · HP ${pitCanonWhole(state?.health)} · 🐾 ${pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item')} ${either('осталось','remaining')}`,'ok');
+          await sleep(pitCanonFastCycleDelay(def,config.sniper));
           continue;
         }
         const telemetry=pitCanonBattleTelemetry(def,level);
         hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('бой','battle')} ${level} → ${level+1} · HP ${pitCanonWhole(state.health)}${telemetry.text?` · ${telemetry.text}`:''}`,progress.done,progress.total);
         pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('бой','battle')} ${level} → ${level+1}${telemetry.text?` · ${telemetry.text}`:''}`,'info');
         const battleResponse=await apiJson(api.battle,'POST');
-        playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-battle`);state=pitRaceSnapshot(def.id,playerDocument);
+        {
+          const mutation=pitCanonStateAfterMutation(def,battleResponse,`pits:${def.id}:after-battle`);
+          state=mutation.state;
+          if(mutation.needsReread){playerDocument=await hkAuthoritativePlayerRead(mutation.reason);state=pitRaceSnapshot(def.id,playerDocument);}
+        }
         const afterLevel=pitCanonWhole(state?.level);
         const won=afterLevel>level||battleResponse?.battle_result?.is_win===true;
         pitCanonRunnerLog(`${won?'✓':'✗'} ${pitCanonDefinitionName(def)} — ${won?either('ПРОБИТО','WON'):either('НЕ ПРОБИТО','LOST')} · ${level} → ${level+1} · HP ${pitCanonWhole(state?.health)}${telemetry.chance!==null?` · ${either('шанс','chance')}: ${pitChanceLabel(telemetry.chance)}`:''}`,won?'ok':'warn');
+        await sleep(pitCanonFastCycleDelay(def,config.sniper));
       }
       state=pitRaceSnapshot(def.id,playerDocument);
       if(state&&state.is_finish===false&&config.autofinish){
@@ -5794,6 +5815,7 @@
   const HK_PITS_POWER_TABLE_REV = 'pits-power-table-collapsed-20260920-r7';
   const HK_PITS_PROGRESS_REV = 'pits-battle-progress-20260920-r8';
   const HK_PITS_RUNNER_HISTORY_REV = 'pits-runner-history-20260920-r9';
+  const HK_PITS_SPEED_REV = 'pits-fast-cycle-20260920-r10';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
