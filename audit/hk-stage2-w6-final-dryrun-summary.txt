@@ -1,5 +1,6 @@
 stage=W6
 dry_run=True
+flag_decode=crystals=source_flag&0x07; investment=bool(source_flag&0x08)
 total_maps=235
 exact_area_id_matches=0
 city_grid_yx_matches=25

@@ -4816,12 +4816,12 @@
       {
         "building_id": "way275342879",
         "point_index": 41,
-        "room_count": -1
+        "room_count": 7
       },
       {
         "building_id": "way276127143",
         "point_index": 42,
-        "room_count": -1
+        "room_count": 7
       },
       {
         "building_id": "way276127149",
@@ -5056,7 +5056,7 @@
       {
         "building_id": "way276126247",
         "point_index": 109,
-        "room_count": -1
+        "room_count": 7
       },
       {
         "building_id": "way275338441",
@@ -5091,7 +5091,7 @@
       {
         "building_id": "way276126255",
         "point_index": 116,
-        "room_count": -1
+        "room_count": 7
       },
       {
         "building_id": "way276023913",
@@ -5116,7 +5116,7 @@
       {
         "building_id": "way276023873",
         "point_index": 123,
-        "room_count": -1
+        "room_count": 7
       },
       {
         "building_id": "way276023893",

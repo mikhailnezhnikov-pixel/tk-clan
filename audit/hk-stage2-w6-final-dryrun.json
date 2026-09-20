@@ -11,6 +11,7 @@
   "exact_area_id_matches": 0,
   "existing_links_before": 1,
   "existing_null_fill_candidates": 1732,
+  "flag_decode": "crystals=source_flag&0x07; investment=bool(source_flag&0x08)",
   "maps": [
     {
       "ambiguous": 0,
