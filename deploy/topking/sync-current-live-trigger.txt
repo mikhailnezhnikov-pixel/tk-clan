@@ -1,1 +1,1 @@
-2026-09-20 sync pits runner history r9 live candidate
+2026-09-20 sync pits fast cycle r10 live candidate
