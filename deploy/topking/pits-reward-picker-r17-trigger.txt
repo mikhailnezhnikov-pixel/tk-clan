@@ -1,1 +1,1 @@
-2026-09-20 Pits reward picker r17 input-sha diagnostic
+2026-09-20 Pits reward picker r17 live-drift diagnostic
