@@ -31,7 +31,7 @@ jobs:
           from pathlib import Path
           s=Path('/tmp/server.py').read_text('utf-8')
           t=ast.parse(s)
-          names={'cabinet_maps','map_index','map_detail','hk_maps_index','hk_map_data'}
+          names={'cabinet_maps','map_index','map_detail','hk_maps_index','hk_map_data','submit_map_area','normalize_map_area','discover_hk_map_area','link_hk_map_area'}
           out=['server_sha256='+hashlib.sha256(s.encode()).hexdigest()]
           for n in t.body:
               if isinstance(n,ast.FunctionDef) and n.name in names:
