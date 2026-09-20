@@ -107,3 +107,34 @@ Required user confirmation:
 2. wait for the active-building reread phase to finish;
 3. reopen the affected district;
 4. confirm that currently active buildings are now colored with 0/1/2/3/4/5+ 💎 instead of remaining unknown.
+
+
+## Canonical coordinate fix r1
+
+Confirmed coordinate orientation bug:
+- game API grid axes are row/column;
+- user-facing district coordinates are X:Y = column:row;
+- Maps previously stored raw API x:y, producing reversed labels such as 32:23 instead of 23:32.
+
+Fix marker:
+`HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1'`
+
+Canonical submit mapping now stores:
+- `x = API y`;
+- `y = API x`.
+
+Rumor routing remains on its existing raw-grid compatibility path and was explicitly preserved.
+
+Build-only verification:
+- source live SHA256: `a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0cec177e`;
+- candidate SHA256: `f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290`;
+- syntax: PASS.
+
+Live verification:
+- deploy: PASS;
+- service: PASS;
+- public byte equality: PASS;
+- live/public SHA256: `f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290`;
+- baseline sync: PASS.
+
+Existing server rows are corrected when the district is submitted again through “Считать карты аккаунта”.
