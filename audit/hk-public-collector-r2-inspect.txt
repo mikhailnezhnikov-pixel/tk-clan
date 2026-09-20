@@ -1,11 +1,10 @@
 === STATUS FILE ===
-{"revision":"public-server-collector-20260920-r1","ok":true,"state":"ok","at":1789916400,"mode":"ratings","duration_sec":127.98,"war":false,"ratings":["influence","power","clans","alliance_defense","alliance_influence","alliance_power"]}
+{"revision":"public-server-collector-20260920-r1","ok":true,"state":"deferred","at":1789916650,"mode":"war","duration_sec":48.56}
 === RATINGS SERVICE ===
 ○ hamsterking-public-collector.service - TopKing isolated public wars/ratings collector
      Loaded: loaded (/etc/systemd/system/hamsterking-public-collector.service; static)
-     Active: inactive (dead) since Sun 2026-09-20 15:00:00 UTC; 1min 12s ago
+     Active: inactive (dead) since Sun 2026-09-20 15:00:00 UTC; 4min 41s ago
 TriggeredBy: ● hamsterking-public-collector.timer
-    Process: 14165 ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py ratings (code=exited, status=0/SUCCESS)
    Main PID: 14165 (code=exited, status=0/SUCCESS)
         CPU: 912ms
 
@@ -18,17 +17,17 @@ Sep 20 15:00:00 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-co
 === WAR SERVICE ===
 ○ hamsterking-public-war.service - TopKing lightweight current war collector
      Loaded: loaded (/etc/systemd/system/hamsterking-public-war.service; static)
-     Active: inactive (dead) since Sun 2026-09-20 14:57:52 UTC; 3min 20s ago
+     Active: inactive (dead) since Sun 2026-09-20 15:04:10 UTC; 30s ago
 TriggeredBy: ● hamsterking-public-war.timer
-    Process: 14005 ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py war (code=exited, status=0/SUCCESS)
-   Main PID: 14005 (code=exited, status=0/SUCCESS)
-        CPU: 450ms
+    Process: 14701 ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py war (code=exited, status=0/SUCCESS)
+   Main PID: 14701 (code=exited, status=0/SUCCESS)
+        CPU: 424ms
 
-Sep 20 14:57:03 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
-Sep 20 14:57:52 Mikhail.nezhnikov.com python3[14005]: [public-collector] war read failed: JSONDecodeError
-Sep 20 14:57:52 Mikhail.nezhnikov.com python3[14005]: [public-collector] deferred: war endpoint temporarily unavailable; previous cache preserved
-Sep 20 14:57:52 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Deactivated successfully.
-Sep 20 14:57:52 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-war.service - TopKing lightweight current war collector.
+Sep 20 15:03:21 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
+Sep 20 15:04:10 Mikhail.nezhnikov.com python3[14701]: [public-collector] war read failed: JSONDecodeError
+Sep 20 15:04:10 Mikhail.nezhnikov.com python3[14701]: [public-collector] deferred: war endpoint temporarily unavailable; previous cache preserved
+Sep 20 15:04:10 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Deactivated successfully.
+Sep 20 15:04:10 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-war.service - TopKing lightweight current war collector.
 === RATINGS JOURNAL ===
 Sep 20 14:24:45 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
 Sep 20 14:24:45 Mikhail.nezhnikov.com python3[60971]: [public-collector] disabled: HK_PUBLIC_COLLECTOR_GAME_TOKEN is not configured
@@ -71,7 +70,12 @@ Sep 20 14:57:52 Mikhail.nezhnikov.com python3[14005]: [public-collector] war rea
 Sep 20 14:57:52 Mikhail.nezhnikov.com python3[14005]: [public-collector] deferred: war endpoint temporarily unavailable; previous cache preserved
 Sep 20 14:57:52 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Deactivated successfully.
 Sep 20 14:57:52 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-war.service - TopKing lightweight current war collector.
+Sep 20 15:03:21 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
+Sep 20 15:04:10 Mikhail.nezhnikov.com python3[14701]: [public-collector] war read failed: JSONDecodeError
+Sep 20 15:04:10 Mikhail.nezhnikov.com python3[14701]: [public-collector] deferred: war endpoint temporarily unavailable; previous cache preserved
+Sep 20 15:04:10 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Deactivated successfully.
+Sep 20 15:04:10 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-war.service - TopKing lightweight current war collector.
 === TIMERS ===
-Sun 2026-09-20 15:03:21 UTC       2min 9s Sun 2026-09-20 14:57:02 UTC  4min 9s ago hamsterking-public-war.timer       hamsterking-public-war.service
-Sun 2026-09-20 15:18:47 UTC         17min -                                      - hamsterking-public-collector.timer hamsterking-public-collector.service
+Sun 2026-09-20 15:13:20 UTC         8min Sun 2026-09-20 15:03:21 UTC 1min 19s ago hamsterking-public-war.timer       hamsterking-public-war.service
+Sun 2026-09-20 15:16:17 UTC        11min -                                      - hamsterking-public-collector.timer hamsterking-public-collector.service
 === DB COUNTS ===
