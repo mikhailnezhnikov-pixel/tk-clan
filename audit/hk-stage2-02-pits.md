@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: SOURCE_PREFLIGHT_PASS_IN_PROGRESS
+status: BUG_CONFIRMED_FIX_PENDING
 
 ## Required Stage 2 chain
 
@@ -66,3 +66,24 @@ Exact donor re-uploaded and verified:
 The previous donor-source block is resolved.
 
 Stage 2.02 source preflight resumes from this exact pinned donor.
+
+
+## Confirmed live regression
+
+Bug ticket:
+`audit/hk-stage2-bug-pits-canonical-transfer-gap.md`
+
+Direct live verification:
+- workflow run: `35490479912`
+- live SHA256: `303f6813d6e001751b53b32d83c6098f307aeedcee6a3cf320887bc93a07a117`
+- legacy `pitLoop` active: YES
+- canonical `runPits(configs)`: ABSENT
+- canonical `pitBuildMenuState`: ABSENT
+- canonical `pitReadRunConfigs`: ABSENT
+- direct API `executeDailyPit`: orphaned declaration, no active call site
+
+Result:
+**BUG_CONFIRMED_FIX_PENDING**
+
+Next block:
+port/wire Kokkaras canonical three-Pit behavior into current HK visual/runner architecture.
