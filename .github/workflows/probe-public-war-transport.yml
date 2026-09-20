@@ -1,0 +1,50 @@
+name: Probe Public War Transport
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deploy/topking/public-war-transport-probe-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Probe transport safely
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/probe_public_war_transport.py root@89.125.1.71:/tmp/probe_public_war_transport.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/probe_public_war_transport.py' \
+            > /tmp/public-war-transport-probe.txt
+          cat /tmp/public-war-transport-probe.txt
+
+      - name: Save probe
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/public-war-transport-probe.txt audit/hk-public-war-transport-probe.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-public-war-transport-probe.txt
+          git commit -m "audit: probe public war transport" || true
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/public-war-transport-probe.txt
