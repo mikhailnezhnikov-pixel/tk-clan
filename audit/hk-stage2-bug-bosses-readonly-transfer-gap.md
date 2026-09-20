@@ -2,7 +2,7 @@
 
 ## Status
 
-**CONFIRMED**
+**PARTIALLY_RESOLVED_CORE_R1**
 
 ## Scope
 
@@ -76,3 +76,22 @@ Transfer the canonical donor Bosses mechanics into the current HK integration wh
 - performing authoritative resulting-state refresh/rerun.
 
 No speculative feature additions.
+
+
+## Resolution progress — canonical core r1
+
+Core action gap is now transferred and technically live:
+- Area/Regional canonical runner: present;
+- pass plans and FREE/PREM/ITEM: present;
+- active resume: present;
+- restoration decision: present;
+- action -> authoritative state refresh: present;
+- live/public SHA: `571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9`;
+- baseline sync: `bac973abc67096f5642fce84ab1df8ba1a16883e`.
+
+Remaining donor gap is limited to the higher-level Area Boss tournament planning/calculator block:
+- tournament target/reward planning;
+- reward-only continuation;
+- Area Boss Calculator / rewards view.
+
+Bug remains open until those donor mechanics and final live paths are verified.
