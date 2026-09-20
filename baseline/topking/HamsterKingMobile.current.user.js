@@ -1740,7 +1740,7 @@
     }
   }
 
-  const HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r1';
+  const HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r2';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -1762,24 +1762,28 @@
   function exploreSettings(){
     const x=load().exploreCanonSettings||{},clamp=(v,a,b,d)=>Number.isFinite(Number(v))?Math.min(b,Math.max(a,Math.trunc(Number(v)))):d;
     const st=Array.isArray(x.startTiers)?[...new Set(x.startTiers.map(Number).filter(v=>Number.isInteger(v)&&v>=0&&v<=7))]:[0,1,2];
-    const target=clamp(x.targetTier,0,8,3);
+    const target=clamp(x.targetTier,1,8,3),targetActionsAllowed=target>=1&&target<=6&&x.exploreTargetTier===true;
+    const maxStart=targetActionsAllowed?target:Math.min(target,7)-1,selectedStart=st.filter(v=>v<=maxStart);
     return {
-      maxBuildings:clamp(x.maxBuildings,1,5000,500),startTiers:st.length?st:[0,1,2],targetTier:target,
+      maxBuildings:clamp(x.maxBuildings,1,5000,500),startTiers:selectedStart.length?selectedStart:[0],targetTier:target,
       districtId:String(x.districtId||'all'),buildingType:['all','normal','investment'].includes(String(x.buildingType||''))?String(x.buildingType):'all',
       battleLevel:explorePriority(x.battleLevel||'min'),level:explorePriority(x.level||'min'),
       nextTierLevel:explorePriority(x.nextTierLevel||'max'),totalEvents:explorePriority(x.totalEvents||'any'),
       actionDelayMinMs:clamp(x.actionDelayMinMs,0,60000,1000),actionDelayMaxMs:clamp(x.actionDelayMaxMs,0,60000,3000),
       battleDelayMs:clamp(x.battleDelayMs,0,60000,1000),betweenBuildingsDelayMinMs:clamp(x.betweenBuildingsDelayMinMs,0,120000,2000),
       betweenBuildingsDelayMaxMs:clamp(x.betweenBuildingsDelayMaxMs,0,120000,7000),buyMissingMaterials:x.buyMissingMaterials===true,
-      exploreTargetTier:target<=6&&x.exploreTargetTier===true,exploreTargetBattles:target<=6&&x.exploreTargetTier===true&&x.exploreTargetBattles===true
+      exploreTargetTier:targetActionsAllowed,exploreTargetBattles:targetActionsAllowed&&x.exploreTargetBattles===true
     };
   }
   function exploreSaveSettings(x){
-    x={...x,startTiers:[...new Set((x.startTiers||[]).map(Number).filter(v=>Number.isInteger(v)&&v>=0&&v<=7))],
-      maxBuildings:Math.min(5000,Math.max(1,Math.trunc(Number(x.maxBuildings)||500))),targetTier:Math.min(8,Math.max(0,Math.trunc(Number(x.targetTier)||0)))};
+    const target=Math.min(8,Math.max(1,Math.trunc(Number(x.targetTier)||3))),targetActionsAllowed=target>=1&&target<=6&&x.exploreTargetTier===true;
+    const maxStart=targetActionsAllowed?target:Math.min(target,7)-1;
+    x={...x,targetTier:target,startTiers:[...new Set((x.startTiers||[]).map(Number).filter(v=>Number.isInteger(v)&&v>=0&&v<=7&&v<=maxStart))],
+      maxBuildings:Math.min(5000,Math.max(1,Math.trunc(Number(x.maxBuildings)||500)))};
+    if(!x.startTiers.length)x.startTiers=[0];
     if(x.actionDelayMaxMs<x.actionDelayMinMs)x.actionDelayMaxMs=x.actionDelayMinMs;
     if(x.betweenBuildingsDelayMaxMs<x.betweenBuildingsDelayMinMs)x.betweenBuildingsDelayMaxMs=x.betweenBuildingsDelayMinMs;
-    if(x.targetTier>6){x.exploreTargetTier=false;x.exploreTargetBattles=false;} if(!x.exploreTargetTier)x.exploreTargetBattles=false;
+    x.exploreTargetTier=targetActionsAllowed;if(!x.exploreTargetTier)x.exploreTargetBattles=false;
     save({exploreCanonSettings:x});return x;
   }
   function exploreReadSettings(){
@@ -1857,18 +1861,20 @@
   function exploreProgress(doc){const b=doc?.building||doc?.data?.building||doc?.data||doc||{},events=Array.isArray(b?.events)?b.events:[];let total=0,done=0;
     const add=v=>{total++;if(Number(v?.level||0)>=Number(v?.max_level||0))done++;};for(const e of events){add(e);for(const x of (Array.isArray(e?.side_events)?e.side_events:[]))add(x);}
     return {total,completed:done,remaining:Math.max(0,total-done),finished:done>=total};}
+  function exploreFingerprint(r){return [Number(r?.tier||0),Number(r?.level||0),Number(r?.next_tier_level||0),Number(r?.max_battle_level||0),r?.has_events===undefined?'':(r.has_events?1:0)].join('|');}
   function exploreCache(){const pk=String(playerIdentity((hkStateStore.snapshot||playerDocument)?.player||{})||''),rootCache=load().exploreCanonProgressByPlayer;
     return {pk,cache:rootCache&&typeof rootCache==='object'&&rootCache[pk]&&typeof rootCache[pk]==='object'?{...rootCache[pk]}:{}};}
   function exploreSaveCache(pk,cache){if(!pk)return;const st=load(),r=st.exploreCanonProgressByPlayer&&typeof st.exploreCanonProgressByPlayer==='object'?st.exploreCanonProgressByPlayer:{};
     localStorage.setItem(STORE,JSON.stringify({...st,exploreCanonProgressByPlayer:{...r,[pk]:cache}}));}
   async function exploreScanTarget(rows,settings){
     if(!settings.exploreTargetTier||settings.targetTier>6)return {rows,checked:0,skipped:0,errors:0};const target=Number(settings.targetTier),cc=exploreCache(),out=[];let checked=0,skipped=0,errors=0;
-    const total=rows.filter(r=>Number(r.tier)===target).length;
-    for(const r of rows){if(Number(r.tier)!==target){out.push(r);continue;}const cached=cc.cache[r.id],needBattle=settings.exploreTargetBattles&&Number(r.battle_level||0)<Number(r.max_battle_level||0);
-      if(cached&&Number(cached.tier)===target&&cached.finished===true&&!needBattle){skipped++;continue;}
+    let queue=rows;if(settings.level==='max')queue=rows.map((row,index)=>({row,index})).sort((a,b)=>{const at=Number(a.row?.tier)===target,bt=Number(b.row?.tier)===target;if(at!==bt)return at?-1:1;if(at&&bt){const ac=cc.cache[a.row.id],bc=cc.cache[b.row.id],ak=!!ac&&ac.fingerprint===exploreFingerprint(a.row),bk=!!bc&&bc.fingerprint===exploreFingerprint(b.row);if(ak!==bk)return ak?-1:1;if(ak&&bk){const d=Number(ac.remaining||0)-Number(bc.remaining||0);if(d)return d;}}return a.index-b.index;}).map(x=>x.row);queue=exploreStable(queue,r=>r.battle_level,settings.battleLevel);
+    const total=queue.filter(r=>Number(r.tier)===target).length;
+    for(const r of queue){if(Number(r.tier)!==target){out.push(r);continue;}const cached=cc.cache[r.id],cacheValid=!!cached&&Number(cached.tier)===target&&cached.fingerprint===exploreFingerprint(r),needBattle=settings.exploreTargetBattles&&Number(r.battle_level||0)<Number(r.max_battle_level||0);
+      if(cacheValid&&cached.finished===true&&!needBattle){skipped++;continue;}
       try{checked++;let doc=buildingStudyCache.get(r.id)||null;if(!doc){doc=await apiJson('/player/building?building_id='+encodeURIComponent(r.id),'POST');buildingStudyCache.set(r.id,doc);}
         const b=doc?.building||doc?.data?.building||doc?.data||doc||{},p=exploreProgress(doc),bl=Number(b?.battle_level??r.battle_level??0),mb=Number(b?.max_battle_level??r.max_battle_level??0),need=settings.exploreTargetBattles&&bl<mb;
-        cc.cache[r.id]={tier:target,total:p.total,completed:p.completed,remaining:p.remaining,finished:p.finished,checkedAt:Date.now()};
+        cc.cache[r.id]={tier:target,fingerprint:exploreFingerprint({...r,...b}),total:p.total,completed:p.completed,remaining:p.remaining,finished:p.finished,checkedAt:Date.now()};
         if(p.remaining<=0&&!need)skipped++;else out.push({...r,battle_level:bl,max_battle_level:mb,totalEvents:p.total,targetTotal:p.total,targetDone:p.completed,targetRemaining:p.remaining});
       }catch(_){errors++;}if(checked<total)await sleep(100);
     }exploreSaveCache(cc.pk,cc.cache);return {rows:out,checked,skipped,errors};
@@ -1876,10 +1882,11 @@
   function exploreCounts(rows){const o=Object.fromEntries(EXPLORE_TIERS.map(t=>[t.value,{all:0,battles:0}]));for(const r of rows){const t=Number(r.tier);if(!o[t])continue;o[t].all++;if(Number(r.battle_level||0)>=Number(r.max_battle_level||0))o[t].battles++;}return o;}
   async function exploreBuildPlan(){
     playerDocument=await hkAuthoritativePlayerRead('explore:plan');const settings=exploreSettings(),meta=await exploreLoadMeta(false),basic=exploreBasic(settings,playerDocument,meta),scan=await exploreScanTarget(basic.rows,settings);
-    let candidates=scan.rows;if(settings.totalEvents!=='any'&&basic.totalEventsKnown){candidates=exploreStable(candidates,r=>r.next_tier_level,settings.nextTierLevel);candidates=exploreStable(candidates,r=>r.level,settings.level);
+    let candidates=scan.rows;if(!settings.exploreTargetTier)candidates=candidates.slice(0,settings.maxBuildings);
+    if(settings.totalEvents!=='any'&&basic.totalEventsKnown){candidates=exploreStable(candidates,r=>r.next_tier_level,settings.nextTierLevel);candidates=exploreStable(candidates,r=>r.level,settings.level);
       candidates=exploreStable(candidates,r=>r.totalEvents,settings.totalEvents);candidates=exploreStable(candidates,r=>r.battle_level,settings.battleLevel);}
     const filtered=exploreFiltered(settings,playerDocument,meta),c=exploreConsigliere(playerDocument),level=Number(playerDocument?.player?.level||0);
-    return {settings,meta,candidates,selected:candidates.slice(0,settings.maxBuildings),filteredCount:filtered.length,tierCounts:exploreCounts(filtered),consigliere:c,autoMaxTier:exploreAutoTier(c),playerLevel:level,tierModes:exploreTierModes(level),targetScan:scan,totalEventsKnown:basic.totalEventsKnown};
+    return {settings,meta,candidates,selected:settings.exploreTargetTier?candidates.slice(0,settings.maxBuildings):candidates,filteredCount:filtered.length,tierCounts:exploreCounts(filtered),consigliere:c,autoMaxTier:exploreAutoTier(c),playerLevel:level,tierModes:exploreTierModes(level),targetScan:scan,totalEventsKnown:basic.totalEventsKnown};
   }
   async function explorePreparePlan(){
     if(exploreBusy)return explorePlan;exploreBusy=true;renderExplore();try{explorePlan=await exploreBuildPlan();log(either('Исследование: кандидатов ','Explore: candidates ')+explorePlan.candidates.length+' · '+either('к обработке ','to process ')+explorePlan.selected.length,explorePlan.selected.length?'ok':'warn');return explorePlan;}
@@ -1890,9 +1897,10 @@
 
   function renderExplore(){
     const box=root?.querySelector('#hk-explore-content');if(!box)return;const s=exploreSettings(),p=explorePlan,st=hkStateStore.snapshot||playerDocument||{},active=exploreActive(st),c=p?.consigliere||exploreConsigliere(st);
-    const auto=p?.autoMaxTier??exploreAutoTier(c),level=p?.playerLevel??Number(st?.player?.level||0),modes=p?.tierModes||exploreTierModes(level),counts=p?.tierCounts||exploreCounts(active),targetOk=s.targetTier<=6;
-    const tiers=EXPLORE_TIERS.map(t=>'<label><input type="checkbox" data-ex-tier="'+t.value+'" '+(s.startTiers.includes(t.value)?'checked':'')+'> '+t.label+' <small class="hk-muted">'+(counts[t.value]?.all||0)+' / '+(counts[t.value]?.battles||0)+'</small></label>').join('');
-    const targets=EXPLORE_TIERS.map(t=>'<option value="'+t.value+'" '+(s.targetTier===t.value?'selected':'')+'>'+t.label+'</option>').join('')+'<option value="8" '+(s.targetTier===8?'selected':'')+'>'+either('Мгновенно MAX','Instant MAX')+'</option>';
+    const auto=p?.autoMaxTier??exploreAutoTier(c),level=p?.playerLevel??Number(st?.player?.level||0),modes=p?.tierModes||exploreTierModes(level),counts=p?.tierCounts||exploreCounts(active),targetOk=s.targetTier>=1&&s.targetTier<=6;
+    const maxStart=targetOk&&s.exploreTargetTier?s.targetTier:Math.min(s.targetTier,7)-1;
+    const tiers=EXPLORE_TIERS.map(t=>'<label><input type="checkbox" data-ex-tier="'+t.value+'" '+(s.startTiers.includes(t.value)?'checked':'')+' '+(t.value>maxStart?'disabled':'')+'> '+t.label+' <small class="hk-muted">'+(counts[t.value]?.all||0)+' / '+(counts[t.value]?.battles||0)+'</small></label>').join('');
+    const targets=EXPLORE_TIERS.filter(t=>t.value>=1).map(t=>'<option value="'+t.value+'" '+(s.targetTier===t.value?'selected':'')+'>'+t.label+'</option>').join('')+'<option value="8" '+(s.targetTier===8?'selected':'')+'>'+either('Мгновенно MAX','Instant MAX')+'</option>';
     const modeLine=EXPLORE_TIERS.map(t=>t.label+': '+(modes[t.value]==='fast'?either('быстро','fast'):modes[t.value]==='auto'?either('авто','auto'):either('вручную','manual'))).join(' · ');
     const rows=(p?.selected||[]).slice(0,20).map((r,i)=>'<div class="hk-card"><div class="hk-business-info"><b>'+(i+1)+'. '+escapeHtml(r.id)+'</b><small>'+escapeHtml(r.areaId||either('район неизвестен','district unknown'))+' · '+exploreTierLabel(r.tier)+' · '+either('ур.','Lv')+' '+Number(r.level||0)+' · '+either('бой','battle')+' '+Number(r.battle_level||0)+'/'+Number(r.max_battle_level||0)+' · '+either('события','events')+' '+(r.targetRemaining!=null?(r.targetRemaining+'/'+r.targetTotal):(r.totalEvents==null?'?':r.totalEvents))+(r.isInvest===true?' · ◆ '+either('инвест','investment'):r.isInvest===false?' · '+either('обычное','normal'):'')+'</small></div><strong>→ '+exploreTierLabel(s.targetTier)+'</strong></div>').join('');
     const summary=p?'<div class="hk-cardbox"><b>'+either('Read-only план','Read-only plan')+'</b><p class="hk-muted">'+either('После фильтров','After filters')+': '+p.filteredCount+' · '+either('кандидатов','candidates')+': '+p.candidates.length+' · '+either('к обработке','to process')+': '+p.selected.length+'</p>'+
