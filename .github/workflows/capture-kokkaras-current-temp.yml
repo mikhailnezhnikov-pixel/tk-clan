@@ -1,0 +1,39 @@
+name: Capture Kokkaras Current Temp
+
+on:
+  push:
+    paths:
+      - 'reference/topking/capture-current-temp-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch current public donor
+        run: |
+          set -euo pipefail
+          mkdir -p reference/topking/_temp
+          curl -fsSL --retry 3 --connect-timeout 20 \
+            'https://kokkaras.com/hk_maps/panel.js' \
+            -o reference/topking/_temp/kokkaras-current.js
+          node --check reference/topking/_temp/kokkaras-current.js
+          sha256sum reference/topking/_temp/kokkaras-current.js > reference/topking/_temp/kokkaras-current.sha256
+
+      - name: Commit temp donor
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reference/topking/_temp
+          git commit -m "temp: capture current Kokkaras donor"
+          git pull --rebase origin main
+          git push origin HEAD:main
