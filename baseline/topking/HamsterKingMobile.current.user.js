@@ -3011,6 +3011,28 @@
     return {steps,cost,remaining};
   }
 
+  function pitCanonFitRewardStepToAvailable(config,index,availablePasses){
+    const current=config?.steps?.[index];
+    if(current?.source!=='reward')return {changed:false,deltaRounds:0,before:0,after:0};
+    const original=pitCanonWhole(current.chunk);
+    const options=[...(config.rewardItemBatches||[])]
+      .filter(row=>pitCanonWhole(row.batch)>0&&pitCanonWhole(row.cost)>0)
+      .sort((a,b)=>pitCanonWhole(b.batch)-pitCanonWhole(a.batch))
+      .filter(row=>pitCanonWhole(row.batch)<=original&&pitCanonWhole(row.cost)<=pitCanonWhole(availablePasses));
+    const chosen=options[0];
+    if(!chosen||pitCanonWhole(chosen.batch)===original)return {changed:false,deltaRounds:0,before:original,after:original};
+    const remainder=Math.max(0,original-pitCanonWhole(chosen.batch));
+    const decomp=pitCanonRewardDecomposeWithBatches(config.rewardItemBatches,remainder);
+    if(decomp.remaining>0)return {changed:false,deltaRounds:0,before:original,after:original};
+    const replacement=[{...current,chunk:pitCanonWhole(chosen.batch)},...decomp.steps.map(step=>({...current,chunk:pitCanonWhole(step.chunk)}) )];
+    const originalOption=(config.rewardItemBatches||[]).find(row=>pitCanonWhole(row.batch)===original);
+    const oldCost=pitCanonWhole(originalOption?.cost);
+    const newCost=pitCanonWhole(chosen.cost)+pitCanonWhole(decomp.cost);
+    config.steps.splice(index,1,...replacement);
+    config.itemPassBudget=Math.max(0,pitCanonWhole(config.itemPassBudget)+newCost-oldCost);
+    return {changed:true,deltaRounds:replacement.length-1,before:original,after:pitCanonWhole(chosen.batch),replacement:replacement.map(step=>pitCanonWhole(step.chunk))};
+  }
+
   function pitCanonRewardStrategyRequestedNow(required,strategy,{completed=0,gradualDivisor=1,strategyActiveNow=true}={}){
     const normalized=pitCanonRewardStrategy(strategy),needed=pitCanonWhole(required),done=pitCanonWhole(completed),divisor=Math.max(1,pitCanonWhole(gradualDivisor));
     if(normalized==='upfront')return needed;
@@ -3415,6 +3437,16 @@
             state=pitRaceSnapshot(def.id,playerDocument);
             have=pitCanonResourceQuantity(playerDocument,HK_PIT_PASS_ITEM_ID,'item');
             rewardCost=pitCanonDirectPassCost(state,chunk,'ITEM');
+          }
+          if(rewardCost===null||have<pitCanonWhole(rewardCost)){
+            const fitted=pitCanonFitRewardStepToAvailable(config,index,have);
+            if(fitted.changed){
+              progress.total=Math.max(progress.done,progress.total+fitted.deltaRounds);
+              step=config.steps[index];chunk=pitCanonWhole(step.chunk);
+              rewardCost=pitCanonDirectPassCost(state,chunk,'ITEM');
+              hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('reward-шаг адаптирован','reward step adapted')} ×${fitted.before} → ×${fitted.after}`,progress.done,progress.total);
+              pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('reward-шаг адаптирован под доступные Пропуски Ямы','reward step adapted to available Pit Passes')}: ×${fitted.before} → ${fitted.replacement.map(value=>'×'+value).join(' + ')}`,'info');
+            }
           }
           if(rewardCost===null||have<pitCanonWhole(rewardCost)){
             const removed=config.steps.length-index;
@@ -6477,6 +6509,7 @@
   const HK_PITS_SHARED_FORECAST_REV = 'pits-shared-reward-forecast-20260920-r15';
   const HK_PITS_REWARD_ONLY_REV = 'pits-reward-only-plan-20260920-r16';
   const HK_PITS_PREVIEW_REV = 'pits-runtime-preview-20260920-r17';
+  const HK_PITS_REWARD_FIT_REV = 'pits-reward-fit-available-20260920-r18';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
