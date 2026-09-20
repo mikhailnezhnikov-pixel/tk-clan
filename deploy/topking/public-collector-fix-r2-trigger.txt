@@ -1,1 +1,1 @@
-2026-09-21 one-time R3 alliance id/sum rebuild
+2026-09-21 R3 block legacy anon snapshots then rebuild alliances
