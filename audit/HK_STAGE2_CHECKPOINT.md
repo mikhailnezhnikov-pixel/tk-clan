@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: READY_TO_START
+- current module status: BLOCKED_DONOR_SOURCE_NOT_FOUND
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -67,3 +67,13 @@ Each module:
 
 - 2.01 Today / Сегодня — LIVE PASS
   - final SHA256: `303f6813d6e001751b53b32d83c6098f307aeedcee6a3cf320887bc93a07a117`
+
+
+## Pits donor source block
+
+- expected donor: Kokkaras HK Control Panel `5.3.22-ui-icons-pit-dim`
+- expected SHA256: `28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1`
+- File Library lookup: NOT FOUND
+- current module: BLOCKED_DONOR_SOURCE_NOT_FOUND
+- no Pits gameplay code changed
+- resume action: restore/re-upload the exact pinned donor, then rerun SOURCE PREFLIGHT and continue 2.02
