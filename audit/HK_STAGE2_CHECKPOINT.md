@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Buildings / Здания
 - current module file: audit/hk-stage2-06-buildings.md
-- current module status: SOURCE_PREFLIGHT_PENDING
+- current module status: CANONICAL_TRANSFER_GAP_CONFIRMED
 - next module after LIVE PASS: Explore / Исследование
 - Today / Сегодня: LIVE PASS
 
@@ -596,3 +596,17 @@ Stage 2 continues with 2.05 Resources / Ресурсы.
 
 Stage 2.05 Resources / Ресурсы: **LIVE PASS**.
 Stage 2 continues with 2.06 Buildings / Здания.
+
+
+## Buildings / Explore semantic transfer gap
+
+Donor-first revalidation found that the historical Stage 2I implementation is not functionally equivalent to pinned Kokkaras:
+- Buildings currently provides read/list only, while donor has filtered automatic opening + favorites;
+- Explore currently duplicates district/map research, while donor Explore Buildings is a full building event/battle/upgrade automation.
+
+Tickets:
+- `audit/hk-stage2-bug-buildings-canonical-transfer-gap.md`;
+- `audit/hk-stage2-bug-explore-canonical-transfer-gap.md`.
+
+Current Stage 2.06 status: **CANONICAL_TRANSFER_GAP_CONFIRMED**.
+Transfer Buildings first; Explore follows only after Buildings live candidate.
