@@ -32,7 +32,7 @@ jobs:
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "HK_PITS_SUMMARY_REV = 'pits-plan-totals-20260920-r14'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_PITS_REWARD_EXEC_REV = 'pits-reward-execution-20260920-r13'" /tmp/HamsterKingMobile.user.js
           test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "c51b1549bd631bcc4ea87df8b37a4be990db2300470f6c446a81319532c3ef6b"
 
       - name: Apply plan and totals r14
