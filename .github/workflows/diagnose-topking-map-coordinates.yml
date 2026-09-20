@@ -25,61 +25,52 @@ jobs:
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
-      - name: Inspect live backend map coordinate path
+      - name: Fetch live backend
         run: |
           set -euo pipefail
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
           python3 -m py_compile /tmp/server.py
-          python3 - <<'PY' > audit/hk-map-coords-backend-diagnostic.txt
-          from pathlib import Path
-          s=Path('/tmp/server.py').read_text()
-          print('SERVER_MAP_COORDS_DIAGNOSTIC')
-          terms=[
-              '/api/v1/maps/submit',
-              'maps/submit',
-              'def map',
-              'room_count',
-              'expected_buildings',
-              'area_id',
-              'ON CONFLICT',
-              'map_area',
-              'map_areas',
-          ]
-          seen=set()
-          for term in terms:
-              start=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  line=s.count('\n',0,i)+1
-                  if line not in seen:
-                      seen.add(line)
-                      a=max(0,i-2200); b=min(len(s),i+7000)
-                      print(f'\n=== TERM {term!r} LINE {line} ===')
-                      print(s[a:b])
-                  start=i+len(term)
-          PY
-      - name: Inspect live map DB schema
+      - name: Extract map backend code
         run: |
           set -euo pipefail
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
-            "python3 - <<'PY'" >> audit/hk-map-coords-backend-diagnostic.txt
-          import sqlite3
-          db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db')
-          for row in db.execute("SELECT name, sql FROM sqlite_master WHERE type='table' AND (name LIKE '%map%' OR sql LIKE '%area_id%') ORDER BY name"):
-              print('\n=== TABLE',row[0],'===')
-              print(row[1])
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/server.py').read_text()
+          out=['SERVER_MAP_COORDS_DIAGNOSTIC']
+          needles=['maps/submit','/maps/list','/maps/detail','room_count','expected_buildings','ON CONFLICT','area_id']
+          ranges=[]
+          for needle in needles:
+              start=0
+              while True:
+                  i=s.find(needle,start)
+                  if i<0: break
+                  ranges.append((max(0,i-2500),min(len(s),i+6500),needle))
+                  start=i+len(needle)
+          ranges.sort()
+          merged=[]
+          for a,b,n in ranges:
+              if merged and a<=merged[-1][1]:
+                  merged[-1]=(merged[-1][0],max(merged[-1][1],b),merged[-1][2]+'|'+n)
+              else:
+                  merged.append((a,b,n))
+          for a,b,n in merged[:20]:
+              line=s.count('\n',0,a)+1
+              out.append(f'\n=== {n} around line {line} ===\n'+s[a:b])
+          Path('audit/hk-map-coords-backend-diagnostic.txt').write_text('\n'.join(out))
           PY
+          wc -c audit/hk-map-coords-backend-diagnostic.txt
       - name: Commit diagnostic
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add audit/hk-map-coords-backend-diagnostic.txt
-          git commit -m "audit: inspect live map coordinate backend" || exit 0
-          git pull --rebase origin main
-          git push origin HEAD:main
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: inspect live map coordinate backend"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking" /tmp/server.py
