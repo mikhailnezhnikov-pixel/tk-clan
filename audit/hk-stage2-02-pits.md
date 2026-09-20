@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: ACTION_RETEST_PENDING
+status: RESPAWN_RETEST_PENDING
 
 ## Required Stage 2 chain
 
@@ -304,3 +304,53 @@ Next user check:
 - press `Запустить выбранные Ямы`;
 - expected immediate UI response: runner enters `Подготовка`;
 - report the first visible runner/log result.
+
+## Respawn cost r6
+
+User retest result:
+- Start button works;
+- runner entered the Pits action path;
+- battle execution reached the HP restoration branch;
+- runtime stopped with: `pitCanonRespawnCost is not defined`.
+
+Cause:
+- r1/r5 action code referenced `pitCanonRespawnCost()`, but the helper itself had not been transferred.
+
+Pinned donor behavior:
+- read `state.respawn_costs`;
+- choose the first non-premium option (`is_prem === false`);
+- read `item_pit_health_ticket` quantity from that cost;
+- if cost is absent/zero, fall back to the current Pit batch size.
+
+r6:
+- adds only `pitCanonRespawnCost(state,chunk)`;
+- no UI, pass-plan, sniper, battle endpoint or spending logic changed.
+
+Marker:
+`HK_PITS_RESPAWN_REV = 'pits-respawn-cost-20260920-r6'`
+
+Deploy:
+- workflow: `Deploy TopKing Pits Respawn R6`;
+- run: `35493832589` — SUCCESS;
+- JS syntax: PASS;
+- service active: PASS;
+- public round-trip byte equality: PASS;
+- live/public SHA256: `f8644b37332e2b8d9d763ef80ff00768f932fae31e88963bac51f8791946d895`.
+
+Static action-path audit after r6:
+- all Pit canonical helper/function calls in `pitCanonRunOne()` are defined;
+- the only missing runtime helper found in r5 was `pitCanonRespawnCost`, now supplied by r6.
+
+Current status:
+**RESPAWN_RETEST_PENDING**
+
+This user run already confirms:
+- main Start button ACTION entry: PASS;
+- configuration snapshot before async reread: PASS in live usage;
+- battle path reached: PASS.
+
+Still required:
+- restoration branch completes;
+- authoritative state update;
+- action completion;
+- rerun from resulting state.
