@@ -14,6 +14,6 @@ function selectTopKind(next,button){kind=next;alliancesTab.classList.remove('act
 document.querySelectorAll('#rating-tabs [data-kind]').forEach(b=>b.onclick=()=>selectTopKind(b.dataset.kind,b));
 alliancesTab.onclick=()=>{document.querySelectorAll('#rating-tabs [data-kind]').forEach(x=>x.classList.remove('active'));alliancesTab.classList.add('active');allianceMetrics.classList.remove('hidden');if(!kind.startsWith('alliance_'))kind='alliance_power';document.querySelectorAll('[data-alliance-kind]').forEach(x=>x.classList.toggle('active',x.dataset.allianceKind===kind));load()};
 document.querySelectorAll('[data-alliance-kind]').forEach(b=>b.onclick=()=>{kind=b.dataset.allianceKind;document.querySelectorAll('[data-alliance-kind]').forEach(x=>x.classList.toggle('active',x===b));load()});
-document.getElementById('search').oninput=()=>{page=1;render()};document.getElementById('prev').onclick=()=>{page--;render()};document.getElementById('next').onclick=()=>{page++;render()};document.addEventListener('tk-language-change',render);load();setInterval(load,300000);
+document.getElementById('search').oninput=()=>{page=1;render()};document.getElementById('prev').onclick=()=>{page--;render()};document.getElementById('next').onclick=()=>{page++;render()};document.addEventListener('tk-language-change',render);load();setInterval(load,10800000);
 </script><script src="../assets/site-nav.js?v=20260920-11"></script>
 </body></html>
