@@ -1,0 +1,6 @@
+MAPS_BUILDING_SCAN_R2_LIVE=PASS
+live_sha256=a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0cec177e
+public_sha256=a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0cec177e
+public_byte_equality=PASS
+syntax=PASS
+marker=maps-building-scan-20260920-r2
