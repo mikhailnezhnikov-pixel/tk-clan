@@ -1,0 +1,14 @@
+MAPS_SHARED_KB_W2_LIVE=PASS
+server_sha256=1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e
+client_sha256=1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6
+pilot_map_key=hk_moscow1226
+pilot_canonical_area_id=9ea6ff78-b881-45b3-b92d-a8f1da8eca05
+match_method=city_grid_yx
+bridge_rows=1
+duplicate_districts=0
+alias_resolution=PASS
+hk_maps_catalog=235
+hk_map_points=235
+building_migration=NO
+userscript_changed=NO
+explore_changed=NO
