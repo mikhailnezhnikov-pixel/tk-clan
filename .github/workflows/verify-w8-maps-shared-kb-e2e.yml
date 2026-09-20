@@ -1,0 +1,463 @@
+name: W8 Maps shared knowledge end-to-end
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/w8-e2e-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch deployed server and live clients
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          server_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
+          echo "$server_sha" > /tmp/w8-server-sha.txt
+          test "$server_sha" = "b5189981acade420e1aaa533dec8b745c0e16969bf1def0c5008aa297f2a2812"
+          grep -Fq 'HK_MAP_PROVENANCE_W5_V1' /tmp/server.py
+          grep -Fq 'HK_MAP_WEBSITE_OVERLAY_W4_V1' /tmp/server.py
+          grep -Fq 'HK_MAP_AUTHORIZED_UPLOAD_W7_V1' /tmp/server.py
+
+          curl -fsSL --retry 5 --retry-delay 2 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?w8=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          sha256sum /tmp/public.js | awk '{print $1}' > /tmp/w8-client-sha.txt
+
+          curl -fsSL --retry 5 --retry-delay 2 "https://tk-clan.ru/maps/view/?w8=$(date +%s)" -o /tmp/maps-view.html
+          curl -fsSL --retry 5 --retry-delay 2 "https://tk-clan.ru/cabinet/?w8=$(date +%s)" -o /tmp/cabinet.html
+
+      - name: Verify scanner and live website invariants
+        run: |
+          set -euo pipefail
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r6-safe5'" /tmp/public.js
+          grep -Fq "HK_MAP_READ_CONCURRENCY = 5" /tmp/public.js
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2'" /tmp/public.js
+          grep -Fq "coord_revision:'column-row-v1'" /tmp/public.js
+          grep -Fq "const active=activePlayerBuildingIds(state);" /tmp/public.js
+          grep -Fq "const areaId=String(mapBuildingAreas.get(buildingId)||'');" /tmp/public.js
+          grep -Fq "if(!areaId||(selected&&!selected.has(areaId)))continue;" /tmp/public.js
+          grep -Fq "const workers=Math.min(HK_MAP_READ_CONCURRENCY,Math.max(1,unique.length));" /tmp/public.js
+
+          grep -Fq "Boolean(flag&0x08)" /tmp/maps-view.html
+          grep -Fq "flag&0x07" /tmp/maps-view.html
+          grep -Fq "'6 крист.'" /tmp/maps-view.html
+          grep -Fq "'7 крист.'" /tmp/maps-view.html
+
+          grep -Fq 'data-cab-tab="maps"' /tmp/cabinet.html
+          grep -Fq "currentMapsAccess=!!(m.maps_access||m.maps_manage)" /tmp/cabinet.html
+          grep -Fq "const data=await request('/maps')" /tmp/cabinet.html
+          grep -Fq "renderMapsIndex()" /tmp/cabinet.html
+
+          echo "W8_SCANNER_SAFE5=PASS"
+          echo "W8_ACTIVE_INTERSECTION=PASS"
+          echo "W8_WEBSITE_BITMASK=PASS"
+          echo "W8_CABINET_UI=PASS"
+
+      - name: End-to-end both directions on temporary DB
+        run: |
+          python3 - <<'PY'
+          import importlib.util,json,os,sqlite3,tempfile
+
+          spec=importlib.util.spec_from_file_location('s','/tmp/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          fd,path=tempfile.mkstemp(prefix='w8-e2e-',suffix='.db');os.close(fd)
+
+          def poly(cx,cy,d=.00022):
+              return {'type':'Polygon','coordinates':[[
+                  [cx-d,cy-d],[cx+d,cy-d],[cx+d,cy+d],[cx-d,cy+d],[cx-d,cy-d]
+              ]]}
+
+          def catalog(key,city,grid,buildings,unknown=0,invest=0):
+              return {
+                  'key':key,'city':city,'grid':grid,'invest':invest,'buildings':buildings,'unknown':unknown,
+                  'crystals':[0,1,1,1,1,1],'eventBuildings':max(0,buildings-unknown),
+                  'totalEvents':max(0,buildings-unknown),'progress':100 if not unknown else 66.7,
+                  'score':buildings,'reward':{'max':1,'normal':1,'investment':1}
+              }
+
+          try:
+              s.DB_PATH=path
+              s.init_db()
+              manager={'telegram_id':'w8-manager','maps_manage':1,'maps_access':1}
+
+              # -----------------------------------------------------------------
+              # A1. userscript/game_live -> canonical DB -> website.
+              # Existing website geometry keeps coordinates + investment bit;
+              # later canonical room knowledge must overlay only the room bits.
+              # -----------------------------------------------------------------
+              a_area={
+                  'area_id':'w8-area-a','city_id':'w8-city-a','city_name':'Alpha',
+                  'x':11,'y':22,'invest_count':1,'expected_buildings':2,
+                  'buildings':[
+                      {'building_id':'way801','opened':False,'room_count':None,'has_events':False,
+                       'is_invest':True,'tier':None,'faction':'a','building_type':'normal'},
+                      {'building_id':'way802','opened':False,'room_count':None,'has_events':False,
+                       'is_invest':False,'tier':None,'faction':'a','building_type':'normal'},
+                  ]
+              }
+              created=s.submit_map_area('player-w8-a',a_area)
+              assert created['area_id']=='w8-area-a',created
+
+              a_key='hk_w8a2211'
+              a_points=[1000000,2000000,9,100,100,0]  # invest+1, then normal 0
+              assert s.import_hk_maps_index([catalog(a_key,'Alpha','22:11',2,unknown=2,invest=1)])['accepted']==1
+              assert s.import_hk_map_points([[a_key,a_points]])['accepted']==1
+              s.link_hk_map_area(a_key,'w8-area-a')
+              s.link_hk_map_points(a_key,[
+                  {'point_index':0,'building_id':'way801'},
+                  {'point_index':1,'building_id':'way802'},
+              ],'exact_building_id')
+
+              before=s.hk_map_data(a_key,member=manager)
+              assert before['render']=='points',before
+              assert before['points']==a_points,before['points']
+              source_blob=None
+              with s.db_session() as db:
+                  source_blob=db.execute("SELECT points_json FROM hk_map_points WHERE map_key=?",(a_key,)).fetchone()[0]
+
+              live_update={
+                  **a_area,
+                  'area_id':'w8-alias-a',
+                  'buildings':[
+                      {'building_id':'way801','opened':True,'room_count':6,'has_events':True,
+                       'is_invest':True,'tier':3,'faction':'a','building_type':'normal'},
+                      {'building_id':'way802','opened':False,'room_count':None,'has_events':False,
+                       'is_invest':False,'tier':None,'faction':'a','building_type':'normal'},
+                  ]
+              }
+              refreshed=s.submit_map_area('player-w8-a-live',live_update)
+              assert refreshed['area_id']=='w8-area-a',refreshed
+
+              a_detail=s.map_detail('w8-alias-a')
+              assert a_detail and a_detail['area']['area_id']=='w8-area-a',a_detail
+              a_by={x['building_id']:x for x in a_detail['buildings']}
+              assert a_by['way801']['room_count']==6 and a_by['way801']['knowledge_source']=='game_live',a_by['way801']
+              assert a_by['way801']['is_invest']==1,a_by['way801']
+              assert a_by['way802']['room_count'] is None,a_by['way802']
+
+              after=s.hk_map_data(a_key,member=manager)
+              assert after['points']==[1000000,2000000,14,100,100,0],after['points']
+              assert after['canonical']['enabled'] is True,after['canonical']
+              assert after['canonical']['linked_points']==2,after['canonical']
+              assert after['canonical']['applied_points']==1,after['canonical']
+              assert after['canonical']['fallback_points']==1,after['canonical']
+              with s.db_session() as db:
+                  assert db.execute("SELECT points_json FROM hk_map_points WHERE map_key=?",(a_key,)).fetchone()[0]==source_blob
+                  alias=db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id='w8-alias-a'").fetchone()
+                  assert alias and alias[0]=='w8-area-a'
+
+              # -----------------------------------------------------------------
+              # A2. A current game observation must refresh a complete imported
+              # district, and the website must immediately read that new value.
+              # -----------------------------------------------------------------
+              c_area={
+                  'area_id':'w8-area-c','city_id':'w8-city-c','city_name':'Gamma',
+                  'x':12,'y':23,'invest_count':0,'expected_buildings':1,
+                  'buildings':[{'building_id':'way803','opened':True,'room_count':2,'has_events':True,
+                                'is_invest':False,'tier':1,'faction':'g','building_type':'normal'}]
+              }
+              c0=s.submit_map_area('source-hk-maps-import',c_area)
+              assert c0['area_id']=='w8-area-c'
+              c_key='hk_w8c2312'
+              assert s.import_hk_maps_index([catalog(c_key,'Gamma','23:12',1)])['accepted']==1
+              assert s.import_hk_map_points([[c_key,[1200000,2300000,3]]])['accepted']==1
+              s.link_hk_map_area(c_key,'w8-area-c')
+              s.link_hk_map_points(c_key,[{'point_index':0,'building_id':'way803'}],'exact_building_id')
+              c_live={**c_area,'area_id':'w8-alias-c','buildings':[
+                  {'building_id':'way803','opened':True,'room_count':0,'has_events':False,
+                   'is_invest':False,'tier':1,'faction':'g','building_type':'normal'}
+              ]}
+              c1=s.submit_map_area('player-w8-c-live',c_live)
+              assert c1['area_id']=='w8-area-c',c1
+              c_detail=s.map_detail('w8-alias-c')
+              assert c_detail['buildings'][0]['room_count']==0,c_detail
+              assert c_detail['buildings'][0]['knowledge_source']=='game_live',c_detail
+              c_web=s.hk_map_data(c_key,member=manager)
+              assert c_web['points']==[1200000,2300000,0],c_web['points']
+
+              print('W8_A_USERSCRIPT_TO_WEBSITE_DISTRICTS=2')
+              print('W8_A_ROOM_OVERLAY=PASS')
+              print('W8_A_INVESTMENT_BIT=PASS')
+              print('W8_A_ALIAS_RESOLUTION=PASS')
+              print('W8_A_UNKNOWN_NULL_FALLBACK=PASS')
+              print('W8_A_SOURCE_GEOMETRY_UNCHANGED=PASS')
+
+              # -----------------------------------------------------------------
+              # B1. Authorized website import -> canonical DB -> userscript.
+              # Includes known normal, known investment, and unknown/null row.
+              # -----------------------------------------------------------------
+              b_key='hk_w8b4131'
+              b_upload={
+                  'catalog':catalog(b_key,'Beta','41:31',3,unknown=1,invest=1),
+                  'points':[3000000,4000000,2,100,100,12],  # 2 normal, 4 investment
+                  'meta':{
+                      'area_id':'w8-web-b','city_id':'w8-city-b','city_name':'Beta',
+                      'x':31,'y':41,'coord_revision':'column-row-v1'
+                  },
+                  'buildingsGeoJSON':{'type':'FeatureCollection','features':[
+                      {'type':'Feature','id':'way811','geometry':poly(30.0,40.0),
+                       'properties':{'is_game':True,'building_id':'way811','crystals':2,'is_investment':False,'faction':'b'}},
+                      {'type':'Feature','id':'way812','geometry':poly(30.001,40.001),
+                       'properties':{'is_game':True,'building_id':'way812','crystals':4,'is_investment':True,'faction':'b'}},
+                      {'type':'Feature','id':'way813','geometry':poly(30.002,40.002),
+                       'properties':{'is_game':True,'building_id':'way813','crystals':None,'is_investment':False,'faction':'b'}},
+                  ]}
+              }
+              b=s.import_hk_authorized_map_upload(b_upload)
+              assert b['ok'] and b['direct_shared'] is True and b['sync_required'] is False,b
+              assert b['canonical_area_id']=='w8-web-b' and b['matched_points']==2 and b['point_links']==2,b
+              b_detail=s.map_detail('w8-web-b')
+              b_by={x['building_id']:x for x in b_detail['buildings']}
+              assert b_by['way811']['room_count']==2 and b_by['way811']['knowledge_source']=='hk_maps_import',b_by['way811']
+              assert b_by['way812']['room_count']==4 and b_by['way812']['is_invest']==1,b_by['way812']
+              assert b_by['way812']['knowledge_source']=='hk_maps_import',b_by['way812']
+              assert b_by['way813']['room_count'] is None,b_by['way813']
+              assert b_detail['area']['x']==31 and b_detail['area']['y']==41,b_detail['area']
+
+              # Personal Cabinet backend can display the newly uploaded map.
+              cab=s.cabinet_maps(manager)
+              b_rows=[x for x in cab['maps'] if x['key']==b_key]
+              assert cab['ok'] and cab['can_manage'] is True and len(b_rows)==1,cab
+              assert b_rows[0]['city']=='Beta' and b_rows[0]['grid']=='41:31',b_rows[0]
+              b_private=s.hk_map_data(b_key,member=manager)
+              assert b_private['canonical']['enabled'] is True,b_private['canonical']
+              assert b_private['canonical']['applied_points']==2,b_private['canonical']
+
+              # -----------------------------------------------------------------
+              # B2. historical-yx is explicit and swapped exactly once.
+              # Complete imported map then gets a game_live update; re-import
+              # must not overwrite it.
+              # -----------------------------------------------------------------
+              h_key='hk_w8h5544'
+              h_upload={
+                  'catalog':catalog(h_key,'Delta','55:44',1),
+                  'points':[5000000,6000000,7],
+                  'meta':{
+                      'area_id':'w8-web-h','city_id':'w8-city-h','city_name':'Delta',
+                      'x':55,'y':44,'coord_revision':'historical-yx'
+                  },
+                  'buildingsGeoJSON':{'type':'FeatureCollection','features':[
+                      {'type':'Feature','id':'way821','geometry':poly(50.0,60.0),
+                       'properties':{'is_game':True,'building_id':'way821','crystals':7,'is_investment':False,'faction':'d'}}
+                  ]}
+              }
+              h1=s.import_hk_authorized_map_upload(h_upload)
+              assert h1['canonical_area_id']=='w8-web-h',h1
+              h_detail=s.map_detail('w8-web-h')
+              assert h_detail['area']['x']==44 and h_detail['area']['y']==55,h_detail['area']
+              assert h_detail['buildings'][0]['room_count']==7,h_detail
+
+              with s.db_session() as db:
+                  counts1={
+                      'areas':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
+                      'buildings':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0],
+                      'catalog':db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0],
+                      'points':db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0],
+                      'area_links':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
+                      'point_links':db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0],
+                  }
+              h2=s.import_hk_authorized_map_upload(h_upload)
+              assert h2['canonical_area_id']=='w8-web-h'
+              with s.db_session() as db:
+                  counts2={
+                      'areas':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
+                      'buildings':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0],
+                      'catalog':db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0],
+                      'points':db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0],
+                      'area_links':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
+                      'point_links':db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0],
+                  }
+              assert counts2==counts1,(counts1,counts2)
+
+              h_live={
+                  'area_id':'w8-game-h-alias','city_id':'w8-city-h','city_name':'Delta',
+                  'x':44,'y':55,'invest_count':0,'expected_buildings':1,
+                  'buildings':[{'building_id':'way821','opened':True,'room_count':0,'has_events':False,
+                                'is_invest':False,'tier':1,'faction':'d','building_type':'normal'}]
+              }
+              h3=s.submit_map_area('player-w8-h-live',h_live)
+              assert h3['area_id']=='w8-web-h',h3
+              hd=s.map_detail('w8-game-h-alias')
+              assert hd['area']['area_id']=='w8-web-h',hd
+              assert hd['buildings'][0]['room_count']==0 and hd['buildings'][0]['knowledge_source']=='game_live',hd
+
+              h4=s.import_hk_authorized_map_upload(h_upload)
+              assert h4['canonical_area_id']=='w8-web-h'
+              hd2=s.map_detail('w8-web-h')
+              assert hd2['buildings'][0]['room_count']==0 and hd2['buildings'][0]['knowledge_source']=='game_live',hd2
+              h_web=s.hk_map_data(h_key,member=manager)
+              assert h_web['points']==[5000000,6000000,0],h_web['points']
+
+              # Shared/userscript map list must expose website-imported districts.
+              idx=s.map_index()
+              idx_by={x['area_id']:x for x in idx}
+              assert 'w8-web-b' in idx_by and 'w8-web-h' in idx_by,idx_by.keys()
+              assert idx_by['w8-web-b']['x']==31 and idx_by['w8-web-b']['y']==41,idx_by['w8-web-b']
+              assert idx_by['w8-web-h']['x']==44 and idx_by['w8-web-h']['y']==55,idx_by['w8-web-h']
+              assert 'w8-game-h-alias' in idx_by['w8-web-h']['aliases'],idx_by['w8-web-h']['aliases']
+
+              print('W8_B_WEBSITE_TO_USERSCRIPT_DISTRICTS=2')
+              print('W8_B_DIRECT_SHARED_KNOWLEDGE=PASS')
+              print('W8_B_COLUMN_ROW_COORDS=PASS')
+              print('W8_B_HISTORICAL_YX_COORDS=PASS')
+              print('W8_B_INVESTMENT_FLAG=PASS')
+              print('W8_B_UNKNOWN_NULL=PASS')
+              print('W8_B_SOURCE_PRIORITY=PASS')
+              print('W8_B_RERUN_IDEMPOTENCY=PASS')
+              print('W8_PERSONAL_CABINET_BACKEND=PASS')
+
+              summary={
+                  'direction_a_districts':2,
+                  'direction_b_districts':2,
+                  'coordinates':'PASS',
+                  'aliases':'PASS',
+                  'room_count':'PASS',
+                  'investment':'PASS',
+                  'unknown_null':'PASS',
+                  'source_priority':'PASS',
+                  'idempotency':'PASS',
+                  'cabinet_backend':'PASS',
+                  'no_sync':'PASS',
+              }
+              open('/tmp/w8-temp-summary.json','w').write(json.dumps(summary,sort_keys=True))
+          finally:
+              try:os.remove(path)
+              except OSError:pass
+          PY
+
+      - name: Read-only verification on production DB across linked districts
+        run: |
+          cat > /tmp/w8-live-read.py <<'PY'
+          import importlib.util,json,sqlite3
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          DB='/var/lib/hamsterking-license/licenses.db'
+          db=sqlite3.connect('file:'+DB+'?mode=ro',uri=True);db.row_factory=sqlite3.Row
+
+          counts={
+              'catalog':db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0],
+              'points':db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0],
+              'area_links':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
+              'point_links':db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0],
+          }
+          assert counts['catalog']==235,counts
+          assert counts['points']==235,counts
+          assert counts['area_links']==25,counts
+          assert counts['point_links']>=2007,counts
+
+          dups=[dict(r) for r in db.execute("""SELECT canonical_area_id,COUNT(*) n
+                                               FROM hk_map_area_links
+                                               GROUP BY canonical_area_id HAVING COUNT(*)>1""")]
+          assert not dups,dups
+
+          rows=[dict(r) for r in db.execute("""
+              SELECT l.map_key,l.canonical_area_id,c.city,c.grid,COUNT(pl.point_index) point_links
+              FROM hk_map_area_links l
+              JOIN hk_maps_catalog c ON c.map_key=l.map_key
+              LEFT JOIN hk_map_point_links pl ON pl.map_key=l.map_key
+              GROUP BY l.map_key,l.canonical_area_id,c.city,c.grid
+              ORDER BY point_links DESC,c.city,c.grid
+          """)]
+          assert len(rows)==25,len(rows)
+          samples=[]
+          seen_city=set()
+          for row in rows:
+              if row['city'] in seen_city and len(samples)<2:
+                  continue
+              detail=s.map_detail(row['canonical_area_id'])
+              assert detail and detail['area']['area_id']==row['canonical_area_id'],row
+              source_hist={}
+              nulls=invest=0
+              for b in detail['buildings']:
+                  source_hist[str(b.get('knowledge_source'))]=source_hist.get(str(b.get('knowledge_source')),0)+1
+                  if b.get('room_count') is None:nulls+=1
+                  if b.get('is_invest'):invest+=1
+              item={**row,'canonical_buildings':len(detail['buildings']),
+                    'null_buildings':nulls,'investment_buildings':invest,'source_hist':source_hist}
+              samples.append(item);seen_city.add(row['city'])
+              if len(samples)>=3:break
+          if len(samples)<3:
+              for row in rows:
+                  if any(x['map_key']==row['map_key'] for x in samples):continue
+                  detail=s.map_detail(row['canonical_area_id'])
+                  samples.append({**row,'canonical_buildings':len(detail['buildings'])})
+                  if len(samples)>=3:break
+          assert len(samples)>=3,samples
+          out={'counts':counts,'duplicate_targets':0,'linked_maps':len(rows),'samples':samples}
+          print(json.dumps(out,ensure_ascii=False,sort_keys=True))
+          db.close()
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w8-live-read.py root@89.125.1.71:/tmp/w8-live-read.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w8-live-read.py' | tee /tmp/w8-live-samples.json
+
+      - name: Record W8 verification evidence
+        run: |
+          set -euo pipefail
+          server_sha="$(cat /tmp/w8-server-sha.txt)"
+          client_sha="$(cat /tmp/w8-client-sha.txt)"
+          cp /tmp/w8-live-samples.json audit/hk-stage2-w8-live-samples.json
+          cp /tmp/w8-temp-summary.json audit/hk-stage2-w8-temp-e2e-summary.json
+          {
+            echo "MAPS_SHARED_KB_W8=PASS"
+            echo "server_sha256=$server_sha"
+            echo "client_sha256=$client_sha"
+            echo "direction_a_userscript_to_website=PASS"
+            echo "direction_a_districts=2"
+            echo "direction_b_website_to_userscript=PASS"
+            echo "direction_b_districts=2"
+            echo "coordinates=PASS"
+            echo "aliases=PASS"
+            echo "room_count=PASS"
+            echo "investment_flag=PASS"
+            echo "unknown_null=PASS"
+            echo "source_priority=PASS"
+            echo "rerun_idempotency=PASS"
+            echo "personal_cabinet_backend=PASS"
+            echo "personal_cabinet_live_ui=PASS"
+            echo "website_live_bitmask=PASS"
+            echo "scanner=maps-parallel-read-20260920-r6-safe5"
+            echo "read_concurrency=5"
+            echo "safe_active_building_intersection=PASS"
+            echo "coord_revision=column-row-v1"
+            echo "production_writes=NO"
+          } > audit/hk-stage2-maps-shared-kb-w8-status.txt
+          cat audit/hk-stage2-maps-shared-kb-w8-status.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-w8-live-samples.json audit/hk-stage2-w8-temp-e2e-summary.json audit/hk-stage2-maps-shared-kb-w8-status.txt
+          git commit -m "audit: verify Maps shared KB W8 end-to-end"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'rm -f /tmp/w8-live-read.py' || true
+          rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/public.js /tmp/maps-view.html /tmp/cabinet.html \
+            /tmp/w8-server-sha.txt /tmp/w8-client-sha.txt /tmp/w8-live-read.py /tmp/w8-live-samples.json /tmp/w8-temp-summary.json
