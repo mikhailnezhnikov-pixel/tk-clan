@@ -2562,6 +2562,13 @@
     return pitCanonCostQuantity(row?.cost,prem?'cur_prem':HK_PIT_PASS_ITEM_ID,prem?'currency':'item');
   }
 
+  function pitCanonRespawnCost(state,chunk=1) {
+    const options=Array.isArray(state?.respawn_costs)?state.respawn_costs:[];
+    const option=options.find(row=>row?.is_prem===false);
+    const quantity=pitCanonCostQuantity(option,HK_PIT_RESTORATION_ITEM_ID,'item');
+    return pitCanonWhole(quantity)||Math.max(1,pitCanonWhole(chunk));
+  }
+
   function pitCanonPlans(state,available,itemPasses) {
     available=pitCanonWhole(available);
     itemPasses=pitCanonWhole(itemPasses);
@@ -5721,6 +5728,7 @@
   const HK_PITS_SNIPER_REV = 'pits-passplan-sniper-20260920-r3';
   const HK_PITS_TOOLBAR_REV = 'pits-toolbar-clean-20260920-r4';
   const HK_PITS_START_REV = 'pits-start-config-snapshot-20260920-r5';
+  const HK_PITS_RESPAWN_REV = 'pits-respawn-cost-20260920-r6';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
