@@ -29,7 +29,7 @@ jobs:
           set -euo pipefail
           python3 -m py_compile deploy/topking/public_collector.py deploy/topking/verify_public_collector_r2.py
           grep -Fq "ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py ratings" deploy/topking/hamsterking-public-collector.service
-          grep -Fq "OnCalendar=*-*-* 00/3:15:00" deploy/topking/hamsterking-public-collector.timer
+          grep -Fq "OnCalendar=*-*-* 16:00:00 Europe/Moscow" deploy/topking/hamsterking-public-collector.timer
           grep -Fq "ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py war" deploy/topking/hamsterking-public-war.service
           grep -Fq "OnCalendar=*-*-* *:03/10:00" deploy/topking/hamsterking-public-war.timer
           grep -Fq "setInterval(load,60000)" wars/index.html
@@ -193,7 +193,7 @@ jobs:
           {
             echo "PUBLIC_COLLECTOR_R2_LIVE=PASS"
             echo "player_client_public_collection=DISABLED"
-            echo "ratings_collector_interval=3h"
+            echo "ratings_collector_interval=24h"\n            echo "ratings_collector_schedule=16:00_Europe/Moscow"
             echo "war_collector_interval=10m"
             echo "war_api_requests_per_run=1"
             echo "ratings_refresh_forced_during_deploy=NO"
