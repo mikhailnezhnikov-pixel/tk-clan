@@ -805,6 +805,24 @@ Required output before any schema/write change:
 
 PASS gate: audit written and reviewed.
 
+#### W1 result — PASS (2026-09-20)
+
+- audit evidence: `audit/HK_STAGE2_W1_MAPS_SHARED_KB_AUDIT.md`
+- read-only live snapshot: `map_areas=301`, `map_buildings=162170`, `map_area_aliases=301`, `hk_maps_catalog=235`, `hk_map_points=235`;
+- all 301 current alias rows are self-aliases; no non-self alias existed in the W1 snapshot;
+- historical HK Maps coordinate convention is `grid Y:X`; canonical discovery must use `x=grid.X`, `y=grid.Y`;
+- direct unswapped interpretation produced 0 matches and is rejected;
+- safe automatic links: **26/235**;
+- ambiguous: **0**;
+- unresolved/not found: **209**;
+- no duplicate canonical target among the 26 safe candidates;
+- exact 26 `map_key → canonical_area_id` candidates and all 209 unresolved maps are recorded in the W1 audit;
+- current Personal Cabinet maps still read `hk_maps_catalog/hk_map_points` only; userscript `/maps/list|detail|submit` still use `map_areas/map_buildings/map_area_aliases`;
+- W2 recommended durable bridge: `hk_map_area_links(map_key PK/FK → hk_maps_catalog, canonical_area_id FK → map_areas, match_method, linked_at)`;
+- **no live/schema/write/deploy mutation was performed during W1**;
+- W2 is **NOT STARTED** and requires an explicit next instruction.
+
+
 ### Stage W2 — Link website map ↔ canonical game district
 
 Add a durable relation:
