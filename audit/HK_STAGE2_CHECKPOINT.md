@@ -691,3 +691,18 @@ Buildings r1 remains deployed; Explore remains blocked until Maps data semantics
 - accidental rollback workflow and trigger removed.
 
 Maps remains **SCANNER_R2_LIVE_CANDIDATE** pending fresh user scan confirmation.
+
+
+## Maps safe active-building scanner r3
+
+- source rule now strictly intersects `/player/me.buildings` with `/game_area/{area}/buildings` before any detailed building read;
+- active ID normalization supports `id` and `building_id`;
+- event catalog is ensured for room matching;
+- unavailable `/events` can no longer silently create false zero-crystal observations;
+- unopened buildings are never read by scanner backfill;
+- marker: `maps-active-intersection-20260920-r3`;
+- coordinates marker retained: `maps-coordinates-column-row-20260920-r1`;
+- live/public SHA256: `f8a34bff26fd449f315f07a2ef8e6a8a6e8169ea62f463e7efe527766d698101`;
+- technical live verification: PASS.
+
+Current Maps status: **SCANNER_R3_LIVE_CANDIDATE** pending user scan confirmation.
