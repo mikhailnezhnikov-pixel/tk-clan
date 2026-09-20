@@ -1,0 +1,53 @@
+name: Inspect TopKing Public Collector Server
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-inspect-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect server safely
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            echo "=== SERVICE ENV NAMES ==="
+            systemctl show hamsterking-license.service -p Environment --no-pager               | sed "s/^Environment=//" | tr " " "\n"               | sed -E "s/=.*$/=[SET]/"               | grep -E "^(HK_|GAME_|HAMSTER|PUBLIC|TOKEN|AUTH)" || true
+            echo "=== SERVER PUBLIC ROUTES ==="
+            grep -n -E "public-snapshot|public/clan-war|public/ratings|public_clan_war_snapshot|public_rating_snapshots|normalize_clan_war|RATING_KINDS" /opt/hamsterking-license/server.py | head -220 || true
+            echo "=== SERVER NETWORK/HTTP CLIENTS ==="
+            grep -n -E "requests\.|httpx|urllib|aiohttp|hwgame|GAME_API|game-api|Authorization" /opt/hamsterking-license/server.py | head -220 || true
+            echo "=== SYSTEMD TIMERS ==="
+            systemctl list-timers --all --no-pager | grep -Ei "hamster|topking|collector|public" || true
+          ' > /tmp/public-collector-server-inspect.txt
+          cat /tmp/public-collector-server-inspect.txt
+      - name: Save inspection
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/public-collector-server-inspect.txt audit/hk-public-collector-server-inspect.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-public-collector-server-inspect.txt
+          git commit -m "audit: inspect public collector server state" || true
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/public-collector-server-inspect.txt
