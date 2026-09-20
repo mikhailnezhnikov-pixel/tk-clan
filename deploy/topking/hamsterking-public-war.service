@@ -1,0 +1,16 @@
+[Unit]
+Description=TopKing lightweight current war collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=-/etc/hamsterking-public-collector.env
+ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py war
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+PrivateTmp=true
+NoNewPrivileges=true
