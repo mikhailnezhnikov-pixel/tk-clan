@@ -36,7 +36,8 @@ jobs:
           grep -Fq "HK_PITS_UI_REV = 'pits-ui-align-20260920-r2'" /tmp/live.js
           grep -Fq "HK_PITS_SNIPER_REV = 'pits-passplan-sniper-20260920-r3'" /tmp/live.js
           grep -Fq "HK_PITS_TOOLBAR_REV = 'pits-toolbar-clean-20260920-r4'" /tmp/live.js
-          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "003c3a2a47bc2dc97e1e073b14744a57463d936e1fdc20b02e6041b124842223"
+          grep -Fq "HK_PITS_START_REV = 'pits-start-config-snapshot-20260920-r5'" /tmp/live.js
+          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "c373370ba5c3cf9a24f19d7e3ae82e871c124357e2d940f954fe834520a44629"
           cp /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
       - name: Commit current snapshot
         run: |
@@ -45,7 +46,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js
           if ! git diff --cached --quiet; then
-            git commit -m "stage2: sync Pits toolbar clean r4 live candidate"
+            git commit -m "stage2: sync Pits start r5 live candidate"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
