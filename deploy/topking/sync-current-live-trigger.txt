@@ -1,1 +1,1 @@
-2026-09-20 sync pits shared forecast r15 live candidate
+2026-09-20 sync pits reward-only r16 live candidate
