@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- current module: Maps / Карты
-- current module file: audit/hk-stage2-04-maps.md
+- current module: Resources / Ресурсы
+- current module file: audit/hk-stage2-05-resources.md
 - current module status: SOURCE_PREFLIGHT_PENDING
-- next module after LIVE PASS: Resources / Ресурсы
+- next module after LIVE PASS: Buildings / Здания
 - Today / Сегодня: LIVE PASS
 
 ## Module order
@@ -75,6 +75,9 @@ Each module:
   - final marker: `bosses-area-target-20260920-r2`
   - final SHA256: `0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7`
   - Area Boss Calculator intentionally remains website-only
+- 2.04 Maps / Карты — LIVE PASS
+  - marker: `stage2e-maps-20260919-r1`
+  - no new patch required
 
 
 ## Pits donor source block
@@ -568,3 +571,14 @@ Stage 2 continues with 2.04 Maps / Карты.
 - Stage 2.03 Bosses remains **LIVE PASS** at r2.
 
 Stage 2.04 Maps resumes from **SOURCE_PREFLIGHT_PENDING** until a Maps-specific audit/candidate is actually recorded.
+
+
+## Maps Stage 2.04 final
+
+- current Maps implementation revalidated against the transferred Stage 2E patch and existing live verification;
+- UI/read/calculation/action/state-reread/runner path present;
+- no confirmed regression found;
+- no redeploy required.
+
+Stage 2.04 Maps / Карты: **LIVE PASS**.
+Stage 2 continues with 2.05 Resources / Ресурсы.
