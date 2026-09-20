@@ -1,0 +1,528 @@
+server_sha256=8fe91e74f49ecec9ea662e5ec85c32f07854a6dd5ed03864f70a3261a43dc245
+
+### import_hk_maps_index
+def import_hk_maps_index(rows: object) -> dict:
+    if not isinstance(rows, list) or len(rows) > 1000:
+        raise ValueError("invalid maps index")
+    now = utc_now()
+    accepted = 0
+    with db_session() as db:
+        for raw in rows:
+            if not isinstance(raw, dict):
+                continue
+            key = str(raw.get("key") or "").strip()
+            city = str(raw.get("city") or "").strip()[:100]
+            grid = str(raw.get("grid") or "").strip()[:32]
+            crystals = raw.get("crystals") if isinstance(raw.get("crystals"), list) else []
+            reward = raw.get("reward") if isinstance(raw.get("reward"), dict) else {}
+            if not re.fullmatch(r"hk_[a-z0-9]+", key) or not city or not grid:
+                continue
+            def iv(value: object) -> int:
+                try:
+                    return max(0, int(value or 0))
+                except (TypeError, ValueError):
+                    return 0
+            try:
+                progress = max(0.0, min(100.0, float(raw.get("progress") or 0)))
+            except (TypeError, ValueError):
+                progress = 0.0
+            c = [iv(crystals[i] if i < len(crystals) else 0) for i in range(6)]
+            db.execute("""INSERT INTO hk_maps_catalog(
+                        map_key,city,grid,invest,buildings,unknown,c0,c1,c2,c3,c4,c5,
+                        event_buildings,total_events,progress,score,reward_max,reward_normal,reward_investment,updated_at)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        ON CONFLICT(map_key) DO UPDATE SET
+                        city=excluded.city,grid=excluded.grid,invest=excluded.invest,buildings=excluded.buildings,
+                        unknown=excluded.unknown,c0=excluded.c0,c1=excluded.c1,c2=excluded.c2,c3=excluded.c3,
+                        c4=excluded.c4,c5=excluded.c5,event_buildings=excluded.event_buildings,
+                        total_events=excluded.total_events,progress=excluded.progress,score=excluded.score,
+                        reward_max=excluded.reward_max,reward_normal=excluded.reward_normal,
+                        reward_investment=excluded.reward_investment,updated_at=excluded.updated_at""",
+                       (key, city, grid, iv(raw.get("invest")), iv(raw.get("buildings")), iv(raw.get("unknown")),
+                        *c, iv(raw.get("eventBuildings")), iv(raw.get("totalEvents")), progress, iv(raw.get("score")),
+                        iv(reward.get("max")), iv(reward.get("normal")), iv(reward.get("investment")), now))
+            accepted += 1
+    return {"ok": True, "received": len(rows), "accepted": accepted}
+
+### import_hk_map_points
+def import_hk_map_points(rows: object) -> dict:
+    if not isinstance(rows, list) or len(rows) > 1000:
+        raise ValueError("invalid maps points")
+    now = utc_now()
+    accepted = 0
+    total_points = 0
+    with db_session() as db:
+        for raw in rows:
+            if not isinstance(raw, list) or len(raw) != 2:
+                continue
+            key = str(raw[0] or "").strip()
+            flat = raw[1]
+            if not re.fullmatch(r"hk_[a-z0-9]+", key) or not isinstance(flat, list) or len(flat) % 3:
+                continue
+            if len(flat) > 300000:
+                continue
+            clean = []
+            valid = True
+            for value in flat:
+                if isinstance(value, bool) or not isinstance(value, int):
+                    valid = False
+                    break
+                clean.append(value)
+            if not valid:
+                continue
+            point_count = len(clean) // 3
+            exists = db.execute("SELECT 1 FROM hk_maps_catalog WHERE map_key=?", (key,)).fetchone()
+            if not exists:
+                continue
+            db.execute("""INSERT INTO hk_map_points(map_key,points_json,point_count,updated_at)
+                          VALUES(?,?,?,?)
+                          ON CONFLICT(map_key) DO UPDATE SET
+                          points_json=excluded.points_json,point_count=excluded.point_count,updated_at=excluded.updated_at""",
+                       (key, json.dumps(clean, separators=(",", ":")), point_count, now))
+            db.execute("UPDATE hk_maps_catalog SET open_url=?,updated_at=? WHERE map_key=?",
+                       (f"/maps/view/?key={key}", now, key))
+            accepted += 1
+            total_points += point_count
+    return {"ok": True, "received": len(rows), "accepted": accepted, "points": total_points}
+
+### hk_map_data
+def hk_map_data(map_key: str, member: dict | None = None, public: bool = False) -> dict:
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    if not public and not member:
+        raise PermissionError("maps access denied")
+    with db_session() as db:
+        if public:
+            row = db.execute("""SELECT c.*,p.points_json,p.point_count
+                                FROM hk_maps_catalog c JOIN hk_map_points p ON p.map_key=c.map_key
+                                WHERE c.map_key=? AND c.published=1 AND c.open_url<>''""", (map_key,)).fetchone()
+        else:
+            row = db.execute("""SELECT c.*,p.points_json,p.point_count
+                                FROM hk_maps_catalog c JOIN hk_map_points p ON p.map_key=c.map_key
+                                WHERE c.map_key=?""", (map_key,)).fetchone()
+    if not row:
+        raise LookupError("map not found")
+    if not public and not member_can_access_hk_map(member, map_key, row["city"]):
+        raise PermissionError("maps access denied")
+    full = load_full_hk_map(map_key)
+    if full is not None:
+        return {"ok": True, "map": hk_map_row(row), "point_count": row["point_count"],
+                "render": "full", "full": full}
+    try:
+        points = json.loads(row["points_json"])
+    except json.JSONDecodeError:
+        points = []
+    points, canonical = hk_map_points_with_canonical(map_key, points)
+    return {"ok": True, "map": hk_map_row(row), "point_count": row["point_count"],
+            "render": "points", "points": points, "canonical": canonical}
+
+### link_hk_map_area
+def link_hk_map_area(map_key: str, area_id: str = "") -> dict:
+    key = str(map_key or "").strip()
+    with db_session() as db:
+        map_row = db.execute("SELECT 1 FROM hk_maps_catalog WHERE map_key=?", (key,)).fetchone()
+        if not map_row:
+            raise LookupError("map not found")
+        requested = str(area_id or "").strip()
+        if requested:
+            canonical = _canonical_area_id(db, requested)
+            if not canonical:
+                raise LookupError("canonical area not found")
+            method = "exact_area_id"
+            candidates = [canonical]
+        else:
+            discovered = discover_hk_map_area(db, key)
+            candidates = discovered["candidates"]
+            method = discovered["match_method"]
+            if len(candidates) != 1:
+                raise ValueError(f"map link requires exactly one canonical candidate, got {len(candidates)}")
+            canonical = candidates[0]
+        now = utc_now()
+        db.execute(
+            """INSERT INTO hk_map_area_links(map_key,canonical_area_id,match_method,linked_at)
+               VALUES(?,?,?,?)
+               ON CONFLICT(map_key) DO UPDATE SET
+               canonical_area_id=excluded.canonical_area_id,
+               match_method=excluded.match_method,
+               linked_at=excluded.linked_at""",
+            (key, canonical, method, now),
+        )
+        linked = db.execute(
+            "SELECT map_key,canonical_area_id,match_method,linked_at FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+    return {"ok": True, "link": dict(linked), "candidates": candidates}
+
+### link_hk_map_points
+def link_hk_map_points(map_key: str, value: object, match_method: str = "osm_point_in_polygon") -> dict:
+    key = str(map_key or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key):
+        raise ValueError("invalid map key")
+    if match_method not in {"osm_point_in_polygon", "exact_building_id"}:
+        raise ValueError("invalid point link method")
+    if not isinstance(value, list) or len(value) > 5000:
+        raise ValueError("invalid point links")
+    now = utc_now()
+    with db_session() as db:
+        bridge = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not bridge:
+            raise LookupError("map is not linked to canonical area")
+        area_id = str(bridge["canonical_area_id"])
+        point_row = db.execute(
+            "SELECT point_count FROM hk_map_points WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not point_row:
+            raise LookupError("map points not found")
+        point_count = int(point_row["point_count"])
+        normalized = []
+        seen_points = set()
+        seen_buildings = set()
+        for raw in value:
+            if not isinstance(raw, dict):
+                continue
+            try:
+                point_index = int(raw.get("point_index"))
+            except (TypeError, ValueError):
+                continue
+            building_id = str(raw.get("building_id") or "").strip()
+            if not 0 <= point_index < point_count:
+                continue
+            if not ID_RE.fullmatch(building_id):
+                continue
+            if point_index in seen_points or building_id in seen_buildings:
+                continue
+            exists = db.execute(
+                "SELECT 1 FROM map_buildings WHERE area_id=? AND building_id=?",
+                (area_id, building_id),
+            ).fetchone()
+            if not exists:
+                continue
+            seen_points.add(point_index)
+            seen_buildings.add(building_id)
+            normalized.append((point_index, building_id))
+        if not normalized:
+            raise ValueError("no valid point links")
+        for point_index, building_id in normalized:
+            db.execute(
+                """INSERT INTO hk_map_point_links(map_key,point_index,building_id,match_method,linked_at)
+                   VALUES(?,?,?,?,?)
+                   ON CONFLICT(map_key,point_index) DO UPDATE SET
+                     building_id=excluded.building_id,
+                     match_method=excluded.match_method,
+                     linked_at=excluded.linked_at""",
+                (key, point_index, building_id, match_method, now),
+            )
+        total = db.execute(
+            "SELECT COUNT(*) FROM hk_map_point_links WHERE map_key=?",
+            (key,),
+        ).fetchone()[0]
+    return {"ok": True, "map_key": key, "area_id": area_id,
+            "linked": len(normalized), "total": int(total), "match_method": match_method}
+
+### import_hk_map_room_knowledge
+def import_hk_map_room_knowledge(map_key: str, value: object) -> dict:
+    """Fill only previously unknown canonical room counts for one linked website map.
+
+    W3 intentionally does not overwrite any existing non-NULL room_count.
+    Source priority/provenance normalization is handled in W5.
+    """
+    key = str(map_key or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key):
+        raise ValueError("invalid map key")
+    if not isinstance(value, list) or len(value) > 5000:
+        raise ValueError("invalid room knowledge")
+    normalized = []
+    seen = set()
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        building_id = str(raw.get("building_id", "")).strip()
+        if not ID_RE.fullmatch(building_id) or building_id in seen:
+            continue
+        try:
+            room_count = int(raw.get("room_count"))
+        except (TypeError, ValueError):
+            continue
+        if not 0 <= room_count <= 20:
+            continue
+        seen.add(building_id)
+        normalized.append({"building_id": building_id, "room_count": room_count})
+    if not normalized:
+        raise ValueError("no valid room knowledge")
+
+    now = utc_now()
+    source = "source-hk-maps-import"
+    filled = preserved = missing = 0
+    filled_ids = []
+    preserved_ids = []
+    missing_ids = []
+    with db_session() as db:
+        link = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not link:
+            raise LookupError("map is not linked to canonical area")
+        area_id = str(link["canonical_area_id"])
+        if not db.execute("SELECT 1 FROM map_areas WHERE area_id=?", (area_id,)).fetchone():
+            raise LookupError("canonical area not found")
+
+        for item in normalized:
+            row = db.execute(
+                """SELECT room_count,knowledge_source,knowledge_observed_at FROM map_buildings
+                   WHERE area_id=? AND building_id=?""",
+                (area_id, item["building_id"]),
+            ).fetchone()
+            if not row:
+                missing += 1
+                missing_ids.append(item["building_id"])
+                continue
+            if row["room_count"] is not None:
+                preserved += 1
+                preserved_ids.append(item["building_id"])
+                continue
+            cursor = db.execute(
+                """UPDATE map_buildings
+                   SET room_count=?,
+                       has_events=MAX(has_events,?),
+                       last_player_id=?,
+                       last_seen=?,
+                       knowledge_source='hk_maps_import',
+                       knowledge_observed_at=?
+                   WHERE area_id=? AND building_id=? AND room_count IS NULL""",
+                (item["room_count"], int(item["room_count"] > 0), source, now, now,
+                 area_id, item["building_id"]),
+            )
+            if cursor.rowcount:
+                filled += 1
+                filled_ids.append(item["building_id"])
+
+        known, total, progress = map_completion(db, area_id)
+
+    return {
+        "ok": True,
+        "map_key": key,
+        "area_id": area_id,
+        "requested": len(normalized),
+        "filled": filled,
+        "preserved_nonnull": preserved,
+        "missing_buildings": missing,
+        "filled_ids": filled_ids,
+        "preserved_ids": preserved_ids,
+        "missing_ids": missing_ids,
+        "known_buildings": known,
+        "buildings": total,
+        "progress": progress,
+        "source": source,
+        "knowledge_source": "hk_maps_import",
+    }
+
+### CLI --import-hk-maps
+]})
+        assert merged["area_id"] == "area-1" and merged["added_buildings"] == 1 and merged["progress"] == 100
+        index = map_index()
+        assert len(index) == 1 and index[0]["total_rooms"] == 3 and len(map_detail("area-duplicate")["buildings"]) == 3
+        ignored = submit_map_area("player-3", {"area_id":"area-third","city_id":"city-1","city_name":"Test","x":2,"y":3,
+            "expected_buildings":3,"buildings":[{"building_id":"building-1","opened":True,"room_count":5}]})
+        assert ignored["ignored_complete"] and map_index()[0]["total_rooms"] == 3
+    print("LICENSE SERVER SELF-TEST OK")
+
+
+if __name__ == "__main__":
+    if "--self-test" in os.sys.argv:
+        self_test()
+    elif "--import-recipes" in os.sys.argv:
+        init_db()
+        imported = json.loads(os.sys.stdin.buffer.read().decode("utf-8-sig"))
+        added = total = 0
+        for offset in range(0, len(imported), 12):
+            batch_added, total = submit_business_plans("historical-har", imported[offset:offset + 12])
+            added += batch_added
+        print(json.dumps({"received": len(imported), "added": added, "total": total}))
+    elif "--delete-historical-recipes" in os.sys.argv:
+        init_db()
+        with db_session() as db:
+            removed = db.execute("DELETE FROM business_plan_catalog WHERE first_player_id='historical-har'").rowcount
+            remaining = db.execute("SELECT COUNT(*) FROM business_plan_catalog").fetchone()[0]
+        print(json.dumps({"removed": removed, "remaining": remaining}))
+    elif "--anonymize-contributors" in os.sys.argv:
+        init_db()
+        print(json.dumps(anonymize_existing_contributors()))
+    elif "--merge-map-duplicates" in os.sys.argv:
+        init_db()
+        print(json.dumps(merge_existing_map_duplicates()))
+    elif "--import-hk-maps-index" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --import-hk-maps-index FILE.json")
+        init_db()
+        with open(os.sys.argv[2], "r", encoding="utf-8") as source:
+            print(json.dumps(import_hk_maps_index(json.load(source))))
+    elif "--import-hk-map-points" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --import-hk-map-points FILE.json.gz")
+        init_db()
+        with gzip.open(os.sys.argv[2], "rt", encoding="utf-8") as source:
+            print(json.dumps(import_hk_map_points(json.load(source))))
+    elif "--link-hk-map-area" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --link-hk-map-area MAP_KEY [AREA_ID]")
+        init_db()
+        print(json.dumps(link_hk_map_area(os.sys.argv[2], os.sys.argv[3] if len(os.sys.argv) > 3 else "")))
+    elif "--import-hk-map-room-knowledge" in os.sys.argv:
+        if len(os.sys.argv) < 4:
+            raise SystemExit("usage: server.py --import-hk-map-room-knowledge MAP_KEY FILE.json")
+        init_db()
+        with open(os.sys.argv[3], "r", encoding="utf-8") as source:
+            print(json.dumps(import_hk_map_room_knowledge(os.sys.argv[2], json.load(source))))
+    elif "--link-hk-map-points" in os.sys.argv:
+        if len(os.sys.argv) < 4:
+            raise SystemExit("usage: server.py --link-hk-map-points MAP_KEY FILE.json")
+        init_db()
+        with open(os.sys.argv[3], "r", encoding="utf-8") as source:
+            print(json.dumps(link_hk_map_points(os.sys.argv[2], json.load(source))))
+    elif "--import-kokkaras-map" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --import-kokkaras-map FILE.json.gz")
+        init_db()
+        with gzip.open(os.sys.argv[2], "rt", encoding="utf-8") as source:
+            print(json.dumps(import_kokkaras_map(json.load(source))))
+    else:
+        if not ADMIN_HASH or not SIGNING_SECRET:
+            raise SystemExit("HK_ADMIN_PASSWORD_HASH and HK_SIGNING_SECRET are required")
+        init_db()
+        ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+
+
+### CLI --import-hk-map-points
+ea-third","city_id":"city-1","city_name":"Test","x":2,"y":3,
+            "expected_buildings":3,"buildings":[{"building_id":"building-1","opened":True,"room_count":5}]})
+        assert ignored["ignored_complete"] and map_index()[0]["total_rooms"] == 3
+    print("LICENSE SERVER SELF-TEST OK")
+
+
+if __name__ == "__main__":
+    if "--self-test" in os.sys.argv:
+        self_test()
+    elif "--import-recipes" in os.sys.argv:
+        init_db()
+        imported = json.loads(os.sys.stdin.buffer.read().decode("utf-8-sig"))
+        added = total = 0
+        for offset in range(0, len(imported), 12):
+            batch_added, total = submit_business_plans("historical-har", imported[offset:offset + 12])
+            added += batch_added
+        print(json.dumps({"received": len(imported), "added": added, "total": total}))
+    elif "--delete-historical-recipes" in os.sys.argv:
+        init_db()
+        with db_session() as db:
+            removed = db.execute("DELETE FROM business_plan_catalog WHERE first_player_id='historical-har'").rowcount
+            remaining = db.execute("SELECT COUNT(*) FROM business_plan_catalog").fetchone()[0]
+        print(json.dumps({"removed": removed, "remaining": remaining}))
+    elif "--anonymize-contributors" in os.sys.argv:
+        init_db()
+        print(json.dumps(anonymize_existing_contributors()))
+    elif "--merge-map-duplicates" in os.sys.argv:
+        init_db()
+        print(json.dumps(merge_existing_map_duplicates()))
+    elif "--import-hk-maps-index" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --import-hk-maps-index FILE.json")
+        init_db()
+        with open(os.sys.argv[2], "r", encoding="utf-8") as source:
+            print(json.dumps(import_hk_maps_index(json.load(source))))
+    elif "--import-hk-map-points" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --import-hk-map-points FILE.json.gz")
+        init_db()
+        with gzip.open(os.sys.argv[2], "rt", encoding="utf-8") as source:
+            print(json.dumps(import_hk_map_points(json.load(source))))
+    elif "--link-hk-map-area" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --link-hk-map-area MAP_KEY [AREA_ID]")
+        init_db()
+        print(json.dumps(link_hk_map_area(os.sys.argv[2], os.sys.argv[3] if len(os.sys.argv) > 3 else "")))
+    elif "--import-hk-map-room-knowledge" in os.sys.argv:
+        if len(os.sys.argv) < 4:
+            raise SystemExit("usage: server.py --import-hk-map-room-knowledge MAP_KEY FILE.json")
+        init_db()
+        with open(os.sys.argv[3], "r", encoding="utf-8") as source:
+            print(json.dumps(import_hk_map_room_knowledge(os.sys.argv[2], json.load(source))))
+    elif "--link-hk-map-points" in os.sys.argv:
+        if len(os.sys.argv) < 4:
+            raise SystemExit("usage: server.py --link-hk-map-points MAP_KEY FILE.json")
+        init_db()
+        with open(os.sys.argv[3], "r", encoding="utf-8") as source:
+            print(json.dumps(link_hk_map_points(os.sys.argv[2], json.load(source))))
+    elif "--import-kokkaras-map" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --import-kokkaras-map FILE.json.gz")
+        init_db()
+        with gzip.open(os.sys.argv[2], "rt", encoding="utf-8") as source:
+            print(json.dumps(import_kokkaras_map(json.load(source))))
+    else:
+        if not ADMIN_HASH or not SIGNING_SECRET:
+            raise SystemExit("HK_ADMIN_PASSWORD_HASH and HK_SIGNING_SECRET are required")
+        init_db()
+        ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+
+
+### CLI --import-hk-map-room-knowledge
+otal = submit_business_plans("historical-har", imported[offset:offset + 12])
+            added += batch_added
+        print(json.dumps({"received": len(imported), "added": added, "total": total}))
+    elif "--delete-historical-recipes" in os.sys.argv:
+        init_db()
+        with db_session() as db:
+            removed = db.execute("DELETE FROM business_plan_catalog WHERE first_player_id='historical-har'").rowcount
+            remaining = db.execute("SELECT COUNT(*) FROM business_plan_catalog").fetchone()[0]
+        print(json.dumps({"removed": removed, "remaining": remaining}))
+    elif "--anonymize-contributors" in os.sys.argv:
+        init_db()
+        print(json.dumps(anonymize_existing_contributors()))
+    elif "--merge-map-duplicates" in os.sys.argv:
+        init_db()
+        print(json.dumps(merge_existing_map_duplicates()))
+    elif "--import-hk-maps-index" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --import-hk-maps-index FILE.json")
+        init_db()
+        with open(os.sys.argv[2], "r", encoding="utf-8") as source:
+            print(json.dumps(import_hk_maps_index(json.load(source))))
+    elif "--import-hk-map-points" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --import-hk-map-points FILE.json.gz")
+        init_db()
+        with gzip.open(os.sys.argv[2], "rt", encoding="utf-8") as source:
+            print(json.dumps(import_hk_map_points(json.load(source))))
+    elif "--link-hk-map-area" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --link-hk-map-area MAP_KEY [AREA_ID]")
+        init_db()
+        print(json.dumps(link_hk_map_area(os.sys.argv[2], os.sys.argv[3] if len(os.sys.argv) > 3 else "")))
+    elif "--import-hk-map-room-knowledge" in os.sys.argv:
+        if len(os.sys.argv) < 4:
+            raise SystemExit("usage: server.py --import-hk-map-room-knowledge MAP_KEY FILE.json")
+        init_db()
+        with open(os.sys.argv[3], "r", encoding="utf-8") as source:
+            print(json.dumps(import_hk_map_room_knowledge(os.sys.argv[2], json.load(source))))
+    elif "--link-hk-map-points" in os.sys.argv:
+        if len(os.sys.argv) < 4:
+            raise SystemExit("usage: server.py --link-hk-map-points MAP_KEY FILE.json")
+        init_db()
+        with open(os.sys.argv[3], "r", encoding="utf-8") as source:
+            print(json.dumps(link_hk_map_points(os.sys.argv[2], json.load(source))))
+    elif "--import-kokkaras-map" in os.sys.argv:
+        if len(os.sys.argv) < 3:
+            raise SystemExit("usage: server.py --import-kokkaras-map FILE.json.gz")
+        init_db()
+        with gzip.open(os.sys.argv[2], "rt", encoding="utf-8") as source:
+            print(json.dumps(import_kokkaras_map(json.load(source))))
+    else:
+        if not ADMIN_HASH or not SIGNING_SECRET:
+            raise SystemExit("HK_ADMIN_PASSWORD_HASH and HK_SIGNING_SECRET are required")
+        init_db()
+        ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+
