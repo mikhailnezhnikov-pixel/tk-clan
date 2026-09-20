@@ -65,7 +65,7 @@ jobs:
     timeout-minutes: 12
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 5
       matrix:
         map_key: ${{ fromJson(needs.classify.outputs.map_keys) }}
     steps:
@@ -144,14 +144,12 @@ jobs:
               return rings
           def call(q):
               body=urllib.parse.urlencode({'data':q}).encode();last=None
-              endpoints=('https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter')
-              for round_no in range(4):
-                  for endpoint in endpoints:
-                      try:
-                          req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6-local/5.0'})
-                          with urllib.request.urlopen(req,timeout=30) as r:return json.load(r)
-                      except Exception as e:last=repr(e)
-                  time.sleep(2+round_no*2)
+              endpoints=('https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass-api.de/api/interpreter')
+              for endpoint in endpoints:
+                  try:
+                      req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6-local/6.0'})
+                      with urllib.request.urlopen(req,timeout=15) as r:return json.load(r)
+                  except Exception as e:last=repr(e)
               raise RuntimeError('OSM query failed '+str(last))
           def add_elements(out,data):
               for e in data.get('elements',[]):
@@ -166,14 +164,13 @@ jobs:
           # Query only buildings within 12 m of each positive point.  The source
           # point is expected inside the target polygon; the radius only limits
           # candidate retrieval and does not relax the later point-in-polygon gate.
-          for start in range(0,len(pts),20):
-              part=pts[start:start+20]; clauses=[]
+          for start in range(0,len(pts),40):
+              part=pts[start:start+40]; clauses=[]
               for p in part:
-                  clauses.append(f'way(around:12,{p["lat"]},{p["lon"]})["building"];')
-                  clauses.append(f'relation(around:12,{p["lat"]},{p["lon"]})["building"];')
+                  clauses.append(f'nwr(around:12,{p["lat"]},{p["lon"]})["building"];')
               if clauses:
-                  add_elements(features,call('[out:json][timeout:20];('+''.join(clauses)+');out geom;'))
-                  time.sleep(0.2)
+                  add_elements(features,call('[out:json][timeout:12];('+''.join(clauses)+');out geom;'))
+                  time.sleep(0.1)
 
           unique=[];unmatched=[];amb=[];used={}
           for p in pts:
