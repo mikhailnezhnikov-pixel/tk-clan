@@ -28,9 +28,9 @@ Do not run the full Stage 1 in one long session.
 - donor version: 5.3.22-ui-icons-pit-dim
 - donor SHA256: 28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1
 - prior migration audits: FOUND / READ
-- current block: 1B
+- current block: 1C
 - current block status: READY_TO_START
-- next action: audit donor -> current/live endpoints and constants
+- next action: audit donor -> current/live automation, mutation paths and hidden helpers
 - overall Stage 1 status: IN_PROGRESS
 
 ## Resume command
@@ -50,4 +50,12 @@ Then:
 - 1A — functions: PASS
   - historical genuinely untransferred functions: 0
   - donor-only Neighborhoods and Rat Hunt retained as later-stage references
+  - no gameplay code changed
+
+
+- 1B — endpoints/constants: PASS
+  - historical missing real endpoints: 0
+  - historical missing constants: 0
+  - /city/{id}/game_area confirmed present
+  - Kokkaras service/storage constants classified as architecture-specific reference
   - no gameplay code changed
