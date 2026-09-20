@@ -382,6 +382,34 @@
     wireDesktopGroups();
     wireGeneratedMenu();
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
+  function sendSiteAnalytics(){
+    if(document.documentElement.dataset.tkAnalyticsSent==='1')return;
+    document.documentElement.dataset.tkAnalyticsSent='1';
+    const ua=navigator.userAgent||'';
+    const device=/iPad|Tablet/i.test(ua)?'tablet':/Android|iPhone|iPod|Mobile/i.test(ua)?'mobile':'desktop';
+    let referrerHost='';
+    try{referrerHost=document.referrer?new URL(document.referrer).hostname:''}catch(_){}
+    const payload={
+      path:location.pathname||'/',
+      title:document.title||'',
+      referrer_host:referrerHost,
+      language:(document.documentElement.lang||navigator.language||'').slice(0,16),
+      device
+    };
+    fetch('https://hk-license.89.125.1.71.sslip.io/api/v1/site-analytics/view',{
+      method:'POST',
+      mode:'cors',
+      cache:'no-store',
+      keepalive:true,
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    }).catch(()=>{});
+  }
+  // TK_SITE_ANALYTICS_V1
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>{render();sendSiteAnalytics()},{once:true});
+  }else{
+    render();sendSiteAnalytics();
+  }
   window.addEventListener('tk-language-change',render);
 })();
