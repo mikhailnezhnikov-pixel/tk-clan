@@ -675,3 +675,19 @@ Deployment/check artifacts for both reverted fixes were removed to prevent accid
 
 Current Maps status: **BUG_CONFIRMED_NO_FIX_APPLIED**.
 Buildings r1 remains deployed; Explore remains blocked until Maps data semantics are redesigned and confirmed.
+
+
+## Maps two-fix rollback incident and reapply
+
+- an ambiguous user typo was interpreted as a request to remove both Maps fixes;
+- rollback workflow restored pre-fix live SHA256 `0931ee3eb65a16f9dd768fe51b9a84b897620e011c51ee9e0226d92f37b9e686`, which explains why neither change was visible in the subsequent check;
+- user immediately clarified that neither fix had applied and did **not** intend a rollback;
+- exact previously verified two-fix candidate was reapplied;
+- scanner marker: `maps-building-scan-20260920-r2`;
+- coordinate marker: `maps-coordinates-column-row-20260920-r1`;
+- live/public SHA256: `f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290`;
+- syntax: PASS;
+- public byte equality: PASS;
+- accidental rollback workflow and trigger removed.
+
+Maps remains **SCANNER_R2_LIVE_CANDIDATE** pending fresh user scan confirmation.
