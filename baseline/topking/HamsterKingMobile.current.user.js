@@ -2462,9 +2462,9 @@
   }
 
   const HK_PITS_CANON_DEFINITIONS = [
-    {id:'normal', textKey:'pitNormal', currencyId:'cur_pit_pass', icon:'https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/pit-icon.png',api:'pit',leaderboardType:'pit_daily_lb',scoreItemId:'item_pit_fake_lb_score'},
-    {id:'boss', textKey:'pitBoss', currencyId:'cur_pit_2_pass', icon:'https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/boss-pit-icon.png',api:'boss_pit',leaderboardType:'pit_2_daily_lb',scoreItemId:'item_pit_2_fake_lb_score'},
-    {id:'gang', textKey:'pitGang', currencyId:'cur_pit_3_pass', icon:'https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/pve-pit-icon.png',api:'pit_pve',leaderboardType:'pit_3_daily_lb',leaderboardStatus:'ACTUAL',scoreItemId:'item_pit_3_fake_lb_score'}
+    {id:'normal', textKey:'pitNormal', currencyId:'cur_pit_pass', icon:'https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/pit-icon.png',api:'pit',previewApi:'pit',leaderboardType:'pit_daily_lb',scoreItemId:'item_pit_fake_lb_score'},
+    {id:'boss', textKey:'pitBoss', currencyId:'cur_pit_2_pass', icon:'https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/boss-pit-icon.png',api:'boss_pit',previewApi:'pit_2',leaderboardType:'pit_2_daily_lb',scoreItemId:'item_pit_2_fake_lb_score'},
+    {id:'gang', textKey:'pitGang', currencyId:'cur_pit_3_pass', icon:'https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/pve-pit-icon.png',api:'pit_pve',previewApi:'pit_pve',leaderboardType:'pit_3_daily_lb',leaderboardStatus:'ACTUAL',scoreItemId:'item_pit_3_fake_lb_score'}
   ];
   const HK_PITS_CANON_BATCHES = [50,20,10,5,1];
   const HK_PIT_PASS_ITEM_ID = 'item_pit_pass_ticket';
@@ -2671,6 +2671,39 @@
     return {state,needsReread:!state,reason};
   }
 
+  const pitCanonRuntimePreview={normal:null,boss:null,gang:null};
+  function pitCanonResetRuntimePreview(){pitCanonRuntimePreview.normal=null;pitCanonRuntimePreview.boss=null;pitCanonRuntimePreview.gang=null;}
+  function pitCanonCaptureRuntimePreview(def,data){
+    if(!def||!data||typeof data!=='object')return;
+    const key=def.id==='normal'?'pit_preview':def.id==='boss'?'pit2_preview':'pit_pve_preview';
+    const direct=data?.[key];
+    if(direct&&typeof direct==='object')pitCanonRuntimePreview[def.id]=direct;
+  }
+  function pitCanonFormatGameWinrate(value){
+    const number=Number(value);
+    if(!Number.isFinite(number))return '—';
+    if(number===0)return '0%';
+    const precise=number.toFixed(8).replace(/0+$/,'').replace(/\.$/,'');
+    return precise+'%';
+  }
+  function pitCanonRuntimeWinrateText(def){
+    const preview=pitCanonRuntimePreview?.[def?.id];
+    if(!preview)return '—';
+    if(def?.id==='normal'||def?.id==='boss')return pitCanonFormatGameWinrate(preview?.winrate);
+    const rounds=preview?.rounds;
+    if(!Array.isArray(rounds)||!rounds.length)return '—';
+    return rounds.map(row=>pitCanonFormatGameWinrate(row?.winrate)).join(' · ');
+  }
+  async function pitCanonLoadRuntimePreview(def){
+    try{
+      const previewApi=String(def?.previewApi||def?.api||'');
+      if(!previewApi)return null;
+      const data=await apiJson('/'+previewApi+'/preview','GET');
+      pitCanonCaptureRuntimePreview(def,data);
+      return data;
+    }catch(_){return null}
+  }
+
   function pitCanonBattleTelemetry(def,level) {
     const type=def?.id;
     const numericLevel=pitCanonWhole(level);
@@ -2680,6 +2713,9 @@
     const profile=pitForecastProfile(type);
     const playerPower=type==='gang'?0:Number(profile?.playerPower||0);
     const chance=enemyPower>0?pitForecastChance(type,numericLevel,enemyPower):null;
+    const runtimeWinrate=pitCanonRuntimeWinrateText(def);
+    const runtimeKnown=runtimeWinrate!=='—';
+    const chanceText=runtimeKnown?runtimeWinrate:(chance!==null?pitChanceLabel(chance):'');
     const parts=[];
     if(enemyPower>0){
       parts.push(exactPower>0
@@ -2687,8 +2723,8 @@
         : `${either('прогноз силы Ямы','predicted Pit power')}: ${Math.round(enemyPower).toLocaleString(locale())}`);
     }
     if(playerPower>0)parts.push(`${either('наша сила','our power')}: ${Math.round(playerPower).toLocaleString(locale())}`);
-    if(chance!==null)parts.push(`${either('шанс','chance')}: ${pitChanceLabel(chance)}`);
-    return {enemyPower,playerPower,chance,text:parts.join(' · ')};
+    if(chanceText)parts.push(`${runtimeKnown?either('шанс игры','game winrate'):either('шанс','chance')}: ${chanceText}`);
+    return {enemyPower,playerPower,chance,runtimeKnown,runtimeWinrate,chanceText,text:parts.join(' · ')};
   }
 
   async function pitCanonLoadRewardLive(){
@@ -3362,8 +3398,12 @@
       let step=config.steps[index],chunk=pitCanonWhole(step.chunk);
       playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:round-${index+1}:pre`);state=pitRaceSnapshot(def.id,playerDocument);
       const active=pitCanonActiveState(def.id,playerDocument),available=pitCanonResourceQuantity(playerDocument,def.currencyId,'currency'),resuming=step.payment==='ACTIVE';
-      if(resuming){if(!active)throw new Error(`${pitCanonDefinitionName(def)}: ${either('активная Яма изменилась','active Pit changed')}`);chunk=Math.max(1,pitCanonWhole(active.mass_multiplier ?? active.multiplier));state=active;}
-      else{
+      if(resuming){
+        if(!active)throw new Error(`${pitCanonDefinitionName(def)}: ${either('активная Яма изменилась','active Pit changed')}`);
+        chunk=Math.max(1,pitCanonWhole(active.mass_multiplier ?? active.multiplier));state=active;
+        pitCanonRuntimePreview[def.id]=null;
+        await pitCanonLoadRuntimePreview(def);
+      } else{
         if(active)throw new Error(`${pitCanonDefinitionName(def)}: ${either('Яма уже активна — обновите данные','Pit is already active — refresh')}`);
         let payment=step.payment;if(payment==='AUTO')payment=available>=chunk?'FREE':'PREM';
         if(step.source==='reward'&&payment==='ITEM'){
@@ -3397,7 +3437,12 @@
         if(payment==='ITEM'&&pitCanonResourceQuantity(playerDocument,HK_PIT_PASS_ITEM_ID,'item')<pitCanonWhole(itemCost))throw new Error(either('Недостаточно Пропусков Ямы','Not enough Pit Passes'));
         hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('запуск','start')} ×${chunk}`,progress.done,progress.total);
         pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('запуск раунда','starting round')} ×${chunk} · ${either('оплата','payment')}: ${payment}`,'info');
-        if(payment==='FREE')await apiJson(api.start,'POST',{mass_multiplier:chunk});else await apiJson(api.pass,'POST',{mass_multiplier:chunk,payment_type:payment});
+        pitCanonRuntimePreview[def.id]=null;
+        const startResponse=payment==='FREE'
+          ? await apiJson(api.start,'POST',{mass_multiplier:chunk})
+          : await apiJson(api.pass,'POST',{mass_multiplier:chunk,payment_type:payment});
+        pitCanonCaptureRuntimePreview(def,startResponse);
+        if(pitCanonRuntimeWinrateText(def)==='—')await pitCanonLoadRuntimePreview(def);
         spentCrystals+=pitCanonWhole(premCost);spentItems+=pitCanonWhole(itemCost);
         stats.passesUsed+=chunk;stats.crystals=spentCrystals;stats.itemPasses=spentItems;
         playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-start`);state=pitRaceSnapshot(def.id,playerDocument);
@@ -3439,6 +3484,8 @@
           hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('восстановление','restoration')} 🐾 ${cost}`,progress.done,progress.total);
           pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('восстановление','restoration')}: 🐾 ${cost} · ${either('потрачено скриптом','spent by script')}: ${restorationSpent+cost}`,'warn');
           const respawnResponse=await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;stats.restoration+=cost;
+          pitCanonCaptureRuntimePreview(def,respawnResponse);
+          if(pitCanonRuntimeWinrateText(def)==='—')await pitCanonLoadRuntimePreview(def);
           if(rememberedAllowed||pitCanonDecisionBudget.remember)pitCanonDecisionBudgetConsume(cost);
           {
             const mutation=pitCanonStateAfterMutation(def,respawnResponse,`pits:${def.id}:after-respawn`);
@@ -3453,6 +3500,7 @@
         hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('бой','battle')} ${level} → ${level+1} · HP ${pitCanonWhole(state.health)}${telemetry.text?` · ${telemetry.text}`:''}`,progress.done,progress.total);
         pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('бой','battle')} ${level} → ${level+1}${telemetry.text?` · ${telemetry.text}`:''}`,'info');
         const battleResponse=await apiJson(api.battle,'POST');
+        pitCanonCaptureRuntimePreview(def,battleResponse);
         {
           const mutation=pitCanonStateAfterMutation(def,battleResponse,`pits:${def.id}:after-battle`);
           state=mutation.state;
@@ -3460,7 +3508,7 @@
         }
         const afterLevel=pitCanonWhole(state?.level);
         const won=afterLevel>level||battleResponse?.battle_result?.is_win===true;
-        pitCanonRunnerLog(`${won?'✓':'✗'} ${pitCanonDefinitionName(def)} — ${won?either('ПРОБИТО','WON'):either('НЕ ПРОБИТО','LOST')} · ${level} → ${level+1} · HP ${pitCanonWhole(state?.health)}${telemetry.chance!==null?` · ${either('шанс','chance')}: ${pitChanceLabel(telemetry.chance)}`:''}`,won?'ok':'warn');
+        pitCanonRunnerLog(`${won?'✓':'✗'} ${pitCanonDefinitionName(def)} — ${won?either('ПРОБИТО','WON'):either('НЕ ПРОБИТО','LOST')} · ${level} → ${level+1} · HP ${pitCanonWhole(state?.health)}${telemetry.chanceText?` · ${telemetry.runtimeKnown?either('шанс игры','game winrate'):either('шанс','chance')}: ${telemetry.chanceText}`:''}`,won?'ok':'warn');
         await sleep(pitCanonFastCycleDelay(def,config.sniper));
       }
       state=pitRaceSnapshot(def.id,playerDocument);
@@ -3504,6 +3552,7 @@
     const total=configs.reduce((sum,row)=>sum+row.steps.length,0),progress={done:0,total};
     hkRunner.start({title:either('Ямы','Pits'),step:either('Подготовка','Preparing'),total,pausable:true,stoppable:true});
     pitCanonDecisionBudgetReset();
+    pitCanonResetRuntimePreview();
     pitCanonSetBusy(true);
     pitCanonLogPlan(configs);
     pitCanonRunnerLog(either('Ямы — запуск выбранного плана','Pits — starting selected plan'),'info');
@@ -6427,6 +6476,7 @@
   const HK_PITS_SUMMARY_REV = 'pits-plan-totals-20260920-r14';
   const HK_PITS_SHARED_FORECAST_REV = 'pits-shared-reward-forecast-20260920-r15';
   const HK_PITS_REWARD_ONLY_REV = 'pits-reward-only-plan-20260920-r16';
+  const HK_PITS_PREVIEW_REV = 'pits-runtime-preview-20260920-r17';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
