@@ -162,3 +162,36 @@ The confirmed Maps building-study attribution issue and reversed-coordinate issu
 
 Current status:
 **BUG_CONFIRMED_NO_FIX_APPLIED**
+
+
+## Safe active-building scanner r3
+
+Marker:
+`HK_MAP_SCANNER_REV = 'maps-active-intersection-20260920-r3'`
+
+Applied scanner source rule:
+- district/building membership comes from `/game_area/{area}/buildings`;
+- detailed `POST /player/building?building_id=...` reads are performed only for IDs present in `/player/me.buildings` **and** mapped to the selected owned district;
+- active building ID normalization accepts both `row.id` and `row.building_id`;
+- `mapAreaPayload()` uses the same normalized active ID rule;
+- `/events` is explicitly ensured before bulk room counting;
+- if the event catalog is unavailable, bare event IDs cannot produce a false `room_count=0`; such buildings remain unknown unless a direct crystal marker or direct crystals field is present;
+- direct `crystals/crystal_rooms/crystalRooms` remains first priority;
+- otherwise room/event matching uses `item_fake_prematmaxeventlvl` and the event catalog;
+- scanner does not call `/player/building` for closed/unopened buildings;
+- explicit building opening remains isolated in `buildingCanonOpen()` through `hkMutationGate`.
+
+Build verification:
+- source live SHA256: `f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290`;
+- candidate SHA256: `f8a34bff26fd449f315f07a2ef8e6a8a6e8169ea62f463e7efe527766d698101`;
+- Python compile: PASS;
+- JS syntax: PASS.
+
+Live verification:
+- deploy: PASS;
+- service: PASS;
+- public byte equality: PASS;
+- live/public SHA256: `f8a34bff26fd449f315f07a2ef8e6a8a6e8169ea62f463e7efe527766d698101`;
+- baseline sync: PASS.
+
+Current status remains **LIVE_CANDIDATE** pending user scan confirmation.
