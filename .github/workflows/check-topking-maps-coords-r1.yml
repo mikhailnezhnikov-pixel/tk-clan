@@ -1,0 +1,84 @@
+name: Check TopKing Maps Coords R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-coords-r1-check-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: check-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact current live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-building-scan-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0cec177e"
+
+      - name: Compile patch
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/patch_maps_coords_r1.py
+
+      - name: Apply and validate only
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/patch_maps_coords_r1.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "x:full?.info?.y ?? full?.meta?.gamearea_coords?.y" /tmp/HamsterKingMobile.user.js
+          grep -Fq "y:full?.info?.x ?? full?.meta?.gamearea_coords?.x" /tmp/HamsterKingMobile.user.js
+          grep -Fq "Number(row?.x) === wantedY && Number(row?.y) === wantedX" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-building-scan-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_PITS_REWARD_PICKER_REV = 'pits-reward-picker-20260920-r20'" /tmp/HamsterKingMobile.user.js
+          sha="$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')"
+          {
+            echo "MAPS_COORDS_R1_BUILD=PASS"
+            echo "source_live_sha256=a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0cec177e"
+            echo "candidate_sha256=$sha"
+            echo "syntax=PASS"
+            echo "deployed=no"
+          } > audit/hk-stage2-maps-coords-r1-build-status.txt
+
+      - name: Commit build status
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-coords-r1-build-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: verify canonical map coordinates r1 build"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js
