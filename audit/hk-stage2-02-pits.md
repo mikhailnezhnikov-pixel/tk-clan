@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: BUG_CONFIRMED_FIX_PENDING
+status: CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
 
 ## Required Stage 2 chain
 
@@ -87,3 +87,51 @@ Result:
 
 Next block:
 port/wire Kokkaras canonical three-Pit behavior into current HK visual/runner architecture.
+
+
+## Canonical core r1 deployed
+
+Marker:
+`HK_PITS_CANON_REV = 'pits-canon-core-20260920-r1'`
+
+Workflow:
+`Deploy TopKing Pits Canon Core R1`
+
+Successful run:
+`35491426778`
+
+Technical result:
+- patch payload SHA verification: PASS
+- Python compile: PASS
+- exact pre-deploy live SHA verification: PASS
+- JS syntax after patch: PASS
+- backup/deploy: PASS
+- service active: PASS
+- public round-trip: PASS
+- live/public byte equality: PASS
+- version remains: `1.17.4`
+- live/public SHA256: `0d6de4888121d5e09d2cd5fa5140ec5941734dd30c23dc70fbbd95a951dcb825`
+
+Core behavior now wired into the visible Pits tab:
+- three independent Pit cards: normal / boss / gang;
+- live free-pass counts;
+- donor Exact / Rounded / Direct / Pit Pass planning;
+- target level selector;
+- per-Pit maximum Restoration Paws;
+- per-Pit Auto-finish plus global Auto-finish all;
+- continuation of an already active Pit;
+- direct API start/pass/battle/respawn/finish;
+- current HK mutation gate and runner pause/stop;
+- authoritative player reread before/after mutations;
+- cost/balance revalidation before paid mutations;
+- legacy single-Pit DOM UI/button bindings removed from active page.
+
+Not yet in this core block:
+- sniper mode/payment;
+- tournament reward target planning / daily base runs / reward strategy;
+- interactive restoration-decision modal.
+
+These stay for the next Pits block after the core UI/live-read is visually confirmed.
+
+Current status:
+**CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK**
