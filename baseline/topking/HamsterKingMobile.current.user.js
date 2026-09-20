@@ -137,8 +137,9 @@
   const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';
   const CLAN_SHOP_FACT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1';
   const PUBLIC_SNAPSHOT_API = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-snapshot';
+  const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-snapshot-3h-20260920-r1';
   const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
-  const PUBLIC_SNAPSHOT_INTERVAL_MS = 15 * 60 * 1000;
+  const PUBLIC_SNAPSHOT_INTERVAL_MS = 3 * 60 * 60 * 1000;
   const LICENSE_RECHECK_MS = 60 * 60 * 1000;
   const GAME_API_FALLBACK = 'https://hk-game-api.hwgame.cloud';
   const GAME_AUTH_REFRESH_EARLY_MS = 60 * 1000;
@@ -1228,7 +1229,7 @@
       }
       licenseCheckPromise = null; updateLicenseUI();
       if (licenseState.allowed) setTimeout(() => {
-        synchronizeSettings(); flushPitObservations(); loadSharedPitPowers(); refreshSharedClanSkills(); maybeAutoScanClanSkills(); collectPublicSnapshot();
+        synchronizeSettings(); flushPitObservations(); loadSharedPitPowers(); refreshSharedClanSkills(); maybeAutoScanClanSkills();
       }, 0);
       return licenseState.allowed;
     })();
@@ -11826,7 +11827,6 @@
     setTimeout(() => hkGameBridge.discover(false), 1500);
     setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
     setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
-    setTimeout(() => collectPublicSnapshot(true), 5000);
     setInterval(() => collectPublicSnapshot(), PUBLIC_SNAPSHOT_INTERVAL_MS);
     recordDiagnostic('native-login-gate-open',{revision:'login-gate-20260920-r1'});
   }
