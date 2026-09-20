@@ -1,0 +1,153 @@
+name: Capture Canonical HK Baseline
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/capture-baseline-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capture-hk-baseline
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact live userscript
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.live.user.js
+          node --check /tmp/HamsterKingMobile.live.user.js
+
+      - name: Write canonical baseline
+        run: |
+          set -euo pipefail
+          mkdir -p baseline/topking
+          cp /tmp/HamsterKingMobile.live.user.js baseline/topking/HamsterKingMobile.current.user.js
+
+          version="$(sed -n 's#^// @version[[:space:]]*##p' /tmp/HamsterKingMobile.live.user.js | head -1)"
+          sha="$(sha256sum /tmp/HamsterKingMobile.live.user.js | awk '{print $1}')"
+          short="${sha:0:12}"
+          cp /tmp/HamsterKingMobile.live.user.js "baseline/topking/HamsterKingMobile.${version}-${short}.user.js"
+
+          cat > baseline/topking/BASELINE.json <<EOF
+          {
+            "schema": "hk-canonical-baseline-v1",
+            "version": "${version}",
+            "sha256": "${sha}",
+            "immutable_file": "baseline/topking/HamsterKingMobile.${version}-${short}.user.js",
+            "current_file": "baseline/topking/HamsterKingMobile.current.user.js",
+            "source": "live-server:/opt/hamsterking-license/HamsterKingMobile.user.js",
+            "captured_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+          cat > baseline/topking/README.md <<'EOF'
+          # HK / Top King — CANONICAL BASELINE
+
+          This directory is the source of truth for further HK userscript work.
+
+          ## Files
+
+          - `HamsterKingMobile.current.user.js` — exact byte-for-byte copy of the currently accepted live script.
+          - `HamsterKingMobile.<version>-<sha>.user.js` — immutable snapshot of that accepted baseline.
+          - `BASELINE.json` — version, SHA256 and capture metadata.
+
+          ## Mandatory development rule
+
+          For every new chat/session/task that changes the HK userscript:
+
+          1. Read `baseline/topking/BASELINE.json`.
+          2. Read `baseline/topking/HamsterKingMobile.current.user.js`.
+          3. Treat that file as the implementation source of truth.
+          4. Do NOT reconstruct mechanics from chat descriptions, memories, roadmap text, screenshots or assumptions.
+          5. Do NOT rewrite already-working mechanics unless a concrete regression is demonstrated.
+          6. If historical behavior must be restored, compare the canonical baseline against the preserved old script/source before changing code.
+          7. Apply the smallest targeted patch to the canonical baseline.
+          8. Validate syntax and the exact affected runtime path.
+          9. Deploy and verify public delivery.
+          10. Only after the user confirms the new live build works may the canonical baseline be refreshed.
+
+          ## Priority of sources
+
+          When sources disagree, use this order:
+
+          1. Current accepted canonical baseline in this directory.
+          2. Verified preserved historical working script/source.
+          3. Real live game API/definitions.
+          4. Roadmap/task text.
+          5. Chat memory/context.
+
+          Chat text is never sufficient by itself to redefine existing working mechanics.
+
+          ## New-chat instruction
+
+          Use:
+
+          > Work from the canonical HK baseline in `baseline/topking/`. First read `BASELINE.json` and `HamsterKingMobile.current.user.js`. Do not recreate or reinterpret existing mechanics from text. Make only the requested change against this exact baseline.
+
+          EOF
+
+          cat > baseline/topking/BASELINE_STATUS.txt <<EOF
+          version=${version}
+          sha256=${sha}
+          syntax=ok
+          source=live-server
+          immutable=HamsterKingMobile.${version}-${short}.user.js
+          EOF
+
+          # Exactness check for canonical current copy.
+          cmp -s /tmp/HamsterKingMobile.live.user.js baseline/topking/HamsterKingMobile.current.user.js
+
+      - name: Update roadmap source-of-truth rule
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('docs/HK_MASTER_ROADMAP.md')
+          s=p.read_text(encoding='utf-8')
+          block='''## SOURCE OF TRUTH — ОБЯЗАТЕЛЬНО\n\nПеред любой работой с HK userscript в новом чате/сессии сначала открыть:\n\n- `baseline/topking/BASELINE.json`;\n- `baseline/topking/HamsterKingMobile.current.user.js`;\n- `baseline/topking/README.md`.\n\nКанонический baseline имеет приоритет над описанием в чате, памятью и roadmap. Нельзя восстанавливать существующую механику по тексту или придумывать её заново. Все изменения делаются минимальным патчем поверх точного baseline.\n\n---\n\n'''
+          marker='# TOP KING / HK — MASTER ROADMAP\n\n'
+          if '## SOURCE OF TRUTH — ОБЯЗАТЕЛЬНО' not in s:
+              s=s.replace(marker,marker+block,1)
+              p.write_text(s,encoding='utf-8')
+          PY
+
+      - name: Commit canonical baseline
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking docs/HK_MASTER_ROADMAP.md
+          if ! git diff --cached --quiet; then
+            git commit -m "baseline: capture accepted live HK userscript"
+            for attempt in 1 2 3 4; do
+              git pull --rebase origin main || true
+              if git push origin HEAD:main; then exit 0; fi
+              sleep $((attempt * 2))
+            done
+            exit 1
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.live.user.js
