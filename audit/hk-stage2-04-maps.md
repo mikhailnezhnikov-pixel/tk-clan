@@ -195,3 +195,34 @@ Live verification:
 - baseline sync: PASS.
 
 Current status remains **LIVE_CANDIDATE** pending user scan confirmation.
+
+
+## Parallel active-building reader r4
+
+Marker:
+`HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r4'`
+
+Performance changes:
+- safe source intersection from r3 is unchanged;
+- detailed `/player/building` reads are now processed by up to 6 concurrent read-only workers;
+- scanner observations are accumulated in memory;
+- map submissions are grouped by district and sent in batches of up to 100 buildings;
+- if a batch submit fails, only that batch falls back to the previous one-building submit path;
+- game-side 429 / transient failures / player-state locks continue to use the existing retry/backoff logic;
+- Pause/Stop remains runner-controlled, and Stop aborts in-flight game requests through the shared runner signal;
+- unopened buildings remain excluded because workers consume only the safe `/player/me.buildings ∩ mapped district building IDs` set.
+
+Build verification:
+- source live SHA256: `f8a34bff26fd449f315f07a2ef8e6a8a6e8169ea62f463e7efe527766d698101`;
+- candidate SHA256: `f4f5a74ed8a4cc25b63ef11adf714d358ada0399f95a765bfedb21728a6162ca`;
+- Python compile: PASS;
+- JS syntax: PASS.
+
+Live verification:
+- deploy: PASS;
+- service: PASS;
+- public byte equality: PASS;
+- live/public SHA256: `f4f5a74ed8a4cc25b63ef11adf714d358ada0399f95a765bfedb21728a6162ca`;
+- baseline sync: PASS.
+
+Current status remains **LIVE_CANDIDATE** pending user timing/behavior confirmation.
