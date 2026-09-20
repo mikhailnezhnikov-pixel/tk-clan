@@ -1,55 +1,173 @@
-name: W6 stubborn map audit
+name: W6 stubborn maps via OSM API
 on:
   push:
-    paths: ['deploy/topking/w6-stubborn-audit-trigger.txt']
+    paths: ['deploy/topking/w6-osm-api-trigger.txt']
 permissions:
   contents: write
 jobs:
-  audit:
+  resolve:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        map_key: [hk_newyork2520,hk_newyork3110,hk_newyork3111,hk_newyork3307,hk_newyork4026]
     steps:
       - uses: actions/checkout@v4
-      - name: ssh
+      - name: prepare ssh
         env:
           SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
           chmod 600 ~/.ssh/topking
-      - name: audit read-only
+      - name: export map read-only
+        env:
+          MAP_KEY: ${{ matrix.map_key }}
         run: |
-          cat > /tmp/w6-stubborn.py <<'PY'
-          import json,sqlite3
-          keys=['hk_newyork2520','hk_newyork3110','hk_newyork3111','hk_newyork3307','hk_newyork4026']
+          cat > /tmp/w6-one.py <<'PY'
+          import importlib.util,json,os,sqlite3
+          key=os.environ['MAP_KEY']
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
           db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
-          out=[]
-          for key in keys:
-              p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(key,)).fetchone()
-              link=db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",(key,)).fetchone()
-              flat=json.loads(p['points_json'] or '[]');lng=lat=0;pts=[]
-              for i in range(0,len(flat),3):
-                  lng+=int(flat[i]);lat+=int(flat[i+1]);flag=int(flat[i+2]);pts.append((lng/1e5,lat/1e5,flag))
-              row={'map_key':key,'point_count':len(pts),'linked':bool(link)}
-              if pts:
-                  xs=[x for x,_,_ in pts];ys=[y for _,y,_ in pts]
-                  row.update({'min_lon':min(xs),'max_lon':max(xs),'min_lat':min(ys),'max_lat':max(ys),
-                              'span_lon':max(xs)-min(xs),'span_lat':max(ys)-min(ys)})
-              if link:
-                  area=link['canonical_area_id']
-                  row['canonical_area_id']=area
-                  row['canonical_buildings']=db.execute("SELECT COUNT(*) FROM map_buildings WHERE area_id=?",(area,)).fetchone()[0]
-              out.append(row)
-          print(json.dumps(out,ensure_ascii=False,indent=2))
+          d=s.discover_hk_map_area(db,key);c=d.get('candidates') or []
+          assert len(c)==1,(key,d)
+          area=c[0]
+          p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(key,)).fetchone()
+          can=[dict(r) for r in db.execute("""SELECT building_id,room_count,is_invest,knowledge_source,knowledge_observed_at
+                                             FROM map_buildings WHERE area_id=? ORDER BY building_id""",(area,))]
+          out={'map_key':key,'canonical_area_id':area,'points':json.loads(p['points_json'] or '[]'),
+               'point_count':p['point_count'],'canonical_buildings':can}
+          print(json.dumps(out,ensure_ascii=False,separators=(',',':')))
           db.close()
           PY
-          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-stubborn.py root@89.125.1.71:/tmp/w6-stubborn.py
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w6-stubborn.py' > audit/hk-stage2-w6-stubborn-extents.json
-          cat audit/hk-stage2-w6-stubborn-extents.json
-      - name: commit
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-one.py root@89.125.1.71:/tmp/w6-one.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new "MAP_KEY=${MAP_KEY}" root@89.125.1.71 'MAP_KEY="$MAP_KEY" python3 /tmp/w6-one.py' > /tmp/w6-one.json
+      - name: resolve with OSM map API
+        env:
+          MAP_KEY: ${{ matrix.map_key }}
         run: |
+          cat > /tmp/w6-osm-map.py <<'PY'
+          import json,math,os,time,urllib.request,xml.etree.ElementTree as ET
+          key=os.environ['MAP_KEY'];src=json.load(open('/tmp/w6-one.json'))
+          flat=src['points'];lng=lat=0;pts=[]
+          for i in range(0,len(flat),3):
+              lng+=int(flat[i]);lat+=int(flat[i+1]);flag=int(flat[i+2])
+              inv=flag>=7;rooms=flag-8 if inv else flag
+              pts.append({'point_index':i//3,'lon':lng/1e5,'lat':lat/1e5,'room_count':rooms,'investment':inv,'source_flag':flag})
+          can={x['building_id']:x for x in src['canonical_buildings']}
+          minlon=min(p['lon'] for p in pts)-0.00015;maxlon=max(p['lon'] for p in pts)+0.00015
+          minlat=min(p['lat'] for p in pts)-0.00015;maxlat=max(p['lat'] for p in pts)+0.00015
+          # ~220m tiles keep dense NYC OSM /map responses below API limits.
+          dx=0.0025;dy=0.0020
+          nodes={};ways={};relations={}
+          def fetch(url):
+              last=None
+              for attempt in range(4):
+                  try:
+                      req=urllib.request.Request(url,headers={'User-Agent':'TopKing-W6-OSMMap/1.0'})
+                      with urllib.request.urlopen(req,timeout=45) as r:return r.read()
+                  except Exception as e:
+                      last=e;time.sleep(2+attempt*2)
+              raise RuntimeError(repr(last))
+          ix=0;x=minlon
+          while x<maxlon:
+              y=minlat
+              while y<maxlat:
+                  ix+=1
+                  x2=min(x+dx,maxlon);y2=min(y+dy,maxlat)
+                  url=f'https://api.openstreetmap.org/api/0.6/map?bbox={x},{y},{x2},{y2}'
+                  root=ET.fromstring(fetch(url))
+                  for n in root.findall('node'):
+                      nodes[n.attrib['id']]=(float(n.attrib['lon']),float(n.attrib['lat']))
+                  for w in root.findall('way'):
+                      wid='way'+w.attrib['id']
+                      nd=[n.attrib['ref'] for n in w.findall('nd')]
+                      tags={t.attrib.get('k'):t.attrib.get('v') for t in w.findall('tag')}
+                      if 'building' in tags: ways[wid]=nd
+                  # Relations are kept for audit only; safe migration below uses
+                  # closed way polygons. Relation buildings remain unmatched.
+                  for rel in root.findall('relation'):
+                      tags={t.attrib.get('k'):t.attrib.get('v') for t in rel.findall('tag')}
+                      if tags.get('type')=='multipolygon' and 'building' in tags:
+                          relations['relation'+rel.attrib['id']]=1
+                  y+=dy
+                  time.sleep(0.12)
+              x+=dx
+          def inside(poly,x,y):
+              if len(poly)<4:return False
+              ok=False;j=len(poly)-1
+              for i in range(len(poly)):
+                  xi,yi=poly[i];xj,yj=poly[j]
+                  if ((yi>y)!=(yj>y)):
+                      z=(xj-xi)*(y-yi)/(yj-yi)+xi
+                      if x<z:ok=not ok
+                  j=i
+              return ok
+          polys={}
+          for bid,refs in ways.items():
+              if bid not in can: continue
+              poly=[nodes[r] for r in refs if r in nodes]
+              if len(poly)>=4 and poly[0]==poly[-1]:polys[bid]=poly
+          unique=[];unmatched=[];amb=[];used={}
+          for p in pts:
+              hits=[bid for bid,poly in polys.items() if inside(poly,p['lon'],p['lat'])]
+              if not hits:
+                  unmatched.append({**p,'reason':'no_closed_canonical_way_match'});continue
+              if len(hits)>1:
+                  amb.append({**p,'candidates':sorted(hits),'reason':'multiple_canonical_way_matches'});continue
+              bid=hits[0]
+              if bid in used:
+                  amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]});continue
+              used[bid]=p['point_index'];cur=can[bid]
+              unique.append({**p,'building_id':bid,'existing':True,
+                             'canonical_room_count':cur['room_count'],'canonical_source':cur['knowledge_source'],
+                             'canonical_observed_at':cur['knowledge_observed_at']})
+          out={'map_key':key,'canonical_area_id':src['canonical_area_id'],'point_count':len(pts),'points':unique,
+               'unmatched':unmatched,'ambiguous':amb,'safe_new_building_rows':0,
+               'resolver':'osm_api_map_closed_canonical_ways','osm_way_polygons':len(polys),
+               'osm_relation_buildings_seen':len(relations),'tiles':ix}
+          path=f'audit/w6-{key}-osm-api.json'
+          open(path,'w',encoding='utf-8').write(json.dumps(out,ensure_ascii=False,indent=2,sort_keys=True))
+          print(key,'points',len(pts),'unique',len(unique),'unmatched',len(unmatched),'ambiguous',len(amb),'tiles',ix,'polys',len(polys))
+          PY
+          python3 /tmp/w6-osm-map.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w6-osm-api-${{ matrix.map_key }}
+          path: audit/w6-${{ matrix.map_key }}-osm-api.json
+          retention-days: 3
+  aggregate:
+    needs: resolve
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: w6-osm-api-*
+          merge-multiple: true
+          path: /tmp/w6-osm-api
+      - name: aggregate stubborn results
+        run: |
+          python3 - <<'PY'
+          import glob,json,os
+          files=glob.glob('/tmp/w6-osm-api/*.json')
+          rows=[json.load(open(f)) for f in files]
+          out={'maps':len(rows),'map_keys':sorted(r['map_key'] for r in rows),
+               'point_count':sum(r['point_count'] for r in rows),
+               'unique':sum(len(r['points']) for r in rows),
+               'unmatched':sum(len(r['unmatched']) for r in rows),
+               'ambiguous':sum(len(r['ambiguous']) for r in rows)}
+          open('audit/hk-stage2-w6-stubborn-osm-api-summary.json','w').write(json.dumps(out,indent=2,sort_keys=True))
+          print(json.dumps(out,indent=2))
+          assert len(rows)==5,len(rows)
+          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-stage2-w6-stubborn-extents.json
-          git commit -m "audit: inspect W6 stubborn map extents"
+          git add audit/hk-stage2-w6-stubborn-osm-api-summary.json
+          git commit -m "audit: resolve W6 stubborn maps via OSM API"
           git pull --rebase origin main
           git push origin HEAD:main
