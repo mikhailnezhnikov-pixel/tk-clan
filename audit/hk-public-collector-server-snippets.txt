@@ -1,0 +1,352 @@
+=== PUBLIC SNAPSHOT STORAGE ===
+                                        OR (excluded.knowledge_source='game_live'
+                                            AND (map_buildings.knowledge_source<>'game_live'
+                                                 OR excluded.knowledge_observed_at>map_buildings.knowledge_observed_at)))
+                                  THEN excluded.knowledge_observed_at ELSE map_buildings.knowledge_observed_at END""",
+                               (winner,row["building_id"],row["opened"],row["room_count"],row["has_events"],row["is_invest"],row["tier"],
+                                row["faction"],row["building_type"],row["last_player_id"],row["last_seen"],
+                                row["knowledge_source"],row["knowledge_observed_at"]))
+                loser_area = db.execute("SELECT * FROM map_areas WHERE area_id=?", (loser,)).fetchone()
+                db.execute("""UPDATE map_areas SET invest_count=MAX(invest_count,?),expected_buildings=MAX(expected_buildings,?),
+                              last_seen=MAX(last_seen,?) WHERE area_id=?""",
+                           (loser_area["invest_count"], loser_area["expected_buildings"], loser_area["last_seen"], winner))
+                db.execute("UPDATE map_area_aliases SET canonical_area_id=? WHERE canonical_area_id=?", (winner, loser))
+                db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen) VALUES(?,?,?,?)
+                              ON CONFLICT(source_area_id) DO UPDATE SET canonical_area_id=excluded.canonical_area_id,last_seen=excluded.last_seen""",
+                           (loser, winner, utc_now(), utc_now()))
+                removed += db.execute("DELETE FROM map_areas WHERE area_id=?", (loser,)).rowcount
+                merged += 1
+    return {"groups": sum(1 for values in groups.values() if len(values) > 1), "merged": merged, "removed": removed}
+
+
+# ALLIANCE_RATINGS_SERVER_V1
+RATING_KINDS = frozenset({
+    "influence", "power", "clans", "alliances",
+    "alliance_power", "alliance_influence", "alliance_defense",
+})
+
+
+def public_snapshot_member(player_id: str) -> bool:
+    with db_session() as db:
+        row = db.execute("""SELECT 1 FROM clan_members
+                            WHERE linked_player_id=? AND active=1""", (player_id,)).fetchone()
+    return bool(row)
+
+
+def clean_public_name(value: object, maximum: int = 100) -> str:
+    text = re.sub(r"[\x00-\x1f\x7f]+", " ", str(value or "")).strip()
+    return re.sub(r"\s+", " ", text)[:maximum]
+
+
+def normalize_clan_war(value: object) -> dict | None:
+    if value in (None, False, {}):
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("invalid clan war")
+    result = {
+        "our_clan": clean_public_name(value.get("our_clan")),
+        "opponent": clean_public_name(value.get("opponent")),
+        "status": clean_public_name(value.get("status"), 32) or "active",
+    }
+    # CLAN_WAR_HP_SERVER_V1
+    for key in ("our_score", "opponent_score", "started_at", "ends_at"):
+        try:
+            number = int(value.get(key) or 0)
+        except (TypeError, ValueError):
+            number = 0
+        result[key] = max(0, min(number, 10**18))
+    for key in ("our_hp", "our_hp_max", "opponent_hp", "opponent_hp_max"):
+        if key not in value:
+            continue
+        try:
+            number = int(value.get(key))
+        except (TypeError, ValueError):
+            continue
+        result[key] = max(0, min(number, 10**18))
+    if not result["our_clan"] or not result["opponent"]:
+        raise ValueError("clan names required")
+    return result
+
+
+def normalize_rating_rows(kind: str, value: object) -> list[dict]:
+    if kind not in RATING_KINDS or not isinstance(value, list) or len(value) > 100:
+        raise ValueError("invalid ratings")
+    rows, used = [], set()
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            rank = int(raw.get("rank"))
+            score = float(raw.get("value"))
+        except (TypeError, ValueError):
+            continue
+        name = clean_public_name(raw.get("name"))
+        if not 1 <= rank <= 100 or rank in used or not name or not 0 <= score <= 10**30:
+            continue
+        used.add(rank)
+        rows.append({"rank": rank, "name": name, "value": int(score) if score.is_integer() else score})
+    return sorted(rows, key=lambda row: row["rank"])
+
+
+def store_public_snapshot(player_id: str, document: object) -> dict:
+    if not public_snapshot_member(player_id):
+        raise PermissionError("member not allowed")
+    if not isinstance(document, dict):
+        raise ValueError("snapshot object required")
+    if any(key.lower() in {"token", "authorization", "jwt", "participants", "members", "damage"}
+           for key in document):
+        raise ValueError("sensitive snapshot field")
+    now, saved_war, saved_ratings = utc_now(), False, []
+    with db_session() as db:
+        if "war" in document:
+            war = normalize_clan_war(document.get("war"))
+            db.execute("DELETE FROM public_clan_war_snapshot")
+            if war:
+                db.execute("""INSERT INTO public_clan_war_snapshot
+                              (singleton,snapshot_json,source_player_id,updated_at) VALUES(1,?,?,?)""",
+                           (json.dumps(war, ensure_ascii=False, separators=(",", ":")),
+                            contributor_id(player_id), now))
+            saved_war = True
+        ratings = document.get("ratings")
+        if ratings is not None:
+            if not isinstance(ratings, dict):
+                raise ValueError("ratings object required")
+            for kind, raw_rows in ratings.items():
+                if kind not in RATING_KINDS:
+                    continue
+                rows = normalize_rating_rows(kind, raw_rows)
+                db.execute("DELETE FROM public_rating_snapshots WHERE kind=?", (kind,))
+                db.executemany("""INSERT INTO public_rating_snapshots
+                                  (kind,rank,name,value,source_player_id,updated_at)
+                                  VALUES(?,?,?,?,?,?)""",
+                               [(kind, row["rank"], row["name"], row["value"], contributor_id(player_id), now)
+                                for row in rows])
+                saved_ratings.append(kind)
+    if not saved_war and not saved_ratings:
+        raise ValueError("empty snapshot")
+    return {"ok": True, "war": saved_war, "ratings": saved_ratings, "updated_at": now}
+
+
+def public_clan_war() -> dict:
+    with db_session() as db:
+        row = db.execute("SELECT snapshot_json,updated_at FROM public_clan_war_snapshot WHERE singleton=1").fetchone()
+    if not row:
+        return {"ok": True, "active": False, "war": None, "updated_at": 0, "stale": False}
+    try:
+        war = json.loads(row["snapshot_json"])
+    except json.JSONDecodeError:
+        war = None
+    stale = row["updated_at"] < utc_now() - 1800
+    if war:
+        war = {**war, "active": True, "updated_at": row["updated_at"], "stale": stale}
+    return {"ok": True, "active": bool(war), "war": war, "updated_at": row["updated_at"], "stale": stale}
+
+
+def public_ratings(kind: str) -> dict:
+    if kind not in RATING_KINDS:
+        raise ValueError("invalid rating kind")
+    with db_session() as db:
+        rows = db.execute("""SELECT rank,name,value,updated_at FROM public_rating_snapshots
+                             WHERE kind=? ORDER BY rank LIMIT 100""", (kind,)).fetchall()
+    updated_at = max((row["updated_at"] for row in rows), default=0)
+    return {"ok": True, "kind": kind, "updated_at": updated_at,
+            "stale": bool(updated_at and updated_at < utc_now() - 1800),
+            "rows": [{"rank": row["rank"], "name": row["name"], "value": row["value"]} for row in rows]}
+
+
+# SITE_ANALYTICS_V1
+SITE_ANALYTICS_PATH_RE = re.compile(r"^/[A-Za-z0-9_./-]{0,220}$")
+SITE_ANALYTICS_LANG_RE = re.compile(r"^[A-Za-z-]{0,16}$")
+
+
+def site_analytics_source(host: str) -> str:
+    host=(host or "").lower().strip(".")
+    if not host:
+        return "direct"
+    if host in {"t.me","telegram.me","web.telegram.org"} or host.endswith(".t.me"):
+        return "telegram"
+=== SERVER HTTP CLIENT ===
+            "rate": "Заявка уже отправлена. Следующую отправку можно сделать через 5 минут.",
+            "title": "Заявка в клан Top King",
+            "from": "От",
+        },
+        "en": {
+            "choose_language": "Choose application language / Выберите язык анкеты:",
+            "help": "/cancel — cancel, /back — go back, /language — change language",
+            "send": "Submit application?",
+            "submit": "✅ Submit",
+            "edit": "✏️ Edit",
+            "cancel": "❌ Cancel",
+            "cancelled": "Application cancelled.",
+            "edit_prompt": "Enter the corrected answer.",
+            "sent": "✅ Your application has been sent to the Top King admins.",
+            "failed": "Could not send the application. Please try again later.",
+            "not_configured": "The service is temporarily unavailable. Please try again later.",
+            "rate": "Your application was already sent. You can submit another one in 5 minutes.",
+            "title": "Top King clan application",
+            "from": "From",
+        },
+    }
+    return messages[lang][key]
+
+
+def telegram_application_language_buttons() -> list[list[tuple[str, str]]]:
+    return [[("🇷🇺 Русский", "app-lang:ru"), ("🇬🇧 English", "app-lang:en")]]
+
+
+def telegram_application_prompt(state: dict) -> str:
+    fields = application_fields(state)
+    if state["step"] < 0:
+        return application_message(state, "choose_language")
+    step = min(max(0, state["step"]), len(fields) - 1)
+    return fields[step][2]
+
+
+def telegram_api(method: str, payload: dict) -> bool:
+    if not TELEGRAM_BOT_TOKEN:
+        return False
+    request = urllib.request.Request(
+        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}",
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return response.status == 200
+    except (OSError, urllib.error.URLError):
+        return False
+
+
+def telegram_send(chat_id: str, text: str, buttons: list[list[tuple[str, str]]] | None = None,
+                  message_thread_id: int | None = None) -> bool:
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML",
+               "disable_web_page_preview": True}
+    if message_thread_id is not None:
+        payload["message_thread_id"] = int(message_thread_id)
+    if buttons:
+        payload["reply_markup"] = {"inline_keyboard": [
+            [{"text": title, "callback_data": data} for title, data in row] for row in buttons
+        ]}
+    return telegram_api("sendMessage", payload)
+
+
+def telegram_answer_callback(callback_id: str) -> None:
+    if callback_id:
+        telegram_api("answerCallbackQuery", {"callback_query_id": callback_id})
+
+
+# TELEGRAM_APPLICATION_TOPIC_V1
+def ensure_telegram_delivery_schema() -> None:
+    with db_session() as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS telegram_delivery_targets (
+                      kind TEXT PRIMARY KEY,
+                      chat_id TEXT NOT NULL,
+                      thread_id INTEGER,
+                      updated_by TEXT NOT NULL DEFAULT '',
+                      updated_at INTEGER NOT NULL
+                    )""")
+
+
+def telegram_delivery_target(kind: str) -> dict | None:
+    ensure_telegram_delivery_schema()
+    with db_session() as db:
+        row = db.execute("""SELECT chat_id,thread_id,updated_by,updated_at
+                            FROM telegram_delivery_targets WHERE kind=?""",
+                         (kind,)).fetchone()
+=== PUBLIC ROUTES ===
+                    raise OSError("release too large")
+            except OSError:
+                self.send_cabinet_json(HTTPStatus.NOT_FOUND, {"error": "release_not_found"})
+                return
+            self.send_common(HTTPStatus.OK, "text/javascript; charset=utf-8", content, {
+                "Access-Control-Allow-Origin": origin, "Vary": "Origin", "Cache-Control": "no-store",
+                "Content-Disposition": f'attachment; filename="{release_filename()}"',
+                "X-Content-Type-Options": "nosniff", "X-Release-SHA256": release_sha256(),
+            })
+        elif path == "/api/v1/recipes/public":
+            origin = self.headers.get("Origin", "")
+            if origin and origin not in PUBLIC_RECIPE_ORIGINS:
+                self.send_public_recipe_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"})
+                return
+            if not rate_allowed(f"public-recipes:{self.client_ip()}", 120, 60):
+                self.send_public_recipe_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "rate_limited"})
+                return
+            recipes = recipe_catalog()
+            self.send_public_recipe_json(HTTPStatus.OK, {"ok": True, "total": len(recipes), "recipes": recipes})
+        elif path == "/api/v1/public/clan-war":
+            origin = self.headers.get("Origin", "")
+            if origin and origin not in PUBLIC_RECIPE_ORIGINS:
+                self.send_public_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"}); return
+            if not rate_allowed(f"public-war:{self.client_ip()}", 120, 60):
+                self.send_public_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "rate_limited"}); return
+            self.send_public_json(HTTPStatus.OK, public_clan_war())
+        elif path == "/api/v1/public/ratings":
+            origin = self.headers.get("Origin", "")
+            if origin and origin not in PUBLIC_RECIPE_ORIGINS:
+                self.send_public_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"}); return
+            if not rate_allowed(f"public-ratings:{self.client_ip()}", 120, 60):
+                self.send_public_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "rate_limited"}); return
+            kind = parse_qs(parsed.query).get("kind", ["influence"])[-1]
+            try:
+                document = public_ratings(kind)
+            except ValueError:
+                self.send_public_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_kind"}); return
+            self.send_public_json(HTTPStatus.OK, document)
+        elif path in ("/business-calculator", "/business-calculator/", "/business-calculator/index.html"):
+            try:
+                with open(os.path.join(BUSINESS_CALCULATOR_DIR, "index.html"), "rb") as source:
+                    content = source.read(1_000_001)
+                if len(content) > 1_000_000:
+                    raise OSError("business calculator too large")
+            except OSError:
+                self.send_json(HTTPStatus.NOT_FOUND, {"error": "business_calculator_not_found"})
+                    self.send_public_json(HTTPStatus.BAD_REQUEST, {"error":"invalid_analytics"}); return
+                self.send_public_json(HTTPStatus.OK, result)
+            elif path == "/api/v1/check":
+                if not rate_allowed(f"check-ip:{self.client_ip()}", 120, 60):
+                    self.send_json(HTTPStatus.TOO_MANY_REQUESTS, {"allowed": False, "reason": "rate_limited"})
+                    return
+                origin = self.headers.get("Origin", "")
+                if origin not in ALLOWED_ORIGINS:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"allowed": False, "reason": "origin_not_allowed"})
+                    return
+                body = self.read_json()
+                player_id = str(body.get("player_id", "")).strip()
+                device_id = str(body.get("device_id", "")).strip()
+                version = str(body.get("script_version", "")).strip()
+                if not ID_RE.fullmatch(player_id) or not DEVICE_RE.fullmatch(device_id):
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"allowed": False, "reason": "invalid_identity"})
+                    return
+                if not rate_allowed(f"check-id:{player_id}:{device_id}", 30, 60):
+                    self.send_json(HTTPStatus.TOO_MANY_REQUESTS, {"allowed": False, "reason": "rate_limited"})
+                    return
+                status, response = license_check(player_id, device_id, version, self.client_ip())
+                self.send_json(status, response)
+            elif path == "/api/v1/public-snapshot":
+                origin = self.headers.get("Origin", "")
+                if origin not in ALLOWED_ORIGINS:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "origin_not_allowed"}); return
+                player_id = self.recipe_player()
+                if not player_id:
+                    self.send_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"}); return
+                if not rate_allowed(f"public-snapshot:{player_id}", 12, 900):
+                    self.send_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "rate_limited"}); return
+                try:
+                    result = store_public_snapshot(player_id, self.read_json(300_000))
+                except PermissionError:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"error": "member_not_allowed"}); return
+                self.send_json(HTTPStatus.OK, result)
+            elif path == "/api/v1/cabinet/site-stats":
+                origin=self.headers.get("Origin","")
+                if origin not in CABINET_ORIGINS:
+                    self.send_cabinet_json(HTTPStatus.FORBIDDEN, {"error":"origin_not_allowed"}); return
+                member=self.cabinet_member()
+                if not member:
+                    self.send_cabinet_json(HTTPStatus.UNAUTHORIZED, {"error":"unauthorized"}); return
+                body=self.read_json(2048)
+                try:
+                    days=int(body.get("days") or 30)
+                except (TypeError,ValueError):
+                    days=30
+                self.send_cabinet_json(HTTPStatus.OK, site_analytics_stats(days))
+            elif path == "/api/v1/cabinet/login":
+                origin = self.headers.get("Origin", "")
