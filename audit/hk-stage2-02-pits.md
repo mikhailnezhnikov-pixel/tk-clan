@@ -670,3 +670,29 @@ Baseline sync:
 - run `35496845598` — PASS.
 
 No Pit API/action logic changed in r14.
+
+
+## Shared tournament resource forecast r15
+
+Transferred from pinned donor:
+- existing shared Pit Passes;
+- selected Pit-plan ITEM cost through the tournament deadline;
+- current + projected Tribute Boxes;
+- expected x100 box returns at 2 Pit Passes per full batch;
+- passive Pit Pass income from `bonuses.passive_income_item` including building bonus and active VIP component;
+- projected shared Pit Pass balance;
+- future free Pit runs;
+- maximum reachable reward tier.
+
+Marker:
+`HK_PITS_SHARED_FORECAST_REV = 'pits-shared-reward-forecast-20260920-r15'`
+
+Deploy:
+- run `35496976601` — PASS;
+- live/public SHA256: `c5806b911ddc4c89aec36ad5dc99a672e18ba8a1870adfc03c31ecd4632bce9c`;
+- public byte equality: PASS.
+
+Baseline sync:
+- run `35497018252` — PASS.
+
+r15 is forecast/UI only; no action/spending path changed.
