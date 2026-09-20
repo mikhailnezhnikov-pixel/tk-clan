@@ -53,14 +53,21 @@ jobs:
             cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.$stamp"
             install -m 0644 /tmp/site-analytics-server.py /opt/hamsterking-license/server.py
             systemctl restart hamsterking-license.service
-            for port in 8787 3188; do
-              if curl -fsS --max-time 4 "http://127.0.0.1:$port/health" >/tmp/hk-health.json 2>/dev/null; then
-                cat /tmp/hk-health.json
-                exit 0
-              fi
+            ok=0
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+              for port in 8787 3188; do
+                if curl -fsS --max-time 3 "http://127.0.0.1:$port/health" >/tmp/hk-health.json 2>/dev/null; then
+                  cat /tmp/hk-health.json
+                  ok=1
+                  break 2
+                fi
+              done
+              sleep 1
             done
-            systemctl status hamsterking-license.service --no-pager -l || true
-            exit 1
+            if [ "$ok" -ne 1 ]; then
+              systemctl status hamsterking-license.service --no-pager -l || true
+              exit 1
+            fi
           '
 
       - name: Verify public analytics endpoint
