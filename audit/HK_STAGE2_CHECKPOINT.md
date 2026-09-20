@@ -843,6 +843,28 @@ PASS gate:
 - no duplicate district is created;
 - aliases still resolve correctly.
 
+#### W2 result — PASS (2026-09-20)
+
+- audit evidence: `audit/HK_STAGE2_W2_MAPS_SHARED_KB_LINK.md`;
+- durable bridge added: `hk_map_area_links(map_key PK/FK, canonical_area_id FK, match_method, linked_at)`;
+- supported match methods: `exact_area_id`, `city_grid_yx`;
+- historical coordinate rule retained: HK Maps `Y:X` → canonical `x=X,y=Y`;
+- pilot: `hk_moscow1226` → `9ea6ff78-b881-45b3-b92d-a8f1da8eca05`;
+- pilot canonical coordinates: Moscow `x=26,y=12`;
+- live bridge rows: **1**;
+- duplicate district created: **NO**;
+- alias resolution: **PASS**;
+- `hk_maps_catalog=235`, `hk_map_points=235`;
+- building migration: **NO**;
+- userscript/public SHA unchanged: `1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6`;
+- live server SHA: `1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e`;
+- build run `35508970854`: PASS;
+- successful live run `35509058115`: PASS;
+- first live attempt `35509018962` failed in read-only CI quoting before any live change;
+- Explore/scanner behavior untouched;
+- **W3 NOT STARTED**; stop here until explicit user instruction.
+
+
 ### Stage W3 — Website → shared userscript knowledge, one-map pilot
 
 Use exactly one linked map first.
