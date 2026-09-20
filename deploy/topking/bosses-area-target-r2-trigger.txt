@@ -1,0 +1,2 @@
+2026-09-20 Bosses Area target r2 deploy
+input_sha=571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9
