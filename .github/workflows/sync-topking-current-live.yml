@@ -52,7 +52,9 @@ jobs:
           grep -Fq "HK_PITS_REWARD_FIT_REV = 'pits-reward-fit-available-20260920-r18'" /tmp/live.js
           grep -Fq "HK_PITS_PREFLIGHT_REV = 'pits-aggregate-preflight-20260920-r19'" /tmp/live.js
           grep -Fq "HK_PITS_REWARD_PICKER_REV = 'pits-reward-picker-20260920-r20'" /tmp/live.js
-          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb"
+          grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-canon-core-20260920-r1'" /tmp/live.js
+          grep -Fq "HK_BOSSES_CANON_REV='bosses-canon-core-20260920-r1'" /tmp/live.js
+          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9"
           cp /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
       - name: Commit current snapshot
         run: |
@@ -61,7 +63,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js
           if ! git diff --cached --quiet; then
-            git commit -m "stage2: sync Pits reward picker r20 live candidate"
+            git commit -m "stage2: sync Bosses canonical core r1 live candidate"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
