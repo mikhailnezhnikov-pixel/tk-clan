@@ -2,7 +2,7 @@
 
 ## Status
 
-**LIVE PASS**
+**SCANNER_R2_LIVE_CANDIDATE**
 
 ## Canonical implementation
 
@@ -61,5 +61,49 @@ Current baseline is the synchronized live candidate after Bosses r2, whose live/
 No confirmed Maps regression was found.
 No Maps patch or redeploy was required.
 
-Final status:
-**LIVE PASS**
+Historical status before scanner bug discovery:
+**REOPENED**
+
+
+## Building-study scanner r2 — reopened after live bug report
+
+A real live regression was confirmed from the district map: many buildings already opened by the player remained `не исследовано` because the scanner did not reliably attach full `/player/building` study responses to their district and did not reread all already-active buildings during account map scan.
+
+Bug ticket:
+`audit/hk-stage2-bug-maps-building-study-link-loss.md`
+
+Fix marker:
+`HK_MAP_SCANNER_REV = 'maps-building-scan-20260920-r2'`
+
+Fix behavior:
+- persists owned `building_id -> area_id` mapping per player;
+- lazily rebuilds that mapping from owned `/game_area/{id}/buildings` when a building response arrives without an area;
+- account map scan starts from fresh authoritative `/player/me`;
+- after district mapping, rereads **only buildings already active in /player/me.buildings** through read-only `/player/building`;
+- calculates crystal-room count from the full building response;
+- submits the observation to the exact district/building;
+- closed/unopened buildings are not touched by scanner backfill;
+- pause/stop and pacing are retained.
+
+Build-only verification:
+- source live SHA256: `0931ee3eb65a16f9dd768fe51b9a84b897620e011c51ee9e0226d92f37b9e686`;
+- candidate SHA256: `a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0cec177e`;
+- Python compile: PASS;
+- JS syntax: PASS.
+
+Live verification:
+- deploy: PASS;
+- service: PASS;
+- syntax: PASS;
+- public byte equality: PASS;
+- live/public SHA256: `a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0cec177e`;
+- baseline sync: PASS.
+
+Current Maps status:
+**SCANNER_R2_LIVE_CANDIDATE**
+
+Required user confirmation:
+1. run “Считать карты аккаунта”;
+2. wait for the active-building reread phase to finish;
+3. reopen the affected district;
+4. confirm that currently active buildings are now colored with 0/1/2/3/4/5+ 💎 instead of remaining unknown.
