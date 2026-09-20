@@ -1,0 +1,79 @@
+name: Diagnose TopKing Bosses R3 Predeploy
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/bosses-r3-predeploy-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Reproduce predeploy
+        shell: bash
+        run: |
+          set +e
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          fetch_rc=$?
+          live_sha="$(sha256sum /tmp/HamsterKingMobile.user.js 2>/dev/null | awk '{print $1}')"
+          python3 -m py_compile deploy/topking/patch_bosses_area_calculator_r3_1174.py > /tmp/compile.out 2>&1
+          compile_rc=$?
+          python3 deploy/topking/patch_bosses_area_calculator_r3_1174.py > /tmp/patch.out 2>&1
+          patch_rc=$?
+          node --check /tmp/HamsterKingMobile.user.js > /tmp/node.out 2>&1
+          node_rc=$?
+          candidate_sha="$(sha256sum /tmp/HamsterKingMobile.user.js 2>/dev/null | awk '{print $1}')"
+          marker_count="$(grep -Fc "HK_BOSSES_CALC_REV='bosses-area-calculator-20260920-r3'" /tmp/HamsterKingMobile.user.js 2>/dev/null || true)"
+          {
+            echo "fetch_rc=$fetch_rc"
+            echo "live_sha256=$live_sha"
+            echo "compile_rc=$compile_rc"
+            echo "patch_rc=$patch_rc"
+            echo "node_rc=$node_rc"
+            echo "candidate_sha256=$candidate_sha"
+            echo "r3_marker_count=$marker_count"
+            echo "--- compile ---"
+            cat /tmp/compile.out
+            echo "--- patch ---"
+            cat /tmp/patch.out
+            echo "--- node ---"
+            cat /tmp/node.out
+          } > audit/hk-stage2-bosses-r3-predeploy.txt
+          exit 0
+
+      - name: Commit diagnostic
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-bosses-r3-predeploy.txt
+          git commit -m "stage2: diagnose Bosses r3 predeploy" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/compile.out /tmp/patch.out /tmp/node.out
