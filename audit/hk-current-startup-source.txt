@@ -1,0 +1,291 @@
+version=1.17.4
+sha256=d5a945e4d6951e859371c66b47f003d959404132237feb153a32fd124e101295
+
+===== startInterface =====
+].forEach(selector => root.querySelector(selector).onchange=renderMapDetail);
+    presetSelect.onchange = () => loadPreset(presetSelect.value);
+    fillTierFilters(); refreshPresets(); refreshFairPresets(); renderBusinessLists(); renderBusinessOptimizerFilters(); renderDailyTasks(); renderClanSkills(); renderResources();
+    if (playerDocument) refreshBusinessData();
+    applyLanguage();
+    setInterval(() => {
+      updatePitStatus();
+      const c=root.querySelector('#hk-connect'); if(c)c.textContent=apiHeaders.Authorization?tr('connectedSlots',{n:layout.length}):tr('waiting');
+      const token=currentGameBearer(); const exp=jwtExpiration(token);
+      setHealth('auth', !!token && exp > Date.now()+5000, token ? (exp > Date.now()+5000 ? 'авторизация активна' : 'токен истёк') : 'нет токена');
+    }, 1000);
+    setInterval(updateWatermark, 30000);
+  }
+
+  function startNetworkCapture() {
+    try { installNetworkCapture(); }
+    catch (_) { setTimeout(startNetworkCapture, 250); }
+  }
+
+  function startInterface() {
+    if (root) return;
+    try {
+      if (document.body) renderUI();
+    } catch (error) {
+      showBootstrap(error?.message || error);
+      return;
+    }
+    if (!root) setTimeout(startInterface, 250);
+  }
+
+  // HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1
+  const HK_NATIVE_LOGIN_GATE_REV = 'login-gate-hotfix-20260920-r2';
+  const HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3';
+  let hkNativeLoginRuntimeStarted = false;
+
+  function 
+
+===== renderUI =====
+g'),done:either('Готово','Done'),error:either('Ошибка','Error')};
+    const percent=state.total?Math.max(0,Math.min(100,(state.done/state.total)*100)):(state.status==='done'?100:0);
+    root.querySelector('#hk-runner-title').textContent=state.title||either('Выполнение','Execution');
+    root.querySelector('#hk-runner-state').textContent=labels[state.status]||state.status;
+    root.querySelector('#hk-runner-step').textContent=state.error||state.step||(state.total?`${state.done} / ${state.total}`:'');
+    root.querySelector('#hk-runner-fill').style.width=`${percent}%`;
+    const pause=root.querySelector('#hk-runner-pause'); const stop=root.querySelector('#hk-runner-stop');
+    pause.textContent=state.status==='paused'?either('Продолжить','Continue'):either('Пауза','Pause');
+    pause.disabled=!state.pausable||!['running','paused'].includes(state.status);
+    stop.textContent=either('Остановить','Stop'); stop.disabled=!state.stoppable||!['running','paused'].includes(state.status);
+  }
+
+  function renderUI() {
+    if (!document.body) return;
+    if (root?.isConnected && root.querySelector('#hk-fab')) return;
+    if (root && !root.isConnected) { root = null; panel = null; }
+    // If Safari still has an older duplicate userscript enabled, replace its
+    // two-tab panel with this newer build instead of silently aborting.
+    document.querySelector('#hk-mobile-root')?.remove();
+    const style = document.createElement('style');
+    style.textContent = `
+      #hk-mobile-root{position:fixed;z-index:2147483647;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f7f9fc}
+      #hk-fab{display:block!important;visibility:visible!important;opacity:1!important;width:58px;height:58px;border:0;border-radius:50%;background:linear-gradient(145deg,#ffb627,#ff7b00);box-shadow:0 8px 28px #0008;color:#15100a;font-size:25px;font-weight:900;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+      #hk-fab.dragging{cursor:grabbing;transform:scale(1.05);box-shadow:0 10px 32px #000a}
+      #hk-panel{position:fixed;inset:0;background:#0b1018ee;backdrop-filter:blur(16px);display:none;overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));box-sizing:border-box}
+      #hk-panel.open{display:block} .hk-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-head h2{margin:0;font-size:22px;flex:1}.hk-close{border:0;background:#253044;color:white;border-radius:12px;padding:10px 14px;font-size:20px}.hk-lang{display:flex;gap:5px}.hk-lang button{border:1px solid #34445c;background:#182230;border-radius:10px;padding:7px 8px;font-size:21px;line-height:1;opacity:.5}.hk-lang button.active{opacity:1;border-color:#ffad1f;background:#3a2b14;box-shadow:0 0 0 2px #ffad1f33}
+      .hk-donation{width:100%;margin:12px 0 0;border:1px solid #ff6f91;border-radius:13px;padding:11px;background:linear-gradient(135deg,#7b2947,#b63863);color:#fff;font-weight:900;box-shadow:0 7px 18px #7b294744}.hk-donation:active{transform:scale(.99)}
+      #hk-watermark{position:fixed;inset:-40px;z-index:20;pointer-events:none;display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));grid-auto-rows:minmax(120px,1fr);align-items:center;justify-items:center;overflow:hidden;transition:transform .5s ease}#hk-watermark span{display:block;max-width:310px;color:#fff;font:700 11px ui-monospace,monospace;letter-spacing:.4px;opacity:.035;transform:rotate(-24deg);white-space:nowrap;text-shadow:0 1px 2px #000}
+      .hk-license{padding:11px;border:1px solid #3b4a61;border-radius:12px;background:#101a28;margin:14px 0;color:#c8d4e5}.hk-license.ok{border-color:#287b60}.hk-license.bad{border-color:#803b49}.hk-update{display:none;margin:0 0 14px;padding:12px;border:1px solid #ffad1f;border-radius:13px;background:#2a2418;color:#fff}.hk-update.required{border-color:#ff6b75;background:#351b22}.hk-update b,.hk-update small{display:block}.hk-update small{margin-top:5px;color:#cbd5e5}.hk-update .hk-primary{margin-top:10px}.hk-locked .hk-tabs,.hk-locked .hk-subnav,.hk-locked .hk-runner,.hk-locked .hk-page{display:none!important}
+      .hk-health{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 0 8px}.hk-health-chip{display:grid;grid-template-columns:9px minmax(0,1fr);align-items:center;column-gap:7px;padding:9px 8px;border:1px solid #34445c;border-radius:11px;background:#111a27;color:#d3dbe8;min-width:0}.hk-health-chip:before{content:'';width:8px;height:8px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}.hk-health-chip.ok{border-color:#24694f;background:#10231d}.hk-health-chip.ok:before{background:#52d296;box-shadow:0 0 0 3px #52d29622}.hk-health-chip.bad{border-color:#7a3443;background:#29151b}.hk-health-chip.bad:before{background:#ff6b7a;box-shadow:0 0 0 3px #ff6b7a22}.hk-health-chip b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-chip small{grid-column:2;color:#8392a7;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-actions{display:flex;gap:7px;margin:0 0 14px}.hk-health-actions button{flex:1;min-height:36px;font-size:12px}@media(max-width:430px){.hk-health{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}.hk-growth-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.hk-growth-stats>div{padding:11px;border:1px solid #304057;border-radius:12px;background:#0e1723}.hk-growth-stats small{display:block;color:#8797ad;font-size:10px}.hk-growth-stats b{display:block;margin-top:4px;color:#ffe083;font-size:15px}.hk-growth-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-growth-actions button{margin-top:0}.hk-growth-options{display:grid;gap:9px;margin:10px 0}.hk-growth-option{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-option span{display:grid;gap:3px}.hk-growth-option small{color:#8998ad;font-size:10px}.hk-growth-option select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:9px}.hk-growth-check{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-check input{width:20px;height:20px;accent-color:#ffad1f}.hk-growth-live{display:grid;gap:3px;padding:9px 10px;border:1px solid #245d48;border-radius:11px;background:#0d211b}.hk-growth-live span{font-size:11px;font-weight:900;color:#6ee7a8}.hk-growth-live small{font-size:9px;color:#8fa89f}.hk-growth-plan{display:grid;gap:6px;margin:4px 0 10px;padding:11px;border:1px solid #3a4659;border-radius:12px;background:#0e1723}.hk-growth-plan>b{color:#ffe083}.hk-growth-plan>span{font-size:11px;color:#d4deea}.hk-growth-plan>small{font-size:9px;color:#8290a4;line-height:1.4}.hk-growth-priority-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-growth-priority-head h3{margin:0}.hk-growth-priority-list{display:grid;gap:7px;margin-top:8px}.hk-growth-priority{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px;border:1px solid #2d3a4e;border-radius:10px;background:#101927}.hk-growth-priority>b{color:#ffe083}.hk-growth-priority>span{font-size:9px;color:#8797ad}.hk-growth-priority>div{display:flex;gap:4px}.hk-growth-priority button{min-width:30px;margin:0;padding:6px 8px}.hk-growth-stats>div:nth-child(n+5){background:#121a28}@media(max-width:430px){.hk-tab{min-height:58px;padding:8px}.hk-tab-icon{width:32px;height:32px;font-size:19px}}
+      .hk-business-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.hk-business-tab{border:1px solid #34445b;border-radius:11px;padding:11px;background:#172234;color:#b8c4d6;font-weight:700}.hk-business-tab.active{border-color:#ffad1f;background:#3a2a0f;color:#fff}.hk-business-pane{display:none}.hk-business-pane.active{display:block}
+      .hk-page{display:none}.hk-page.active{display:block}.hk-cardbox{background:#151d29;border:1px solid #2a374a;border-radius:16px;padding:14px;margin-bottom:12px}.hk-grid{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center}
+      input,select,button{font:inherit}.hk-grid input,.hk-grid select,.hk-toolbar select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-primary,.hk-secondary,.hk-danger{width:100%;border:0;border-radius:12px;padding:13px;margin-top:9px;font-weight:800}.hk-primary{background:#ffad1f;color:#16110a}.hk-secondary{background:#28364a;color:white}.hk-danger{background:#642a32;color:#fff}.hk-primary:disabled,.hk-secondary:disabled{opacity:.45}
+      .hk-live{padding:10px;border-radius:10px;background:#0d1520;margin:10px 0;color:#cbd5e5}.hk-wallet-forecast{display:grid;gap:7px;margin-top:9px;padding-top:8px;border-top:1px solid #26354a}.hk-wallet-row{display:grid;grid-template-columns:minmax(105px,.65fr) minmax(0,1.35fr);gap:8px;align-items:center;padding:7px 8px;border:1px solid #2b3a50;border-radius:9px;background:#111b29;font-size:12px}.hk-wallet-row.shortage{border-color:#ff6677;background:#301923;color:#ffd6dc}.hk-wallet-currency{display:flex;align-items:center;gap:5px;min-width:0}.hk-wallet-currency b{overflow:hidden;text-overflow:ellipsis}.hk-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.hk-toolbar>*{flex:1}.hk-toolbar button{border:0;border-radius:10px;padding:10px;background:#29374a;color:white}.hk-toolbar input{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}
+      .hk-daily-progress{margin:10px 0;padding:10px;border:1px solid #29394f;border-radius:12px;background:#101927}.hk-daily-progress>div{display:flex;justify-content:space-between;gap:9px;font-size:12px}.hk-daily-progress span{color:#aebbd0}.hk-daily-progress i{display:block;height:8px;margin-top:8px;border-radius:8px;overflow:hidden;background:#080d14}.hk-daily-progress em{display:block;height:100%;border-radius:inherit;background:#36d59a;transition:width .2s}.hk-daily-list{list-style:none;padd
+
+===== startup tail =====
+:true});
+      pitRunning = true;
+      updatePitButtons();
+      log(settings.collectOnly ? either('Запущен безопасный сбор данных Ямы без боя','Started safe Pit data collection without battle') : `Автобой запущен до раунда ${settings.target}`);
+      try {
+        await pitLoop();
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        hkRunner.finish(either('Яма завершена','Pit completed'));
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          hkRunner.reset();
+          log(either('Автобой остановлен','Auto battle stopped'),'warn');
+        } else {
+          hkRunner.fail(error);
+          log(`${either('Ошибка Ямы','Pit error')}: ${error?.message || error}`,'bad');
+        }
+      } finally {
+        pitRunning = false;
+        updatePitButtons();
+      }
+    };
+    root.querySelector('#hk-pit-stop').onclick = () => {
+      pitRunning = false;
+      hkRunner.stop('pit');
+      updatePitButtons();
+      log(either('Останавливаю автобой…','Stopping auto battle…'),'warn');
+    };
+    root.querySelector('#hk-export').onclick = exportPowers;
+    root.querySelector('#hk-refresh-game').onclick = () => location.reload();
+    root.querySelector('#hk-optimizer-calculate').onclick = calculateBusinessOptimizer;
+    root.querySelector('#hk-optimizer-restore').onclick = prepareOriginalBusinessRestore;
+    root.querySelector('#hk-remove-tier').onchange = renderBusinessLists;
+    root.querySelector('#hk-insert-tier').onchange = renderBusinessLists;
+    root.querySelector('#hk-select-remove').onclick = () => {
+      preparedBusinessPlan = null; preparedBusinessPlanSource = '';
+      const filter = Number(root.querySelector('#hk-remove-tier').value || 0);
+      layout.filter(row => filter === 0 ? true : filter === -1 ? !row.businessId : !!row.businessId && tier(row.businessId) === filter)
+        .forEach(row => selectedSlots.add(row.key));
+      renderBusinessLists();
+    };
+    root.querySelector('#hk-save-preset').onclick = savePreset;
+    root.querySelector('#hk-delete-preset').onclick = deletePreset;
+    root.querySelector('#hk-fair-load').onclick = () => refreshModuleLive('fair',{force:true});
+    root.querySelector('#hk-fair-save-preset').onclick = () => saveFairPreset();
+    root.querySelector('#hk-fair-update-preset').onclick = () => fairPresetSelect?.value ? saveFairPreset(fairPresetSelect.value) : saveFairPreset();
+    root.querySelector('#hk-fair-delete-preset').onclick = deleteFairPreset;
+    fairPresetSelect.onchange = () => loadFairPreset(fairPresetSelect.value);
+    root.querySelector('#hk-fair-search').oninput = renderFair;
+    const exactFairLots = root.querySelector('#hk-fair-exact-lots');
+    exactFairLots.oninput = exactFairLots.onchange = () => { renderFairBonusChoices(); updateFairControls(); };
+    root.querySelector('#hk-fair-buy-limit').oninput = updateFairControls;
+    root.querySelector('#hk-fair-reroll-limit').oninput = updateFairControls;
+    root.querySelector('#hk-fair-start').onclick = runFair;
+    root.querySelector('#hk-fair-stop').onclick = () => { fairStop = true; hkRunner.stop('fair'); log(either('Останавливаю ярмарку…','Stopping fair…'), 'warn'); };
+    renderFairBonusChoices();
+    root.querySelector('#hk-shop-load').onclick = () => refreshModuleLive('shop',{force:true});
+    root.querySelector('#hk-shop-buy').onclick = buyRegularShop;
+    root.querySelector('#hk-shop-select').onclick = () => {
+      selectedShopLots.clear();
+      selectedShopCounts.clear();
+      shopRows.filter(row => row.section === selectedShopSection &&
+        (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && row.safe && row.remaining > 0)
+        .forEach(row => { selectedShopLots.add(row.lotId); selectedShopCounts.set(row.lotId, defaultShopPurchaseCount(row)); });
+      renderShop();
+    };
+    root.querySelectorAll('[data-shop-section]').forEach(button => button.onclick = () => {
+      selectedShopSection = button.dataset.shopSection;
+      selectedShopGroup = selectedShopSection === 'ordinary' ? 'resources' : selectedShopSection === 'clan' ? 'personal' : '';
+      selectedShopLots.clear();
+      selectedShopCounts.clear();
+      root.querySelectorAll('[data-shop-section]').forEach(element => element.classList.toggle('active', element === button));
+      renderShop();
+    });
+    root.querySelectorAll('[data-shop-group]').forEach(button => button.onclick = () => {
+      selectedShopGroup = button.dataset.shopGroup;
+      selectedShopLots.clear();
+      selectedShopCounts.clear();
+      root.querySelectorAll('[data-shop-group]').forEach(element => element.classList.toggle('active', element === button));
+      renderShop();
+    });
+    root.querySelectorAll('[data-recipe-pane]').forEach(button => button.onclick = () => {
+      root.querySelectorAll('[data-recipe-pane]').forEach(element => element.classList.toggle('active', element === button));
+      root.querySelectorAll('[data-recipe-content]').forEach(element => element.classList.toggle('active', element.dataset.recipeContent === button.dataset.recipePane));
+      if(button.dataset.recipePane==='spin')void refreshModuleLive('recipes',{force:true});
+      if(button.dataset.recipePane==='database')void loadCommunityRecipes();
+      if(button.dataset.recipePane==='bureau')void loadProjectBureau();
+    });
+    root.querySelector('#hk-recipe-load').onclick = () => refreshModuleLive('recipes',{force:true});
+    root.querySelector('#hk-recipe-attempts').oninput = renderRecipes;
+    root.querySelector('#hk-recipe-run').onclick = runRecipes;
+    root.querySelector('#hk-recipe-stop').onclick = () => { recipeStop = true; hkRunner.stop('recipes'); log(either('Останавливаю прокрутку…', 'Stopping rerolls…'), 'warn'); };
+    root.querySelector('#hk-recipe-db-load').onclick = loadCommunityRecipes;
+    root.querySelector('#hk-bureau-load').onclick = loadProjectBureau;
+    root.querySelector('#hk-bureau-tier').onchange = event => { bureauTier = Number(event.target.value || 0); renderProjectBureau(); };
+    root.querySelector('#hk-bureau-attempts').oninput = renderProjectBureau;
+    root.querySelector('#hk-bureau-run').onclick = runProjectBureau;
+    root.querySelector('#hk-map-load').onclick = () => loadMapIndex(false);
+    root.querySelector('#hk-map-scan').onclick = () => submitOwnedMapAreas(true);
+    root.querySelectorAll('[data-map-source]').forEach(button => button.onclick = () => setMapSource(button.dataset.mapSource));
+    root.querySelector('#hk-map-search').oninput = renderMapIndex;
+    root.querySelector('#hk-map-sort').onchange = renderMapIndex;
+    root.querySelector('#hk-map-back').onclick = renderMapIndex;
+    root.querySelector('#hk-map-zoom-out').onclick = () => changeMapZoom(mapZoom / 1.4);
+    root.querySelector('#hk-map-zoom-in').onclick = () => changeMapZoom(mapZoom * 1.4);
+    root.querySelector('#hk-map-zoom-value').onclick = resetMapZoom;
+    ['#hk-map-status-filter','#hk-map-room-filter','#hk-map-type-filter','#hk-map-faction-filter'].forEach(selector => root.querySelector(selector).onchange=renderMapDetail);
+    presetSelect.onchange = () => loadPreset(presetSelect.value);
+    fillTierFilters(); refreshPresets(); refreshFairPresets(); renderBusinessLists(); renderBusinessOptimizerFilters(); renderDailyTasks(); renderClanSkills(); renderResources();
+    if (playerDocument) refreshBusinessData();
+    applyLanguage();
+    setInterval(() => {
+      updatePitStatus();
+      const c=root.querySelector('#hk-connect'); if(c)c.textContent=apiHeaders.Authorization?tr('connectedSlots',{n:layout.length}):tr('waiting');
+      const token=currentGameBearer(); const exp=jwtExpiration(token);
+      setHealth('auth', !!token && exp > Date.now()+5000, token ? (exp > Date.now()+5000 ? 'авторизация активна' : 'токен истёк') : 'нет токена');
+    }, 1000);
+    setInterval(updateWatermark, 30000);
+  }
+
+  function startNetworkCapture() {
+    try { installNetworkCapture(); }
+    catch (_) { setTimeout(startNetworkCapture, 250); }
+  }
+
+  function startInterface() {
+    if (root) return;
+    try {
+      if (document.body) renderUI();
+    } catch (error) {
+      showBootstrap(error?.message || error);
+      return;
+    }
+    if (!root) setTimeout(startInterface, 250);
+  }
+
+  // HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1
+  const HK_NATIVE_LOGIN_GATE_REV = 'login-gate-hotfix-20260920-r2';
+  const HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3';
+  let hkNativeLoginRuntimeStarted = false;
+
+  function hkNativeGameLoginReady() {
+    if (playerDocument && apiHeaders.Authorization) return true;
+    try {
+      for (const storage of [sessionStorage, localStorage]) {
+        const token = String(storage.getItem('token') || '').trim();
+        if (token && jwtExpiration(token) > Date.now() + 5000 && gameBearerPlayerId(token)) return true;
+      }
+    } catch (_) {}
+    try {
+      const licenseOrigin = new URL(LICENSE_URL).origin;
+      for (const entry of performance.getEntriesByType('resource').slice().reverse()) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.origin === licenseOrigin) continue;
+        if (url.pathname === '/player/me') return true;
+      }
+    } catch (_) {}
+
+    // The current game city is rendered with Leaflet/OpenStreetMap.  A visible
+    // native map is a strong signal that the player is already inside the game,
+    // even when the game no longer exposes its bearer token under the old
+    // localStorage key expected by the original gate.
+    try {
+      const nativeMap = document.querySelector('.leaflet-container, .leaflet-map-pane, .leaflet-control-container');
+      if (nativeMap && (nativeMap.offsetWidth || nativeMap.offsetHeight || nativeMap.getClientRects().length)) return true;
+      const osm = document.querySelector('a[href*="openstreetmap.org"]');
+      if (osm && (osm.offsetWidth || osm.offsetHeight || osm.getClientRects().length)) return true;
+    } catch (_) {}
+
+    // Also accept observed authenticated game traffic.  The API has changed
+    // route/storage details over time, so do not depend on /player/me alone.
+    try {
+      const licenseOrigin = new URL(LICENSE_URL).origin;
+      for (const entry of performance.getEntriesByType('resource').slice().reverse()) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.origin === licenseOrigin) continue;
+        if (!/(^|\.)hwgame\.cloud$/i.test(url.hostname)) continue;
+        if (/\/(player|city|shop|clan|alliance|war|wars|building|business|fair|game_area)(?:\/|$)/i.test(url.pathname)) return true;
+      }
+    } catch (_) {}
+
+    return false;
+  }
+
+  function startAfterNativeGameLogin() {
+    if (hkNativeLoginRuntimeStarted) return;
+    if (!hkNativeGameLoginReady()) {
+      setTimeout(startAfterNativeGameLogin, 500);
+      return;
+    }
+    hkNativeLoginRuntimeStarted = true;
+    showBootstrap();
+    startNetworkCapture();
+    startInterface();
+    setTimeout(() => bootstrapLateGameConnection(), 100);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
+    setInterval(() => { ensureGameAuthorization(false, 'background').catch(error => recordDiagnostic('auth-background-error',{error:error?.message || error})); }, 30000);
+    setInterval(captureActiveEventCode, 1500);
+    setTimeout(() => hkGameBridge.discover(false), 1500);
+    setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
+    setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
+    setTimeout(() => collectPublicSnapshot(true), 5000);
+    setInterval(() => collectPublicSnapshot(), PUBLIC_SNAPSHOT_INTERVAL_MS);
+    recordDiagnostic('native-login-gate-open',{revision:'login-gate-20260920-r1'});
+  }
+
+  startInterface();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startInterface, {once:true});
+  }
+  startAfterNativeGameLogin();
+})();
