@@ -157,25 +157,112 @@
     @keyframes slashFlash{0%,43%{opacity:0;transform:rotate(-26deg) scaleX(.45)}51%{opacity:.95;transform:rotate(-26deg) scaleX(1)}62%,100%{opacity:0;transform:rotate(-26deg) scaleX(1.25)}}
     @keyframes sparkFly{0%{transform:translate(0,0) scale(.4);opacity:0}15%{opacity:1}100%{transform:translate(80px,-85px) scale(0);opacity:0}}
 
+
+    /* Cinematic battle scene: raster artwork + lightweight atmosphere overlays. */
+    .war-arena{
+      min-height:640px;
+      background:#090b0f;
+    }
+    .war-panel{
+      width:min(1080px,calc(100% - 44px));
+      margin:22px auto 0;
+      padding:22px 24px;
+      display:grid;
+      grid-template-columns:minmax(0,1.08fr) minmax(330px,.92fr);
+      gap:30px;
+      align-items:center;
+      border-radius:20px;
+      background:linear-gradient(135deg,rgba(13,16,22,.96),rgba(7,9,13,.91));
+      box-shadow:0 18px 52px rgba(0,0,0,.46),0 0 38px var(--war-accent-soft);
+    }
+    .war-panel-top{grid-template-columns:64px minmax(0,1fr);gap:16px}
+    .war-emblem{width:64px;height:64px;border-radius:18px;font-size:28px}
+    .war-name{font-size:clamp(30px,4.2vw,48px)}
+    .war-slogan{margin-top:7px;font-size:11px}
+    .war-health{margin-top:0}
+    .war-health-head{align-items:center;margin-bottom:8px}
+    .war-health-values strong{font-size:clamp(24px,3vw,34px)}
+    .war-health-values span{font-size:clamp(15px,2vw,21px)}
+    .war-health-track{height:14px}
+    .war-percent{margin-top:6px}
+
+    .battle-stage{
+      position:absolute;
+      inset:168px 0 0;
+      z-index:1;
+      overflow:hidden;
+      pointer-events:none;
+      background-image:
+        linear-gradient(180deg,rgba(7,9,13,.92) 0%,rgba(7,9,13,.24) 18%,rgba(7,9,13,.02) 58%,rgba(7,9,13,.52) 100%),
+        url('../assets/war/hamster-clan-battle.webp');
+      background-size:cover;
+      background-position:center bottom;
+      animation:battleCamera 14s ease-in-out infinite alternate;
+    }
+    .battle-stage:before{
+      content:"";
+      position:absolute;
+      inset:0;
+      z-index:2;
+      background:
+        linear-gradient(90deg,rgba(0,0,0,.30),transparent 22%,transparent 78%,rgba(0,0,0,.32)),
+        linear-gradient(180deg,rgba(0,0,0,.12),transparent 34%,rgba(0,0,0,.28));
+    }
+    .battle-stage:after{
+      content:"";
+      position:absolute;
+      left:0;right:0;bottom:0;height:42%;
+      z-index:4;
+      background:linear-gradient(180deg,transparent,rgba(6,7,9,.70));
+    }
+    .battle-tint{
+      position:absolute;inset:0;z-index:1;
+      background:radial-gradient(circle at 50% 60%,transparent 36%,var(--war-accent-soft) 100%);
+      mix-blend-mode:color;
+      opacity:.30;
+    }
+    .battle-smoke{
+      position:absolute;inset:-10%;z-index:3;
+      opacity:.34;filter:blur(18px);
+      background:
+        radial-gradient(ellipse at 14% 82%,rgba(0,0,0,.82),transparent 30%),
+        radial-gradient(ellipse at 80% 76%,rgba(0,0,0,.68),transparent 28%),
+        radial-gradient(ellipse at 52% 62%,rgba(255,255,255,.12),transparent 24%);
+      animation:smokeDrift 9s ease-in-out infinite alternate;
+    }
+    .battle-heat{
+      position:absolute;left:18%;right:18%;bottom:-8%;height:45%;z-index:3;
+      opacity:.36;filter:blur(18px);
+      background:radial-gradient(ellipse at center,var(--war-accent),transparent 67%);
+      animation:heatPulse 3.8s ease-in-out infinite;
+    }
+    .spark{z-index:5}
+    .spark.s1{left:31%;top:64%}.spark.s2{left:46%;top:52%}.spark.s3{left:58%;top:62%}.spark.s4{left:72%;top:48%}.spark.s5{left:40%;top:76%}
+
+    @keyframes battleCamera{
+      from{background-position:49% 100%}
+      to{background-position:51% 98%}
+    }
+    @keyframes heatPulse{
+      0%,100%{transform:scale(.94);opacity:.24}
+      50%{transform:scale(1.06);opacity:.44}
+    }
     @media(max-width:760px){
       .wars-page{padding-top:calc(var(--header) + 24px)}
       .wars-heading{padding:24px 0 18px}
       .wars-heading p{font-size:11px}
       .war-arena{min-height:690px;border-radius:22px}
-      .war-panel{width:calc(100% - 24px);margin-top:14px;padding:20px 18px}
+      .war-panel{width:calc(100% - 24px);margin-top:14px;padding:18px;grid-template-columns:1fr;gap:16px}
       .war-panel-top{grid-template-columns:58px minmax(0,1fr);gap:13px}
       .war-emblem{width:58px;height:58px;border-radius:17px;font-size:27px}
       .war-name{font-size:clamp(26px,8vw,38px)}
       .war-slogan{font-size:10px;letter-spacing:.07em}
       .war-health-head{align-items:center}
       .war-health-values strong{font-size:21px}.war-health-values span{font-size:14px}
-      .battle-stage{inset:260px 0 0}
-      .fighter{width:58vw;bottom:14%}.fighter.attacker{left:-7%}.fighter.defender{right:-9%}
-      .slash{left:39%;top:48%;width:130px}
-      .battle-sun{right:5%;top:22%;width:130px;height:130px}
+      .battle-stage{inset:260px 0 0;background-size:auto 100%;background-position:center bottom}
     }
     @media(prefers-reduced-motion:reduce){
-      .war-health-fill:after,.battle-smoke,.battle-sun,.flag:after,.fighter,.attacker .weapon,.defender .shield,.slash,.spark{animation:none!important}
+      .war-health-fill:after,.battle-stage,.battle-smoke,.battle-heat,.spark{animation:none!important}
     }
   </style>
 </head>
@@ -230,54 +317,9 @@
       </article>
 
       <div class="battle-stage" aria-hidden="true">
-        <div class="battle-sun"></div>
+        <div class="battle-tint"></div>
         <div class="battle-smoke"></div>
-        <div class="battle-flags"><i class="flag f1"></i><i class="flag f2"></i><i class="flag f3"></i></div>
-        <div class="battle-ground"></div>
-
-        <div class="fighter attacker">
-          <svg viewBox="0 0 320 300" role="img">
-            <g class="weapon">
-              <rect x="146" y="117" width="105" height="17" rx="8" class="dark" transform="rotate(-28 146 117)"/>
-              <circle cx="255" cy="78" r="31" class="accent"/>
-              <path d="M255 35l7 18 18-8-8 18 19 7-19 7 8 18-18-8-7 19-7-19-18 8 8-18-19-7 19-7-8-18 18 8z" class="dark"/>
-            </g>
-            <ellipse cx="151" cy="245" rx="88" ry="34" class="dark" opacity=".5"/>
-            <path d="M83 174c8-55 49-93 99-82 48 11 70 61 55 111-15 49-67 69-116 46-34-16-45-43-38-75z" class="armor"/>
-            <circle cx="159" cy="112" r="72" class="fur"/>
-            <circle cx="101" cy="68" r="29" class="fur"/><circle cx="216" cy="69" r="29" class="fur"/>
-            <circle cx="101" cy="68" r="15" class="fur-light"/><circle cx="216" cy="69" r="15" class="fur-light"/>
-            <ellipse cx="158" cy="128" rx="54" ry="42" class="fur-light"/>
-            <circle cx="132" cy="104" r="9" class="eye"/><circle cx="186" cy="104" r="9" class="eye"/>
-            <circle cx="135" cy="101" r="2.8" class="shine"/><circle cx="189" cy="101" r="2.8" class="shine"/>
-            <path d="M150 122q9-8 18 0-4 12-9 12t-9-12z" class="dark"/>
-            <path d="M136 141q23 20 46 0" fill="none" stroke="#3a1712" stroke-width="6" stroke-linecap="round"/>
-            <path d="M92 163q68 28 139-2" fill="none" stroke="var(--war-accent)" stroke-width="15" stroke-linecap="round"/>
-            <path d="M103 195l-25 47 43-17M222 197l29 39-45-13" fill="none" stroke="#89939f" stroke-width="18" stroke-linecap="round"/>
-          </svg>
-        </div>
-
-        <div class="fighter defender">
-          <svg viewBox="0 0 320 300" role="img">
-            <ellipse cx="169" cy="248" rx="86" ry="31" class="dark" opacity=".5"/>
-            <path d="M86 173c3-51 42-87 92-83 50 4 79 48 70 99-9 54-56 81-107 65-39-12-58-43-55-81z" class="armor"/>
-            <circle cx="170" cy="112" r="70" class="fur"/>
-            <circle cx="113" cy="70" r="28" class="fur"/><circle cx="224" cy="72" r="28" class="fur"/>
-            <circle cx="113" cy="70" r="14" class="fur-light"/><circle cx="224" cy="72" r="14" class="fur-light"/>
-            <ellipse cx="170" cy="131" rx="52" ry="40" class="fur-light"/>
-            <circle cx="143" cy="105" r="9" class="eye"/><circle cx="196" cy="105" r="9" class="eye"/>
-            <circle cx="146" cy="102" r="2.8" class="shine"/><circle cx="199" cy="102" r="2.8" class="shine"/>
-            <path d="M161 122q9-8 18 0-4 12-9 12t-9-12z" class="dark"/>
-            <path d="M149 147q21-17 42 0" fill="none" stroke="#3a1712" stroke-width="6" stroke-linecap="round"/>
-            <g class="shield">
-              <path d="M190 173l57 13-8 70q-27 29-62 18l-21-60z" class="accent"/>
-              <path d="M201 205l10-14 9 14 17 2-12 12 4 18-18-8-16 9 2-18-13-11z" fill="#f5df9a"/>
-            </g>
-            <path d="M103 195l-26 39 43-10" fill="none" stroke="#89939f" stroke-width="18" stroke-linecap="round"/>
-          </svg>
-        </div>
-
-        <div class="slash"></div>
+        <div class="battle-heat"></div>
         <i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i><i class="spark s5"></i>
       </div>
 
