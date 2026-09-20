@@ -174,11 +174,23 @@ jobs:
           rowmap={str(r['building_id']):r for r in rows}
           current_hist={}
           source_hist={}
-          for bid in unique_ids:
+          unique_mapped=[]
+          by_index={m['index']:m for m in unique}
+          for m in unique:
+              bid=m['candidates'][0]
               r=rowmap[bid]
               k='null' if r['room_count'] is None else str(r['room_count'])
               current_hist[k]=current_hist.get(k,0)+1
               src=str(r['last_player_id']); source_hist[src]=source_hist.get(src,0)+1
+              unique_mapped.append({
+                  'index':m['index'],
+                  'building_id':bid,
+                  'crystals':m['point']['crystals'],
+                  'investment':m['point']['investment'],
+                  'current_room_count':r['room_count'],
+                  'current_last_player_id':src,
+                  'current_last_seen':r['last_seen'],
+              })
           report={
               'decoded_hist':hist,
               'decoded_investment_count':sum(1 for p in points if p['investment']),
@@ -191,6 +203,7 @@ jobs:
               'ambiguous':len(ambiguous),
               'current_room_hist_for_matches':current_hist,
               'source_hist_for_matches':source_hist,
+              'unique_mapped_points':unique_mapped,
               'matches':matches,
           }
           open('/tmp/w3-osm-report.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
@@ -219,6 +232,8 @@ jobs:
             f"ambiguous={d['ambiguous']}",
             'current_room_hist_for_matches='+json.dumps(d['current_room_hist_for_matches'],sort_keys=True,separators=(',',':')),
             'source_hist_for_matches='+json.dumps(d['source_hist_for_matches'],sort_keys=True,separators=(',',':')),
+            'null_fill_candidates='+json.dumps([m for m in d['unique_mapped_points'] if m['current_room_count'] is None],ensure_ascii=False,separators=(',',':')),
+            'unique_mapped_points='+json.dumps(d['unique_mapped_points'],ensure_ascii=False,separators=(',',':')),
             'live_mutation=NO',
           ]
           if d['unmatched'] or d['ambiguous']:
