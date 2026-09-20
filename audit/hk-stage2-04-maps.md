@@ -2,7 +2,7 @@
 
 ## Status
 
-**SCANNER_R2_LIVE_CANDIDATE**
+**BUG_CONFIRMED_NO_FIX_APPLIED**
 
 ## Canonical implementation
 
@@ -138,3 +138,27 @@ Live verification:
 - baseline sync: PASS.
 
 Existing server rows are corrected when the district is submitted again through “Считать карты аккаунта”.
+
+
+## Rollback of scanner r2 and coordinate r1
+
+User explicitly requested that neither of the two experimental fixes remain applied.
+
+Rolled back from:
+- `maps-building-scan-20260920-r2`;
+- `maps-coordinates-column-row-20260920-r1`.
+
+Restored exact pre-fix live:
+- source commit: `4c0f3d6c5b1278d3547ba53fd593b484f826ff92`;
+- live/public SHA256: `0931ee3eb65a16f9dd768fe51b9a84b897620e011c51ee9e0226d92f37b9e686`;
+- syntax: PASS;
+- service: PASS;
+- public byte equality: PASS;
+- scanner r2 marker: ABSENT;
+- coordinate r1 marker: ABSENT;
+- Buildings canonical r1 remains present.
+
+The confirmed Maps building-study attribution issue and reversed-coordinate issue remain **unfixed by design** after this rollback. Do not treat the two reverted implementations as active or approved.
+
+Current status:
+**BUG_CONFIRMED_NO_FIX_APPLIED**
