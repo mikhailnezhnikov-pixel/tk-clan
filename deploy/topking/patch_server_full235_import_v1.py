@@ -275,9 +275,10 @@ def _full235_resolution(db: sqlite3.Connection, batch_id: str, member: dict) -> 
             target = existing_link
             overlap = counts.get(target,0)
             others = [cid for cid in counts if cid != target and counts[cid] > 0]
+            target_building_count = len(area_buildings.get(target,set()))
             if others:
                 status = "conflict_link_buildings"
-            elif counts and overlap == 0:
+            elif target_building_count > 0 and overlap == 0:
                 status = "conflict_link_no_overlap"
             else:
                 status = "matched_link"
