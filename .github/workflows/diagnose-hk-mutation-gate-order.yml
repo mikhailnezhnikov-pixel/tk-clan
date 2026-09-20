@@ -1,0 +1,39 @@
+name: Diagnose HK Mutation Gate Order
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/mutation-gate-order-trigger.txt'
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect live order
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          echo '=== OCCURRENCES ==='
+          grep -n -C 4 'hkMutationGate\|runtime.mutationGate\|runtime.runner = hkRunner' /tmp/live.js || true
+          echo '=== ORDER ==='
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/live.js').read_text()
+          for needle in ["runtime.runner = hkRunner","runtime.mutationGate = hkMutationGate","const hkMutationGate ="]:
+              print(needle, s.find(needle))
+          PY
+          node --check /tmp/live.js
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js
