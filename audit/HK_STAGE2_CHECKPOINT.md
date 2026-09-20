@@ -1141,6 +1141,47 @@ Only after user confirmation:
 - mark Website ↔ Maps shared knowledge link PASS;
 - resume the normal Stage 2 sequence.
 
+#### W8 result — PASS (2026-09-21)
+
+- user explicitly authorized continuing after W7, satisfying the W8 confirmation gate;
+- audit: `audit/HK_STAGE2_W8_MAPS_SHARED_KB_E2E.md`;
+- status: `audit/hk-stage2-maps-shared-kb-w8-status.txt`;
+- temporary end-to-end summary: `audit/hk-stage2-w8-temp-e2e-summary.json`;
+- production read-only samples: `audit/hk-stage2-w8-live-samples.json`;
+- verification run `35520602358`, job `106103898484`: PASS;
+- direction A, userscript/game_live → shared DB → website: **PASS on 2 districts**;
+- direction B, authorized website import → shared DB → userscript: **PASS on 2 districts**;
+- coordinates:
+  - `column-row-v1`: PASS;
+  - explicit `historical-yx`: PASS;
+- aliases: PASS;
+- room_count propagation in both directions: PASS;
+- investment bit/is_invest behavior: PASS;
+- unknown/NULL behavior: PASS;
+- source priority `game_live > hk_maps_import`: PASS;
+- rerun/idempotency: PASS;
+- Personal Cabinet backend: PASS;
+- live Personal Cabinet Maps UI path: PASS;
+- live website point bitmask renderer: PASS;
+- current server SHA: `b5189981acade420e1aaa533dec8b745c0e16969bf1def0c5008aa297f2a2812`;
+- current userscript SHA: `bddc55fc46bd4fe8da70c37799a35b74f3924015b071a3e692c532f0f7e6d766`;
+- scanner remains `maps-parallel-read-20260920-r6-safe5`;
+- read-only scanner concurrency remains **5**;
+- safe active-building intersection: PASS;
+- coordinate marker remains `maps-coordinates-column-row-20260920-r2`;
+- production bridge state:
+  - `hk_maps_catalog=235`;
+  - `hk_map_points=235`;
+  - `hk_map_area_links=25`;
+  - `hk_map_point_links=2007`;
+  - duplicate canonical targets=0;
+- real production read-only samples verified across New York, Moscow, and Saint Petersburg;
+- W8 production writes: **NO**;
+- **Website ↔ Maps shared knowledge link = PASS**;
+- **W1–W8 shared-knowledge subproject = COMPLETE**;
+- normal Stage 2 may resume on the **next explicit user instruction**; stop here.
+
+
 ### Execution rule for W1–W8
 
 Work in short sessions.
