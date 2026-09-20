@@ -59,7 +59,7 @@ jobs:
       - name: resolve positive points against OSM
         run: |
           cat > /tmp/w6-analyze.py <<'PY'
-          import json,math,time,urllib.parse,urllib.request
+          import json,time,urllib.parse,urllib.request
           from collections import Counter,defaultdict
           src=json.load(open('/tmp/w6-input.json'))
           def decode(flat):
@@ -79,12 +79,12 @@ jobs:
                       if x<cross:ok=not ok
                   j=i
               return ok
-          def polygons(element):
-              if element.get('type')=='way':
-                  g=[(float(n['lon']),float(n['lat'])) for n in element.get('geometry') or [] if 'lon' in n and 'lat' in n]
+          def polygons(e):
+              if e.get('type')=='way':
+                  g=[(float(n['lon']),float(n['lat'])) for n in e.get('geometry') or [] if 'lon' in n and 'lat' in n]
                   return [g] if len(g)>=3 else []
               segs=[]
-              for m in element.get('members') or []:
+              for m in e.get('members') or []:
                   if m.get('role')!='outer':continue
                   g=[(float(n['lon']),float(n['lat'])) for n in m.get('geometry') or [] if 'lon' in n and 'lat' in n]
                   if len(g)>=2:segs.append(g)
@@ -94,114 +94,111 @@ jobs:
                   while changed and segs:
                       changed=False
                       for k,g in enumerate(segs):
-                          if ring[-1]==g[0]: ring.extend(g[1:]);segs.pop(k);changed=True;break
-                          if ring[-1]==g[-1]: ring.extend(list(reversed(g[:-1])));segs.pop(k);changed=True;break
-                          if ring[0]==g[-1]: ring=g[:-1]+ring;segs.pop(k);changed=True;break
-                          if ring[0]==g[0]: ring=list(reversed(g[1:]))+ring;segs.pop(k);changed=True;break
+                          if ring[-1]==g[0]:ring.extend(g[1:]);segs.pop(k);changed=True;break
+                          if ring[-1]==g[-1]:ring.extend(list(reversed(g[:-1])));segs.pop(k);changed=True;break
+                          if ring[0]==g[-1]:ring=g[:-1]+ring;segs.pop(k);changed=True;break
+                          if ring[0]==g[0]:ring=list(reversed(g[1:]))+ring;segs.pop(k);changed=True;break
                   if len(ring)>=3:rings.append(ring)
               return rings
-          def overpass(points):
-              if not points:return {}
-              south=min(p['lat'] for p in points)-0.0015;north=max(p['lat'] for p in points)+0.0015
-              west=min(p['lon'] for p in points)-0.0015;east=max(p['lon'] for p in points)+0.0015
-              q=f'[out:json][timeout:45];(way["building"]({south},{west},{north},{east});relation["building"]({south},{west},{north},{east}););out geom;'
+          def call(q):
               body=urllib.parse.urlencode({'data':q}).encode()
               last=None
-              for endpoint in ('https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'):
-                  for attempt in range(2):
+              endpoints=('https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.nchc.org.tw/api/interpreter')
+              for endpoint in endpoints:
+                  for attempt in range(3):
                       try:
-                          req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6-dryrun/1.0'})
-                          with urllib.request.urlopen(req,timeout=75) as r:data=json.load(r)
-                          feats={}
-                          for e in data.get('elements',[]):
-                              typ=e.get('type');eid=e.get('id')
-                              if typ not in ('way','relation') or eid is None:continue
-                              ps=polygons(e)
-                              if ps:feats[('way' if typ=='way' else 'relation')+str(eid)]=ps
-                          return feats
+                          req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6-dryrun/2.0'})
+                          with urllib.request.urlopen(req,timeout=55) as r:return json.load(r)
                       except Exception as exc:
                           last=repr(exc);time.sleep(2+attempt*2)
-              raise RuntimeError('overpass failed '+str(last))
-          existing_links={x['map_key']:x for x in src['existing_links']}
-          metrics=Counter()
-          map_rows=[]
-          manifests=[]
-          target_to_maps=defaultdict(list)
+              raise RuntimeError(str(last))
+          def canonical_features(ids):
+              ways=[int(x[3:]) for x in ids if x.startswith('way') and x[3:].isdigit()]
+              rels=[int(x[8:]) for x in ids if x.startswith('relation') and x[8:].isdigit()]
+              chunks=[]
+              for x in ways:chunks.append(f'way({x});')
+              for x in rels:chunks.append(f'relation({x});')
+              if not chunks:return {}
+              data=call('[out:json][timeout:45];('+''.join(chunks)+');out geom;')
+              out={}
+              for e in data.get('elements',[]):
+                  typ=e.get('type');eid=e.get('id')
+                  if typ not in ('way','relation') or eid is None:continue
+                  ps=polygons(e)
+                  if ps:out[('way' if typ=='way' else 'relation')+str(eid)]=ps
+              return out
+          def local_features(p):
+              d=0.00045;south=p['lat']-d;north=p['lat']+d;west=p['lon']-d;east=p['lon']+d
+              q=f'[out:json][timeout:25];(way["building"]({south},{west},{north},{east});relation["building"]({south},{west},{north},{east}););out geom;'
+              data=call(q);out={}
+              for e in data.get('elements',[]):
+                  typ=e.get('type');eid=e.get('id')
+                  if typ not in ('way','relation') or eid is None:continue
+                  ps=polygons(e)
+                  if ps:out[('way' if typ=='way' else 'relation')+str(eid)]=ps
+              return out
+          metrics=Counter();map_rows=[];manifests=[];target_to_maps=defaultdict(list)
           for m in src['maps']:
-              cands=m['discovery'].get('candidates') or []
-              if len(cands)==1:
-                  metrics['city_grid_yx_matches']+=1
-                  target_to_maps[cands[0]].append(m['map_key'])
-              elif len(cands)==0:metrics['unresolved_maps']+=1
+              c=m['discovery'].get('candidates') or []
+              if len(c)==1:
+                  metrics['city_grid_yx_matches']+=1;target_to_maps[c[0]].append(m['map_key'])
+              elif len(c)==0:metrics['unresolved_maps']+=1
               else:metrics['ambiguous_maps']+=1
           metrics['exact_area_id_matches']=sum(1 for x in src['existing_links'] if x['match_method']=='exact_area_id')
           duplicate_targets={k:v for k,v in target_to_maps.items() if len(v)>1}
-          metrics['duplicate_target_groups']=len(duplicate_targets)
-          metrics['duplicate_target_maps']=sum(len(v) for v in duplicate_targets.values())
-          for idx,m in enumerate(src['maps']):
-              cands=m['discovery'].get('candidates') or []
-              row={'map_key':m['map_key'],'city':m['city'],'grid':m['grid'],'candidate_count':len(cands),'candidates':cands,'existing_link':m.get('existing_link')}
-              if len(cands)!=1:
-                  map_rows.append(row);continue
-              area=cands[0];pts=decode(m['points']);row['canonical_area_id']=area;row['source_points']=len(pts)
-              can={x['building_id']:x for x in m.get('canonical_buildings') or []}
-              features=overpass(pts)
-              unique=[];unmatched=[];amb=[]
-              used={}
+          metrics['duplicate_target_groups']=len(duplicate_targets);metrics['duplicate_target_maps']=sum(len(v) for v in duplicate_targets.values())
+          resolved_i=0
+          for m in src['maps']:
+              c=m['discovery'].get('candidates') or []
+              row={'map_key':m['map_key'],'city':m['city'],'grid':m['grid'],'candidate_count':len(c),'candidates':c,'existing_link':m.get('existing_link')}
+              if len(c)!=1:map_rows.append(row);continue
+              resolved_i+=1;area=c[0];pts=decode(m['points']);can={x['building_id']:x for x in m.get('canonical_buildings') or []}
+              feats=canonical_features(list(can))
+              unique=[];unmatched=[];amb=[];used={}
               for p in pts:
-                  hits=[bid for bid,polys in features.items() if any(inside(poly,p['lon'],p['lat']) for poly in polys)]
+                  hits=[bid for bid,polys in feats.items() if any(inside(poly,p['lon'],p['lat']) for poly in polys)]
                   if len(hits)==1:
                       bid=hits[0]
-                      if bid in used:
-                          amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]})
-                          continue
-                      used[bid]=p['point_index']
-                      cur=can.get(bid)
-                      rec={**p,'building_id':bid,'existing':bool(cur)}
-                      if cur:
-                          rec['canonical_room_count']=cur['room_count'];rec['canonical_source']=cur['knowledge_source'];rec['canonical_observed_at']=cur['knowledge_observed_at']
-                          metrics['building_rows_already_known']+=1
-                          if cur['room_count'] is None:metrics['existing_null_fill_candidates']+=1
-                          elif int(cur['room_count'])!=int(p['room_count']):
-                              metrics['room_count_conflicts_total']+=1
-                              metrics['room_count_conflicts_'+str(cur['knowledge_source'])]+=1
-                          else:metrics['room_count_same']+=1
+                  elif len(hits)>1:
+                      amb.append({**p,'candidates':sorted(hits),'reason':'multiple_canonical_buildings'});continue
+                  else:
+                      local=local_features(p)
+                      local_hits=[bid for bid,polys in local.items() if any(inside(poly,p['lon'],p['lat']) for poly in polys)]
+                      if len(local_hits)==1:bid=local_hits[0]
+                      elif len(local_hits)>1:
+                          amb.append({**p,'candidates':sorted(local_hits),'reason':'multiple_local_buildings'});continue
                       else:
-                          metrics['building_rows_to_add']+=1
-                      unique.append(rec)
-                  elif not hits:unmatched.append(p)
-                  else:amb.append({**p,'candidates':sorted(hits),'reason':'multiple_buildings'})
-              metrics['source_positive_points']+=len(pts)
-              metrics['point_unique_matches']+=len(unique)
-              metrics['point_unmatched']+=len(unmatched)
-              metrics['point_ambiguous']+=len(amb)
-              row.update({'unique_points':len(unique),'unmatched_points':len(unmatched),'ambiguous_points':len(amb)})
-              map_rows.append(row)
-              manifests.append({'map_key':m['map_key'],'canonical_area_id':area,'area_match_method':'city_grid_yx','points':unique,'unmatched':unmatched,'ambiguous':amb})
-              print(f"[{idx+1}/235] {m['map_key']} unique={len(unique)} unmatched={len(unmatched)} ambiguous={len(amb)}")
-              time.sleep(0.2)
-          report={
-            'stage':'W6','dry_run':True,'total_maps':src['catalog_count'],
-            'existing_links_before':len(src['existing_links']),
-            'exact_area_id_matches':metrics['exact_area_id_matches'],
-            'city_grid_yx_matches':metrics['city_grid_yx_matches'],
+                          unmatched.append(p);continue
+                  if bid in used:
+                      amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]});continue
+                  used[bid]=p['point_index'];cur=can.get(bid)
+                  rec={**p,'building_id':bid,'existing':bool(cur)}
+                  if cur:
+                      rec['canonical_room_count']=cur['room_count'];rec['canonical_source']=cur['knowledge_source'];rec['canonical_observed_at']=cur['knowledge_observed_at']
+                      metrics['building_rows_already_known']+=1
+                      if cur['room_count'] is None:metrics['existing_null_fill_candidates']+=1
+                      elif int(cur['room_count'])!=int(p['room_count']):
+                          metrics['room_count_conflicts_total']+=1;metrics['room_count_conflicts_'+str(cur['knowledge_source'])]+=1
+                      else:metrics['room_count_same']+=1
+                  else:metrics['building_rows_to_add']+=1
+                  unique.append(rec)
+              metrics['source_positive_points']+=len(pts);metrics['point_unique_matches']+=len(unique);metrics['point_unmatched']+=len(unmatched);metrics['point_ambiguous']+=len(amb)
+              row.update({'canonical_area_id':area,'source_points':len(pts),'unique_points':len(unique),'unmatched_points':len(unmatched),'ambiguous_points':len(amb)})
+              map_rows.append(row);manifests.append({'map_key':m['map_key'],'canonical_area_id':area,'area_match_method':'city_grid_yx','points':unique,'unmatched':unmatched,'ambiguous':amb})
+              print(f"[resolved {resolved_i}/{metrics['city_grid_yx_matches']}] {m['map_key']} unique={len(unique)} unmatched={len(unmatched)} ambiguous={len(amb)}",flush=True)
+              time.sleep(0.25)
+          report={'stage':'W6','dry_run':True,'total_maps':src['catalog_count'],'existing_links_before':len(src['existing_links']),
+            'exact_area_id_matches':metrics['exact_area_id_matches'],'city_grid_yx_matches':metrics['city_grid_yx_matches'],
             'unresolved_maps':metrics['unresolved_maps'],'ambiguous_maps':metrics['ambiguous_maps'],
-            'duplicate_target_groups':metrics['duplicate_target_groups'],'duplicate_target_maps':metrics['duplicate_target_maps'],
-            'duplicate_targets':duplicate_targets,
-            'source_positive_points':metrics['source_positive_points'],
-            'point_unique_matches':metrics['point_unique_matches'],'point_unmatched':metrics['point_unmatched'],'point_ambiguous':metrics['point_ambiguous'],
-            'building_rows_to_add':metrics['building_rows_to_add'],
-            'building_rows_already_known':metrics['building_rows_already_known'],
-            'existing_null_fill_candidates':metrics['existing_null_fill_candidates'],
-            'room_count_same':metrics['room_count_same'],
+            'duplicate_target_groups':metrics['duplicate_target_groups'],'duplicate_target_maps':metrics['duplicate_target_maps'],'duplicate_targets':duplicate_targets,
+            'source_positive_points':metrics['source_positive_points'],'point_unique_matches':metrics['point_unique_matches'],'point_unmatched':metrics['point_unmatched'],'point_ambiguous':metrics['point_ambiguous'],
+            'building_rows_to_add':metrics['building_rows_to_add'],'building_rows_already_known':metrics['building_rows_already_known'],
+            'existing_null_fill_candidates':metrics['existing_null_fill_candidates'],'room_count_same':metrics['room_count_same'],
             'room_count_conflicts_total':metrics['room_count_conflicts_total'],
-            'room_count_conflicts_by_source':{
-              'game_live':metrics['room_count_conflicts_game_live'],
-              'hk_maps_import':metrics['room_count_conflicts_hk_maps_import'],
-              'legacy':metrics['room_count_conflicts_legacy']},
-            'maps':map_rows,'migration_manifest':manifests
-          }
+            'room_count_conflicts_by_source':{'game_live':metrics['room_count_conflicts_game_live'],'hk_maps_import':metrics['room_count_conflicts_hk_maps_import'],'legacy':metrics['room_count_conflicts_legacy']},
+            'maps':map_rows,'migration_manifest':manifests}
           assert report['total_maps']==235
+          assert report['city_grid_yx_matches']+report['unresolved_maps']+report['ambiguous_maps']==235
           open('audit/hk-stage2-w6-dryrun.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
           summary={k:v for k,v in report.items() if k not in ('maps','migration_manifest','duplicate_targets')}
           open('audit/hk-stage2-w6-dryrun-summary.txt','w',encoding='utf-8').write('\n'.join(f'{k}={v}' for k,v in summary.items())+'\n')
