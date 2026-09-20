@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: UI_LIVE_READ_PASS_ACTION_PENDING
+- current module status: ACTION_RETEST_PENDING
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -158,3 +158,19 @@ Current module status:
 Next required chain:
 action → authoritative state update → rerun.
 Do not advance to Bosses until Pits reaches LIVE PASS.
+
+
+## Pits start action r5
+
+- bug: run config was captured after async reread/re-render;
+- fix: capture selected Pits/config before any await, start runner immediately, then live reread/revalidate;
+- donor execution order restored for this boundary;
+- marker: `pits-start-config-snapshot-20260920-r5`;
+- deploy run: `35493622785` — PASS;
+- live/public SHA256: `c373370ba5c3cf9a24f19d7e3ae82e871c124357e2d940f954fe834520a44629`;
+- baseline sync: `35493651043` — PASS.
+
+Current module status:
+**ACTION_RETEST_PENDING**
+
+Do not advance to Bosses until action → state update → rerun is confirmed.
