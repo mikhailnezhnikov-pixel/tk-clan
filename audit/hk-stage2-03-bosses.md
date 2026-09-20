@@ -100,3 +100,46 @@ Still missing versus donor before static Bosses parity:
 - Area Boss Calculator / rewards view.
 
 Do not mark Bosses LIVE PASS yet.
+
+
+## Area target / reward continuation r2
+
+Transferred and deployed after canonical core r1:
+- Area Boss tournament target planning;
+- selectable target levels from donor target set;
+- reward-only plan (`reward-0`);
+- live target score/forecast calculation;
+- future free-attempt / passive invitation forecast;
+- current-run strategy handling;
+- Area Boss reward continuation using available invitations;
+- safe stop when invitation balance is insufficient;
+- rerun/live score reread during continuation.
+
+Markers:
+- `HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2'`;
+- `HK_BOSSES_CANON_REV='bosses-area-target-20260920-r2'`;
+- `HK_BOSSES_TARGET_REV='bosses-area-target-20260920-r2'`.
+
+Technical live verification:
+- syntax: PASS;
+- outer marker: PASS;
+- inner canonical marker: R2;
+- target marker: PASS;
+- target plan: PASS;
+- reward-only plan: PASS;
+- public byte equality: PASS;
+- live/public SHA256: `0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7`.
+
+Baseline sync:
+- live candidate synchronized after r2;
+- current baseline contains r2 markers and target continuation functions.
+
+Current status:
+**AREA_TARGET_R2_LIVE_CANDIDATE**
+
+Still pending before Bosses LIVE PASS:
+1. user live UI/action/state/rerun confirmation for canonical Area + Regional runner;
+2. user live confirmation of Area target/reward continuation;
+3. donor Area Boss Calculator / rewards view is still not transferred.
+
+Do not advance to Maps yet.
