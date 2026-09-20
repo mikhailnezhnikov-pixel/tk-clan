@@ -110,12 +110,49 @@ jobs:
                   ring=[(float(n['lon']),float(n['lat'])) for n in geom if 'lon' in n and 'lat' in n]
                   if len(ring)>=3: polys.append(ring)
               else:
+                  segments=[]
                   for m in e.get('members') or []:
                       if m.get('role')!='outer': continue
                       geom=m.get('geometry') or []
-                      ring=[(float(n['lon']),float(n['lat'])) for n in geom if 'lon' in n and 'lat' in n]
+                      seg=[(float(n['lon']),float(n['lat'])) for n in geom if 'lon' in n and 'lat' in n]
+                      if len(seg)>=2: segments.append(seg)
+                  # Join multi-way outer members into closed relation rings.
+                  while segments:
+                      ring=segments.pop(0)
+                      changed=True
+                      while changed and segments:
+                          changed=False
+                          for k,seg in enumerate(segments):
+                              if ring[-1]==seg[0]:
+                                  ring.extend(seg[1:]); segments.pop(k); changed=True; break
+                              if ring[-1]==seg[-1]:
+                                  ring.extend(list(reversed(seg[:-1]))); segments.pop(k); changed=True; break
+                              if ring[0]==seg[-1]:
+                                  ring=seg[:-1]+ring; segments.pop(k); changed=True; break
+                              if ring[0]==seg[0]:
+                                  ring=list(reversed(seg[1:]))+ring; segments.pop(k); changed=True; break
                       if len(ring)>=3: polys.append(ring)
               features[bid]=polys
+
+          def point_segment_distance_m(px,py,ax,ay,bx,by):
+              lat0=math.radians(py)
+              sx=111320.0*math.cos(lat0); sy=110540.0
+              pax=(px-ax)*sx; pay=(py-ay)*sy
+              bax=(bx-ax)*sx; bay=(by-ay)*sy
+              den=bax*bax+bay*bay
+              t=0.0 if den==0 else max(0.0,min(1.0,(pax*bax+pay*bay)/den))
+              dx=pax-t*bax; dy=pay-t*bay
+              return math.hypot(dx,dy)
+
+          def feature_distance_m(polys,px,py):
+              best=10**9
+              for ring in polys:
+                  if ring_contains(ring,px,py): return 0.0
+                  for k in range(len(ring)-1):
+                      best=min(best,point_segment_distance_m(px,py,*ring[k],*ring[k+1]))
+                  if len(ring)>2:
+                      best=min(best,point_segment_distance_m(px,py,*ring[-1],*ring[0]))
+              return best
 
           matches=[]
           for idx,p in enumerate(points):
@@ -123,7 +160,12 @@ jobs:
               for bid,polys in features.items():
                   if any(ring_contains(r,p['lon'],p['lat']) for r in polys):
                       cand.append(bid)
-              matches.append({'index':idx,'point':p,'candidates':sorted(cand)})
+              nearest=sorted(
+                  ({'building_id':bid,'distance_m':round(feature_distance_m(polys,p['lon'],p['lat']),3)}
+                   for bid,polys in features.items()),
+                  key=lambda x:x['distance_m']
+              )[:5]
+              matches.append({'index':idx,'point':p,'candidates':sorted(cand),'nearest':nearest})
 
           unique=[m for m in matches if len(m['candidates'])==1]
           unmatched=[m for m in matches if len(m['candidates'])==0]
