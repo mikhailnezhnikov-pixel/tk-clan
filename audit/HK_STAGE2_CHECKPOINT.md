@@ -514,11 +514,28 @@ Stage 2 continues with 2.03 Bosses / Боссы.
 - deploy/service/public byte equality: PASS;
 - live/public SHA256: `571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9`;
 - baseline sync commit: `bac973abc67096f5642fce84ab1df8ba1a16883e` — PASS;
-- current module status: **CANON_CORE_R1_LIVE_CANDIDATE**.
+- current module status: **AREA_TARGET_R2_LIVE_CANDIDATE**.
 
 Remaining static donor parity before final Bosses live checks:
 - Area Boss tournament target/reward planning;
 - reward-only continuation;
 - Area Boss Calculator / rewards view.
+
+Do not advance to Maps.
+
+
+## Bosses area target r2
+
+- canonical core r1 remains live and is extended by r2;
+- r2 markers: `bosses-area-target-20260920-r2`;
+- Area Boss target planning + reward-only continuation transferred;
+- technical live verification: syntax PASS, public byte equality PASS, target/reward markers PASS;
+- live/public SHA256: `0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7`;
+- current module status: **AREA_TARGET_R2_LIVE_CANDIDATE**.
+
+Remaining before Bosses LIVE PASS:
+- live user-path confirmation for Area + Regional action/state/rerun;
+- live user-path confirmation for Area target/reward continuation;
+- Area Boss Calculator / rewards view transfer.
 
 Do not advance to Maps.
