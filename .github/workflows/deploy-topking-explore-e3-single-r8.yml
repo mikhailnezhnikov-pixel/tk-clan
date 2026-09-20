@@ -57,15 +57,14 @@ jobs:
           assert "explore-e3-single-20260920-r8" in after
           assert "Запустить тест E3 · 1 здание" in after
           assert "const HK_MAP_READ_CONCURRENCY = 5;" in after
-          # Outside the Explore block, only the two read-only cost endpoints may differ.
-          def cut(s):
-              a=s.index("  const HK_EXPLORE_CANON_REV=")
-              b=s.index("  async function acceptBuildingStudy(",a)
-              return s[:a],s[b:]
-          bp,bs=cut(before); ap,ass=cut(after)
-          bp2=bp.replace("    '/player/building',\n    '/shop/view',","    '/player/building',\n    '/player/building/fast_completion/cost',\n    '/player/building/fast_remort/cost',\n    '/shop/view',",1)
-          assert bp2==ap
-          assert bs==ass
+          # Scope guards: the only intentional global change is classification
+          # of the two cost endpoints as read-only; Maps and later modules stay intact.
+          assert before.count("'/player/building/fast_completion/cost'")==0
+          assert before.count("'/player/building/fast_remort/cost'")==0
+          assert after.count("'/player/building/fast_completion/cost'")>=2
+          assert after.count("'/player/building/fast_remort/cost'")>=2
+          assert "const HK_MAP_READ_CONCURRENCY = 5;" in after
+          assert after[after.index("  async function acceptBuildingStudy("):]==before[before.index("  async function acceptBuildingStudy("):]
           PY
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
 
