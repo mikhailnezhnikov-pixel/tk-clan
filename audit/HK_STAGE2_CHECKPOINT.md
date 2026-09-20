@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Maps / Карты — scanner repair
 - current module file: audit/hk-stage2-04-maps.md
-- current module status: SCANNER_R2_LIVE_CANDIDATE
+- current module status: BUG_CONFIRMED_NO_FIX_APPLIED
 - next module after LIVE PASS: Buildings / Здания — resume live confirmation
 - Today / Сегодня: LIVE PASS
 
@@ -653,3 +653,25 @@ Buildings r1 remains deployed but its live confirmation is paused until Maps sca
 - live/public SHA256: `f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290`.
 
 Maps remains **SCANNER_R2_LIVE_CANDIDATE** pending user confirmation after a fresh account-map scan.
+
+
+## Rollback — both Maps fixes removed
+
+User requested that neither experimental Maps fix remain applied.
+
+Removed from live:
+- scanner/backfill r2;
+- coordinate swap r1.
+
+Verified restored live:
+- SHA256: `0931ee3eb65a16f9dd768fe51b9a84b897620e011c51ee9e0226d92f37b9e686`;
+- public byte equality: PASS;
+- syntax: PASS;
+- `maps-building-scan-20260920-r2`: ABSENT;
+- `maps-coordinates-column-row-20260920-r1`: ABSENT;
+- `buildings-canon-core-20260920-r1`: PRESENT.
+
+Deployment/check artifacts for both reverted fixes were removed to prevent accidental reapplication.
+
+Current Maps status: **BUG_CONFIRMED_NO_FIX_APPLIED**.
+Buildings r1 remains deployed; Explore remains blocked until Maps data semantics are redesigned and confirmed.
