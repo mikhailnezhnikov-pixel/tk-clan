@@ -408,3 +408,29 @@ Required final Pits checks:
 - r11 restoration-decision live path;
 - reward target execution/recalculation + final state/rerun;
 - runtime exact winrate visibility when preview supplies data.
+
+
+## Pits final static parity audit
+
+After r19:
+- all Pits revision markers r1–r19 present in current baseline;
+- required canonical helpers/action paths present;
+- active canonical runner is `runPitsCanonical()`;
+- legacy `pitLoop()` has no active call site;
+- donor reward-card picker remains a visual difference only; current inline reward UI was already user-approved and retains the functional planning/execution semantics.
+
+Static donor parity:
+**DONOR_FUNCTIONAL_PARITY_PASS**
+
+Current module status:
+**FINAL_LIVE_CHECKS_PENDING**
+
+No more speculative Pits patches.
+
+Live confirmations still required:
+1. restoration decision modal (r11);
+2. reward execution/recalculation/adaptive batch path (r13/r18/r19);
+3. exact game winrate visibility from runtime preview (r17);
+4. resulting state + rerun confirmation.
+
+Only after these: mark Stage 2.02 Pits LIVE PASS and proceed to Bosses.
