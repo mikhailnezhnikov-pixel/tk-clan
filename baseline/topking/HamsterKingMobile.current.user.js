@@ -546,7 +546,7 @@
   })();
 
   const hkRunner = (() => {
-    const state = {status:'idle', title:'', step:'', done:0, total:0, startedAt:0, error:'', pausable:true, stoppable:true};
+    const state = {status:'idle', title:'', step:'', done:0, total:0, startedAt:0, error:'', pausable:true, stoppable:true, history:[]};
     let abortController = null;
     let pauseResolvers = [];
     const emit = () => renderRunnerState();
@@ -558,10 +558,11 @@
       start({title='', total=0, step='', pausable=true, stoppable=true}={}) {
         if (this.running) throw new Error(either('Уже выполняется другая задача','Another task is already running'));
         abortController = new AbortController();
-        Object.assign(state,{status:'running',title:String(title||either('Выполнение','Execution')),step:String(step||''),done:0,total:Math.max(0,Number(total)||0),startedAt:Date.now(),error:'',pausable:!!pausable,stoppable:!!stoppable});
+        Object.assign(state,{status:'running',title:String(title||either('Выполнение','Execution')),step:String(step||''),done:0,total:Math.max(0,Number(total)||0),startedAt:Date.now(),error:'',pausable:!!pausable,stoppable:!!stoppable,history:[]});
         recordDiagnostic('runner-start',{title:state.title,total:state.total}); emit(); return state;
       },
       setStep(step, done=state.done, total=state.total) { state.step=String(step||''); state.done=Math.max(0,Number(done)||0); state.total=Math.max(0,Number(total)||0); emit(); return state; },
+      note(message,type='') { const value=String(message||'').trim(); if(!value)return state; const safeType=['ok','warn','bad','info'].includes(type)?type:''; state.history=[...(state.history||[]),{text:value,type:safeType,at:Date.now()}].slice(-10); emit(); return state; },
       advance(step='') { state.done=Math.min(state.total||state.done+1,state.done+1); if(step)state.step=String(step); emit(); return state; },
       pause() { if(state.status!=='running'||!state.pausable)return false; state.status='paused'; recordDiagnostic('runner-pause',{title:state.title}); emit(); return true; },
       resume() { if(state.status!=='paused')return false; state.status='running'; settlePaused(); recordDiagnostic('runner-resume',{title:state.title}); emit(); return true; },
@@ -569,7 +570,7 @@
       stop(reason='user') { if(!this.running||!state.stoppable)return false; state.status='stopping'; abortController?.abort(reason); settlePaused(); recordDiagnostic('runner-stop',{title:state.title,reason}); emit(); return true; },
       finish(step='') { if(step)state.step=String(step); state.status='done'; if(state.total)state.done=state.total; recordDiagnostic('runner-finish',{title:state.title}); emit(); setTimeout(()=>{if(state.status==='done'){state.status='idle';emit();}},1800); },
       fail(error) { state.status='error'; state.error=String(error?.message||error||either('Ошибка','Error')); recordDiagnostic('runner-error',{title:state.title,error:state.error}); emit(); },
-      reset() { abortController=null; settlePaused(); Object.assign(state,{status:'idle',title:'',step:'',done:0,total:0,startedAt:0,error:'',pausable:true,stoppable:true}); emit(); }
+      reset() { abortController=null; settlePaused(); Object.assign(state,{status:'idle',title:'',step:'',done:0,total:0,startedAt:0,error:'',pausable:true,stoppable:true,history:[]}); emit(); }
     };
   })();
 
@@ -2814,6 +2815,8 @@
     }).filter(config=>config?.steps?.length);
   }
 
+  function pitCanonRunnerLog(message,type='') { log(message,type); hkRunner.note(message,type); }
+
   async function pitCanonRunOne(config,progress) {
     const def=config.definition,api=PIT_DAILY_API[def.id];
     if(!api)throw new Error(`${pitCanonDefinitionName(def)}: ${either('неизвестный тип Ямы','unknown Pit type')}`);
@@ -2837,7 +2840,7 @@
         if(payment==='PREM'&&pitCanonResourceQuantity(playerDocument,'cur_prem','currency')<pitCanonWhole(premCost))throw new Error(either('Недостаточно кристаллов','Not enough crystals'));
         if(payment==='ITEM'&&pitCanonResourceQuantity(playerDocument,HK_PIT_PASS_ITEM_ID,'item')<pitCanonWhole(itemCost))throw new Error(either('Недостаточно Пропусков Ямы','Not enough Pit Passes'));
         hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('запуск','start')} ×${chunk}`,progress.done,progress.total);
-        log(`${pitCanonDefinitionName(def)} — ${either('запуск раунда','starting round')} ×${chunk} · ${either('оплата','payment')}: ${payment}`,'info');
+        pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('запуск раунда','starting round')} ×${chunk} · ${either('оплата','payment')}: ${payment}`,'info');
         if(payment==='FREE')await apiJson(api.start,'POST',{mass_multiplier:chunk});else await apiJson(api.pass,'POST',{mass_multiplier:chunk,payment_type:payment});
         spentCrystals+=pitCanonWhole(premCost);spentItems+=pitCanonWhole(itemCost);
         playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-start`);state=pitRaceSnapshot(def.id,playerDocument);
@@ -2847,35 +2850,35 @@
       while(state&&state.is_finish===false){
         await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');if(++battles>1000)throw new Error(`${pitCanonDefinitionName(def)}: ${either('защитный лимит боёв','battle safety limit')}`);
         const level=pitCanonWhole(state.level),targetReached=config.target>0&&level>=config.target;
-        if(targetReached){log(`✓ ${pitCanonDefinitionName(def)}: ${either('цель достигнута','target reached')} ${level}`,'ok');break;}
+        if(targetReached){pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)}: ${either('цель достигнута','target reached')} ${level}`,'ok');break;}
         if(pitCanonWhole(state.health)<=0){
           const cost=pitCanonRespawnCost(state,chunk),paws=pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item');
-          if(cost<=0||restorationSpent+cost>config.maxRestoration||paws<cost){log(`${pitCanonDefinitionName(def)}: ${either('остановка по лимиту Лап восстановления','Restoration Paws limit reached')} (${restorationSpent}/${config.maxRestoration})`,'warn');break;}
+          if(cost<=0||restorationSpent+cost>config.maxRestoration||paws<cost){pitCanonRunnerLog(`${pitCanonDefinitionName(def)}: ${either('остановка по лимиту Лап восстановления','Restoration Paws limit reached')} (${restorationSpent}/${config.maxRestoration})`,'warn');break;}
           hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('восстановление','restoration')} 🐾 ${cost}`,progress.done,progress.total);
-          log(`${pitCanonDefinitionName(def)} — ${either('восстановление','restoration')}: 🐾 ${cost} · ${either('потрачено скриптом','spent by script')}: ${restorationSpent+cost}/${config.maxRestoration}`,'warn');
+          pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('восстановление','restoration')}: 🐾 ${cost} · ${either('потрачено скриптом','spent by script')}: ${restorationSpent+cost}/${config.maxRestoration}`,'warn');
           await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;
           playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-respawn`);state=pitRaceSnapshot(def.id,playerDocument);
-          log(`✓ ${pitCanonDefinitionName(def)} — ${either('восстановлено','restored')} · HP ${pitCanonWhole(state?.health)} · 🐾 ${pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item')} ${either('осталось','remaining')}`,'ok');
+          pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)} — ${either('восстановлено','restored')} · HP ${pitCanonWhole(state?.health)} · 🐾 ${pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item')} ${either('осталось','remaining')}`,'ok');
           continue;
         }
         const telemetry=pitCanonBattleTelemetry(def,level);
         hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('бой','battle')} ${level} → ${level+1} · HP ${pitCanonWhole(state.health)}${telemetry.text?` · ${telemetry.text}`:''}`,progress.done,progress.total);
-        log(`${pitCanonDefinitionName(def)} — ${either('бой','battle')} ${level} → ${level+1}${telemetry.text?` · ${telemetry.text}`:''}`,'info');
+        pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('бой','battle')} ${level} → ${level+1}${telemetry.text?` · ${telemetry.text}`:''}`,'info');
         const battleResponse=await apiJson(api.battle,'POST');
         playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-battle`);state=pitRaceSnapshot(def.id,playerDocument);
         const afterLevel=pitCanonWhole(state?.level);
         const won=afterLevel>level||battleResponse?.battle_result?.is_win===true;
-        log(`${won?'✓':'✗'} ${pitCanonDefinitionName(def)} — ${won?either('ПРОБИТО','WON'):either('НЕ ПРОБИТО','LOST')} · ${level} → ${level+1} · HP ${pitCanonWhole(state?.health)}${telemetry.chance!==null?` · ${either('шанс','chance')}: ${pitChanceLabel(telemetry.chance)}`:''}`,won?'ok':'warn');
+        pitCanonRunnerLog(`${won?'✓':'✗'} ${pitCanonDefinitionName(def)} — ${won?either('ПРОБИТО','WON'):either('НЕ ПРОБИТО','LOST')} · ${level} → ${level+1} · HP ${pitCanonWhole(state?.health)}${telemetry.chance!==null?` · ${either('шанс','chance')}: ${pitChanceLabel(telemetry.chance)}`:''}`,won?'ok':'warn');
       }
       state=pitRaceSnapshot(def.id,playerDocument);
       if(state&&state.is_finish===false&&config.autofinish){
         hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('завершение','finish')}`,progress.done,progress.total);
-        log(`${pitCanonDefinitionName(def)} — ${either('завершение раунда','finishing round')} · ${either('уровень','level')} ${pitCanonWhole(state.level)}`,'info');
+        pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('завершение раунда','finishing round')} · ${either('уровень','level')} ${pitCanonWhole(state.level)}`,'info');
         try{await apiJson(api.finish,'POST');}catch(error){if(!pitAlreadyFinishedError(error))throw error;}
         playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-finish`);
-        log(`✓ ${pitCanonDefinitionName(def)} — ${either('раунд завершён','round completed')}`,'ok');
+        pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)} — ${either('раунд завершён','round completed')}`,'ok');
       }
-      progress.done+=1;hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('раунд завершён','round completed')}`,progress.done,progress.total);log(`✓ ${pitCanonDefinitionName(def)}: ×${chunk} · 🐾 ${restorationSpent}${config.autofinish?` · ${either('автозавершение','auto-finish')}`:''}`,'ok');
+      progress.done+=1;hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('раунд завершён','round completed')}`,progress.done,progress.total);pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)}: ×${chunk} · 🐾 ${restorationSpent}${config.autofinish?` · ${either('автозавершение','auto-finish')}`:''}`,'ok');
       if(!config.autofinish)break;
     }
   }
@@ -2887,14 +2890,14 @@
     const total=configs.reduce((sum,row)=>sum+row.steps.length,0),progress={done:0,total};
     hkRunner.start({title:either('Ямы','Pits'),step:either('Подготовка','Preparing'),total,pausable:true,stoppable:true});
     pitCanonSetBusy(true);
-    log(either('Ямы — запуск выбранного плана','Pits — starting selected plan'),'info');
+    pitCanonRunnerLog(either('Ямы — запуск выбранного плана','Pits — starting selected plan'),'info');
     recordDiagnostic('pits-run-config-snapshot',{pits:configs.map(config=>({id:config.definition?.id,planId:config.planId,steps:config.steps?.length||0,sniper:!!config.sniper,target:config.target}))});
     try{
       playerDocument=await hkAuthoritativePlayerRead('pits:prepare');
       for(const config of configs)await pitCanonRunOne(config,progress);
-      playerDocument=await hkAuthoritativePlayerRead('pits:complete');pitCanonRender();hkRunner.finish(either('Ямы завершены','Pits completed'));log(either('Выбранные Ямы завершены.','Selected Pits completed.'),'ok');
+      playerDocument=await hkAuthoritativePlayerRead('pits:complete');pitCanonRender();hkRunner.finish(either('Ямы завершены','Pits completed'));pitCanonRunnerLog(either('Выбранные Ямы завершены.','Selected Pits completed.'),'ok');
     }catch(error){
-      if(error?.name==='AbortError'){hkRunner.reset();log(either('Ямы остановлены пользователем','Pits stopped by user'),'warn');}else{hkRunner.fail(error);log(`${either('Ошибка Ям','Pits error')}: ${error?.message||error}`,'bad');}
+      if(error?.name==='AbortError'){hkRunner.reset();pitCanonRunnerLog(either('Ямы остановлены пользователем','Pits stopped by user'),'warn');}else{hkRunner.fail(error);pitCanonRunnerLog(`${either('Ошибка Ям','Pits error')}: ${error?.message||error}`,'bad');}
       try{playerDocument=await hkAuthoritativePlayerRead('pits:error-reread');pitCanonRender();}catch(_){}
     }finally{
       pitCanonSetBusy(false);
@@ -2909,7 +2912,7 @@
       rememberPower(state);
       updatePitStatus(state);
       if (state.round !== null && state.round >= settings.target) {
-        pitRunning = false; log(`Цель достигнута: раунд ${state.round}`, 'ok'); break;
+        pitRunning = false; pitCanonRunnerLog(`Цель достигнута: раунд ${state.round}`, 'ok'); break;
       }
       if (settings.collectOnly) {
         await gameRetryDelay(Math.max(700, settings.interval * 1000));
@@ -2918,34 +2921,34 @@
       let acted = false;
       if (state.restoreModal) {
         if (!settings.allowTokens || restoreSpent >= settings.restoreLimit) {
-          pitRunning = false; log('Остановка: достигнут лимит жетонов восстановления', 'warn'); break;
+          pitRunning = false; pitCanonRunnerLog('Остановка: достигнут лимит жетонов восстановления', 'warn'); break;
         }
         acted = clickRestoreToken();
-        if (acted) { restoreSpent++; log(`Восстановление жетоном ${restoreSpent}/${settings.restoreLimit}`); }
+        if (acted) { restoreSpent++; pitCanonRunnerLog(`Восстановление жетоном ${restoreSpent}/${settings.restoreLimit}`); }
       } else if (state.controls.some(text => /^(Восстановить|Restore)$/i.test(text))) {
         if (!settings.allowTokens || restoreSpent >= settings.restoreLimit) {
-          pitRunning = false; log('Требуется восстановление, но расход жетонов запрещён', 'warn'); break;
+          pitRunning = false; pitCanonRunnerLog('Требуется восстановление, но расход жетонов запрещён', 'warn'); break;
         }
         acted = clickText(/^(Восстановить|Restore)$/i);
       } else if (state.controls.some(text => /Сражаться\s+До конца|Fight\s+to\s+end/i.test(text))) {
         acted = clickText(/Сражаться\s+До конца|Fight\s+to\s+end/i);
       } else if (state.controls.some(text => /Сражаться|Fight/i.test(text))) {
         const fast = [...document.querySelectorAll('button.event-offer__auto')].find(visible);
-        if (fast) { fast.click(); acted = true; log('Ускорение боя включено'); }
+        if (fast) { fast.click(); acted = true; pitCanonRunnerLog('Ускорение боя включено'); }
         else acted = clickText(/Сражаться|Fight/i, /До конца|to end/i);
       } else if (state.controls.some(text => /Оплатить|Pay/i.test(text)) || /Оплатить вход|Pay entry/i.test(document.body?.innerText || '')) {
         if (!settings.allowTokens || activationSpent >= settings.activationLimit) {
-          pitRunning = false; log('Остановка: достигнут лимит жетонов активации', 'warn'); break;
+          pitRunning = false; pitCanonRunnerLog('Остановка: достигнут лимит жетонов активации', 'warn'); break;
         }
         if (state.controls.some(text => /Оплатить|Pay/i.test(text))) clickText(/Оплатить|Pay/i);
         await gameRetryDelay(400);
         if (hkRunner.running) await hkRunner.waitIfPaused();
         acted = await clickEntranceToken();
-        if (acted) { activationSpent++; log(`Активация жетоном ${activationSpent}/${settings.activationLimit}`); }
+        if (acted) { activationSpent++; pitCanonRunnerLog(`Активация жетоном ${activationSpent}/${settings.activationLimit}`); }
       } else if (/жетон|token/i.test(document.body?.innerText || '')) {
         if (settings.allowTokens && activationSpent < settings.activationLimit) {
           acted = await clickEntranceToken();
-          if (acted) { activationSpent++; log(`Активация жетоном ${activationSpent}/${settings.activationLimit}`); }
+          if (acted) { activationSpent++; pitCanonRunnerLog(`Активация жетоном ${activationSpent}/${settings.activationLimit}`); }
         }
       }
       await gameRetryDelay(Math.max(700, settings.interval * 1000));
@@ -5790,6 +5793,7 @@
   const HK_PITS_RESPAWN_REV = 'pits-respawn-cost-20260920-r6';
   const HK_PITS_POWER_TABLE_REV = 'pits-power-table-collapsed-20260920-r7';
   const HK_PITS_PROGRESS_REV = 'pits-battle-progress-20260920-r8';
+  const HK_PITS_RUNNER_HISTORY_REV = 'pits-runner-history-20260920-r9';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
@@ -9173,6 +9177,7 @@
     const box=root.querySelector('#hk-runner'); if(!box)return;
     const state=hkRunner.state;
     const visibleState=state.status!=='idle'; box.classList.toggle('show',visibleState);
+    box.classList.toggle('pit-run',visibleState&&String(state.title||'')===either('Ямы','Pits'));
     if(!visibleState)return;
     const labels={running:either('Выполняется','Running'),paused:either('Пауза','Paused'),stopping:either('Остановка','Stopping'),done:either('Готово','Done'),error:either('Ошибка','Error')};
     const percent=state.total?Math.max(0,Math.min(100,(state.done/state.total)*100)):(state.status==='done'?100:0);
@@ -9180,6 +9185,12 @@
     root.querySelector('#hk-runner-state').textContent=labels[state.status]||state.status;
     root.querySelector('#hk-runner-step').textContent=state.error||state.step||(state.total?`${state.done} / ${state.total}`:'');
     root.querySelector('#hk-runner-fill').style.width=`${percent}%`;
+    const history=root.querySelector('#hk-runner-history');
+    if(history){
+      const rows=Array.isArray(state.history)?state.history:[];
+      history.innerHTML=rows.map(row=>'<div class="hk-runner-history-row '+escapeHtml(row.type||'')+'"><span>'+new Date(row.at||Date.now()).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'</span><b>'+escapeHtml(row.text||'')+'</b></div>').join('');
+      history.style.display=rows.length?'grid':'none';
+    }
     const pause=root.querySelector('#hk-runner-pause'); const stop=root.querySelector('#hk-runner-stop');
     pause.textContent=state.status==='paused'?either('Продолжить','Continue'):either('Пауза','Pause');
     pause.disabled=!state.pausable||!['running','paused'].includes(state.status);
@@ -9204,7 +9215,7 @@
       #hk-watermark{position:fixed;inset:-40px;z-index:20;pointer-events:none;display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));grid-auto-rows:minmax(120px,1fr);align-items:center;justify-items:center;overflow:hidden;transition:transform .5s ease}#hk-watermark span{display:block;max-width:310px;color:#fff;font:700 11px ui-monospace,monospace;letter-spacing:.4px;opacity:.035;transform:rotate(-24deg);white-space:nowrap;text-shadow:0 1px 2px #000}
       .hk-license{padding:11px;border:1px solid #3b4a61;border-radius:12px;background:#101a28;margin:14px 0;color:#c8d4e5}.hk-license.ok{border-color:#287b60}.hk-license.bad{border-color:#803b49}.hk-update{display:none;margin:0 0 14px;padding:12px;border:1px solid #ffad1f;border-radius:13px;background:#2a2418;color:#fff}.hk-update.required{border-color:#ff6b75;background:#351b22}.hk-update b,.hk-update small{display:block}.hk-update small{margin-top:5px;color:#cbd5e5}.hk-update .hk-primary{margin-top:10px}.hk-locked .hk-tabs,.hk-locked .hk-subnav,.hk-locked .hk-runner,.hk-locked .hk-page{display:none!important}
       .hk-health{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 0 8px}.hk-health-chip{display:grid;grid-template-columns:9px minmax(0,1fr);align-items:center;column-gap:7px;padding:9px 8px;border:1px solid #34445c;border-radius:11px;background:#111a27;color:#d3dbe8;min-width:0}.hk-health-chip:before{content:'';width:8px;height:8px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}.hk-health-chip.ok{border-color:#24694f;background:#10231d}.hk-health-chip.ok:before{background:#52d296;box-shadow:0 0 0 3px #52d29622}.hk-health-chip.bad{border-color:#7a3443;background:#29151b}.hk-health-chip.bad:before{background:#ff6b7a;box-shadow:0 0 0 3px #ff6b7a22}.hk-health-chip b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-chip small{grid-column:2;color:#8392a7;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-actions{display:flex;gap:7px;margin:0 0 14px}.hk-health-actions button{flex:1;min-height:36px;font-size:12px}@media(max-width:430px){.hk-health{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}      .hk-pits-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 10px}.hk-pits-summary>div{padding:9px;border:1px solid #304057;border-radius:12px;background:#0e1723;min-width:0}.hk-pits-summary small{display:block;color:#8797ad;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-pits-summary b{display:block;margin-top:4px;color:#ffe083;font-size:13px}.hk-pits-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-bottom:10px}.hk-pit-canon-global{display:flex;align-items:center;gap:7px;padding:9px;border:1px solid #304057;border-radius:12px;background:#101927;color:#cbd6e5;font-size:10px;font-weight:800}.hk-pit-canon-global input,.hk-pit-canon-head input,.hk-pit-canon-check input{accent-color:#ffad1f}.hk-pits-cards{display:grid;gap:10px}.hk-pit-canon-card{padding:12px;border:1px solid #304057;border-radius:15px;background:linear-gradient(145deg,#121d2b,#0d1622)}.hk-pit-canon-card.selected{border-color:#a96e20;box-shadow:0 0 0 1px #ffad1f26 inset}.hk-pit-canon-head{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:9px;align-items:center}.hk-pit-canon-head img{width:42px;height:42px;object-fit:contain;border-radius:11px;background:#ffffff0b}.hk-pit-canon-head b{display:block;font-size:13px}.hk-pit-canon-head small{display:block;margin-top:3px;color:#8393aa;font-size:9px}.hk-pit-canon-head>label{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:900;color:#ffd77b}.hk-pit-canon-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin:9px 0;color:#96a6ba;font-size:10px}.hk-pit-canon-meta b{color:#fff}.hk-pit-canon-grid{display:grid;gap:9px;max-width:820px}.hk-pit-canon-grid>label{display:grid;grid-template-columns:minmax(190px,260px) minmax(220px,360px);gap:12px;align-items:center;justify-content:start}.hk-pit-canon-grid>label>span{font-size:10px;color:#b9c6d7;line-height:1.25}.hk-pit-canon-grid select,.hk-pit-canon-grid input[type=number]{width:100%;min-width:0;background:#0b111b;color:#fff;border:1px solid #3b4a61;border-radius:10px;padding:8px;font-size:10px}.hk-pit-canon-check input{justify-self:start;width:18px;height:18px}.hk-pits-cards+.hk-primary{margin-top:12px}.hk-pits-busy{opacity:.88}.hk-pits-busy .hk-pit-canon-card{filter:saturate(.85)}@media(max-width:760px){.hk-pit-canon-grid{max-width:none}.hk-pit-canon-grid>label{grid-template-columns:minmax(150px,220px) minmax(0,1fr)}}@media(max-width:430px){.hk-pits-summary{grid-template-columns:1fr 1fr}.hk-pits-summary>div:last-child{grid-column:1/-1}.hk-pits-toolbar{grid-template-columns:1fr}.hk-pit-canon-grid>label{grid-template-columns:1fr}.hk-pit-canon-head{grid-template-columns:38px minmax(0,1fr)}.hk-pit-canon-head img{width:38px;height:38px}.hk-pit-canon-head>label{grid-column:1/-1}}
+      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner.pit-run{border-color:#ffad1f;background:linear-gradient(145deg,#302411,#17170f);box-shadow:0 0 0 2px #ffad1f26,0 8px 24px #0006}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-history{display:grid;gap:4px;max-height:290px;overflow:auto;margin:8px 0;padding:8px;border:1px solid #5a4724;border-radius:10px;background:#080b0f99}.hk-runner-history-row{display:grid;grid-template-columns:58px minmax(0,1fr);gap:7px;align-items:start;padding:4px 6px;border-radius:7px;background:#ffffff05}.hk-runner-history-row span{color:#7f8b9d;font:9px ui-monospace,monospace}.hk-runner-history-row b{font-size:10px;line-height:1.25;color:#dce5f1}.hk-runner-history-row.ok b{color:#7fe0ad}.hk-runner-history-row.warn b{color:#ffd166}.hk-runner-history-row.bad b{color:#ff8995}.hk-runner-history-row.info b{color:#a9c9ff}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}      .hk-pits-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 10px}.hk-pits-summary>div{padding:9px;border:1px solid #304057;border-radius:12px;background:#0e1723;min-width:0}.hk-pits-summary small{display:block;color:#8797ad;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-pits-summary b{display:block;margin-top:4px;color:#ffe083;font-size:13px}.hk-pits-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-bottom:10px}.hk-pit-canon-global{display:flex;align-items:center;gap:7px;padding:9px;border:1px solid #304057;border-radius:12px;background:#101927;color:#cbd6e5;font-size:10px;font-weight:800}.hk-pit-canon-global input,.hk-pit-canon-head input,.hk-pit-canon-check input{accent-color:#ffad1f}.hk-pits-cards{display:grid;gap:10px}.hk-pit-canon-card{padding:12px;border:1px solid #304057;border-radius:15px;background:linear-gradient(145deg,#121d2b,#0d1622)}.hk-pit-canon-card.selected{border-color:#a96e20;box-shadow:0 0 0 1px #ffad1f26 inset}.hk-pit-canon-head{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:9px;align-items:center}.hk-pit-canon-head img{width:42px;height:42px;object-fit:contain;border-radius:11px;background:#ffffff0b}.hk-pit-canon-head b{display:block;font-size:13px}.hk-pit-canon-head small{display:block;margin-top:3px;color:#8393aa;font-size:9px}.hk-pit-canon-head>label{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:900;color:#ffd77b}.hk-pit-canon-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin:9px 0;color:#96a6ba;font-size:10px}.hk-pit-canon-meta b{color:#fff}.hk-pit-canon-grid{display:grid;gap:9px;max-width:820px}.hk-pit-canon-grid>label{display:grid;grid-template-columns:minmax(190px,260px) minmax(220px,360px);gap:12px;align-items:center;justify-content:start}.hk-pit-canon-grid>label>span{font-size:10px;color:#b9c6d7;line-height:1.25}.hk-pit-canon-grid select,.hk-pit-canon-grid input[type=number]{width:100%;min-width:0;background:#0b111b;color:#fff;border:1px solid #3b4a61;border-radius:10px;padding:8px;font-size:10px}.hk-pit-canon-check input{justify-self:start;width:18px;height:18px}.hk-pits-cards+.hk-primary{margin-top:12px}.hk-pits-busy{opacity:.88}.hk-pits-busy .hk-pit-canon-card{filter:saturate(.85)}@media(max-width:760px){.hk-pit-canon-grid{max-width:none}.hk-pit-canon-grid>label{grid-template-columns:minmax(150px,220px) minmax(0,1fr)}}@media(max-width:430px){.hk-pits-summary{grid-template-columns:1fr 1fr}.hk-pits-summary>div:last-child{grid-column:1/-1}.hk-pits-toolbar{grid-template-columns:1fr}.hk-pit-canon-grid>label{grid-template-columns:1fr}.hk-pit-canon-head{grid-template-columns:38px minmax(0,1fr)}.hk-pit-canon-head img{width:38px;height:38px}.hk-pit-canon-head>label{grid-column:1/-1}}
 .hk-growth-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.hk-growth-stats>div{padding:11px;border:1px solid #304057;border-radius:12px;background:#0e1723}.hk-growth-stats small{display:block;color:#8797ad;font-size:10px}.hk-growth-stats b{display:block;margin-top:4px;color:#ffe083;font-size:15px}.hk-growth-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-growth-actions button{margin-top:0}.hk-growth-options{display:grid;gap:9px;margin:10px 0}.hk-growth-option{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-option span{display:grid;gap:3px}.hk-growth-option small{color:#8998ad;font-size:10px}.hk-growth-option select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:9px}.hk-growth-check{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-check input{width:20px;height:20px;accent-color:#ffad1f}.hk-growth-live{display:grid;gap:3px;padding:9px 10px;border:1px solid #245d48;border-radius:11px;background:#0d211b}.hk-growth-live span{font-size:11px;font-weight:900;color:#6ee7a8}.hk-growth-live small{font-size:9px;color:#8fa89f}.hk-growth-plan{display:grid;gap:6px;margin:4px 0 10px;padding:11px;border:1px solid #3a4659;border-radius:12px;background:#0e1723}.hk-growth-plan>b{color:#ffe083}.hk-growth-plan>span{font-size:11px;color:#d4deea}.hk-growth-plan>small{font-size:9px;color:#8290a4;line-height:1.4}.hk-growth-priority-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-growth-priority-head h3{margin:0}.hk-growth-priority-list{display:grid;gap:7px;margin-top:8px}.hk-growth-priority{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px;border:1px solid #2d3a4e;border-radius:10px;background:#101927}.hk-growth-priority>b{color:#ffe083}.hk-growth-priority>span{font-size:9px;color:#8797ad}.hk-growth-priority>div{display:flex;gap:4px}.hk-growth-priority button{min-width:30px;margin:0;padding:6px 8px}.hk-growth-stats>div:nth-child(n+5){background:#121a28}@media(max-width:430px){.hk-tab{min-height:58px;padding:8px}.hk-tab-icon{width:32px;height:32px;font-size:19px}}
       .hk-business-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.hk-business-tab{border:1px solid #34445b;border-radius:11px;padding:11px;background:#172234;color:#b8c4d6;font-weight:700}.hk-business-tab.active{border-color:#ffad1f;background:#3a2a0f;color:#fff}.hk-business-pane{display:none}.hk-business-pane.active{display:block}
       .hk-page{display:none}.hk-page.active{display:block}.hk-cardbox{background:#151d29;border:1px solid #2a374a;border-radius:16px;padding:14px;margin-bottom:12px}.hk-grid{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center}
@@ -9259,7 +9270,7 @@
       <div id="hk-update-banner" class="hk-update"></div>
       <div class="hk-tabs">${menuTabs}</div>
       <div id="hk-subnav" class="hk-subnav"></div>
-      <div id="hk-runner" class="hk-runner"><div class="hk-runner-head"><b id="hk-runner-title"></b><span id="hk-runner-state" class="hk-runner-state"></span></div><div id="hk-runner-step" class="hk-runner-step"></div><div class="hk-runner-track"><div id="hk-runner-fill" class="hk-runner-fill"></div></div><div class="hk-runner-actions"><button id="hk-runner-pause" class="hk-secondary"></button><button id="hk-runner-stop" class="hk-danger"></button></div></div>
+      <div id="hk-runner" class="hk-runner"><div class="hk-runner-head"><b id="hk-runner-title"></b><span id="hk-runner-state" class="hk-runner-state"></span></div><div id="hk-runner-step" class="hk-runner-step"></div><div class="hk-runner-track"><div id="hk-runner-fill" class="hk-runner-fill"></div></div><div id="hk-runner-history" class="hk-runner-history" style="display:none"></div><div class="hk-runner-actions"><button id="hk-runner-pause" class="hk-secondary"></button><button id="hk-runner-stop" class="hk-danger"></button></div></div>
       <div class="hk-page active" data-content="daily">
         <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
       </div>
