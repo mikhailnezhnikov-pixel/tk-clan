@@ -63,8 +63,8 @@ new=r"""          if(rewardCost===null||have<pitCanonWhole(rewardCost)){
             break;
           }
 """
-old=old.replaceAll('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
-new=new.replaceAll('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
+old=old.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
+new=new.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
 if old not in s: raise SystemExit('reward insufficient block missing')
 s=s.replace(old,new,1)
 
