@@ -87,3 +87,22 @@
 Расширенная команда, если нужно явно повторить правило:
 
 > Работай по `docs/HK_NEW_CHAT_START.md`. Сначала выполни SOURCE PREFLIGHT из `reference/topking/REFERENCE.json`, используй pinned donor как источник существующей механики, current baseline — только для интеграции, затем выполняй только указанный этап `docs/HK_MASTER_ROADMAP.md`.
+
+
+## Short-block execution protocol
+
+For long audit/migration stages, work in short, self-contained blocks instead of one long tool session.
+
+For Stage 1:
+- 1A — functions;
+- 1B — endpoints/constants;
+- 1C — automation/mutation/helpers;
+- 1D — navigation/live paths;
+- final — consolidated audit.
+
+After every block:
+1. save evidence under `audit/`;
+2. update `audit/HK_STAGE1_CHECKPOINT.md`;
+3. stop and report the checkpoint.
+
+If a session expires or fails, read the checkpoint first and continue only from the recorded block.
