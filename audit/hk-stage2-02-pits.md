@@ -696,3 +696,26 @@ Baseline sync:
 - run `35497018252` — PASS.
 
 r15 is forecast/UI only; no action/spending path changed.
+
+
+## Reward-only plan r16
+
+Transferred from pinned donor:
+- synthetic pass plan `reward-0`;
+- label: `Только цель награды — 0 базовых запусков`;
+- option is available only while a tournament reward target is selected;
+- base steps are empty;
+- execution consists only of reward-generated ITEM continuation steps;
+- if the reward target is removed, the synthetic plan falls back to a normal pass plan;
+- runnable validation requires the selected reward plan itself to be valid.
+
+Marker:
+`HK_PITS_REWARD_ONLY_REV = 'pits-reward-only-plan-20260920-r16'`
+
+Deploy:
+- successful run `35497301664`;
+- live/public SHA256: `7a94ab3ce598fca1c12bc3daab4e41f46bc0bdccd517869f9662bf723dd3afdf`;
+- public byte equality: PASS.
+
+Baseline sync:
+- run `35497344758` — PASS.
