@@ -796,3 +796,34 @@ Remaining before Pits LIVE PASS:
 3. verify r17 live `шанс игры` appears when the game preview endpoint supplies winrate.
 
 Do not advance to Bosses until these checks pass.
+
+
+## Final donor parity audit after r19
+
+Static audit against the pinned Kokkaras Pits donor:
+- canonical markers r1 through r19: present;
+- three-Pit canonical runner: present;
+- Pass plan / Sniper / active-resume: present;
+- restoration decision flow: present;
+- tournament reward planning and execution: present;
+- shared tournament resource forecast: present;
+- reward-only zero-base plan: present;
+- exact runtime preview/winrate: present;
+- adaptive reward batch fit: present;
+- aggregate preflight before first spend: present;
+- execution plan + per-Pit/overall totals: present;
+- legacy `pitLoop()` remains only as an unused function definition; no active call site exists.
+
+Known donor UI difference:
+- Kokkaras uses a separate reward-picker modal with reward cards;
+- current HK uses the already user-approved inline Tournament reward controls/selectors;
+- calculations/actions are present, so this is not treated as a blocking functional gap.
+
+Static parity status:
+**DONOR_FUNCTIONAL_PARITY_PASS**
+
+Module status remains:
+**FINAL_LIVE_CHECKS_PENDING**
+
+Do not add further Pits patches without a concrete live failure.
+Do not advance to Bosses until the remaining live paths are confirmed.
