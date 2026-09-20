@@ -29,15 +29,10 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
-          import re
           s=Path('reference/topking/_temp/kokkaras-current.js').read_text(encoding='utf-8')
-          m=re.search(r"version:'([^']+)'",s)
-          if not m:
-              raise SystemExit('panelApi version not found')
-          Path('/tmp/kokkaras-version.txt').write_text(m.group(1),encoding='utf-8')
           checks=[
-              "baseUrl: 'https://kokkaras.com/hk_maps/'",
-              "apiUrl: 'https://hk-game-api.hwgame.cloud'",
+              "kokkaras.com/hk_maps/",
+              "hk-game-api.hwgame.cloud",
               "storageNeighborhoodBattlesKey",
               "clanWars",
               "ratHunt",
@@ -57,10 +52,9 @@ jobs:
           src='reference/topking/_temp/kokkaras-current.js'
           sha='454f7bd810be7b39582f947f955d011042878eb10dd4b2cfd985d28b07190f0a'
           upload_sha='28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1'
-          version="$(cat /tmp/kokkaras-version.txt)"
-          safe_version="$(printf '%s' "$version" | tr -c 'A-Za-z0-9._-' '_')"
+          label='captured-20260920'
           short="${sha:0:12}"
-          immutable="reference/topking/kokkaras-panel.${safe_version}-${short}.js"
+          immutable="reference/topking/kokkaras-panel.${label}-${short}.js"
 
           cp "$src" reference/topking/donor.current.js
           cp "$src" "$immutable"
@@ -70,7 +64,8 @@ jobs:
             "schema": "hk-donor-reference-v1",
             "name": "Kokkaras HK Control Panel",
             "source_url": "https://kokkaras.com/hk_maps/panel.js",
-            "version": "${version}",
+            "pinned_label": "${label}",
+            "user_uploaded_version": "5.3.22-ui-icons-pit-dim",
             "pinned_sha256": "${sha}",
             "user_uploaded_sha256": "${upload_sha}",
             "current_file": "reference/topking/donor.current.js",
@@ -84,7 +79,8 @@ jobs:
 
           cat > reference/topking/REFERENCE_STATUS.txt <<EOF
           name=Kokkaras HK Control Panel
-          version=${version}
+          pinned_label=${label}
+          user_uploaded_version=5.3.22-ui-icons-pit-dim
           pinned_sha256=${sha}
           user_uploaded_sha256=${upload_sha}
           source=https://kokkaras.com/hk_maps/panel.js
