@@ -1,0 +1,52 @@
+{
+  "schema": "hk-donor-reference-v2",
+  "project": "Top King / Hamster King Mobile",
+  "roadmap_path": "docs/HK_MASTER_ROADMAP.md",
+  "new_chat_protocol_path": "docs/HK_NEW_CHAT_START.md",
+  "donor": {
+    "name": "Kokkaras HK Control Panel",
+    "source_kind": "chatgpt_file_library",
+    "file_title": "Вставленный текст.txt",
+    "file_id": "file_0000000006d08243a84499c0fe6f08c7",
+    "sha256": "28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1",
+    "size_bytes": 1836359,
+    "version": "5.3.22-ui-icons-pit-dim",
+    "source_url": "https://kokkaras.com/hk_maps/panel.js",
+    "identity_anchors": [
+      "baseUrl: 'https://kokkaras.com/hk_maps/'",
+      "apiUrl: 'https://hk-game-api.hwgame.cloud'",
+      "storageNeighborhoodBattlesKey",
+      "showNeighborhoodBattlesMenu",
+      "runNeighborhoodBattles",
+      "showExploreBuildingsMenu",
+      "runExploreBuildings",
+      "ratHunt",
+      "clanWars"
+    ],
+    "note": "The live kokkaras.com file is mutable and changed after capture. Never substitute the live URL for this pinned uploaded revision."
+  },
+  "current_implementation": {
+    "manifest": "baseline/topking/BASELINE.json",
+    "script": "baseline/topking/HamsterKingMobile.current.user.js"
+  },
+  "stage_start_protocol": [
+    "Read reference/topking/REFERENCE.json first.",
+    "Locate the donor in ChatGPT File Library by exact title/file id and confirm the pinned version/source anchors.",
+    "Use donor code as primary source for existing mechanics: endpoints, fields, ordering, calculations, guards and state behavior.",
+    "Then read the current implementation baseline only to understand integration and preserve working code.",
+    "Then read only the requested stage in docs/HK_MASTER_ROADMAP.md.",
+    "Do not infer donor mechanics from chat memory, screenshots, roadmap prose or old HK versions.",
+    "If the exact donor cannot be located, stop implementation and report DONOR SOURCE NOT FOUND instead of guessing."
+  ],
+  "source_priority": [
+    "Pinned donor/reference script",
+    "Real game API/definitions when implementing mechanics absent from donor",
+    "Current HK implementation baseline",
+    "Roadmap/TZ",
+    "Chat context/memory"
+  ],
+  "command_semantics": {
+    "начни этап N": "Execute the mandatory stage_start_protocol, then perform only stage N.",
+    "продолжи этап N": "Re-run the mandatory source preflight, inspect current baseline/live state, then continue only stage N."
+  }
+}
