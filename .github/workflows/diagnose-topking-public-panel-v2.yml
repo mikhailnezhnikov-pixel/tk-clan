@@ -1,0 +1,51 @@
+name: Diagnose TopKing Public Panel Delivery V2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-panel-diagnostic-v2-trigger.txt'
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Compare server file with public panel
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/server.js
+          curl -fsSL --retry 2 --connect-timeout 15 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?diag=$(date +%s)" -o /tmp/public.js
+          echo "SERVER_SHA=$(sha256sum /tmp/server.js | awk '{print $1}')"
+          echo "PUBLIC_SHA=$(sha256sum /tmp/public.js | awk '{print $1}')"
+          if cmp -s /tmp/server.js /tmp/public.js; then echo "IDENTICAL=PASS"; else echo "IDENTICAL=FAIL"; fi
+          echo "SERVER_VERSION=$(grep -m1 '^// @version' /tmp/server.js || true)"
+          echo "PUBLIC_VERSION=$(grep -m1 '^// @version' /tmp/public.js || true)"
+          for marker in \
+            "HK_LAUNCHER_REV = 'launcher-hotfix-20260920-r1'" \
+            "HK_NATIVE_LOGIN_GATE_REV = 'login-gate-hotfix-20260920-r2'" \
+            "HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3'" \
+            "HK_LAUNCHER_HANDOFF_REV = 'launcher-handoff-20260920-r4'"; do
+            echo "MARKER=$marker"
+            if grep -Fq "$marker" /tmp/server.js; then echo "  SERVER=PASS"; else echo "  SERVER=FAIL"; fi
+            if grep -Fq "$marker" /tmp/public.js; then echo "  PUBLIC=PASS"; else echo "  PUBLIC=FAIL"; fi
+          done
+          node --check /tmp/server.js
+          node --check /tmp/public.js
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.js /tmp/public.js
