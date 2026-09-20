@@ -253,8 +253,8 @@ new_save=r"""        sniper,
         rewardStrategy:pitCanonRewardStrategy(box.querySelector(`[data-pit-reward-strategy="${def.id}"]`)?.value||old.rewardStrategy)
       };
 """
-old_save=old_save.replace('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
-new_save=new_save.replaceAll('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
+old_save=old_save.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
+new_save=new_save.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
 if old_save not in s:
     raise SystemExit('save dom anchor missing')
 s=s.replace(old_save,new_save,1)
@@ -267,16 +267,16 @@ replace=r"""        const paymentOptions=`<option value="FREE" ${row.sniperPayme
         const strategyOptions=`<option value="upfront" ${row.rewardStrategy==='upfront'?'selected':''}>${either('Сразу','Upfront')}</option><option value="gradual" ${row.rewardStrategy==='gradual'?'selected':''}>${either('Постепенно','Gradual')}</option><option value="last_day" ${row.rewardStrategy==='last_day'?'selected':''}>${either('В последний день','Last day')}</option>`;
         const rewardBlock=row.leaderboard?`<details class="hk-pit-reward-block" ${row.rewardTargetMin>0?'open':''}><summary><span>${either('Турнирная награда','Tournament reward')}</span><b class="${row.tournamentActive?'active':'inactive'}">${row.tournamentActive?either('Активный турнир','Active tournament'):either('Нет активного турнира','No active tournament')}${row.tournamentActive&&row.tournamentEndTime?` · ${pitCanonFormatRemaining(row.tournamentEndTime)}`:''}</b></summary><div class="hk-pit-reward-body"><div class="hk-pit-reward-live"><span>${either('Очки турнира','Tournament points')} <b>${row.currentScore.toLocaleString(locale())}</b></span><span>${either('Коробки дани','Tribute Boxes')} <b>${row.lootboxes.toLocaleString(locale())}</b></span></div><div class="hk-pit-reward-controls"><label><span>${either('Цель по награде','Reward target')}</span><select data-pit-reward-target="${def.id}" ${row.tournamentActive?'':'disabled'}>${rewardOptions}</select></label><label><span>${either('Ежедневные базовые запуски','Daily base runs')}</span><input data-pit-daily-base-runs="${def.id}" type="number" min="0" step="1" value="${pitCanonDailyBaseRuns(row)}"></label><label><span>${either('Стратегия дополнительных Пропусков Ямы','Extra Pit Pass strategy')}</span><select data-pit-reward-strategy="${def.id}">${strategyOptions}</select></label></div>${rewardPlan?`<div class="hk-pit-reward-plan"><div class="hk-pit-reward-stats"><span><small>${either('Очки за x1','Points per x1')}</small><b>${rewardPlan.pointsPerPass.toLocaleString(locale())}</b></span><span><small>${either('Будущих сбросов','Future resets')}</small><b>${rewardPlan.futureRefreshes}</b></span><span><small>${either('Нужно после базы','Needed after base')}</small><b>${rewardPlan.remainingPoints.toLocaleString(locale())}</b></span><span><small>${either('Доп. x1 всего','Extra x1 total')}</small><b>${rewardPlan.requiredExtraRuns}</b></span><span><small>${either('Запланировано сейчас','Scheduled now')}</small><b>${rewardPlan.scheduledNow}</b></span><span><small>${either('Доп. Пропусков','Extra Pit Passes')}</small><b>${rewardPlan.requiredExtraItemCost}</b></span><span><small>${either('Возврат из коробок','Box-return Passes')}</small><b>${rewardPlan.expectedBoxPasses}</b></span><span><small>${either('Прогноз очков','Projected points')}</small><b>${rewardPlan.finalScore.toLocaleString(locale())}</b></span></div><div class="hk-pit-reward-status ${rewardPlan.valid?'good':'warn'}">${escapeHtml(pitCanonRewardStatus(rewardPlan))}</div><small class="hk-pit-reward-note">${either('Сегодня используется выбранный План пропусков. После будущих дневных сбросов — значение «Ежедневные базовые запуски». Каждые полные 100 коробок дани прогнозируются как 2 Пропуска Ямы.','Today uses the selected Pass plan. Future daily resets use Daily base runs. Every full 100 Tribute Boxes is forecast as 2 Pit Passes.')}</small></div>`:''}</div></details>`:'';
         return `<section class="hk-pit-canon-card ${row.enabled?'selected':''}"><div class="hk-pit-canon-head">"""
-needle=needle.replaceAll('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
-replace=replace.replaceAll('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
+needle=needle.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
+replace=replace.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
 if needle not in s:
     raise SystemExit('render payment anchor missing')
 s=s.replace(needle,replace,1)
 
 card_end=r"""<label class="hk-pit-canon-check"><span>${either('Автозавершение Ямы','Auto-finish Pit')}</span><input data-pit-canon-autofinish="${def.id}" type="checkbox" ${row.autofinish?'checked':''}></label></div></section>`;"""
 card_new=r"""<label class="hk-pit-canon-check"><span>${either('Автозавершение Ямы','Auto-finish Pit')}</span><input data-pit-canon-autofinish="${def.id}" type="checkbox" ${row.autofinish?'checked':''}></label></div>${rewardBlock}</section>`;"""
-card_end=card_end.replaceAll('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
-card_new=card_new.replaceAll('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
+card_end=card_end.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
+card_new=card_new.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
 if card_end not in s:
     raise SystemExit('card end anchor missing')
 s=s.replace(card_end,card_new,1)
@@ -310,8 +310,8 @@ new_refresh=r"""        if (key === 'pit') {
           liveReadOk=true;return playerDocument;
         }
 """
-old_refresh=old_refresh.replaceAll('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
-new_refresh=new_refresh.replaceAll('`',chr(96)).replaceAll('§'+chr(123),'$'+chr(123))
+old_refresh=old_refresh.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
+new_refresh=new_refresh.replace('`',chr(96)).replace('§'+chr(123),'$'+chr(123))
 if old_refresh not in s:
     raise SystemExit('pit refresh anchor missing')
 s=s.replace(old_refresh,new_refresh,1)
