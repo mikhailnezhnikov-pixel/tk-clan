@@ -19,6 +19,35 @@ jobs:
           printf '%s\n' "$K" > ~/.ssh/k
           chmod 600 ~/.ssh/k
           scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+      - name: inspect full map feature IDs
+        run: |
+          cat > /tmp/w7-full.py <<'PY'
+          import importlib.util,json,os,subprocess
+          pid=subprocess.check_output(['systemctl','show','hamsterking-license.service','-p','MainPID','--value'],text=True).strip()
+          for item in open(f'/proc/{pid}/environ','rb').read().split(bytes([0])):
+              if b'=' in item:
+                  k,v=item.split(b'=',1);os.environ[k.decode('utf-8','ignore')]=v.decode('utf-8','ignore')
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          server=importlib.util.module_from_spec(spec);spec.loader.exec_module(server)
+          full=server.load_full_hk_map('hk_newyork2332')
+          rows=(full or {}).get('buildings',{}).get('features') or []
+          game=[f for f in rows if (f.get('properties') or {}).get('is_game')]
+          sample=[]
+          for f in game[:8]:
+              sample.append({'feature_id':f.get('id'),'property_keys':sorted((f.get('properties') or {}).keys()),
+                             'properties':{k:v for k,v in (f.get('properties') or {}).items() if k in ('id','osm_id','building_id','crystals','crystals_key','investment','is_game')}})
+          print(json.dumps({'features':len(rows),'game':len(game),'sample':sample},ensure_ascii=False,indent=2))
+          PY
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new /tmp/w7-full.py root@89.125.1.71:/tmp/w7-full.py
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w7-full.py' > audit/hk-stage2-w7-full-feature-sample.json
+          cat audit/hk-stage2-w7-full-feature-sample.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-w7-full-feature-sample.json
+          git commit -m "audit: inspect W7 full map building IDs"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
       - name: extract import path
         run: |
           python3 - <<'PY'
