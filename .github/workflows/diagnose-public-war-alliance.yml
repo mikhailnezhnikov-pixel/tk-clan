@@ -57,13 +57,13 @@ jobs:
             echo "=== LIVE SNAPSHOT CALL ==="
             grep -nE "Promise\.all\(\[readPublicWar|collectPublicSnapshot" /opt/hamsterking-license/HamsterKingMobile.user.js | head -30 || true
             echo "=== RATING DB SUMMARY ==="
-            sqlite3 /var/lib/hamsterking-license/licenses.db "SELECT kind,COUNT(*),MIN(updated_at),MAX(updated_at),substr(source_player_id,1,12) FROM public_rating_snapshots GROUP BY kind,source_player_id ORDER BY MAX(updated_at) DESC;" || true
+            python3 -c "import sqlite3;d=sqlite3.connect(\"/var/lib/hamsterking-license/licenses.db\");[(print(*r,sep=\"|\")) for r in d.execute(\"SELECT kind,COUNT(*),MIN(updated_at),MAX(updated_at),substr(source_player_id,1,12) FROM public_rating_snapshots GROUP BY kind,source_player_id ORDER BY MAX(updated_at) DESC\")]" || true
             echo "=== WAR DB SUMMARY ==="
-            sqlite3 /var/lib/hamsterking-license/licenses.db "SELECT singleton,updated_at,substr(source_player_id,1,12),snapshot_json FROM public_clan_war_snapshot;" || true
+            python3 -c "import sqlite3;d=sqlite3.connect(\"/var/lib/hamsterking-license/licenses.db\");[(print(*r,sep=\"|\")) for r in d.execute(\"SELECT singleton,updated_at,substr(source_player_id,1,12),snapshot_json FROM public_clan_war_snapshot\")]" || true
             echo "=== RECENT SCRIPT VERSIONS ==="
-            sqlite3 /var/lib/hamsterking-license/licenses.db "SELECT script_version,MAX(last_seen),COUNT(*) FROM devices GROUP BY script_version ORDER BY MAX(last_seen) DESC LIMIT 12;" || true
+            python3 -c "import sqlite3;d=sqlite3.connect(\"/var/lib/hamsterking-license/licenses.db\");[(print(*r,sep=\"|\")) for r in d.execute(\"SELECT script_version,MAX(last_seen),COUNT(*) FROM devices GROUP BY script_version ORDER BY MAX(last_seen) DESC LIMIT 12\")]" || true
             echo "=== RECENT ACCESS VERSIONS ==="
-            sqlite3 /var/lib/hamsterking-license/licenses.db "SELECT script_version,MAX(created_at),COUNT(*) FROM access_log WHERE created_at > strftime('%s','now')-1800 GROUP BY script_version ORDER BY MAX(created_at) DESC;" || true
+            python3 -c "import sqlite3,time;d=sqlite3.connect(\"/var/lib/hamsterking-license/licenses.db\");[(print(*r,sep=\"|\")) for r in d.execute(\"SELECT script_version,MAX(created_at),COUNT(*) FROM access_log WHERE created_at>? GROUP BY script_version ORDER BY MAX(created_at) DESC\",(int(time.time())-1800,))]" || true
             echo "=== RECENT HTTP ==="
             journalctl -u hamsterking-license.service --since "15 minutes ago" --no-pager | grep -E "public-snapshot|/api/v1/check|POST /api/v1" | tail -80 || true
           '
