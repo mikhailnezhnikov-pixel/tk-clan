@@ -4,6 +4,13 @@ s=p.read_text()
 
 old_rev="const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-snapshot-3h-20260920-r1';"
 new_rev="const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2';"
+if new_rev in s:
+    assert s.count("collectPublicSnapshot(")==1
+    assert "setInterval(() => collectPublicSnapshot()" not in s
+    assert "HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" in s
+    assert "const HK_MAP_READ_CONCURRENCY = 5;" in s
+    p.write_text(s)
+    raise SystemExit(0)
 assert s.count(old_rev)==1, s.count(old_rev)
 s=s.replace(old_rev,new_rev,1)
 
