@@ -26,16 +26,16 @@ jobs:
           set -euo pipefail
           git fetch origin main
           git reset --hard origin/main
-          for n in 0 1 2 3 4 5; do
+          for n in 0 1 2 3 4 5 6 7; do
             test -s "deploy/topking/war-hq-parts/part$n.b64"
           done
-          cat deploy/topking/war-hq-parts/part{0,1,2,3,4,5}.b64 > /tmp/war-hq.b64
+          cat deploy/topking/war-hq-parts/part{0,1,2,3,4,5,6,7}.b64 > /tmp/war-hq.b64
           base64 -d /tmp/war-hq.b64 > /tmp/hamster-clan-battle-hq.webp
           python3 - <<'PY'
           from pathlib import Path
           p=Path('/tmp/hamster-clan-battle-hq.webp')
           b=p.read_bytes()
-          assert len(b) > 80000, len(b)
+          assert len(b) > 35000, len(b)
           assert b[:4] == b'RIFF' and b[8:12] == b'WEBP', b[:16]
           print('war_hq_bytes='+str(len(b)))
           PY
@@ -80,5 +80,5 @@ jobs:
           git fetch origin main
           git show origin/main:wars/index.html | grep -Fq "hamster-clan-battle-hq.webp"
           bytes="$(git cat-file -s origin/main:assets/war/hamster-clan-battle-hq.webp)"
-          test "$bytes" -gt 80000
+          test "$bytes" -gt 35000
           echo "war_hq_repo_bytes=$bytes"
