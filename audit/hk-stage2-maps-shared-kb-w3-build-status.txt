@@ -1,0 +1,11 @@
+MAPS_SHARED_KB_W3_BUILD=PASS
+source_server_sha256=1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e
+candidate_server_sha256=26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4
+null_only_fill=PASS
+nonnull_preserve=PASS
+map_detail_read=PASS
+idempotent=PASS
+geometry_unchanged=PASS
+district_duplicate=NO
+bulk_migration=NO
+deployed=NO
