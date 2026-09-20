@@ -443,6 +443,8 @@
   let mapPanY = 0;
   let mapPointerMoved = false;
   let mapBuildingAreas = new Map();
+  let mapOwnedBuildingIndexPromise = null;
+  const mapBuildingStudySubmitDedupe = new Map();
   let mapScanning = false;
   let dailyRumorRoute = [];
   let dailyAccountAreaIndex = [];
@@ -753,6 +755,8 @@
   const HK_STAGE2_STATE_REV = 'stage2c-state-20260919-r1';
   const HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1';
   const HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1';
+  const HK_MAP_SCANNER_REV = 'maps-building-scan-20260920-r2';
+  const HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1';
   const HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1';
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
@@ -768,6 +772,8 @@
   runtime.stateMigrationStage = HK_STAGE2_STATE_REV;
   runtime.resourceBusinessRunnerStage = HK_STAGE2D_RUNNER_REV;
   runtime.mapRunnerStage = HK_STAGE2E_RUNNER_REV;
+  runtime.mapScannerStage = HK_MAP_SCANNER_REV;
+  runtime.mapCoordsStage = HK_MAP_COORDS_REV;
   runtime.clanRunnerStage = HK_STAGE2F_RUNNER_REV;
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
   runtime.warsStage = HK_STAGE2H_WARS_REV;
@@ -1781,17 +1787,20 @@
       save({resourceSelectedKind:kind,resourceSelectedTiers:tiers, ...(kind==='nut'?{resourceSelectedTier:selectedTier}:{})});
       renderResources();
     }
-    const areaId=mapBuildingAreas.get(buildingId); if (!areaId || !licenseState.allowed) return;
+    if (!buildingId || !licenseState.allowed) return;
+    let areaId=String(mapBuildingAreas.get(buildingId)||'');
+    if(!areaId)areaId=await mapResolveBuildingArea(buildingId);
+    if (!areaId) return;
+    mapRememberBuildingArea(buildingId,areaId);
     if (!eventCatalogDocument) { try { eventCatalogDocument=normalizeEventCatalog(await apiJson('/events','GET')); } catch (_) { return; } }
     const rooms=buildingRooms(documentValue); const roomCount=crystalRoomCount(documentValue);
     if (roomCount == null) return;
-    const area=(playerDocument?.areas?.areas || []).find(row=>String(row?.gamearea_id)===areaId); if(!area)return;
     const hasEvents=rooms.length>0 || roomCount>0;
     if (String(mapDetail?.area?.area_id || '') === areaId) {
       const localRow=(mapDetail.buildings || []).find(row=>String(row?.building_id)===buildingId);
       if (localRow) { localRow.opened=true; localRow.room_count=roomCount; localRow.has_events=hasEvents; renderMapDetail(); }
     }
-    mapServerJson('/submit',{area:{area_id:areaId,city_id:String(area.city_id||''),expected_buildings:0,buildings:[{building_id:buildingId,opened:true,room_count:roomCount,has_events:hasEvents}]}}).catch(()=>{});
+    await mapSubmitBuildingStudy(buildingId,areaId,roomCount,hasEvents);
   }
 
   const PIT_API_PATH_TYPES = new Map([
@@ -7791,6 +7800,145 @@
     return gameText(row?.name || row?.city_name || row?.city_id || '');
   }
 
+
+  function mapBuildingAreaCacheKey() {
+    return String(playerIdentity((hkStateStore.snapshot||playerDocument)?.player||{}) || '');
+  }
+
+  function mapHydrateBuildingAreas() {
+    const playerKey=mapBuildingAreaCacheKey();
+    if(!playerKey)return 0;
+    const rootCache=load().mapBuildingAreasByPlayer;
+    const rows=rootCache&&typeof rootCache==='object'&&rootCache[playerKey]&&typeof rootCache[playerKey]==='object'?rootCache[playerKey]:{};
+    let count=0;
+    for(const [buildingId,areaId] of Object.entries(rows)){
+      if(!buildingId||!areaId)continue;
+      if(!mapBuildingAreas.has(String(buildingId)))mapBuildingAreas.set(String(buildingId),String(areaId));
+      count+=1;
+    }
+    return count;
+  }
+
+  function mapPersistOwnedBuildingAreas() {
+    const playerKey=mapBuildingAreaCacheKey();
+    if(!playerKey)return false;
+    const ownedIds=new Set(((hkStateStore.snapshot||playerDocument)?.areas?.areas||[])
+      .map(row=>String(row?.gamearea_id||row?.area_id||'')).filter(Boolean));
+    const rows={};
+    for(const [buildingId,areaId] of mapBuildingAreas.entries()){
+      if(buildingId&&ownedIds.has(String(areaId)))rows[String(buildingId)]=String(areaId);
+    }
+    const stored=load();
+    const rootCache=stored.mapBuildingAreasByPlayer&&typeof stored.mapBuildingAreasByPlayer==='object'?stored.mapBuildingAreasByPlayer:{};
+    localStorage.setItem(STORE,JSON.stringify({...stored,mapBuildingAreasByPlayer:{...rootCache,[playerKey]:rows}}));
+    return true;
+  }
+
+  function mapRememberBuildingArea(buildingId,areaId) {
+    const id=String(buildingId||''), area=String(areaId||'');
+    if(!id||!area)return false;
+    mapBuildingAreas.set(id,area);
+    return true;
+  }
+
+  async function mapEnsureOwnedBuildingAreaIndex(force=false) {
+    mapHydrateBuildingAreas();
+    const state=hkStateStore.snapshot||playerDocument||{};
+    const owned=(state?.areas?.areas||[]).filter(row=>row?.gamearea_id||row?.area_id);
+    const activeIds=new Set((state?.buildings||[]).map(row=>String(row?.id||row?.building_id||'')).filter(Boolean));
+    if(!force&&activeIds.size&&[...activeIds].every(id=>mapBuildingAreas.has(id)))return mapBuildingAreas;
+    if(mapOwnedBuildingIndexPromise)return mapOwnedBuildingIndexPromise;
+    mapOwnedBuildingIndexPromise=(async()=>{
+      let cursor=0;
+      const worker=async()=>{
+        while(cursor<owned.length){
+          const row=owned[cursor++];
+          const areaId=String(row?.gamearea_id||row?.area_id||'');
+          if(!areaId)continue;
+          let definitions=[];
+          try{definitions=await apiJson(`/game_area/${encodeURIComponent(areaId)}/buildings`,'GET');}catch(_){continue;}
+          for(const definition of (Array.isArray(definitions)?definitions:[])){
+            const buildingId=String(definition?.building_id||'');
+            if(buildingId)mapRememberBuildingArea(buildingId,areaId);
+          }
+        }
+      };
+      await Promise.all(Array.from({length:Math.min(4,Math.max(1,owned.length))},()=>worker()));
+      mapPersistOwnedBuildingAreas();
+      return mapBuildingAreas;
+    })().finally(()=>{mapOwnedBuildingIndexPromise=null;});
+    return mapOwnedBuildingIndexPromise;
+  }
+
+  async function mapResolveBuildingArea(buildingId) {
+    const id=String(buildingId||'');
+    if(!id)return '';
+    mapHydrateBuildingAreas();
+    let areaId=String(mapBuildingAreas.get(id)||'');
+    if(areaId)return areaId;
+    try{await mapEnsureOwnedBuildingAreaIndex(false);}catch(_){}
+    areaId=String(mapBuildingAreas.get(id)||'');
+    return areaId;
+  }
+
+  async function mapSubmitBuildingStudy(buildingId,areaId,roomCount,hasEvents) {
+    const id=String(buildingId||''), area=String(areaId||'');
+    if(!id||!area||roomCount==null)return false;
+    const key=`${area}:${id}:${Number(roomCount)}`;
+    const now=Date.now(), previous=Number(mapBuildingStudySubmitDedupe.get(key)||0);
+    if(previous&&now-previous<5000)return true;
+    mapBuildingStudySubmitDedupe.set(key,now);
+    const areaRow=((hkStateStore.snapshot||playerDocument)?.areas?.areas||[]).find(row=>String(row?.gamearea_id||row?.area_id||'')===area);
+    if(!areaRow)return false;
+    try{
+      await mapServerJson('/submit',{area:{area_id:area,city_id:String(areaRow?.city_id||''),expected_buildings:0,buildings:[{building_id:id,opened:true,room_count:Number(roomCount),has_events:!!hasEvents}]}});
+      return true;
+    }catch(_){
+      mapBuildingStudySubmitDedupe.delete(key);
+      return false;
+    }
+  }
+
+  async function mapBackfillActiveBuildingStudies(selectedAreaIds=null) {
+    const state=hkStateStore.snapshot||playerDocument||{};
+    const active=(state?.buildings||[]).map(row=>String(row?.id||row?.building_id||'')).filter(Boolean);
+    const selected=selectedAreaIds instanceof Set?selectedAreaIds:null;
+    const rows=[];
+    for(const buildingId of active){
+      const areaId=String(mapBuildingAreas.get(buildingId)||'');
+      if(!areaId||(selected&&!selected.has(areaId)))continue;
+      rows.push({buildingId,areaId});
+    }
+    const unique=[...new Map(rows.map(row=>[row.buildingId,row])).values()];
+    let studied=0,known=0,failed=0;
+    const baseDone=hkRunner.state.done||0;
+    const total=baseDone+unique.length;
+    hkRunner.setStep(either('Считываю открытые здания','Reading active buildings'),baseDone,total);
+    for(let index=0;index<unique.length;index++){
+      if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+      await hkRunner.waitIfPaused();
+      const {buildingId,areaId}=unique[index];
+      hkRunner.setStep(`${either('Считываю здание','Reading building')} ${index+1}/${unique.length}`,baseDone+index,total);
+      try{
+        let value=buildingStudyCache.get(buildingId)||null;
+        let roomCount=value?crystalRoomCount(value):null;
+        if(roomCount==null){
+          value=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}`,'POST');
+          buildingStudyCache.set(buildingId,value);
+          roomCount=crystalRoomCount(value);
+        }else known+=1;
+        if(roomCount!=null){
+          const rooms=buildingRooms(value);
+          await mapSubmitBuildingStudy(buildingId,areaId,roomCount,rooms.length>0||roomCount>0);
+          studied+=1;
+        }else failed+=1;
+      }catch(_){failed+=1;}
+      hkRunner.setStep(`${either('Считано зданий','Buildings read')}: ${index+1}/${unique.length}`,baseDone+index+1,total);
+      if(index+1<unique.length)await gameRetryDelay(180);
+    }
+    return {total:unique.length,studied,known,failed};
+  }
+
   async function mapAreaPayload(area, cities = []) {
     const areaId = String(area?.gamearea_id || area?.area_id || '');
     const cityId = String(area?.city_id || '');
@@ -7798,14 +7946,17 @@
     const playerBuildings = new Map((playerDocument?.buildings || []).map(row => [String(row?.id || ''), row]));
     const invest = new Set(full?.info?.invest_building_list || []);
     const buildings = (Array.isArray(definitions) ? definitions : []).map(row => {
-      const id = String(row?.building_id || ''); const state = playerBuildings.get(id); mapBuildingAreas.set(id, areaId);
-      const detectedRooms=state ? crystalRoomCount(state) : null;
+      const id = String(row?.building_id || ''); const state = playerBuildings.get(id); mapRememberBuildingArea(id, areaId);
+      const study=buildingStudyCache.get(id)||state;
+      const detectedRooms=study ? crystalRoomCount(study) : null;
       return {building_id:id, opened:!!state, room_count:detectedRooms ?? (state && state.has_events === false ? 0 : null), has_events:!!state?.has_events,
         is_invest:invest.has(id), tier:state?.tier ?? null, faction:String(row?.faction || ''), building_type:String(row?.meta?.building_generator || row?.meta?.building_type || '')};
     });
     const city = cities.find(row => String(row?.id) === cityId) || {};
-    return {area_id:areaId, city_id:cityId, city_name:cityLabel(city), x:full?.info?.x ?? full?.meta?.gamearea_coords?.x,
-      y:full?.info?.y ?? full?.meta?.gamearea_coords?.y, invest_count:Number(full?.info?.invest_count || invest.size),
+    // Game API exposes district grid axes as row/column. Public/user-facing
+    // coordinates are X:Y = column:row, so canonical map storage must swap them.
+    return {area_id:areaId, city_id:cityId, city_name:cityLabel(city), x:full?.info?.y ?? full?.meta?.gamearea_coords?.y,
+      y:full?.info?.x ?? full?.meta?.gamearea_coords?.x, invest_count:Number(full?.info?.invest_count || invest.size),
       expected_buildings:Math.max(buildings.length, Number(full?.meta?.buildings_total || 0)), buildings};
   }
 
@@ -7814,11 +7965,14 @@
     if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
     mapScanning = true;
     try {
+      playerDocument=await hkAuthoritativePlayerRead('maps:scan-start');
       await ensureRecipeMetadata();
+      mapHydrateBuildingAreas();
       const cities = await apiJson('/cities', 'GET');
       const owned = (playerDocument?.areas?.areas || []).filter(row => row?.gamearea_id);
       const currentId = String(playerDocument?.gameArea?.gamearea_id || '');
       const selected = all ? owned : owned.filter(row => String(row.gamearea_id) === currentId).slice(0,1);
+      const selectedAreaIds=new Set(selected.map(row=>String(row?.gamearea_id||row?.area_id||'')).filter(Boolean));
       hkRunner.start({title:either('Исследование районов','District research'),total:selected.length,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
       for (let index=0; index<selected.length; index++) {
         if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
@@ -7829,13 +7983,19 @@
         await mapServerJson('/submit', {area:payload});
         await gameRetryDelay(180);
       }
+      mapPersistOwnedBuildingAreas();
+      hkRunner.setStep(either('Считываю уже открытые здания','Reading already active buildings'),selected.length,selected.length);
+      const backfill=await mapBackfillActiveBuildingStudies(selectedAreaIds);
       const completedAt = Date.now();
       if (all) {
         const playerId = playerIdentity(playerDocument?.player);
         if (playerId) save({mapContributionByPlayer:{...(load().mapContributionByPlayer || {}), [playerId]:completedAt}});
       }
       save({lastMapContribution:completedAt});
-      log(either(`Карты отправлены: районов ${selected.length}`,`Maps submitted: ${selected.length} districts`),'ok');
+      log(either(
+        `Карты отправлены: районов ${selected.length} · активных зданий считано ${backfill.studied}/${backfill.total}${backfill.failed?` · ошибок ${backfill.failed}`:''}`,
+        `Maps submitted: ${selected.length} districts · active buildings read ${backfill.studied}/${backfill.total}${backfill.failed?` · errors ${backfill.failed}`:''}`
+      ),backfill.failed?'warn':'ok');
       await loadMapIndex(false);
       hkRunner.finish(either('Исследование районов завершено','District research completed'));
     } catch (error) {
