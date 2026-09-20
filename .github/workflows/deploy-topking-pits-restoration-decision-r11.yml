@@ -1,0 +1,80 @@
+name: Deploy TopKing Pits Restoration Decision R11
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/pits-restoration-decision-r11-trigger.txt'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact Pits r10 live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11'" /tmp/HamsterKingMobile.user.js
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "973e1b1788b86caaefac7a26b66f0eb42bc497ed49a618c277ebf36df63e6e25"
+
+      - name: Apply restoration decision r11
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/patch_pits_restoration_decision_r11_1174.py
+          python3 deploy/topking/patch_pits_restoration_decision_r11_1174.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function pitCanonAskRestorationDecision" /tmp/HamsterKingMobile.user.js
+          grep -Fq 'id="hk-pit-restoration-decision"' /tmp/HamsterKingMobile.user.js
+          grep -Fq 'data-pit-decision="spend"' /tmp/HamsterKingMobile.user.js
+          grep -Fq "decision.action==='manual'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "decision.action==='collect'" /tmp/HamsterKingMobile.user.js
+          echo "PATCHED_SHA=$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')"
+
+      - name: Backup and deploy
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.pits-r11.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            node --check /tmp/HamsterKingMobile.pits-r11.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.pits-r11.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.pits-r11.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+
+      - name: Verify public round trip
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?pits-r11=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          grep -Fq "HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11'" /tmp/public.js
+          echo "PUBLIC_SHA=$(sha256sum /tmp/public.js | awk '{print $1}')"
+          echo "PITS_RESTORATION_DECISION_R11=PASS"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js
