@@ -602,3 +602,56 @@ User UI/read-only confirmation still required:
 
 Only after that confirmation may E2 be promoted from technical/live-candidate status to final E2 PASS and E3 be considered.
 
+## E2 r3 — compact UI checkpoint
+
+Status: **LIVE CANDIDATE / USER VISUAL CHECK PENDING**
+
+Marker:
+`HK_EXPLORE_CANON_REV = 'explore-readonly-plan-20260920-r3-ui'`
+
+Live/baseline sync commit:
+`fe6a03a7c56c25a9a68c82ee2007ddb27656a828`
+
+Reason:
+user UI review of r2 found the Explore screen visually disorganized on desktop: controls were stretched across the full panel, large empty gaps appeared between labels and fields, starting tiers were split across distant columns, and target toggles collapsed into one dense line.
+
+### UI-only changes
+
+- account capabilities are shown as compact tier chips;
+- building filters use a bounded 3-column field grid on desktop;
+- starting tiers use a compact 4-column grid;
+- target tier and target options are grouped together;
+- target-tier toggles are separated into readable toggle cards;
+- Priority and Future delays are side-by-side desktop cards;
+- form controls fill their local cell instead of being pushed to the far right edge;
+- responsive breakpoints collapse to one-column/mobile layouts;
+- candidate/read-only summary remains full width.
+
+All existing Explore element IDs and handlers were preserved.
+
+### Scope guard
+
+- Explore mechanics changed: **NO**;
+- candidate calculation changed: **NO**;
+- donor rules changed: **NO**;
+- mutation endpoints added: **0**;
+- Maps/backend/schema changed: **NO**;
+- E3 started: **NO**.
+
+### Live verification
+
+- source live SHA256: `6a40137d505248ff5525bed0136b185b0b1c7273147fa0d283cb65397039563a`;
+- deployed/public SHA256: `76833b35de3620f7b946fac3c02fca021cd48d332e58c51ce74a40616c199c14`;
+- syntax: PASS;
+- service/deploy: PASS;
+- public byte equality: PASS;
+- Explore mutation endpoint scan: 0.
+
+Evidence:
+`audit/hk-stage2-explore-e2-ui-r3-live-status.txt`
+
+### Stop gate
+
+E2 remains pending user visual/read-only confirmation.
+Do not start E3 automatically.
+
