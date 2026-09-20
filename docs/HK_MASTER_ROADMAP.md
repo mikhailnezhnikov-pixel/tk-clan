@@ -50,7 +50,7 @@
 
 Рабочая live-база:
 
-**1.17.4 · launcher r1 · handoff r4 · runtime r5 · core r6 · startup r7 · error-trap r8**
+**1.17.4 · launcher r1 · handoff r4 · runtime r5 · core r6 · startup r7 · error-trap r8 · error-scope r9 (live candidate, UI confirmation pending)**
 
 Stage 0 technical baseline is pinned by baseline/topking/BASELINE.json and audit/hk-stage0-baseline-status.txt.
 
