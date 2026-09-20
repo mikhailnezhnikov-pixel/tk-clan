@@ -2865,6 +2865,128 @@
     return days>0?`${days}д ${hours}ч`:`${hours}ч ${minutes}м`;
   }
 
+  function pitCanonRewardItemBatches(row){
+    const result=[];
+    for(const batch of HK_PITS_CANON_BATCHES){
+      const cost=pitCanonDirectPassCost(row?.state,batch,'ITEM');
+      if(cost!==null&&pitCanonWhole(cost)>0)result.push({batch,cost:pitCanonWhole(cost)});
+    }
+    return result;
+  }
+
+  function pitCanonRewardDecomposeWithBatches(supported,total){
+    let remaining=pitCanonWhole(total),steps=[],cost=0;
+    const options=[...(supported||[])].filter(row=>pitCanonWhole(row.batch)>0&&pitCanonWhole(row.cost)>0).sort((a,b)=>b.batch-a.batch);
+    for(const option of options){
+      const batch=pitCanonWhole(option.batch),unitCost=pitCanonWhole(option.cost);
+      while(remaining>=batch){
+        steps.push({chunk:batch,payment:'ITEM',source:'reward'});
+        cost+=unitCost;
+        remaining-=batch;
+      }
+    }
+    return {steps,cost,remaining};
+  }
+
+  function pitCanonRewardStrategyRequestedNow(required,strategy,{completed=0,gradualDivisor=1,strategyActiveNow=true}={}){
+    const normalized=pitCanonRewardStrategy(strategy),needed=pitCanonWhole(required),done=pitCanonWhole(completed),divisor=Math.max(1,pitCanonWhole(gradualDivisor));
+    if(normalized==='upfront')return needed;
+    if(normalized==='gradual'&&needed>0)return Math.max(0,Math.ceil((needed+done)/divisor)-done);
+    if(normalized==='last_day'&&strategyActiveNow)return needed;
+    return 0;
+  }
+
+  function pitCanonRewardRunMeta(row){
+    const minScore=pitCanonWhole(row?.rewardTargetMin);
+    const plan=minScore>0?pitCanonRewardPlan(row,minScore):null;
+    const supported=pitCanonRewardItemBatches(row);
+    const canExecute=!!(plan?.valid&&plan?.known&&row?.autofinish&&supported.length);
+    const requested=canExecute?pitCanonWhole(plan.scheduledNow):0;
+    const decomp=pitCanonRewardDecomposeWithBatches(supported,requested);
+    const safeSteps=decomp.remaining===0?decomp.steps:[];
+    const safeCost=decomp.remaining===0?decomp.cost:0;
+    return {
+      enabled:canExecute,
+      minScore:canExecute?minScore:0,
+      plannedFinalScore:canExecute?pitCanonWhole(plan.finalScore):0,
+      pointsPerPass:canExecute?pitCanonWhole(plan.pointsPerPass):0,
+      boxesPerPass:canExecute?pitCanonWhole(plan.boxesPerPass):0,
+      futureDailyPoints:canExecute?pitCanonWhole(plan.futureDailyPoints):0,
+      futureExtraPoints:canExecute?Math.max(0,pitCanonWhole(plan.requiredExtraRuns)-requested)*pitCanonWhole(plan.pointsPerPass):0,
+      strategy:canExecute?pitCanonRewardStrategy(plan.strategy):'last_day',
+      strategyActiveNow:canExecute?!!plan.strategyActiveNow:false,
+      gradualDivisor:canExecute?Math.max(1,pitCanonWhole(plan.gradualDivisor)):1,
+      itemBatches:supported.map(row=>({...row})),
+      steps:safeSteps,
+      itemCost:safeCost
+    };
+  }
+
+  async function pitCanonLiveLeaderboardScore(def){
+    try{
+      const payload={leaderboard_type:def.leaderboardType};
+      if(def.leaderboardStatus)payload.leaderboard_status=def.leaderboardStatus;
+      const leaderboard=await apiJson('/leaderboard','POST',payload);
+      pitCanonRewardLive.leaderboards[def.id]=leaderboard;
+      if(String(leaderboard?.status||'').toUpperCase()!=='ACTUAL')return null;
+      return pitCanonWhole(leaderboard?.your_lb_slot?.score);
+    }catch(error){
+      pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('не удалось обновить очки турнира','could not refresh tournament score')}: ${error?.message||error}`,'warn');
+      return null;
+    }
+  }
+
+  async function pitCanonOpenRewardLootboxes(){
+    let openedTotal=0,gainedTotal=0;
+    for(let guard=0;guard<100;guard++){
+      const beforeBoxes=pitCanonResourceQuantity(playerDocument,HK_PIT_LOOTBOX_ITEM_ID,'item');
+      if(beforeBoxes<HK_PIT_LOOTBOX_OPEN_BATCH)break;
+      const beforePasses=pitCanonResourceQuantity(playerDocument,HK_PIT_PASS_ITEM_ID,'item');
+      hkRunner.setStep(`${either('Открытие коробок дани','Opening Tribute Boxes')} ×${HK_PIT_LOOTBOX_OPEN_BATCH}`,hkRunner.state.done,hkRunner.state.total);
+      pitCanonRunnerLog(`${either('Коробки дани — открытие','Tribute Boxes — opening')}: ×${HK_PIT_LOOTBOX_OPEN_BATCH}`,'info');
+      await apiJson(`/player/boxes/open?item_id=${encodeURIComponent(HK_PIT_LOOTBOX_ITEM_ID)}&quantity=${HK_PIT_LOOTBOX_OPEN_BATCH}`,'POST');
+      playerDocument=await hkAuthoritativePlayerRead('pits:reward-lootboxes');
+      const afterBoxes=pitCanonResourceQuantity(playerDocument,HK_PIT_LOOTBOX_ITEM_ID,'item');
+      const afterPasses=pitCanonResourceQuantity(playerDocument,HK_PIT_PASS_ITEM_ID,'item');
+      const opened=Math.max(0,beforeBoxes-afterBoxes),gained=Math.max(0,afterPasses-beforePasses);
+      openedTotal+=opened;gainedTotal+=gained;
+      pitCanonRunnerLog(`✓ ${either('Коробки дани открыты','Tribute Boxes opened')}: ${opened||HK_PIT_LOOTBOX_OPEN_BATCH} · 🎟 +${gained} · ${either('осталось коробок','boxes remaining')}: ${afterBoxes}`,'ok');
+      if(afterBoxes>=beforeBoxes)break;
+    }
+    return {opened:openedTotal,gained:gainedTotal};
+  }
+
+  function pitCanonRecalculateRewardContinuation(config,completedIndex,liveScore){
+    if(pitCanonWhole(config?.rewardMinScore)<=0||pitCanonWhole(config?.rewardPointsPerPass)<=0||liveScore===null)return null;
+    const future=config.steps.slice(completedIndex+1);
+    const futureBase=future.filter(step=>step.source!=='reward');
+    const futureReward=future.filter(step=>step.source==='reward');
+    const oldMultiplier=futureReward.reduce((sum,step)=>sum+pitCanonWhole(step.chunk),0);
+    const completedRewardMultiplier=config.steps.slice(0,completedIndex+1).filter(step=>step.source==='reward').reduce((sum,step)=>sum+pitCanonWhole(step.chunk),0);
+    const futureBaseMultiplier=futureBase.reduce((sum,step)=>sum+pitCanonWhole(step.chunk),0);
+    const futureBasePoints=futureBaseMultiplier*pitCanonWhole(config.rewardPointsPerPass);
+    const scoreAfterDaily=pitCanonWhole(liveScore)+futureBasePoints+pitCanonWhole(config.rewardFutureDailyPoints);
+    const remainingPoints=Math.max(0,pitCanonWhole(config.rewardMinScore)-scoreAfterDaily);
+    const remainingRuns=remainingPoints>0?Math.ceil(remainingPoints/pitCanonWhole(config.rewardPointsPerPass)):0;
+    const newMultiplier=pitCanonRewardStrategyRequestedNow(remainingRuns,config.rewardStrategy,{
+      completed:completedRewardMultiplier,
+      gradualDivisor:config.rewardGradualDivisor,
+      strategyActiveNow:config.rewardStrategyActiveNow
+    });
+    config.rewardFutureExtraPoints=Math.max(0,remainingRuns-newMultiplier)*pitCanonWhole(config.rewardPointsPerPass);
+    if(newMultiplier===oldMultiplier)return null;
+    const decomp=pitCanonRewardDecomposeWithBatches(config.rewardItemBatches,newMultiplier);
+    if(decomp.remaining>0)return null;
+    const oldFutureCost=futureReward.reduce((sum,step)=>{
+      const option=(config.rewardItemBatches||[]).find(row=>pitCanonWhole(row.batch)===pitCanonWhole(step.chunk));
+      return sum+pitCanonWhole(option?.cost);
+    },0);
+    const oldLength=config.steps.length;
+    config.steps=[...config.steps.slice(0,completedIndex+1),...futureBase,...decomp.steps];
+    config.itemPassBudget=Math.max(0,pitCanonWhole(config.itemPassBudget)+decomp.cost-oldFutureCost);
+    return {before:oldMultiplier,after:newMultiplier,deltaRounds:config.steps.length-oldLength};
+  }
+
   function pitCanonPlans(state,available,itemPasses) {
     available=pitCanonWhole(available);
     itemPasses=pitCanonWhole(itemPasses);
@@ -3075,17 +3197,37 @@
       const target=standaloneSniper
         ? {id:`minimum:${pitCanonWhole(row.sniperTarget)}`,level:pitCanonWhole(row.sniperTarget)}
         : (row.targets.find(x=>x.id===row.targetId)||row.targets[0]);
+      const reward=pitCanonRewardRunMeta(row);
+      let base=null;
       if(row.active){
         const chunk=Math.max(1,pitCanonWhole(row.activeState?.mass_multiplier ?? row.activeState?.multiplier));
-        return {definition:row.definition,planId:'active',steps:[{chunk,payment:'ACTIVE'}],target:pitCanonWhole(target?.level),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:true,crystalBudget:0,itemPassBudget:0,sniper:!!row.sniper,sniperPayment:'ACTIVE'};
-      }
-      if(row.sniper){
+        base={definition:row.definition,planId:'active',steps:[{chunk,payment:'ACTIVE',source:'base'}],target:pitCanonWhole(target?.level),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:true,crystalBudget:0,itemPassBudget:0,sniper:!!row.sniper,sniperPayment:'ACTIVE'};
+      }else if(row.sniper){
         if(!pitCanonRowRunnable(row))return null;
-        return {definition:row.definition,planId:'sniper-1',steps:[{chunk:1,payment:row.sniperPayment||'FREE'}],target:pitCanonWhole(row.sniperTarget),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:false,crystalBudget:row.sniperPayment==='PREM'?pitCanonWhole(row.sniperCrystalCost):0,itemPassBudget:row.sniperPayment==='ITEM'?pitCanonWhole(row.sniperItemCost):0,sniper:true,sniperPayment:row.sniperPayment};
+        base={definition:row.definition,planId:'sniper-1',steps:[{chunk:1,payment:row.sniperPayment||'FREE',source:'base'}],target:pitCanonWhole(row.sniperTarget),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:false,crystalBudget:row.sniperPayment==='PREM'?pitCanonWhole(row.sniperCrystalCost):0,itemPassBudget:row.sniperPayment==='ITEM'?pitCanonWhole(row.sniperItemCost):0,sniper:true,sniperPayment:row.sniperPayment};
+      }else{
+        const plan=row.plans.find(x=>x.id===row.planId);if(!plan)return null;
+        const chunks=row.autofinish?[...plan.chunks]:plan.chunks.slice(0,1);
+        base={definition:row.definition,planId:plan.id,steps:chunks.map(chunk=>({chunk,payment:plan.paymentMode,source:'base'})),target:pitCanonWhole(target?.level),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:false,crystalBudget:pitCanonWhole(plan.crystalCost),itemPassBudget:pitCanonWhole(plan.itemCost),sniper:false,sniperPayment:''};
       }
-      const plan=row.plans.find(x=>x.id===row.planId);if(!plan)return null;
-      const chunks=row.autofinish?[...plan.chunks]:plan.chunks.slice(0,1);
-      return {definition:row.definition,planId:plan.id,steps:chunks.map(chunk=>({chunk,payment:plan.paymentMode})),target:pitCanonWhole(target?.level),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:false,crystalBudget:pitCanonWhole(plan.crystalCost),itemPassBudget:pitCanonWhole(plan.itemCost),sniper:false,sniperPayment:''};
+      if(!base)return null;
+      if(reward.enabled&&reward.steps.length){
+        base.steps.push(...reward.steps.map(step=>({...step})));
+        base.itemPassBudget+=pitCanonWhole(reward.itemCost);
+      }
+      Object.assign(base,{
+        rewardMinScore:reward.minScore,
+        rewardPlannedFinalScore:reward.plannedFinalScore,
+        rewardPointsPerPass:reward.pointsPerPass,
+        rewardBoxesPerPass:reward.boxesPerPass,
+        rewardFutureDailyPoints:reward.futureDailyPoints,
+        rewardFutureExtraPoints:reward.futureExtraPoints,
+        rewardStrategy:reward.strategy,
+        rewardStrategyActiveNow:reward.strategyActiveNow,
+        rewardGradualDivisor:reward.gradualDivisor,
+        rewardItemBatches:reward.itemBatches
+      });
+      return base;
     }).filter(config=>config?.steps?.length);
   }
 
@@ -3105,6 +3247,27 @@
       else{
         if(active)throw new Error(`${pitCanonDefinitionName(def)}: ${either('Яма уже активна — обновите данные','Pit is already active — refresh')}`);
         let payment=step.payment;if(payment==='AUTO')payment=available>=chunk?'FREE':'PREM';
+        if(step.source==='reward'&&payment==='ITEM'){
+          let have=pitCanonResourceQuantity(playerDocument,HK_PIT_PASS_ITEM_ID,'item');
+          let rewardCost=pitCanonDirectPassCost(state,chunk,'ITEM');
+          if(rewardCost!==null&&have<pitCanonWhole(rewardCost)&&pitCanonResourceQuantity(playerDocument,HK_PIT_LOOTBOX_ITEM_ID,'item')>=HK_PIT_LOOTBOX_OPEN_BATCH){
+            await pitCanonOpenRewardLootboxes();
+            playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:reward-pass-reread`);
+            state=pitRaceSnapshot(def.id,playerDocument);
+            have=pitCanonResourceQuantity(playerDocument,HK_PIT_PASS_ITEM_ID,'item');
+            rewardCost=pitCanonDirectPassCost(state,chunk,'ITEM');
+          }
+          if(rewardCost===null||have<pitCanonWhole(rewardCost)){
+            const removed=config.steps.length-index;
+            config.steps.splice(index);
+            progress.total=Math.max(progress.done,progress.total-removed);
+            hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('турнирный план остановлен — не хватает Пропусков Ямы','reward plan stopped — not enough Pit Passes')}`,progress.done,progress.total);
+            pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('турнирный план безопасно остановлен: фактических Пропусков Ямы недостаточно','reward plan stopped safely: actual Pit Pass balance is insufficient')}`,'warn');
+            break;
+          }
+        }
+        if(index>=config.steps.length)break;
+        step=config.steps[index];chunk=pitCanonWhole(step.chunk);payment=step.payment;if(payment==='AUTO')payment=available>=chunk?'FREE':'PREM';
         const premCost=payment==='PREM'?pitCanonDirectPassCost(state,chunk,'PREM'):0,itemCost=payment==='ITEM'?pitCanonDirectPassCost(state,chunk,'ITEM'):0;
         if(payment==='FREE'&&available<chunk)throw new Error(`${pitCanonDefinitionName(def)}: ${either('количество пропусков изменилось','available passes changed')}`);
         if(payment==='PREM'&&premCost===null)throw new Error(`${pitCanonDefinitionName(def)}: ${either('стоимость платного запуска изменилась','paid pass cost changed')}`);
@@ -3190,6 +3353,24 @@
         pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)} — ${either('раунд завершён','round completed')}`,'ok');
       }
       progress.done+=1;hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('раунд завершён','round completed')}`,progress.done,progress.total);pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)}: ×${chunk} · 🐾 ${restorationSpent}${config.autofinish?` · ${either('автозавершение','auto-finish')}`:''}`,'ok');
+      if(config.rewardMinScore>0){
+        const liveScore=await pitCanonLiveLeaderboardScore(def);
+        if(liveScore!==null){
+          if(liveScore>=config.rewardMinScore){
+            pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)} — ${either('цель турнирной награды достигнута','tournament reward target reached')}: ${liveScore.toLocaleString(locale())} / ${config.rewardMinScore.toLocaleString(locale())}`,'ok');
+          }
+          const result=pitCanonRecalculateRewardContinuation(config,index,liveScore);
+          if(result){
+            progress.total=Math.max(progress.done,progress.total+result.deltaRounds);
+            hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('турнирный план пересчитан','reward plan recalculated')} ${result.before} → ${result.after}`,progress.done,progress.total);
+            pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('дополнительные x1 пересчитаны','extra x1 recalculated')}: ${result.before} → ${result.after}`,'info');
+          }
+          const projected=liveScore+pitCanonWhole(config.rewardFutureDailyPoints)+pitCanonWhole(config.rewardFutureExtraPoints);
+          if(liveScore<config.rewardMinScore&&projected>=config.rewardMinScore){
+            pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)} — ${either('цель остаётся по графику с будущими запусками','target remains on schedule with future runs')}`,'ok');
+          }
+        }
+      }
       if(!config.autofinish)break;
     }
   }
@@ -3203,9 +3384,12 @@
     pitCanonDecisionBudgetReset();
     pitCanonSetBusy(true);
     pitCanonRunnerLog(either('Ямы — запуск выбранного плана','Pits — starting selected plan'),'info');
-    recordDiagnostic('pits-run-config-snapshot',{pits:configs.map(config=>({id:config.definition?.id,planId:config.planId,steps:config.steps?.length||0,sniper:!!config.sniper,target:config.target}))});
+    recordDiagnostic('pits-run-config-snapshot',{pits:configs.map(config=>({id:config.definition?.id,planId:config.planId,steps:config.steps?.length||0,sniper:!!config.sniper,target:config.target,rewardMinScore:config.rewardMinScore||0,rewardSteps:config.steps?.filter(step=>step.source==='reward').reduce((sum,step)=>sum+pitCanonWhole(step.chunk),0)||0}))});
     try{
       playerDocument=await hkAuthoritativePlayerRead('pits:prepare');
+      if(configs.some(config=>pitCanonWhole(config.rewardMinScore)>0)&&pitCanonResourceQuantity(playerDocument,HK_PIT_LOOTBOX_ITEM_ID,'item')>=HK_PIT_LOOTBOX_OPEN_BATCH){
+        await pitCanonOpenRewardLootboxes();
+      }
       for(const config of configs)await pitCanonRunOne(config,progress);
       playerDocument=await hkAuthoritativePlayerRead('pits:complete');pitCanonRender();hkRunner.finish(either('Ямы завершены','Pits completed'));pitCanonRunnerLog(either('Выбранные Ямы завершены.','Selected Pits completed.'),'ok');
     }catch(error){
@@ -6109,6 +6293,7 @@
   const HK_PITS_SPEED_REV = 'pits-fast-cycle-20260920-r10';
   const HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11';
   const HK_PITS_REWARD_REV = 'pits-reward-planner-core-20260920-r12';
+  const HK_PITS_REWARD_EXEC_REV = 'pits-reward-execution-20260920-r13';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
