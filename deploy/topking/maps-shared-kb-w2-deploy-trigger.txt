@@ -1,1 +1,1 @@
-trigger 2026-09-20 W2 live pilot\n
+trigger 2026-09-20 W2 live pilot retry 2\n
