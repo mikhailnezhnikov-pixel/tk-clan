@@ -125,7 +125,7 @@ jobs:
           MAP_KEY: ${{ matrix.map_key }}
         run: |
           cat > /tmp/w6-resolve.py <<'PY'
-          import json,os,time,urllib.parse,urllib.request
+          import json,time,urllib.parse,urllib.request
           src=json.load(open('/tmp/w6-one.json'));key=src['map_key']
           def decode(flat):
               lng=lat=0;out=[]
@@ -167,11 +167,11 @@ jobs:
           def call(q):
               body=urllib.parse.urlencode({'data':q}).encode();last=None
               endpoints=('https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter')
-              for round_no in range(2):
+              for round_no in range(4):
                   for endpoint in endpoints:
                       try:
-                          req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6/4.0'})
-                          with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
+                          req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6-local/5.0'})
+                          with urllib.request.urlopen(req,timeout=30) as r:return json.load(r)
                       except Exception as e:last=repr(e)
                   time.sleep(2+round_no*2)
               raise RuntimeError('OSM query failed '+str(last))
@@ -181,36 +181,44 @@ jobs:
                   if typ not in ('way','relation') or eid is None:continue
                   ps=polygons(e)
                   if ps:out[('way' if typ=='way' else 'relation')+str(eid)]=ps
+
           can={x['building_id']:x for x in src['canonical_buildings']}
-          pts=decode(src['points']);features={}
-          for start in range(0,len(pts),25):
-              batch=pts[start:start+25];clauses=[]
-              for p in batch:
-                  clauses.append(f'way(around:20,{p["lat"]},{p["lon"]})["building"];')
-                  clauses.append(f'relation(around:20,{p["lat"]},{p["lon"]})["building"];')
+          pts=decode(src['points'])
+          features={}
+          # Tiny spatial queries around source points. This is much cheaper than
+          # asking Overpass for geometry of every canonical building in a district.
+          for start in range(0,len(pts),12):
+              part=pts[start:start+12]; clauses=[]
+              for p in part:
+                  d=0.0012
+                  south=p['lat']-d;north=p['lat']+d;west=p['lon']-d;east=p['lon']+d
+                  clauses.append(f'way["building"]({south},{west},{north},{east});')
+                  clauses.append(f'relation["building"]({south},{west},{north},{east});')
               if clauses:
-                  add_elements(features,call('[out:json][timeout:20];('+''.join(clauses)+');out geom;'))
+                  add_elements(features,call('[out:json][timeout:25];('+''.join(clauses)+');out geom;'))
+                  time.sleep(0.3)
+
           unique=[];unmatched=[];amb=[];used={}
           for p in pts:
               hits=[bid for bid,ps in features.items() if any(inside(poly,p['lon'],p['lat']) for poly in ps)]
               if len(hits)==0:
-                  unmatched.append({**p,'reason':'no_exact_osm_building_containment'})
+                  unmatched.append({**p,'reason':'no_osm_building_polygon_match'})
                   continue
               if len(hits)>1:
-                  amb.append({**p,'candidates':sorted(hits),'reason':'multiple_buildings'})
-                  continue
+                  amb.append({**p,'candidates':sorted(hits),'reason':'multiple_buildings'});continue
               bid=hits[0]
               if bid in used:
-                  amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]})
-                  continue
+                  amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]});continue
               used[bid]=p['point_index'];cur=can.get(bid)
               r={**p,'building_id':bid,'existing':bool(cur)}
               if cur:
                   r.update({'canonical_room_count':cur['room_count'],'canonical_source':cur['knowledge_source'],'canonical_observed_at':cur['knowledge_observed_at']})
               unique.append(r)
-          out={'map_key':key,'canonical_area_id':src['canonical_area_id'],'point_count':len(pts),'points':unique,'unmatched':unmatched,'ambiguous':amb}
+          out={'map_key':key,'canonical_area_id':src['canonical_area_id'],'point_count':len(pts),'points':unique,
+               'unmatched':unmatched,'ambiguous':amb,
+               'safe_new_building_rows':sum(1 for p in unique if not p['existing'])}
           open(f'w6-{key}.json','w').write(json.dumps(out,ensure_ascii=False,indent=2,sort_keys=True))
-          print(key,'points',len(pts),'unique',len(unique),'unmatched',len(unmatched),'ambiguous',len(amb))
+          print(key,'points',len(pts),'unique',len(unique),'new',out['safe_new_building_rows'],'unmatched',len(unmatched),'ambiguous',len(amb))
           PY
           python3 /tmp/w6-resolve.py
       - uses: actions/upload-artifact@v4
