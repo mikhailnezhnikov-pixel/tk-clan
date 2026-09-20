@@ -513,6 +513,10 @@ def full235_import_apply(member: dict, value: dict) -> dict:
                         len(buildings),str(batch["archive_sha256"]),now))
         db.execute("UPDATE hk_full_import_batches SET status='applied',resolved_json=? WHERE batch_id=?",
                    (json.dumps(report,ensure_ascii=False,separators=(",",":")),batch_id))
+        # The private archive payload is needed only during resolve/apply.
+        # Keep the compact resolution report/provenance, but remove staged
+        # building rows after a successful import.
+        db.execute("DELETE FROM hk_full_import_stage WHERE batch_id=?", (batch_id,))
 
     unified = cabinet_maps(member)
     return {
