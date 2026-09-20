@@ -3,7 +3,7 @@
   const HOST='app.hamsterking.games';
   const CORE_URL='https://hk-license.89.125.1.71.sslip.io/panel.js';
   const LOCK_KEY='__HK_BOOKMARKLET_RUNTIME__';
-  const LOADER_REV='loader-20260920-r6';
+  const LOADER_REV='loader-20260920-r9';
   const EXPECTED_CORE_REV='core-20260920-r6';
   const TIMEOUTS=[3500,6000,12000,20000];
   const RETRY_DELAYS=[700,1800,4000];
@@ -39,7 +39,7 @@
     try{delete window.__HK_MOBILE_VERSION__}catch{window.__HK_MOBILE_VERSION__=''}
     try{delete window.__HK_MOBILE_REVISION__}catch{window.__HK_MOBILE_REVISION__=''}
   }
-  function loadOnce(timeoutMs,attempt){return new Promise((resolve,reject)=>{const script=document.createElement('script');let done=false;const finish=(error)=>{if(done)return;done=true;clearTimeout(timer);script.onload=null;script.onerror=null;script.remove();error?reject(error):resolve()};script.async=true;script.referrerPolicy='no-referrer';script.src=`${CORE_URL}?v=${encodeURIComponent(EXPECTED_CORE_REV)}&t=${Date.now()}&a=${attempt}`;script.onload=()=>finish();script.onerror=()=>finish(new Error('core-load-error'));const timer=setTimeout(()=>finish(new Error(`core-load-timeout-${timeoutMs}`)),timeoutMs);(document.head||document.documentElement).appendChild(script)})}
+  function loadOnce(timeoutMs,attempt){return new Promise((resolve,reject)=>{const script=document.createElement('script');let done=false;const finish=(error)=>{if(done)return;done=true;clearTimeout(timer);script.onload=null;script.onerror=null;script.remove();error?reject(error):resolve()};script.async=true;script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';script.src=`${CORE_URL}?v=${encodeURIComponent(EXPECTED_CORE_REV)}&t=${Date.now()}&a=${attempt}`;script.onload=()=>finish();script.onerror=()=>finish(new Error('core-load-error'));const timer=setTimeout(()=>finish(new Error(`core-load-timeout-${timeoutMs}`)),timeoutMs);(document.head||document.documentElement).appendChild(script)})}
 
   async function start(){
     runtime.startedAt=new Date().toISOString();runtime.events=[];record('start',{loaderRevision:LOADER_REV,expectedCoreRevision:EXPECTED_CORE_REV});
