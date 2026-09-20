@@ -106,11 +106,12 @@ def lists_in(value, depth=0):
         return result
     return []
 
-def normalize_ranking(document, kind):
+def normalize_ranking(document, kind, max_rank=100, limit=100):
     best=[]
+    scan_limit=max(150,int(limit or max_rank),int(max_rank))
     for rows in lists_in(document):
         normalized=[]
-        for index,row in enumerate(rows[:150]):
+        for index,row in enumerate(rows[:scan_limit]):
             if not isinstance(row,dict): continue
             entity=row.get("player") or row.get("user") or row.get("clan") or row.get("alliance") or row.get("member") or row
             if not isinstance(entity,dict): entity=row
@@ -124,9 +125,10 @@ def normalize_ranking(document, kind):
                 value=finite(row.get("influence"),entity.get("influence"),row.get("level"),entity.get("level"),row.get("value"),row.get("score"))
             else:
                 value=finite(row.get("score"),row.get("points"),row.get("value"),entity.get("score"),entity.get("points"),entity.get("power"),entity.get("level"))
-            if name and 1<=rank<=100 and value is not None:
+            if name and 1<=rank<=max_rank and value is not None:
                 normalized.append({"rank":rank,"name":name,"value":int(value) if float(value).is_integer() else value})
-        if len(normalized)>len(best): best=normalized[:100]
+        if len(normalized)>len(best):
+            best=normalized[:limit]
     return best
 
 def active_war():
@@ -165,14 +167,44 @@ def alliance_list(document):
         rows=document["data"].get("result")
     result=[]
     for row in rows or []:
-        if not isinstance(row,dict): continue
+        if not isinstance(row,dict):
+            continue
         ident=str(row.get("id") or "")
         name=first_text(row.get("name"),row.get("title"))
         if ident and name:
-            result.append({"id":ident,"name":name,"defense":finite(row.get("defense_point")) or 0,
-                           "power":finite(row.get("total_power"),row.get("power")),
-                           "influence":finite(row.get("total_influence"),row.get("influence"))})
-    return result[:100]
+            result.append({
+                "id":ident,
+                "name":name,
+                "defense":finite(row.get("defense_point")) or 0,
+                "members":int(finite(row.get("members_count")) or 0),
+                "power":finite(row.get("total_power"),row.get("power")),
+                "influence":finite(row.get("total_influence"),row.get("influence")),
+            })
+    return result
+
+def all_alliances():
+    result=[]
+    seen=set()
+    offset=0
+    while True:
+        document=game_json(f"/alliance/list?offset={offset}&limit=50")
+        batch=alliance_list(document)
+        for row in batch:
+            if row["id"] in seen:
+                continue
+            seen.add(row["id"])
+            result.append(row)
+        pagination=document.get("pagination") if isinstance(document,dict) and isinstance(document.get("pagination"),dict) else {}
+        total=int(finite(pagination.get("total")) or len(result))
+        limit=int(finite(pagination.get("limit")) or max(1,len(batch)))
+        current_offset=int(finite(pagination.get("offset")) or offset)
+        has_next=bool(pagination.get("hasNextPage"))
+        if not has_next or not batch or current_offset+limit>=total:
+            break
+        offset=current_offset+limit
+        if offset>=5000:
+            break
+    return result
 
 def alliance_clans(document):
     if not isinstance(document,dict): return []
@@ -200,60 +232,116 @@ def rank_totals(rows, metric):
 
 def ratings_snapshot():
     ratings={}
-    clan_influence=[]
-    for leaderboard_type,kind,out_kind in [
-        ("player_level_lb","influence","influence"),
-        ("hamsters_power_lb","power","power"),
-        ("clan_player_level_lb","clans","clans"),
-    ]:
-        try:
-            rows=normalize_ranking(game_json("/leaderboard","POST",{"leaderboard_type":leaderboard_type}),kind)
-            if rows:
-                ratings[out_kind]=rows
-                if out_kind=="clans": clan_influence=rows
-        except Exception as exc:
-            log(f"leaderboard {leaderboard_type} failed: {type(exc).__name__}")
-    clan_power=[]
-    for leaderboard_type in ("clan_hamsters_power_lb","clan_hamster_power_lb","clan_power_lb","clans_hamsters_power_lb"):
-        try:
-            rows=normalize_ranking(game_json("/leaderboard","POST",{"leaderboard_type":leaderboard_type}),"clans")
-            if rows:
-                clan_power=rows; break
-        except Exception:
-            continue
-    influence_map={key(row["name"]):float(row["value"]) for row in clan_influence}
-    power_map={key(row["name"]):float(row["value"]) for row in clan_power}
+
+    # Public player tables remain top-100.
+    try:
+        rows=normalize_ranking(game_json("/leaderboard","POST",{"leaderboard_type":"player_level_lb"}),"influence",100,100)
+        if rows:
+            ratings["influence"]=rows
+    except Exception as exc:
+        log(f"leaderboard player_level_lb failed: {type(exc).__name__}")
 
     try:
-        alliances=alliance_list(game_json("/alliance/list"))
+        rows=normalize_ranking(game_json("/leaderboard","POST",{"leaderboard_type":"hamsters_power_lb"}),"power",100,100)
+        if rows:
+            ratings["power"]=rows
+    except Exception as exc:
+        log(f"leaderboard hamsters_power_lb failed: {type(exc).__name__}")
+
+    # Alliance aggregation needs the full clan leaderboard returned by the game
+    # (currently top-500), not only the public top-100 slice.
+    clan_influence_all=[]
+    try:
+        clan_influence_all=normalize_ranking(
+            game_json("/leaderboard","POST",{"leaderboard_type":"clan_player_level_lb"}),
+            "clans",500,500
+        )
+        if clan_influence_all:
+            ratings["clans"]=clan_influence_all[:100]
+    except Exception as exc:
+        log(f"leaderboard clan_player_level_lb failed: {type(exc).__name__}")
+
+    clan_power_all=[]
+    for leaderboard_type in ("clan_hamsters_power_lb","clan_hamster_power_lb","clan_power_lb","clans_hamsters_power_lb"):
+        try:
+            rows=normalize_ranking(
+                game_json("/leaderboard","POST",{"leaderboard_type":leaderboard_type}),
+                "clans",500,500
+            )
+            if rows:
+                clan_power_all=rows
+                break
+        except Exception:
+            continue
+
+    influence_map={key(row["name"]):float(row["value"]) for row in clan_influence_all}
+    power_map={key(row["name"]):float(row["value"]) for row in clan_power_all}
+
+    try:
+        alliances=all_alliances()
+        log(f"alliances discovered: {len(alliances)}")
     except Exception as exc:
         log(f"alliance list failed: {type(exc).__name__}")
         alliances=[]
 
     totals=[]
+    complete_influence=0
+    complete_power=0
     for index,alliance in enumerate(alliances):
         clans=[]
         try:
             clans=alliance_clans(game_json("/alliance/members?alliance_id="+urllib.parse.quote(alliance["id"])))
         except Exception as exc:
             log(f"alliance detail {index+1}/{len(alliances)} failed: {type(exc).__name__}")
+
         if not clans:
-            totals.append({"name":alliance["name"],"defense":alliance["defense"] or None,
-                           "influence":alliance["influence"],"power":alliance["power"]})
+            totals.append({
+                "name":alliance["name"],
+                "defense":alliance["defense"] or None,
+                "influence":alliance["influence"],
+                "power":alliance["power"],
+            })
             continue
-        influence=0.0; ic=0; power=0.0; pc=0
+
+        influence=0.0
+        influence_covered=0
+        power=0.0
+        power_covered=0
         for clan in clans:
             iv=influence_map.get(clan["key"],clan.get("influence"))
             pv=power_map.get(clan["key"],clan.get("power"))
-            if iv is not None: influence+=float(iv); ic+=1
-            if pv is not None: power+=float(pv); pc+=1
-        defense=alliance["defense"] or sum(float(c.get("defense") or 0) for c in clans)
-        totals.append({"name":alliance["name"],"defense":defense or None,
-                       "influence":influence if ic==len(clans) else alliance["influence"],
-                       "power":power if pc==len(clans) else alliance["power"]})
+            if iv is not None:
+                influence+=float(iv)
+                influence_covered+=1
+            if pv is not None:
+                power+=float(pv)
+                power_covered+=1
+
+        influence_value=influence if influence_covered==len(clans) else alliance["influence"]
+        power_value=power if power_covered==len(clans) else alliance["power"]
+        if influence_value is not None:
+            complete_influence+=1
+        if power_value is not None:
+            complete_power+=1
+
+        totals.append({
+            "name":alliance["name"],
+            # defense_point on /alliance/list is already the alliance total.
+            "defense":alliance["defense"] or None,
+            "influence":influence_value,
+            "power":power_value,
+        })
+
+    log(
+        f"alliance metric coverage: total={len(totals)} "
+        f"influence={complete_influence} power={complete_power} "
+        f"clan_influence_rows={len(clan_influence_all)} clan_power_rows={len(clan_power_all)}"
+    )
+
     for metric in ("defense","influence","power"):
         rows=rank_totals(totals,metric)
-        if rows: ratings["alliance_"+metric]=rows
+        if rows:
+            ratings["alliance_"+metric]=rows
     return ratings
 
 def store_snapshot(war_read,war,ratings):
@@ -295,23 +383,46 @@ def main():
         write_status(True,"disabled_no_token")
         log("disabled: HK_PUBLIC_COLLECTOR_GAME_TOKEN is not configured")
         return 0
+
+    mode=(sys.argv[1].strip().lower() if len(sys.argv)>1 else "all")
+    if mode not in {"all","war","ratings"}:
+        raise SystemExit("usage: public_collector.py [all|war|ratings]")
+
     started=time.time()
     try:
-        war_read=False; war=None
-        try:
-            war_read,war=active_war()
-        except Exception as exc:
-            log(f"war read failed: {type(exc).__name__}")
-        ratings=ratings_snapshot()
+        war_read=False
+        war=None
+        ratings={}
+
+        if mode in {"all","war"}:
+            try:
+                war_read,war=active_war()
+            except Exception as exc:
+                log(f"war read failed: {type(exc).__name__}")
+
+        if mode in {"all","ratings"}:
+            ratings=ratings_snapshot()
+
         if not war_read and not ratings:
             raise RuntimeError("no public data collected")
+
         saved=store_snapshot(war_read,war,ratings)
-        write_status(True,"ok",duration_sec=round(time.time()-started,2),war=bool(war),ratings=saved)
-        log(f"success: war={'active' if war else 'none' if war_read else 'unchanged'} ratings={','.join(saved) or 'unchanged'}")
+        write_status(
+            True,"ok",
+            mode=mode,
+            duration_sec=round(time.time()-started,2),
+            war=bool(war),
+            ratings=saved,
+        )
+        log(
+            f"success: mode={mode} "
+            f"war={'active' if war else 'none' if war_read else 'unchanged'} "
+            f"ratings={','.join(saved) or 'unchanged'}"
+        )
         return 0
     except Exception as exc:
-        write_status(False,"error",error=type(exc).__name__,duration_sec=round(time.time()-started,2))
-        log(f"failed: {type(exc).__name__}: {exc}")
+        write_status(False,"error",mode=mode,error=type(exc).__name__,duration_sec=round(time.time()-started,2))
+        log(f"failed: mode={mode} {type(exc).__name__}: {exc}")
         return 1
 
 if __name__=="__main__":
