@@ -1,1 +1,1 @@
-2026-09-20 Pits reward-only plan r16 retry 2
+2026-09-20 Pits reward-only r16 retry after syntax repair
