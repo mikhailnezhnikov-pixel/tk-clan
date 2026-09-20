@@ -1,0 +1,9 @@
+MAPS_SHARED_KB_W3_STORED_SOURCE_AUDIT=PASS
+pilot=hk_moscow1226
+hk_positive_bytes=100089
+hk_positive_contains_pilot=False
+hk_positive_json_type=None
+hk_positive_pilot_type=None
+source_pack_bytes=15750
+source_pack_contains_pilot=None
+live_mutation=NO
