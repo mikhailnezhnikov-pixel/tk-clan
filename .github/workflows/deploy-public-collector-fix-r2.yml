@@ -44,6 +44,31 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
+      - name: Make legacy public snapshot endpoint read-only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-source.sha
+          python3 deploy/topking/patch_public_snapshot_server_only_r3.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq "PUBLIC_SNAPSHOT_SERVER_ONLY_R3" /tmp/server.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.public-server-only-r3.py
+          source_sha="$(cat /tmp/server-source.sha)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "
+            set -euo pipefail
+            current=\$(sha256sum /opt/hamsterking-license/server.py | awk '{print \$1}')
+            test \"\$current\" = \"$source_sha\" || { echo LIVE_SERVER_CHANGED_BEFORE_PUBLIC_SNAPSHOT_R3; exit 42; }
+            python3 -m py_compile /tmp/server.public-server-only-r3.py
+            grep -Fq PUBLIC_SNAPSHOT_SERVER_ONLY_R3 /tmp/server.public-server-only-r3.py
+            stamp=\$(date +%Y%m%d-%H%M%S)
+            cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.public-server-only-r3.\$stamp
+            install -m 0644 /tmp/server.public-server-only-r3.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          "
+
       - name: Capture live preflight
         run: |
           set -euo pipefail
@@ -139,6 +164,30 @@ jobs:
             > /tmp/public-collector-r2-db.txt
           cat /tmp/public-collector-r2-db.txt
 
+      - name: Verify server-only cache ownership
+        run: |
+          set -euo pipefail
+          sleep 20
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            grep -Fq PUBLIC_SNAPSHOT_SERVER_ONLY_R3 /opt/hamsterking-license/server.py
+            python3 - <<"PY"
+          import sqlite3
+          db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
+          try:
+              war=db.execute("select source_player_id from public_clan_war_snapshot where singleton=1").fetchone()
+              assert war and war[0]=="server-collector", war
+              print("war_source_persisted=server-collector")
+              for kind in ("alliance_defense","alliance_influence","alliance_power"):
+                  rows=db.execute("select distinct source_player_id from public_rating_snapshots where kind=?",(kind,)).fetchall()
+                  sources={row[0] for row in rows}
+                  assert sources=={"server-collector"}, (kind,sources)
+                  print(kind+"_source_persisted=server-collector")
+          finally:
+              db.close()
+          PY
+          '
+
       - name: Verify latest ratings coverage evidence
         run: |
           set -euo pipefail
@@ -232,4 +281,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/public-collector-r2-preflight.txt /tmp/public-collector-r2-db.txt /tmp/public-collector-r2-ratings-evidence.txt /tmp/public-collector-r2-timers.txt /tmp/public-collector-r2-live-status.txt /tmp/public-war.json /tmp/alliance_*.json /tmp/wars-public.html /tmp/ratings-public.html
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/server-source.sha /tmp/public-collector-r2-preflight.txt /tmp/public-collector-r2-db.txt /tmp/public-collector-r2-ratings-evidence.txt /tmp/public-collector-r2-timers.txt /tmp/public-collector-r2-live-status.txt /tmp/public-war.json /tmp/alliance_*.json /tmp/wars-public.html /tmp/ratings-public.html
