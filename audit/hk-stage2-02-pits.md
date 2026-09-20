@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: UI_LIVE_READ_PASS_ACTION_PENDING
+status: ACTION_RETEST_PENDING
 
 ## Required Stage 2 chain
 
@@ -270,3 +270,37 @@ Still required before Pits LIVE PASS:
 - remaining planned donor Pits functionality if still in Stage 2.02 scope.
 
 Do not advance to Bosses yet.
+
+
+## Start action r5
+
+User report:
+- main Pits start action did not visibly start.
+
+Root cause fixed:
+- current implementation performed an authoritative /player/me reread and re-render before freezing the selected Pits configuration;
+- pinned donor freezes run configs first, then starts execution and performs live validation;
+- r5 now snapshots selected Pits/config synchronously on click, starts the runner immediately in Preparing state, then performs authoritative reread;
+- existing per-step live cost/resource/state revalidation remains unchanged.
+
+Marker:
+`HK_PITS_START_REV = 'pits-start-config-snapshot-20260920-r5'`
+
+Deploy:
+- workflow: `Deploy TopKing Pits Start R5`;
+- run: `35493622785` — SUCCESS;
+- live/public SHA256: `c373370ba5c3cf9a24f19d7e3ae82e871c124357e2d940f954fe834520a44629`;
+- public round-trip byte equality: PASS.
+
+Baseline sync:
+- run: `35493651043` — SUCCESS.
+
+Current status:
+**ACTION_RETEST_PENDING**
+
+Next user check:
+- reload game → HK → Ямы;
+- select only the Pit/plan the user is willing to spend;
+- press `Запустить выбранные Ямы`;
+- expected immediate UI response: runner enters `Подготовка`;
+- report the first visible runner/log result.
