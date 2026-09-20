@@ -827,3 +827,41 @@ Module status remains:
 
 Do not add further Pits patches without a concrete live failure.
 Do not advance to Bosses until the remaining live paths are confirmed.
+
+
+## Reward picker r20
+
+r20 closes the remaining donor UI difference noted after r19:
+- separate tournament reward picker overlay;
+- reward cards built from live leaderboard reward views;
+- card shows reward range and actual reward item/currency entries;
+- per-card forecast: remaining points after base, extra x1, Pit Pass cost, projected score;
+- invalid/unreachable tiers are disabled;
+- current tier selection is highlighted;
+- actions: select tier / clear reward target / close;
+- existing inline selector remains available and stays synchronized with the card picker.
+
+Marker:
+`HK_PITS_REWARD_PICKER_REV = 'pits-reward-picker-20260920-r20'`
+
+Deploy:
+- run `35497956677` — PASS;
+- live/public SHA256: `c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb`;
+- public byte equality: PASS.
+
+Baseline sync:
+- run `35498145691` — PASS.
+
+Static donor parity:
+**DONOR_UI_FUNCTIONAL_PARITY_PASS**
+
+Current module status remains:
+**FINAL_LIVE_CHECKS_PENDING**
+
+No further Pits patches without a concrete live failure.
+
+Final live checks:
+1. restoration-decision modal at low Paws limit;
+2. reward execution/recalculation/adaptive batch + resulting state/rerun;
+3. runtime exact `шанс игры` visibility from preview.
+After these pass: Stage 2.02 Pits = LIVE PASS, then move to Bosses.
