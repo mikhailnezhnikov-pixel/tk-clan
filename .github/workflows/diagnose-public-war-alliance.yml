@@ -47,6 +47,26 @@ jobs:
               echo
             done
           '
+      - name: Inspect live collector and recent submissions
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -e
+            echo "=== LIVE V4 MARKERS ==="
+            grep -nE "HK_PUBLIC_WAR_ALLIANCE_V4|readPublicWarV4|readPublicRatingsV4|public-snapshot" /opt/hamsterking-license/HamsterKingMobile.user.js | head -40 || true
+            echo "=== LIVE SNAPSHOT CALL ==="
+            grep -nE "Promise\.all\(\[readPublicWar|collectPublicSnapshot" /opt/hamsterking-license/HamsterKingMobile.user.js | head -30 || true
+            echo "=== RATING DB SUMMARY ==="
+            sqlite3 /var/lib/hamsterking-license/licenses.db "SELECT kind,COUNT(*),MIN(updated_at),MAX(updated_at),substr(source_player_id,1,12) FROM public_rating_snapshots GROUP BY kind,source_player_id ORDER BY MAX(updated_at) DESC;" || true
+            echo "=== WAR DB SUMMARY ==="
+            sqlite3 /var/lib/hamsterking-license/licenses.db "SELECT singleton,updated_at,substr(source_player_id,1,12),snapshot_json FROM public_clan_war_snapshot;" || true
+            echo "=== RECENT SCRIPT VERSIONS ==="
+            sqlite3 /var/lib/hamsterking-license/licenses.db "SELECT script_version,MAX(last_seen),COUNT(*) FROM devices GROUP BY script_version ORDER BY MAX(last_seen) DESC LIMIT 12;" || true
+            echo "=== RECENT ACCESS VERSIONS ==="
+            sqlite3 /var/lib/hamsterking-license/licenses.db "SELECT script_version,MAX(created_at),COUNT(*) FROM access_log WHERE created_at > strftime('%s','now')-1800 GROUP BY script_version ORDER BY MAX(created_at) DESC;" || true
+            echo "=== RECENT HTTP ==="
+            journalctl -u hamsterking-license.service --since "15 minutes ago" --no-pager | grep -E "public-snapshot|/api/v1/check|POST /api/v1" | tail -80 || true
+          '
       - name: Inspect Hamster King alliance routes
         run: |
           set -euo pipefail
