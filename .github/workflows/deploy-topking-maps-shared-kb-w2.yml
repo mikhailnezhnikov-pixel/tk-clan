@@ -42,8 +42,7 @@ jobs:
           node --check /tmp/HamsterKingMobile.user.js
           test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1"
           test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6"
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
-            "python3 - <<'PY'
+          cat > /tmp/w2-precheck.py <<'PY'
           import sqlite3
           db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
           db.row_factory=sqlite3.Row
@@ -55,7 +54,11 @@ jobs:
           assert exact[0]['area_id']=='9ea6ff78-b881-45b3-b92d-a8f1da8eca05',dict(exact[0])
           print('W2_PILOT_PRECHECK=PASS')
           db.close()
-          PY"
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w2-precheck.py root@89.125.1.71:/tmp/w2-precheck.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w2-precheck.py'
 
       - name: Apply verified W2 patch
         run: |
@@ -102,8 +105,7 @@ jobs:
       - name: Verify live W2 state
         run: |
           set -euo pipefail
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
-            "python3 - <<'PY'
+          cat > /tmp/w2-live-verify.py <<'PY'
           import sqlite3
           db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
           db.row_factory=sqlite3.Row
@@ -129,8 +131,13 @@ jobs:
           print('W2_ALIAS_LIVE=PASS')
           print('W2_GEOMETRY_COUNTS_UNCHANGED=PASS')
           db.close()
-          PY"
-          test "$(ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "sha256sum /opt/hamsterking-license/server.py | awk '{print \$1}'")" = "1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e"
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w2-live-verify.py root@89.125.1.71:/tmp/w2-live-verify.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w2-live-verify.py'
+          live_server_sha="$(ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'sha256sum /opt/hamsterking-license/server.py' | awk '{print $1}')"
+          test "$live_server_sha" = "1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e"
           curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
             "https://hk-license.89.125.1.71.sslip.io/panel.js?w2=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
@@ -170,4 +177,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/w2-link.json
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/w2-link.json /tmp/w2-precheck.py /tmp/w2-live-verify.py
