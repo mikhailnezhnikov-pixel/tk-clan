@@ -1,0 +1,192 @@
+name: Deploy Isolated Public Collector R1
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-r1-trigger.txt'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate collector locally
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/public_collector.py
+          grep -Fq "OnCalendar=*-*-* 00/3:15:00" deploy/topking/hamsterking-public-collector.timer
+          grep -Fq "EnvironmentFile=-/etc/hamsterking-public-collector.env" deploy/topking/hamsterking-public-collector.service
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Prepare optional collector token file
+        env:
+          COLLECTOR_TOKEN: ${{ secrets.TOPKING_PUBLIC_COLLECTOR_GAME_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${COLLECTOR_TOKEN:-}" ]; then
+            umask 077
+            {
+              printf 'HK_PUBLIC_COLLECTOR_GAME_TOKEN=%s\n' "$COLLECTOR_TOKEN"
+              printf 'HK_PUBLIC_COLLECTOR_GAME_API=https://hk-game-api.hwgame.cloud\n'
+              printf 'HK_PUBLIC_COLLECTOR_DB=/var/lib/hamsterking-license/licenses.db\n'
+              printf 'HK_PUBLIC_COLLECTOR_STATUS=/var/lib/hamsterking-license/public-collector-status.json\n'
+              printf 'HK_PUBLIC_COLLECTOR_REQUEST_GAP=0.35\n'
+            } > /tmp/hamsterking-public-collector.env
+            echo "configured=yes" > /tmp/collector-token-state
+          else
+            echo "configured=no" > /tmp/collector-token-state
+          fi
+
+      - name: Install isolated server collector
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             deploy/topking/public_collector.py root@89.125.1.71:/tmp/public_collector.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             deploy/topking/hamsterking-public-collector.service root@89.125.1.71:/tmp/hamsterking-public-collector.service
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             deploy/topking/hamsterking-public-collector.timer root@89.125.1.71:/tmp/hamsterking-public-collector.timer
+          if [ -f /tmp/hamsterking-public-collector.env ]; then
+            scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new               /tmp/hamsterking-public-collector.env root@89.125.1.71:/tmp/hamsterking-public-collector.env
+          fi
+          token_state="$(cat /tmp/collector-token-state)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "set -euo pipefail
+            install -m 0755 /tmp/public_collector.py /opt/hamsterking-license/public_collector.py
+            install -m 0644 /tmp/hamsterking-public-collector.service /etc/systemd/system/hamsterking-public-collector.service
+            install -m 0644 /tmp/hamsterking-public-collector.timer /etc/systemd/system/hamsterking-public-collector.timer
+            if [ '$token_state' = 'configured=yes' ]; then
+              install -m 0600 /tmp/hamsterking-public-collector.env /etc/hamsterking-public-collector.env
+            elif [ ! -f /etc/hamsterking-public-collector.env ]; then
+              umask 077
+              cat > /etc/hamsterking-public-collector.env <<'ENV'
+HK_PUBLIC_COLLECTOR_GAME_TOKEN=
+HK_PUBLIC_COLLECTOR_GAME_API=https://hk-game-api.hwgame.cloud
+HK_PUBLIC_COLLECTOR_DB=/var/lib/hamsterking-license/licenses.db
+HK_PUBLIC_COLLECTOR_STATUS=/var/lib/hamsterking-license/public-collector-status.json
+HK_PUBLIC_COLLECTOR_REQUEST_GAP=0.35
+ENV
+            fi
+            python3 -m py_compile /opt/hamsterking-license/public_collector.py
+            systemctl daemon-reload
+            systemctl enable --now hamsterking-public-collector.timer
+            systemctl start hamsterking-public-collector.service || true
+            systemctl is-active --quiet hamsterking-public-collector.timer
+          "
+
+      - name: Fetch current live userscript and disable client collection
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-snapshot-3h-20260920-r1'" /tmp/HamsterKingMobile.user.js
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/source.sha
+          python3 deploy/topking/patch_public_snapshot_server_only_r2.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          test "$(grep -Fo 'collectPublicSnapshot(' /tmp/HamsterKingMobile.user.js | wc -l)" -eq 1
+          ! grep -Fq "setInterval(() => collectPublicSnapshot()" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Race-safe install userscript
+        run: |
+          set -euo pipefail
+          source_sha="$(cat /tmp/source.sha)"
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.public-server-only-r2.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "set -euo pipefail
+            current=\$(sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js | awk '{print \$1}')
+            test \"\$current\" = \"$source_sha\" || { echo LIVE_CHANGED_BEFORE_PUBLIC_SERVER_ONLY_R2; exit 42; }
+            node --check /tmp/HamsterKingMobile.public-server-only-r2.user.js
+            stamp=\$(date +%Y%m%d-%H%M%S)
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js.bak.public-server-only-r2.\$stamp
+            install -m 0644 /tmp/HamsterKingMobile.public-server-only-r2.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          "
+
+      - name: Verify public userscript and collector state
+        run: |
+          set -euo pipefail
+          sleep 2
+          curl -fsSL --retry 4 --connect-timeout 15 --max-time 30             "https://hk-license.89.125.1.71.sslip.io/panel.js?public-server-only-r2=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          candidate="$(cat /tmp/candidate.sha)"
+          test "$(sha256sum /tmp/public.js | awk '{print $1}')" = "$candidate"
+          grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2'" /tmp/public.js
+          test "$(grep -Fo 'collectPublicSnapshot(' /tmp/public.js | wc -l)" -eq 1
+          ! grep -Fq "setInterval(() => collectPublicSnapshot()" /tmp/public.js
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            systemctl is-active --quiet hamsterking-public-collector.timer
+            echo "timer_active=PASS"
+            echo -n "collector_state="
+            if [ -f /var/lib/hamsterking-license/public-collector-status.json ]; then
+              python3 -c "import json;d=json.load(open('/var/lib/hamsterking-license/public-collector-status.json'));print(d.get('state','unknown'))"
+            else
+              echo missing
+            fi
+            echo -n "next_timer="
+            systemctl show hamsterking-public-collector.timer -p NextElapseUSecRealtime --value
+          ' > /tmp/collector-runtime.txt
+          cat /tmp/collector-runtime.txt
+
+          {
+            echo "PUBLIC_SERVER_COLLECTOR_R1_LIVE=PASS"
+            echo "source_live_sha256=$(cat /tmp/source.sha)"
+            echo "live_sha256=$candidate"
+            echo "public_sha256=$candidate"
+            echo "public_byte_equality=PASS"
+            echo "syntax=PASS"
+            echo "player_client_public_collection=DISABLED"
+            echo "collector_timer=3h"
+            echo "$(cat /tmp/collector-token-state)"
+            cat /tmp/collector-runtime.txt
+            echo "explore_r9_preserved=PASS"
+            echo "map_concurrency_5_preserved=PASS"
+            echo "server_py_changed=NO"
+            echo "maps_backend_schema_changed=NO"
+          } > /tmp/public-server-collector-r1-live-status.txt
+
+      - name: Sync baseline and evidence
+        run: |
+          set -euo pipefail
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+            cp /tmp/public-server-collector-r1-live-status.txt audit/hk-public-server-collector-r1-live-status.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-public-server-collector-r1-live-status.txt
+            git commit -m "hotfix: isolate public collection from player clients" || true
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/source.sha /tmp/candidate.sha /tmp/collector-token-state /tmp/collector-runtime.txt /tmp/public-server-collector-r1-live-status.txt /tmp/hamsterking-public-collector.env
