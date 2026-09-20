@@ -1,0 +1,132 @@
+name: Check TopKing Maps Shared KB W2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-shared-kb-w2-check-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: check-topking-maps-shared-kb-w2
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact live server
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1"
+
+      - name: Apply W2 patch
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/patch_server_maps_shared_kb_w2.py
+          python3 deploy/topking/patch_server_maps_shared_kb_w2.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq 'CREATE TABLE IF NOT EXISTS hk_map_area_links' /tmp/server.py
+          grep -Fq 'HK_MAP_AREA_LINKS_W2_V1' /tmp/server.py
+          grep -Fq 'Historical HK Maps labels grid as Y:X' /tmp/server.py
+          grep -Fq -- '--link-hk-map-area' /tmp/server.py
+
+      - name: Regression test W2 on temporary DB
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util, os, tempfile
+          spec=importlib.util.spec_from_file_location("server_candidate","/tmp/server.py")
+          server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
+          fd,path=tempfile.mkstemp(prefix="hk-w2-",suffix=".db"); os.close(fd)
+          try:
+              server.DB_PATH=path
+              server.init_db()
+              now=server.utc_now()
+              canonical="area-canonical"
+              alias="area-alias"
+              with server.db_session() as db:
+                  db.execute("""INSERT INTO map_areas(area_id,city_id,city_name,x,y,invest_count,expected_buildings,last_player_id,last_seen)
+                                VALUES(?,?,?,?,?,?,?,?,?)""",
+                             (canonical,"city-moscow","Moscow",26,12,0,1,"test",now))
+                  db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                                VALUES(?,?,?,?)""",(alias,canonical,now,now))
+                  db.execute("""INSERT INTO hk_maps_catalog(map_key,city,grid,updated_at)
+                                VALUES(?,?,?,?)""",("hk_moscow1226","Moscow","12:26",now))
+              before_areas=None
+              with server.db_session() as db:
+                  before_areas=db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0]
+                  discovered=server.discover_hk_map_area(db,"hk_moscow1226")
+              assert discovered["candidates"]==[canonical], discovered
+              result=server.link_hk_map_area("hk_moscow1226")
+              assert result["link"]["canonical_area_id"]==canonical, result
+              assert result["link"]["match_method"]=="city_grid_yx", result
+              exact=server.link_hk_map_area("hk_moscow1226",alias)
+              assert exact["link"]["canonical_area_id"]==canonical, exact
+              assert exact["link"]["match_method"]=="exact_area_id", exact
+              detail=server.map_detail(alias)
+              assert detail and detail["area"]["area_id"]==canonical, detail
+              with server.db_session() as db:
+                  after_areas=db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0]
+                  links=db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0]
+              assert before_areas==after_areas==1,(before_areas,after_areas)
+              assert links==1,links
+              print("W2_TEMP_DB=PASS")
+              print("W2_LINK="+str(result["link"]))
+              print("W2_ALIAS_RESOLUTION=PASS")
+              print("W2_NO_DUPLICATE_AREA=PASS")
+          finally:
+              try: os.remove(path)
+              except OSError: pass
+          PY
+
+      - name: Record build status
+        run: |
+          set -euo pipefail
+          candidate="$(sha256sum /tmp/server.py | awk '{print $1}')"
+          {
+            echo "MAPS_SHARED_KB_W2_BUILD=PASS"
+            echo "source_server_sha256=1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1"
+            echo "candidate_server_sha256=$candidate"
+            echo "schema_bridge=PASS"
+            echo "city_grid_yx_discovery=PASS"
+            echo "exact_area_id_alias_resolution=PASS"
+            echo "no_duplicate_area=PASS"
+            echo "building_migration=NO"
+            echo "deployed=NO"
+          } > audit/hk-stage2-maps-shared-kb-w2-build-status.txt
+
+      - name: Commit build status
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w2-build-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: verify Maps shared KB W2 build"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py
