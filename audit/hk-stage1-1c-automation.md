@@ -172,6 +172,18 @@ Current equivalents cover the important helper classes:
 - expense tracking;
 - game UI refresh bridge.
 
+## Decision after comparison
+
+Decision: **keep the current generic Auto Routines implementation unchanged**.
+
+Reason:
+- current Auto Routines is broader: it can sequence multiple already-configured HK modules;
+- it preserves each module's own confirmations, budgets and guards;
+- Kokkaras Business Auto Routines 1/2/3 are specialized business automation and add scheduled state-changing execution around reset;
+- importing them now would increase mutation complexity and would cross into Stage 7 scope.
+
+Therefore the donor Business Auto Routines are retained only as a Stage 7 reference. They are not used to replace the current generic routine system.
+
 ## Stage 1C conclusion
 
 - historical migration helper coverage: **PASS**
@@ -179,7 +191,7 @@ Current equivalents cover the important helper classes:
 - current pause/stop/abort helpers: **PRESENT**
 - current budget/live-refresh helpers: **PRESENT**
 - genuinely missing historical helpers found in this block: **0**
-- donor Business Auto Routines 1/2/3: **NOT EQUIVALENT TO CURRENT GENERIC AUTO ROUTINES; DEFERRED TO STAGE 7**
+- donor Business Auto Routines 1/2/3: **NOT APPLIED; CURRENT GENERIC AUTO ROUTINES RETAINED; DONOR KEPT AS OPTIONAL STAGE 7 REFERENCE**
 - gameplay code changed in this block: **0**
 
 **Stage 1C: PASS_WITH_STAGE7_REFERENCE**
