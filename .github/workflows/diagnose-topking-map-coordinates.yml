@@ -1,0 +1,85 @@
+name: Diagnose TopKing Map Coordinates
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/map-coords-diagnostic-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect live backend map coordinate path
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          python3 - <<'PY' > audit/hk-map-coords-backend-diagnostic.txt
+          from pathlib import Path
+          s=Path('/tmp/server.py').read_text()
+          print('SERVER_MAP_COORDS_DIAGNOSTIC')
+          terms=[
+              '/api/v1/maps/submit',
+              'maps/submit',
+              'def map',
+              'room_count',
+              'expected_buildings',
+              'area_id',
+              'ON CONFLICT',
+              'map_area',
+              'map_areas',
+          ]
+          seen=set()
+          for term in terms:
+              start=0
+              while True:
+                  i=s.find(term,start)
+                  if i<0: break
+                  line=s.count('\n',0,i)+1
+                  if line not in seen:
+                      seen.add(line)
+                      a=max(0,i-2200); b=min(len(s),i+7000)
+                      print(f'\n=== TERM {term!r} LINE {line} ===')
+                      print(s[a:b])
+                  start=i+len(term)
+          PY
+      - name: Inspect live map DB schema
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "python3 - <<'PY'" >> audit/hk-map-coords-backend-diagnostic.txt
+          import sqlite3
+          db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db')
+          for row in db.execute("SELECT name, sql FROM sqlite_master WHERE type='table' AND (name LIKE '%map%' OR sql LIKE '%area_id%') ORDER BY name"):
+              print('\n=== TABLE',row[0],'===')
+              print(row[1])
+          PY
+      - name: Commit diagnostic
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-map-coords-backend-diagnostic.txt
+          git commit -m "audit: inspect live map coordinate backend" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py
