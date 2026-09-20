@@ -1,0 +1,123 @@
+name: Deploy TopKing Explore E2 R7 Area Types
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/explore-e2-r7-area-types-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live and patch Explore only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r6-fresh-meta'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/source.sha
+          cp /tmp/HamsterKingMobile.user.js /tmp/before.js
+          python3 deploy/topking/patch_explore_e2_r7_area_types.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r7-area-types'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function exploreAreaIndex(st)" /tmp/HamsterKingMobile.user.js
+          grep -Fq "invest_building_list" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          python3 - <<'PY'
+          from pathlib import Path
+          before=Path('/tmp/before.js').read_text()
+          after=Path('/tmp/HamsterKingMobile.user.js').read_text()
+          def bounds(s):
+              a=s.index("  const HK_EXPLORE_CANON_REV=")
+              b=s.index("  async function acceptBuildingStudy(",a)
+              return a,b
+          ba,bb=bounds(before); aa,ab=bounds(after)
+          assert before[:ba]==after[:aa]
+          assert before[bb:]==after[ab:]
+          block=after[aa:ab]
+          assert "explore-readonly-plan-20260920-r7-area-types" in block
+          assert "function exploreAreaIndex(st)" in block
+          assert "invest_building_list" in block
+          assert "Number(total)>20" not in block
+          forbidden=["/player/building/fast_completion","/player/battle/fast","/player/building/remort?","/player/building/fast_remort","/shop/buy"]
+          assert not [x for x in forbidden if x in block]
+          PY
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Race-safe install
+        run: |
+          set -euo pipefail
+          source_sha="$(cat /tmp/source.sha)"
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.explore-e2-r7.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "set -euo pipefail; current=\$(sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js | awk '{print \$1}'); test \"\$current\" = \"$source_sha\" || { echo LIVE_CHANGED_BEFORE_EXPLORE_E2_R7; exit 42; }; node --check /tmp/HamsterKingMobile.explore-e2-r7.user.js; stamp=\$(date +%Y%m%d-%H%M%S); cp -a /opt/hamsterking-license/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js.bak.explore-e2-r7.\$stamp; install -m 0644 /tmp/HamsterKingMobile.explore-e2-r7.user.js /opt/hamsterking-license/HamsterKingMobile.user.js; systemctl restart hamsterking-license.service; systemctl is-active --quiet hamsterking-license.service"
+
+      - name: Verify public exact candidate
+        run: |
+          set -euo pipefail
+          sleep 2
+          curl -fsSL --retry 4 --connect-timeout 15 --max-time 30 "https://hk-license.89.125.1.71.sslip.io/panel.js?explore-e2-r7=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          candidate="$(cat /tmp/candidate.sha)"
+          test "$(sha256sum /tmp/public.js | awk '{print $1}')" = "$candidate"
+          grep -Fq "HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r7-area-types'" /tmp/public.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/public.js
+          {
+            echo "EXPLORE_E2_R7_AREA_TYPES_LIVE=PASS"
+            echo "source_live_sha256=$(cat /tmp/source.sha)"
+            echo "live_sha256=$candidate"
+            echo "public_sha256=$candidate"
+            echo "public_byte_equality=PASS"
+            echo "syntax=PASS"
+            echo "mutation_endpoints_in_explore=0"
+            echo "area_index=current_player_cache"
+            echo "building_type=explicit_or_invest_list"
+            echo "event_count_heuristic=REMOVED"
+            echo "map_concurrency_5_preserved=PASS"
+            echo "maps_backend_schema_changed=NO"
+          } > /tmp/explore-e2-r7-live-status.txt
+
+      - name: Sync baseline and evidence
+        run: |
+          set -euo pipefail
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+            cp /tmp/explore-e2-r7-live-status.txt audit/hk-stage2-explore-e2-r7-area-types-live-status.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-stage2-explore-e2-r7-area-types-live-status.txt
+            git commit -m "stage2: fix Explore area type mapping r7" || true
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/before.js /tmp/source.sha /tmp/candidate.sha /tmp/explore-e2-r7-live-status.txt
