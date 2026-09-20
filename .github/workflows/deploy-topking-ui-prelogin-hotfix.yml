@@ -1,0 +1,104 @@
+name: Deploy TopKing 1.17.4 UI Prelogin Hotfix
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/ui-prelogin-hotfix-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live 1.17.4
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          grep -q '^// @version      1.17.4$' /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_LAUNCHER_REV = 'launcher-hotfix-20260920-r1'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_NATIVE_LOGIN_GATE_REV = 'login-gate-hotfix-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Apply and validate UI prelogin hotfix
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/patch_ui_prelogin_hotfix_1174.py
+          grep -Fq "HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3'" /tmp/HamsterKingMobile.user.js
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text()
+          ui=s.rfind("  startInterface();\n  if (document.readyState === 'loading')")
+          gate=s.rfind('  startAfterNativeGameLogin();')
+          assert ui >= 0 and gate > ui, (ui, gate)
+          PY
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Deploy hotfix
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -euo pipefail;
+            stamp="$(date +%Y%m%d-%H%M%S)";
+            node --check /tmp/HamsterKingMobile.user.js;
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
+            install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
+            systemctl restart hamsterking-license.service;
+            systemctl is-active --quiet hamsterking-license.service;
+            grep -q "^// @version      1.17.4$" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            grep -Fq "HK_UI_PRELOGIN_REV = '\''ui-prelogin-20260920-r3'\''" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            node --check /opt/hamsterking-license/HamsterKingMobile.user.js'
+
+      - name: Round trip verify
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live-after.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/live-after.js
+          node --check /tmp/live-after.js
+          sha="$(sha256sum /tmp/live-after.js | awk '{print $1}')"
+          mkdir -p audit
+          {
+            echo 'version=1.17.4'
+            echo 'hotfix=ui-prelogin-20260920-r3'
+            echo 'launcher=launcher-hotfix-20260920-r1'
+            echo 'login_gate=login-gate-hotfix-20260920-r2'
+            echo 'ui_mount_before_gate=PASS'
+            echo 'syntax=ok'
+            echo 'roundtrip=identical'
+            echo "sha256=$sha"
+          } > audit/hk-1174-ui-prelogin-hotfix-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-1174-ui-prelogin-hotfix-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Verify live TopKing 1.17.4 UI prelogin hotfix"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/live-after.js
