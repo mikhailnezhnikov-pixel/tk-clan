@@ -36,7 +36,7 @@ jobs:
           if not m:
               raise SystemExit('historical replacement not found')
           replacement=ast.literal_eval(m.group(1).strip())
-          out,n=re.subn(r'^const SERVER_ACCESS = .*?;$',replacement,src,count=1,flags=re.M)
+          out,n=re.subn(r'const\\s+SERVER_ACCESS\\s*=\\s*.*?;',replacement,src,count=1,flags=re.S)
           if n != 1:
               raise SystemExit(f'SERVER_ACCESS replacement count={n}')
           Path('/tmp/kokkaras.js').write_text(out,encoding='utf-8')
