@@ -1,0 +1,96 @@
+ENDPOINT /player/me STATUS 200 TYPE dict KEYS ['advertisement', 'areas', 'auth_methods', 'bonuses', 'boss_battle', 'buildings', 'business_building', 'clan', 'constructions', 'currencies', 'daily_rewards', 'description', 'fair', 'favorite_building_slots', 'gameArea', 'gamearea_recommendation', 'hamsteresses', 'hamsteresses_quest_slots', 'idler', 'items', 'notifications', 'offers', 'pit', 'pit2', 'pit_generals', 'pit_pve', 'player', 'playerFactions', 'playerHamsters', 'player_bosses', 'player_counters', 'player_hamster_generals', 'player_hamsteresses_skill_line', 'player_regional_bosses', 'quests', 'referals', 'rumors', 'shop_lot_limits', 'timestamp', 'triggers', 'type', 'version']
+ OBJ advertisement KEYS ['type'] NAME 
+ OBJ areas KEYS ['areas', 'cities', 'max_player_areas', 'max_player_cities'] NAME 
+ LIST auth_methods LEN 3 ITEM_KEYS ['info', 'type']
+ OBJ bonuses KEYS ['currency_periodic_income', 'max_area', 'max_building', 'max_city', 'max_currency', 'passive_income_currency', 'passive_income_item'] NAME 
+ OBJ boss_battle KEYS ['health', 'is_finish', 'level', 'mass_multiplier', 'mass_multipliers', 'pass_costs', 'respawn_count', 'retry_costs', 'wins_count'] NAME 
+ LIST buildings LEN 2175 ITEM_KEYS ['active_passive_income', 'battle_level', 'crystal_events_num', 'has_events', 'id', 'is_favorite', 'level', 'max_battle_level', 'next_tier_level', 'slot_index', 'tier']
+ LIST business_building LEN 18 ITEM_KEYS ['active_business', 'id', 'level', 'max_item_rarity', 'nextLevelUp', 'num_slots']
+ OBJ clan KEYS ['active_applications_num', 'applications_limit', 'applied_clans', 'clan_id'] NAME 
+ LIST constructions LEN 41 ITEM_KEYS ['id', 'level']
+ LIST currencies LEN 26 ITEM_KEYS ['active_income_multiplier', 'currency_id', 'max_value', 'passive_income_multiplier', 'passive_income_timestamp', 'quantity']
+ OBJ daily_rewards KEYS ['available_now', 'day_index'] NAME 
+ LIST fair LEN 20 ITEM_KEYS ['fair_reroll_cost', 'fair_slots', 'id']
+ LIST favorite_building_slots LEN 0 ITEM_KEYS []
+ OBJ gameArea KEYS ['building_id', 'city_factions', 'city_id', 'gamearea_id'] NAME 
+ LIST hamsteresses LEN 34 ITEM_KEYS ['exp', 'hamsteress_id', 'level', 'next_level']
+ LIST hamsteresses_quest_slots LEN 28 ITEM_KEYS ['index', 'quest_id']
+ OBJ idler KEYS ['autotap_tick', 'buildings', 'player_tap_power'] NAME 
+ LIST items LEN 2572 ITEM_KEYS ['item_id', 'quantity']
+ LIST notifications LEN 0 ITEM_KEYS []
+ LIST offers LEN 0 ITEM_KEYS []
+ OBJ pit KEYS ['active_enemy_faction', 'active_player_faction', 'enemy_power', 'guaranteed_win_threshold', 'health', 'is_finish', 'leaderboard_id', 'level', 'mass_multiplier', 'max_pit_level', 'min_pit_level', 'pass_costs', 'refresh_pit_timer', 'refresh_pit_timestamp', 'respawn_count', 'retry_cost', 'reward_view'] NAME 
+ OBJ pit2 KEYS ['active_enemy_meta', 'enemy_power', 'guaranteed_win_threshold', 'health', 'is_finish', 'leaderboard_id', 'level', 'mass_multiplier', 'max_pit_level', 'min_pit_level', 'pass_costs', 'refresh_pit_timer', 'refresh_pit_timestamp', 'respawn_count', 'retry_cost', 'reward_view'] NAME 
+ OBJ pit_generals KEYS ['active_battle_state', 'guaranteed_win_threshold', 'health', 'is_finish', 'leaderboard_id', 'level', 'mass_multiplier', 'max_preset_level', 'pass_costs', 'preset_id', 'refresh_pit_timer', 'refresh_pit_timestamp', 'respawn_count', 'retry_cost', 'reward_view'] NAME 
+ OBJ pit_pve KEYS ['active_battle_state', 'active_enemy_meta', 'guaranteed_win_threshold', 'health', 'is_finish', 'leaderboard_id', 'level', 'mass_multiplier', 'max_pit_level', 'min_pit_level', 'one_faction_power', 'pass_costs', 'refresh_pit_timer', 'refresh_pit_timestamp', 'respawn_count', 'retry_cost', 'reward_view'] NAME 
+ OBJ player KEYS ['active_hamsteress_id', 'allowPayments', 'business_worker_busy', 'business_worker_max', 'daily_activity_timer', 'has_hamster_generals', 'has_hamsters', 'id', 'incoming_reward_count', 'last_active_area', 'last_buildings_passive_income_receive_timestamp', 'level', 'max_buildings', 'max_favorite_areas', 'max_favorite_building', 'max_passive_income_time', 'migration_version', 'monthly_activity_timer', 'next_hamster_ball_goal', 'next_passive_income_timer', 'nickname', 'passive_income_available', 'passive_income_buffer_ticks_count', 'player_active_building', 'refer_id', 'refresh_daily_activity_timestamp', 'special_offer_timer', 'unsuccessful_goal', 'vip_status_applied', 'vip_status_end', 'vip_status_end_timer', 'weekly_activity_timer'] NAME [ТК] crAsh
+ LIST playerFactions LEN 14 ITEM_KEYS ['id', 'power', 'stats']
+ LIST playerHamsters LEN 1874 ITEM_KEYS ['add_bonus_max_level', 'hamster_id', 'level', 'nextUpgrade', 'power', 'quality', 'quantity', 'stats']
+ LIST player_bosses LEN 23 ITEM_KEYS ['level']
+ LIST player_counters LEN 1516 ITEM_KEYS ['id', 'quantity']
+ LIST player_hamster_generals LEN 206 ITEM_KEYS ['add_bonus_max_level', 'faction_modifier', 'filter', 'hamster_id', 'level', 'nextLevelUp', 'nextUpgrade', 'power', 'power_modifier', 'power_per_hamster', 'quality', 'quantity']
+ LIST player_hamsteresses_skill_line LEN 50 ITEM_KEYS ['hamsteress_id', 'id', 'level', 'next_lvl_up_cost', 'status']
+ OBJ player_regional_bosses KEYS ['bosses', 'mass_multipliers', 'retry_costs'] NAME 
+ OBJ quests KEYS ['daily', 'endless', 'hamsteresses_quest_reset_timer'] NAME 
+ OBJ referals KEYS ['quantity', 'referals_ids'] NAME 
+ OBJ rumors KEYS ['city_rumors', 'researched_cells', 'rumors_refresh_duration', 'rumors_refresh_timer'] NAME 
+ LIST shop_lot_limits LEN 225 ITEM_KEYS ['number_of_purchase', 'shop_lot_id']
+ LIST triggers LEN 5 ITEM_KEYS ['claimed', 'trigger_id']
+PLAYER_CLAN 
+ENDPOINT /clan/active_battles STATUS 200 TYPE dict KEYS ['alliance_attack_war', 'clan_defense_wars', 'description', 'pit_generals_preset_id', 'timestamp', 'type', 'version']
+ OBJ alliance_attack_war KEYS ['defender_clan_id', 'end_timer', 'health', 'id', 'initial_health', 'name'] NAME Шпана с Окраины
+ LIST clan_defense_wars LEN 0 ITEM_KEYS []
+ENDPOINT /clan/active_defense_wars STATUS 400 TYPE dict KEYS ['_error']
+ENDPOINT /alliance/list STATUS 200 TYPE dict KEYS ['description', 'pagination', 'result', 'timestamp', 'type', 'version']
+ OBJ pagination KEYS ['hasNextPage', 'hasPrevPage', 'limit', 'offset', 'total'] NAME 
+ LIST result LEN 10 ITEM_KEYS ['defense_point', 'id', 'members_count', 'members_max', 'name']
+ALLIANCE_ROW Iran plus ID_PRESENT True KEYS ['defense_point', 'id', 'members_count', 'members_max', 'name']
+ENDPOINT /alliance/members?alliance_id=d44aa742-572c-46e6-967d-5022327a740a STATUS 200 TYPE dict KEYS ['core_clan', 'description', 'satellite_clans', 'timestamp', 'type', 'version']
+ OBJ core_clan KEYS ['cur_alliance', 'current_level', 'defense_point', 'exp_points', 'has_chat', 'id', 'leader_id', 'max_members_from_bonuses', 'name', 'next_level', 'number_of_members', 'private', 'required_legendary_buildings', 'required_power', 'role', 'vault_clan_alliance_currency'] NAME Iran plus
+ LIST satellite_clans LEN 0 ITEM_KEYS []
+ALLIANCE_ROW Украиничи ID_PRESENT True KEYS ['defense_point', 'id', 'members_count', 'members_max', 'name']
+ENDPOINT /alliance/members?alliance_id=5dc993f1-38bf-4261-bf10-022e8e910909 STATUS 200 TYPE dict KEYS ['core_clan', 'description', 'satellite_clans', 'timestamp', 'type', 'version']
+ OBJ core_clan KEYS ['cur_alliance', 'current_level', 'defense_point', 'exp_points', 'has_chat', 'id', 'leader_id', 'max_members_from_bonuses', 'name', 'next_level', 'number_of_members', 'private', 'required_legendary_buildings', 'required_power', 'role', 'vault_clan_alliance_currency'] NAME Украиничи
+ LIST satellite_clans LEN 0 ITEM_KEYS []
+ALLIANCE_ROW Дом ID_PRESENT True KEYS ['defense_point', 'id', 'members_count', 'members_max', 'name']
+ENDPOINT /alliance/members?alliance_id=48f958db-02c6-4c0c-9ac5-ddada2d55f1f STATUS 200 TYPE dict KEYS ['core_clan', 'description', 'satellite_clans', 'timestamp', 'type', 'version']
+ OBJ core_clan KEYS ['cur_alliance', 'current_level', 'defense_point', 'exp_points', 'has_chat', 'id', 'leader_id', 'max_members_from_bonuses', 'name', 'next_level', 'number_of_members', 'private', 'required_legendary_buildings', 'required_power', 'role', 'vault_clan_alliance_currency'] NAME Дом
+ LIST satellite_clans LEN 0 ITEM_KEYS []
+ENDPOINT /leaderboard STATUS 200 TYPE dict KEYS ['bonus_score_rewards', 'boost', 'description', 'end_time', 'end_timer', 'id', 'meta', 'reload_timer', 'rewards', 'score_rewards', 'start_time', 'status', 'timestamp', 'top', 'type', 'version', 'your_lb_slot']
+ LIST bonus_score_rewards LEN 0 ITEM_KEYS []
+ OBJ meta KEYS ['default', 'priority', 'score'] NAME 
+ LIST rewards LEN 0 ITEM_KEYS []
+ LIST score_rewards LEN 0 ITEM_KEYS []
+ LIST top LEN 500 ITEM_KEYS ['name', 'rank', 'score']
+ OBJ your_lb_slot KEYS ['is_claimed', 'rank', 'reward_view', 'score'] NAME 
+ LB_SAMPLE player_level_lb CONTAINER top NAME [TK] Кутёжный KEYS ['name', 'rank', 'score']
+ENDPOINT /leaderboard STATUS 200 TYPE dict KEYS ['bonus_score_rewards', 'boost', 'description', 'end_time', 'end_timer', 'id', 'meta', 'reload_timer', 'rewards', 'score_rewards', 'start_time', 'status', 'timestamp', 'top', 'type', 'version', 'your_lb_slot']
+ LIST bonus_score_rewards LEN 0 ITEM_KEYS []
+ OBJ meta KEYS ['default', 'priority', 'score'] NAME 
+ LIST rewards LEN 0 ITEM_KEYS []
+ LIST score_rewards LEN 0 ITEM_KEYS []
+ LIST top LEN 500 ITEM_KEYS ['name', 'rank', 'score']
+ OBJ your_lb_slot KEYS ['is_claimed', 'rank', 'reward_view', 'score'] NAME 
+ LB_SAMPLE hamsters_power_lb CONTAINER top NAME [TK] Кутёжный KEYS ['name', 'rank', 'score']
+ENDPOINT /leaderboard STATUS 200 TYPE dict KEYS ['bonus_score_rewards', 'boost', 'description', 'end_time', 'end_timer', 'id', 'meta', 'reload_timer', 'rewards', 'score_rewards', 'start_time', 'status', 'timestamp', 'top', 'type', 'version', 'your_lb_slot']
+ LIST bonus_score_rewards LEN 0 ITEM_KEYS []
+ OBJ meta KEYS ['clan', 'default', 'priority', 'score'] NAME 
+ LIST rewards LEN 0 ITEM_KEYS []
+ LIST score_rewards LEN 0 ITEM_KEYS []
+ LIST top LEN 500 ITEM_KEYS ['id', 'name', 'rank', 'score']
+ OBJ your_lb_slot KEYS ['id', 'is_claimed', 'name', 'rank', 'reward_view', 'score'] NAME Top🏆King
+ LB_SAMPLE clan_player_level_lb CONTAINER top NAME Top🏆King KEYS ['id', 'name', 'rank', 'score']
+ENDPOINT /leaderboard STATUS 200 TYPE dict KEYS ['bonus_score_rewards', 'boost', 'description', 'end_time', 'end_timer', 'id', 'meta', 'reload_timer', 'rewards', 'score_rewards', 'start_time', 'status', 'timestamp', 'top', 'type', 'version', 'your_lb_slot']
+ LIST bonus_score_rewards LEN 0 ITEM_KEYS []
+ OBJ meta KEYS ['clan', 'default', 'priority', 'score'] NAME 
+ LIST rewards LEN 0 ITEM_KEYS []
+ LIST score_rewards LEN 0 ITEM_KEYS []
+ LIST top LEN 500 ITEM_KEYS ['id', 'name', 'rank', 'score']
+ OBJ your_lb_slot KEYS ['id', 'is_claimed', 'name', 'rank', 'reward_view', 'score'] NAME Top🏆King
+ LB_SAMPLE clan_hamsters_power_lb CONTAINER top NAME Top🏆King KEYS ['id', 'name', 'rank', 'score']
+ENDPOINT /leaderboard STATUS 406 TYPE dict KEYS ['_error']
+ENDPOINT /leaderboard STATUS 406 TYPE dict KEYS ['_error']
+ENDPOINT /leaderboard STATUS 406 TYPE dict KEYS ['_error']
+COLLECTOR_STATUS {"revision":"public-server-collector-20260920-r1","ok":true,"state":"ok","at":1789915289,"duration_sec":54.62,"war":false,"ratings":["influence","power","clans","alliance_defense","alliance_influence","alliance_power"]}
+DB_WAR [('{"our_clan":"Top King","opponent":"Шпана с Окраины","status":"active","our_score":0,"opponent_score":0,"started_at":0,"ends_at":1790317499,"opponent_hp":294100,"opponent_hp_max":1200000}', 1789915405, 'anon-57df5f32d108736747fa6d25')]
+DB_RATING_COUNTS [('alliance_defense', 10, 1789915405, 'anon-57df5f32d108736747fa6d25'), ('alliance_influence', 2, 1789915405, 'anon-57df5f32d108736747fa6d25'), ('alliance_power', 10, 1789915405, 'anon-57df5f32d108736747fa6d25'), ('alliances', 10, 1789915350, 'anon-86934fbc8c959b6547cc8198'), ('clans', 100, 1789915405, 'anon-57df5f32d108736747fa6d25'), ('influence', 100, 1789915405, 'anon-57df5f32d108736747fa6d25'), ('power', 100, 1789915405, 'anon-57df5f32d108736747fa6d25')]
