@@ -1,1 +1,1 @@
-w6 aggregate final
+w6 aggregate final bitmask
