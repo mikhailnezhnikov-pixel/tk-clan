@@ -61,7 +61,7 @@ jobs:
     timeout-minutes: 12
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 3
       matrix:
         map_key:
           - hk_dubai5335
@@ -182,27 +182,33 @@ jobs:
                   ps=polygons(e)
                   if ps:out[('way' if typ=='way' else 'relation')+str(eid)]=ps
           can={x['building_id']:x for x in src['canonical_buildings']}
-          ids=list(can);features={}
-          for start in range(0,len(ids),60):
-              chunk=ids[start:start+60];clauses=[]
-              for bid in chunk:
-                  if bid.startswith('way') and bid[3:].isdigit():clauses.append(f"way({int(bid[3:])});")
-                  elif bid.startswith('relation') and bid[8:].isdigit():clauses.append(f"relation({int(bid[8:])});")
-              if clauses:add_elements(features,call('[out:json][timeout:25];('+''.join(clauses)+');out geom;'))
-          pts=decode(src['points']);unique=[];unmatched=[];amb=[];used={}
+          pts=decode(src['points']);features={}
+          for start in range(0,len(pts),25):
+              batch=pts[start:start+25];clauses=[]
+              for p in batch:
+                  clauses.append(f'way(around:20,{p["lat"]},{p["lon"]})["building"];')
+                  clauses.append(f'relation(around:20,{p["lat"]},{p["lon"]})["building"];')
+              if clauses:
+                  add_elements(features,call('[out:json][timeout:20];('+''.join(clauses)+');out geom;'))
+          unique=[];unmatched=[];amb=[];used={}
           for p in pts:
               hits=[bid for bid,ps in features.items() if any(inside(poly,p['lon'],p['lat']) for poly in ps)]
               if len(hits)==0:
-                  unmatched.append({**p,'reason':'no_existing_canonical_building_match'})
+                  unmatched.append({**p,'reason':'no_exact_osm_building_containment'})
                   continue
-              if len(hits)>1:amb.append({**p,'candidates':sorted(hits),'reason':'multiple_buildings'});continue
+              if len(hits)>1:
+                  amb.append({**p,'candidates':sorted(hits),'reason':'multiple_buildings'})
+                  continue
               bid=hits[0]
-              if bid in used:amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]});continue
+              if bid in used:
+                  amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]})
+                  continue
               used[bid]=p['point_index'];cur=can.get(bid)
               r={**p,'building_id':bid,'existing':bool(cur)}
-              if cur:r.update({'canonical_room_count':cur['room_count'],'canonical_source':cur['knowledge_source'],'canonical_observed_at':cur['knowledge_observed_at']})
+              if cur:
+                  r.update({'canonical_room_count':cur['room_count'],'canonical_source':cur['knowledge_source'],'canonical_observed_at':cur['knowledge_observed_at']})
               unique.append(r)
-          out={'map_key':key,'canonical_area_id':src['canonical_area_id'],'point_count':len(pts),'points':unique,'unmatched':unmatched,'ambiguous':amb,'safe_new_building_rows':0}
+          out={'map_key':key,'canonical_area_id':src['canonical_area_id'],'point_count':len(pts),'points':unique,'unmatched':unmatched,'ambiguous':amb}
           open(f'w6-{key}.json','w').write(json.dumps(out,ensure_ascii=False,indent=2,sort_keys=True))
           print(key,'points',len(pts),'unique',len(unique),'unmatched',len(unmatched),'ambiguous',len(amb))
           PY
@@ -255,7 +261,9 @@ jobs:
               metrics['point_unmatched']+=len(r['unmatched'])
               metrics['point_ambiguous']+=len(r['ambiguous'])
               for p in r['points']:
-                  assert p['existing'] is True,p
+                  if not p['existing']:
+                      metrics['building_rows_to_add']+=1
+                      continue
                   metrics['building_rows_already_known']+=1
                   cur=p.get('canonical_room_count')
                   if cur is None:metrics['existing_null_fill_candidates']+=1
@@ -269,7 +277,7 @@ jobs:
             'duplicate_target_groups':len(dup),'duplicate_target_maps':sum(len(v) for v in dup.values()),'duplicate_targets':dup,
             'source_positive_points':metrics['source_positive_points'],'point_unique_matches':metrics['point_unique_matches'],
             'point_unmatched':metrics['point_unmatched'],'point_ambiguous':metrics['point_ambiguous'],
-            'building_rows_to_add':0,'building_rows_already_known':metrics['building_rows_already_known'],
+            'building_rows_to_add':metrics['building_rows_to_add'],'building_rows_already_known':metrics['building_rows_already_known'],
             'existing_null_fill_candidates':metrics['existing_null_fill_candidates'],'room_count_same':metrics['room_count_same'],
             'room_count_conflicts_total':metrics['room_count_conflicts_total'],
             'room_count_conflicts_by_source':{'game_live':metrics['room_count_conflicts_game_live'],'hk_maps_import':metrics['room_count_conflicts_hk_maps_import'],'legacy':metrics['room_count_conflicts_legacy']},
