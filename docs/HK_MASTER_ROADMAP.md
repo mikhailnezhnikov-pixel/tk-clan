@@ -2,22 +2,47 @@
 
 ## SOURCE OF TRUTH — ОБЯЗАТЕЛЬНО
 
-Для переноса/копирования существующей механики источник истины — **точный внешний DONOR / REFERENCE SCRIPT**, а не наш текущий HK.
+Каждый этап связан с **точным внешним DONOR / REFERENCE SCRIPT** через:
 
-Перед такой работой открыть:
+- `reference/topking/REFERENCE.json`;
+- `reference/topking/README.md`.
 
-- `reference/topking/README.md`;
-- точный donor/reference script в `reference/topking/`;
-- `baseline/topking/BASELINE.json`;
-- `baseline/topking/HamsterKingMobile.current.user.js`.
+### SOURCE PREFLIGHT — запускается автоматически для каждого этапа
 
-Роли:
+Команды пользователя:
 
-- donor/reference = как механика должна работать;
-- current baseline = как она сейчас встроена у нас.
+- **«начни этап N»**
+- **«продолжи этап N»**
 
-Нельзя восстанавливать donor-механику по тексту, памяти, roadmap или нашим старым версиям. Если donor-source ещё не сохранён, сначала нужно получить именно его.
+означают обязательный порядок:
 
+1. открыть `reference/topking/REFERENCE.json`;
+2. найти **закреплённый donor** в ChatGPT File Library;
+3. сверить его идентичность по версии/источнику/anchors из `REFERENCE.json`;
+4. прочитать код donor, относящийся к текущему этапу;
+5. затем открыть:
+   - `baseline/topking/BASELINE.json`;
+   - `baseline/topking/HamsterKingMobile.current.user.js`;
+6. затем читать и выполнять **только запрошенный этап** этого roadmap.
+
+### Роли источников
+
+- **donor/reference** = как существующая механика реально работает;
+- **real game API/definitions** = источник для механики, которой нет в donor;
+- **current baseline** = как механика сейчас встроена у нас;
+- **roadmap** = что именно делать на текущем этапе.
+
+### Приоритет источников
+
+1. Закреплённый donor из `REFERENCE.json`.
+2. Реальные API/definitions игры — для отсутствующей в donor механики.
+3. Current implementation baseline.
+4. Конкретное ТЗ текущего этапа.
+5. Контекст/память чата.
+
+Нельзя восстанавливать donor-механику по тексту, памяти, roadmap, скриншотам или нашим старым версиям.
+
+Если закреплённый donor не найден, этап **не начинается**: статус `DONOR SOURCE NOT FOUND`.
 
 ---
 
