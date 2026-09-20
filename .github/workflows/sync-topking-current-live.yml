@@ -1,0 +1,50 @@
+name: Sync TopKing Current From Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/sync-current-live-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Fetch verified live candidate
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          node --check /tmp/live.js
+          grep -Fq "HK_TODAY_CANON_REV = 'today-kokkaras-order-20260920-r1'" /tmp/live.js
+          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "73a8da55150892cabbf2f5bf9f5d2a22fcaa8ad228ff1bee3d793b3429f3c21b"
+          cp /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
+      - name: Commit current snapshot
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking/HamsterKingMobile.current.user.js
+          if ! git diff --cached --quiet; then
+            git commit -m "stage2: sync Today live candidate into current baseline"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js
