@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Bosses / Боссы
 - current module file: audit/hk-stage2-03-bosses.md
-- current module status: CANONICAL_TRANSFER_GAP_CONFIRMED
+- current module status: CANON_CORE_R1_LIVE_CANDIDATE
 - next module after LIVE PASS: Maps / Карты
 - Today / Сегодня: LIVE PASS
 
@@ -504,3 +504,21 @@ Stage 2 continues with 2.03 Bosses / Боссы.
 - bug: `audit/hk-stage2-bug-bosses-readonly-transfer-gap.md`;
 - Stage 2.03 status: **CANONICAL_TRANSFER_GAP_CONFIRMED**;
 - next action: transfer Bosses canonical core only, then live-test it before advancing to Maps.
+
+
+## Bosses canonical core r1
+
+- donor-first canonical Area + Regional core transferred;
+- marker: `bosses-canon-core-20260920-r1`;
+- technical predeploy: PASS;
+- deploy/service/public byte equality: PASS;
+- live/public SHA256: `571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9`;
+- baseline sync commit: `bac973abc67096f5642fce84ab1df8ba1a16883e` — PASS;
+- current module status: **CANON_CORE_R1_LIVE_CANDIDATE**.
+
+Remaining static donor parity before final Bosses live checks:
+- Area Boss tournament target/reward planning;
+- reward-only continuation;
+- Area Boss Calculator / rewards view.
+
+Do not advance to Maps.
