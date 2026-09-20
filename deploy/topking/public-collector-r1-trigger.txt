@@ -1,0 +1,1 @@
+2026-09-20T23:39+09:00 isolate public collector from player clients
