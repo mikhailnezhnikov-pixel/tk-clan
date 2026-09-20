@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: BLOCKED_DONOR_SOURCE_NOT_FOUND
+status: SOURCE_PREFLIGHT_PASS_IN_PROGRESS
 
 ## Required Stage 2 chain
 
@@ -53,3 +53,16 @@ Protocol decision:
 - do not start implementation until the exact pinned donor source is available again.
 
 Current/live Pits code was **not changed** in this block.
+
+
+## Donor restored
+
+Exact donor re-uploaded and verified:
+- raw upload: CRLF, 1,860,858 bytes, SHA256 `8a5aece8b10dfbaf0b3dd2890de600a9505aa523783cbe0c97ea81331d7e0c7d`
+- normalized CRLF → LF: 1,836,359 bytes
+- normalized SHA256: `28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1`
+- version: `5.3.22-ui-icons-pit-dim`
+
+The previous donor-source block is resolved.
+
+Stage 2.02 source preflight resumes from this exact pinned donor.
