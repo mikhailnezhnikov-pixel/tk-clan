@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request, fcntl, hashlib
 
-REV = "public-server-collector-20260921-r2-war-safe"
+REV = "public-server-collector-20260921-r3-alliance-id-sums"
 GAME_API = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_API", "https://hk-game-api.hwgame.cloud").rstrip("/")
 DB_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_DB", "/var/lib/hamsterking-license/licenses.db")
 STATUS_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_STATUS", "/var/lib/hamsterking-license/public-collector-status.json")
@@ -143,6 +143,33 @@ def normalize_ranking(document, kind, max_rank=100, limit=100):
             best=normalized[:limit]
     return best
 
+def normalize_clan_scores(document, limit=500):
+    """Normalize clan leaderboards while preserving the canonical clan id."""
+    best=[]
+    scan_limit=max(500,int(limit or 500))
+    for rows in lists_in(document):
+        normalized=[]
+        for index,row in enumerate(rows[:scan_limit]):
+            if not isinstance(row,dict): continue
+            entity=row.get("clan") if isinstance(row.get("clan"),dict) else row
+            ident=str(row.get("id") or entity.get("id") or row.get("clan_id") or entity.get("clan_id") or "")
+            name=first_text(entity.get("name"),entity.get("title"),row.get("name"),row.get("clan_name"))
+            rank=finite(row.get("rank"),row.get("place"),row.get("position"),entity.get("rank"))
+            if rank is None: rank=index+1
+            rank=int(rank)
+            value=finite(row.get("score"),row.get("value"),entity.get("score"),entity.get("value"))
+            if ident and name and 1<=rank<=scan_limit and value is not None:
+                normalized.append({
+                    "id":ident,
+                    "key":key(name),
+                    "rank":rank,
+                    "name":name,
+                    "value":int(value) if float(value).is_integer() else value,
+                })
+        if len(normalized)>len(best):
+            best=normalized[:limit]
+    return best
+
 def active_war():
     # Lightweight path: exactly one Game API request per scheduled war run.
     # If the game is throttling us, defer to the next timer instead of retrying
@@ -267,7 +294,7 @@ def alliance_clans(document):
         if not ident or not name or k in seen: continue
         seen.add(k)
         out.append({"id":ident,"name":name,"key":k,
-                    "defense":finite(row.get("defense_point")) or 0,
+                    "defense":finite(row.get("defense_point")),
                     "power":finite(row.get("hamsters_power"),row.get("power"),row.get("total_power")),
                     "influence":finite(row.get("influence"),row.get("total_influence"),row.get("player_level_sum"))})
     return out
@@ -295,25 +322,26 @@ def ratings_snapshot():
     except Exception as exc:
         log(f"leaderboard hamsters_power_lb failed: {type(exc).__name__}")
 
-    # Alliance aggregation needs the full clan leaderboard returned by the game
-    # (currently top-500), not only the public top-100 slice.
+    # Alliance aggregation uses the full top-500 clan leaderboards and keeps
+    # the game clan id. ID matching is canonical; normalized name is fallback.
     clan_influence_all=[]
     try:
-        clan_influence_all=normalize_ranking(
-            game_json("/leaderboard","POST",{"leaderboard_type":"clan_player_level_lb"}),
-            "clans",500,500
+        clan_influence_all=normalize_clan_scores(
+            game_json("/leaderboard","POST",{"leaderboard_type":"clan_player_level_lb"}),500
         )
         if clan_influence_all:
-            ratings["clans"]=clan_influence_all[:100]
+            ratings["clans"]=[
+                {"rank":row["rank"],"name":row["name"],"value":row["value"]}
+                for row in clan_influence_all[:100]
+            ]
     except Exception as exc:
         log(f"leaderboard clan_player_level_lb failed: {type(exc).__name__}")
 
     clan_power_all=[]
     for leaderboard_type in ("clan_hamsters_power_lb","clan_hamster_power_lb","clan_power_lb","clans_hamsters_power_lb"):
         try:
-            rows=normalize_ranking(
-                game_json("/leaderboard","POST",{"leaderboard_type":leaderboard_type}),
-                "clans",500,500
+            rows=normalize_clan_scores(
+                game_json("/leaderboard","POST",{"leaderboard_type":leaderboard_type}),500
             )
             if rows:
                 clan_power_all=rows
@@ -321,8 +349,10 @@ def ratings_snapshot():
         except Exception:
             continue
 
-    influence_map={key(row["name"]):float(row["value"]) for row in clan_influence_all}
-    power_map={key(row["name"]):float(row["value"]) for row in clan_power_all}
+    influence_id_map={row["id"]:float(row["value"]) for row in clan_influence_all}
+    power_id_map={row["id"]:float(row["value"]) for row in clan_power_all}
+    influence_name_map={row["key"]:float(row["value"]) for row in clan_influence_all}
+    power_name_map={row["key"]:float(row["value"]) for row in clan_power_all}
 
     try:
         alliances=all_alliances()
@@ -332,8 +362,10 @@ def ratings_snapshot():
         alliances=[]
 
     totals=[]
+    complete_defense=0
     complete_influence=0
     complete_power=0
+    member_count_mismatches=0
     for index,alliance in enumerate(alliances):
         clans=[]
         try:
@@ -342,21 +374,37 @@ def ratings_snapshot():
             log(f"alliance detail {index+1}/{len(alliances)} failed: {type(exc).__name__}")
 
         if not clans:
+            defense_value=alliance["defense"] if alliance["defense"] is not None else None
+            if defense_value is not None:
+                complete_defense+=1
             totals.append({
                 "name":alliance["name"],
-                "defense":alliance["defense"] or None,
+                "defense":defense_value,
                 "influence":alliance["influence"],
                 "power":alliance["power"],
             })
             continue
 
+        if alliance.get("members") and alliance["members"]!=len(clans):
+            member_count_mismatches+=1
+
+        defense=0.0
+        defense_covered=0
         influence=0.0
         influence_covered=0
         power=0.0
         power_covered=0
         for clan in clans:
-            iv=influence_map.get(clan["key"],clan.get("influence"))
-            pv=power_map.get(clan["key"],clan.get("power"))
+            dv=clan.get("defense")
+            iv=influence_id_map.get(clan["id"])
+            if iv is None:
+                iv=influence_name_map.get(clan["key"],clan.get("influence"))
+            pv=power_id_map.get(clan["id"])
+            if pv is None:
+                pv=power_name_map.get(clan["key"],clan.get("power"))
+            if dv is not None:
+                defense+=float(dv)
+                defense_covered+=1
             if iv is not None:
                 influence+=float(iv)
                 influence_covered+=1
@@ -364,8 +412,13 @@ def ratings_snapshot():
                 power+=float(pv)
                 power_covered+=1
 
+        # Canonical alliance totals are sums of the clans returned by
+        # /alliance/members. /alliance/list defense_point is only a fallback.
+        defense_value=defense if defense_covered==len(clans) else alliance["defense"]
         influence_value=influence if influence_covered==len(clans) else alliance["influence"]
         power_value=power if power_covered==len(clans) else alliance["power"]
+        if defense_value is not None:
+            complete_defense+=1
         if influence_value is not None:
             complete_influence+=1
         if power_value is not None:
@@ -373,16 +426,16 @@ def ratings_snapshot():
 
         totals.append({
             "name":alliance["name"],
-            # defense_point on /alliance/list is already the alliance total.
-            "defense":alliance["defense"] or None,
+            "defense":defense_value,
             "influence":influence_value,
             "power":power_value,
         })
 
     log(
         f"alliance metric coverage: total={len(totals)} "
-        f"influence={complete_influence} power={complete_power} "
-        f"clan_influence_rows={len(clan_influence_all)} clan_power_rows={len(clan_power_all)}"
+        f"defense={complete_defense} influence={complete_influence} power={complete_power} "
+        f"clan_influence_rows={len(clan_influence_all)} clan_power_rows={len(clan_power_all)} "
+        f"member_count_mismatches={member_count_mismatches}"
     )
 
     for metric in ("defense","influence","power"):
