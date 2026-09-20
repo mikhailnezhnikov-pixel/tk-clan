@@ -290,7 +290,7 @@
       createBusinessPlan:'Создать бизнес-план', bureauHint:'Действия Проектного бюро не добавляются в общую базу и не сохраняются.',
       bureauTier:'Тир бизнеса', bureauAllTiers:'Все тиры', mapIndex:'Исследованные карты', readMapIndex:'Обновить индекс', scanMyMaps:'Исследовать мои районы',
       donation:'Пожертвование', mapSearch:'Город, район или координаты', mapOpen:'Открыть', mapProgress:'Прогресс', mapRating:'Рейтинг', mapBuildings:'Здания', mapUnexplored:'Не исследовано', mapRooms:'Алмазные комнаты',
-      myMaps:'Мои карты', uploadedMaps:'Загруженные карты', scanAccountMaps:'Считать карты аккаунта', refreshUploadedMaps:'Обновить загруженные карты'
+      myMaps:'Мои карты', uploadedMaps:'Общая база', scanAccountMaps:'Считать карты аккаунта', refreshUploadedMaps:'Обновить общую базу'
     },
     en: {
       daily:'Today', pit:'Pit', businesses:'Businesses', clan:'Clan', fair:'Fair', shop:'Shop', recipes:'Recipes', maps:'Maps', navToday:'Today', navBattles:'Battles', navCity:'City', navBusiness:'Business', navGrowth:'Growth', navTrade:'Trade', navClan:'Clan', navTodayHint:'tasks and rewards', navBattlesHint:'pits and battles', navCityHint:'maps and buildings', navBusinessHint:'cards and recipes', navGrowthHint:'hamsters and generals', navTradeHint:'fair and shop', navClanHint:'skills and wars', checkingLicense:'Checking license…',
@@ -327,7 +327,7 @@
       createBusinessPlan:'Create business plan', bureauHint:'Project Bureau actions are not added to the shared database and are not stored.',
       bureauTier:'Business tier', bureauAllTiers:'All tiers', mapIndex:'Researched maps', readMapIndex:'Refresh index', scanMyMaps:'Research my districts',
       donation:'Donation', mapSearch:'City, district or coordinates', mapOpen:'Open', mapProgress:'Progress', mapRating:'Rating', mapBuildings:'Buildings', mapUnexplored:'Unresearched', mapRooms:'Diamond rooms',
-      myMaps:'My maps', uploadedMaps:'Uploaded maps', scanAccountMaps:'Read account maps', refreshUploadedMaps:'Refresh uploaded maps'
+      myMaps:'My maps', uploadedMaps:'Shared maps', scanAccountMaps:'Read account maps', refreshUploadedMaps:'Refresh shared maps'
     }
   };
   const tr = (key, vars = {}) => {
@@ -756,7 +756,8 @@
   const HK_STAGE2_STATE_REV = 'stage2c-state-20260919-r1';
   const HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1';
   const HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1';
-  const HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r6-safe5';
+  const HK_MAP_SCANNER_REV = 'maps-shared-runtime-20260921-r7-safe5';
+  const HK_MAP_SHARED_RUNTIME_REV = 'maps-shared-knowledge-20260921-r1';
   const HK_MAP_READ_CONCURRENCY = 5;
   const HK_MAP_SUBMIT_BATCH = 200;
   const HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2';
@@ -776,6 +777,7 @@
   runtime.resourceBusinessRunnerStage = HK_STAGE2D_RUNNER_REV;
   runtime.mapRunnerStage = HK_STAGE2E_RUNNER_REV;
   runtime.mapScannerStage = HK_MAP_SCANNER_REV;
+  runtime.mapSharedRuntimeStage = HK_MAP_SHARED_RUNTIME_REV;
   runtime.mapCoordsStage = HK_MAP_COORDS_REV;
   runtime.clanRunnerStage = HK_STAGE2F_RUNNER_REV;
   runtime.rumorsStage = HK_STAGE2G_RUMORS_REV;
@@ -8243,6 +8245,10 @@
   }
 
   async function mapServerJson(path, body = {}, retry = true) { return licensedServerJson(MAP_API_BASE, path, body, retry, 'maps'); }
+  function mapSharedKnowledgeEnabled() {
+    return load().mapUseSharedKnowledge !== false;
+  }
+
   function cityLabel(row) {
     return gameText(row?.name || row?.city_name || row?.city_id || '');
   }
@@ -8384,6 +8390,40 @@
     return {submitted,failed};
   }
 
+  async function mapSharedKnownBuildingRooms(selectedAreaIds=null) {
+    const known=new Map();
+    if(!mapSharedKnowledgeEnabled())return known;
+    const selected=selectedAreaIds instanceof Set?selectedAreaIds:ownedMapIds();
+    if(!selected.size)return known;
+    try{
+      const index=await mapServerJson('/list');
+      mapRows=Array.isArray(index?.maps)?index.maps:[];
+      const targets=mapRows.filter(row=>{
+        const ids=[String(row?.area_id||''),...(Array.isArray(row?.aliases)?row.aliases.map(String):[])];
+        return ids.some(id=>selected.has(id));
+      });
+      let cursor=0;
+      const worker=async()=>{
+        while(cursor<targets.length){
+          const row=targets[cursor++];
+          try{
+            const result=await mapServerJson('/detail',{area_id:String(row?.area_id||'')});
+            for(const building of (result?.detail?.buildings||[])){
+              const buildingId=String(building?.building_id||'');
+              if(!buildingId||building?.room_count==null)continue;
+              known.set(buildingId,{roomCount:Number(building.room_count),source:String(building?.knowledge_source||'shared'),areaId:String(row?.area_id||'')});
+            }
+          }catch(_){}
+        }
+      };
+      const workers=Math.min(4,Math.max(1,targets.length));
+      await Promise.all(Array.from({length:workers},()=>worker()));
+    }catch(_){
+      log(either('Общая база карт временно недоступна — читаю здания напрямую','Shared map knowledge is temporarily unavailable — reading buildings directly'),'warn');
+    }
+    return known;
+  }
+
   async function mapBackfillActiveBuildingStudies(selectedAreaIds=null) {
     const state=hkStateStore.snapshot||playerDocument||{};
     const active=activePlayerBuildingIds(state);
@@ -8402,19 +8442,22 @@
       rows.push({buildingId,areaId});
     }
     const unique=[...new Map(rows.map(row=>[row.buildingId,row])).values()];
-    let studied=0,known=0,failed=0,completed=0,cursor=0;
+    const sharedKnown=await mapSharedKnownBuildingRooms(selected);
+    const pending=mapSharedKnowledgeEnabled()?unique.filter(row=>!sharedKnown.has(row.buildingId)):unique;
+    const sharedKnownCount=unique.length-pending.length;
+    let studied=0,known=sharedKnownCount,failed=0,completed=sharedKnownCount,cursor=0;
     const observations=[];
     const baseDone=hkRunner.state.done||0;
     const total=baseDone+unique.length;
-    hkRunner.setStep(either('Считываю открытые здания','Reading active buildings'),baseDone,total);
+    hkRunner.setStep(either('Считываю открытые здания','Reading active buildings'),baseDone+completed,total);
 
     const worker=async()=>{
       while(true){
         if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
         await hkRunner.waitIfPaused();
         const index=cursor++;
-        if(index>=unique.length)return;
-        const {buildingId,areaId}=unique[index];
+        if(index>=pending.length)return;
+        const {buildingId,areaId}=pending[index];
         try{
           let value=buildingStudyCache.get(buildingId)||null;
           let roomCount=value?crystalRoomCount(value,crystalIds):null;
@@ -8437,8 +8480,8 @@
       }
     };
 
-    const workers=Math.min(HK_MAP_READ_CONCURRENCY,Math.max(1,unique.length));
-    await Promise.all(Array.from({length:workers},()=>worker()));
+    const workers=pending.length?Math.min(HK_MAP_READ_CONCURRENCY,pending.length):0;
+    if(workers)await Promise.all(Array.from({length:workers},()=>worker()));
 
     const grouped=new Map();
     for(const row of observations){
@@ -8452,7 +8495,7 @@
       studied+=result.submitted;
       failed+=result.failed;
     }
-    return {total:unique.length,studied,known,failed,workers};
+    return {total:unique.length,studied,known,sharedKnown:sharedKnownCount,directReads:pending.length,failed,workers};
   }
 
   async function mapAreaPayload(area, cities = []) {
@@ -8476,7 +8519,9 @@
     return {area_id:areaId, city_id:cityId, city_name:cityLabel(city), coord_revision:'column-row-v1',
       x:full?.info?.y ?? full?.meta?.gamearea_coords?.y,
       y:full?.info?.x ?? full?.meta?.gamearea_coords?.x, invest_count:Number(full?.info?.invest_count || invest.size),
-      expected_buildings:Math.max(buildings.length, Number(full?.meta?.buildings_total || 0)), buildings};
+      expected_buildings:Math.max(buildings.length, Number(full?.meta?.buildings_total || 0)), buildings,
+      _website_hydrate:mapSharedKnowledgeEnabled(),
+      _website_geometry:mapSharedKnowledgeEnabled()?(full?.geo_json_buildings||null):null};
   }
 
   async function submitOwnedMapAreas(all = true) {
@@ -11466,6 +11511,10 @@
       <div class="hk-page" data-content="maps">
         <div id="hk-map-index" class="hk-cardbox"><h3 data-i18n="mapIndex">${tr('mapIndex')}</h3>
           <div class="hk-map-source-tabs"><button class="active" data-map-source="mine">${tr('myMaps')}</button><button data-map-source="uploaded">${tr('uploadedMaps')}</button></div>
+          <label class="hk-map-shared-setting" style="display:flex;align-items:flex-start;gap:10px;margin:10px 0;padding:10px 12px;border:1px solid #2f4058;border-radius:12px;background:#111a27">
+            <input id="hk-map-shared-knowledge" type="checkbox" style="margin-top:3px">
+            <span><b>Использовать общую базу карт</b><small style="display:block;opacity:.72;margin-top:3px">Подгружать знания сайта и игроков. Уже известные активные здания повторно не считываются.</small></span>
+          </label>
           <div class="hk-map-controls"><input id="hk-map-search" data-i18n-placeholder="mapSearch" placeholder="${tr('mapSearch')}"><select id="hk-map-sort"><option value="rating">${tr('mapRating')}</option><option value="total_rooms">${tr('mapRooms')}</option><option value="progress">${tr('mapProgress')}</option><option value="city">${either('Город','City')}</option></select></div>
           <button id="hk-map-load" class="hk-secondary" style="display:none">${tr('refreshUploadedMaps')}</button><button id="hk-map-scan" class="hk-primary">${tr('scanAccountMaps')}</button>
           <div id="hk-map-list" class="hk-map-list"><p class="hk-muted">${either('Откройте индекс карт','Open the map index')}</p></div></div>
@@ -11699,6 +11748,15 @@
     root.querySelector('#hk-bureau-run').onclick = runProjectBureau;
     root.querySelector('#hk-map-load').onclick = () => loadMapIndex(false);
     root.querySelector('#hk-map-scan').onclick = () => submitOwnedMapAreas(true);
+    const mapSharedToggle=root.querySelector('#hk-map-shared-knowledge');
+    if(mapSharedToggle){
+      mapSharedToggle.checked=mapSharedKnowledgeEnabled();
+      mapSharedToggle.onchange=()=>{
+        save({mapUseSharedKnowledge:!!mapSharedToggle.checked});
+        log(mapSharedToggle.checked?either('Общая база карт включена','Shared map knowledge enabled'):either('Общая база карт отключена — здания будут считываться напрямую','Shared map knowledge disabled — buildings will be read directly'),'ok');
+        if(mapSharedToggle.checked)void loadMapIndex(false);
+      };
+    }
     root.querySelectorAll('[data-map-source]').forEach(button => button.onclick = () => setMapSource(button.dataset.mapSource));
     root.querySelector('#hk-map-search').oninput = renderMapIndex;
     root.querySelector('#hk-map-sort').onchange = renderMapIndex;

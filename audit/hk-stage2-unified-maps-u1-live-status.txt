@@ -1,0 +1,13 @@
+UNIFIED_MAPS_RUNTIME_U1_LIVE=PASS
+server_sha256=f8b10a30a42d7dbb19ea11ee746eaccd89704a70ddb577631bf72c6ecca26df3
+client_sha256=46c6b95688a589e7d4b02a10403c9bd32c5012a8e92b6e0e768364aad54d55b5
+unified_personal_cabinet=PASS
+legacy_website_auto_hydration=PASS
+shared_preload_default_on=PASS
+known_active_buildings_skip_direct_read=PASS
+safe_active_intersection=PASS
+read_concurrency=5
+game_live_priority=PASS
+bulk_force_link_210=NO
+production_test_rows=0
+production_state={"area_links": 25, "areas": 310, "buildings": 167690, "catalog": 235, "point_links": 2007, "points": 235, "source_counts": {"combined": 25, "script": 285, "website": 210}, "unified_rows": 520}
