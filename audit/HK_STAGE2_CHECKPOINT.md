@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- current module: Bosses / Боссы
-- current module file: audit/hk-stage2-03-bosses.md
+- current module: Maps / Карты
+- current module file: audit/hk-stage2-04-maps.md
 - current module status: CANON_CORE_R1_LIVE_CANDIDATE
-- next module after LIVE PASS: Maps / Карты
+- next module after LIVE PASS: Resources / Ресурсы
 - Today / Сегодня: LIVE PASS
 
 ## Module order
@@ -71,6 +71,10 @@ Each module:
   - final marker: `pits-reward-picker-20260920-r20`
   - final SHA256: `c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb`
   - baseline sync: `35498145691` — PASS
+- 2.03 Bosses / Боссы — LIVE PASS
+  - final marker: `bosses-area-target-20260920-r2`
+  - final SHA256: `0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7`
+  - Area Boss Calculator intentionally remains website-only
 
 
 ## Pits donor source block
@@ -539,3 +543,17 @@ Remaining before Bosses LIVE PASS:
 - Area Boss Calculator / rewards view transfer.
 
 Do not advance to Maps.
+
+
+## Bosses final live confirmation
+
+User confirmed Bosses r2 works correctly in live use.
+- Area + Regional action paths: PASS;
+- state refresh and rerun: PASS;
+- Area target/reward continuation: PASS;
+- Area Boss Calculator is explicitly out of userscript scope because it already exists on the website.
+
+Stage 2.03 Bosses / Боссы: **LIVE PASS**.
+Final live/public SHA remains `0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7`.
+
+Stage 2 continues with 2.04 Maps / Карты.
