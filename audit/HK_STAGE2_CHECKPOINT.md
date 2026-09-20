@@ -216,3 +216,19 @@ Do not advance to Bosses yet.
 - deploy run: `35494398235` — PASS;
 - live/public SHA256: `bbc766dc775c7ce637302f1ecf1edfae28b835afeab8408c214abe47b4950fdd`;
 - baseline sync: `35494440507` — PASS.
+
+
+## Pits fast cycle r10
+
+- user requested slightly faster battle/respawn cadence;
+- removed mandatory full `/player/me` reread after every battle and respawn when the mutation response already provides Pit state;
+- preserved fallback authoritative reread if state is absent;
+- preserved short anti-lock pacing (80–180 ms depending on Pit/sniper mode);
+- pre-start validation and post-finish rereads remain;
+- marker: `pits-fast-cycle-20260920-r10`;
+- deploy run: `35494689254` — PASS;
+- live/public SHA256: `973e1b1788b86caaefac7a26b66f0eb42bc497ed49a618c277ebf36df63e6e25`;
+- baseline sync: `35494718699` — PASS.
+
+Current module status remains:
+**RESPAWN_RETEST_PENDING**
