@@ -1076,6 +1076,48 @@ PASS gate:
 - a new website map becomes visible to userscript knowledge automatically;
 - no separate synchronization job is required.
 
+#### W7 result — PASS (2026-09-21)
+
+- audit: `audit/HK_STAGE2_W7_DIRECT_AUTHORIZED_UPLOAD.md`;
+- build status: `audit/hk-stage2-maps-shared-kb-w7-build-status.txt`;
+- live status: `audit/hk-stage2-maps-shared-kb-w7-live-status.txt`;
+- new server path: `import_hk_authorized_map_upload()`;
+- new CLI: `server.py --import-hk-authorized-map FILE.json[.gz]`;
+- authorized upload contract now preserves exact `building_id` from full/raw map GeoJSON instead of reconstructing IDs later through OSM;
+- upload requires explicit `coord_revision` and canonical X/Y metadata; silent coordinate-orientation guessing is rejected;
+- one import now performs:
+  - website catalog write;
+  - compact geometry write;
+  - canonical resolve/create;
+  - canonical room knowledge write with `hk_maps_import` provenance;
+  - area link write;
+  - exact point link write;
+- build run `35520020636`: PASS:
+  - create canonical: PASS;
+  - resolve existing canonical: PASS;
+  - direct shared visibility through `map_detail()`: PASS;
+  - `game_live` priority: PASS;
+  - idempotent re-upload: PASS;
+  - no separate sync: PASS;
+- future authorized import workflow: `.github/workflows/import-authorized-hk-map.yml`;
+- upload path: `deploy/maps/authorized/*.json.gz`;
+- schema/contract: `deploy/maps/authorized/README.md`;
+- live deploy run `35520130288`: PASS;
+- live server SHA: `b5189981acade420e1aaa533dec8b745c0e16969bf1def0c5008aa297f2a2812`;
+- deployed integration test used a temporary SQLite DB only; production test rows: **0**;
+- production W6 state remains:
+  - `hk_maps_catalog=235`;
+  - `hk_map_points=235`;
+  - `hk_map_area_links=25`;
+  - `hk_map_point_links=2007`;
+- W7 changed userscript: **NO**;
+- current userscript SHA: `bddc55fc46bd4fe8da70c37799a35b74f3924015b071a3e692c532f0f7e6d766`;
+- Maps scanner remains `maps-parallel-read-20260920-r6-safe5`;
+- coordinate marker remains `maps-coordinates-column-row-20260920-r2`;
+- website point renderer was corrected to the real HK Maps bitmask and now handles values 6/7 correctly;
+- **W8 NOT STARTED**; stop here until explicit user instruction.
+
+
 ### Stage W8 — End-to-end verification and checkpoint
 
 Test both directions on multiple districts:
