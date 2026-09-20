@@ -28,10 +28,10 @@ Do not run the full Stage 1 in one long session.
 - donor version: 5.3.22-ui-icons-pit-dim
 - donor SHA256: 28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1
 - prior migration audits: FOUND / READ
-- current block: FINAL
-- current block status: READY_TO_START
-- next action: consolidate 1A-1D into final Stage 1 migration table and verify genuinely untransferred historical functionality = 0
-- overall Stage 1 status: IN_PROGRESS
+- current block: COMPLETE
+- current block status: PASS
+- next action: none; Stage 1 closed. Start Stage 2 only on explicit user command
+- overall Stage 1 status: STAGE1_PASS
 
 ## Resume command
 
@@ -76,3 +76,12 @@ Then:
   - Rat Hunt intentionally deferred to Stage 6
   - no dead active navigation routes found
   - no gameplay/navigation code changed
+
+
+- FINAL — consolidated migration audit: PASS
+  - historical genuinely untransferred functionality: 0
+  - endpoints missing: 0
+  - constants missing: 0
+  - historical nav retained: 20/20
+  - active current routes verified structurally: 18/18
+  - Stage 1 closed
