@@ -1,0 +1,106 @@
+name: Finalize Kokkaras Donor Reference
+
+on:
+  push:
+    paths:
+      - 'reference/topking/finalize-kokkaras-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate captured donor
+        run: |
+          set -euo pipefail
+          src='reference/topking/_temp/kokkaras-current.js'
+          test -s "$src"
+          node --check "$src"
+          sha="$(sha256sum "$src" | awk '{print $1}')"
+          test "$sha" = '454f7bd810be7b39582f947f955d011042878eb10dd4b2cfd985d28b07190f0a'
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('reference/topking/_temp/kokkaras-current.js').read_text(encoding='utf-8')
+          m=re.search(r"version:'([^']+)'",s)
+          if not m:
+              raise SystemExit('panelApi version not found')
+          Path('/tmp/kokkaras-version.txt').write_text(m.group(1),encoding='utf-8')
+          checks=[
+              "baseUrl: 'https://kokkaras.com/hk_maps/'",
+              "apiUrl: 'https://hk-game-api.hwgame.cloud'",
+              "storageNeighborhoodBattlesKey",
+              "clanWars",
+              "ratHunt",
+              "showNeighborhoodBattlesMenu",
+              "runNeighborhoodBattles",
+              "showExploreBuildingsMenu",
+              "runExploreBuildings",
+          ]
+          for needle in checks:
+              if needle not in s:
+                  raise SystemExit('missing donor anchor: '+needle)
+          PY
+
+      - name: Freeze donor snapshot
+        run: |
+          set -euo pipefail
+          src='reference/topking/_temp/kokkaras-current.js'
+          sha='454f7bd810be7b39582f947f955d011042878eb10dd4b2cfd985d28b07190f0a'
+          upload_sha='28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1'
+          version="$(cat /tmp/kokkaras-version.txt)"
+          safe_version="$(printf '%s' "$version" | tr -c 'A-Za-z0-9._-' '_')"
+          short="${sha:0:12}"
+          immutable="reference/topking/kokkaras-panel.${safe_version}-${short}.js"
+
+          cp "$src" reference/topking/donor.current.js
+          cp "$src" "$immutable"
+
+          cat > reference/topking/REFERENCE.json <<EOF
+          {
+            "schema": "hk-donor-reference-v1",
+            "name": "Kokkaras HK Control Panel",
+            "source_url": "https://kokkaras.com/hk_maps/panel.js",
+            "version": "${version}",
+            "pinned_sha256": "${sha}",
+            "user_uploaded_sha256": "${upload_sha}",
+            "current_file": "reference/topking/donor.current.js",
+            "immutable_file": "${immutable}",
+            "role": "primary donor/reference for copied HK mechanics, API behavior, calculations, ordering, guards and flows",
+            "refresh_policy": "frozen until explicitly recaptured; never read the live URL in place of the pinned file during a stage",
+            "note": "The public source changed after the user's capture. The repository pins the later captured Kokkaras snapshot; the user's uploaded snapshot SHA is preserved separately.",
+            "captured_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+          cat > reference/topking/REFERENCE_STATUS.txt <<EOF
+          name=Kokkaras HK Control Panel
+          version=${version}
+          pinned_sha256=${sha}
+          user_uploaded_sha256=${upload_sha}
+          source=https://kokkaras.com/hk_maps/panel.js
+          syntax=ok
+          frozen=PASS
+          donor_anchors=PASS
+          EOF
+
+          rm -rf reference/topking/_temp
+
+      - name: Commit frozen reference
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A reference/topking
+          git commit -m "reference: freeze Kokkaras donor for HK stages"
+          git pull --rebase origin main
+          git push origin HEAD:main
