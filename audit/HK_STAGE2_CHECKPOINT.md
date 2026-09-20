@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: BLOCKED_DONOR_SOURCE_NOT_FOUND
+- current module status: SOURCE_PREFLIGHT_PASS_IN_PROGRESS
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -77,3 +77,11 @@ Each module:
 - current module: BLOCKED_DONOR_SOURCE_NOT_FOUND
 - no Pits gameplay code changed
 - resume action: restore/re-upload the exact pinned donor, then rerun SOURCE PREFLIGHT and continue 2.02
+
+
+## Pits donor source restored
+
+- exact pinned donor re-uploaded
+- CRLF → LF canonical SHA256 verified: `28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1`
+- previous BLOCKED status resolved
+- Stage 2.02 Pits preflight resumed
