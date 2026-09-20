@@ -1,0 +1,45 @@
+name: W7 import-path preflight
+on:
+  push:
+    paths: ['deploy/topking/w7-preflight-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: fetch live server
+        env:
+          K: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$K" > ~/.ssh/k
+          chmod 600 ~/.ssh/k
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+      - name: extract import path
+        run: |
+          python3 - <<'PY'
+          import ast,hashlib
+          from pathlib import Path
+          s=Path('/tmp/server.py').read_text('utf-8')
+          t=ast.parse(s)
+          names={'import_hk_maps_index','import_hk_map_points','hk_map_data','link_hk_map_area','link_hk_map_points','import_hk_map_room_knowledge'}
+          out=['server_sha256='+hashlib.sha256(s.encode()).hexdigest()]
+          for n in t.body:
+              if isinstance(n,ast.FunctionDef) and n.name in names:
+                  out.append('\n### '+n.name+'\n'+(ast.get_source_segment(s,n) or ''))
+          # CLI branches near private HK imports
+          for needle in ('--import-hk-maps','--import-hk-map-points','--import-hk-map-room-knowledge'):
+              i=s.find(needle)
+              if i>=0: out.append('\n### CLI '+needle+'\n'+s[max(0,i-1800):i+4200])
+          Path('audit/hk-stage2-w7-import-preflight.txt').write_text('\n'.join(out)+'\n',encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-w7-import-preflight.txt
+          git commit -m "audit: inspect W7 import path"
+          git pull --rebase origin main
+          git push origin HEAD:main
