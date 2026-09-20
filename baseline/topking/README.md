@@ -1,43 +1,56 @@
-# HK / Top King — CANONICAL BASELINE
+# HK / Top King — CURRENT IMPLEMENTATION BASELINE
 
-This directory is the source of truth for further HK userscript work.
+This directory stores our currently accepted HK implementation.
+
+It is **NOT** the primary source of truth for copied mechanics or data behavior.
 
 ## Files
 
-- `HamsterKingMobile.current.user.js` — exact byte-for-byte copy of the currently accepted live script.
-- `HamsterKingMobile.<version>-<sha>.user.js` — immutable snapshot of that accepted baseline.
+- `HamsterKingMobile.current.user.js` — exact byte-for-byte copy of our currently accepted live implementation.
+- `HamsterKingMobile.<version>-<sha>.user.js` — immutable snapshot of that implementation.
 - `BASELINE.json` — version, SHA256 and capture metadata.
 
-## Mandatory development rule
+## Role of this directory
 
-For every new chat/session/task that changes the HK userscript:
+Use this baseline to understand:
 
-1. Read `baseline/topking/BASELINE.json`.
-2. Read `baseline/topking/HamsterKingMobile.current.user.js`.
-3. Treat that file as the implementation source of truth.
-4. Do NOT reconstruct mechanics from chat descriptions, memories, roadmap text, screenshots or assumptions.
-5. Do NOT rewrite already-working mechanics unless a concrete regression is demonstrated.
-6. If historical behavior must be restored, compare the canonical baseline against the preserved old script/source before changing code.
-7. Apply the smallest targeted patch to the canonical baseline.
-8. Validate syntax and the exact affected runtime path.
-9. Deploy and verify public delivery.
-10. Only after the user confirms the new live build works may the canonical baseline be refreshed.
+- what our script currently contains;
+- where a feature is integrated;
+- what must not be accidentally broken;
+- what exact code is currently deployed.
 
-## Priority of sources
+Do **not** use this file to invent or redefine the behavior of a feature that is being copied from an external donor/reference script.
 
-When sources disagree, use this order:
+For copied mechanics, the donor/reference source has priority. See:
 
-1. Current accepted canonical baseline in this directory.
-2. Verified preserved historical working script/source.
-3. Real live game API/definitions.
-4. Roadmap/task text.
+`reference/topking/`
+
+## Development rule
+
+For every task:
+
+1. Read the donor/reference source first when the task concerns copied mechanics/data/API behavior.
+2. Read this current implementation baseline second.
+3. Compare donor behavior against our implementation.
+4. Apply the smallest targeted change to our implementation.
+5. Do not reconstruct donor mechanics from chat text, memory, screenshots, or assumptions.
+6. Validate syntax and the affected runtime path.
+7. Deploy and verify.
+8. Refresh this implementation baseline only after the new live build is accepted.
+
+## Source priority
+
+When working on copied functionality:
+
+1. Exact donor/reference script.
+2. Real game API/definitions when needed to understand donor behavior.
+3. Current implementation baseline in this directory.
+4. Roadmap/task wording.
 5. Chat memory/context.
 
-Chat text is never sufficient by itself to redefine existing working mechanics.
+When working only on our own integration/UI/bugs:
 
-## New-chat instruction
-
-Use:
-
-> Work from the canonical HK baseline in `baseline/topking/`. First read `BASELINE.json` and `HamsterKingMobile.current.user.js`. Do not recreate or reinterpret existing mechanics from text. Make only the requested change against this exact baseline.
-
+1. Current implementation baseline.
+2. Real runtime/live behavior.
+3. Roadmap/task wording.
+4. Chat memory/context.
