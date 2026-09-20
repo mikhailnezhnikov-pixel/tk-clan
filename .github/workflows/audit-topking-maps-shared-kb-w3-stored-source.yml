@@ -1,0 +1,127 @@
+name: Audit TopKing W3 Stored HK Source
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-shared-kb-w3-stored-source-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decode stored HK sources
+        run: |
+          set -euo pipefail
+          cat deploy/maps/hk-positive.part*.b64 | base64 -d | gzip -d > /tmp/hk-positive.decoded
+          base64 -d maps/generated/source-pack.b64 > /tmp/source-pack.decoded || true
+          {
+            echo "HK_POSITIVE_FILE=$(file -b /tmp/hk-positive.decoded)"
+            echo "HK_POSITIVE_BYTES=$(wc -c < /tmp/hk-positive.decoded)"
+            echo "SOURCE_PACK_FILE=$(file -b /tmp/source-pack.decoded 2>/dev/null || true)"
+            echo "SOURCE_PACK_BYTES=$(wc -c < /tmp/source-pack.decoded 2>/dev/null || echo 0)"
+          }
+
+      - name: Inspect pilot content
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, re, subprocess, os
+          pilot='hk_moscow1226'
+          result={'pilot':pilot}
+
+          p=pathlib.Path('/tmp/hk-positive.decoded')
+          raw=p.read_bytes()
+          result['hk_positive_bytes']=len(raw)
+          text=raw.decode('utf-8','replace')
+          result['hk_positive_contains_pilot']=pilot in text
+          result['hk_positive_prefix']=text[:180]
+          result['hk_positive_pilot_excerpt']=''
+          i=text.find(pilot)
+          if i>=0:
+              result['hk_positive_pilot_excerpt']=text[max(0,i-500):i+5000]
+          try:
+              obj=json.loads(text)
+              result['hk_positive_json_type']=type(obj).__name__
+              if isinstance(obj,dict):
+                  result['hk_positive_top_keys']=list(obj)[:30]
+                  row=obj.get(pilot)
+                  if row is not None:
+                      result['hk_positive_pilot_type']=type(row).__name__
+                      result['hk_positive_pilot']=row
+              elif isinstance(obj,list):
+                  result['hk_positive_list_len']=len(obj)
+                  hits=[x for x in obj if isinstance(x,dict) and pilot in json.dumps(x,ensure_ascii=False)]
+                  result['hk_positive_hits']=hits[:3]
+          except Exception as e:
+              result['hk_positive_json_error']=repr(e)
+
+          sp=pathlib.Path('/tmp/source-pack.decoded')
+          if sp.exists():
+              sraw=sp.read_bytes()
+              result['source_pack_bytes']=len(sraw)
+              result['source_pack_magic']=list(sraw[:8])
+              try:
+                  st=sraw.decode('utf-8')
+                  result['source_pack_text']=True
+                  result['source_pack_contains_pilot']=pilot in st
+                  j=st.find(pilot)
+                  if j>=0:
+                      result['source_pack_pilot_excerpt']=st[max(0,j-500):j+5000]
+              except Exception:
+                  result['source_pack_text']=False
+
+          pathlib.Path('/tmp/w3-stored-source.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps({
+              k:v for k,v in result.items()
+              if k not in ('hk_positive_pilot_excerpt','source_pack_pilot_excerpt','hk_positive_pilot','hk_positive_hits')
+          },ensure_ascii=False,indent=2))
+          if result.get('hk_positive_pilot') is not None:
+              print('PILOT_JSON='+json.dumps(result['hk_positive_pilot'],ensure_ascii=False)[:8000])
+          elif result.get('hk_positive_pilot_excerpt'):
+              print('PILOT_EXCERPT='+result['hk_positive_pilot_excerpt'][:8000])
+          if result.get('source_pack_pilot_excerpt'):
+              print('SOURCE_PACK_EXCERPT='+result['source_pack_pilot_excerpt'][:8000])
+          PY
+
+      - name: Record stored-source audit
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w3-stored-source.json',encoding='utf-8'))
+          lines=[
+            'MAPS_SHARED_KB_W3_STORED_SOURCE_AUDIT=PASS',
+            f"pilot={d['pilot']}",
+            f"hk_positive_bytes={d.get('hk_positive_bytes')}",
+            f"hk_positive_contains_pilot={d.get('hk_positive_contains_pilot')}",
+            f"hk_positive_json_type={d.get('hk_positive_json_type')}",
+            f"hk_positive_pilot_type={d.get('hk_positive_pilot_type')}",
+            f"source_pack_bytes={d.get('source_pack_bytes')}",
+            f"source_pack_contains_pilot={d.get('source_pack_contains_pilot')}",
+            'live_mutation=NO',
+          ]
+          if isinstance(d.get('hk_positive_pilot'),dict):
+              lines.append('pilot_keys='+json.dumps(sorted(d['hk_positive_pilot'].keys()),ensure_ascii=False,separators=(',',':')))
+          elif isinstance(d.get('hk_positive_pilot'),list) and d['hk_positive_pilot']:
+              x=d['hk_positive_pilot'][0]
+              if isinstance(x,dict):
+                  lines.append('pilot_item_keys='+json.dumps(sorted(x.keys()),ensure_ascii=False,separators=(',',':')))
+          open('audit/hk-stage2-maps-shared-kb-w3-stored-source.txt','w',encoding='utf-8').write('\n'.join(lines)+'\n')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w3-stored-source.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: inspect stored HK source for W3"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
