@@ -1,1 +1,2 @@
-2026-09-20 sync pits reward picker r20 live candidate
+2026-09-20 sync Bosses canonical core r1 live
+sha256=571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9
