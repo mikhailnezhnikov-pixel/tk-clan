@@ -706,3 +706,17 @@ Maps remains **SCANNER_R2_LIVE_CANDIDATE** pending fresh user scan confirmation.
 - technical live verification: PASS.
 
 Current Maps status: **SCANNER_R3_LIVE_CANDIDATE** pending user scan confirmation.
+
+
+## Maps parallel reader r4
+
+- safe scanner logic from r3 retained;
+- 6 concurrent read-only `/player/building` workers;
+- batched map submission up to 100 building observations per request;
+- existing 429/transient/player-lock retry/backoff retained;
+- unopened buildings remain excluded;
+- marker: `maps-parallel-read-20260920-r4`;
+- live/public SHA256: `f4f5a74ed8a4cc25b63ef11adf714d358ada0399f95a765bfedb21728a6162ca`;
+- technical live verification: PASS.
+
+Current Maps status: **SCANNER_R4_LIVE_CANDIDATE** pending user timing and map-result confirmation.
