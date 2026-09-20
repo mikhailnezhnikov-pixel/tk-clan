@@ -1,0 +1,14 @@
+{
+  "ambiguous": 3,
+  "map_keys": [
+    "hk_newyork2520",
+    "hk_newyork3110",
+    "hk_newyork3111",
+    "hk_newyork3307",
+    "hk_newyork4026"
+  ],
+  "maps": 5,
+  "point_count": 1778,
+  "unique": 1661,
+  "unmatched": 114
+}
