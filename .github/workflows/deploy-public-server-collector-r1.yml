@@ -75,13 +75,13 @@ jobs:
               install -m 0600 /tmp/hamsterking-public-collector.env /etc/hamsterking-public-collector.env
             elif [ ! -f /etc/hamsterking-public-collector.env ]; then
               umask 077
-              cat > /etc/hamsterking-public-collector.env <<'ENV'
-HK_PUBLIC_COLLECTOR_GAME_TOKEN=
-HK_PUBLIC_COLLECTOR_GAME_API=https://hk-game-api.hwgame.cloud
-HK_PUBLIC_COLLECTOR_DB=/var/lib/hamsterking-license/licenses.db
-HK_PUBLIC_COLLECTOR_STATUS=/var/lib/hamsterking-license/public-collector-status.json
-HK_PUBLIC_COLLECTOR_REQUEST_GAP=0.35
-ENV
+              printf '%s\\n' \
+                'HK_PUBLIC_COLLECTOR_GAME_TOKEN=' \
+                'HK_PUBLIC_COLLECTOR_GAME_API=https://hk-game-api.hwgame.cloud' \
+                'HK_PUBLIC_COLLECTOR_DB=/var/lib/hamsterking-license/licenses.db' \
+                'HK_PUBLIC_COLLECTOR_STATUS=/var/lib/hamsterking-license/public-collector-status.json' \
+                'HK_PUBLIC_COLLECTOR_REQUEST_GAP=0.35' \
+                > /etc/hamsterking-public-collector.env
             fi
             python3 -m py_compile /opt/hamsterking-license/public_collector.py
             systemctl daemon-reload
