@@ -1,0 +1,102 @@
+name: Diagnose HK Launcher
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/launcher-diagnostic-trigger.txt'
+      - '.github/workflows/diagnose-hk-launcher.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: diagnose-hk-launcher
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live userscript read only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Capture launcher diagnostics
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, re
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          m=re.search(r'^// @version\s+([^\s]+)',s,re.M)
+          version=m.group(1) if m else 'unknown'
+          sha=hashlib.sha256(s.encode()).hexdigest()
+          checks={
+            'runtime_guard': 'const previousRuntime = window.__HK_MOBILE_RUNTIME__;' in s,
+            'runtime_open': 'runtime.open = () =>' in s,
+            'bootstrap_show': 'function showBootstrap(' in s,
+            'bootstrap_hide': 'function hideBootstrap()' in s,
+            'render_ui': 'function renderUI()' in s,
+            'fab_html': 'id="hk-fab"' in s,
+            'fab_css': '#hk-fab{' in s,
+            'fab_drag': 'function installFabDragging(fab)' in s,
+            'root_remove': "document.querySelector('#hk-mobile-root')?.remove();" in s,
+            'hide_after_append': 'document.body.appendChild(root);\n    hideBootstrap();' in s,
+          }
+          planned=re.findall(r"\{planned:true,ru:'([^']+)',en:'([^']+)'\}",s)
+          status=[f'version={version}',f'sha256={sha}','syntax=ok']
+          status += [f'{k}=' + ('PASS' if v else 'FAIL') for k,v in checks.items()]
+          status.append('planned=' + ', '.join(ru for ru,en in planned))
+          Path('audit/hk-current-launcher-status.txt').write_text('\n'.join(status)+'\n',encoding='utf-8')
+          anchors=[
+            'const previousRuntime = window.__HK_MOBILE_RUNTIME__;',
+            'function showBootstrap(',
+            'function installFabDragging(fab)',
+            'function renderUI()',
+            'id="hk-fab"',
+            'document.body.appendChild(root);',
+            'runtime.open = () =>',
+          ]
+          out=['# Current live HK launcher source',*status,'']
+          for a in anchors:
+            i=s.find(a)
+            out += [f'===== {a} =====']
+            if i<0: out += ['NOT FOUND','']
+            else: out += [s[max(0,i-2200):min(len(s),i+6500)],'']
+          Path('audit/hk-current-launcher-source.txt').write_text('\n'.join(out),encoding='utf-8')
+          PY
+
+      - name: Commit diagnostics
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-current-launcher-status.txt audit/hk-current-launcher-source.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Capture live HK launcher diagnostics"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js
