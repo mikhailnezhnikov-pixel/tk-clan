@@ -1,0 +1,186 @@
+name: W6 point-local dry-run
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/w6-point-local-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+      - name: Classify all 235 maps read-only
+        run: |
+          cat > /tmp/w6-classify.py <<'PY'
+          import importlib.util,json,sqlite3
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          links={r['map_key']:dict(r) for r in db.execute(
+              "SELECT map_key,canonical_area_id,match_method,linked_at FROM hk_map_area_links")}
+          maps=[]
+          for r in db.execute("SELECT map_key,city,grid FROM hk_maps_catalog ORDER BY map_key"):
+              d=s.discover_hk_map_area(db,r['map_key'])
+              maps.append({
+                  'map_key':r['map_key'],'city':r['city'],'grid':r['grid'],
+                  'candidates':d.get('candidates') or [],
+                  'existing_link':links.get(r['map_key'])
+              })
+          out={
+              'total_maps':len(maps),'maps':maps,'existing_links':list(links.values()),
+              'map_areas_count':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
+              'map_buildings_count':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0]
+          }
+          print(json.dumps(out,ensure_ascii=False))
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-classify.py root@89.125.1.71:/tmp/w6-classify.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w6-classify.py' > w6-classification.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('w6-classification.json'))
+          assert d['total_maps']==235,d['total_maps']
+          one=[m for m in d['maps'] if len(m['candidates'])==1]
+          zero=[m for m in d['maps'] if len(m['candidates'])==0]
+          many=[m for m in d['maps'] if len(m['candidates'])>1]
+          assert len(one)==26,len(one)
+          assert len(zero)==209,len(zero)
+          assert len(many)==0,len(many)
+          print('W6_CLASSIFY=PASS unique=26 unresolved=209 ambiguous=0')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w6-classification-v5
+          path: w6-classification.json
+          retention-days: 2
+
+  analyze:
+    needs: classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        map_key:
+          - hk_dubai5335
+          - hk_lagos0843
+          - hk_moscow1226
+          - hk_newyork0001
+          - hk_newyork0002
+          - hk_newyork0438
+          - hk_newyork1437
+          - hk_newyork1706
+          - hk_newyork2508
+          - hk_newyork2520
+          - hk_newyork2528
+          - hk_newyork3110
+          - hk_newyork3111
+          - hk_newyork3307
+          - hk_newyork3504
+          - hk_newyork3707
+          - hk_newyork4016
+          - hk_newyork4026
+          - hk_newyork4617
+          - hk_newyork4639
+          - hk_newyork4727
+          - hk_newyork4825
+          - hk_riodejaneiro0217
+          - hk_riodejaneiro1730
+          - hk_saintpetersburg0001
+          - hk_saintpetersburg0003
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+      - name: Export one resolved map read-only
+        env:
+          MAP_KEY: ${{ matrix.map_key }}
+        run: |
+          cat > /tmp/w6-one.py <<'PY'
+          import importlib.util,json,sqlite3,sys
+          key=sys.argv[1]
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          d=s.discover_hk_map_area(db,key); candidates=d.get('candidates') or []
+          assert len(candidates)==1,(key,candidates)
+          area=candidates[0]
+          p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(key,)).fetchone()
+          buildings=[dict(r) for r in db.execute(
+              """SELECT building_id,room_count,is_invest,knowledge_source,knowledge_observed_at
+                 FROM map_buildings WHERE area_id=? ORDER BY building_id""",(area,))]
+          print(json.dumps({
+              'map_key':key,'canonical_area_id':area,
+              'points':json.loads(p['points_json'] or '[]'),'point_count':p['point_count'],
+              'canonical_buildings':buildings
+          },ensure_ascii=False))
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-one.py root@89.125.1.71:/tmp/w6-one.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 "python3 /tmp/w6-one.py '$MAP_KEY'" > /tmp/w6-one.json
+      - name: Resolve OSM buildings around source points
+        env:
+          MAP_KEY: ${{ matrix.map_key }}
+        run: |
+          python3 deploy/topking/w6_point_local_dryrun.py /tmp/w6-one.json "w6-$MAP_KEY.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w6-v5-${{ matrix.map_key }}
+          path: w6-${{ matrix.map_key }}.json
+          retention-days: 2
+
+  aggregate:
+    needs: [classify, analyze]
+    if: ${{ always() && needs.classify.result == 'success' && needs.analyze.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: w6-classification-v5
+          path: /tmp/classification
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: w6-v5-*
+          path: /tmp/maps
+          merge-multiple: true
+      - name: Aggregate dry-run
+        run: |
+          python3 deploy/topking/w6_aggregate_dryrun.py \
+            /tmp/classification/w6-classification.json \
+            /tmp/maps \
+            audit/hk-stage2-w6-dryrun.json \
+            audit/hk-stage2-w6-dryrun-summary.txt
+          cat audit/hk-stage2-w6-dryrun-summary.txt
+      - name: Commit dry-run evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-w6-dryrun.json audit/hk-stage2-w6-dryrun-summary.txt
+          git commit -m "audit: W6 point-local dry-run all 235 maps"
+          git pull --rebase origin main
+          git push origin HEAD:main
