@@ -1,0 +1,11 @@
+[Unit]
+Description=Run TopKing public collector every 3 hours
+
+[Timer]
+OnCalendar=*-*-* 00/3:15:00
+RandomizedDelaySec=300
+Persistent=true
+Unit=hamsterking-public-collector.service
+
+[Install]
+WantedBy=timers.target
