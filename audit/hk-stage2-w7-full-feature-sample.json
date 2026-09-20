@@ -1,0 +1,230 @@
+{
+  "features": 4329,
+  "game": 2574,
+  "sample": [
+    {
+      "feature_id": "way248169359",
+      "property_keys": [
+        "base_color",
+        "building_generator",
+        "building_id",
+        "crystals",
+        "crystals_key",
+        "faction",
+        "forced_polygon",
+        "highlight_color",
+        "id",
+        "is_db_building",
+        "is_game",
+        "is_investment",
+        "osm_id",
+        "tags",
+        "type"
+      ],
+      "properties": {
+        "id": "way248169359",
+        "osm_id": "way248169359",
+        "building_id": "way248169359",
+        "is_game": true,
+        "crystals": 2,
+        "crystals_key": "2"
+      }
+    },
+    {
+      "feature_id": "way248169360",
+      "property_keys": [
+        "base_color",
+        "building_generator",
+        "building_id",
+        "crystals",
+        "crystals_key",
+        "faction",
+        "forced_polygon",
+        "highlight_color",
+        "id",
+        "is_db_building",
+        "is_game",
+        "is_investment",
+        "osm_id",
+        "tags",
+        "type"
+      ],
+      "properties": {
+        "id": "way248169360",
+        "osm_id": "way248169360",
+        "building_id": "way248169360",
+        "is_game": true,
+        "crystals": 2,
+        "crystals_key": "2"
+      }
+    },
+    {
+      "feature_id": "way248169362",
+      "property_keys": [
+        "base_color",
+        "building_generator",
+        "building_id",
+        "crystals",
+        "crystals_key",
+        "faction",
+        "forced_polygon",
+        "highlight_color",
+        "id",
+        "is_db_building",
+        "is_game",
+        "is_investment",
+        "osm_id",
+        "tags",
+        "type"
+      ],
+      "properties": {
+        "id": "way248169362",
+        "osm_id": "way248169362",
+        "building_id": "way248169362",
+        "is_game": true,
+        "crystals": 2,
+        "crystals_key": "2"
+      }
+    },
+    {
+      "feature_id": "way248169363",
+      "property_keys": [
+        "base_color",
+        "building_generator",
+        "building_id",
+        "crystals",
+        "crystals_key",
+        "faction",
+        "forced_polygon",
+        "highlight_color",
+        "id",
+        "is_db_building",
+        "is_game",
+        "is_investment",
+        "osm_id",
+        "tags",
+        "type"
+      ],
+      "properties": {
+        "id": "way248169363",
+        "osm_id": "way248169363",
+        "building_id": "way248169363",
+        "is_game": true,
+        "crystals": 2,
+        "crystals_key": "2"
+      }
+    },
+    {
+      "feature_id": "way248169364",
+      "property_keys": [
+        "base_color",
+        "building_generator",
+        "building_id",
+        "crystals",
+        "crystals_key",
+        "faction",
+        "forced_polygon",
+        "highlight_color",
+        "id",
+        "is_db_building",
+        "is_game",
+        "is_investment",
+        "osm_id",
+        "tags",
+        "type"
+      ],
+      "properties": {
+        "id": "way248169364",
+        "osm_id": "way248169364",
+        "building_id": "way248169364",
+        "is_game": true,
+        "crystals": 1,
+        "crystals_key": "1"
+      }
+    },
+    {
+      "feature_id": "way248169366",
+      "property_keys": [
+        "base_color",
+        "building_generator",
+        "building_id",
+        "crystals",
+        "crystals_key",
+        "faction",
+        "forced_polygon",
+        "highlight_color",
+        "id",
+        "is_db_building",
+        "is_game",
+        "is_investment",
+        "osm_id",
+        "tags",
+        "type"
+      ],
+      "properties": {
+        "id": "way248169366",
+        "osm_id": "way248169366",
+        "building_id": "way248169366",
+        "is_game": true,
+        "crystals": 0,
+        "crystals_key": "0"
+      }
+    },
+    {
+      "feature_id": "way248169367",
+      "property_keys": [
+        "base_color",
+        "building_generator",
+        "building_id",
+        "crystals",
+        "crystals_key",
+        "faction",
+        "forced_polygon",
+        "highlight_color",
+        "id",
+        "is_db_building",
+        "is_game",
+        "is_investment",
+        "osm_id",
+        "tags",
+        "type"
+      ],
+      "properties": {
+        "id": "way248169367",
+        "osm_id": "way248169367",
+        "building_id": "way248169367",
+        "is_game": true,
+        "crystals": 1,
+        "crystals_key": "1"
+      }
+    },
+    {
+      "feature_id": "way248169370",
+      "property_keys": [
+        "base_color",
+        "building_generator",
+        "building_id",
+        "crystals",
+        "crystals_key",
+        "faction",
+        "forced_polygon",
+        "highlight_color",
+        "id",
+        "is_db_building",
+        "is_game",
+        "is_investment",
+        "osm_id",
+        "tags",
+        "type"
+      ],
+      "properties": {
+        "id": "way248169370",
+        "osm_id": "way248169370",
+        "building_id": "way248169370",
+        "is_game": true,
+        "crystals": 2,
+        "crystals_key": "2"
+      }
+    }
+  ]
+}
