@@ -6,8 +6,8 @@
   "donor": {
     "name": "Kokkaras HK Control Panel",
     "source_kind": "chatgpt_file_library",
-    "file_title": "Вставленный текст.txt",
-    "file_id": "file_0000000006d08243a84499c0fe6f08c7",
+    "file_title": "скрипт Kokkaras,.txt",
+    "file_id": "file_000000008f94821087c96e41e5ff3872",
     "sha256": "28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1",
     "size_bytes": 1836359,
     "version": "5.3.22-ui-icons-pit-dim",
@@ -23,7 +23,12 @@
       "ratHunt",
       "clanWars"
     ],
-    "note": "The live kokkaras.com file is mutable and changed after capture. Never substitute the live URL for this pinned uploaded revision."
+    "note": "Exact pinned donor re-uploaded on 2026-09-20. Raw upload uses CRLF; normalizing CRLF to LF reproduces the canonical 1,836,359-byte file and pinned SHA256 exactly. Never substitute the mutable live kokkaras.com file.",
+    "uploaded_raw_sha256": "8a5aece8b10dfbaf0b3dd2890de600a9505aa523783cbe0c97ea81331d7e0c7d",
+    "uploaded_raw_size_bytes": 1860858,
+    "line_endings": "CRLF",
+    "normalization": "CRLF -> LF",
+    "verified_at": "2026-09-20"
   },
   "current_implementation": {
     "manifest": "baseline/topking/BASELINE.json",
