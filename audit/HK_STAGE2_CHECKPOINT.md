@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- current module: Resources / Ресурсы
-- current module file: audit/hk-stage2-05-resources.md
+- current module: Buildings / Здания
+- current module file: audit/hk-stage2-06-buildings.md
 - current module status: SOURCE_PREFLIGHT_PENDING
-- next module after LIVE PASS: Buildings / Здания
+- next module after LIVE PASS: Explore / Исследование
 - Today / Сегодня: LIVE PASS
 
 ## Module order
@@ -77,6 +77,9 @@ Each module:
   - Area Boss Calculator intentionally remains website-only
 - 2.04 Maps / Карты — LIVE PASS
   - marker: `stage2e-maps-20260919-r1`
+  - no new patch required
+- 2.05 Resources / Ресурсы — LIVE PASS
+  - revision: `bureau-resources-live-20260920-r1`
   - no new patch required
 
 
@@ -582,3 +585,14 @@ Stage 2.04 Maps resumes from **SOURCE_PREFLIGHT_PENDING** until a Maps-specific 
 
 Stage 2.04 Maps / Карты: **LIVE PASS**.
 Stage 2 continues with 2.05 Resources / Ресурсы.
+
+
+## Resources Stage 2.05 final
+
+- current Resources module revalidated against the deployed 1.17.1 Bureau/Resources fix;
+- live read, budget calculation, guarded mutation, state refresh and rerun path are present;
+- no confirmed regression found;
+- no new deploy required.
+
+Stage 2.05 Resources / Ресурсы: **LIVE PASS**.
+Stage 2 continues with 2.06 Buildings / Здания.
