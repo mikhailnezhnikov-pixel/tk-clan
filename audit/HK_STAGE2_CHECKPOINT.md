@@ -193,3 +193,14 @@ Current module status:
 Next:
 resume/re-run the selected active Pit and verify restoration → state update → completion/rerun.
 Do not advance to Bosses yet.
+
+
+## Pits saved power table r7
+
+- `Сохранённая сила уровней` now starts collapsed;
+- manual expansion remains available;
+- no data/forecast/action logic changed;
+- marker: `pits-power-table-collapsed-20260920-r7`;
+- deploy run: `35494081452` — PASS;
+- live/public SHA256: `06422b7f259c15c47259e2156ea4446b2286bba6e9f8db3769d16faf7763bc6a`;
+- baseline sync: `35494109901` — PASS.
