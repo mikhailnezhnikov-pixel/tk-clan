@@ -297,7 +297,7 @@ s=s.replace(old_busy,new_busy,1)
 
 old_refresh=r"""        if (key === 'pit') {
           playerDocument = await apiJson('/player/me','POST');
-          acceptPitDocument(${apiBase}/player/me`,playerDocument);
+          acceptPitDocument(`${apiBase}/player/me`,playerDocument);
           pitCanonRender();
           liveReadOk=true;return playerDocument;
         }
@@ -305,7 +305,7 @@ old_refresh=r"""        if (key === 'pit') {
 new_refresh=r"""        if (key === 'pit') {
           const results=await Promise.all([apiJson('/player/me','POST'),pitCanonLoadRewardLive()]);
           playerDocument=results[0];
-          acceptPitDocument(${apiBase}/player/me`,playerDocument);
+          acceptPitDocument(`${apiBase}/player/me`,playerDocument);
           pitCanonRender();
           liveReadOk=true;return playerDocument;
         }
