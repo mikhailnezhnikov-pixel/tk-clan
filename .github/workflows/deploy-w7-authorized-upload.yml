@@ -1,0 +1,172 @@
+name: Deploy W7 authorized map upload
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/w7-live-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Build exact W7 candidate from current live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          live_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
+          echo "source_server_sha256=$live_sha"
+          test "$live_sha" = "8fe91e74f49ecec9ea662e5ec85c32f07854a6dd5ed03864f70a3261a43dc245"
+          python3 deploy/topking/patch_server_maps_shared_kb_w7.py
+          python3 -m py_compile /tmp/server.py
+          test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "b5189981acade420e1aaa533dec8b745c0e16969bf1def0c5008aa297f2a2812"
+          grep -Fq 'HK_MAP_AUTHORIZED_UPLOAD_W7_V1' /tmp/server.py
+
+      - name: Backup and deploy server only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.w7.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.w7.$stamp"
+            install -m 0644 /tmp/server.w7.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+            sha256sum /opt/hamsterking-license/server.py
+          '
+
+      - name: Verify deployed W7 on temporary DB
+        run: |
+          cat > /tmp/w7-live-test.py <<'PY'
+          import importlib.util,os,tempfile
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          assert hasattr(s,'import_hk_authorized_map_upload')
+          fd,path=tempfile.mkstemp(prefix='w7-live-',suffix='.db');os.close(fd)
+          def poly(cx,cy,d=.0002):
+              return {'type':'Polygon','coordinates':[[[cx-d,cy-d],[cx+d,cy-d],[cx+d,cy+d],[cx-d,cy+d],[cx-d,cy-d]]]}
+          try:
+              s.DB_PATH=path;s.init_db()
+              payload={
+                'catalog':{'key':'hk_w7live0101','city':'W7','grid':'01:01','invest':0,'buildings':1,'unknown':0,
+                           'crystals':[0,1,0,0,0,0],'eventBuildings':1,'totalEvents':1,'progress':100,'score':1,'reward':{}},
+                'points':[1000000,2000000,1],
+                'meta':{'area_id':'w7-web-area','city_id':'w7-city','city_name':'W7','x':1,'y':1,'coord_revision':'column-row-v1'},
+                'buildingsGeoJSON':{'type':'FeatureCollection','features':[
+                  {'type':'Feature','id':'way7001','geometry':poly(10.0,20.0),
+                   'properties':{'is_game':True,'building_id':'way7001','crystals':1,'is_investment':False}}
+                ]}
+              }
+              r=s.import_hk_authorized_map_upload(payload)
+              assert r['ok'] and r['direct_shared'] and r['sync_required'] is False,r
+              assert r['matched_points']==1 and r['point_links']==1,r
+              detail=s.map_detail(r['canonical_area_id'])
+              assert detail and detail['buildings'][0]['room_count']==1,detail
+              assert detail['buildings'][0]['knowledge_source']=='hk_maps_import',detail
+              again=s.import_hk_authorized_map_upload(payload)
+              assert again['canonical_area_id']==r['canonical_area_id'],again
+              with s.db_session() as db:
+                  assert db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0]==1
+                  assert db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0]==1
+                  assert db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0]==1
+              print('W7_DEPLOYED_DIRECT_UPLOAD=PASS')
+              print('W7_DEPLOYED_NO_SYNC=PASS')
+              print('W7_DEPLOYED_IDEMPOTENT=PASS')
+          finally:
+              try:os.remove(path)
+              except OSError:pass
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w7-live-test.py root@89.125.1.71:/tmp/w7-live-test.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w7-live-test.py'
+
+      - name: Verify live W6 data and current Maps client
+        run: |
+          set -euo pipefail
+          cat > /tmp/w7-live-read.py <<'PY'
+          import json,sqlite3
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          out={
+            'catalog':db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0],
+            'points':db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0],
+            'area_links':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
+            'point_links':db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0],
+            'w7_test_live_rows':db.execute("SELECT COUNT(*) FROM hk_maps_catalog WHERE map_key='hk_w7live0101'").fetchone()[0],
+          }
+          assert out['catalog']==235,out
+          assert out['points']==235,out
+          assert out['area_links']==25,out
+          assert out['point_links']==2007,out
+          assert out['w7_test_live_rows']==0,out
+          print(json.dumps(out,sort_keys=True))
+          db.close()
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w7-live-read.py root@89.125.1.71:/tmp/w7-live-read.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w7-live-read.py' | tee /tmp/w7-live-db.json
+          curl -fsSL "https://hk-license.89.125.1.71.sslip.io/panel.js?w7=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r6-safe5'" /tmp/public.js
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2'" /tmp/public.js
+          sha256sum /tmp/public.js | awk '{print $1}' > /tmp/w7-client-sha.txt
+
+      - name: Record W7 live status
+        run: |
+          set -euo pipefail
+          client_sha="$(cat /tmp/w7-client-sha.txt)"
+          {
+            echo "MAPS_SHARED_KB_W7_LIVE=PASS"
+            echo "server_sha256=b5189981acade420e1aaa533dec8b745c0e16969bf1def0c5008aa297f2a2812"
+            echo "client_sha256=$client_sha"
+            echo "direct_authorized_upload=PASS"
+            echo "create_or_resolve_canonical=PASS"
+            echo "direct_shared_knowledge=PASS"
+            echo "no_separate_sync=PASS"
+            echo "idempotent_reupload=PASS"
+            echo "live_test_db_only=YES"
+            echo "production_test_rows=0"
+            echo "catalog=235"
+            echo "points=235"
+            echo "area_links=25"
+            echo "point_links=2007"
+            echo "userscript_changed=NO"
+            echo "scanner=maps-parallel-read-20260920-r6-safe5"
+            echo "coords=maps-coordinates-column-row-20260920-r2"
+            echo "W8_STARTED=NO"
+          } > audit/hk-stage2-maps-shared-kb-w7-live-status.txt
+          cat audit/hk-stage2-maps-shared-kb-w7-live-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w7-live-status.txt
+          git commit -m "audit: record Maps shared KB W7 live PASS"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'rm -f /tmp/server.w7.py /tmp/w7-live-test.py /tmp/w7-live-read.py' || true
+          rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/w7-live-test.py /tmp/w7-live-read.py /tmp/w7-live-db.json /tmp/public.js /tmp/w7-client-sha.txt
