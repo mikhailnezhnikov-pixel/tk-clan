@@ -1,0 +1,71 @@
+name: Diagnose TopKing Bosses R3 Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/bosses-r3-diagnose-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Read live state
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          sha="$(sha256sum /tmp/live.js | awk '{print $1}')"
+          syntax=FAIL
+          node --check /tmp/live.js && syntax=PASS
+          stage="unknown"
+          if grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-area-calculator-20260920-r3'" /tmp/live.js; then stage=r3; fi
+          if grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2'" /tmp/live.js; then stage=r2; fi
+          public=UNKNOWN
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?bosses-r3-diag=$(date +%s)" -o /tmp/public.js || true
+          if test -s /tmp/public.js; then
+            if cmp -s /tmp/live.js /tmp/public.js; then public=PASS; else public=DIFF; fi
+          fi
+          {
+            echo "stage=$stage"
+            echo "live_sha256=$sha"
+            echo "syntax=$syntax"
+            echo "public_byte_equality=$public"
+            echo "has_r3_calc_marker=$(grep -Fc "HK_BOSSES_CALC_REV='bosses-area-calculator-20260920-r3'" /tmp/live.js || true)"
+          } > audit/hk-stage2-bosses-r3-diagnose.txt
+
+      - name: Commit diagnostic
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-bosses-r3-diagnose.txt
+          git commit -m "stage2: diagnose Bosses r3 live" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js /tmp/public.js
