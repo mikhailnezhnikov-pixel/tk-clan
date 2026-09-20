@@ -61,7 +61,7 @@ jobs:
     timeout-minutes: 12
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 2
       matrix:
         map_key:
           - hk_dubai5335
@@ -185,18 +185,17 @@ jobs:
           can={x['building_id']:x for x in src['canonical_buildings']}
           pts=decode(src['points'])
           features={}
-          # Tiny spatial queries around source points. This is much cheaper than
-          # asking Overpass for geometry of every canonical building in a district.
-          for start in range(0,len(pts),12):
-              part=pts[start:start+12]; clauses=[]
+          # Query only buildings within 12 m of each positive point.  The source
+          # point is expected inside the target polygon; the radius only limits
+          # candidate retrieval and does not relax the later point-in-polygon gate.
+          for start in range(0,len(pts),20):
+              part=pts[start:start+20]; clauses=[]
               for p in part:
-                  d=0.0012
-                  south=p['lat']-d;north=p['lat']+d;west=p['lon']-d;east=p['lon']+d
-                  clauses.append(f'way["building"]({south},{west},{north},{east});')
-                  clauses.append(f'relation["building"]({south},{west},{north},{east});')
+                  clauses.append(f'way(around:12,{p["lat"]},{p["lon"]})["building"];')
+                  clauses.append(f'relation(around:12,{p["lat"]},{p["lon"]})["building"];')
               if clauses:
-                  add_elements(features,call('[out:json][timeout:25];('+''.join(clauses)+');out geom;'))
-                  time.sleep(0.3)
+                  add_elements(features,call('[out:json][timeout:20];('+''.join(clauses)+');out geom;'))
+                  time.sleep(0.2)
 
           unique=[];unmatched=[];amb=[];used={}
           for p in pts:
