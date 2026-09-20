@@ -50,7 +50,8 @@ submit_anchor = '''def submit_map_area(player_id: str, value: object) -> dict:
     area, now = normalize_map_area(value), utc_now()
     player_id = contributor_id(player_id)
 '''
-submit_new = '''def map_knowledge_source(player_id: str) -> str:
+submit_new = '''# HK_MAP_PROVENANCE_W5_V1
+def map_knowledge_source(player_id: str) -> str:
     raw = str(player_id or "").strip()
     if raw == "source-hk-maps-import":
         return "hk_maps_import"
