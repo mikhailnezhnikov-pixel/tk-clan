@@ -12,3 +12,4 @@ check public snapshot after V4 live deploy
 check after user game reload
 inspect live v4 collector and recent submissions
 query db with python after v4 snapshot
+inspect live loader version and service minimum
