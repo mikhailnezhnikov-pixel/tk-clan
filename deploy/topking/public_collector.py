@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request
+import json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request, fcntl
 
 REV = "public-server-collector-20260920-r1"
 GAME_API = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_API", "https://hk-game-api.hwgame.cloud").rstrip("/")
 DB_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_DB", "/var/lib/hamsterking-license/licenses.db")
 STATUS_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_STATUS", "/var/lib/hamsterking-license/public-collector-status.json")
 TOKEN = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_TOKEN", "").strip()
-REQUEST_GAP = max(0.15, float(os.environ.get("HK_PUBLIC_COLLECTOR_REQUEST_GAP", "0.35")))
+REQUEST_GAP = max(1.0, float(os.environ.get("HK_PUBLIC_COLLECTOR_REQUEST_GAP", "1.0")))
 SOURCE = "server-collector"
 RATING_KINDS = {"influence","power","clans","alliance_power","alliance_influence","alliance_defense"}
 
@@ -388,6 +388,16 @@ def main():
     if mode not in {"all","war","ratings"}:
         raise SystemExit("usage: public_collector.py [all|war|ratings]")
 
+    lock_path="/run/hamsterking-public-collector.lock"
+    lock=open(lock_path,"a+")
+    try:
+        fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+    except BlockingIOError:
+        write_status(True,"skipped_busy",mode=mode)
+        log(f"skipped: mode={mode} another public collector is running")
+        lock.close()
+        return 0
+
     started=time.time()
     try:
         war_read=False
@@ -404,6 +414,10 @@ def main():
             ratings=ratings_snapshot()
 
         if not war_read and not ratings:
+            if mode=="war":
+                write_status(True,"deferred",mode=mode,duration_sec=round(time.time()-started,2))
+                log("deferred: war endpoint temporarily unavailable; previous cache preserved")
+                return 0
             raise RuntimeError("no public data collected")
 
         saved=store_snapshot(war_read,war,ratings)
@@ -424,6 +438,12 @@ def main():
         write_status(False,"error",mode=mode,error=type(exc).__name__,duration_sec=round(time.time()-started,2))
         log(f"failed: mode={mode} {type(exc).__name__}: {exc}")
         return 1
+    finally:
+        try:
+            fcntl.flock(lock.fileno(),fcntl.LOCK_UN)
+        except Exception:
+            pass
+        lock.close()
 
 if __name__=="__main__":
     sys.exit(main())
