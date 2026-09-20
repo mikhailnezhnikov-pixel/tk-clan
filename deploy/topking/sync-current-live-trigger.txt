@@ -1,2 +1,2 @@
-2026-09-20 sync Bosses canonical core r1 live
-sha256=571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9
+2026-09-20 sync Bosses area target r2 live after marker fix
+sha256=0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7
