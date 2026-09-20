@@ -142,6 +142,12 @@ Stage 0 technical baseline is pinned by baseline/topking/BASELINE.json and audit
 
 # ЭТАП 1 — ФИНАЛЬНЫЙ АУДИТ ПЕРЕНОСА СТАРОГО СКРИПТА
 
+**Stage 1 status: `STAGE1_PASS`**
+
+Final evidence: `audit/hk-stage1-final.md`
+
+Genuinely untransferred historical functionality: **0**
+
 ## Цель
 
 Окончательно подтвердить, что старый рабочий скрипт перенесён полностью.
