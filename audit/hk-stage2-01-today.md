@@ -1,55 +1,87 @@
 # HK Stage 2.01 — Today / Сегодня
 
-status: TECHNICAL_CHECK_RUNNING
+status: LIVE_CANDIDATE_PENDING_USER_UI_CHECK
 
 ## Donor reference
 
 Pinned Kokkaras:
-- version: 5.3.22-ui-icons-pit-dim
-- file id: file_0000000006d08243a84499c0fe6f08c7
+- version: `5.3.22-ui-icons-pit-dim`
+- sha256: `28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1`
 
-Relevant donor flow:
-- showDailyTasksMenu()
-- live auth/player
-- shop catalog
-- client_config
-- static items/currencies/localization
-- selected actions preview
-- runDailyTasks()
-- ads / rumors / daily quests / purchases / rewards
+## User-confirmed regression
 
-## Required Stage 2 chain
+Before this patch, current Today did not follow the donor canon:
+- Rumor route/coordinates were shown as a separate UI section;
+- an unavailable Ads card was shown;
+- Pits were mixed into Today although Pits have their own module;
+- shop actions were grouped by the previous HK tabs/order rather than the donor order;
+- donor Daily Quest reward claims and reward-claim phase were missing from Today.
 
-UI → live read → calculation/plan → action → state update → rerun
+User requirement:
+- preserve current HK visual language;
+- remove rumor route display;
+- action set/order must follow pinned donor canon.
 
-## Current structural evidence
+## Applied live change
 
-Current HK has:
-- renderDailyTasks()
-- refreshDailyTasks()
-- selectedDailyActions()
-- dailyPlanTotals()
-- runDailySelected()
-- runDailyAd()
-- runDailyRumors()
-- runDailyClanPurchases()
+Marker:
+`HK_TODAY_CANON_REV = 'today-kokkaras-order-20260920-r1'`
 
-refreshDailyTasks() explicitly rereads:
-- POST /player/me
-- GET /shop/view
-- rumor route
-and rebuilds/render daily state.
+Canonical visual/action order now:
+1. **Действия**
+   - Ads only when actually available;
+   - Rumors when route data exists;
+   - Daily quests (Ω).
+2. **Магазин клана**
+3. **Инвестиционные предложения**
+4. **Обычные предложения события**
+5. **Получение наград**
+   - leaderboard rewards for canonical Pit/Boss/Rat families;
+   - Area Boss Battle Pass rewards.
 
-runDailySelected():
-- validates budget;
-- requires confirmation;
-- uses shared runner;
-- supports pause/abort;
-- dispatches action by kind;
-- after execution rereads /player/me and /shop/view;
-- rebuilds selection/snapshot and rerenders.
+Removed from Today UI:
+- rumor route / city-coordinate list;
+- Pits status/actions;
+- unavailable Ads placeholder/card;
+- old store-tab grouping.
 
-## Pending
+The visual components/classes remain the existing HK design.
 
-- exact live/public code verification
-- authenticated browser UI/read/action/state/rerun confirmation
+## Canonical execution additions
+
+Added current-architecture equivalents of donor behavior:
+- completed daily quest reward claim via `/quest/claim`;
+- leaderboard reward discovery/claim via `/leaderboards/view`, `/leaderboard`, `/leaderboard/reward`;
+- Area Boss Battle Pass discovery/claim via `/client_config`, `/battlepass`, `/battlepass/claim`.
+
+The shared HK mutation gate, runner, budget checks and reread architecture are preserved.
+
+## Technical verification
+
+Workflow:
+`Deploy TopKing Today Canon R1`
+
+Run:
+`35489305183`
+
+Result:
+- patch: PASS
+- syntax: PASS
+- deploy: PASS
+- service restart/active: PASS
+- public round-trip: PASS
+- live/public byte equality: PASS
+- version remains: `1.17.4`
+- live SHA256: `73a8da55150892cabbf2f5bf9f5d2a22fcaa8ad228ff1bee3d793b3429f3c21b`
+
+## Pending user UI verification
+
+Need to confirm after page reload:
+- no rumor route/coordinate section;
+- no Pits block inside Today;
+- no Ads row when account has no ad;
+- the five canonical groups appear in order;
+- existing HK visual style is preserved;
+- module opens/refreshes without error.
+
+Do not advance to Pits until this is confirmed or a concrete Today bug is recorded.
