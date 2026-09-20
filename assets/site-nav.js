@@ -213,7 +213,7 @@
     if(tabs.querySelector('[data-cab-group="main"]')&&tabs.querySelector('[data-cab-group="sections"]'))return;
     const specs=[
       {name:'main',label:'Основное',keys:['overview','stats','clan-shop']},
-      {name:'sections',label:'Разделы',keys:['maps','install']}
+      {name:'sections',label:'Разделы',keys:['maps','site-stats','install']}
     ];
     const byKey=new Map([...tabs.querySelectorAll('[data-cab-tab]')].map(button=>[button.dataset.cabTab,button]));
     if(!specs.some(group=>group.keys.some(key=>byKey.has(key))))return;
