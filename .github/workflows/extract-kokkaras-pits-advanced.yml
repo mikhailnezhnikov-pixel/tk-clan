@@ -1,0 +1,90 @@
+name: Extract Kokkaras Pits Advanced Canon
+
+on:
+  push:
+    paths:
+      - 'reference/topking/extract-pits-advanced-trigger.txt'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extract-kokkaras-pits-advanced
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct pinned uploaded donor from git history
+        run: |
+          set -euo pipefail
+          ref='07bfd5dcbf37da3eea125857e59e9c87ff845ee4'
+          : > /tmp/kokkaras.b64
+          for i in $(seq -w 0 14); do
+            git show "$ref:reference/topking/_upload_parts/part${i}.b64" >> /tmp/kokkaras.b64
+          done
+          base64 -d /tmp/kokkaras.b64 > /tmp/kokkaras.xz
+          xz -dc /tmp/kokkaras.xz > /tmp/kokkaras.raw.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/kokkaras.raw.js')
+          b=p.read_bytes().replace(b'\r\n',b'\n')
+          Path('/tmp/kokkaras.js').write_bytes(b)
+          PY
+          test "$(sha256sum /tmp/kokkaras.js | awk '{print $1}')" = "28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1"
+          node --check /tmp/kokkaras.js
+
+      - name: Extract Pits advanced canonical logic
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          src=Path('/tmp/kokkaras.js').read_text(encoding='utf-8')
+          lines=src.splitlines()
+          patterns=[
+              r'runPits', r'pitBuildMenuState', r'pitReadRunConfigs',
+              r'sniper', r'tournament', r'reward.?strategy', r'daily.?base',
+              r'restor', r'paw', r'crystal', r'cur_pit', r'pit_pass',
+              r'снайпер', r'турнир', r'награ', r'лап'
+          ]
+          rx=re.compile('|'.join(f'(?:{p})' for p in patterns), re.I)
+          hits=[i for i,l in enumerate(lines) if rx.search(l)]
+          ranges=[]
+          for i in hits:
+              a=max(0,i-28); b=min(len(lines),i+29)
+              if ranges and a <= ranges[-1][1]+8:
+                  ranges[-1]=(ranges[-1][0],max(ranges[-1][1],b))
+              else:
+                  ranges.append((a,b))
+          out=[
+              '# Kokkaras Pits advanced canon extraction',
+              '',
+              'source_version: 5.3.22-ui-icons-pit-dim',
+              'source_sha256: 28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1',
+              ''
+          ]
+          for n,(a,b) in enumerate(ranges,1):
+              out += [f'## Window {n} — lines {a+1}-{b}', '~~~js']
+              out += [f'{j+1:06d}: {lines[j]}' for j in range(a,b)]
+              out += ['~~~','']
+          Path('audit/hk-stage2-pits-advanced-donor-extract.md').write_text('\n'.join(out),encoding='utf-8')
+          print('hits',len(hits),'ranges',len(ranges))
+          PY
+
+      - name: Commit extraction
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-pits-advanced-donor-extract.md
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: extract Kokkaras advanced Pits canon"
+            git push origin HEAD:main
+          fi
