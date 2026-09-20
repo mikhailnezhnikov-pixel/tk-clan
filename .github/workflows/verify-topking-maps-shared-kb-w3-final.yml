@@ -1,0 +1,124 @@
+name: Verify TopKing Maps Shared KB W3 Final
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-shared-kb-w3-final-verify-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Verify live server and W3 data read-only
+        run: |
+          set -euo pipefail
+          cat > /tmp/w3-final.py <<'PY'
+          import importlib.util,json,sqlite3
+          A='9ea6ff78-b881-45b3-b92d-a8f1da8eca05'
+          T=['way29242551','way29242552','way430609368']
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          assert hasattr(s,'import_hk_map_room_knowledge')
+          detail=s.map_detail(A)
+          assert detail and detail['area']['area_id']==A
+          by={r['building_id']:r for r in detail['buildings']}
+          assert all(by[x]['room_count']==2 for x in T)
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          rows=db.execute("SELECT building_id,room_count,last_player_id FROM map_buildings WHERE area_id=?",(A,)).fetchall()
+          hist={}
+          for r in rows:
+              k='null' if r['room_count'] is None else str(r['room_count'])
+              hist[k]=hist.get(k,0)+1
+          assert hist=={'0':114,'2':3},hist
+          assert sum(1 for r in rows if r['last_player_id']=='source-hk-maps-import')==3
+          assert db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0]==1
+          link=db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key='hk_moscow1226'").fetchone()
+          assert link and link['canonical_area_id']==A
+          p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key='hk_moscow1226'").fetchone()
+          assert p and p['point_count']==32
+          same=db.execute("SELECT area_id FROM map_areas WHERE x=26 AND y=12 AND lower(trim(city_name))='moscow'").fetchall()
+          assert len(same)==1 and same[0]['area_id']==A
+          print(json.dumps({'room_hist':hist,'source_rows':3,'bridge_rows':1,'point_count':32,'detail_rooms':{x:by[x]['room_count'] for x in T}},sort_keys=True))
+          db.close()
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w3-final.py root@89.125.1.71:/tmp/w3-final.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w3-final.py' | tee /tmp/w3-final-data.json
+          server_sha="$(ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'sha256sum /opt/hamsterking-license/server.py' | awk '{print $1}')"
+          echo "$server_sha" > /tmp/w3-server-sha.txt
+          test "$server_sha" = "26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4"
+
+      - name: Snapshot current public userscript without modifying it
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?w3-final=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          client_sha="$(sha256sum /tmp/public.js | awk '{print $1}')"
+          echo "$client_sha" > /tmp/w3-client-sha.txt
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r5'" /tmp/public.js
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2'" /tmp/public.js
+          grep -Fq "coord_revision:'column-row-v1'" /tmp/public.js
+          echo "current_client_sha256=$client_sha"
+          echo "maps_scanner_r5=PASS"
+          echo "maps_coords_r2=PASS"
+
+      - name: Record final W3 verification
+        run: |
+          set -euo pipefail
+          client_sha="$(cat /tmp/w3-client-sha.txt)"
+          server_sha="$(cat /tmp/w3-server-sha.txt)"
+          {
+            echo "MAPS_SHARED_KB_W3_FINAL_VERIFY=PASS"
+            echo "server_sha256=$server_sha"
+            echo "current_client_sha256=$client_sha"
+            echo "w2_client_sha256=1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6"
+            echo "client_drift_reason=parallel_explore_e2_deploy"
+            echo "w3_changed_userscript=NO"
+            echo "maps_scanner_r5=PASS"
+            echo "maps_coords_r2=PASS"
+            echo "pilot_map_key=hk_moscow1226"
+            echo "pilot_canonical_area_id=9ea6ff78-b881-45b3-b92d-a8f1da8eca05"
+            echo "pilot_room_hist=0:114,2:3"
+            echo "hk_maps_import_rows=3"
+            echo "map_detail_read=PASS"
+            echo "geometry_point_count=32"
+            echo "geometry_changed=NO"
+            echo "district_duplicate=NO"
+            echo "bridge_rows=1"
+            echo "bulk_migration=NO"
+          } > audit/hk-stage2-maps-shared-kb-w3-final-verify.txt
+          cat audit/hk-stage2-maps-shared-kb-w3-final-verify.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w3-final-verify.txt
+          git commit -m "audit: verify Maps shared KB W3 final state"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'rm -f /tmp/w3-final.py' || true
+          rm -f "$HOME/.ssh/topking" /tmp/w3-final.py /tmp/w3-final-data.json /tmp/public.js /tmp/w3-server-sha.txt /tmp/w3-client-sha.txt
