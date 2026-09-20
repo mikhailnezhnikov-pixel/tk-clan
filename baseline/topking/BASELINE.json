@@ -1,0 +1,9 @@
+{
+  "schema": "hk-canonical-baseline-v1",
+  "version": "1.17.4",
+  "sha256": "f7415cc08dc60f651bf95f7579407779ba16cbf2de876aeffb4f51463377d91e",
+  "immutable_file": "baseline/topking/HamsterKingMobile.1.17.4-f7415cc08dc6.user.js",
+  "current_file": "baseline/topking/HamsterKingMobile.current.user.js",
+  "source": "live-server:/opt/hamsterking-license/HamsterKingMobile.user.js",
+  "captured_utc": "2026-09-20T02:34:39Z"
+}

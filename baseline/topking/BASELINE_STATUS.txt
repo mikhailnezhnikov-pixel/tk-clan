@@ -1,0 +1,5 @@
+version=1.17.4
+sha256=f7415cc08dc60f651bf95f7579407779ba16cbf2de876aeffb4f51463377d91e
+syntax=ok
+source=live-server
+immutable=HamsterKingMobile.1.17.4-f7415cc08dc6.user.js

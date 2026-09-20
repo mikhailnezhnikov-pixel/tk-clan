@@ -1,5 +1,17 @@
 # TOP KING / HK — MASTER ROADMAP
 
+## SOURCE OF TRUTH — ОБЯЗАТЕЛЬНО
+
+Перед любой работой с HK userscript в новом чате/сессии сначала открыть:
+
+- `baseline/topking/BASELINE.json`;
+- `baseline/topking/HamsterKingMobile.current.user.js`;
+- `baseline/topking/README.md`.
+
+Канонический baseline имеет приоритет над описанием в чате, памятью и roadmap. Нельзя восстанавливать существующую механику по тексту или придумывать её заново. Все изменения делаются минимальным патчем поверх точного baseline.
+
+---
+
 ## Текущая точка
 
 Рабочая live-база:
