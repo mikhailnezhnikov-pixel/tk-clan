@@ -748,3 +748,196 @@ Deployed fix:
 Client SHA256: `1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6`.
 Server SHA256: `1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1`.
 Maps remains live-candidate pending fresh user rescan confirmation.
+
+
+## Maps ↔ Website shared knowledge base — staged implementation plan
+
+### Goal
+
+Create one shared canonical knowledge base for district/building knowledge so that:
+
+- data collected by players through the userscript appears automatically in Website → Personal Cabinet → Maps;
+- maps/imports added on the website feed the same shared building knowledge used by the userscript;
+- geometry and knowledge stay separate:
+  - `hk_maps_catalog` / `hk_map_points` = website map geometry / visualization layer;
+  - `map_areas` / `map_buildings` / `map_area_aliases` = canonical district/building knowledge layer;
+- do **not** create two periodically synchronized independent databases.
+
+### Current live state before this work
+
+- Maps scanner marker: `maps-parallel-read-20260920-r5`
+- parallel read-only `/player/building` workers: 10
+- map submit batch: 200
+- coordinate marker: `maps-coordinates-column-row-20260920-r2`
+- canonical coordinate backend revision: `column-row-v1`
+- current userscript live/public SHA256:
+  `1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6`
+- current map backend SHA256:
+  `1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1`
+- coordinate complete-map regression: PASS
+- Maps is still a live candidate pending user rescan confirmation.
+- Do not modify Explore while this work is in progress.
+- Do not alter scanner safety rule: only read `/player/building` for IDs in the safe active-building intersection.
+
+### Stage W1 — Audit only, no live changes
+
+Inspect the current live/backend implementation of:
+
+- `map_areas`
+- `map_buildings`
+- `map_area_aliases`
+- `hk_maps_catalog`
+- `hk_map_points`
+- `/maps/list`
+- `/maps/detail`
+- `/maps/submit`
+- HK Maps / Kokkaras import path
+- Personal Cabinet → Maps read path
+- current 235 website maps
+
+Required output before any schema/write change:
+
+1. exact current data flow;
+2. how many of the 235 maps can be linked automatically to a canonical `area_id`;
+3. exact proposed relation between `map_key` and `canonical_area_id`;
+4. unresolved/ambiguous maps list;
+5. no live mutation.
+
+PASS gate: audit written and reviewed.
+
+### Stage W2 — Link website map ↔ canonical game district
+
+Add a durable relation:
+
+`map_key → canonical_area_id`
+
+Prefer exact `area_id` when available.
+For historical maps without an exact game area ID, use:
+
+`city + canonical X:Y`
+
+only to discover the match, then persist the resolved canonical relation.
+
+Do not migrate all building data yet.
+
+PASS gate:
+- one test website map is linked to exactly one canonical district;
+- no duplicate district is created;
+- aliases still resolve correctly.
+
+### Stage W3 — Website → shared userscript knowledge, one-map pilot
+
+Use exactly one linked map first.
+
+For that map:
+
+- geometry remains in `hk_map_points`;
+- known `building_id + crystals` from the authorized HK Maps import is written into canonical `map_buildings.room_count`;
+- the userscript reads that knowledge through the existing shared map API;
+- no bulk 235-map migration yet.
+
+PASS gate:
+- userscript can see the imported room counts for the pilot map without the current player scanning those buildings;
+- no geometry duplication;
+- no district duplication.
+
+### Stage W4 — Shared knowledge → Website, one-map pilot
+
+Make Personal Cabinet → Maps render the same pilot map from:
+
+- geometry: `hk_map_points`;
+- current canonical building knowledge: `map_buildings`.
+
+PASS gate:
+- player scan updates `map_buildings`;
+- reopening the website map shows the same updated room counts automatically;
+- no manual export/import is needed.
+
+### Stage W5 — Source provenance and conflict rules
+
+Add/normalize provenance for building knowledge.
+
+At minimum distinguish:
+
+- `game_live`
+- `hk_maps_import`
+- `legacy` if required by existing data
+
+Conflict rule:
+
+`game_live` has priority over imported/historical knowledge.
+
+A later old import must not overwrite a newer authoritative live game observation.
+
+PASS gate:
+- explicit regression test proves imported data cannot overwrite newer `game_live` knowledge;
+- source and timestamp are inspectable.
+
+### Stage W6 — Dry-run and migration of all 235 website maps
+
+Before any bulk write, produce a dry-run report:
+
+- total maps: 235;
+- exact area_id matches;
+- city+X:Y matches;
+- unresolved maps;
+- ambiguous maps;
+- maps that would create duplicates;
+- building rows to add;
+- building rows already known;
+- room_count conflicts by source.
+
+Only after reviewing the dry-run, migrate automatically resolvable maps.
+
+PASS gate:
+- resolved maps linked;
+- no duplicate canonical districts;
+- unresolved/ambiguous maps remain untouched and are reported;
+- migration is rerunnable/idempotent.
+
+### Stage W7 — New website uploads write directly to shared knowledge
+
+Change the website import path so every new authorized map upload:
+
+1. stores/updates geometry in `hk_maps_catalog` / `hk_map_points`;
+2. resolves or creates the canonical district relation;
+3. writes imported building knowledge into canonical `map_buildings` using source/provenance rules.
+
+PASS gate:
+- a new website map becomes visible to userscript knowledge automatically;
+- no separate synchronization job is required.
+
+### Stage W8 — End-to-end verification and checkpoint
+
+Test both directions on multiple districts:
+
+A. userscript → shared DB → website
+B. website/import → shared DB → userscript
+
+Verify:
+
+- coordinates;
+- aliases;
+- room_count;
+- investment flag behavior;
+- unknown/null buildings;
+- source priority;
+- rerun/idempotency;
+- Personal Cabinet display;
+- scanner still uses 10 read-only workers and safe active-building intersection.
+
+Only after user confirmation:
+- mark Website ↔ Maps shared knowledge link PASS;
+- resume the normal Stage 2 sequence.
+
+### Execution rule for W1–W8
+
+Work in short sessions.
+After each stage:
+
+1. write audit evidence;
+2. update this checkpoint;
+3. stop and report PASS/FAIL;
+4. do not continue to the next stage automatically unless explicitly requested.
+
+No bulk migration, schema mutation, or live deploy is allowed during W1.
