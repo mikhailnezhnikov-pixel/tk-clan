@@ -1,0 +1,88 @@
+name: Import authorized HK map
+
+on:
+  push:
+    paths:
+      - 'deploy/maps/authorized/*.json.gz'
+  workflow_dispatch:
+    inputs:
+      file:
+        description: 'Path under deploy/maps/authorized/'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Select authorized upload files
+        id: files
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_FILE: ${{ inputs.file }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            case "$DISPATCH_FILE" in
+              deploy/maps/authorized/*.json.gz) printf '%s\n' "$DISPATCH_FILE" > /tmp/w7-files.txt ;;
+              *) echo "Invalid authorized upload path" >&2; exit 1 ;;
+            esac
+          else
+            git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" -- 'deploy/maps/authorized/*.json.gz' > /tmp/w7-files.txt
+          fi
+          test -s /tmp/w7-files.txt
+          cat /tmp/w7-files.txt
+
+      - name: Import directly to website and shared knowledge
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            test -f "$file"
+            gzip -t "$file"
+            base="$(basename "$file")"
+            scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+              "$file" "root@89.125.1.71:/tmp/$base"
+            ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+              root@89.125.1.71 "python3 /opt/hamsterking-license/server.py --import-hk-authorized-map '/tmp/$base'" \
+              > "/tmp/$base.result.json"
+            python3 - "/tmp/$base.result.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1],encoding='utf-8'))
+          assert d.get('ok') is True,d
+          assert d.get('direct_shared') is True,d
+          assert d.get('sync_required') is False,d
+          assert d.get('canonical_area_id'),d
+          print(json.dumps({
+              'map_key':d.get('map_key'),
+              'canonical_area_id':d.get('canonical_area_id'),
+              'matched_points':d.get('matched_points'),
+              'point_links':d.get('point_links'),
+              'sync_required':d.get('sync_required')
+          },sort_keys=True))
+          PY
+            ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+              root@89.125.1.71 "rm -f '/tmp/$base'"
+          done < /tmp/w7-files.txt
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/w7-files.txt /tmp/*.result.json
