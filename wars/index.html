@@ -1,29 +1,448 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080b11"><title>Клановые войны — Top King</title><meta name="description" content="Текущий клановый бой Top King в Hamster King"><link rel="stylesheet" href="../assets/public.css">
-  <style>
-    .war-hp{margin-top:18px}
-    .war-hp-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px;font-weight:800}
-    .war-hp-head span:first-child{color:#f3c969;letter-spacing:.05em}
-    .war-hp-head span:last-child{font-variant-numeric:tabular-nums;color:#eef2f7}
-    .war-hp-track{height:14px;overflow:hidden;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(255,255,255,.06);box-shadow:inset 0 1px 4px rgba(0,0,0,.55)}
-    .war-hp-fill{height:100%;min-width:0;border-radius:inherit;background:linear-gradient(90deg,#bf7b20 0%,#efbb4d 52%,#ffe59a 100%);box-shadow:0 0 16px rgba(239,187,77,.24);transition:width .35s ease}
-    .war-hp-note{display:block;margin-top:7px;color:#8f98a7;font-size:12px}
-  </style>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080b11">
+  <title>Клановые войны — Top King</title>
+  <meta name="description" content="Текущий противник Top King в клановой войне Hamster King">
+  <link rel="stylesheet" href="../assets/public.css">
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
   <link rel="apple-touch-icon" href="../assets/brand/topking-clan-crest.png">
-</head><body>
-<header class="topbar"><div class="shell topbar-inner"><a class="brand" href="../" aria-label="Top King"><img class="tk-clan-crest" src="../assets/brand/topking-clan-crest.png" alt="Top King"></a><nav class="nav"><a href="../" data-i18n="home"></a><a href="../recipes/" data-i18n="recipes"></a><a class="active" href="./" data-i18n="wars"></a><a href="../ratings/" data-i18n="ratings"></a><a href="../information/" data-i18n="information"></a><a href="../feedback/" data-i18n="feedback"></a></nav><div class="languages" aria-label="Language"><button data-language="ru">RU</button><button data-language="en">EN</button><button data-language="fa">FA</button></div><button class="menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Menu">☰</button></div><nav class="mobile-nav" data-mobile-nav><a href="../" data-i18n="home"></a><a href="../recipes/" data-i18n="recipes"></a><a href="../ratings/" data-i18n="ratings"></a><a href="../information/" data-i18n="information"></a><a href="../feedback/" data-i18n="feedback"></a></nav></header>
-<main><header class="shell page-head"><p class="eyebrow" data-i18n="eyebrow"></p><h1 data-i18n="title"></h1><p class="lead" data-i18n="lead"></p></header><section class="shell content"><div id="war-status" class="status" data-i18n="loading"></div><div id="war-card" class="grid" style="margin-top:16px"><div class="empty card full" data-i18n="loading"></div></div></section></main>
+  <style>
+    .wars-page{padding-top:calc(var(--header) + 42px)}
+    .wars-heading{padding:30px 0 24px;text-align:center}
+    .wars-heading .eyebrow{justify-content:center;margin-bottom:12px}
+    .wars-heading .eyebrow:before{display:none}
+    .wars-heading h1{margin-inline:auto;font-size:clamp(42px,7vw,78px)!important}
+    .wars-heading p{margin:12px auto 0;color:#9aa2af;font-size:15px;letter-spacing:.08em;text-transform:uppercase}
+
+    .war-arena{
+      --war-accent:#e94b42;
+      --war-accent-2:#7d1715;
+      --war-accent-soft:rgba(233,75,66,.22);
+      --war-sky:#271012;
+      position:relative;
+      min-height:650px;
+      margin-bottom:88px;
+      overflow:hidden;
+      border:1px solid color-mix(in srgb,var(--war-accent) 35%,rgba(255,255,255,.08));
+      border-radius:30px;
+      background:
+        radial-gradient(circle at 50% 115%,var(--war-accent-soft),transparent 44%),
+        radial-gradient(circle at 18% 15%,rgba(255,255,255,.04),transparent 24%),
+        linear-gradient(180deg,var(--war-sky),#0a0c10 50%,#07080b 100%);
+      box-shadow:0 30px 90px rgba(0,0,0,.46),inset 0 1px rgba(255,255,255,.04);
+      isolation:isolate
+    }
+    .war-arena:before{
+      content:"";position:absolute;inset:0;z-index:-1;opacity:.22;pointer-events:none;
+      background-image:
+        linear-gradient(115deg,transparent 0 49%,var(--war-accent-soft) 49.5% 50%,transparent 50.5%),
+        linear-gradient(65deg,transparent 0 49%,rgba(255,255,255,.035) 49.5% 50%,transparent 50.5%);
+      background-size:96px 96px
+    }
+
+    .theme-raiders{--war-accent:#ef4940;--war-accent-2:#7a1515;--war-accent-soft:rgba(239,73,64,.25);--war-sky:#291012}
+    .theme-iron{--war-accent:#bd6672;--war-accent-2:#4a5360;--war-accent-soft:rgba(189,102,114,.22);--war-sky:#171a20}
+    .theme-storm{--war-accent:#64a6ff;--war-accent-2:#264a78;--war-accent-soft:rgba(100,166,255,.20);--war-sky:#101a2a}
+    .theme-ember{--war-accent:#f39a35;--war-accent-2:#7b4218;--war-accent-soft:rgba(243,154,53,.22);--war-sky:#2a180d}
+    .theme-venom{--war-accent:#8fd45f;--war-accent-2:#3e6b2c;--war-accent-soft:rgba(143,212,95,.19);--war-sky:#142112}
+    .theme-royal{--war-accent:#d5a5ff;--war-accent-2:#68468b;--war-accent-soft:rgba(213,165,255,.20);--war-sky:#21142d}
+
+    .war-panel{
+      position:relative;z-index:8;
+      width:min(920px,calc(100% - 44px));
+      margin:32px auto 0;
+      padding:28px 30px 26px;
+      border:1px solid color-mix(in srgb,var(--war-accent) 42%,rgba(255,255,255,.10));
+      border-radius:24px;
+      background:linear-gradient(145deg,rgba(17,20,27,.94),rgba(8,10,15,.91));
+      box-shadow:0 20px 70px rgba(0,0,0,.38),0 0 42px var(--war-accent-soft);
+      backdrop-filter:blur(13px)
+    }
+    .war-panel-top{display:grid;grid-template-columns:auto minmax(0,1fr);gap:19px;align-items:center}
+    .war-emblem{
+      width:78px;height:78px;display:grid;place-items:center;position:relative;
+      border:1px solid color-mix(in srgb,var(--war-accent) 64%,#fff 6%);
+      border-radius:22px;
+      background:
+        radial-gradient(circle at 35% 24%,rgba(255,255,255,.14),transparent 28%),
+        linear-gradient(145deg,var(--war-accent-2),#0d0f13 70%);
+      box-shadow:inset 0 0 24px rgba(0,0,0,.32),0 10px 30px var(--war-accent-soft);
+      color:#fff;font-size:34px;font-weight:900
+    }
+    .war-emblem:after{content:"";position:absolute;inset:7px;border:1px solid rgba(255,255,255,.14);border-radius:16px}
+    .war-label{display:block;margin-bottom:3px;color:var(--war-accent);font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+    .war-name{margin:0;color:#fff;font:700 clamp(30px,5vw,52px)/1 Georgia,"Times New Roman",serif;letter-spacing:-.035em;text-wrap:balance}
+    .war-slogan{margin:9px 0 0;color:#abb2be;font-size:13px;font-weight:760;letter-spacing:.10em;text-transform:uppercase}
+
+    .war-health{margin-top:25px}
+    .war-health-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:10px}
+    .war-health-title{display:flex;align-items:center;gap:8px;color:#d6dae0;font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+    .war-health-title:before{content:"♥";color:var(--war-accent);font-size:17px;filter:drop-shadow(0 0 10px var(--war-accent))}
+    .war-health-values{font-variant-numeric:tabular-nums;text-align:right}
+    .war-health-values strong{color:var(--war-accent);font-size:clamp(22px,3.4vw,36px)}
+    .war-health-values span{color:#d8dde5;font-size:clamp(16px,2.4vw,23px);font-weight:800}
+    .war-health-track{height:18px;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(0,0,0,.36);box-shadow:inset 0 2px 8px rgba(0,0,0,.44)}
+    .war-health-fill{
+      width:0;height:100%;position:relative;border-radius:inherit;
+      background:linear-gradient(90deg,var(--war-accent-2),var(--war-accent),color-mix(in srgb,var(--war-accent) 65%,#fff));
+      box-shadow:0 0 24px var(--war-accent-soft);
+      transition:width .8s cubic-bezier(.2,.8,.2,1)
+    }
+    .war-health-fill:after{
+      content:"";position:absolute;inset:0;width:42%;transform:translateX(-150%);
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);
+      animation:hpShine 2.8s ease-in-out infinite
+    }
+    .war-percent{margin-top:8px;text-align:right;color:var(--war-accent);font-size:13px;font-weight:900;letter-spacing:.08em}
+
+    .battle-stage{position:absolute;inset:230px 0 0;z-index:1;overflow:hidden;pointer-events:none}
+    .battle-stage:before{
+      content:"";position:absolute;left:0;right:0;bottom:0;height:47%;
+      background:
+        radial-gradient(ellipse at 50% 100%,rgba(0,0,0,.05),rgba(0,0,0,.82) 73%),
+        linear-gradient(180deg,transparent,rgba(0,0,0,.28));
+      z-index:6
+    }
+    .battle-sun{
+      position:absolute;right:11%;top:18%;width:170px;height:170px;border-radius:50%;
+      background:radial-gradient(circle,rgba(255,225,161,.80),var(--war-accent-soft) 37%,transparent 70%);
+      filter:blur(2px);opacity:.60;animation:sunPulse 4s ease-in-out infinite
+    }
+    .battle-ground{position:absolute;left:-8%;right:-8%;bottom:-12%;height:44%;background:radial-gradient(ellipse at center,var(--war-accent-soft),rgba(11,10,10,.94) 58%);transform:rotate(-1.2deg)}
+    .battle-smoke{position:absolute;inset:0;opacity:.34;filter:blur(12px);background:
+      radial-gradient(ellipse at 20% 70%,var(--war-accent-soft),transparent 34%),
+      radial-gradient(ellipse at 76% 64%,rgba(255,255,255,.12),transparent 27%),
+      radial-gradient(ellipse at 53% 83%,var(--war-accent-soft),transparent 31%);
+      animation:smokeDrift 9s ease-in-out infinite alternate
+    }
+    .battle-flags{position:absolute;inset:0;opacity:.44}
+    .flag{position:absolute;width:2px;height:190px;background:rgba(210,196,166,.42);transform-origin:bottom}
+    .flag:after{content:"";position:absolute;top:8px;left:2px;width:76px;height:43px;clip-path:polygon(0 0,100% 17%,77% 48%,100% 86%,0 100%);background:linear-gradient(120deg,var(--war-accent-2),var(--war-accent));animation:flagWave 2.4s ease-in-out infinite alternate}
+    .flag.f1{left:12%;bottom:20%;transform:rotate(-8deg)}.flag.f2{right:13%;bottom:18%;height:220px;transform:rotate(7deg)}.flag.f2:after{left:auto;right:2px;transform:scaleX(-1)}
+    .flag.f3{left:49%;bottom:19%;height:150px;opacity:.55;transform:rotate(2deg) scale(.75)}
+
+    .fighter{position:absolute;bottom:12%;width:min(36vw,390px);filter:drop-shadow(0 22px 24px rgba(0,0,0,.55));transform-origin:50% 75%}
+    .fighter.attacker{left:10%;animation:attackBob 2.6s ease-in-out infinite}
+    .fighter.defender{right:10%;animation:defendBob 2.9s ease-in-out infinite}
+    .fighter svg{display:block;width:100%;height:auto;overflow:visible}
+    .fighter .fur{fill:#c7884f}.fighter .fur-light{fill:#f2d3ad}.fighter .armor{fill:#303743;stroke:#b4bdc7;stroke-width:3}.fighter .accent{fill:var(--war-accent);stroke:color-mix(in srgb,var(--war-accent) 65%,#fff);stroke-width:2}.fighter .dark{fill:#15181d}.fighter .eye{fill:#08090b}.fighter .shine{fill:#fff;opacity:.9}
+    .attacker .weapon{transform-origin:164px 143px;animation:weaponSwing 2.6s ease-in-out infinite}
+    .defender .shield{transform-origin:190px 214px;animation:shieldBrace 2.9s ease-in-out infinite}
+
+    .slash{position:absolute;left:48%;top:46%;width:190px;height:10px;border-radius:999px;background:linear-gradient(90deg,transparent,#fff,var(--war-accent),transparent);filter:blur(.2px) drop-shadow(0 0 14px var(--war-accent));transform:rotate(-26deg);opacity:0;animation:slashFlash 2.6s ease-out infinite}
+    .spark{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--war-accent);box-shadow:0 0 12px var(--war-accent);opacity:.75;animation:sparkFly 2.4s linear infinite}
+    .spark.s1{left:42%;top:52%;animation-delay:.1s}.spark.s2{left:49%;top:44%;animation-delay:.7s}.spark.s3{left:56%;top:58%;animation-delay:1.1s}.spark.s4{left:62%;top:49%;animation-delay:1.7s}.spark.s5{left:35%;top:61%;animation-delay:2s}
+
+    .war-message{
+      position:absolute;z-index:10;left:50%;bottom:42px;transform:translateX(-50%);
+      width:min(620px,calc(100% - 42px));padding:17px 20px;
+      border:1px solid rgba(255,255,255,.10);border-radius:18px;
+      background:rgba(7,9,13,.78);backdrop-filter:blur(14px);
+      color:#cbd1da;text-align:center;font-weight:750
+    }
+    .war-message.hidden{display:none}
+    .war-message.bad{border-color:rgba(255,156,165,.30);color:#ffb6bd}
+
+    @keyframes hpShine{0%,45%{transform:translateX(-160%)}70%,100%{transform:translateX(340%)}}
+    @keyframes smokeDrift{from{transform:translate3d(-2%,1%,0) scale(1)}to{transform:translate3d(3%,-1%,0) scale(1.08)}}
+    @keyframes sunPulse{0%,100%{transform:scale(.95);opacity:.48}50%{transform:scale(1.08);opacity:.72}}
+    @keyframes flagWave{from{transform:skewY(-3deg) scaleX(.96)}to{transform:skewY(3deg) scaleX(1.04)}}
+    @keyframes attackBob{0%,100%{transform:translate3d(0,0,0) rotate(-2deg)}48%{transform:translate3d(22px,-8px,0) rotate(2deg)}58%{transform:translate3d(30px,1px,0) rotate(4deg)}}
+    @keyframes defendBob{0%,100%{transform:translate3d(0,0,0) rotate(2deg)}50%{transform:translate3d(-8px,6px,0) rotate(-2deg)}58%{transform:translate3d(-16px,11px,0) rotate(-4deg)}}
+    @keyframes weaponSwing{0%,38%,100%{transform:rotate(-18deg)}52%{transform:rotate(26deg)}62%{transform:rotate(12deg)}}
+    @keyframes shieldBrace{0%,100%{transform:rotate(5deg)}50%,62%{transform:rotate(-10deg) translateX(-5px)}}
+    @keyframes slashFlash{0%,43%{opacity:0;transform:rotate(-26deg) scaleX(.45)}51%{opacity:.95;transform:rotate(-26deg) scaleX(1)}62%,100%{opacity:0;transform:rotate(-26deg) scaleX(1.25)}}
+    @keyframes sparkFly{0%{transform:translate(0,0) scale(.4);opacity:0}15%{opacity:1}100%{transform:translate(80px,-85px) scale(0);opacity:0}}
+
+    @media(max-width:760px){
+      .wars-page{padding-top:calc(var(--header) + 24px)}
+      .wars-heading{padding:24px 0 18px}
+      .wars-heading p{font-size:11px}
+      .war-arena{min-height:690px;border-radius:22px}
+      .war-panel{width:calc(100% - 24px);margin-top:14px;padding:20px 18px}
+      .war-panel-top{grid-template-columns:58px minmax(0,1fr);gap:13px}
+      .war-emblem{width:58px;height:58px;border-radius:17px;font-size:27px}
+      .war-name{font-size:clamp(26px,8vw,38px)}
+      .war-slogan{font-size:10px;letter-spacing:.07em}
+      .war-health-head{align-items:center}
+      .war-health-values strong{font-size:21px}.war-health-values span{font-size:14px}
+      .battle-stage{inset:260px 0 0}
+      .fighter{width:58vw;bottom:14%}.fighter.attacker{left:-7%}.fighter.defender{right:-9%}
+      .slash{left:39%;top:48%;width:130px}
+      .battle-sun{right:5%;top:22%;width:130px;height:130px}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .war-health-fill:after,.battle-smoke,.battle-sun,.flag:after,.fighter,.attacker .weapon,.defender .shield,.slash,.spark{animation:none!important}
+    }
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="brand" href="../" aria-label="Top King"><img class="tk-clan-crest" src="../assets/brand/topking-clan-crest.png" alt="Top King"></a>
+    <nav class="nav">
+      <a href="../" data-i18n="home"></a>
+      <a href="../recipes/" data-i18n="recipes"></a>
+      <a class="active" href="./" data-i18n="wars"></a>
+      <a href="../ratings/" data-i18n="ratings"></a>
+      <a href="../information/" data-i18n="information"></a>
+      <a href="../feedback/" data-i18n="feedback"></a>
+    </nav>
+    <div class="languages" aria-label="Language"><button data-language="ru">RU</button><button data-language="en">EN</button><button data-language="fa">FA</button></div>
+    <button class="menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Menu">☰</button>
+  </div>
+  <nav class="mobile-nav" data-mobile-nav>
+    <a href="../" data-i18n="home"></a><a href="../recipes/" data-i18n="recipes"></a><a href="../ratings/" data-i18n="ratings"></a><a href="../information/" data-i18n="information"></a><a href="../feedback/" data-i18n="feedback"></a>
+  </nav>
+</header>
+
+<main class="wars-page">
+  <header class="shell wars-heading">
+    <p class="eyebrow" data-i18n="eyebrow"></p>
+    <h1 data-i18n="title"></h1>
+    <p data-i18n="battleTagline"></p>
+  </header>
+
+  <section class="shell">
+    <div id="war-arena" class="war-arena theme-raiders">
+      <article class="war-panel">
+        <div class="war-panel-top">
+          <div id="war-emblem" class="war-emblem" aria-hidden="true">⚔</div>
+          <div>
+            <span class="war-label" data-i18n="opponent"></span>
+            <h2 id="war-name" class="war-name">—</h2>
+            <p id="war-slogan" class="war-slogan"></p>
+          </div>
+        </div>
+        <div class="war-health">
+          <div class="war-health-head">
+            <span class="war-health-title" data-i18n="health"></span>
+            <div class="war-health-values"><strong id="war-hp">0</strong><span> / <span id="war-hp-max">0</span></span></div>
+          </div>
+          <div id="war-health-track" class="war-health-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="war-health-fill" class="war-health-fill"></div>
+          </div>
+          <div id="war-percent" class="war-percent">0%</div>
+        </div>
+      </article>
+
+      <div class="battle-stage" aria-hidden="true">
+        <div class="battle-sun"></div>
+        <div class="battle-smoke"></div>
+        <div class="battle-flags"><i class="flag f1"></i><i class="flag f2"></i><i class="flag f3"></i></div>
+        <div class="battle-ground"></div>
+
+        <div class="fighter attacker">
+          <svg viewBox="0 0 320 300" role="img">
+            <g class="weapon">
+              <rect x="146" y="117" width="105" height="17" rx="8" class="dark" transform="rotate(-28 146 117)"/>
+              <circle cx="255" cy="78" r="31" class="accent"/>
+              <path d="M255 35l7 18 18-8-8 18 19 7-19 7 8 18-18-8-7 19-7-19-18 8 8-18-19-7 19-7-8-18 18 8z" class="dark"/>
+            </g>
+            <ellipse cx="151" cy="245" rx="88" ry="34" class="dark" opacity=".5"/>
+            <path d="M83 174c8-55 49-93 99-82 48 11 70 61 55 111-15 49-67 69-116 46-34-16-45-43-38-75z" class="armor"/>
+            <circle cx="159" cy="112" r="72" class="fur"/>
+            <circle cx="101" cy="68" r="29" class="fur"/><circle cx="216" cy="69" r="29" class="fur"/>
+            <circle cx="101" cy="68" r="15" class="fur-light"/><circle cx="216" cy="69" r="15" class="fur-light"/>
+            <ellipse cx="158" cy="128" rx="54" ry="42" class="fur-light"/>
+            <circle cx="132" cy="104" r="9" class="eye"/><circle cx="186" cy="104" r="9" class="eye"/>
+            <circle cx="135" cy="101" r="2.8" class="shine"/><circle cx="189" cy="101" r="2.8" class="shine"/>
+            <path d="M150 122q9-8 18 0-4 12-9 12t-9-12z" class="dark"/>
+            <path d="M136 141q23 20 46 0" fill="none" stroke="#3a1712" stroke-width="6" stroke-linecap="round"/>
+            <path d="M92 163q68 28 139-2" fill="none" stroke="var(--war-accent)" stroke-width="15" stroke-linecap="round"/>
+            <path d="M103 195l-25 47 43-17M222 197l29 39-45-13" fill="none" stroke="#89939f" stroke-width="18" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <div class="fighter defender">
+          <svg viewBox="0 0 320 300" role="img">
+            <ellipse cx="169" cy="248" rx="86" ry="31" class="dark" opacity=".5"/>
+            <path d="M86 173c3-51 42-87 92-83 50 4 79 48 70 99-9 54-56 81-107 65-39-12-58-43-55-81z" class="armor"/>
+            <circle cx="170" cy="112" r="70" class="fur"/>
+            <circle cx="113" cy="70" r="28" class="fur"/><circle cx="224" cy="72" r="28" class="fur"/>
+            <circle cx="113" cy="70" r="14" class="fur-light"/><circle cx="224" cy="72" r="14" class="fur-light"/>
+            <ellipse cx="170" cy="131" rx="52" ry="40" class="fur-light"/>
+            <circle cx="143" cy="105" r="9" class="eye"/><circle cx="196" cy="105" r="9" class="eye"/>
+            <circle cx="146" cy="102" r="2.8" class="shine"/><circle cx="199" cy="102" r="2.8" class="shine"/>
+            <path d="M161 122q9-8 18 0-4 12-9 12t-9-12z" class="dark"/>
+            <path d="M149 147q21-17 42 0" fill="none" stroke="#3a1712" stroke-width="6" stroke-linecap="round"/>
+            <g class="shield">
+              <path d="M190 173l57 13-8 70q-27 29-62 18l-21-60z" class="accent"/>
+              <path d="M201 205l10-14 9 14 17 2-12 12 4 18-18-8-16 9 2-18-13-11z" fill="#f5df9a"/>
+            </g>
+            <path d="M103 195l-26 39 43-10" fill="none" stroke="#89939f" stroke-width="18" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <div class="slash"></div>
+        <i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i><i class="spark s5"></i>
+      </div>
+
+      <div id="war-message" class="war-message hidden"></div>
+    </div>
+  </section>
+</main>
+
 <footer class="footer"><div class="shell footer-row"><span data-i18n="footer"></span><a href="../feedback/" data-i18n="feedback"></a></div></footer>
-<script>window.TK_PAGE_TRANSLATIONS={ru:{pageTitle:'Клановые войны — Top King',eyebrow:'Текущий бой',title:'Клановые войны',lead:'Общий счёт нашего боя с противником — без персонального урона и данных участников.',ourClan:'Наш клан',opponent:'Противник',score:'Счёт',starts:'Начало',ends:'Окончание',active:'Бой идёт',finished:'Бой завершён',waiting:'Активного боя сейчас нет.',stale:'Данные давно не обновлялись.',hp:'HP',hpUpdated:'Шкала HP из игры'},en:{pageTitle:'Clan wars — Top King',eyebrow:'Current battle',title:'Clan wars',lead:'The overall score of our battle against the opponent, without member damage or personal data.',ourClan:'Our clan',opponent:'Opponent',score:'Score',starts:'Starts',ends:'Ends',active:'Battle in progress',finished:'Battle finished',waiting:'There is no active battle now.',stale:'The data has not been refreshed recently.',hp:'HP',hpUpdated:'In-game HP bar'},fa:{pageTitle:'جنگ‌های قبیله‌ای — Top King',eyebrow:'نبرد فعلی',title:'جنگ‌های قبیله‌ای',lead:'امتیاز کلی نبرد ما با حریف، بدون نمایش آسیب یا اطلاعات شخصی اعضا.',ourClan:'قبیله ما',opponent:'حریف',score:'امتیاز',starts:'شروع',ends:'پایان',active:'نبرد در جریان است',finished:'نبرد پایان یافته',waiting:'در حال حاضر نبرد فعالی وجود ندارد.',stale:'اطلاعات مدتی است به‌روزرسانی نشده است.',hp:'HP',hpUpdated:'نوار HP بازی'}};</script>
-<script src="../assets/site-i18n.js?v=20260920-10"></script><script>
-const API='https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war';let war=null;
-const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=v=>v?new Date(Number(v)*1000).toLocaleString(TopKingI18n.language):'—';
-const clanIcon='https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/clan-list-icon.png';
-const battleIcon='https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/vs.png';
-function hpBar(current,maximum,s){const cur=Number(current),max=Number(maximum);if(!Number.isFinite(cur)||!Number.isFinite(max)||max<=0)return'';const pct=Math.max(0,Math.min(100,(cur/max)*100));const locale=TopKingI18n.language||'ru';return `<div class="war-hp"><div class="war-hp-head"><span>${safe(s.hp||'HP')}</span><span>${Math.max(0,Math.round(cur)).toLocaleString(locale)} / ${Math.max(0,Math.round(max)).toLocaleString(locale)}</span></div><div class="war-hp-track" role="progressbar" aria-valuemin="0" aria-valuemax="${Math.round(max)}" aria-valuenow="${Math.round(cur)}"><div class="war-hp-fill" style="width:${pct.toFixed(2)}%"></div></div><small class="war-hp-note">${safe(s.hpUpdated||'')}</small></div>`}
-function render(){const s=TopKingI18n.strings(),box=document.getElementById('war-card'),status=document.getElementById('war-status');if(!war||!war.active){status.className='status';status.textContent=s.waiting;box.innerHTML='';return}const stale=Date.now()/1000-Number(war.updated_at||0)>21600;status.className='status '+(stale?'warn':'good');status.textContent=(war.status==='finished'?s.finished:s.active)+(stale?' · '+s.stale:'')+' · '+s.updated+': '+fmt(war.updated_at);box.innerHTML=`<article class="card"><div class="icon-title"><img class="game-icon" src="${clanIcon}" alt=""><div><small>${safe(s.ourClan)}</small><h2>${safe(war.our_clan||'Top King')}</h2></div></div><h3 style="font-size:42px;margin-top:24px">${Number(war.our_score||0).toLocaleString()}</h3>${hpBar(war.our_hp,war.our_hp_max,s)}</article><article class="card"><div class="icon-title"><img class="game-icon" src="${battleIcon}" alt=""><div><small>${safe(s.opponent)}</small><h2>${safe(war.opponent||'—')}</h2></div></div><h3 style="font-size:42px;margin-top:24px">${Number(war.opponent_score||0).toLocaleString()}</h3>${hpBar(war.opponent_hp,war.opponent_hp_max,s)}</article><article class="card full"><b>${safe(s.starts)}:</b> ${fmt(war.started_at)} &nbsp; · &nbsp; <b>${safe(s.ends)}:</b> ${fmt(war.ends_at)}</article>`}
-async function load(){try{const r=await fetch(API,{cache:'no-store'});if(!r.ok)throw Error();const d=await r.json();war=d.war||null;render()}catch{const s=TopKingI18n.strings();document.getElementById('war-status').className='status bad';document.getElementById('war-status').textContent=s.error;document.getElementById('war-card').innerHTML=''}}
-document.addEventListener('tk-language-change',render);load();setInterval(load,60000);
-</script><script src="../assets/site-nav.js?v=20260920-11"></script>
-</body></html>
+
+<script>
+window.TK_PAGE_TRANSLATIONS={
+  ru:{
+    pageTitle:'Клановые войны — Top King',
+    eyebrow:'Текущий бой',
+    title:'Клановые войны',
+    battleTagline:'Сражения делают легенды',
+    opponent:'Противник',
+    health:'Здоровье',
+    waiting:'Активного боя сейчас нет.',
+    error:'Не удалось загрузить текущий бой.',
+    slogan_raiders:'Шумные. Наглые. Опасные.',
+    slogan_iron:'Держатся строем. Бьют тяжело.',
+    slogan_storm:'Быстрые. Резкие. Непредсказуемые.',
+    slogan_ember:'Горячие головы. Тяжёлый удар.',
+    slogan_venom:'Тихие. Цепкие. Ядовитые.',
+    slogan_royal:'Амбиции высоки. Бой будет громким.',
+    slogan_default:'Новый противник на поле боя.'
+  },
+  en:{
+    pageTitle:'Clan wars — Top King',
+    eyebrow:'Current battle',
+    title:'Clan wars',
+    battleTagline:'Battles create legends',
+    opponent:'Opponent',
+    health:'Health',
+    waiting:'There is no active battle now.',
+    error:'Could not load the current battle.',
+    slogan_raiders:'Loud. Bold. Dangerous.',
+    slogan_iron:'Hold the line. Hit hard.',
+    slogan_storm:'Fast. Sharp. Unpredictable.',
+    slogan_ember:'Hot heads. Heavy hits.',
+    slogan_venom:'Quiet. Tenacious. Venomous.',
+    slogan_royal:'High ambition. Loud battle.',
+    slogan_default:'A new opponent enters the battlefield.'
+  },
+  fa:{
+    pageTitle:'جنگ‌های قبیله‌ای — Top King',
+    eyebrow:'نبرد فعلی',
+    title:'جنگ‌های قبیله‌ای',
+    battleTagline:'نبردها افسانه می‌سازند',
+    opponent:'حریف',
+    health:'سلامتی',
+    waiting:'در حال حاضر نبرد فعالی وجود ندارد.',
+    error:'بارگذاری نبرد فعلی ممکن نشد.',
+    slogan_raiders:'پر سر و صدا. جسور. خطرناک.',
+    slogan_iron:'صف را نگه می‌دارند. سنگین ضربه می‌زنند.',
+    slogan_storm:'سریع. تند. غیرقابل پیش‌بینی.',
+    slogan_ember:'داغ. سنگین. بی‌رحم.',
+    slogan_venom:'آرام. سرسخت. سمی.',
+    slogan_royal:'جاه‌طلبی بزرگ. نبردی پر سر و صدا.',
+    slogan_default:'حریف تازه‌ای وارد میدان شده است.'
+  }
+};
+</script>
+<script src="../assets/site-i18n.js?v=20260920-10"></script>
+<script>
+const API='https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war';
+let currentWar=null;
+let currentTheme='raiders';
+
+const WAR_THEME_OVERRIDES={
+  'шпана с окраины':{theme:'raiders',emblem:'☠'},
+  'товарищи':{theme:'iron',emblem:'✦'},
+  'lad':{theme:'storm',emblem:'⚡'},
+  'hamster pub':{theme:'ember',emblem:'♨'},
+  'top king':{theme:'royal',emblem:'♛'}
+};
+const WAR_THEMES=[
+  {theme:'raiders',emblem:'☠'},
+  {theme:'iron',emblem:'✦'},
+  {theme:'storm',emblem:'⚡'},
+  {theme:'ember',emblem:'♨'},
+  {theme:'venom',emblem:'◆'},
+  {theme:'royal',emblem:'♛'}
+];
+
+function normalizeOpponent(value){
+  return String(value||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+function hashName(value){
+  let h=2166136261;
+  for(const ch of value){h^=ch.codePointAt(0);h=Math.imul(h,16777619)}
+  return h>>>0;
+}
+function themeFor(name){
+  const key=normalizeOpponent(name);
+  return WAR_THEME_OVERRIDES[key]||WAR_THEMES[hashName(key)%WAR_THEMES.length];
+}
+function fmtNumber(value){
+  const n=Number(value);
+  return Number.isFinite(n)?Math.max(0,Math.round(n)).toLocaleString(TopKingI18n.language||'ru'):'—';
+}
+function sloganFor(theme,s){
+  return s['slogan_'+theme]||s.slogan_default||'';
+}
+function setTheme(info){
+  currentTheme=info.theme;
+  const arena=document.getElementById('war-arena');
+  arena.className='war-arena theme-'+info.theme;
+  document.getElementById('war-emblem').textContent=info.emblem||'⚔';
+}
+function render(){
+  const s=TopKingI18n.strings();
+  const message=document.getElementById('war-message');
+
+  if(!currentWar){
+    setTheme({theme:'iron',emblem:'⚔'});
+    document.getElementById('war-name').textContent=s.waiting;
+    document.getElementById('war-slogan').textContent=s.slogan_default||'';
+    document.getElementById('war-hp').textContent='0';
+    document.getElementById('war-hp-max').textContent='0';
+    document.getElementById('war-health-fill').style.width='0%';
+    document.getElementById('war-health-track').setAttribute('aria-valuenow','0');
+    document.getElementById('war-percent').textContent='0%';
+    message.className='war-message hidden';
+    return;
+  }
+
+  const opponent=String(currentWar.opponent||'—');
+  const info=themeFor(opponent);
+  setTheme(info);
+
+  const hp=Number(currentWar.opponent_hp);
+  const hpMax=Number(currentWar.opponent_hp_max);
+  const pct=Number.isFinite(hp)&&Number.isFinite(hpMax)&&hpMax>0
+    ?Math.max(0,Math.min(100,(hp/hpMax)*100))
+    :0;
+
+  document.getElementById('war-name').textContent=opponent;
+  document.getElementById('war-slogan').textContent=sloganFor(info.theme,s);
+  document.getElementById('war-hp').textContent=fmtNumber(hp);
+  document.getElementById('war-hp-max').textContent=fmtNumber(hpMax);
+  document.getElementById('war-health-fill').style.width=pct.toFixed(2)+'%';
+  document.getElementById('war-health-track').setAttribute('aria-valuenow',String(Math.round(pct)));
+  document.getElementById('war-percent').textContent=Math.round(pct)+'%';
+  message.className='war-message hidden';
+}
+async function load(){
+  const message=document.getElementById('war-message');
+  try{
+    const r=await fetch(API,{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    currentWar=d&&d.active&&d.war?d.war:null;
+    render();
+  }catch(_){
+    message.className='war-message bad';
+    message.textContent=TopKingI18n.strings().error;
+  }
+}
+document.addEventListener('tk-language-change',render);
+load();
+setInterval(load,60000);
+</script>
+<script src="../assets/site-nav.js?v=20260920-11"></script>
+</body>
+</html>
