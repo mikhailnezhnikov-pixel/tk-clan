@@ -1,0 +1,99 @@
+server_sha256=b5189981acade420e1aaa533dec8b745c0e16969bf1def0c5008aa297f2a2812
+
+### hk_map_data
+def hk_map_data(map_key: str, member: dict | None = None, public: bool = False) -> dict:
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    if not public and not member:
+        raise PermissionError("maps access denied")
+    with db_session() as db:
+        if public:
+            row = db.execute("""SELECT c.*,p.points_json,p.point_count
+                                FROM hk_maps_catalog c JOIN hk_map_points p ON p.map_key=c.map_key
+                                WHERE c.map_key=? AND c.published=1 AND c.open_url<>''""", (map_key,)).fetchone()
+        else:
+            row = db.execute("""SELECT c.*,p.points_json,p.point_count
+                                FROM hk_maps_catalog c JOIN hk_map_points p ON p.map_key=c.map_key
+                                WHERE c.map_key=?""", (map_key,)).fetchone()
+    if not row:
+        raise LookupError("map not found")
+    if not public and not member_can_access_hk_map(member, map_key, row["city"]):
+        raise PermissionError("maps access denied")
+    full = load_full_hk_map(map_key)
+    if full is not None:
+        return {"ok": True, "map": hk_map_row(row), "point_count": row["point_count"],
+                "render": "full", "full": full}
+    try:
+        points = json.loads(row["points_json"])
+    except json.JSONDecodeError:
+        points = []
+    points, canonical = hk_map_points_with_canonical(map_key, points)
+    return {"ok": True, "map": hk_map_row(row), "point_count": row["point_count"],
+            "render": "points", "points": points, "canonical": canonical}
+
+### cabinet_maps
+def cabinet_maps(member: dict) -> dict:
+    ensure_scoped_hk_map_access_schema()
+    with db_session() as db:
+        rows = db.execute("SELECT * FROM hk_maps_catalog ORDER BY score DESC,city,grid").fetchall()
+        if not member.get('maps_manage'):
+            telegram_id = str(member.get('telegram_id') or '')
+            cities, map_rules = _hk_member_rules(db, telegram_id)
+            rows = [row for row in rows if map_rules.get(row['map_key'], row['city'] in cities)]
+            if not rows:
+                raise PermissionError('maps access denied')
+        members = []
+        if member.get('maps_manage'):
+            raw_members = [dict(row) for row in db.execute(
+                """SELECT telegram_id,note,first_name,username,linked_player_id,active,maps_access,maps_manage
+                   FROM clan_members WHERE active=1 ORDER BY first_name,username,note,telegram_id""").fetchall()]
+            rule_rows = db.execute("SELECT telegram_id,scope_type,scope_value,allowed FROM hk_map_access_rules").fetchall()
+            by_member: dict[str, dict] = {}
+            for rule in rule_rows:
+                bucket = by_member.setdefault(rule['telegram_id'], {'cities': [], 'maps': {}})
+                if rule['scope_type'] == 'city' and rule['allowed']:
+                    bucket['cities'].append(rule['scope_value'])
+                elif rule['scope_type'] == 'map':
+                    bucket['maps'][rule['scope_value']] = bool(rule['allowed'])
+            for item in raw_members:
+                rules = by_member.get(item['telegram_id'], {'cities': [], 'maps': {}})
+                rules['cities'] = sorted(set(rules['cities']))
+                item['map_rules'] = rules
+                members.append(item)
+    return {'ok': True, 'can_manage': bool(member.get('maps_manage')),
+            'maps': [hk_map_row(row) for row in rows], 'members': members}
+
+### map_index
+def map_index() -> list[dict]:
+    with db_session() as db:
+        rows = db.execute("""SELECT a.*,COUNT(b.building_id) buildings,SUM(b.opened) opened,
+          SUM(CASE WHEN b.building_id IS NOT NULL AND b.room_count IS NULL THEN 1 ELSE 0 END) unexplored,
+          SUM(CASE WHEN b.room_count IS NOT NULL THEN 1 ELSE 0 END) known,
+          SUM(CASE WHEN b.room_count>0 THEN 1 ELSE 0 END) buildings_with_rooms,COALESCE(SUM(b.room_count),0) total_rooms,
+          SUM(CASE WHEN b.room_count=0 THEN 1 ELSE 0 END) room0,SUM(CASE WHEN b.room_count=1 THEN 1 ELSE 0 END) room1,
+          SUM(CASE WHEN b.room_count=2 THEN 1 ELSE 0 END) room2,SUM(CASE WHEN b.room_count=3 THEN 1 ELSE 0 END) room3,
+          SUM(CASE WHEN b.room_count=4 THEN 1 ELSE 0 END) room4,SUM(CASE WHEN b.room_count>=5 THEN 1 ELSE 0 END) room5
+          FROM map_areas a LEFT JOIN map_buildings b ON b.area_id=a.area_id GROUP BY a.area_id""").fetchall()
+        aliases = {}
+        for row in db.execute("SELECT source_area_id,canonical_area_id FROM map_area_aliases ORDER BY first_seen"):
+            aliases.setdefault(str(row["canonical_area_id"]), []).append(str(row["source_area_id"]))
+    result=[]
+    for row in rows:
+        item=dict(row); total=max(item["expected_buildings"],item["buildings"] or 0); known=int(item["known"] or 0)
+        item["progress"]=round(100*known/total,1) if total else 0; item["rating"]=(item["total_rooms"] or 0)*2+(item["buildings_with_rooms"] or 0)
+        item["aliases"] = aliases.get(str(item["area_id"]), [str(item["area_id"])])
+        result.append(item)
+    return sorted(result,key=lambda row:(-row["rating"],row["city_name"],row["x"] or 0,row["y"] or 0))
+
+### map_detail
+def map_detail(area_id: str) -> dict | None:
+    with db_session() as db:
+        alias=db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",(area_id,)).fetchone()
+        area_id=str(alias[0]) if alias else area_id
+        area=db.execute("SELECT * FROM map_areas WHERE area_id=?",(area_id,)).fetchone()
+        if not area:return None
+        buildings=[dict(row) for row in db.execute(
+            """SELECT building_id,opened,room_count,has_events,is_invest,tier,faction,building_type,
+                      knowledge_source,knowledge_observed_at
+               FROM map_buildings WHERE area_id=? ORDER BY building_id""",(area_id,))]
+    return {"area":dict(area),"buildings":buildings}
