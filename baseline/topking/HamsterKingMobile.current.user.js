@@ -458,7 +458,7 @@
   let pitCatalogLoaded = false;
   let pitSubmitQueue = [];
   let pitSubmitTimer = null;
-  let pitPowerTableOpen = true;
+  let pitPowerTableOpen = false;
   let lastNetworkPitContext = null;
   const pitSubmittedThisSession = new Set();
   const initialMapResearchAttempted = new Set();
@@ -5729,6 +5729,7 @@
   const HK_PITS_TOOLBAR_REV = 'pits-toolbar-clean-20260920-r4';
   const HK_PITS_START_REV = 'pits-start-config-snapshot-20260920-r5';
   const HK_PITS_RESPAWN_REV = 'pits-respawn-cost-20260920-r6';
+  const HK_PITS_POWER_TABLE_REV = 'pits-power-table-collapsed-20260920-r7';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
