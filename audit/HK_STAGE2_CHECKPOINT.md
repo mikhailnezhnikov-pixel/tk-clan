@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: BUG_CONFIRMED_FIX_PENDING
+- current module status: CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -95,3 +95,14 @@ Each module:
 - active live path: legacy single-Pit `pitLoop()`
 - donor canonical three-Pit `runPits(configs)`: missing
 - next action: fix Pits only; do not advance to Bosses
+
+
+## Pits canonical core r1
+
+- marker: `pits-canon-core-20260920-r1`
+- deploy run: `35491426778`
+- technical verification: PASS
+- live/public SHA256: `0d6de4888121d5e09d2cd5fa5140ec5941734dd30c23dc70fbbd95a951dcb825`
+- core UI/live-read user confirmation: PENDING
+- advanced donor Pits (sniper + tournament reward planning + restoration decision): PENDING next Pits block
+- do not advance to Bosses
