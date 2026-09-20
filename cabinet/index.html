@@ -512,6 +512,34 @@
       .mirror-row{grid-template-columns:1fr!important}
       .mirror-row b{justify-self:start}
     }
+    .site-analytics-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .site-analytics-periods{display:flex;gap:7px;flex-wrap:wrap}
+    .site-analytics-periods button{min-height:38px;padding:8px 12px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.035);color:#cbd1da;font-weight:800;cursor:pointer}
+    .site-analytics-periods button.active{border-color:rgba(232,182,84,.42);background:rgba(232,182,84,.13);color:#ffe3a0}
+    .site-analytics-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:20px 0}
+    .site-analytics-kpi{padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.025)}
+    .site-analytics-kpi span{display:block;color:var(--muted);font-size:12px}
+    .site-analytics-kpi b{display:block;margin-top:6px;color:#fff;font-size:28px}
+    .site-analytics-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:14px}
+    .site-analytics-box{padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.018)}
+    .site-analytics-box h3{margin:0 0 12px;font-size:18px}
+    .site-analytics-table{width:100%;border-collapse:collapse}
+    .site-analytics-table th,.site-analytics-table td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:middle}
+    .site-analytics-table th{color:#8993a3;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+    .site-analytics-table td:last-child,.site-analytics-table th:last-child{text-align:right}
+    .site-analytics-path{font-weight:800;color:#eef2f7;overflow-wrap:anywhere}
+    .site-analytics-title{display:block;margin-top:2px;color:#7f8998;font-size:11px;font-weight:500}
+    .site-analytics-bars{display:grid;gap:8px}
+    .site-analytics-bar{display:grid;grid-template-columns:minmax(90px,1fr) minmax(80px,2fr) auto;gap:8px;align-items:center}
+    .site-analytics-bar-track{height:8px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+    .site-analytics-bar-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#d49b39,#ffe09a)}
+    .site-analytics-bar b{font-size:12px}
+    .site-analytics-chart{display:flex;align-items:flex-end;gap:4px;height:130px;padding-top:12px}
+    .site-analytics-day{flex:1;min-width:4px;position:relative;height:100%;display:flex;align-items:flex-end}
+    .site-analytics-day i{display:block;width:100%;min-height:2px;border-radius:4px 4px 1px 1px;background:linear-gradient(180deg,#f5cf78,#a86e20)}
+    .site-analytics-day:hover::after{content:attr(data-label);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:5px 7px;border-radius:7px;background:#111722;color:#fff;font-size:11px;z-index:3}
+    @media(max-width:760px){.site-analytics-grid{grid-template-columns:1fr 1fr}.site-analytics-kpi:last-child{grid-column:1/-1}.site-analytics-layout{grid-template-columns:1fr}.site-analytics-bar{grid-template-columns:minmax(80px,1fr) minmax(70px,1.5fr) auto}}
+    @media(max-width:430px){.site-analytics-grid{grid-template-columns:1fr}.site-analytics-kpi:last-child{grid-column:auto}}
     @media(prefers-reduced-motion:reduce){.loading{animation:none}.expand-mark{transition:none}}
   </style>
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
@@ -563,6 +591,7 @@
         <div class="cab-tab-group" data-cab-group="sections">
           <span class="cab-tab-group-label">Разделы</span>
           <button class="cab-tab" type="button" data-cab-tab="maps" hidden>Карты</button>
+          <button class="cab-tab" type="button" data-cab-tab="site-stats">Посещения</button>
           <button class="cab-tab" type="button" data-cab-tab="install">Установка</button>
         </div>
       </nav>
@@ -853,6 +882,54 @@
           </div>
 
           <p class="hkmap-note">Нажмите строку карты, чтобы увидеть максимальную награду. Публикация доступна только управляющим картами. После включения карта автоматически появляется в публичном разделе «Карты».</p>
+        </article>
+      </section>
+
+      <section class="cab-panel" data-cab-panel="site-stats" hidden>
+        <article class="card cab-card wide">
+          <div class="site-analytics-head">
+            <div>
+              <div class="card-kicker">Сайт · аналитика</div>
+              <h2>Посещения tk-clan.ru</h2>
+              <p class="stats-sub">Просмотры страниц, популярные разделы и источники переходов. Сырые IP-адреса в статистике не сохраняются.</p>
+            </div>
+            <div class="site-analytics-periods" role="group" aria-label="Период статистики">
+              <button class="active" type="button" data-site-stats-days="7">7 дней</button>
+              <button type="button" data-site-stats-days="30">30 дней</button>
+              <button type="button" data-site-stats-days="90">90 дней</button>
+            </div>
+          </div>
+          <div class="site-analytics-grid">
+            <div class="site-analytics-kpi"><span>Просмотров за период</span><b id="site-stats-total">0</b></div>
+            <div class="site-analytics-kpi"><span>Просмотров сегодня</span><b id="site-stats-today">0</b></div>
+            <div class="site-analytics-kpi"><span>Уникальных сегодня</span><b id="site-stats-unique">0</b></div>
+          </div>
+          <div class="site-analytics-layout">
+            <section class="site-analytics-box">
+              <h3>Популярные страницы</h3>
+              <div style="overflow:auto">
+                <table class="site-analytics-table">
+                  <thead><tr><th>Страница</th><th>Просмотры</th></tr></thead>
+                  <tbody id="site-stats-pages"></tbody>
+                </table>
+              </div>
+            </section>
+            <div style="display:grid;gap:14px">
+              <section class="site-analytics-box">
+                <h3>Динамика</h3>
+                <div id="site-stats-chart" class="site-analytics-chart"></div>
+              </section>
+              <section class="site-analytics-box">
+                <h3>Источники</h3>
+                <div id="site-stats-sources" class="site-analytics-bars"></div>
+              </section>
+              <section class="site-analytics-box">
+                <h3>Устройства</h3>
+                <div id="site-stats-devices" class="site-analytics-bars"></div>
+              </section>
+            </div>
+          </div>
+          <p id="site-stats-message" class="message" role="status" aria-live="polite"></p>
         </article>
       </section>
 
@@ -1676,6 +1753,65 @@
   });
 
 
+  let siteStatsDays=7;
+  let siteStatsLoaded=false;
+
+  function renderSiteStatsBars(id,rows){
+    const box=$(id);if(!box)return;
+    const list=Array.isArray(rows)?rows:[];
+    const max=Math.max(1,...list.map(row=>Number(row.views||0)));
+    const labels={direct:'Прямые',internal:'Внутри сайта',telegram:'Telegram',search:'Поиск',social:'Соцсети',referral:'Другие сайты',desktop:'ПК',mobile:'Телефон',tablet:'Планшет',other:'Другое'};
+    box.innerHTML=list.length?list.map(row=>{
+      const value=Number(row.views||0);
+      const width=Math.max(2,Math.round(value/max*100));
+      const label=labels[row.name]||row.name||'—';
+      return '<div class="site-analytics-bar"><span>'+safe(label)+'</span><div class="site-analytics-bar-track"><div class="site-analytics-bar-fill" style="width:'+width+'%"></div></div><b>'+formatNumber(value)+'</b></div>';
+    }).join(''):'<div class="muted">Пока нет данных.</div>';
+  }
+
+  function renderSiteStats(data){
+    $('site-stats-total').textContent=formatNumber(data.total_views||0);
+    $('site-stats-today').textContent=formatNumber(data.views_today||0);
+    $('site-stats-unique').textContent=formatNumber(data.unique_today||0);
+    const pages=Array.isArray(data.pages)?data.pages:[];
+    $('site-stats-pages').innerHTML=pages.length?pages.map(row=>
+      '<tr><td><span class="site-analytics-path">'+safe(row.path||'/')+'</span>'+
+      (row.title?'<span class="site-analytics-title">'+safe(row.title)+'</span>':'')+
+      '</td><td><b>'+formatNumber(row.views||0)+'</b></td></tr>'
+    ).join(''):'<tr><td colspan="2" class="muted">Статистика начнёт заполняться с момента установки счётчика.</td></tr>';
+    const daily=Array.isArray(data.daily)?data.daily:[];
+    const max=Math.max(1,...daily.map(row=>Number(row.views||0)));
+    $('site-stats-chart').innerHTML=daily.length?daily.map(row=>{
+      const value=Number(row.views||0);
+      const height=Math.max(2,Math.round(value/max*100));
+      return '<div class="site-analytics-day" data-label="'+safe(row.day_key+': '+value)+'"><i style="height:'+height+'%"></i></div>';
+    }).join(''):'<div class="muted">Нет данных.</div>';
+    renderSiteStatsBars('site-stats-sources',data.sources);
+    renderSiteStatsBars('site-stats-devices',data.devices);
+  }
+
+  async function loadSiteStats(force=false){
+    if(siteStatsLoaded&&!force)return;
+    setMessage('site-stats-message','Загружаю статистику…');
+    try{
+      const data=await request('/site-stats',{method:'POST',body:JSON.stringify({days:siteStatsDays})});
+      renderSiteStats(data);
+      siteStatsLoaded=true;
+      setMessage('site-stats-message','Обновлено.','good');
+    }catch(error){
+      setMessage('site-stats-message','Не удалось загрузить статистику сайта.','bad');
+    }
+  }
+
+  document.addEventListener('click',event=>{
+    const button=event.target.closest('[data-site-stats-days]');
+    if(!button)return;
+    siteStatsDays=Number(button.dataset.siteStatsDays||7);
+    document.querySelectorAll('[data-site-stats-days]').forEach(x=>x.classList.toggle('active',x===button));
+    siteStatsLoaded=false;
+    loadSiteStats(true);
+  });
+
   function setCabTab(name,syncUrl=true){
     document.querySelectorAll('[data-cab-tab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.cabTab===name));
     document.querySelectorAll('[data-cab-panel]').forEach(panel=>panel.hidden=panel.dataset.cabPanel!==name);
@@ -1691,6 +1827,7 @@
       loadMapsIndex();
     }
     if(name==='clan-shop')loadClanShop();
+    if(name==='site-stats')loadSiteStats();
   }
 
   document.addEventListener('click',event=>{
@@ -2324,6 +2461,6 @@
   },60000);
 </script>
 <script src="../assets/cabinet-i18n.js?v=20260920-11"></script>
-<script src="../assets/site-nav.js?v=20260920-8"></script>
+<script src="../assets/site-nav.js?v=20260920-11"></script>
 </body>
 </html>
