@@ -834,6 +834,22 @@
             <div class="hkmap-mini"><span>Open подключено</span><b id="hkmap-ready">0</b></div>
           </div>
 
+          <section id="hk-full-import-admin" class="hidden" style="margin:14px 0;padding:14px;border:1px solid rgba(95,150,220,.35);border-radius:14px;background:rgba(14,25,40,.72)">
+            <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
+              <div style="max-width:720px">
+                <h3 style="margin:0 0 6px">Полный импорт HK Maps — 235 карт</h3>
+                <p class="muted" style="margin:0">Выберите исходный <code>hk_maps_235_full.json.gz</code>. Архив распаковывается в браузере; на сервер отправляются только ID зданий и знания по комнатам. Сначала выполняется dry-run без изменения карт.</p>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input id="hk-full-import-file" type="file" accept=".json.gz,.gz,application/gzip" style="max-width:320px">
+                <button id="hk-full-import-check" class="button ghost" type="button">Проверить 235 карт</button>
+                <button id="hk-full-import-apply" class="button primary" type="button" disabled>Применить импорт</button>
+              </div>
+            </div>
+            <div id="hk-full-import-progress" class="muted" style="margin-top:10px"></div>
+            <div id="hk-full-import-result" style="margin-top:10px"></div>
+          </section>
+
           <details id="hkmap-access-admin" class="hkmap-access-admin hidden">
             <summary>
               <div>
@@ -1035,6 +1051,8 @@
   let hkMapsMembers=[];
   let hkMapsCanManage=false;
   let hkMapsLoaded=false;
+  let hkFullImportBatch='';
+  let hkFullImportReport=null;
   let currentMapsAccess=false;
   let initialCabTabApplied=false;
   let clanShopData=null;
@@ -1163,6 +1181,151 @@
     }
   }
 
+  function hkFullImportSetProgress(text='',kind=''){
+    const el=$('hk-full-import-progress');
+    if(!el)return;
+    el.textContent=text;
+    el.style.color=kind==='bad'?'#ff8a8a':kind==='good'?'#78e7a4':'';
+  }
+
+  function hkFullImportMapKey(map){
+    const match=String(map?.url||'').match(/\/(hk_[a-z0-9]+)\.php(?:[?#].*)?$/i);
+    return match?match[1].toLowerCase():'';
+  }
+
+  function hkFullImportCompactMap(map){
+    const key=hkFullImportMapKey(map);
+    const city=String(map?.city||'').trim();
+    const grid=String(map?.grid||'').trim();
+    const raw=Array.isArray(map?.game_buildings)?map.game_buildings:[];
+    const seen=new Set();
+    const buildings=[];
+    for(const feature of raw){
+      const p=feature?.properties||{};
+      if(!p.is_game)continue;
+      const id=String(p.building_id||feature?.id||'').trim();
+      if(!id||seen.has(id))throw new Error('duplicate_building_id:'+id);
+      seen.add(id);
+      const room=p.crystals==null?null:Number(p.crystals);
+      if(room!=null&&(!Number.isInteger(room)||room<0||room>20))throw new Error('invalid_room_count:'+id);
+      buildings.push([id,room,!!p.is_investment,String(p.faction||'').slice(0,40),String(p.building_generator||'').slice(0,100)]);
+    }
+    if(!key||!city||!/^\d{1,3}:\d{1,3}$/.test(grid)||!buildings.length)throw new Error('invalid_map:'+key);
+    return {key,city,grid,buildings};
+  }
+
+  async function hkFullImportReadArchive(file){
+    if(typeof DecompressionStream!=='function')throw new Error('browser_gzip_not_supported');
+    const bytes=await file.arrayBuffer();
+    const digest=await crypto.subtle.digest('SHA-256',bytes);
+    const sha=[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+    const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    const text=await new Response(stream).text();
+    const doc=JSON.parse(text);
+    if(doc?.format!=='HK Maps Full Export'||Number(doc?.version)!==3)throw new Error('invalid_full_export');
+    if(Number(doc?.maps_found)!==235||Number(doc?.maps_exported)!==235||Number(doc?.errors_count)!==0)throw new Error('archive_not_complete');
+    if(!Array.isArray(doc?.maps)||doc.maps.length!==235)throw new Error('archive_map_count');
+    const maps=doc.maps.map(hkFullImportCompactMap);
+    const keys=new Set(maps.map(x=>x.key));
+    if(keys.size!==235)throw new Error('duplicate_map_key');
+    const allBuildings=new Set();
+    let totalBuildings=0;
+    for(const map of maps){
+      totalBuildings+=map.buildings.length;
+      for(const row of map.buildings){
+        if(allBuildings.has(row[0]))throw new Error('building_in_multiple_maps:'+row[0]);
+        allBuildings.add(row[0]);
+      }
+    }
+    return {doc,maps,sha,totalBuildings,uniqueBuildings:allBuildings.size};
+  }
+
+  function hkFullImportRenderReport(report){
+    const box=$('hk-full-import-result'),apply=$('hk-full-import-apply');
+    if(!box)return;
+    const counts=report?.status_counts||{};
+    const entries=[
+      ['Уже связаны',counts.matched_link||0],
+      ['Совпали по building_id',counts.matched_building||0],
+      ['Пустой canonical по координатам',counts.matched_empty_coordinate||0],
+      ['Новые районы',counts.new||0],
+      ['Только координаты — нужна проверка',counts.coordinate_only||0],
+      ['Слабое совпадение',counts.weak_overlap||0],
+      ['Неоднозначные building_id',counts.ambiguous_building_overlap||0],
+      ['Конфликт существующей связи', (counts.conflict_link_buildings||0)+(counts.conflict_link_no_overlap||0)]
+    ];
+    const problems=(report?.maps||[]).filter(x=>!['matched_link','matched_building','matched_empty_coordinate','new'].includes(x.status));
+    box.innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">'+
+      entries.map(([label,value])=>'<div style="padding:9px 10px;border:1px solid rgba(255,255,255,.1);border-radius:10px"><small>'+safe(label)+'</small><b style="display:block;font-size:20px">'+formatNumber(value)+'</b></div>').join('')+
+      '</div>'+
+      '<p style="margin:10px 0 0"><b>'+formatNumber(report?.maps_received||0)+'/235 карт</b> · '+formatNumber(report?.archive_total_buildings||0)+' зданий · уникальных ID '+formatNumber(report?.unique_archive_building_ids||0)+'</p>'+
+      (report?.ready_to_apply
+        ? '<p style="color:#78e7a4;margin:7px 0 0"><b>Dry-run PASS.</b> Все 235 карт можно импортировать без неоднозначных склеек.</p>'
+        : '<p style="color:#ffb36b;margin:7px 0 0"><b>Импорт пока заблокирован.</b> Проблемных карт: '+formatNumber(problems.length)+'.</p>')+
+      (problems.length?'<details style="margin-top:8px"><summary>Показать проблемные карты</summary><pre style="white-space:pre-wrap;max-height:320px;overflow:auto">'+safe(problems.slice(0,50).map(x=>x.map_key+' · '+x.status+' · '+x.grid).join('\n'))+'</pre></details>':'');
+    if(apply)apply.disabled=!report?.ready_to_apply;
+  }
+
+  async function hkFullImportCheck(){
+    if(!hkMapsCanManage)return;
+    const file=$('hk-full-import-file')?.files?.[0];
+    if(!file){hkFullImportSetProgress('Выберите hk_maps_235_full.json.gz.','bad');return}
+    const check=$('hk-full-import-check'),apply=$('hk-full-import-apply');
+    if(check)check.disabled=true;
+    if(apply)apply.disabled=true;
+    hkFullImportBatch='';hkFullImportReport=null;
+    try{
+      hkFullImportSetProgress('Читаю и проверяю полный архив…');
+      const pack=await hkFullImportReadArchive(file);
+      hkFullImportSetProgress('Архив подтверждён: 235 карт, '+formatNumber(pack.totalBuildings)+' зданий. Создаю dry-run…');
+      const start=await request('/maps/full-import/start',{method:'POST',body:JSON.stringify({
+        format:pack.doc.format,version:pack.doc.version,
+        maps_found:pack.doc.maps_found,maps_exported:pack.doc.maps_exported,
+        errors_count:pack.doc.errors_count,exported_at:pack.doc.exported_at,
+        archive_sha256:pack.sha
+      })});
+      hkFullImportBatch=start.batch_id;
+      const chunkSize=8;
+      for(let i=0;i<pack.maps.length;i+=chunkSize){
+        const chunk=pack.maps.slice(i,i+chunkSize);
+        const uploaded=await request('/maps/full-import/chunk',{method:'POST',body:JSON.stringify({batch_id:hkFullImportBatch,maps:chunk})});
+        hkFullImportSetProgress('Загружено для проверки: '+uploaded.received_maps+'/235 карт…');
+      }
+      hkFullImportSetProgress('Сопоставляю 152 593 building_id с общей базой…');
+      const report=await request('/maps/full-import/resolve',{method:'POST',body:JSON.stringify({batch_id:hkFullImportBatch})});
+      hkFullImportReport=report;
+      hkFullImportRenderReport(report);
+      hkFullImportSetProgress(report.ready_to_apply?'Dry-run завершён — можно применять.':'Dry-run завершён — обнаружены карты, требующие проверки.',report.ready_to_apply?'good':'bad');
+    }catch(error){
+      hkFullImportSetProgress('Ошибка проверки архива: '+String(error?.code||error?.message||error),'bad');
+      console.error(error);
+    }finally{
+      if(check)check.disabled=false;
+    }
+  }
+
+  async function hkFullImportApply(){
+    if(!hkMapsCanManage||!hkFullImportBatch||!hkFullImportReport?.ready_to_apply)return;
+    if(!confirm('Импортировать все 235 карт в общую базу? Перед записью сервер создаст резервную копию БД.'))return;
+    const apply=$('hk-full-import-apply'),check=$('hk-full-import-check');
+    if(apply)apply.disabled=true;if(check)check.disabled=true;
+    try{
+      hkFullImportSetProgress('Импортирую 235 карт и знания зданий…');
+      const result=await request('/maps/full-import/apply',{method:'POST',body:JSON.stringify({batch_id:hkFullImportBatch,confirm:'IMPORT_235'})});
+      hkFullImportSetProgress('Импорт завершён: '+result.maps_imported+' карт · '+formatNumber(result.source_buildings_processed)+' зданий · новых canonical районов '+result.created_canonical_areas+'.','good');
+      const box=$('hk-full-import-result');
+      if(box)box.innerHTML+='<p style="color:#78e7a4"><b>IMPORT PASS.</b> Общий список: '+formatNumber(result.unified_rows)+' районов. Сайт + Скрипт: '+formatNumber(result.source_counts?.combined||0)+'. Только Скрипт: '+formatNumber(result.source_counts?.script||0)+'. Только Сайт: '+formatNumber(result.source_counts?.website||0)+'.</p>';
+      await loadMapsIndex(true);
+    }catch(error){
+      hkFullImportSetProgress('Ошибка импорта: '+String(error?.code||error?.message||error),'bad');
+      console.error(error);
+      if(apply)apply.disabled=!hkFullImportReport?.ready_to_apply;
+    }finally{
+      if(check)check.disabled=false;
+    }
+  }
+
   function renderMapsIndex(){
     const body=$('hkmap-body');
     if(!body)return;
@@ -1181,6 +1344,7 @@
       return (Number(av)-Number(bv))*hkMapsSort.dir;
     });
 
+    $('hk-full-import-admin')?.classList.toggle('hidden',!hkMapsCanManage);
     $('hkmap-total').textContent=formatNumber(source.length);
     $('hkmap-cities').textContent=formatNumber(new Set(source.map(x=>x.city)).size);
     $('hkmap-ready').textContent=formatNumber(source.filter(x=>x.open_url).length);
@@ -1305,6 +1469,8 @@
   });
 
   $('hkmap-search')?.addEventListener('input',renderMapsIndex);
+  $('hk-full-import-check')?.addEventListener('click',hkFullImportCheck);
+  $('hk-full-import-apply')?.addEventListener('click',hkFullImportApply);
 
 
   function announcementDate(value){
