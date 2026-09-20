@@ -332,3 +332,17 @@ Pending before Pits LIVE PASS:
 - r11 restoration decision user-path check;
 - r13 reward execution/recalculation user-path check.
 Do not advance to Bosses yet.
+
+
+## Pits plan/totals r14
+
+- donor execution-plan summary added before start;
+- actual per-Pit and overall totals added after execution;
+- actual counters: rounds / passes / crystals / Pit Passes / Restoration Paws;
+- marker: `pits-plan-totals-20260920-r14`;
+- deploy `35496803315` — PASS;
+- live/public SHA256: `0079d453a830fc452b7d1d953cc3c2991ac023daea7543112377ccd90c1cade9`;
+- baseline sync `35496845598` — PASS.
+
+Pending Pits live checks remain r11 restoration decision and r13 reward execution.
+Do not advance to Bosses yet.
