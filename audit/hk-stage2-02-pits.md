@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: RESTORATION_DECISION_LIVE_CANDIDATE_PENDING_USER_CHECK
+status: REWARD_PLANNER_CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
 
 ## Required Stage 2 chain
 
@@ -514,3 +514,67 @@ User check:
 - verify one safe branch first (recommended: `Потратить Лапы и продолжить` with a small known amount).
 
 Do not advance to tournament reward planning until this r11 decision path is visually/action confirmed.
+
+
+## Tournament reward planner core r12
+
+User requested to proceed to the next Pits block before separately confirming the r11 restoration modal.
+Therefore r11 remains technically deployed but still has an outstanding user-path check.
+
+Pinned donor basis:
+- live reward data is loaded from each Pit view plus its leaderboard;
+- reward tiers use leaderboard score rewards with min_score >= 500000;
+- tournament activity is status ACTUAL;
+- current score is read from your_lb_slot.score;
+- Pit score per x1 is calculated from the selected exact Target level and the Pit score reward item;
+- future daily reset count uses the donor 12:00 UTC reset boundary;
+- Daily base runs applies only to future resets; today's selected Pass plan remains the base;
+- strategies are donor terms/semantics: upfront / gradual / last_day;
+- every full 100 Tribute Boxes is forecast as 2 Pit Passes.
+
+r12 includes:
+- per-Pit live tournament section;
+- active/inactive tournament indicator and remaining time;
+- current tournament points and current Tribute Boxes;
+- Reward target selector from live reward tiers;
+- Daily base runs input;
+- Extra Pit Pass strategy selector: Upfront / Gradual / Last day;
+- read-only forecast:
+  - points per x1;
+  - future daily resets;
+  - points still required after base plan;
+  - total extra x1 runs;
+  - runs scheduled now by strategy;
+  - extra Pit Pass requirement;
+  - expected Pit Pass return from Tribute Boxes;
+  - projected tournament score;
+- Auto-finish and exact Target-level readiness are surfaced in plan status.
+
+Safety boundary:
+- r12 DOES NOT automatically spend extra Pit Passes;
+- it does not append reward-generated x1 runs to the execution plan yet;
+- execution/recalculation after completed runs remains the next patch after UI/live calculation confirmation.
+
+Marker:
+`HK_PITS_REWARD_REV = 'pits-reward-planner-core-20260920-r12'`
+
+Deploy:
+- workflow: `Deploy TopKing Pits Reward Planner R12`;
+- successful run: `35495840079`;
+- Python patch compile: PASS;
+- JS syntax: PASS;
+- backup/deploy: PASS;
+- service active: PASS;
+- public round-trip byte equality: PASS;
+- live/public SHA256: `56d5b9663b78767a6a290c71109878870b97113c975b21299869fce5fbca49a8`.
+
+Baseline sync:
+- run: `35495872850` — SUCCESS.
+
+Current status:
+**REWARD_PLANNER_CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK**
+
+Outstanding checks before reward execution:
+1. r11 restoration decision modal still needs user-path confirmation when a Paws limit is hit;
+2. r12 tournament section must be checked against live tournament values;
+3. only after r12 UI/live-read/calculation is confirmed should automatic extra Pit Pass execution and after-run recalculation be enabled.
