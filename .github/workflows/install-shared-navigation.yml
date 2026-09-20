@@ -21,7 +21,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          nav_version='20260920-8'
+          nav_version='20260920-11'
           for p in Path('.').rglob('index.html'):
               rel=p.as_posix()
               if rel.startswith('.git/') or rel=='maps/moscow-20-19/index.html':
