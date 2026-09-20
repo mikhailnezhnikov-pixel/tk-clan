@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: REWARD_PLANNER_CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
+- current module status: REWARD_EXECUTION_R13_LIVE_CANDIDATE_PENDING_USER_CHECK
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -296,4 +296,39 @@ Still pending:
 - r11 restoration modal user-path check;
 - r12 live tournament UI/calculation check;
 - then reward execution + after-run recalculation.
+Do not advance to Bosses yet.
+
+
+## Pits reward execution r13
+
+User accepted r12 planner and asked to continue.
+
+r13 activates donor-style reward continuation:
+- only r12-valid reward plans can generate ITEM reward steps;
+- Tribute Boxes open in full x100 batches;
+- every reward ITEM round revalidates live balance/cost;
+- live tournament score rereads after each completed Pit round;
+- remaining reward steps recalculate dynamically from actual score;
+- Upfront / Gradual / Last day requested-now semantics match donor;
+- unnecessary future reward steps are removed when target/future schedule already covers the goal;
+- insufficient actual Pit Pass balance safely cancels remaining reward continuation instead of overspending.
+
+Marker:
+`pits-reward-execution-20260920-r13`
+
+Deploy:
+`35496430554` — PASS
+
+Live/public SHA256:
+`c51b1549bd631bcc4ea87df8b37a4be990db2300470f6c446a81319532c3ef6b`
+
+Baseline sync:
+`35496474389` — PASS
+
+Current module status:
+**REWARD_EXECUTION_R13_LIVE_CANDIDATE_PENDING_USER_CHECK**
+
+Pending before Pits LIVE PASS:
+- r11 restoration decision user-path check;
+- r13 reward execution/recalculation user-path check.
 Do not advance to Bosses yet.
