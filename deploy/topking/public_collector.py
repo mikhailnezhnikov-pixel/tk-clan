@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request, fcntl, hashlib
 
-REV = "public-server-collector-20260920-r1"
+REV = "public-server-collector-20260921-r2-war-safe"
 GAME_API = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_API", "https://hk-game-api.hwgame.cloud").rstrip("/")
 DB_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_DB", "/var/lib/hamsterking-license/licenses.db")
 STATUS_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_STATUS", "/var/lib/hamsterking-license/public-collector-status.json")
 TOKEN = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_TOKEN", "").strip()
-REQUEST_GAP = max(1.0, float(os.environ.get("HK_PUBLIC_COLLECTOR_REQUEST_GAP", "1.0")))
+REQUEST_GAP = max(1.5, float(os.environ.get("HK_PUBLIC_COLLECTOR_REQUEST_GAP", "1.5")))
 SOURCE = "server-collector"
 RATING_KINDS = {"influence","power","clans","alliance_power","alliance_influence","alliance_defense"}
 
@@ -45,7 +45,7 @@ def finite(*values):
     return None
 
 _last_request=0.0
-def game_json(path, method="GET", body=None):
+def game_json(path, method="GET", body=None, retry_delays=None):
     global _last_request
     if not TOKEN:
         raise RuntimeError("collector token missing")
@@ -58,7 +58,9 @@ def game_json(path, method="GET", body=None):
     if body is not None:
         data=json.dumps(body,separators=(",",":")).encode()
         headers["Content-Type"]="application/json"
-    delays=(0,3,10,30)
+    delays=tuple(retry_delays) if retry_delays is not None else (0,3,10,30)
+    if not delays:
+        delays=(0,)
     last=None
     for attempt,delay in enumerate(delays):
         if delay: time.sleep(delay)
@@ -142,12 +144,22 @@ def normalize_ranking(document, kind, max_rank=100, limit=100):
     return best
 
 def active_war():
-    # Current war does not need /player/me. That document is >2 MB for
-    # developed accounts and is unnecessary load for this lightweight path.
+    # Lightweight path: exactly one Game API request per scheduled war run.
+    # If the game is throttling us, defer to the next timer instead of retrying
+    # several times and increasing pressure on the upstream API.
     own=clean_name(os.environ.get("HK_PUBLIC_COLLECTOR_CLAN_NAME","Top🏆King")) or "Top King"
-    value=game_json("/clan/active_battles")
-    attack=value.get("alliance_attack_war") if isinstance(value,dict) else None
-    if isinstance(attack,dict):
+    value=game_json("/clan/active_battles",retry_delays=(0,))
+    if not isinstance(value,dict):
+        raise RuntimeError("active_battles invalid document")
+    if value.get("_error"):
+        raise RuntimeError("active_battles error document")
+    if "alliance_attack_war" not in value or "clan_defense_wars" not in value:
+        raise RuntimeError("active_battles incomplete schema")
+
+    attack=value.get("alliance_attack_war")
+    if attack is not None and not isinstance(attack,dict):
+        raise RuntimeError("active_battles attack schema invalid")
+    if isinstance(attack,dict) and attack:
         timer=finite(attack.get("end_timer")) or 0
         war={
             "our_clan":own,
@@ -166,11 +178,15 @@ def active_war():
             war["opponent_hp_max"]=round(maximum)
         return True,war
 
-    defenses=value.get("clan_defense_wars") if isinstance(value,dict) else None
-    if isinstance(defenses,list) and defenses:
-        defenses=[x for x in defenses if isinstance(x,dict)]
-        defenses.sort(key=lambda x: finite(x.get("end_timer")) or 0)
-        defense=defenses[0]
+    defenses=value.get("clan_defense_wars")
+    if not isinstance(defenses,list):
+        raise RuntimeError("active_battles defense schema invalid")
+    if defenses:
+        valid=[x for x in defenses if isinstance(x,dict)]
+        if not valid:
+            raise RuntimeError("active_battles defense rows invalid")
+        valid.sort(key=lambda x: finite(x.get("end_timer")) or 0)
+        defense=valid[0]
         timer=finite(defense.get("end_timer")) or 0
         war={
             "our_clan":own,
@@ -189,8 +205,9 @@ def active_war():
             war["our_hp_max"]=round(maximum)
         return True,war
 
+    # Canonical empty response. store_snapshot() still protects an unexpired
+    # server snapshot from being erased by a suspicious temporary empty read.
     return True,None
-
 def alliance_list(document):
     rows=document.get("result") if isinstance(document,dict) else None
     if not isinstance(rows,list) and isinstance(document,dict) and isinstance(document.get("data"),dict):
@@ -380,11 +397,42 @@ def store_snapshot(war_read,war,ratings):
     try:
         db.execute("PRAGMA busy_timeout=30000")
         db.execute("BEGIN IMMEDIATE")
+        war_state="unchanged"
         if war_read:
-            db.execute("DELETE FROM public_clan_war_snapshot")
             if war:
+                db.execute("DELETE FROM public_clan_war_snapshot")
                 db.execute("""INSERT INTO public_clan_war_snapshot(singleton,snapshot_json,source_player_id,updated_at)
                               VALUES(1,?,?,?)""",(json.dumps(war,ensure_ascii=False,separators=(",",":")),SOURCE,now))
+                war_state="active"
+            else:
+                # Do not erase a still-unexpired server snapshot merely because
+                # one upstream read said "no battle". This protects against
+                # throttling/anti-abuse responses that are syntactically valid
+                # but temporarily empty. Old client-generated anon rows are not
+                # treated as authoritative server cache.
+                existing=db.execute(
+                    "SELECT snapshot_json,source_player_id,updated_at FROM public_clan_war_snapshot WHERE singleton=1"
+                ).fetchone()
+                preserve=False
+                if existing and existing[1]==SOURCE:
+                    try:
+                        previous=json.loads(existing[0])
+                    except Exception:
+                        previous={}
+                    previous_ends=finite(previous.get("ends_at")) if isinstance(previous,dict) else None
+                    preserve=bool(
+                        isinstance(previous,dict)
+                        and previous.get("status")=="active"
+                        and previous_ends is not None
+                        and previous_ends>now
+                    )
+                if preserve:
+                    war_state="preserved_unexpired"
+                    log("war empty read ignored: unexpired server snapshot preserved")
+                else:
+                    db.execute("DELETE FROM public_clan_war_snapshot")
+                    war_state="none"
+
         saved=[]
         for kind,rows in ratings.items():
             if kind not in RATING_KINDS or not rows: continue
@@ -402,12 +450,11 @@ def store_snapshot(war_read,war,ratings):
                               VALUES(?,?,?,?,?,?)""",clean)
             saved.append(kind)
         db.commit()
-        return saved
+        return saved,war_state
     except Exception:
         db.rollback(); raise
     finally:
         db.close()
-
 def main():
     if not TOKEN:
         write_status(True,"disabled_no_token")
@@ -450,17 +497,18 @@ def main():
                 return 0
             raise RuntimeError("no public data collected")
 
-        saved=store_snapshot(war_read,war,ratings)
+        saved,war_state=store_snapshot(war_read,war,ratings)
         write_status(
             True,"ok",
             mode=mode,
             duration_sec=round(time.time()-started,2),
             war=bool(war),
+            war_state=war_state,
             ratings=saved,
         )
         log(
             f"success: mode={mode} "
-            f"war={'active' if war else 'none' if war_read else 'unchanged'} "
+            f"war={war_state} "
             f"ratings={','.join(saved) or 'unchanged'}"
         )
         return 0
