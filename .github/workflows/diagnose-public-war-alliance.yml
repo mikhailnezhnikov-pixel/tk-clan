@@ -47,6 +47,22 @@ jobs:
               echo
             done
           '
+      - name: Inspect map room count source
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -e
+            file=/opt/hamsterking-license/HamsterKingMobile.user.js
+            echo "=== MAP ROOM COUNT SOURCE ==="
+            grep -n -E "submitOwnedMapAreas|room_count|has_events|is_invest|gamearea|building_id|crystal|event" "$file" | head -220 || true
+            echo "=== SUBMIT OWNED MAP FUNCTION ==="
+            line="$(grep -n "async function submitOwnedMapAreas" "$file" | head -1 | cut -d: -f1 || true)"
+            if [ -n "$line" ]; then
+              start=$((line-20)); [ "$start" -lt 1 ] && start=1
+              end=$((line+240))
+              sed -n "${start},${end}p" "$file"
+            fi
+          '
       - name: Inspect live collector and recent submissions
         run: |
           set -euo pipefail
