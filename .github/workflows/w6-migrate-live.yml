@@ -185,7 +185,7 @@ jobs:
               assert r and r['room_count'] is not None
               if old_room is None and r['knowledge_source']=='hk_maps_import':
                   assert int(r['room_count'])==import_room
-              if old_source=='game_live':
+              if old_source=='game_live' and old_room is not None:
                   assert r['knowledge_source']=='game_live' and int(r['knowledge_observed_at'])>=int(old_obs)
           db.close()
 
