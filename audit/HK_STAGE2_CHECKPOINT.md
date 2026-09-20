@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- current module: Pits / Ямы
-- current module file: audit/hk-stage2-02-pits.md
-- current module status: FINAL_LIVE_CHECKS_PENDING
-- next module after LIVE PASS: Bosses / Боссы
+- current module: Bosses / Боссы
+- current module file: audit/hk-stage2-03-bosses.md
+- current module status: SOURCE_PREFLIGHT_PENDING
+- next module after LIVE PASS: Maps / Карты
 - Today / Сегодня: LIVE PASS
 
 ## Module order
@@ -67,6 +67,10 @@ Each module:
 
 - 2.01 Today / Сегодня — LIVE PASS
   - final SHA256: `303f6813d6e001751b53b32d83c6098f307aeedcee6a3cf320887bc93a07a117`
+- 2.02 Pits / Ямы — LIVE PASS
+  - final marker: `pits-reward-picker-20260920-r20`
+  - final SHA256: `c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb`
+  - baseline sync: `35498145691` — PASS
 
 
 ## Pits donor source block
@@ -476,3 +480,17 @@ Remaining live-only checks:
 2. reward execution/recalculation: r13 + r18 + r19 controlled run and resulting state;
 3. r17 exact runtime winrate from game preview;
 4. rerun and confirm the resulting state is read correctly.
+
+
+## Pits final live confirmation
+
+User confirmed all remaining r20 final live checks are working:
+- r11 Restoration decision: PASS;
+- r13/r18/r19 reward execution, recalculation, adaptive fit and aggregate preflight: PASS;
+- r17 exact runtime preview winrate: PASS;
+- resulting state and rerun read: PASS.
+
+Stage 2.02 Pits / Ямы: **LIVE PASS**.
+No post-r20 code patch was required; final live/public SHA remains `c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb` and baseline sync `35498145691` remains current.
+
+Stage 2 continues with 2.03 Bosses / Боссы.
