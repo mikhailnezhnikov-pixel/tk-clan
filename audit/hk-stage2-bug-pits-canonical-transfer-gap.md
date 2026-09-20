@@ -1,6 +1,6 @@
 # HK Stage 2 bug — Pits canonical transfer gap
 
-status: CONFIRMED_LIVE_BUG
+status: CORE_FIX_DEPLOYED_FULL_CANON_PENDING
 
 ## Module
 
@@ -100,3 +100,26 @@ Preserve current HK visual language, but replace the legacy single-Pit control m
 - live reread/recalculation after actions.
 
 Do not advance to Bosses until this bug is fixed and Pits reaches LIVE PASS.
+
+
+## Core fix deployed
+
+Canonical three-Pit core is now wired into the visible Pits tab.
+
+- deploy run: `35491426778`
+- version: `1.17.4`
+- live/public SHA256: `0d6de4888121d5e09d2cd5fa5140ec5941734dd30c23dc70fbbd95a951dcb825`
+- visible runner: `runPitsCanonical()`
+- visible renderer: `pitCanonRender()`
+- live host: `#hk-pits-content`
+- legacy `#hk-pit-start` / `#hk-pit-stop`: absent
+- active `await pitLoop()`: absent
+- technical core verification: PASS
+- user UI/live-read confirmation: PENDING
+
+Remaining donor-specific advanced Pits:
+- sniper mode/payment;
+- tournament reward target / daily base runs / reward strategy;
+- interactive restoration-decision modal.
+
+The original transfer-gap bug is therefore partially fixed at core level, but the Stage 2.02 module remains open until full canonical behavior is completed and LIVE PASS is confirmed.
