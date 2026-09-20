@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
+- current module status: PASSPLAN_SNIPER_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -106,3 +106,37 @@ Each module:
 - core UI/live-read user confirmation: PENDING
 - advanced donor Pits (sniper + tournament reward planning + restoration decision): PENDING next Pits block
 - do not advance to Bosses
+
+
+## Pits UI r2 + Pass-plan / Sniper r3
+
+- UI r2 marker: `pits-ui-align-20260920-r2`
+- UI r2 deploy run: `35492472689`
+- r2 live SHA256: `a3df20e0996ced42e4efa39baa5f25b9e41af979657854079c8e645e57b16708`
+
+- r3 marker: `pits-passplan-sniper-20260920-r3`
+- r3 deploy run: `35493218772`
+- technical deploy/public verification: PASS
+- r3 live/public SHA256: `42d39c573c5bb8bf445f8166a72a6b0a16fde14295365a0ebea0ee43e71b6f64`
+- baseline sync run: `35493258548` — SUCCESS
+
+r3 fixes:
+- canonical active-state now follows donor `state.is_finish === false`;
+- false active-state no longer blocks Pass plan on finished Pit snapshots;
+- donor Sniper mode added per Pit;
+- Sniper ×1 payment selector: FREE / PREM / ITEM;
+- donor recommended Sniper target and higher target selection added;
+- normal Pass plan state is preserved separately from Sniper settings.
+
+Pinned donor:
+- exact upload `скрипт Kokkaras,.txt`;
+- canonical SHA256: `28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1`;
+- donor is not stored in repo by user choice; re-upload exact file if a future chat needs donor code.
+
+Current module status:
+**PASSPLAN_SNIPER_LIVE_CANDIDATE_PENDING_USER_UI_CHECK**
+
+Next action:
+user reloads game → HK → Ямы and visually checks Pass plan + Sniper only.
+Do not press Start yet.
+Do not begin tournament reward planning / restoration decision / Bosses before this check.
