@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: RESPAWN_RETEST_PENDING
+- current module status: RESTORATION_DECISION_LIVE_CANDIDATE_PENDING_USER_CHECK
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -232,3 +232,27 @@ Do not advance to Bosses yet.
 
 Current module status remains:
 **RESPAWN_RETEST_PENDING**
+
+
+## Pits r10 confirmed + restoration decision r11
+
+User confirmed current Pits runner/action cadence after r10 is good.
+Tested action path is no longer treated as the active regression.
+
+r11:
+- donor-compatible Restoration Paws decision flow added;
+- current level / target / required / available / remaining are shown;
+- choices: spend+continue / finish current round+continue / leave manual+continue / stop;
+- remember choice + additional Paws budget applies only to the current Pits run;
+- marker: `pits-restoration-decision-20260920-r11`;
+- deploy run: `35495418034` — PASS;
+- live/public SHA256: `d2667d1fec05456cdb7e7bba0f0da2854d3fccf6275cf5df991b44942d05e52c`;
+- baseline sync: `35495453299` — PASS.
+
+Current module status:
+**RESTORATION_DECISION_LIVE_CANDIDATE_PENDING_USER_CHECK**
+
+Next:
+user verifies the decision modal at a low Paws limit.
+After confirmation, continue Pits with tournament reward target planning / daily base runs / reward strategy.
+Do not advance to Bosses.
