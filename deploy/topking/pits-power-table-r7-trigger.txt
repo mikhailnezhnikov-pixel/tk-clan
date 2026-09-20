@@ -1,0 +1,1 @@
+2026-09-20 collapse saved Pits power table by default r7
