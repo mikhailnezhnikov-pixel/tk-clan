@@ -1,0 +1,7 @@
+MAPS_TWO_FIXES_ROLLBACK=PASS
+live_sha256=0931ee3eb65a16f9dd768fe51b9a84b897620e011c51ee9e0226d92f37b9e686
+public_sha256=0931ee3eb65a16f9dd768fe51b9a84b897620e011c51ee9e0226d92f37b9e686
+public_byte_equality=PASS
+syntax=PASS
+scanner_r2=absent
+coords_r1=absent
