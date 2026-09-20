@@ -5,5 +5,7 @@
   "immutable_file": "baseline/topking/HamsterKingMobile.1.17.4-f7415cc08dc6.user.js",
   "current_file": "baseline/topking/HamsterKingMobile.current.user.js",
   "source": "live-server:/opt/hamsterking-license/HamsterKingMobile.user.js",
-  "captured_utc": "2026-09-20T02:34:39Z"
+  "captured_utc": "2026-09-20T03:29:00Z",
+  "stage0_backup": "/opt/hamsterking-license/stage0-backups/HamsterKingMobile.stage0-1.17.4-f7415cc08dc6.user.js",
+  "stage0_status": "TECHNICAL_PASS"
 }

@@ -50,7 +50,9 @@
 
 Рабочая live-база:
 
-**1.17.4 + launcher-hotfix-20260920-r1**
+**1.17.4 · launcher r1 · handoff r4 · runtime r5 · core r6 · startup r7 · error-trap r8**
+
+Stage 0 technical baseline is pinned by baseline/topking/BASELINE.json and audit/hk-stage0-baseline-status.txt.
 
 Уже считаются закрытыми и не должны переноситься заново без обнаруженной регрессии:
 
