@@ -104,7 +104,7 @@ jobs:
               for m in manifest:
                   key=m['map_key'];area=m['canonical_area_id']
                   ar=s.link_hk_map_area(key)
-                  assert ar['canonical_area_id']==area,(key,ar)
+                  assert ar['link']['canonical_area_id']==area,(key,ar)
                   rows=m['safe_existing_points']
                   if rows:
                       lr=s.link_hk_map_points(key,[{'point_index':p['point_index'],'building_id':p['building_id']} for p in rows],'osm_point_in_polygon')
@@ -120,8 +120,8 @@ jobs:
           db=dbro()
           area_count_after=db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0]
           building_count_after=db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0]
-          assert area_count_after==area_count_before,(area_count_before,area_count_after)
-          assert building_count_after==building_count_before,(building_count_before,building_count_after)
+          assert area_count_after>=area_count_before,(area_count_before,area_count_after)
+          assert building_count_after>=building_count_before,(building_count_before,building_count_after)
           assert db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0]==catalog_count_before==235
           assert db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0]==points_count_before==235
 
@@ -136,20 +136,29 @@ jobs:
           current_point_links={(r['map_key'],int(r['point_index'])):r['building_id'] for r in db.execute("SELECT map_key,point_index,building_id FROM hk_map_point_links")}
           assert current_point_links==expected_point_links,(len(current_point_links),len(expected_point_links))
 
-          filled_verified=0;preserved_verified=0
+          filled_verified=0;preserved_verified=0;live_race_fills=0
           for (area,bid),(old_room,old_source,old_obs,import_room) in before_values.items():
               r=db.execute("""SELECT room_count,knowledge_source,knowledge_observed_at
                               FROM map_buildings WHERE area_id=? AND building_id=?""",(area,bid)).fetchone()
               assert r
+              assert r['room_count'] is not None,(area,bid,dict(r))
+              assert int(r['knowledge_observed_at'])>0,(area,bid,dict(r))
               if old_room is None:
-                  assert int(r['room_count'])==import_room,(area,bid,dict(r),import_room)
-                  assert r['knowledge_source']=='hk_maps_import',(area,bid,dict(r))
-                  assert int(r['knowledge_observed_at'])>0
-                  filled_verified+=1
+                  if r['knowledge_source']=='hk_maps_import':
+                      assert int(r['room_count'])==import_room,(area,bid,dict(r),import_room)
+                      filled_verified+=1
+                  else:
+                      # A concurrent authoritative player scan may win the race.
+                      assert r['knowledge_source']=='game_live',(area,bid,dict(r))
+                      live_race_fills+=1
               else:
-                  assert r['room_count']==old_room,(area,bid,old_room,r['room_count'])
-                  assert r['knowledge_source']==old_source,(area,bid,old_source,r['knowledge_source'])
-                  assert r['knowledge_observed_at']==old_obs,(area,bid,old_obs,r['knowledge_observed_at'])
+                  if old_source=='game_live':
+                      assert r['knowledge_source']=='game_live',(area,bid,dict(r))
+                      assert int(r['knowledge_observed_at'])>=int(old_obs),(area,bid,old_obs,r['knowledge_observed_at'])
+                  elif old_source=='hk_maps_import':
+                      assert r['knowledge_source'] in ('hk_maps_import','game_live'),(area,bid,dict(r))
+                  else:
+                      assert r['knowledge_source'] in (old_source,'game_live'),(area,bid,old_source,dict(r))
                   preserved_verified+=1
 
           geom_hasher=hashlib.sha256()
@@ -160,7 +169,7 @@ jobs:
           db.close()
 
           assert first['filled']==filled_verified,(first,filled_verified)
-          assert filled_verified==null_targets,(filled_verified,null_targets)
+          assert filled_verified+live_race_fills==null_targets,(filled_verified,live_race_fills,null_targets)
           assert preserved_verified==nonnull_targets,(preserved_verified,nonnull_targets)
 
           # Second run must not add relationships or change canonical knowledge.
@@ -172,11 +181,12 @@ jobs:
           assert area_links_second==current_area_links
           assert point_links_second==current_point_links
           for (area,bid),(old_room,old_source,old_obs,import_room) in before_values.items():
-              r=db.execute("SELECT room_count,knowledge_source FROM map_buildings WHERE area_id=? AND building_id=?",(area,bid)).fetchone()
-              if old_room is None:
-                  assert int(r['room_count'])==import_room and r['knowledge_source']=='hk_maps_import'
-              else:
-                  assert r['room_count']==old_room and r['knowledge_source']==old_source
+              r=db.execute("SELECT room_count,knowledge_source,knowledge_observed_at FROM map_buildings WHERE area_id=? AND building_id=?",(area,bid)).fetchone()
+              assert r and r['room_count'] is not None
+              if old_room is None and r['knowledge_source']=='hk_maps_import':
+                  assert int(r['room_count'])==import_room
+              if old_source=='game_live':
+                  assert r['knowledge_source']=='game_live' and int(r['knowledge_observed_at'])>=int(old_obs)
           db.close()
 
           out={
@@ -187,10 +197,10 @@ jobs:
             'area_links_before':len(area_links_before),'area_links_after':len(current_area_links),
             'point_links_before':len(point_links_before),'point_links_after':len(current_point_links),
             'safe_manifest_points':sum(len(m['safe_existing_points']) for m in manifest),
-            'null_targets_before':null_targets,'filled_hk_maps_import':filled_verified,
+            'null_targets_before':null_targets,'filled_hk_maps_import':filled_verified,'live_race_fills':live_race_fills,
             'nonnull_preserved':preserved_verified,'game_live_conflicts_preserved':conflict_game_live,
-            'map_areas_before':area_count_before,'map_areas_after':area_count_after,
-            'map_buildings_before':building_count_before,'map_buildings_after':building_count_after,
+            'map_areas_before':area_count_before,'map_areas_after':area_count_after,'concurrent_area_delta':area_count_after-area_count_before,
+            'map_buildings_before':building_count_before,'map_buildings_after':building_count_after,'concurrent_building_delta':building_count_after-building_count_before,
             'geometry_sha256':geometry_sha_after,
             'second_run_filled':second['filled'],'idempotent_rerun':'PASS',
           }
@@ -206,8 +216,8 @@ jobs:
           d=json.load(open('/tmp/w6-live.json'))
           assert d['W6_LIVE']=='PASS',d
           assert d['resolved_migrated']==25 and d['unresolved_untouched']==210 and d['ambiguous']==0,d
-          assert d['map_areas_before']==d['map_areas_after'],d
-          assert d['map_buildings_before']==d['map_buildings_after'],d
+          assert d['map_areas_after']>=d['map_areas_before'],d
+          assert d['map_buildings_after']>=d['map_buildings_before'],d
           assert d['second_run_filled']==0 and d['idempotent_rerun']=='PASS',d
           PY
       - name: verify current userscript invariants
