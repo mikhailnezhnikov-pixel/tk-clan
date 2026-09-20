@@ -204,3 +204,15 @@ Do not advance to Bosses yet.
 - deploy run: `35494081452` — PASS;
 - live/public SHA256: `06422b7f259c15c47259e2156ea4446b2286bba6e9f8db3769d16faf7763bc6a`;
 - baseline sync: `35494109901` — PASS.
+
+
+## Pits runner history r9
+
+- active Pits runner is now visually highlighted;
+- runner shows the last 10 Pits execution messages for the current run;
+- history resets on each new run;
+- existing bottom journal remains unchanged;
+- marker: `pits-runner-history-20260920-r9`;
+- deploy run: `35494398235` — PASS;
+- live/public SHA256: `bbc766dc775c7ce637302f1ecf1edfae28b835afeab8408c214abe47b4950fdd`;
+- baseline sync: `35494440507` — PASS.
