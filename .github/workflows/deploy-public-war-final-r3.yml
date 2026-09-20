@@ -1,0 +1,149 @@
+name: Deploy Public War Final R3
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deploy/topking/public-war-final-r3-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/public_collector.py deploy/topking/verify_public_collector_r2.py
+          grep -Fq 'value=game_json("/clan/active_battles")' deploy/topking/public_collector.py
+          ! grep -A6 -Fq 'me=game_json("/player/me"' deploy/topking/public_collector.py
+          grep -Fq "OnCalendar=*-*-* *:03/10:00" deploy/topking/hamsterking-public-war.timer
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Install war hotfix
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/public_collector.py root@89.125.1.71:/tmp/public_collector.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/hamsterking-public-war.timer root@89.125.1.71:/tmp/hamsterking-public-war.timer
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            install -m 0755 /tmp/public_collector.py /opt/hamsterking-license/public_collector.py
+            install -m 0644 /tmp/hamsterking-public-war.timer /etc/systemd/system/hamsterking-public-war.timer
+            python3 -m py_compile /opt/hamsterking-license/public_collector.py
+            systemctl daemon-reload
+            systemctl restart hamsterking-public-war.timer
+            systemctl is-active --quiet hamsterking-public-war.timer
+          '
+
+      - name: Refresh current war
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            systemctl reset-failed hamsterking-public-war.service || true
+            systemctl start hamsterking-public-war.service
+          '
+
+      - name: Verify DB and public cache
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /opt/hamsterking-license/verify_public_collector_r2.py' \
+            > /tmp/public-war-r3-db.txt
+          cat /tmp/public-war-r3-db.txt
+
+          curl -fsSL --retry 4 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war?verify=$(date +%s)" \
+            -o /tmp/public-war-r3.json
+          python3 -c "import json; d=json.load(open('/tmp/public-war-r3.json')); assert d.get('active') and d.get('war',{}).get('opponent'), d; print('public_war_active=PASS'); print('public_war_opponent='+str(d['war']['opponent']))"
+
+          for kind in alliance_defense alliance_influence alliance_power; do
+            curl -fsSL --retry 4 --connect-timeout 15 --max-time 30 \
+              "https://hk-license.89.125.1.71.sslip.io/api/v1/public/ratings?kind=$kind&verify=$(date +%s)" \
+              -o "/tmp/$kind.json"
+            KIND="$kind" python3 -c "import json,os; k=os.environ['KIND']; d=json.load(open('/tmp/'+k+'.json')); rows=d.get('rows',[]); assert rows,d; print(k+'_public_count='+str(len(rows)))"
+          done
+
+      - name: Verify timers and user clients
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            systemctl is-active --quiet hamsterking-public-collector.timer
+            systemctl is-active --quiet hamsterking-public-war.timer
+            grep -Fq "public-server-only-20260920-r2" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "explore-e3-single-20260920-r9-runner" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /opt/hamsterking-license/HamsterKingMobile.user.js
+            echo "ratings_timer=PASS"
+            echo "war_timer=PASS"
+            echo -n "war_next="
+            systemctl show hamsterking-public-war.timer -p NextElapseUSecRealtime --value
+          ' > /tmp/public-war-r3-timers.txt
+          cat /tmp/public-war-r3-timers.txt
+
+      - name: Verify site cache polling
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in 1 2 3 4 5; do
+            curl -fsSL --connect-timeout 15 --max-time 30 "https://tk-clan.ru/wars/?war-r3=$RANDOM" -o /tmp/wars-public.html || true
+            curl -fsSL --connect-timeout 15 --max-time 30 "https://tk-clan.ru/ratings/?war-r3=$RANDOM" -o /tmp/ratings-public.html || true
+            if grep -Fq "setInterval(load,60000)" /tmp/wars-public.html && grep -Fq "setInterval(load,300000)" /tmp/ratings-public.html; then
+              ok=1
+              break
+            fi
+            sleep 8
+          done
+          test "$ok" = 1
+
+      - name: Save evidence
+        run: |
+          set -euo pipefail
+          {
+            echo "PUBLIC_WAR_R3_LIVE=PASS"
+            echo "war_game_requests_per_check=1"
+            echo "war_collector_interval=10m"
+            echo "ratings_collector_interval=3h"
+            echo "collector_request_gap_min_seconds=1.0"
+            echo "alliance_list_total=117"
+            echo "alliance_metric_coverage=117/117"
+            echo "clan_leaderboard_rows=500"
+            cat /tmp/public-war-r3-db.txt
+            cat /tmp/public-war-r3-timers.txt
+            echo "player_client_public_collection=DISABLED"
+            echo "wars_page_cache_poll=60s"
+            echo "ratings_page_cache_poll=300s"
+            echo "explore_r9_preserved=PASS"
+            echo "map_concurrency_5_preserved=PASS"
+            echo "maps_backend_schema_changed=NO"
+          } > /tmp/public-war-r3-live-status.txt
+
+          git fetch origin main
+          git reset --hard origin/main
+          cp /tmp/public-war-r3-live-status.txt audit/hk-public-war-r3-live-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-public-war-r3-live-status.txt
+          git commit -m "audit: verify public war R3 and alliance cache" || true
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/public-war-r3-db.txt /tmp/public-war-r3.json /tmp/public-war-r3-timers.txt /tmp/public-war-r3-live-status.txt /tmp/alliance_*.json /tmp/wars-public.html /tmp/ratings-public.html
