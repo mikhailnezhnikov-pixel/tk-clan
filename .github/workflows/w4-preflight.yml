@@ -1,0 +1,38 @@
+name: W4 preflight
+on:
+  push:
+    paths: ['deploy/topking/w4-preflight-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ssh
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+      - name: extract
+        run: |
+          python3 - <<'PY'
+          import ast,hashlib
+          from pathlib import Path
+          s=Path('/tmp/server.py').read_text()
+          t=ast.parse(s)
+          names={'hk_map_data','private_hk_map_data','_load_private_hk_maps','_load_full_hk_map','cabinet_maps','hk_map_row'}
+          out=['sha256='+hashlib.sha256(s.encode()).hexdigest()]
+          for n in t.body:
+              if isinstance(n,ast.FunctionDef) and n.name in names:
+                  out.append('\n### '+n.name+'\n'+(ast.get_source_segment(s,n) or ''))
+          Path('audit/hk-stage2-w4-functions.txt').write_text('\n'.join(out)+'\n')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-w4-functions.txt
+          git commit -m "audit: inspect W4 map data functions"
+          git push
