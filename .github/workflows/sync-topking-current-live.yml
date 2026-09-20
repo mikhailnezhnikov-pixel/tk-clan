@@ -32,7 +32,7 @@ jobs:
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
           node --check /tmp/live.js
           grep -Fq "HK_TODAY_CANON_REV = 'today-kokkaras-order-20260920-r1'" /tmp/live.js
-          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "73a8da55150892cabbf2f5bf9f5d2a22fcaa8ad228ff1bee3d793b3429f3c21b"
+          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "0d6de4888121d5e09d2cd5fa5140ec5941734dd30c23dc70fbbd95a951dcb825"
           cp /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
       - name: Commit current snapshot
         run: |
@@ -41,7 +41,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js
           if ! git diff --cached --quiet; then
-            git commit -m "stage2: sync Today live candidate into current baseline"
+            git commit -m "stage2: sync Pits canon core live candidate into current baseline"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
