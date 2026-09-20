@@ -142,14 +142,9 @@ jobs:
             > /tmp/collector-runtime.txt
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/var/lib/hamsterking-license/public-collector-status.json /tmp/collector-status.json 2>/dev/null || printf '{}' > /tmp/collector-status.json
-          python3 - <<'PY' >> /tmp/collector-runtime.txt
-import json
-try:
-    data=json.load(open('/tmp/collector-status.json'))
-    print('collector_state='+str(data.get('state','missing')))
-except Exception:
-    print('collector_state=missing')
-PY
+          python3 -c "import json; p='/tmp/collector-status.json';\
+try: d=json.load(open(p)); print('collector_state='+str(d.get('state','missing')));\
+except Exception: print('collector_state=missing')" >> /tmp/collector-runtime.txt
           cat /tmp/collector-runtime.txt
 
           {
