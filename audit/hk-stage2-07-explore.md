@@ -766,3 +766,67 @@ Pinned donor behavior was re-checked:
 Evidence:
 `audit/hk-stage2-explore-e2-filters-r5-live-status.txt`
 
+## E2 r6 — fresh player state + exact donor type filters
+
+Status: **LIVE CANDIDATE / USER CHECK PENDING**
+
+Marker:
+`HK_EXPLORE_CANON_REV = 'explore-readonly-plan-20260920-r6-fresh-meta'`
+
+Live/baseline sync commit:
+`e0dcdc547dcd50929a7882cb238d0da57f494f4f`
+
+### Fixed from user report
+
+1. Explore now owns a dedicated fresh account snapshot.
+   - opening/refreshing Explore performs a fresh full `POST /player/me`;
+   - plan calculation performs another fresh full `POST /player/me`;
+   - Explore UI/filtering no longer trusts an arbitrary shared snapshot before this read completes;
+   - before fresh state is available, capability values show `—` instead of false `0 / not found` data.
+
+2. Building type filtering now follows donor metadata semantics.
+   - exact explicit `building_type=normal|investment` is accepted when present;
+   - otherwise exact total-event metadata is used:
+     - `normal` = more than 20 events;
+     - `investment` = up to 20 events;
+   - the previous `invest_building_list` inference was removed from Explore;
+   - unknown type stays unknown instead of being guessed;
+   - `All` includes all buildings, while Normal/Investment require the exact resolved type.
+
+3. UI type labels now expose the same donor meaning:
+   - Ordinary (>20 events)
+   - Investment (up to 20 events)
+
+### Safety / scope
+
+- E3 actions added: **NO**;
+- Explore mutation endpoints: **0**;
+- map scanner concurrency remains **5**;
+- Maps backend/schema changed: **NO**;
+- code outside the Explore block was byte-identical during the patch.
+
+### Live verification
+
+- source live SHA256: `df677e603e0a180e0e2e2b5ce27af268ab788ced12e4e6b2036d4c9b23c78115`;
+- deployed/public SHA256: `2855b2bf6a4ad714838e8b89b7460ad22e99afcf39430b34edd37b527d52a5af`;
+- syntax: PASS;
+- service/deploy: PASS;
+- public byte equality: PASS;
+- fresh player state: PASS;
+- donor type threshold filter: PASS;
+- map concurrency 5 preserved: PASS.
+
+Evidence:
+`audit/hk-stage2-explore-e2-r6-fresh-meta-live-status.txt`
+
+The first r6 workflow attempt failed before deployment because of a Python patch-file quoting error. No live change occurred in that failed attempt. The corrected retry completed successfully.
+
+### Stop gate
+
+User should reload Explore and verify:
+- account level / Remort Consigliere / auto-battle capability are populated;
+- All / Ordinary / Investment show different immediate counts where the account contains both types;
+- Calculate Plan follows the selected type.
+
+Do not start E3 automatically.
+
