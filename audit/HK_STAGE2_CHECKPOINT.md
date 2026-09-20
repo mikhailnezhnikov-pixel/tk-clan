@@ -881,6 +881,37 @@ PASS gate:
 - no geometry duplication;
 - no district duplication.
 
+#### W3 result — PASS (2026-09-20)
+
+- audit evidence: `audit/HK_STAGE2_W3_MAPS_SHARED_KB_PILOT.md`;
+- final live verification: `audit/hk-stage2-maps-shared-kb-w3-final-verify.txt`;
+- pilot remains `hk_moscow1226 → 9ea6ff78-b881-45b3-b92d-a8f1da8eca05`;
+- authorized compact HK Maps source decodes to **32** positive points with histogram `1:17, 2:12, 3:3`, matching the saved HK Maps index;
+- exact OSM/canonical building-ID recovery: **29/32**, ambiguous **0**, unmatched **3**;
+- W3 deliberately imported only the 3 exact matches whose canonical `room_count` was still `NULL`:
+  - `way29242551 → 2`;
+  - `way29242552 → 2`;
+  - `way430609368 → 2`;
+- all three are investment points in the website source; W3 does not yet normalize/overwrite investment provenance;
+- existing non-NULL canonical values overwritten: **0**;
+- pilot canonical histogram after import: `0:114, 2:3`;
+- source marker on the three imported rows: `source-hk-maps-import`;
+- live rerun: **0 fills / 3 preserved** — idempotency PASS;
+- existing canonical `map_detail()` read path returns the three imported `room_count=2` values without a new player scan;
+- geometry remains in `hk_map_points`; point count stays **32**; geometry rewrite/duplication: **NO**;
+- bridge rows: **1**; duplicate district: **NO**;
+- W3 live server SHA: `26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4`;
+- build run `35510361084`: PASS;
+- live import/data verification steps in run `35510477205`: PASS; its later client-SHA assertion used the stale W2 SHA and failed only because Explore E2 was being deployed independently in parallel;
+- final read-only W3 run `35510595703`: PASS;
+- current userscript SHA at final verification: `76833b35de3620f7b946fac3c02fca021cd48d332e58c51ce74a40616c199c14`;
+- W3 changed userscript: **NO**;
+- current userscript still contains Maps scanner r5, coords r2 and `column-row-v1`: PASS;
+- the 26 exact positive source points conflicting with existing canonical zero values and the 3 unmatched points remain untouched pending provenance/conflict work;
+- bulk map migration: **NO**;
+- **W4 NOT STARTED**; stop here until explicit user instruction.
+
+
 ### Stage W4 — Shared knowledge → Website, one-map pilot
 
 Make Personal Cabinet → Maps render the same pilot map from:
