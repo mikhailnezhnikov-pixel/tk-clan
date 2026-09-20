@@ -865,3 +865,29 @@ Final live checks:
 2. reward execution/recalculation/adaptive batch + resulting state/rerun;
 3. runtime exact `шанс игры` visibility from preview.
 After these pass: Stage 2.02 Pits = LIVE PASS, then move to Bosses.
+
+
+## Final live confirmation — Stage 2.02 PASS
+
+User confirmed all remaining live paths are working after r20.
+
+Confirmed live:
+- r11 Restoration decision path: PASS;
+- spend Paws and continue / resulting state update: PASS;
+- r13 reward execution and live score recalculation: PASS;
+- r18 adaptive reward batch fit: PASS;
+- r19 aggregate preflight / no unintended spend: PASS;
+- r17 exact runtime game winrate from preview: PASS;
+- resulting state after actions: PASS;
+- rerun reads resulting state correctly: PASS.
+
+Final Pits revision:
+- `HK_PITS_REWARD_PICKER_REV = 'pits-reward-picker-20260920-r20'`;
+- live/public SHA256: `c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb`;
+- baseline sync: `35498145691` — PASS;
+- no code change after r20 was required.
+
+Final status:
+**LIVE PASS**
+
+Stage 2.02 Pits is closed. Next module: Stage 2.03 Bosses / Боссы.
