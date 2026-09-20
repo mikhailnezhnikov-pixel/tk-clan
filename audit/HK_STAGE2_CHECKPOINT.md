@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: RESTORATION_DECISION_LIVE_CANDIDATE_PENDING_USER_CHECK
+- current module status: REWARD_PLANNER_CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -256,3 +256,44 @@ Next:
 user verifies the decision modal at a low Paws limit.
 After confirmation, continue Pits with tournament reward target planning / daily base runs / reward strategy.
 Do not advance to Bosses.
+
+
+## Pits tournament reward planner core r12
+
+User asked to continue to the next Pits block before r11 user-path confirmation.
+
+r12 adds donor-based live/read-only reward planning:
+- per-Pit live tournament leaderboard/view reads;
+- Reward target from live reward tiers;
+- Daily base runs for future resets;
+- strategies: Upfront / Gradual / Last day;
+- exact-target tournament points forecast;
+- future reset forecast;
+- extra x1 / Pit Pass requirement;
+- Tribute Box return forecast at 100 boxes -> 2 Pit Passes;
+- projected tournament score.
+
+Safety:
+- no automatic extra Pit Pass spending in r12;
+- reward continuation steps are not yet injected into the action plan.
+
+Marker:
+`pits-reward-planner-core-20260920-r12`
+
+Deploy run:
+`35495840079` — PASS
+
+Live/public SHA256:
+`56d5b9663b78767a6a290c71109878870b97113c975b21299869fce5fbca49a8`
+
+Baseline sync:
+`35495872850` — PASS
+
+Current module status:
+**REWARD_PLANNER_CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK**
+
+Still pending:
+- r11 restoration modal user-path check;
+- r12 live tournament UI/calculation check;
+- then reward execution + after-run recalculation.
+Do not advance to Bosses yet.
