@@ -1740,7 +1740,7 @@
     }
   }
 
-  const HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r4-ui';
+  const HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r5-filters';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -1899,7 +1899,7 @@
     const box=root?.querySelector('#hk-explore-content');if(!box)return;const s=exploreSettings(),p=explorePlan,st=hkStateStore.snapshot||playerDocument||{},active=exploreActive(st),c=p?.consigliere||exploreConsigliere(st);
     const auto=p?.autoMaxTier??exploreAutoTier(c),level=p?.playerLevel??Number(st?.player?.level||0),modes=p?.tierModes||exploreTierModes(level),counts=p?.tierCounts||exploreCounts(active),targetOk=s.targetTier>=1&&s.targetTier<=6;
     const maxStart=targetOk&&s.exploreTargetTier?s.targetTier:Math.min(s.targetTier,7)-1;
-    const tiers=EXPLORE_TIERS.map(t=>'<label class="hk-ex-check"><input type="checkbox" data-ex-tier="'+t.value+'" '+(s.startTiers.includes(t.value)?'checked':'')+' '+(t.value>maxStart?'disabled':'')+'><span>'+t.label+'</span><small class="hk-muted">'+(counts[t.value]?.all||0)+' / '+(counts[t.value]?.battles||0)+'</small></label>').join('');
+    const tiers=EXPLORE_TIERS.map(t=>'<label class="hk-ex-check"><input type="checkbox" data-ex-tier="'+t.value+'" '+(s.startTiers.includes(t.value)?'checked':'')+' '+(t.value>maxStart?'disabled':'')+'><span>'+t.label+'</span><small class="hk-muted"><span data-ex-count="'+t.value+'">'+(counts[t.value]?.all||0)+'</span> / <span data-ex-battles="'+t.value+'">'+(counts[t.value]?.battles||0)+'</span></small></label>').join('');
     const targets=EXPLORE_TIERS.filter(t=>t.value>=1).map(t=>'<option value="'+t.value+'" '+(s.targetTier===t.value?'selected':'')+'>'+t.label+'</option>').join('')+'<option value="8" '+(s.targetTier===8?'selected':'')+'>'+either('Мгновенно MAX','Instant MAX')+'</option>';
     const modeLine=EXPLORE_TIERS.map(t=>'<span><b>'+t.label+'</b> '+(modes[t.value]==='fast'?either('быстро','fast'):modes[t.value]==='auto'?either('авто','auto'):either('вручную','manual'))+'</span>').join('');
     const rows=(p?.selected||[]).slice(0,20).map((r,i)=>'<div class="hk-card"><div class="hk-business-info"><b>'+(i+1)+'. '+escapeHtml(r.id)+'</b><small>'+escapeHtml(r.areaId||either('район неизвестен','district unknown'))+' · '+exploreTierLabel(r.tier)+' · '+either('ур.','Lv')+' '+Number(r.level||0)+' · '+either('бой','battle')+' '+Number(r.battle_level||0)+'/'+Number(r.max_battle_level||0)+' · '+either('события','events')+' '+(r.targetRemaining!=null?(r.targetRemaining+'/'+r.targetTotal):(r.totalEvents==null?'?':r.totalEvents))+(r.isInvest===true?' · ◆ '+either('инвест','investment'):r.isInvest===false?' · '+either('обычное','normal'):'')+'</small></div><strong>→ '+exploreTierLabel(s.targetTier)+'</strong></div>').join('');
@@ -1951,6 +1951,7 @@
             '<label><input id="hk-ex-target-battles" type="checkbox" '+(s.exploreTargetBattles?'checked':'')+' '+(targetOk&&s.exploreTargetTier?'':'disabled')+'><span>'+either('Завершить бои на целевом тире','Complete target-tier battles')+'</span></label>'+
             '<label><input id="hk-ex-buy" type="checkbox" '+(s.buyMissingMaterials?'checked':'')+'><span>'+either('Автопокупка балок/гвоздей · с E3','Auto-buy beams/nails · from E3')+'</span></label>'+
           '</div>'+
+          '<p id="hk-ex-filter-summary" class="hk-muted" style="margin:9px 0 0"></p>'+
         '</div>'+
         '<div class="hk-ex-two">'+
           '<div class="hk-cardbox"><b>'+either('Приоритет','Priority')+'</b><div class="hk-ex-rows">'+
@@ -1972,7 +1973,23 @@
       '</div>';
 
     const dirty=()=>{const n=box.querySelector('#hk-ex-dirty');if(n)n.textContent=either('Настройки изменены — пересчитайте план','Settings changed — recalculate plan');const r=box.querySelector('#hk-ex-plan-result');if(r)r.innerHTML='<div class="hk-cardbox hk-ex-hint">'+either('Настройки изменены. Нажмите «Рассчитать план».','Settings changed. Press “Calculate plan”.')+'</div>';};
-    const persist=()=>{exploreReadSettings();explorePlan=null;dirty();};
+    const updateFilterPreview=(settings=exploreSettings())=>{
+      const state=hkStateStore.snapshot||playerDocument||{},summary=box.querySelector('#hk-ex-filter-summary'),ready=!!state?.player&&Array.isArray(state?.buildings),metaReady=!!exploreMeta;
+      if(!ready){
+        for(const t of EXPLORE_TIERS){const cEl=box.querySelector('[data-ex-count="'+t.value+'"]'),bEl=box.querySelector('[data-ex-battles="'+t.value+'"]');if(cEl)cEl.textContent='—';if(bEl)bEl.textContent='—';}
+        if(summary)summary.textContent=either('Данные аккаунта ещё загружаются. Нажмите «Обновить», если значения не появятся.','Account data is still loading. Press “Refresh” if values do not appear.');
+        return;
+      }
+      const filtered=exploreFiltered(settings,state,exploreMeta),tierCounts=exploreCounts(filtered),basic=exploreBasic(settings,state,exploreMeta);
+      for(const t of EXPLORE_TIERS){const row=tierCounts[t.value]||{all:0,battles:0},cEl=box.querySelector('[data-ex-count="'+t.value+'"]'),bEl=box.querySelector('[data-ex-battles="'+t.value+'"]');if(cEl)cEl.textContent=String(row.all||0);if(bEl)bEl.textContent=String(row.battles||0);}
+      if(summary){
+        const typeNeedsMeta=settings.buildingType!=='all'&&!metaReady;
+        summary.textContent=typeNeedsMeta
+          ? either('Данные типов зданий ещё загружаются.','Building-type metadata is still loading.')
+          : either('По фильтру: ','Filtered: ')+filtered.length+' · '+either('предварительно кандидатов: ','preliminary candidates: ')+basic.rows.length;
+      }
+    };
+    const persist=()=>{const settings=exploreReadSettings();explorePlan=null;dirty();updateFilterPreview(settings);};
     const syncDependencies=()=>{
       const target=Number(box.querySelector('#hk-ex-target')?.value||3),targetTier=box.querySelector('#hk-ex-target-tier'),targetBattles=box.querySelector('#hk-ex-target-battles'),ok=target>=1&&target<=6;
       if(targetTier){targetTier.disabled=!ok;if(!ok)targetTier.checked=false;}
@@ -1992,6 +2009,7 @@
       if(n.id==='hk-ex-target'||n.id==='hk-ex-target-tier')return;
       n.addEventListener('change',persist);
     });
+    updateFilterPreview(s);
   }
   async function refreshExplore(force=false){
     if(!requireLicense())return null;if(exploreBusy)return playerDocument;exploreBusy=true;renderExplore();
@@ -10996,7 +11014,7 @@
           liveReadOk=true;return playerDocument;
         }
         if (key === 'buildings') {const value=await refreshBuildings(false);liveReadOk=true;return value;}
-        if (key === 'explore') {const value=await refreshExplore(false);liveReadOk=true;return value;}
+        if (key === 'explore') {const value=await refreshExplore(false);liveReadOk=!!value;return value;}
         if (key === 'maps') {
           playerDocument = await apiJson('/player/me','POST');
           const playerId=playerIdentity(playerDocument?.player||{}),lastByPlayer=Number(load().mapContributionByPlayer?.[playerId]||0);
