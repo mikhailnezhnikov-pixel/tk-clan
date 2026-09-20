@@ -354,3 +354,29 @@ Still required:
 - authoritative state update;
 - action completion;
 - rerun from resulting state.
+
+
+## Saved power table r7
+
+User request:
+- keep `Сохранённая сила уровней` collapsed by default;
+- allow manual expansion when needed.
+
+Change:
+- `pitPowerTableOpen` default changed from `true` to `false`;
+- existing `<details>` expand/collapse behavior retained;
+- power observations, forecasts, table contents and calculations unchanged.
+
+Marker:
+`HK_PITS_POWER_TABLE_REV = 'pits-power-table-collapsed-20260920-r7'`
+
+Deploy:
+- workflow: `Deploy TopKing Pits Power Table R7`;
+- run: `35494081452` — SUCCESS;
+- live/public SHA256: `06422b7f259c15c47259e2156ea4446b2286bba6e9f8db3769d16faf7763bc6a`;
+- public round-trip byte equality: PASS.
+
+Baseline sync:
+- run: `35494109901` — SUCCESS.
+
+No Pits action logic changed in r7.
