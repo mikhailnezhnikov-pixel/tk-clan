@@ -1,0 +1,116 @@
+PUBLIC_COLLECTOR_R2_LIVE=PASS
+player_client_public_collection=DISABLED
+ratings_collector_interval=3h
+war_collector_interval=10m
+war_api_requests_per_run=1
+ratings_refresh_forced_during_deploy=NO
+wars_page_cache_poll=60s
+ratings_page_cache_poll=300s
+=== LIVE COLLECTOR REV ===
+REV = "public-server-collector-20260920-r1"
+=== STATUS ===
+{"revision":"public-server-collector-20260920-r1","ok":true,"state":"ok","at":1789917500,"mode":"ratings","duration_sec":133.5,"war":false,"ratings":["influence","power","clans","alliance_defense","alliance_influence","alliance_power"]}
+=== WAR JOURNAL ===
+Sep 20 14:52:57 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
+Sep 20 14:53:46 Mikhail.nezhnikov.com python3[12704]: [public-collector] war read failed: JSONDecodeError
+Sep 20 14:53:46 Mikhail.nezhnikov.com python3[12704]: [public-collector] failed: mode=war RuntimeError: no public data collected
+Sep 20 14:53:46 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Main process exited, code=exited, status=1/FAILURE
+Sep 20 14:53:46 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Failed with result 'exit-code'.
+Sep 20 14:53:46 Mikhail.nezhnikov.com systemd[1]: Failed to start hamsterking-public-war.service - TopKing lightweight current war collector.
+Sep 20 14:57:03 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
+Sep 20 14:57:52 Mikhail.nezhnikov.com python3[14005]: [public-collector] war read failed: JSONDecodeError
+Sep 20 14:57:52 Mikhail.nezhnikov.com python3[14005]: [public-collector] deferred: war endpoint temporarily unavailable; previous cache preserved
+Sep 20 14:57:52 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Deactivated successfully.
+Sep 20 14:57:52 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-war.service - TopKing lightweight current war collector.
+Sep 20 15:03:21 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
+Sep 20 15:04:10 Mikhail.nezhnikov.com python3[14701]: [public-collector] war read failed: JSONDecodeError
+Sep 20 15:04:10 Mikhail.nezhnikov.com python3[14701]: [public-collector] deferred: war endpoint temporarily unavailable; previous cache preserved
+Sep 20 15:04:10 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Deactivated successfully.
+Sep 20 15:04:10 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-war.service - TopKing lightweight current war collector.
+Sep 20 15:06:07 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
+Sep 20 15:06:07 Mikhail.nezhnikov.com python3[16161]: [public-collector] success: mode=war war=active ratings=unchanged
+Sep 20 15:06:07 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Deactivated successfully.
+Sep 20 15:06:07 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-war.service - TopKing lightweight current war collector.
+Sep 20 15:13:09 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
+Sep 20 15:13:09 Mikhail.nezhnikov.com python3[17336]: [public-collector] success: mode=war war=active ratings=unchanged
+Sep 20 15:13:09 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Deactivated successfully.
+Sep 20 15:13:09 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-war.service - TopKing lightweight current war collector.
+=== RATINGS JOURNAL ===
+Sep 20 14:25:58 Mikhail.nezhnikov.com python3[62009]: [public-collector] disabled: HK_PUBLIC_COLLECTOR_GAME_TOKEN is not configured
+Sep 20 14:25:58 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:25:58 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+Sep 20 14:27:35 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:27:35 Mikhail.nezhnikov.com python3[62884]: [public-collector] disabled: HK_PUBLIC_COLLECTOR_GAME_TOKEN is not configured
+Sep 20 14:27:35 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:27:35 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+Sep 20 14:40:34 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:41:23 Mikhail.nezhnikov.com python3[5749]: [public-collector] war read failed: JSONDecodeError
+Sep 20 14:41:29 Mikhail.nezhnikov.com python3[5749]: [public-collector] success: war=unchanged ratings=influence,power,clans,alliance_defense,alliance_influence,alliance_power
+Sep 20 14:41:29 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:41:29 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+Sep 20 14:52:02 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:52:12 Mikhail.nezhnikov.com python3[12456]: [public-collector] alliances discovered: 117
+Sep 20 14:52:57 Mikhail.nezhnikov.com python3[12456]: [public-collector] alliance metric coverage: total=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500
+Sep 20 14:52:57 Mikhail.nezhnikov.com python3[12456]: [public-collector] success: mode=ratings war=unchanged ratings=influence,power,clans,alliance_defense,alliance_influence,alliance_power
+Sep 20 14:52:57 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:52:57 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+Sep 20 14:57:52 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:58:02 Mikhail.nezhnikov.com python3[14165]: [public-collector] alliances discovered: 117
+Sep 20 15:00:00 Mikhail.nezhnikov.com python3[14165]: [public-collector] alliance metric coverage: total=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500
+Sep 20 15:00:00 Mikhail.nezhnikov.com python3[14165]: [public-collector] success: mode=ratings war=unchanged ratings=influence,power,clans,alliance_defense,alliance_influence,alliance_power
+Sep 20 15:00:00 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 15:00:00 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+Sep 20 15:16:06 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 15:16:23 Mikhail.nezhnikov.com python3[17635]: [public-collector] alliances discovered: 117
+Sep 20 15:18:20 Mikhail.nezhnikov.com python3[17635]: [public-collector] alliance metric coverage: total=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500
+Sep 20 15:18:20 Mikhail.nezhnikov.com python3[17635]: [public-collector] success: mode=ratings war=unchanged ratings=influence,power,clans,alliance_defense,alliance_influence,alliance_power
+Sep 20 15:18:20 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 15:18:20 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+=== DB SUMMARY ===
+war_present=1
+war_source=server-collector
+war_updated_at=1789917189
+war_opponent=Шпана с Окраины
+war_hp=272600
+war_hp_max=1200000
+alliance_defense_count=100
+alliance_defense_source=server-collector
+alliance_defense_updated_at=1789917500
+alliance_influence_count=100
+alliance_influence_source=server-collector
+alliance_influence_updated_at=1789917500
+alliance_power_count=100
+alliance_power_source=server-collector
+alliance_power_updated_at=1789917500
+war_opponent=Шпана с Окраины
+war_source=server-collector
+war_updated_at=1789917606
+alliance_defense_count=100
+alliance_defense_source=server-collector
+alliance_defense_updated_at=1789917500
+alliance_influence_count=100
+alliance_influence_source=server-collector
+alliance_influence_updated_at=1789917500
+alliance_power_count=100
+alliance_power_source=server-collector
+alliance_power_updated_at=1789917500
+top_alliance_defense=[[1, "Top🏆King", 1138542.0], [2, "ТОВАРИЩИ", 908334.0], [3, "LAD", 827976.0], [4, "red hot chili hamsters", 758870.0], [5, "Hamster Pub", 540652.0]]
+top_alliance_influence=[[1, "Top🏆King", 6798363279.0], [2, "ТОВАРИЩИ", 4925439332.0], [3, "LAD", 3496990948.0], [4, "red hot chili hamsters", 2462766719.0], [5, "Hamster Pub", 1892331866.0]]
+top_alliance_power=[[1, "Top🏆King", 19814611832.0], [2, "ТОВАРИЩИ", 15316895836.0], [3, "LAD", 10440830399.0], [4, "red hot chili hamsters", 8171187597.0], [5, "Hamster Pub", 6088042748.0]]
+Sep 20 14:52:12 Mikhail.nezhnikov.com python3[12456]: [public-collector] alliances discovered: 117
+Sep 20 14:52:57 Mikhail.nezhnikov.com python3[12456]: [public-collector] alliance metric coverage: total=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500
+Sep 20 14:58:02 Mikhail.nezhnikov.com python3[14165]: [public-collector] alliances discovered: 117
+Sep 20 15:00:00 Mikhail.nezhnikov.com python3[14165]: [public-collector] alliance metric coverage: total=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500
+Sep 20 15:16:23 Mikhail.nezhnikov.com python3[17635]: [public-collector] alliances discovered: 117
+Sep 20 15:18:20 Mikhail.nezhnikov.com python3[17635]: [public-collector] alliance metric coverage: total=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500
+ratings_timer=PASS
+war_timer=PASS
+ratings_next=Sun 2026-09-20 18:18:14 UTC
+war_next=Sun 2026-09-20 15:23:07 UTC
+public_war_endpoint=PASS
+public_alliance_endpoints=PASS
+alliance_list_pagination=ALL_117_DISCOVERABLE
+clan_leaderboard_source_rows=UP_TO_500
+explore_r9_preserved=PASS
+map_concurrency_5_preserved=PASS
+maps_backend_schema_changed=NO
