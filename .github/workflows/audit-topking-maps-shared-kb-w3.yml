@@ -158,9 +158,170 @@ jobs:
             git push origin HEAD:main
           fi
 
+
+      - name: Fetch authorized HK Maps pilot source
+        run: |
+          set -euo pipefail
+          curl -fL --compressed --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 120 \
+            -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36' \
+            'https://kokkaras.com/hk_maps/hk_moscow1226.php' \
+            -o /tmp/hk_moscow1226.html
+          test "$(wc -c < /tmp/hk_moscow1226.html)" -gt 10000
+          grep -q 'const buildingsGeoJSON' /tmp/hk_moscow1226.html
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          src=Path('/tmp/hk_moscow1226.html').read_text('utf-8',errors='replace')
+          marker='const buildingsGeoJSON'
+          i=src.index(marker)
+          i=src.index('{',i)
+          depth=0; quote=None; esc=False; end=None
+          for j,ch in enumerate(src[i:],i):
+              if quote:
+                  if esc: esc=False
+                  elif ch=='\\': esc=True
+                  elif ch==quote: quote=None
+                  continue
+              if ch in ('"',"'"):
+                  quote=ch; continue
+              if ch=='{': depth+=1
+              elif ch=='}':
+                  depth-=1
+                  if depth==0:
+                      end=j+1; break
+          if end is None: raise SystemExit('buildingsGeoJSON object not closed')
+          obj=json.loads(src[i:end])
+          feats=obj.get('features') or []
+          rows=[]
+          for f in feats:
+              p=f.get('properties') if isinstance(f,dict) else None
+              if not isinstance(p,dict) or not p.get('is_game') or not p.get('building_id'):
+                  continue
+              c=p.get('crystals')
+              rows.append({
+                  'building_id':str(p['building_id']),
+                  'crystals':None if c is None else int(c),
+                  'is_investment':bool(p.get('is_investment')),
+                  'faction':str(p.get('faction') or ''),
+                  'building_generator':str(p.get('building_generator') or ''),
+              })
+          out={
+              'features_total':len(feats),
+              'game_buildings':len(rows),
+              'known_crystals':sum(r['crystals'] is not None for r in rows),
+              'room_hist':{},
+              'rows':rows,
+          }
+          for r in rows:
+              k='null' if r['crystals'] is None else str(r['crystals'])
+              out['room_hist'][k]=out['room_hist'].get(k,0)+1
+          Path('/tmp/hk_moscow1226.source.json').write_text(json.dumps(out,ensure_ascii=False),encoding='utf-8')
+          print(json.dumps({k:v for k,v in out.items() if k!='rows'},ensure_ascii=False,sort_keys=True))
+          PY
+
+      - name: Compare HK Maps source to canonical pilot IDs
+        run: |
+          set -euo pipefail
+          cat > /tmp/w3-canonical.py <<'PY'
+          import json,sqlite3
+          AREA='9ea6ff78-b881-45b3-b92d-a8f1da8eca05'
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          rows=[dict(r) for r in db.execute(
+              "SELECT building_id,room_count,opened,has_events,is_invest,last_player_id,last_seen FROM map_buildings WHERE area_id=? ORDER BY building_id",
+              (AREA,)
+          )]
+          print(json.dumps(rows,ensure_ascii=False))
+          db.close()
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w3-canonical.py root@89.125.1.71:/tmp/w3-canonical.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w3-canonical.py' > /tmp/w3-canonical.json
+          python3 - <<'PY'
+          import json
+          source=json.load(open('/tmp/hk_moscow1226.source.json',encoding='utf-8'))
+          canon=json.load(open('/tmp/w3-canonical.json',encoding='utf-8'))
+          sm={r['building_id']:r for r in source['rows']}
+          cm={r['building_id']:r for r in canon}
+          inter=sorted(set(sm)&set(cm))
+          source_only=sorted(set(sm)-set(cm))
+          canonical_only=sorted(set(cm)-set(sm))
+          known=[bid for bid,r in sm.items() if r['crystals'] is not None]
+          known_inter=[bid for bid in known if bid in cm]
+          conflicts=[]
+          fills=[]
+          same=[]
+          for bid in known_inter:
+              src=sm[bid]['crystals']
+              cur=cm[bid]['room_count']
+              if cur is None: fills.append((bid,src))
+              elif cur==src: same.append((bid,src))
+              else: conflicts.append((bid,cur,src))
+          report={
+              'source_game_buildings':len(sm),
+              'source_known_crystals':len(known),
+              'canonical_buildings':len(cm),
+              'id_intersection':len(inter),
+              'source_only':len(source_only),
+              'canonical_only':len(canonical_only),
+              'known_id_intersection':len(known_inter),
+              'fill_null_count':len(fills),
+              'same_count':len(same),
+              'conflict_count':len(conflicts),
+              'source_only_sample':source_only[:10],
+              'canonical_only_sample':canonical_only[:10],
+              'fill_sample':fills[:10],
+              'conflict_sample':conflicts[:10],
+          }
+          print(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
+          open('/tmp/w3-source-compare.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False))
+          if len(known_inter)==0:
+              raise SystemExit('no known building_id overlap')
+          if source_only:
+              raise SystemExit(f'source contains {len(source_only)} building IDs absent from canonical pilot')
+          PY
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'rm -f /tmp/w3-canonical.py'
+
+      - name: Record source comparison evidence
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          s=json.load(open('/tmp/hk_moscow1226.source.json',encoding='utf-8'))
+          r=json.load(open('/tmp/w3-source-compare.json',encoding='utf-8'))
+          lines=[
+            'MAPS_SHARED_KB_W3_SOURCE_COMPARE=PASS',
+            'source_url=https://kokkaras.com/hk_maps/hk_moscow1226.php',
+            f"source_game_buildings={r['source_game_buildings']}",
+            f"source_known_crystals={r['source_known_crystals']}",
+            f"canonical_buildings={r['canonical_buildings']}",
+            f"id_intersection={r['id_intersection']}",
+            f"source_only={r['source_only']}",
+            f"canonical_only={r['canonical_only']}",
+            f"known_id_intersection={r['known_id_intersection']}",
+            f"fill_null_count={r['fill_null_count']}",
+            f"same_count={r['same_count']}",
+            f"conflict_count={r['conflict_count']}",
+            'room_hist='+json.dumps(s.get('room_hist'),sort_keys=True,separators=(',',':')),
+            'conflict_sample='+json.dumps(r.get('conflict_sample'),ensure_ascii=False,separators=(',',':')),
+            'live_mutation=NO',
+          ]
+          open('audit/hk-stage2-maps-shared-kb-w3-source-compare.txt','w',encoding='utf-8').write('\n'.join(lines)+'\n')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w3-source-compare.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: compare W3 HK Maps pilot source"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
       - name: Cleanup
         if: always()
         run: |
-          rm -f "$HOME/.ssh/topking" /tmp/w3-probe.py /tmp/w3-probe.json
+          rm -f "$HOME/.ssh/topking" /tmp/w3-probe.py /tmp/w3-probe.json /tmp/hk_moscow1226.html /tmp/hk_moscow1226.source.json /tmp/w3-canonical.py /tmp/w3-canonical.json /tmp/w3-source-compare.json
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71 'rm -f /tmp/w3-probe.py' || true
