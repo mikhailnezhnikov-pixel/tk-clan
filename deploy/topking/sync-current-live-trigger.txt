@@ -1,1 +1,1 @@
-sync Today candidate 73a8da 2026-09-20
+sync Pits canon core 0d6de488 2026-09-20
