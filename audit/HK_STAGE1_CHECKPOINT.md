@@ -28,9 +28,9 @@ Do not run the full Stage 1 in one long session.
 - donor version: 5.3.22-ui-icons-pit-dim
 - donor SHA256: 28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1
 - prior migration audits: FOUND / READ
-- current block: 1D
+- current block: FINAL
 - current block status: READY_TO_START
-- next action: audit donor -> current/live navigation and real execution paths
+- next action: consolidate 1A-1D into final Stage 1 migration table and verify genuinely untransferred historical functionality = 0
 - overall Stage 1 status: IN_PROGRESS
 
 ## Resume command
@@ -65,5 +65,14 @@ Then:
   - historical genuinely missing helpers: 0
   - mutation gate / runner / state refresh / budget guards present
   - Kokkaras Business Auto Routines 1/2/3 are not equivalent to current generic Auto Routines
-  - exact donor Business Auto Routine decision deferred to Stage 7
+  - current generic Auto Routines retained; donor Business Auto Routines kept only as optional Stage 7 reference
   - no gameplay code changed
+
+
+- 1D — navigation/live paths: PASS
+  - historical nav entries retained: 20/20
+  - current active routes verified: 18/18
+  - Neighborhoods intentionally deferred to Stage 5
+  - Rat Hunt intentionally deferred to Stage 6
+  - no dead active navigation routes found
+  - no gameplay/navigation code changed
