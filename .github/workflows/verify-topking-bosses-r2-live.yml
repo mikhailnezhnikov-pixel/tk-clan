@@ -1,0 +1,78 @@
+name: Verify TopKing Bosses R2 Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/bosses-r2-live-verify-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Verify current live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          node --check /tmp/live.js
+          live_sha="$(sha256sum /tmp/live.js | awk '{print $1}')"
+          outer=FAIL
+          inner=UNKNOWN
+          target=FAIL
+          grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2'" /tmp/live.js && outer=PASS
+          if grep -Fq "HK_BOSSES_CANON_REV='bosses-area-target-20260920-r2'" /tmp/live.js; then
+            inner=R2
+          elif grep -Fq "HK_BOSSES_CANON_REV='bosses-canon-core-20260920-r1'" /tmp/live.js; then
+            inner=R1_STALE
+          fi
+          grep -Fq "HK_BOSSES_TARGET_REV='bosses-area-target-20260920-r2'" /tmp/live.js && target=PASS
+          grep -Fq "function bossCanonTargetPlan" /tmp/live.js
+          grep -Fq "function bossCanonRewardOnlyPlan" /tmp/live.js
+          grep -Fq "async function bossCanonRunAreaTargetContinuation" /tmp/live.js
+
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?bosses-r2-verify=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          public_sha="$(sha256sum /tmp/public.js | awk '{print $1}')"
+          equality=FAIL
+          cmp -s /tmp/live.js /tmp/public.js && equality=PASS
+
+          {
+            echo "checked_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "live_sha256=$live_sha"
+            echo "public_sha256=$public_sha"
+            echo "public_byte_equality=$equality"
+            echo "syntax=PASS"
+            echo "outer_marker=$outer"
+            echo "inner_marker=$inner"
+            echo "target_marker=$target"
+            echo "target_plan=PASS"
+            echo "reward_only=PASS"
+            echo "target_continuation=PASS"
+          } > audit/hk-stage2-03-bosses-r2-live-status.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-03-bosses-r2-live-status.txt
+          git commit -m "stage2: verify Bosses r2 live status" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js /tmp/public.js
