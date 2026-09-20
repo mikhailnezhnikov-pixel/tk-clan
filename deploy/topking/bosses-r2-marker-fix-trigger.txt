@@ -1,0 +1,2 @@
+2026-09-20 deploy Bosses r2 inner marker fix
+input_sha256=d53d17ca2c6251a1591fe740f85bf1366d70ff674f22b050512e1151ae7a544b
