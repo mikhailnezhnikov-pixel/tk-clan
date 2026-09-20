@@ -1,7 +1,7 @@
-name: W6 Dubai drift audit
+name: W6 stubborn map audit
 on:
   push:
-    paths: ['deploy/topking/w6-dubai-drift-trigger.txt']
+    paths: ['deploy/topking/w6-stubborn-audit-trigger.txt']
 permissions:
   contents: write
 jobs:
@@ -18,27 +18,38 @@ jobs:
           chmod 600 ~/.ssh/topking
       - name: audit read-only
         run: |
-          cat > /tmp/w6-dubai.py <<'PY'
+          cat > /tmp/w6-stubborn.py <<'PY'
           import json,sqlite3
+          keys=['hk_newyork2520','hk_newyork3110','hk_newyork3111','hk_newyork3307','hk_newyork4026']
           db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
-          old='79cb821a-ecc1-4605-a96d-0d8ee504b74c'
-          out={}
-          out['old_area']=[dict(r) for r in db.execute('SELECT * FROM map_areas WHERE area_id=?',(old,))]
-          out['old_alias']=[dict(r) for r in db.execute('SELECT * FROM map_area_aliases WHERE source_area_id=? OR canonical_area_id=?',(old,old))]
-          out['dubai_35_53']=[dict(r) for r in db.execute("SELECT area_id,city_id,city_name,x,y,last_seen FROM map_areas WHERE lower(trim(city_name))='dubai' AND x=35 AND y=53")]
-          out['dubai_53_35']=[dict(r) for r in db.execute("SELECT area_id,city_id,city_name,x,y,last_seen FROM map_areas WHERE lower(trim(city_name))='dubai' AND x=53 AND y=35")]
-          out['dubai_nearby']=[dict(r) for r in db.execute("SELECT area_id,city_id,city_name,x,y,last_seen FROM map_areas WHERE lower(trim(city_name))='dubai' AND x BETWEEN 30 AND 60 AND y BETWEEN 30 AND 60 ORDER BY x,y LIMIT 50")]
+          out=[]
+          for key in keys:
+              p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(key,)).fetchone()
+              link=db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",(key,)).fetchone()
+              flat=json.loads(p['points_json'] or '[]');lng=lat=0;pts=[]
+              for i in range(0,len(flat),3):
+                  lng+=int(flat[i]);lat+=int(flat[i+1]);flag=int(flat[i+2]);pts.append((lng/1e5,lat/1e5,flag))
+              row={'map_key':key,'point_count':len(pts),'linked':bool(link)}
+              if pts:
+                  xs=[x for x,_,_ in pts];ys=[y for _,y,_ in pts]
+                  row.update({'min_lon':min(xs),'max_lon':max(xs),'min_lat':min(ys),'max_lat':max(ys),
+                              'span_lon':max(xs)-min(xs),'span_lat':max(ys)-min(ys)})
+              if link:
+                  area=link['canonical_area_id']
+                  row['canonical_area_id']=area
+                  row['canonical_buildings']=db.execute("SELECT COUNT(*) FROM map_buildings WHERE area_id=?",(area,)).fetchone()[0]
+              out.append(row)
           print(json.dumps(out,ensure_ascii=False,indent=2))
           db.close()
           PY
-          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-dubai.py root@89.125.1.71:/tmp/w6-dubai.py
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w6-dubai.py' > audit/hk-stage2-w6-dubai-drift.json
-          cat audit/hk-stage2-w6-dubai-drift.json
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-stubborn.py root@89.125.1.71:/tmp/w6-stubborn.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w6-stubborn.py' > audit/hk-stage2-w6-stubborn-extents.json
+          cat audit/hk-stage2-w6-stubborn-extents.json
       - name: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-stage2-w6-dubai-drift.json
-          git commit -m "audit: inspect W6 Dubai classification drift"
+          git add audit/hk-stage2-w6-stubborn-extents.json
+          git commit -m "audit: inspect W6 stubborn map extents"
           git pull --rebase origin main
           git push origin HEAD:main
