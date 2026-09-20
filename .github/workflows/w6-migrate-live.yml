@@ -1,0 +1,244 @@
+name: W6 migrate resolved maps live
+on:
+  push:
+    paths: ['deploy/topking/w6-migrate-live-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: prepare ssh
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+      - name: copy manifest and migration verifier
+        run: |
+          cat > /tmp/w6-migrate.py <<'PY'
+          import hashlib,importlib.util,json,os,sqlite3,time
+          DB='/var/lib/hamsterking-license/licenses.db'
+          manifest=json.load(open('/tmp/hk-w6-migration-manifest.json'))
+          assert len(manifest)==25,len(manifest)
+          keys={m['map_key'] for m in manifest}
+          assert len(keys)==25
+
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          for name in ('discover_hk_map_area','link_hk_map_area','link_hk_map_points','import_hk_map_room_knowledge'):
+              assert hasattr(s,name),name
+          server_bytes=open('/opt/hamsterking-license/server.py','rb').read()
+          assert b'HK_MAP_PROVENANCE_W5_V1' in server_bytes
+          s.init_db()
+
+          def dbro():
+              db=sqlite3.connect('file:'+DB+'?mode=ro',uri=True);db.row_factory=sqlite3.Row;return db
+
+          # Full preflight: current live discovery must still match the frozen dry-run.
+          db=dbro()
+          catalog=[r['map_key'] for r in db.execute("SELECT map_key FROM hk_maps_catalog ORDER BY map_key")]
+          assert len(catalog)==235,len(catalog)
+          unique={};unresolved=[];ambiguous=[]
+          for key in catalog:
+              d=s.discover_hk_map_area(db,key);c=d.get('candidates') or []
+              if len(c)==1:unique[key]=c[0]
+              elif not c:unresolved.append(key)
+              else:ambiguous.append(key)
+          expected={m['map_key']:m['canonical_area_id'] for m in manifest}
+          assert unique==expected,{'current_unique':len(unique),'expected':len(expected),'added':sorted(set(unique)-set(expected)),'missing':sorted(set(expected)-set(unique))}
+          assert len(unresolved)==210 and not ambiguous,(len(unresolved),ambiguous)
+
+          area_count_before=db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0]
+          building_count_before=db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0]
+          catalog_count_before=db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0]
+          points_count_before=db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0]
+          area_links_before={r['map_key']:(r['canonical_area_id'],r['match_method']) for r in db.execute("SELECT map_key,canonical_area_id,match_method FROM hk_map_area_links")}
+          point_links_before={(r['map_key'],int(r['point_index'])):r['building_id'] for r in db.execute("SELECT map_key,point_index,building_id FROM hk_map_point_links")}
+          geom_hasher=hashlib.sha256()
+          for r in db.execute("SELECT map_key,points_json FROM hk_map_points ORDER BY map_key"):
+              geom_hasher.update(r['map_key'].encode());geom_hasher.update(b'\0');geom_hasher.update((r['points_json'] or '').encode());geom_hasher.update(b'\n')
+          geometry_sha_before=geom_hasher.hexdigest()
+
+          before_values={}
+          expected_point_links=dict(point_links_before)
+          null_targets=0
+          nonnull_targets=0
+          conflict_game_live=0
+          for m in manifest:
+              key=m['map_key'];area=m['canonical_area_id']
+              row=db.execute("SELECT point_count FROM hk_map_points WHERE map_key=?",(key,)).fetchone()
+              assert row
+              point_count=int(row['point_count'])
+              seen_idx=set();seen_bid=set()
+              for p in m['safe_existing_points']:
+                  idx=int(p['point_index']);bid=str(p['building_id']);rooms=int(p['room_count'])
+                  assert 0<=idx<point_count,(key,idx,point_count)
+                  assert idx not in seen_idx and bid not in seen_bid,(key,idx,bid)
+                  seen_idx.add(idx);seen_bid.add(bid)
+                  b=db.execute("""SELECT room_count,knowledge_source,knowledge_observed_at
+                                  FROM map_buildings WHERE area_id=? AND building_id=?""",(area,bid)).fetchone()
+                  assert b,(key,area,bid)
+                  before_values[(area,bid)]=(b['room_count'],b['knowledge_source'],b['knowledge_observed_at'],rooms)
+                  if b['room_count'] is None:null_targets+=1
+                  else:
+                      nonnull_targets+=1
+                      if int(b['room_count'])!=rooms and b['knowledge_source']=='game_live':conflict_game_live+=1
+                  existing=expected_point_links.get((key,idx))
+                  assert existing in (None,bid),(key,idx,existing,bid)
+                  expected_point_links[(key,idx)]=bid
+          db.close()
+
+          # Consistent SQLite backup before the first W6 write.
+          stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+          backup='/var/lib/hamsterking-license/licenses.db.bak.w6.'+stamp
+          src=sqlite3.connect(DB);dst=sqlite3.connect(backup)
+          src.backup(dst);dst.close();src.close()
+
+          def apply_once():
+              filled=preserved=linked_points=0
+              for m in manifest:
+                  key=m['map_key'];area=m['canonical_area_id']
+                  ar=s.link_hk_map_area(key)
+                  assert ar['canonical_area_id']==area,(key,ar)
+                  rows=m['safe_existing_points']
+                  if rows:
+                      lr=s.link_hk_map_points(key,[{'point_index':p['point_index'],'building_id':p['building_id']} for p in rows],'osm_point_in_polygon')
+                      linked_points+=int(lr['linked'])
+                      ir=s.import_hk_map_room_knowledge(key,[{'building_id':p['building_id'],'room_count':p['room_count']} for p in rows])
+                      filled+=int(ir.get('filled',0))
+                      preserved+=int(ir.get('preserved_nonnull',0))
+              return {'filled':filled,'preserved_nonnull':preserved,'linked_calls_points':linked_points}
+
+          first=apply_once()
+
+          # Verify source priority and no geometry/district/building duplication.
+          db=dbro()
+          area_count_after=db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0]
+          building_count_after=db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0]
+          assert area_count_after==area_count_before,(area_count_before,area_count_after)
+          assert building_count_after==building_count_before,(building_count_before,building_count_after)
+          assert db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0]==catalog_count_before==235
+          assert db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0]==points_count_before==235
+
+          current_area_links={r['map_key']:(r['canonical_area_id'],r['match_method']) for r in db.execute("SELECT map_key,canonical_area_id,match_method FROM hk_map_area_links")}
+          for key,area in expected.items():
+              assert current_area_links.get(key)==(area,'city_grid_yx'),(key,current_area_links.get(key),area)
+          assert set(current_area_links)==keys,(len(current_area_links),sorted(set(current_area_links)-keys),sorted(keys-set(current_area_links)))
+          dup=db.execute("""SELECT canonical_area_id,COUNT(*) n FROM hk_map_area_links
+                            GROUP BY canonical_area_id HAVING COUNT(*)>1""").fetchall()
+          assert not dup,[dict(r) for r in dup]
+
+          current_point_links={(r['map_key'],int(r['point_index'])):r['building_id'] for r in db.execute("SELECT map_key,point_index,building_id FROM hk_map_point_links")}
+          assert current_point_links==expected_point_links,(len(current_point_links),len(expected_point_links))
+
+          filled_verified=0;preserved_verified=0
+          for (area,bid),(old_room,old_source,old_obs,import_room) in before_values.items():
+              r=db.execute("""SELECT room_count,knowledge_source,knowledge_observed_at
+                              FROM map_buildings WHERE area_id=? AND building_id=?""",(area,bid)).fetchone()
+              assert r
+              if old_room is None:
+                  assert int(r['room_count'])==import_room,(area,bid,dict(r),import_room)
+                  assert r['knowledge_source']=='hk_maps_import',(area,bid,dict(r))
+                  assert int(r['knowledge_observed_at'])>0
+                  filled_verified+=1
+              else:
+                  assert r['room_count']==old_room,(area,bid,old_room,r['room_count'])
+                  assert r['knowledge_source']==old_source,(area,bid,old_source,r['knowledge_source'])
+                  assert r['knowledge_observed_at']==old_obs,(area,bid,old_obs,r['knowledge_observed_at'])
+                  preserved_verified+=1
+
+          geom_hasher=hashlib.sha256()
+          for r in db.execute("SELECT map_key,points_json FROM hk_map_points ORDER BY map_key"):
+              geom_hasher.update(r['map_key'].encode());geom_hasher.update(b'\0');geom_hasher.update((r['points_json'] or '').encode());geom_hasher.update(b'\n')
+          geometry_sha_after=geom_hasher.hexdigest()
+          assert geometry_sha_after==geometry_sha_before,(geometry_sha_before,geometry_sha_after)
+          db.close()
+
+          assert first['filled']==filled_verified,(first,filled_verified)
+          assert filled_verified==null_targets,(filled_verified,null_targets)
+          assert preserved_verified==nonnull_targets,(preserved_verified,nonnull_targets)
+
+          # Second run must not add relationships or change canonical knowledge.
+          second=apply_once()
+          assert second['filled']==0,second
+          db=dbro()
+          area_links_second={r['map_key']:(r['canonical_area_id'],r['match_method']) for r in db.execute("SELECT map_key,canonical_area_id,match_method FROM hk_map_area_links")}
+          point_links_second={(r['map_key'],int(r['point_index'])):r['building_id'] for r in db.execute("SELECT map_key,point_index,building_id FROM hk_map_point_links")}
+          assert area_links_second==current_area_links
+          assert point_links_second==current_point_links
+          for (area,bid),(old_room,old_source,old_obs,import_room) in before_values.items():
+              r=db.execute("SELECT room_count,knowledge_source FROM map_buildings WHERE area_id=? AND building_id=?",(area,bid)).fetchone()
+              if old_room is None:
+                  assert int(r['room_count'])==import_room and r['knowledge_source']=='hk_maps_import'
+              else:
+                  assert r['room_count']==old_room and r['knowledge_source']==old_source
+          db.close()
+
+          out={
+            'W6_LIVE':'PASS',
+            'server_sha256':hashlib.sha256(server_bytes).hexdigest(),
+            'backup':backup,
+            'maps_total':235,'resolved_migrated':25,'unresolved_untouched':210,'ambiguous':0,
+            'area_links_before':len(area_links_before),'area_links_after':len(current_area_links),
+            'point_links_before':len(point_links_before),'point_links_after':len(current_point_links),
+            'safe_manifest_points':sum(len(m['safe_existing_points']) for m in manifest),
+            'null_targets_before':null_targets,'filled_hk_maps_import':filled_verified,
+            'nonnull_preserved':preserved_verified,'game_live_conflicts_preserved':conflict_game_live,
+            'map_areas_before':area_count_before,'map_areas_after':area_count_after,
+            'map_buildings_before':building_count_before,'map_buildings_after':building_count_after,
+            'geometry_sha256':geometry_sha_after,
+            'second_run_filled':second['filled'],'idempotent_rerun':'PASS',
+          }
+          print(json.dumps(out,sort_keys=True))
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new deploy/topking/hk-w6-migration-manifest.json root@89.125.1.71:/tmp/hk-w6-migration-manifest.json
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-migrate.py root@89.125.1.71:/tmp/w6-migrate.py
+      - name: migrate and verify live
+        run: |
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w6-migrate.py' | tee /tmp/w6-live.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w6-live.json'))
+          assert d['W6_LIVE']=='PASS',d
+          assert d['resolved_migrated']==25 and d['unresolved_untouched']==210 and d['ambiguous']==0,d
+          assert d['map_areas_before']==d['map_areas_after'],d
+          assert d['map_buildings_before']==d['map_buildings_after'],d
+          assert d['second_run_filled']==0 and d['idempotent_rerun']=='PASS',d
+          PY
+      - name: verify current userscript invariants
+        run: |
+          curl -fsSL "https://hk-license.89.125.1.71.sslip.io/panel.js?w6=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r6-safe5'" /tmp/public.js
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2'" /tmp/public.js
+          grep -Fq "coord_revision:'column-row-v1'" /tmp/public.js
+          echo "client_sha256=$(sha256sum /tmp/public.js|awk '{print $1}')" | tee /tmp/w6-client.txt
+      - name: record live status
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w6-live.json'))
+          client=open('/tmp/w6-client.txt').read().strip()
+          lines=[
+            'MAPS_SHARED_KB_W6_LIVE=PASS',
+            *[f'{k}={v}' for k,v in d.items() if k!='W6_LIVE'],
+            client,
+            'userscript_changed=NO',
+            'scanner=maps-parallel-read-20260920-r6-safe5',
+            'read_concurrency=5',
+            'coords=maps-coordinates-column-row-20260920-r2',
+            'W7_STARTED=NO',
+          ]
+          open('audit/hk-stage2-maps-shared-kb-w6-live-status.txt','w').write('\n'.join(lines)+'\n')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w6-live-status.txt
+          git commit -m "audit: record W6 live migration status"
+          git pull --rebase origin main
+          git push origin HEAD:main
