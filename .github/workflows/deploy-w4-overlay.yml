@@ -1,0 +1,114 @@
+name: Deploy W4 pilot overlay
+on:
+  push:
+    paths: ['deploy/topking/w4-live-trigger.txt']
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: ssh
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+      - name: build exact candidate
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          test "$(sha256sum /tmp/server.py|awk '{print $1}')" = "26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4"
+          python3 deploy/topking/patch_server_maps_shared_kb_w4.py
+          python3 -m py_compile /tmp/server.py
+          sha256sum /tmp/server.py | tee /tmp/w4-candidate.sha
+      - name: live precheck
+        run: |
+          cat > /tmp/w4-pre.py <<'PY'
+          import hashlib,json,sqlite3
+          K='hk_moscow1226';A='9ea6ff78-b881-45b3-b92d-a8f1da8eca05'
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(K,)).fetchone()
+          rows=db.execute("SELECT building_id,room_count FROM map_buildings WHERE area_id=?",(A,)).fetchall()
+          h={}
+          for r in rows:
+            k='null' if r['room_count'] is None else str(r['room_count']);h[k]=h.get(k,0)+1
+          assert h=={'0':114,'2':3},h
+          assert p['point_count']==32
+          assert db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",(K,)).fetchone()[0]==A
+          same=db.execute("SELECT area_id FROM map_areas WHERE x=26 AND y=12 AND lower(trim(city_name))='moscow'").fetchall()
+          assert len(same)==1 and same[0]['area_id']==A
+          print(json.dumps({'points_sha':hashlib.sha256(p['points_json'].encode()).hexdigest(),'room_hist':h,'buildings':len(rows)},sort_keys=True))
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w4-pre.py root@89.125.1.71:/tmp/w4-pre.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w4-pre.py' | tee /tmp/w4-before.json
+      - name: deploy server only
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.w4.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -e
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.w4.$stamp"
+            install -m 0644 /tmp/server.w4.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+      - name: link 29 pilot points
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new deploy/topking/hk_moscow1226-point-links-w4.json root@89.125.1.71:/tmp/w4-links.json
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            'python3 /opt/hamsterking-license/server.py --link-hk-map-points hk_moscow1226 /tmp/w4-links.json' | tee /tmp/w4-link-result.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w4-link-result.json'))
+          assert d['linked']==29 and d['total']==29,d
+          PY
+      - name: verify website response from canonical knowledge
+        run: |
+          cat > /tmp/w4-verify.py <<'PY'
+          import hashlib,importlib.util,json,sqlite3
+          K='hk_moscow1226';A='9ea6ff78-b881-45b3-b92d-a8f1da8eca05'
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          data=s.hk_map_data(K,{'telegram_id':'w4-audit','maps_manage':1,'maps_access':1})
+          assert data['render']=='points',data.get('render')
+          assert data['canonical']['enabled'] is True,data['canonical']
+          assert data['canonical']['linked_points']==29,data['canonical']
+          assert data['canonical']['applied_points']==29,data['canonical']
+          assert data['canonical']['fallback_points']==3,data['canonical']
+          flat=data['points'];lng=lat=0;hist={};invest=0
+          for i in range(0,len(flat),3):
+            lng+=flat[i];lat+=flat[i+1];flag=flat[i+2]
+            inv=flag>=7; rooms=flag-8 if inv else flag
+            hist[str(rooms)]=hist.get(str(rooms),0)+1
+            invest+=int(inv)
+          assert hist=={'0':26,'1':1,'2':3,'3':2},hist
+          assert invest==3,invest
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(K,)).fetchone()
+          links=db.execute("SELECT point_index,building_id FROM hk_map_point_links WHERE map_key=? ORDER BY point_index",(K,)).fetchall()
+          assert len(links)==29 and len({r['building_id'] for r in links})==29
+          before=json.load(open('/tmp/w4-before.json'))
+          assert hashlib.sha256(p['points_json'].encode()).hexdigest()==before['points_sha']
+          same=db.execute("SELECT area_id FROM map_areas WHERE x=26 AND y=12 AND lower(trim(city_name))='moscow'").fetchall()
+          assert len(same)==1 and same[0]['area_id']==A
+          print(json.dumps({'render_hist':hist,'investment_points':invest,'linked_points':len(links),'canonical_meta':data['canonical'],'geometry_sha':before['points_sha']},sort_keys=True))
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w4-verify.py root@89.125.1.71:/tmp/w4-verify.py
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w4-before.json root@89.125.1.71:/tmp/w4-before.json
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w4-verify.py' | tee /tmp/w4-after.json
+      - name: verify Maps client invariants
+        run: |
+          curl -fsSL "https://hk-license.89.125.1.71.sslip.io/panel.js?w4=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r5'" /tmp/public.js
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2'" /tmp/public.js
+          echo "client_sha256=$(sha256sum /tmp/public.js|awk '{print $1}')"
+          echo W4_LIVE_PASS
