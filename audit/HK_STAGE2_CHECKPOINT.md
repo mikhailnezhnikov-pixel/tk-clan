@@ -434,3 +434,27 @@ Live confirmations still required:
 4. resulting state + rerun confirmation.
 
 Only after these: mark Stage 2.02 Pits LIVE PASS and proceed to Bosses.
+
+
+## Pits reward picker r20
+
+- donor reward-card picker UI added;
+- live reward contents shown on selectable cards;
+- forecast and validity shown per reward tier;
+- picker and inline reward target remain synchronized;
+- marker: `pits-reward-picker-20260920-r20`;
+- deploy `35497956677` — PASS;
+- live/public SHA256: `c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb`;
+- baseline sync `35498145691` — PASS.
+
+Pits now have static donor UI + functional parity.
+
+Current module status:
+**FINAL_LIVE_CHECKS_PENDING**
+
+No more speculative Pits patches.
+Required user live checks:
+- r11 restoration decision;
+- reward execution/recalculation/adaptive fit + rerun;
+- r17 runtime exact winrate.
+Only after these: mark Pits LIVE PASS and proceed to Bosses.
