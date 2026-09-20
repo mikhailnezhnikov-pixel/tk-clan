@@ -119,7 +119,7 @@ jobs:
           db.close()
           PY
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-one.py root@89.125.1.71:/tmp/w6-one.py
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new "MAP_KEY=$MAP_KEY python3 /tmp/w6-one.py" > /tmp/w6-one.json
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 "MAP_KEY=$MAP_KEY python3 /tmp/w6-one.py" > /tmp/w6-one.json
       - name: resolve building IDs
         env:
           MAP_KEY: ${{ matrix.map_key }}
