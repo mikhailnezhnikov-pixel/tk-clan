@@ -60,6 +60,19 @@ jobs:
             head -40 /opt/hamsterking-license/HamsterKingMobile.loader.user.js || true
             echo "=== SERVICE MIN VERSION ==="
             systemctl show hamsterking-license.service -p Environment --no-pager | tr " " "\n" | grep -E "HK_MIN_SCRIPT_VERSION|HK_RELEASE_PATH" || true
+            echo "=== LIVE MAP CRYSTAL SOURCE ==="
+            python3 - <<'PY'
+            from pathlib import Path
+            import re
+            p=Path("/opt/hamsterking-license/HamsterKingMobile.user.js")
+            s=p.read_text("utf-8","replace")
+            for term in ("crystalRoomCount","buildingRooms","mapAreaPayload","acceptBuildingStudy","/player/building?building_id=","mapBackfillActiveBuildingStudies"):
+                print("###",term)
+                starts=[m.start() for m in re.finditer(re.escape(term),s)]
+                for i in starts[:6]:
+                    print(s[max(0,i-1800):min(len(s),i+5200)])
+                    print("---")
+            PY
             echo "=== LIVE V4 MARKERS ==="
             grep -nE "HK_PUBLIC_WAR_ALLIANCE_V4|readPublicWarV4|readPublicRatingsV4|public-snapshot" /opt/hamsterking-license/HamsterKingMobile.user.js | head -40 || true
             echo "=== LIVE SNAPSHOT CALL ==="
