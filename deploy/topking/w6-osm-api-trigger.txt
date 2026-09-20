@@ -1,1 +1,1 @@
-w6 osm api
+w6 osm api 2
