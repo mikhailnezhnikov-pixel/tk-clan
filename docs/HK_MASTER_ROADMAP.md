@@ -136,7 +136,7 @@ Stage 0 technical baseline is pinned by baseline/topking/BASELINE.json and audit
 
 ### Команда для нового чата
 
-> Работаем по MASTER ROADMAP, ЭТАП 0 — СТАБИЛЬНАЯ БАЗА. Выполни этап полностью. Не переходи к другим этапам. Текущая ожидаемая база — 1.17.4 + launcher-hotfix-20260920-r1.
+> Работаем по MASTER ROADMAP, ЭТАП 0 — СТАБИЛЬНАЯ БАЗА. Выполни этап полностью. Не переходи к другим этапам. Текущая ожидаемая база — 1.17.4 · launcher r1 · handoff r4 · runtime r5 · core r6 · startup r7 · error-trap r8.
 
 ---
 
