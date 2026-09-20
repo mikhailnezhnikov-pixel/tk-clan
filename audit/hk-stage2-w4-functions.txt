@@ -1,4 +1,4 @@
-sha256=26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4
+sha256=c1c583230f632ed38c654a00541809b1a7cb2f2bf0296708f4c44b2456ad46ce
 
 ### hk_map_data
 def hk_map_data(map_key: str, member: dict | None = None, public: bool = False) -> dict:
@@ -27,8 +27,9 @@ def hk_map_data(map_key: str, member: dict | None = None, public: bool = False) 
         points = json.loads(row["points_json"])
     except json.JSONDecodeError:
         points = []
+    points, canonical = hk_map_points_with_canonical(map_key, points)
     return {"ok": True, "map": hk_map_row(row), "point_count": row["point_count"],
-            "render": "points", "points": points}
+            "render": "points", "points": points, "canonical": canonical}
 
 ### hk_map_row
 def hk_map_row(row: sqlite3.Row) -> dict:
