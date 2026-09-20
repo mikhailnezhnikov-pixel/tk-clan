@@ -32,7 +32,7 @@ jobs:
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "HK_PITS_REWARD_EXEC_REV = 'pits-reward-execution-20260920-r13'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_PITS_REWARD_REV = 'pits-reward-planner-core-20260920-r12'" /tmp/HamsterKingMobile.user.js
           test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "56d5b9663b78767a6a290c71109878870b97113c975b21299869fce5fbca49a8"
 
       - name: Apply reward execution r13
