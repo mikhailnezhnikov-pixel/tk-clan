@@ -1740,7 +1740,7 @@
     }
   }
 
-  const HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r6-fresh-meta';
+  const HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r7-area-types';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -1838,16 +1838,28 @@
         const value=String(raw||'').trim().toLowerCase();
         if(value==='normal'||value==='investment')return value;
       }
+      for(const raw of [x?.is_investment,x?.isInvestment,x?.is_invest,x?.isInvest]){
+        if(typeof raw==='boolean')return raw?'investment':'normal';
+      }
     }
-    const total=exploreTotalEvents(...src);
-    return total===null||total===undefined?'':(Number(total)>20?'normal':'investment');
+    return '';
+  }
+  function exploreAreaIndex(st){
+    const result=new Map(),pk=String(playerIdentity(st?.player||{})||'');
+    const cachedRoot=load().mapBuildingAreasByPlayer,cached=cachedRoot&&typeof cachedRoot==='object'&&cachedRoot[pk]&&typeof cachedRoot[pk]==='object'?cachedRoot[pk]:{};
+    for(const [buildingId,areaId] of Object.entries(cached)){if(buildingId&&areaId)result.set(String(buildingId),String(areaId));}
+    for(const row of exploreActive(st)){
+      const id=String(row?.id||''),direct=String(row?.gamearea_id||row?.area_id||row?.gameAreaId||'');
+      if(id&&direct)result.set(id,direct);
+      else if(id&&mapBuildingAreas.has(id))result.set(id,String(mapBuildingAreas.get(id)||''));
+    }
+    return result;
   }
   async function exploreLoadMeta(force=false,sourceState=exploreState()){
     const st=sourceState||{},pk=String(playerIdentity(st?.player||{})||'');
     if(!force&&exploreMeta?.playerKey===pk&&Date.now()-Number(exploreMeta.loadedAt||0)<600000)return exploreMeta;
-    mapHydrateBuildingAreas();await mapEnsureOwnedBuildingAreaIndex(false);
-    const active=exploreActive(st),owned=(st?.areas?.areas||[]).filter(r=>r?.gamearea_id||r?.area_id),ownedMap=new Map(owned.map(r=>[String(r?.gamearea_id||r?.area_id||''),r]));
-    const areaIds=[...new Set(active.map(r=>String(mapBuildingAreas.get(r.id)||'')).filter(Boolean))];
+    const active=exploreActive(st),areaIndex=exploreAreaIndex(st),owned=(st?.areas?.areas||[]).filter(r=>r?.gamearea_id||r?.area_id),ownedMap=new Map(owned.map(r=>[String(r?.gamearea_id||r?.area_id||''),r]));
+    const areaIds=[...new Set(active.map(r=>String(areaIndex.get(r.id)||'')).filter(Boolean))];
     let cities=[];try{cities=await apiJson('/cities','GET');}catch(_){}
     cities=Array.isArray(cities)?cities:[];
     const districts=[],buildingMeta={};let cursor=0,errors=0;
@@ -1856,14 +1868,15 @@
       const cityId=String(own?.city_id||full?.info?.city_id||''),city=cities.find(r=>String(r?.id||'')===cityId)||{};
       const x=full?.info?.y??full?.meta?.gamearea_coords?.y??null,y=full?.info?.x??full?.meta?.gamearea_coords?.x??null;
       districts.push({areaId,label:(cityLabel(city)||cityId||areaId)+(x==null||y==null?'':' · '+x+':'+y)});
-      const dm=new Map(defs.map(r=>[String(r?.building_id||''),r]));
-      for(const row of active){if(String(mapBuildingAreas.get(row.id)||'')!==areaId)continue;const d=dm.get(row.id)||null,study=buildingStudyCache.get(row.id)||null;
-        const totalEvents=exploreTotalEvents(study,row,d),buildingType=exploreBuildingType(d,row,study);
-        buildingMeta[row.id]={areaId,buildingType,isInvest:buildingType==='investment'?true:buildingType==='normal'?false:null,totalEvents};if(d)mapRememberBuildingArea(row.id,areaId);}
+      const dm=new Map(defs.map(r=>[String(r?.building_id||''),r])),investList=full?.info?.invest_building_list,investKnown=Array.isArray(investList),investSet=new Set((investKnown?investList:[]).map(String));
+      for(const row of active){if(String(areaIndex.get(row.id)||'')!==areaId)continue;const d=dm.get(row.id)||null,study=buildingStudyCache.get(row.id)||null;
+        const totalEvents=exploreTotalEvents(study,row,d);let buildingType=exploreBuildingType(d,row,study);
+        if(!buildingType&&investKnown)buildingType=investSet.has(row.id)?'investment':'normal';
+        buildingMeta[row.id]={areaId,buildingType,isInvest:buildingType==='investment'?true:buildingType==='normal'?false:null,totalEvents};}
     }};
     await Promise.all(Array.from({length:Math.min(4,Math.max(1,areaIds.length))},()=>worker()));
     for(const r of active)if(!buildingMeta[r.id]){const study=buildingStudyCache.get(r.id)||null,totalEvents=exploreTotalEvents(study,r),buildingType=exploreBuildingType(r,study);
-      buildingMeta[r.id]={areaId:String(mapBuildingAreas.get(r.id)||''),buildingType,isInvest:buildingType==='investment'?true:buildingType==='normal'?false:null,totalEvents};}
+      buildingMeta[r.id]={areaId:String(areaIndex.get(r.id)||''),buildingType,isInvest:buildingType==='investment'?true:buildingType==='normal'?false:null,totalEvents};}
     districts.sort((a,b)=>a.label.localeCompare(b.label));
     exploreMeta={playerKey:pk,loadedAt:Date.now(),districts,buildingMeta,errors,unmapped:active.filter(r=>!buildingMeta[r.id]?.areaId).length,unknownType:active.filter(r=>!buildingMeta[r.id]?.buildingType).length};return exploreMeta;
   }
@@ -1961,7 +1974,7 @@
         '<div class="hk-cardbox"><b>'+either('Фильтры зданий','Building filters')+'</b>'+
           '<div class="hk-ex-filter-grid">'+
             '<label class="hk-ex-field"><span>'+either('Район','District')+'</span><select id="hk-ex-district">'+exploreDistrictOptions(s.districtId)+'</select></label>'+
-            '<label class="hk-ex-field"><span>'+either('Тип здания','Building type')+'</span><select id="hk-ex-type"><option value="all" '+(s.buildingType==='all'?'selected':'')+'>'+either('Все','All')+'</option><option value="normal" '+(s.buildingType==='normal'?'selected':'')+'>'+either('Обычные (>20 событий)','Normal (>20 events)')+'</option><option value="investment" '+(s.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные (до 20 событий)','Investment (up to 20 events)')+'</option></select></label>'+
+            '<label class="hk-ex-field"><span>'+either('Тип здания','Building type')+'</span><select id="hk-ex-type"><option value="all" '+(s.buildingType==='all'?'selected':'')+'>'+either('Все','All')+'</option><option value="normal" '+(s.buildingType==='normal'?'selected':'')+'>'+either('Обычные','Normal')+'</option><option value="investment" '+(s.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные','Investment')+'</option></select></label>'+
             '<label class="hk-ex-field"><span>'+either('Целевой тир','Target tier')+'</span><select id="hk-ex-target">'+targets+'</select></label>'+
             '<label class="hk-ex-field"><span>'+either('Максимум зданий','Maximum buildings')+'</span><input id="hk-ex-max" type="number" min="1" max="5000" value="'+s.maxBuildings+'"></label>'+
           '</div>'+
