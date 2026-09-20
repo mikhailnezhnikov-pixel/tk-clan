@@ -17,11 +17,11 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- current module: Today / Сегодня
-- current module file: audit/hk-stage2-01-today.md
-- current module status: LIVE_CANDIDATE_R3_PENDING_USER_UI_CHECK
-- next module after LIVE PASS: Pits / Ямы
-- do not advance until Today is LIVE PASS or has a concrete bug ticket
+- current module: Pits / Ямы
+- current module file: audit/hk-stage2-02-pits.md
+- current module status: READY_TO_START
+- next module after LIVE PASS: Bosses / Боссы
+- Today / Сегодня: LIVE PASS
 
 ## Module order
 
@@ -61,3 +61,9 @@ Each module:
 - removed redundant Today toolbar buttons
 - auto-refresh on module open retained
 - technical verification: PASS
+
+
+## Completed modules
+
+- 2.01 Today / Сегодня — LIVE PASS
+  - final SHA256: `303f6813d6e001751b53b32d83c6098f307aeedcee6a3cf320887bc93a07a117`
