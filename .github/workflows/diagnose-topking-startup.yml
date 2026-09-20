@@ -1,0 +1,89 @@
+name: Diagnose TopKing HK Startup
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/startup-diagnostic-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: diagnose-topking-startup
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live userscript
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Extract startup source
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,re
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text()
+          def block(start, end=None, radius=12000):
+              i=s.find(start)
+              if i<0: return f'NOT FOUND: {start}\n'
+              if end:
+                  j=s.find(end,i+len(start))
+                  if j<0: j=min(len(s),i+radius)
+                  else: j=min(len(s),j+len(end))
+              else:
+                  j=min(len(s),i+radius)
+              return s[max(0,i-1000):j]
+          version=re.search(r'^// @version\s+(.+)$',s,re.M)
+          out=[
+              f"version={version.group(1).strip() if version else 'unknown'}",
+              f"sha256={hashlib.sha256(s.encode()).hexdigest()}",
+              '',
+              '===== startInterface =====',
+              block('function startInterface()', '\n  function '),
+              '',
+              '===== renderUI =====',
+              block('function renderUI()', '\n  async function '),
+              '',
+              '===== startup tail =====',
+              s[-12000:],
+          ]
+          Path('audit/hk-current-startup-source.txt').write_text('\n'.join(out))
+          PY
+
+      - name: Commit diagnostic
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-current-startup-source.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Diagnose current HK startup"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js
