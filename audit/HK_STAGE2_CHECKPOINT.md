@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Maps / Карты
 - current module file: audit/hk-stage2-04-maps.md
-- current module status: CANON_CORE_R1_LIVE_CANDIDATE
+- current module status: SOURCE_PREFLIGHT_PENDING
 - next module after LIVE PASS: Resources / Ресурсы
 - Today / Сегодня: LIVE PASS
 
@@ -557,3 +557,14 @@ Stage 2.03 Bosses / Боссы: **LIVE PASS**.
 Final live/public SHA remains `0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7`.
 
 Stage 2 continues with 2.04 Maps / Карты.
+
+
+## Bosses website-only calculator scope lock
+
+- user explicitly confirmed Area Boss Calculator remains on the website and must not be added to the userscript;
+- attempted Bosses calculator r3 deploy did **not** reach live;
+- diagnostic confirmed live remained r2 at SHA256 `0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7` with no r3 calculator marker;
+- r3 deploy/sync/diagnostic workflow and payload/trigger artifacts were removed;
+- Stage 2.03 Bosses remains **LIVE PASS** at r2.
+
+Stage 2.04 Maps resumes from **SOURCE_PREFLIGHT_PENDING** until a Maps-specific audit/candidate is actually recorded.
