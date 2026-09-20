@@ -1,1 +1,1 @@
-2026-09-20 verify pits core r1 live sha before user UI check
+2026-09-20 sync pits ui r2 live candidate
