@@ -1,0 +1,57 @@
+[
+  {
+    "map_key": "hk_newyork2520",
+    "point_count": 360,
+    "linked": false,
+    "min_lon": -73.99179,
+    "max_lon": -73.97987,
+    "min_lat": 40.7498,
+    "max_lat": 40.75873,
+    "span_lon": 0.011919999999989273,
+    "span_lat": 0.008929999999999438
+  },
+  {
+    "map_key": "hk_newyork3110",
+    "point_count": 349,
+    "linked": false,
+    "min_lon": -73.92025,
+    "max_lon": -73.90844,
+    "min_lat": 40.83933,
+    "max_lat": 40.84831,
+    "span_lon": 0.01180999999999699,
+    "span_lat": 0.008980000000001098
+  },
+  {
+    "map_key": "hk_newyork3111",
+    "point_count": 155,
+    "linked": false,
+    "min_lon": -73.92041,
+    "max_lon": -73.90807,
+    "min_lat": 40.83058,
+    "max_lat": 40.83952,
+    "span_lon": 0.0123400000000089,
+    "span_lat": 0.008940000000002613
+  },
+  {
+    "map_key": "hk_newyork3307",
+    "point_count": 457,
+    "linked": false,
+    "min_lon": -73.89655,
+    "max_lon": -73.88414,
+    "min_lat": 40.86614,
+    "max_lat": 40.87508,
+    "span_lon": 0.012410000000002697,
+    "span_lat": 0.008939999999995507
+  },
+  {
+    "map_key": "hk_newyork4026",
+    "point_count": 457,
+    "linked": false,
+    "min_lon": -73.8151,
+    "max_lon": -73.80269,
+    "min_lat": 40.69594,
+    "max_lat": 40.7049,
+    "span_lon": 0.012410000000002697,
+    "span_lat": 0.008960000000001855
+  }
+]
