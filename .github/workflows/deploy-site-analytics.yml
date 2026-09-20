@@ -85,6 +85,12 @@ jobs:
           print('SITE_ANALYTICS_ENDPOINT_OK')
           PY
 
+      - name: Cleanup analytics verification row
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "python3 -c \"import sqlite3; d=sqlite3.connect('/var/lib/hamsterking-license/licenses.db'); d.execute('DELETE FROM site_pageviews WHERE path=?',('/__analytics_verify__/',)); d.commit(); d.close()\""
+
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/analytics.json
