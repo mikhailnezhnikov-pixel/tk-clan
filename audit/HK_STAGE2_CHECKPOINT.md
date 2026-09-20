@@ -733,3 +733,18 @@ Current Maps status: **SCANNER_R4_LIVE_CANDIDATE** pending user timing and map-r
 - technical live verification: PASS.
 
 Current Maps status: **SCANNER_R5_LIVE_CANDIDATE** pending user timing/result confirmation.
+
+
+## Maps coordinate backend r2
+
+Root cause confirmed in live backend: existing non-null `map_areas.x/y` could not be replaced, and completed maps returned before coordinate updates.
+
+Deployed fix:
+- versioned coordinate payload `column-row-v1`;
+- trusted coordinate update before `ignored_complete` return;
+- old/unversioned submissions cannot overwrite corrected values;
+- complete-map 32:23 -> 23:32 regression test PASS.
+
+Client SHA256: `1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6`.
+Server SHA256: `1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1`.
+Maps remains live-candidate pending fresh user rescan confirmation.
