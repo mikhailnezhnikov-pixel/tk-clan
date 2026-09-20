@@ -1,4 +1,4 @@
-name: Deploy Public Collector Fix R2
+name: Deploy Public Collector R3
 
 on:
   workflow_dispatch:
@@ -88,7 +88,7 @@ jobs:
           ' > /tmp/public-collector-r2-preflight.txt
           cat /tmp/public-collector-r2-preflight.txt
 
-      - name: Install collector R2
+      - name: Install collector R3
         run: |
           set -euo pipefail
           for file in public_collector.py verify_public_collector_r2.py hamsterking-public-collector.service hamsterking-public-collector.timer hamsterking-public-war.service hamsterking-public-war.timer; do
@@ -122,6 +122,15 @@ jobs:
             systemctl start hamsterking-public-war.service
           '
 
+      - name: Run one corrected ratings snapshot
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            systemctl reset-failed hamsterking-public-collector.service || true
+            systemctl start hamsterking-public-collector.service
+          '
+
       - name: Verify DB
         run: |
           set -euo pipefail
@@ -139,7 +148,7 @@ jobs:
           ' > /tmp/public-collector-r2-ratings-evidence.txt
           cat /tmp/public-collector-r2-ratings-evidence.txt
           grep -Fq "alliances discovered: 117" /tmp/public-collector-r2-ratings-evidence.txt
-          grep -Fq "alliance metric coverage: total=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500" /tmp/public-collector-r2-ratings-evidence.txt
+          grep -Fq "alliance metric coverage: total=117 defense=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500" /tmp/public-collector-r2-ratings-evidence.txt
 
       - name: Verify public endpoints and timers
         run: |
@@ -153,7 +162,7 @@ jobs:
             curl -fsSL --retry 4 --connect-timeout 15 --max-time 30 \
               "https://hk-license.89.125.1.71.sslip.io/api/v1/public/ratings?kind=$kind&verify=$(date +%s)" \
               -o "/tmp/$kind.json"
-            KIND="$kind" python3 -c "import json,os; k=os.environ['KIND']; d=json.load(open('/tmp/'+k+'.json')); assert len(d.get('rows',[]))>0,d; print(k+'_public_count='+str(len(d['rows'])))"
+            KIND="$kind" python3 -c "import json,os; k=os.environ['KIND']; d=json.load(open('/tmp/'+k+'.json')); rows=d.get('rows',[]); assert len(rows)>0,d; print(k+'_public_count='+str(len(rows))); print(k+'_top5='+json.dumps(rows[:5],ensure_ascii=False,separators=(',',':')))"
           done
 
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
@@ -191,13 +200,13 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo "PUBLIC_COLLECTOR_R2_LIVE=PASS"
+            echo "PUBLIC_COLLECTOR_R3_LIVE=PASS"
             echo "player_client_public_collection=DISABLED"
             echo "ratings_collector_interval=24h"
             echo "ratings_collector_schedule=16:00_Europe/Moscow"
             echo "war_collector_interval=10m"
             echo "war_api_requests_per_run=1"
-            echo "ratings_refresh_forced_during_deploy=NO"
+            echo "ratings_refresh_forced_during_deploy=YES_ONE_TIME_R3_FIX"
             echo "wars_page_cache_poll=60s"
             echo "ratings_page_cache_poll=300s"
             cat /tmp/public-collector-r2-preflight.txt
