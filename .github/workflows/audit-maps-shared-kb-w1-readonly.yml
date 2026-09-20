@@ -1,0 +1,119 @@
+name: W1 Read-only Maps Shared KB Audit
+
+on:
+  push:
+    paths:
+      - '.github/workflows/audit-maps-shared-kb-w1-readonly.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Read live map database only
+        run: |
+          set -euo pipefail
+          cat <<'PY' | ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 -'
+          import json, re, sqlite3, unicodedata
+
+          DB = "file:/var/lib/hamsterking-license/licenses.db?mode=ro"
+
+          def norm(value):
+              value = unicodedata.normalize("NFKD", str(value or "")).encode("ascii","ignore").decode().casefold()
+              return re.sub(r"[^a-z0-9]+", "", value)
+
+          def parse_grid(value):
+              m = re.fullmatch(r"\s*(\d{1,3})\s*:\s*(\d{1,3})\s*", str(value or ""))
+              return (int(m.group(1)), int(m.group(2))) if m else None
+
+          db = sqlite3.connect(DB, uri=True, timeout=10)
+          db.row_factory = sqlite3.Row
+
+          tables = {}
+          for table in ("map_areas","map_buildings","map_area_aliases","hk_maps_catalog","hk_map_points"):
+              tables[table] = db.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]
+
+          areas = [dict(r) for r in db.execute(
+              "SELECT area_id,city_id,city_name,x,y,expected_buildings,last_seen FROM map_areas ORDER BY area_id"
+          )]
+          aliases = [dict(r) for r in db.execute(
+              "SELECT source_area_id,canonical_area_id FROM map_area_aliases ORDER BY source_area_id"
+          )]
+          catalog = [dict(r) for r in db.execute(
+              "SELECT map_key,city,grid,buildings,unknown,progress,updated_at FROM hk_maps_catalog ORDER BY map_key"
+          )]
+          point_stats = dict(db.execute(
+              "SELECT COUNT(*) AS rows, COALESCE(SUM(point_count),0) AS points FROM hk_map_points"
+          ).fetchone())
+
+          by_city_xy = {}
+          for a in areas:
+              if a["x"] is None or a["y"] is None:
+                  continue
+              names = {norm(a["city_name"]), norm(a["city_id"])}
+              for city in [x for x in names if x]:
+                  by_city_xy.setdefault((city, int(a["x"]), int(a["y"])), set()).add(a["area_id"])
+
+          results = []
+          for m in catalog:
+              grid = parse_grid(m["grid"])
+              candidates = set()
+              if grid:
+                  city = norm(m["city"])
+                  candidates |= by_city_xy.get((city, grid[0], grid[1]), set())
+              status = "linked" if len(candidates) == 1 else ("ambiguous" if len(candidates) > 1 else "not_found")
+              results.append({
+                  "map_key": m["map_key"], "city": m["city"], "grid": m["grid"],
+                  "status": status, "canonical_area_ids": sorted(candidates)
+              })
+
+          # Also test swapped coordinates as audit evidence only; never use it as an automatic match.
+          swapped_only = []
+          for m, result in zip(catalog, results):
+              if result["status"] != "not_found":
+                  continue
+              grid = parse_grid(m["grid"])
+              if not grid or grid[0] == grid[1]:
+                  continue
+              cand = by_city_xy.get((norm(m["city"]), grid[1], grid[0]), set())
+              if cand:
+                  swapped_only.append({
+                      "map_key": m["map_key"], "city": m["city"], "grid": m["grid"],
+                      "canonical_area_ids": sorted(cand)
+                  })
+
+          summary = {
+              "audit_mode": "sqlite_mode_ro",
+              "tables": tables,
+              "point_stats": point_stats,
+              "catalog_total": len(catalog),
+              "linked": sum(r["status"] == "linked" for r in results),
+              "ambiguous": sum(r["status"] == "ambiguous" for r in results),
+              "not_found": sum(r["status"] == "not_found" for r in results),
+              "swapped_only_candidates": len(swapped_only),
+              "area_rows_with_coords": sum(a["x"] is not None and a["y"] is not None for a in areas),
+          }
+          print("W1_SUMMARY=" + json.dumps(summary, ensure_ascii=False, sort_keys=True))
+          for r in results:
+              print("W1_LINK=" + json.dumps(r, ensure_ascii=False, sort_keys=True))
+          for r in swapped_only:
+              print("W1_SWAPPED_ONLY=" + json.dumps(r, ensure_ascii=False, sort_keys=True))
+          print("W1_ALIASES=" + json.dumps(aliases, ensure_ascii=False, sort_keys=True))
+          db.close()
+          PY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
