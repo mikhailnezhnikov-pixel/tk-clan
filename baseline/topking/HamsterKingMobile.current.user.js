@@ -755,7 +755,7 @@
   const HK_STAGE2_STATE_REV = 'stage2c-state-20260919-r1';
   const HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1';
   const HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1';
-  const HK_MAP_SCANNER_REV = 'maps-building-scan-20260920-r2';
+  const HK_MAP_SCANNER_REV = 'maps-active-intersection-20260920-r3';
   const HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1';
   const HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1';
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
@@ -1315,7 +1315,29 @@
     const direct=directCrystalRoomCount(documentValue);
     if (direct != null) return direct;
     const rooms=buildingRooms(documentValue);
-    return rooms.length ? rooms.filter(room=>roomContainsCrystal(room,ids)).length : null;
+    if (!rooms.length) return null;
+    const directMarked=rooms.filter(room=>containsCrystalMarker(room)).length;
+    // Without /events we cannot safely translate bare event_id values.
+    // Preserve known direct markers, but never turn an unavailable catalog
+    // into a false zero.
+    if (!ids?.size) return directMarked > 0 ? directMarked : null;
+    return rooms.filter(room=>roomContainsCrystal(room,ids)).length;
+  }
+
+  async function ensureCrystalEventCatalog() {
+    let ids=crystalEventIds();
+    if (ids.size) return ids;
+    try {
+      eventCatalogDocument=normalizeEventCatalog(await apiJson('/events','GET'));
+      ids=crystalEventIds();
+    } catch (_) {}
+    return ids;
+  }
+
+  function activePlayerBuildingIds(documentValue = hkStateStore.snapshot || playerDocument || {}) {
+    return new Set((documentValue?.buildings || [])
+      .map(row=>String(row?.id || row?.building_id || ''))
+      .filter(Boolean));
   }
 
   function exactResourceBuildingData(documentValue, expectedKind = '', trustedCompleted = false) {
@@ -7901,9 +7923,16 @@
 
   async function mapBackfillActiveBuildingStudies(selectedAreaIds=null) {
     const state=hkStateStore.snapshot||playerDocument||{};
-    const active=(state?.buildings||[]).map(row=>String(row?.id||row?.building_id||'')).filter(Boolean);
+    const active=activePlayerBuildingIds(state);
     const selected=selectedAreaIds instanceof Set?selectedAreaIds:null;
+    const crystalIds=await ensureCrystalEventCatalog();
+    if(!crystalIds.size)log(either(
+      'Каталог /events недоступен: здания без прямого crystal-маркера останутся неизвестными, ложный 0 не записывается.',
+      '/events catalog is unavailable: buildings without a direct crystal marker stay unknown; false zero is not stored.'
+    ),'warn');
     const rows=[];
+    // Strict safe intersection:
+    // building must be active in /player/me AND mapped by /game_area/{area}/buildings.
     for(const buildingId of active){
       const areaId=String(mapBuildingAreas.get(buildingId)||'');
       if(!areaId||(selected&&!selected.has(areaId)))continue;
@@ -7925,7 +7954,7 @@
         if(roomCount==null){
           value=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}`,'POST');
           buildingStudyCache.set(buildingId,value);
-          roomCount=crystalRoomCount(value);
+          roomCount=crystalRoomCount(value,crystalIds);
         }else known+=1;
         if(roomCount!=null){
           const rooms=buildingRooms(value);
@@ -7943,7 +7972,9 @@
     const areaId = String(area?.gamearea_id || area?.area_id || '');
     const cityId = String(area?.city_id || '');
     const [full, definitions] = await Promise.all([apiJson(`/game_area/${areaId}`, 'GET'), apiJson(`/game_area/${areaId}/buildings`, 'GET')]);
-    const playerBuildings = new Map((playerDocument?.buildings || []).map(row => [String(row?.id || ''), row]));
+    const playerBuildings = new Map((playerDocument?.buildings || [])
+      .map(row => [String(row?.id || row?.building_id || ''), row])
+      .filter(([id]) => id));
     const invest = new Set(full?.info?.invest_building_list || []);
     const buildings = (Array.isArray(definitions) ? definitions : []).map(row => {
       const id = String(row?.building_id || ''); const state = playerBuildings.get(id); mapRememberBuildingArea(id, areaId);

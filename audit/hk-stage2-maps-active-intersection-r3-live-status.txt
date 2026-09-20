@@ -1,0 +1,7 @@
+MAPS_ACTIVE_INTERSECTION_R3_LIVE=PASS
+live_sha256=f8a34bff26fd449f315f07a2ef8e6a8a6e8169ea62f463e7efe527766d698101
+public_sha256=f8a34bff26fd449f315f07a2ef8e6a8a6e8169ea62f463e7efe527766d698101
+public_byte_equality=PASS
+syntax=PASS
+scanner=maps-active-intersection-20260920-r3
+coords=maps-coordinates-column-row-20260920-r1
