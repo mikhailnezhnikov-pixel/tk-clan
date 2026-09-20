@@ -1,0 +1,153 @@
+name: Deploy TopKing Map Coords Backend R2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/map-coords-backend-r2-deploy-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-map-coords
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact live inputs
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          node --check /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile /tmp/server.py
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "d4c84856ffcad0617ce783451c054205491f7d0d956bf7e7ec1ae5315480680a"
+          test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "939742111f77312bd97b4ba634c7474d792dc2b78510950458136d30746c80e9"
+
+      - name: Apply verified patches
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/patch_maps_coords_marker_r6.py
+          python3 -m py_compile deploy/topking/patch_server_map_coords_r2.py
+          python3 deploy/topking/patch_maps_coords_marker_r6.py
+          python3 deploy/topking/patch_server_map_coords_r2.py
+          node --check /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile /tmp/server.py
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6"
+          test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1"
+
+      - name: Verify completed-map coordinate overwrite
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util, os, sqlite3, tempfile
+          spec=importlib.util.spec_from_file_location("server_candidate","/tmp/server.py")
+          server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
+          fd,path=tempfile.mkstemp(prefix="hk-map-coords-",suffix=".db"); os.close(fd)
+          try:
+              server.DB_PATH=path
+              server.init_db()
+              now=server.utc_now()
+              with server.db_session() as db:
+                  db.execute("""INSERT INTO map_areas(area_id,city_id,city_name,x,y,invest_count,expected_buildings,last_player_id,last_seen)
+                                VALUES(?,?,?,?,?,?,?,?,?)""",
+                             ("test_area","test_city","Test City",32,23,0,1,"anon-test",now))
+                  db.execute("""INSERT INTO map_buildings(area_id,building_id,opened,room_count,has_events,is_invest,tier,faction,building_type,last_player_id,last_seen)
+                                VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                             ("test_area","test_building",1,2,1,0,None,"","","anon-test",now))
+                  db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                                VALUES(?,?,?,?)""",("test_area","test_area",now,now))
+              result=server.submit_map_area("test-player",{
+                  "area_id":"test_area","city_id":"test_city","city_name":"Test City",
+                  "coord_revision":"column-row-v1","x":23,"y":32,
+                  "expected_buildings":1,"buildings":[]
+              })
+              assert result["ignored_complete"] is True, result
+              with server.db_session() as db:
+                  row=db.execute("SELECT x,y FROM map_areas WHERE area_id='test_area'").fetchone()
+              assert (row["x"],row["y"])==(23,32),(row["x"],row["y"])
+              print("COMPLETE_MAP_COORD_UPDATE=PASS")
+          finally:
+              try: os.remove(path)
+              except OSError: pass
+          PY
+
+      - name: Backup and deploy both files
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.coords-r2.user.js
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.coords-r2.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            node --check /tmp/HamsterKingMobile.coords-r2.user.js
+            python3 -m py_compile /tmp/server.coords-r2.py
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.coords-r2.$stamp"
+            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.coords-r2.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.coords-r2.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            install -m 0644 /tmp/server.coords-r2.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+
+      - name: Verify live and public
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            test "$(sha256sum /opt/hamsterking-license/server.py | awk "{print \$1}")" = "1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1"
+            python3 -m py_compile /opt/hamsterking-license/server.py
+            systemctl is-active --quiet hamsterking-license.service
+          '
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?coords-backend-r2=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          test "$(sha256sum /tmp/public.js | awk '{print $1}')" = "1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6"
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2'" /tmp/public.js
+          {
+            echo "MAP_COORDS_BACKEND_R2_LIVE=PASS"
+            echo "client_sha256=1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6"
+            echo "server_sha256=1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1"
+            echo "public_byte_equality=PASS"
+            echo "completed_map_coordinate_update=PASS"
+            echo "coord_revision=column-row-v1"
+          } > audit/hk-stage2-map-coords-backend-r2-live-status.txt
+
+      - name: Sync verified baseline
+        run: |
+          set -euo pipefail
+          cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-stage2-map-coords-backend-r2-live-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "stage2: deploy canonical map coordinate backend r2"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/server.py /tmp/public.js
