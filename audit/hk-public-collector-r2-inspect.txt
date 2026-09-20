@@ -1,0 +1,67 @@
+=== STATUS FILE ===
+{"revision":"public-server-collector-20260920-r1","ok":false,"state":"error","at":1789916026,"mode":"war","error":"RuntimeError","duration_sec":48.65}
+=== RATINGS SERVICE ===
+○ hamsterking-public-collector.service - TopKing isolated public wars/ratings collector
+     Loaded: loaded (/etc/systemd/system/hamsterking-public-collector.service; static)
+     Active: inactive (dead) since Sun 2026-09-20 14:52:57 UTC; 2min 0s ago
+TriggeredBy: ● hamsterking-public-collector.timer
+    Process: 12456 ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py ratings (code=exited, status=0/SUCCESS)
+   Main PID: 12456 (code=exited, status=0/SUCCESS)
+        CPU: 880ms
+
+Sep 20 14:52:02 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:52:12 Mikhail.nezhnikov.com python3[12456]: [public-collector] alliances discovered: 117
+Sep 20 14:52:57 Mikhail.nezhnikov.com python3[12456]: [public-collector] alliance metric coverage: total=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500
+Sep 20 14:52:57 Mikhail.nezhnikov.com python3[12456]: [public-collector] success: mode=ratings war=unchanged ratings=influence,power,clans,alliance_defense,alliance_influence,alliance_power
+Sep 20 14:52:57 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:52:57 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+=== WAR SERVICE ===
+× hamsterking-public-war.service - TopKing lightweight current war collector
+     Loaded: loaded (/etc/systemd/system/hamsterking-public-war.service; static)
+     Active: failed (Result: exit-code) since Sun 2026-09-20 14:53:46 UTC; 1min 11s ago
+TriggeredBy: ● hamsterking-public-war.timer
+    Process: 12704 ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py war (code=exited, status=1/FAILURE)
+   Main PID: 12704 (code=exited, status=1/FAILURE)
+        CPU: 392ms
+
+Sep 20 14:52:57 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
+Sep 20 14:53:46 Mikhail.nezhnikov.com python3[12704]: [public-collector] war read failed: JSONDecodeError
+Sep 20 14:53:46 Mikhail.nezhnikov.com python3[12704]: [public-collector] failed: mode=war RuntimeError: no public data collected
+Sep 20 14:53:46 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Main process exited, code=exited, status=1/FAILURE
+Sep 20 14:53:46 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Failed with result 'exit-code'.
+Sep 20 14:53:46 Mikhail.nezhnikov.com systemd[1]: Failed to start hamsterking-public-war.service - TopKing lightweight current war collector.
+=== RATINGS JOURNAL ===
+Sep 20 14:24:45 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:24:45 Mikhail.nezhnikov.com python3[60971]: [public-collector] disabled: HK_PUBLIC_COLLECTOR_GAME_TOKEN is not configured
+Sep 20 14:24:45 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:24:45 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+Sep 20 14:25:58 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:25:58 Mikhail.nezhnikov.com python3[62009]: [public-collector] disabled: HK_PUBLIC_COLLECTOR_GAME_TOKEN is not configured
+Sep 20 14:25:58 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:25:58 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+Sep 20 14:27:35 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:27:35 Mikhail.nezhnikov.com python3[62884]: [public-collector] disabled: HK_PUBLIC_COLLECTOR_GAME_TOKEN is not configured
+Sep 20 14:27:35 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:27:35 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+Sep 20 14:40:34 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:41:23 Mikhail.nezhnikov.com python3[5749]: [public-collector] war read failed: JSONDecodeError
+Sep 20 14:41:29 Mikhail.nezhnikov.com python3[5749]: [public-collector] success: war=unchanged ratings=influence,power,clans,alliance_defense,alliance_influence,alliance_power
+Sep 20 14:41:29 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:41:29 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+Sep 20 14:52:02 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-collector.service - TopKing isolated public wars/ratings collector...
+Sep 20 14:52:12 Mikhail.nezhnikov.com python3[12456]: [public-collector] alliances discovered: 117
+Sep 20 14:52:57 Mikhail.nezhnikov.com python3[12456]: [public-collector] alliance metric coverage: total=117 influence=117 power=117 clan_influence_rows=500 clan_power_rows=500
+Sep 20 14:52:57 Mikhail.nezhnikov.com python3[12456]: [public-collector] success: mode=ratings war=unchanged ratings=influence,power,clans,alliance_defense,alliance_influence,alliance_power
+Sep 20 14:52:57 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-collector.service: Deactivated successfully.
+Sep 20 14:52:57 Mikhail.nezhnikov.com systemd[1]: Finished hamsterking-public-collector.service - TopKing isolated public wars/ratings collector.
+=== WAR JOURNAL ===
+Sep 20 14:52:57 Mikhail.nezhnikov.com systemd[1]: Starting hamsterking-public-war.service - TopKing lightweight current war collector...
+Sep 20 14:53:46 Mikhail.nezhnikov.com python3[12704]: [public-collector] war read failed: JSONDecodeError
+Sep 20 14:53:46 Mikhail.nezhnikov.com python3[12704]: [public-collector] failed: mode=war RuntimeError: no public data collected
+Sep 20 14:53:46 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Main process exited, code=exited, status=1/FAILURE
+Sep 20 14:53:46 Mikhail.nezhnikov.com systemd[1]: hamsterking-public-war.service: Failed with result 'exit-code'.
+Sep 20 14:53:46 Mikhail.nezhnikov.com systemd[1]: Failed to start hamsterking-public-war.service - TopKing lightweight current war collector.
+=== TIMERS ===
+Sun 2026-09-20 15:00:13 UTC   5min -                                      - hamsterking-public-war.timer       hamsterking-public-war.service
+Sun 2026-09-20 15:18:06 UTC  23min -                                      - hamsterking-public-collector.timer hamsterking-public-collector.service
+=== DB COUNTS ===
