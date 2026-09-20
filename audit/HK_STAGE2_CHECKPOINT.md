@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Buildings / Здания
 - current module file: audit/hk-stage2-06-buildings.md
-- current module status: CANONICAL_TRANSFER_GAP_CONFIRMED
+- current module status: CANON_CORE_R1_LIVE_CANDIDATE
 - next module after LIVE PASS: Explore / Исследование
 - Today / Сегодня: LIVE PASS
 
@@ -610,3 +610,16 @@ Tickets:
 
 Current Stage 2.06 status: **CANONICAL_TRANSFER_GAP_CONFIRMED**.
 Transfer Buildings first; Explore follows only after Buildings live candidate.
+
+
+## Buildings canonical core r1
+
+- donor Buildings automation transferred without Kokkaras runtime dependency;
+- marker: `buildings-canon-core-20260920-r1`;
+- exact input Bosses r2 SHA verified before patch;
+- syntax/deploy/service/public byte equality: PASS;
+- live/public SHA256: `0931ee3eb65a16f9dd768fe51b9a84b897620e011c51ee9e0226d92f37b9e686`;
+- baseline sync: PASS;
+- current module status: **CANON_CORE_R1_LIVE_CANDIDATE**.
+
+Pending: one live open/favorite/state-rerun confirmation. Explore transfer gap remains queued for Stage 2.07 and is not part of this Buildings patch.
