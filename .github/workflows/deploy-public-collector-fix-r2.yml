@@ -193,7 +193,8 @@ jobs:
           {
             echo "PUBLIC_COLLECTOR_R2_LIVE=PASS"
             echo "player_client_public_collection=DISABLED"
-            echo "ratings_collector_interval=24h"\n            echo "ratings_collector_schedule=16:00_Europe/Moscow"
+            echo "ratings_collector_interval=24h"
+            echo "ratings_collector_schedule=16:00_Europe/Moscow"
             echo "war_collector_interval=10m"
             echo "war_api_requests_per_run=1"
             echo "ratings_refresh_forced_during_deploy=NO"
