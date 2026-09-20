@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Bosses / Боссы
 - current module file: audit/hk-stage2-03-bosses.md
-- current module status: SOURCE_PREFLIGHT_PENDING
+- current module status: CANONICAL_TRANSFER_GAP_CONFIRMED
 - next module after LIVE PASS: Maps / Карты
 - Today / Сегодня: LIVE PASS
 
@@ -494,3 +494,13 @@ Stage 2.02 Pits / Ямы: **LIVE PASS**.
 No post-r20 code patch was required; final live/public SHA remains `c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb` and baseline sync `35498145691` remains current.
 
 Stage 2 continues with 2.03 Bosses / Боссы.
+
+
+## Bosses canonical transfer gap
+
+- pinned donor source preflight: PASS;
+- current baseline marker: `bosses-readonly-20260920-r1`;
+- donor full Area/Regional Bosses mechanics are absent from current read-only module;
+- bug: `audit/hk-stage2-bug-bosses-readonly-transfer-gap.md`;
+- Stage 2.03 status: **CANONICAL_TRANSFER_GAP_CONFIRMED**;
+- next action: transfer Bosses canonical core only, then live-test it before advancing to Maps.
