@@ -2588,6 +2588,74 @@
     box.classList.toggle('hk-pits-busy',!!busy);
   }
 
+  const pitCanonDecisionBudget={remember:false,remaining:0};
+  function pitCanonDecisionBudgetReset(){
+    pitCanonDecisionBudget.remember=false;
+    pitCanonDecisionBudget.remaining=0;
+  }
+  function pitCanonDecisionBudgetCanSpend(cost,hasPaws){
+    if(!pitCanonDecisionBudget.remember||!hasPaws)return false;
+    if(!Number.isFinite(pitCanonDecisionBudget.remaining))return true;
+    return pitCanonDecisionBudget.remaining>=Math.max(0,pitCanonWhole(cost));
+  }
+  function pitCanonDecisionBudgetApply(decision){
+    if(decision?.action!=='spend')return;
+    if(decision.remember){
+      pitCanonDecisionBudget.remember=true;
+      pitCanonDecisionBudget.remaining=decision.extraLimit>0?pitCanonWhole(decision.extraLimit):Number.POSITIVE_INFINITY;
+    }else pitCanonDecisionBudgetReset();
+  }
+  function pitCanonDecisionBudgetConsume(cost){
+    if(!pitCanonDecisionBudget.remember||!Number.isFinite(pitCanonDecisionBudget.remaining))return;
+    pitCanonDecisionBudget.remaining=Math.max(0,pitCanonDecisionBudget.remaining-Math.max(0,pitCanonWhole(cost)));
+    if(pitCanonDecisionBudget.remaining<=0)pitCanonDecisionBudgetReset();
+  }
+
+  function pitCanonAskRestorationDecision({def,level,target,cost,paws}){
+    return new Promise(resolve=>{
+      root?.querySelector('#hk-pit-restoration-decision')?.remove();
+      const overlay=document.createElement('div');
+      overlay.id='hk-pit-restoration-decision';
+      overlay.className='hk-pit-decision-overlay';
+      const targetText=target>0?`≥ ${pitCanonWhole(target)}`:either('Как можно дальше','As far as possible');
+      overlay.innerHTML=`<div class="hk-pit-decision-card">
+        <div class="hk-pit-decision-head"><div><small>${either('Ямы · требуется решение','Pits · decision required')}</small><h3>${escapeHtml(pitCanonDefinitionName(def))}</h3></div><span>🐾</span></div>
+        <p class="hk-pit-decision-intro">${either('Выбранная цель ещё не достигнута, а для продолжения требуется восстановление.','The selected target has not been reached and restoration is required to continue.')}</p>
+        <div class="hk-pit-decision-grid">
+          <div><span>${either('Текущий уровень','Current level')}</span><b>${pitCanonWhole(level)}</b></div>
+          <div><span>${either('Выбранная цель','Selected target')}</span><b>${escapeHtml(targetText)}</b></div>
+          <div><span>${either('Нужно сейчас','Required now')}</span><b>🐾 ${pitCanonWhole(cost)}</b></div>
+          <div><span>${either('Доступно сейчас','Available now')}</span><b>🐾 ${pitCanonWhole(paws)}</b></div>
+          <div><span>${either('Останется после траты','Remaining after spend')}</span><b>🐾 ${Math.max(0,pitCanonWhole(paws)-pitCanonWhole(cost))}</b></div>
+        </div>
+        <div class="hk-pit-decision-budget">
+          <label><span>${either('Максимум дополнительных Лап с этого момента','Maximum additional Paws from now')}</span><input id="hk-pit-decision-limit" type="number" min="0" max="${pitCanonWhole(paws)}" value="0"></label>
+          <label class="hk-pit-decision-remember"><input id="hk-pit-decision-remember" type="checkbox"><span>${either('Запомнить мой выбор для этого запуска','Remember my choice for this run')}</span></label>
+          <small>${either('Если лимит больше 0, выбор запоминается автоматически до исчерпания этого дополнительного лимита.','If the limit is above 0, the choice is remembered automatically until that additional budget is exhausted.')}</small>
+        </div>
+        <div class="hk-pit-decision-actions">
+          <button data-pit-decision="spend" class="hk-primary" ${pitCanonWhole(paws)<pitCanonWhole(cost)?'disabled':''}>${either('Потратить Лапы и продолжить','Spend Paws and continue')} (🐾 ${pitCanonWhole(cost)})</button>
+          <button data-pit-decision="collect" class="hk-secondary">${either('Завершить текущий раунд и продолжить','Finish current round and continue')}</button>
+          <button data-pit-decision="manual">${either('Оставить Яму для ручного сбора и перейти дальше','Leave Pit for manual collection and continue')}</button>
+          <button data-pit-decision="stop" class="hk-danger">${either('Полностью остановить','Stop completely')}</button>
+        </div>
+      </div>`;
+      root?.appendChild(overlay);
+      let finished=false;
+      let timer=null;
+      const finish=action=>{
+        if(finished)return;finished=true;
+        if(timer)clearInterval(timer);
+        const limit=Math.max(0,pitCanonWhole(overlay.querySelector('#hk-pit-decision-limit')?.value));
+        const remember=action==='spend'&&(overlay.querySelector('#hk-pit-decision-remember')?.checked===true||limit>0);
+        overlay.remove();
+        resolve({action,remember,extraLimit:limit});
+      };
+      overlay.querySelectorAll('[data-pit-decision]').forEach(button=>button.onclick=()=>finish(String(button.dataset.pitDecision||'stop')));
+      timer=setInterval(()=>{if(hkRunner.signal?.aborted)finish('stop')},150);
+    });
+  }
+
   function pitCanonFastCycleDelay(def,sniper=false) {
     if(sniper)return def?.id==='gang'?120:80;
     return def?.id==='gang'?180:120;
@@ -2857,17 +2925,43 @@
         playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-start`);state=pitRaceSnapshot(def.id,playerDocument);
         if(!pitCanonActiveState(def.id,playerDocument))throw new Error(`${pitCanonDefinitionName(def)}: ${either('Яма не запустилась','Pit did not start')}`);
       }
-      let restorationSpent=0,battles=0;
+      let restorationSpent=0,battles=0,forceFinish=false,leaveManual=false;
       while(state&&state.is_finish===false){
         await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');if(++battles>1000)throw new Error(`${pitCanonDefinitionName(def)}: ${either('защитный лимит боёв','battle safety limit')}`);
         const level=pitCanonWhole(state.level),targetReached=config.target>0&&level>=config.target;
         if(targetReached){pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)}: ${either('цель достигнута','target reached')} ${level}`,'ok');break;}
         if(pitCanonWhole(state.health)<=0){
           const cost=pitCanonRespawnCost(state,chunk),paws=pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item');
-          if(cost<=0||restorationSpent+cost>config.maxRestoration||paws<cost){pitCanonRunnerLog(`${pitCanonDefinitionName(def)}: ${either('остановка по лимиту Лап восстановления','Restoration Paws limit reached')} (${restorationSpent}/${config.maxRestoration})`,'warn');break;}
+          const configuredAllowed=cost>0&&restorationSpent+cost<=config.maxRestoration&&paws>=cost;
+          const rememberedAllowed=!configuredAllowed&&pitCanonDecisionBudgetCanSpend(cost,paws>=cost);
+          if(!configuredAllowed&&!rememberedAllowed){
+            hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('нужно решение по восстановлению','restoration decision required')} 🐾 ${cost}`,progress.done,progress.total);
+            pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('нужно решение по Лапам восстановления','Restoration Paws decision required')} · 🐾 ${cost}`,'warn');
+            const decision=await pitCanonAskRestorationDecision({def,level,target:config.target,cost,paws});
+            if(decision.action==='stop'){
+              hkRunner.stop('pit-restoration-decision');
+              throw new DOMException('Aborted','AbortError');
+            }
+            if(decision.action==='manual'){
+              leaveManual=true;
+              pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('оставлена для ручного сбора','left for manual collection')}`,'warn');
+              break;
+            }
+            if(decision.action==='collect'){
+              forceFinish=true;
+              pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('завершаю текущий раунд и продолжаю','finishing current round and continuing')}`,'info');
+              break;
+            }
+            if(decision.action!=='spend'||cost<=0||paws<cost){
+              leaveManual=true;
+              break;
+            }
+            pitCanonDecisionBudgetApply(decision);
+          }
           hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('восстановление','restoration')} 🐾 ${cost}`,progress.done,progress.total);
-          pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('восстановление','restoration')}: 🐾 ${cost} · ${either('потрачено скриптом','spent by script')}: ${restorationSpent+cost}/${config.maxRestoration}`,'warn');
+          pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('восстановление','restoration')}: 🐾 ${cost} · ${either('потрачено скриптом','spent by script')}: ${restorationSpent+cost}`,'warn');
           const respawnResponse=await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;
+          if(rememberedAllowed||pitCanonDecisionBudget.remember)pitCanonDecisionBudgetConsume(cost);
           {
             const mutation=pitCanonStateAfterMutation(def,respawnResponse,`pits:${def.id}:after-respawn`);
             state=mutation.state;
@@ -2892,7 +2986,8 @@
         await sleep(pitCanonFastCycleDelay(def,config.sniper));
       }
       state=pitRaceSnapshot(def.id,playerDocument);
-      if(state&&state.is_finish===false&&config.autofinish){
+      if(leaveManual)return;
+      if(state&&state.is_finish===false&&(config.autofinish||forceFinish)){
         hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('завершение','finish')}`,progress.done,progress.total);
         pitCanonRunnerLog(`${pitCanonDefinitionName(def)} — ${either('завершение раунда','finishing round')} · ${either('уровень','level')} ${pitCanonWhole(state.level)}`,'info');
         try{await apiJson(api.finish,'POST');}catch(error){if(!pitAlreadyFinishedError(error))throw error;}
@@ -2910,6 +3005,7 @@
     if(!configs.length){alert(either('Выберите хотя бы одну Яму','Select at least one Pit'));return;}
     const total=configs.reduce((sum,row)=>sum+row.steps.length,0),progress={done:0,total};
     hkRunner.start({title:either('Ямы','Pits'),step:either('Подготовка','Preparing'),total,pausable:true,stoppable:true});
+    pitCanonDecisionBudgetReset();
     pitCanonSetBusy(true);
     pitCanonRunnerLog(either('Ямы — запуск выбранного плана','Pits — starting selected plan'),'info');
     recordDiagnostic('pits-run-config-snapshot',{pits:configs.map(config=>({id:config.definition?.id,planId:config.planId,steps:config.steps?.length||0,sniper:!!config.sniper,target:config.target}))});
@@ -5816,6 +5912,7 @@
   const HK_PITS_PROGRESS_REV = 'pits-battle-progress-20260920-r8';
   const HK_PITS_RUNNER_HISTORY_REV = 'pits-runner-history-20260920-r9';
   const HK_PITS_SPEED_REV = 'pits-fast-cycle-20260920-r10';
+  const HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
@@ -9237,7 +9334,7 @@
       #hk-watermark{position:fixed;inset:-40px;z-index:20;pointer-events:none;display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));grid-auto-rows:minmax(120px,1fr);align-items:center;justify-items:center;overflow:hidden;transition:transform .5s ease}#hk-watermark span{display:block;max-width:310px;color:#fff;font:700 11px ui-monospace,monospace;letter-spacing:.4px;opacity:.035;transform:rotate(-24deg);white-space:nowrap;text-shadow:0 1px 2px #000}
       .hk-license{padding:11px;border:1px solid #3b4a61;border-radius:12px;background:#101a28;margin:14px 0;color:#c8d4e5}.hk-license.ok{border-color:#287b60}.hk-license.bad{border-color:#803b49}.hk-update{display:none;margin:0 0 14px;padding:12px;border:1px solid #ffad1f;border-radius:13px;background:#2a2418;color:#fff}.hk-update.required{border-color:#ff6b75;background:#351b22}.hk-update b,.hk-update small{display:block}.hk-update small{margin-top:5px;color:#cbd5e5}.hk-update .hk-primary{margin-top:10px}.hk-locked .hk-tabs,.hk-locked .hk-subnav,.hk-locked .hk-runner,.hk-locked .hk-page{display:none!important}
       .hk-health{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 0 8px}.hk-health-chip{display:grid;grid-template-columns:9px minmax(0,1fr);align-items:center;column-gap:7px;padding:9px 8px;border:1px solid #34445c;border-radius:11px;background:#111a27;color:#d3dbe8;min-width:0}.hk-health-chip:before{content:'';width:8px;height:8px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}.hk-health-chip.ok{border-color:#24694f;background:#10231d}.hk-health-chip.ok:before{background:#52d296;box-shadow:0 0 0 3px #52d29622}.hk-health-chip.bad{border-color:#7a3443;background:#29151b}.hk-health-chip.bad:before{background:#ff6b7a;box-shadow:0 0 0 3px #ff6b7a22}.hk-health-chip b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-chip small{grid-column:2;color:#8392a7;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-actions{display:flex;gap:7px;margin:0 0 14px}.hk-health-actions button{flex:1;min-height:36px;font-size:12px}@media(max-width:430px){.hk-health{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner.pit-run{border-color:#ffad1f;background:linear-gradient(145deg,#302411,#17170f);box-shadow:0 0 0 2px #ffad1f26,0 8px 24px #0006}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-history{display:grid;gap:4px;max-height:290px;overflow:auto;margin:8px 0;padding:8px;border:1px solid #5a4724;border-radius:10px;background:#080b0f99}.hk-runner-history-row{display:grid;grid-template-columns:58px minmax(0,1fr);gap:7px;align-items:start;padding:4px 6px;border-radius:7px;background:#ffffff05}.hk-runner-history-row span{color:#7f8b9d;font:9px ui-monospace,monospace}.hk-runner-history-row b{font-size:10px;line-height:1.25;color:#dce5f1}.hk-runner-history-row.ok b{color:#7fe0ad}.hk-runner-history-row.warn b{color:#ffd166}.hk-runner-history-row.bad b{color:#ff8995}.hk-runner-history-row.info b{color:#a9c9ff}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}      .hk-pits-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 10px}.hk-pits-summary>div{padding:9px;border:1px solid #304057;border-radius:12px;background:#0e1723;min-width:0}.hk-pits-summary small{display:block;color:#8797ad;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-pits-summary b{display:block;margin-top:4px;color:#ffe083;font-size:13px}.hk-pits-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-bottom:10px}.hk-pit-canon-global{display:flex;align-items:center;gap:7px;padding:9px;border:1px solid #304057;border-radius:12px;background:#101927;color:#cbd6e5;font-size:10px;font-weight:800}.hk-pit-canon-global input,.hk-pit-canon-head input,.hk-pit-canon-check input{accent-color:#ffad1f}.hk-pits-cards{display:grid;gap:10px}.hk-pit-canon-card{padding:12px;border:1px solid #304057;border-radius:15px;background:linear-gradient(145deg,#121d2b,#0d1622)}.hk-pit-canon-card.selected{border-color:#a96e20;box-shadow:0 0 0 1px #ffad1f26 inset}.hk-pit-canon-head{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:9px;align-items:center}.hk-pit-canon-head img{width:42px;height:42px;object-fit:contain;border-radius:11px;background:#ffffff0b}.hk-pit-canon-head b{display:block;font-size:13px}.hk-pit-canon-head small{display:block;margin-top:3px;color:#8393aa;font-size:9px}.hk-pit-canon-head>label{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:900;color:#ffd77b}.hk-pit-canon-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin:9px 0;color:#96a6ba;font-size:10px}.hk-pit-canon-meta b{color:#fff}.hk-pit-canon-grid{display:grid;gap:9px;max-width:820px}.hk-pit-canon-grid>label{display:grid;grid-template-columns:minmax(190px,260px) minmax(220px,360px);gap:12px;align-items:center;justify-content:start}.hk-pit-canon-grid>label>span{font-size:10px;color:#b9c6d7;line-height:1.25}.hk-pit-canon-grid select,.hk-pit-canon-grid input[type=number]{width:100%;min-width:0;background:#0b111b;color:#fff;border:1px solid #3b4a61;border-radius:10px;padding:8px;font-size:10px}.hk-pit-canon-check input{justify-self:start;width:18px;height:18px}.hk-pits-cards+.hk-primary{margin-top:12px}.hk-pits-busy{opacity:.88}.hk-pits-busy .hk-pit-canon-card{filter:saturate(.85)}@media(max-width:760px){.hk-pit-canon-grid{max-width:none}.hk-pit-canon-grid>label{grid-template-columns:minmax(150px,220px) minmax(0,1fr)}}@media(max-width:430px){.hk-pits-summary{grid-template-columns:1fr 1fr}.hk-pits-summary>div:last-child{grid-column:1/-1}.hk-pits-toolbar{grid-template-columns:1fr}.hk-pit-canon-grid>label{grid-template-columns:1fr}.hk-pit-canon-head{grid-template-columns:38px minmax(0,1fr)}.hk-pit-canon-head img{width:38px;height:38px}.hk-pit-canon-head>label{grid-column:1/-1}}
+      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner.pit-run{border-color:#ffad1f;background:linear-gradient(145deg,#302411,#17170f);box-shadow:0 0 0 2px #ffad1f26,0 8px 24px #0006}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-history{display:grid;gap:4px;max-height:290px;overflow:auto;margin:8px 0;padding:8px;border:1px solid #5a4724;border-radius:10px;background:#080b0f99}.hk-runner-history-row{display:grid;grid-template-columns:58px minmax(0,1fr);gap:7px;align-items:start;padding:4px 6px;border-radius:7px;background:#ffffff05}.hk-runner-history-row span{color:#7f8b9d;font:9px ui-monospace,monospace}.hk-runner-history-row b{font-size:10px;line-height:1.25;color:#dce5f1}.hk-runner-history-row.ok b{color:#7fe0ad}.hk-runner-history-row.warn b{color:#ffd166}.hk-runner-history-row.bad b{color:#ff8995}.hk-runner-history-row.info b{color:#a9c9ff}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}      .hk-pits-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 10px}.hk-pits-summary>div{padding:9px;border:1px solid #304057;border-radius:12px;background:#0e1723;min-width:0}.hk-pits-summary small{display:block;color:#8797ad;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-pits-summary b{display:block;margin-top:4px;color:#ffe083;font-size:13px}.hk-pits-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-bottom:10px}.hk-pit-canon-global{display:flex;align-items:center;gap:7px;padding:9px;border:1px solid #304057;border-radius:12px;background:#101927;color:#cbd6e5;font-size:10px;font-weight:800}.hk-pit-canon-global input,.hk-pit-canon-head input,.hk-pit-canon-check input{accent-color:#ffad1f}.hk-pits-cards{display:grid;gap:10px}.hk-pit-canon-card{padding:12px;border:1px solid #304057;border-radius:15px;background:linear-gradient(145deg,#121d2b,#0d1622)}.hk-pit-canon-card.selected{border-color:#a96e20;box-shadow:0 0 0 1px #ffad1f26 inset}.hk-pit-canon-head{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:9px;align-items:center}.hk-pit-canon-head img{width:42px;height:42px;object-fit:contain;border-radius:11px;background:#ffffff0b}.hk-pit-canon-head b{display:block;font-size:13px}.hk-pit-canon-head small{display:block;margin-top:3px;color:#8393aa;font-size:9px}.hk-pit-canon-head>label{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:900;color:#ffd77b}.hk-pit-canon-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin:9px 0;color:#96a6ba;font-size:10px}.hk-pit-canon-meta b{color:#fff}.hk-pit-canon-grid{display:grid;gap:9px;max-width:820px}.hk-pit-canon-grid>label{display:grid;grid-template-columns:minmax(190px,260px) minmax(220px,360px);gap:12px;align-items:center;justify-content:start}.hk-pit-canon-grid>label>span{font-size:10px;color:#b9c6d7;line-height:1.25}.hk-pit-canon-grid select,.hk-pit-canon-grid input[type=number]{width:100%;min-width:0;background:#0b111b;color:#fff;border:1px solid #3b4a61;border-radius:10px;padding:8px;font-size:10px}.hk-pit-canon-check input{justify-self:start;width:18px;height:18px}.hk-pits-cards+.hk-primary{margin-top:12px}.hk-pits-busy{opacity:.88}.hk-pits-busy .hk-pit-canon-card{filter:saturate(.85)}.hk-pit-decision-overlay{position:fixed;inset:0;z-index:250;display:grid;place-items:center;padding:18px;background:#05080dcc;backdrop-filter:blur(8px)}.hk-pit-decision-card{width:min(560px,100%);max-height:calc(100vh - 36px);overflow:auto;border:1px solid #ffad1f;border-radius:16px;background:linear-gradient(145deg,#1d1b16,#101722);box-shadow:0 20px 60px #000b,0 0 0 2px #ffad1f22;padding:14px}.hk-pit-decision-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.hk-pit-decision-head small{color:#ffcf73;font-weight:800}.hk-pit-decision-head h3{margin:3px 0 0;font-size:18px}.hk-pit-decision-head>span{font-size:30px}.hk-pit-decision-intro{margin:10px 0;color:#cbd5e1;font-size:12px}.hk-pit-decision-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.hk-pit-decision-grid>div{padding:9px;border:1px solid #34445c;border-radius:10px;background:#0b111b}.hk-pit-decision-grid span{display:block;color:#8fa1b8;font-size:10px}.hk-pit-decision-grid b{display:block;margin-top:3px;font-size:13px}.hk-pit-decision-budget{display:grid;gap:7px;margin:10px 0;padding:10px;border:1px solid #3a4658;border-radius:11px;background:#0a1018}.hk-pit-decision-budget label:not(.hk-pit-decision-remember){display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:8px;align-items:center}.hk-pit-decision-budget input[type=number]{width:100%;box-sizing:border-box}.hk-pit-decision-remember{display:flex;gap:7px;align-items:center}.hk-pit-decision-budget small{color:#8291a5;font-size:9px}.hk-pit-decision-actions{display:grid;gap:7px}.hk-pit-decision-actions button{min-height:42px}.hk-pit-decision-actions button:disabled{opacity:.45}@media(max-width:520px){.hk-pit-decision-grid{grid-template-columns:1fr}.hk-pit-decision-budget label:not(.hk-pit-decision-remember){grid-template-columns:1fr}}@media(max-width:760px){.hk-pit-canon-grid{max-width:none}.hk-pit-canon-grid>label{grid-template-columns:minmax(150px,220px) minmax(0,1fr)}}@media(max-width:430px){.hk-pits-summary{grid-template-columns:1fr 1fr}.hk-pits-summary>div:last-child{grid-column:1/-1}.hk-pits-toolbar{grid-template-columns:1fr}.hk-pit-canon-grid>label{grid-template-columns:1fr}.hk-pit-canon-head{grid-template-columns:38px minmax(0,1fr)}.hk-pit-canon-head img{width:38px;height:38px}.hk-pit-canon-head>label{grid-column:1/-1}}
 .hk-growth-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.hk-growth-stats>div{padding:11px;border:1px solid #304057;border-radius:12px;background:#0e1723}.hk-growth-stats small{display:block;color:#8797ad;font-size:10px}.hk-growth-stats b{display:block;margin-top:4px;color:#ffe083;font-size:15px}.hk-growth-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-growth-actions button{margin-top:0}.hk-growth-options{display:grid;gap:9px;margin:10px 0}.hk-growth-option{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-option span{display:grid;gap:3px}.hk-growth-option small{color:#8998ad;font-size:10px}.hk-growth-option select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:9px}.hk-growth-check{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-check input{width:20px;height:20px;accent-color:#ffad1f}.hk-growth-live{display:grid;gap:3px;padding:9px 10px;border:1px solid #245d48;border-radius:11px;background:#0d211b}.hk-growth-live span{font-size:11px;font-weight:900;color:#6ee7a8}.hk-growth-live small{font-size:9px;color:#8fa89f}.hk-growth-plan{display:grid;gap:6px;margin:4px 0 10px;padding:11px;border:1px solid #3a4659;border-radius:12px;background:#0e1723}.hk-growth-plan>b{color:#ffe083}.hk-growth-plan>span{font-size:11px;color:#d4deea}.hk-growth-plan>small{font-size:9px;color:#8290a4;line-height:1.4}.hk-growth-priority-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-growth-priority-head h3{margin:0}.hk-growth-priority-list{display:grid;gap:7px;margin-top:8px}.hk-growth-priority{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px;border:1px solid #2d3a4e;border-radius:10px;background:#101927}.hk-growth-priority>b{color:#ffe083}.hk-growth-priority>span{font-size:9px;color:#8797ad}.hk-growth-priority>div{display:flex;gap:4px}.hk-growth-priority button{min-width:30px;margin:0;padding:6px 8px}.hk-growth-stats>div:nth-child(n+5){background:#121a28}@media(max-width:430px){.hk-tab{min-height:58px;padding:8px}.hk-tab-icon{width:32px;height:32px;font-size:19px}}
       .hk-business-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.hk-business-tab{border:1px solid #34445b;border-radius:11px;padding:11px;background:#172234;color:#b8c4d6;font-weight:700}.hk-business-tab.active{border-color:#ffad1f;background:#3a2a0f;color:#fff}.hk-business-pane{display:none}.hk-business-pane.active{display:block}
       .hk-page{display:none}.hk-page.active{display:block}.hk-cardbox{background:#151d29;border:1px solid #2a374a;border-radius:16px;padding:14px;margin-bottom:12px}.hk-grid{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center}
