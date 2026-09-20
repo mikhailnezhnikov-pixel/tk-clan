@@ -1033,6 +1033,37 @@ PASS gate:
 - unresolved/ambiguous maps remain untouched and are reported;
 - migration is rerunnable/idempotent.
 
+#### W6 result — PASS (2026-09-21)
+
+- audit: `audit/HK_STAGE2_W6_MAPS_SHARED_KB_MIGRATION.md`;
+- final dry-run: `audit/hk-stage2-w6-final-dryrun.json`;
+- final live status: `audit/hk-stage2-maps-shared-kb-w6-live-status.txt`;
+- website maps reviewed: **235**;
+- safe canonical matches migrated: **25**;
+- unresolved and untouched: **210**;
+- ambiguous maps: **0**;
+- duplicate canonical target groups: **0**;
+- safe point → canonical building matches: **2003**;
+- unmatched points left untouched: **136**;
+- ambiguous points left untouched: **4**;
+- new canonical building rows created by W6: **0**;
+- dry-run room conflicts: **266**, all against `game_live`; all preserved;
+- final area links: **25**;
+- final point links: **2007**;
+- migration rerun/idempotency: **PASS**;
+- final control run: `35519077891`, job `106099902200`: PASS;
+- current server SHA: `8fe91e74f49ecec9ea662e5ec85c32f07854a6dd5ed03864f70a3261a43dc245`;
+- current userscript SHA: `bddc55fc46bd4fe8da70c37799a35b74f3924015b071a3e692c532f0f7e6d766`;
+- scanner remains `maps-parallel-read-20260920-r6-safe5`, concurrency **5**;
+- coordinate marker remains `maps-coordinates-column-row-20260920-r2`;
+- HK Maps point metadata was confirmed as bitmask:
+  - `crystals = meta & 0x07`;
+  - `investment = bool(meta & 0x08)`;
+- W6 corrected the W4 overlay bitmask edge case; hotfix run `35518945365`: PASS;
+- `hk_dubai5335` was deliberately moved to unresolved because current canonical coordinates do not satisfy the proven historical Y:X mapping; no force-link was made;
+- **W7 NOT STARTED**; stop here until explicit user instruction.
+
+
 ### Stage W7 — New website uploads write directly to shared knowledge
 
 Change the website import path so every new authorized map upload:
