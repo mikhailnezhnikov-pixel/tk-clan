@@ -655,3 +655,62 @@ Evidence:
 E2 remains pending user visual/read-only confirmation.
 Do not start E3 automatically.
 
+## E2 r4 — functional native controls + layout fix
+
+Status: **LIVE CANDIDATE / USER UI FUNCTION CHECK PENDING**
+
+Marker:
+`HK_EXPLORE_CANON_REV = 'explore-readonly-plan-20260920-r4-ui'`
+
+Live/baseline sync commit:
+`c2282e7ce8a9b13b11e3c0589d47f14e3184aa9d`
+
+### Root cause fixed
+
+The r3 UI rebound every `select` and `input` to a handler that saved settings and immediately called `renderExplore()`.
+That destroyed and recreated the native control on every change. Depending on browser/input behavior this could appear as a selector or checkbox refusing to switch or reverting immediately.
+
+r4 removes full Explore rerender from ordinary filter changes.
+
+### r4 behavior
+
+- district/type/priority/delay/max-building controls are plain native inputs;
+- ordinary changes save in-place without recreating the DOM;
+- target-tier and target-tier-explore controls update only their dependent disabled states;
+- start-tier checkboxes are enabled/disabled in-place according to donor target rules;
+- at least one allowed starting tier is kept selected;
+- changing settings invalidates the current preview and shows a recalculation hint;
+- full render happens only on explicit refresh / plan calculation / normal module refresh;
+- visual layout is simplified into:
+  - account capability summary;
+  - one ordinary Building filters card;
+  - Priority + Future delays as two balanced cards;
+  - action row;
+  - plan result.
+
+### Scope guard
+
+- Explore candidate/action mechanics changed: **NO**;
+- donor calculation functions before `renderExplore()`: byte-equivalent apart from revision marker;
+- mutation endpoints added: **0**;
+- Maps/backend/schema changed: **NO**;
+- E3 started: **NO**.
+
+### Live verification
+
+- source live SHA256: `76833b35de3620f7b946fac3c02fca021cd48d332e58c51ce74a40616c199c14`;
+- deployed/public SHA256: `78f120fb0a3f83f66378a60dd950673de143d1d1f8dc4067bcdb8572483aa5f6`;
+- syntax: PASS;
+- service/deploy: PASS;
+- public byte equality: PASS;
+- Explore mutation endpoint scan: 0;
+- full rerender on filter change: REMOVED.
+
+Evidence:
+`audit/hk-stage2-explore-e2-ui-r4-live-status.txt`
+
+### Stop gate
+
+User should now verify that normal selects and checkboxes actually switch and remain selected, then run **Рассчитать план**.
+Do not start E3 automatically.
+
