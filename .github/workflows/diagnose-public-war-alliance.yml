@@ -52,6 +52,10 @@ jobs:
           set -euo pipefail
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -e
+            echo "=== LICENSE CHECK SOURCE ==="
+            grep -n -B 20 -A 120 "^def license_check" /opt/hamsterking-license/server.py || true
+            echo "=== UPDATE REQUIRED SOURCE ==="
+            grep -n -B 25 -A 45 "update_required" /opt/hamsterking-license/server.py | head -160 || true
             echo "=== LIVE LOADER HEADER ==="
             head -40 /opt/hamsterking-license/HamsterKingMobile.loader.user.js || true
             echo "=== SERVICE MIN VERSION ==="
