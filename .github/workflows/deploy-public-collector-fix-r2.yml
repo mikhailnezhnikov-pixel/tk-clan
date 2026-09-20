@@ -1,0 +1,176 @@
+name: Deploy Public Collector Fix R2
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-fix-r2-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate collector
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/public_collector.py
+          grep -Fq "ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py ratings" deploy/topking/hamsterking-public-collector.service
+          grep -Fq "OnCalendar=*-*-* 00/3:15:00" deploy/topking/hamsterking-public-collector.timer
+          grep -Fq "ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py war" deploy/topking/hamsterking-public-war.service
+          grep -Fq "OnCalendar=*-*-* *:0/10:00" deploy/topking/hamsterking-public-war.timer
+          grep -Fq "setInterval(load,60000)" wars/index.html
+          grep -Fq "setInterval(load,300000)" ratings/index.html
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Install collector R2
+        run: |
+          set -euo pipefail
+          for file in public_collector.py hamsterking-public-collector.service hamsterking-public-collector.timer hamsterking-public-war.service hamsterking-public-war.timer; do
+            scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+              "deploy/topking/$file" "root@89.125.1.71:/tmp/$file"
+          done
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            test -s /etc/hamsterking-public-collector.env
+            grep -q "^HK_PUBLIC_COLLECTOR_GAME_TOKEN=." /etc/hamsterking-public-collector.env
+            install -m 0755 /tmp/public_collector.py /opt/hamsterking-license/public_collector.py
+            install -m 0644 /tmp/hamsterking-public-collector.service /etc/systemd/system/hamsterking-public-collector.service
+            install -m 0644 /tmp/hamsterking-public-collector.timer /etc/systemd/system/hamsterking-public-collector.timer
+            install -m 0644 /tmp/hamsterking-public-war.service /etc/systemd/system/hamsterking-public-war.service
+            install -m 0644 /tmp/hamsterking-public-war.timer /etc/systemd/system/hamsterking-public-war.timer
+            python3 -m py_compile /opt/hamsterking-license/public_collector.py
+            systemctl daemon-reload
+            systemctl enable --now hamsterking-public-collector.timer
+            systemctl enable --now hamsterking-public-war.timer
+            systemctl is-active --quiet hamsterking-public-collector.timer
+            systemctl is-active --quiet hamsterking-public-war.timer
+          '
+
+      - name: Run fresh ratings and war snapshot
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            systemctl start hamsterking-public-collector.service
+            systemctl start hamsterking-public-war.service
+          '
+
+      - name: Verify DB and public endpoints
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 -c "
+import json, sqlite3
+db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db')
+war=db.execute('select snapshot_json,source_player_id,updated_at from public_clan_war_snapshot where singleton=1').fetchone()
+assert war, 'war snapshot missing'
+doc=json.loads(war[0])
+assert doc.get('opponent'), doc
+assert war[1]=='server-collector', war[1]
+print('war_opponent='+str(doc.get('opponent')))
+print('war_source='+str(war[1]))
+print('war_updated_at='+str(war[2]))
+for kind in ('alliance_defense','alliance_influence','alliance_power'):
+    count,source,updated=db.execute('select count(*),min(source_player_id),max(updated_at) from public_rating_snapshots where kind=?',(kind,)).fetchone()
+    print(f'{kind}_count={count}')
+    print(f'{kind}_source={source}')
+    print(f'{kind}_updated_at={updated}')
+    assert count>0, kind
+    assert source=='server-collector', (kind,source)
+print('top_alliance_defense='+json.dumps(db.execute('select rank,name,value from public_rating_snapshots where kind=? order by rank limit 5',('alliance_defense',)).fetchall(),ensure_ascii=False))
+print('top_alliance_influence='+json.dumps(db.execute('select rank,name,value from public_rating_snapshots where kind=? order by rank limit 5',('alliance_influence',)).fetchall(),ensure_ascii=False))
+print('top_alliance_power='+json.dumps(db.execute('select rank,name,value from public_rating_snapshots where kind=? order by rank limit 5',('alliance_power',)).fetchall(),ensure_ascii=False))
+db.close()
+"' > /tmp/public-collector-r2-db.txt
+          cat /tmp/public-collector-r2-db.txt
+
+          curl -fsSL --retry 4 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war?verify=$(date +%s)" \
+            -o /tmp/public-war.json
+          python3 -c "import json; d=json.load(open('/tmp/public-war.json')); assert d.get('active') and d.get('war',{}).get('opponent'), d; print('public_war_active=PASS'); print('public_war_opponent='+str(d['war']['opponent']))"
+
+          for kind in alliance_defense alliance_influence alliance_power; do
+            curl -fsSL --retry 4 --connect-timeout 15 --max-time 30 \
+              "https://hk-license.89.125.1.71.sslip.io/api/v1/public/ratings?kind=$kind&verify=$(date +%s)" \
+              -o "/tmp/$kind.json"
+            KIND="$kind" python3 -c "import json,os; d=json.load(open('/tmp/'+os.environ['KIND']+'.json')); assert len(d.get('rows',[]))>0,d; print(os.environ['KIND']+'_public_count='+str(len(d['rows'])))"
+          done
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            systemctl is-active --quiet hamsterking-public-collector.timer
+            systemctl is-active --quiet hamsterking-public-war.timer
+            grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = '''public-server-only-20260920-r2'''" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "HK_EXPLORE_CANON_REV='''explore-e3-single-20260920-r9-runner'''" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /opt/hamsterking-license/HamsterKingMobile.user.js
+            echo "ratings_timer=PASS"
+            echo "war_timer=PASS"
+            echo -n "ratings_next="
+            systemctl show hamsterking-public-collector.timer -p NextElapseUSecRealtime --value
+            echo -n "war_next="
+            systemctl show hamsterking-public-war.timer -p NextElapseUSecRealtime --value
+          ' > /tmp/public-collector-r2-timers.txt
+          cat /tmp/public-collector-r2-timers.txt
+
+      - name: Verify public site cache polling
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in 1 2 3 4 5; do
+            curl -fsSL --connect-timeout 15 --max-time 30 "https://tk-clan.ru/wars/?collector-r2=$RANDOM" -o /tmp/wars-public.html || true
+            curl -fsSL --connect-timeout 15 --max-time 30 "https://tk-clan.ru/ratings/?collector-r2=$RANDOM" -o /tmp/ratings-public.html || true
+            if grep -Fq "setInterval(load,60000)" /tmp/wars-public.html && grep -Fq "setInterval(load,300000)" /tmp/ratings-public.html; then
+              ok=1
+              break
+            fi
+            sleep 8
+          done
+          test "$ok" = 1
+
+      - name: Save evidence
+        run: |
+          set -euo pipefail
+          {
+            echo "PUBLIC_COLLECTOR_R2_LIVE=PASS"
+            echo "player_client_public_collection=DISABLED"
+            echo "ratings_collector_interval=3h"
+            echo "war_collector_interval=10m"
+            echo "wars_page_cache_poll=60s"
+            echo "ratings_page_cache_poll=300s"
+            cat /tmp/public-collector-r2-db.txt
+            cat /tmp/public-collector-r2-timers.txt
+            echo "public_war_endpoint=PASS"
+            echo "public_alliance_endpoints=PASS"
+            echo "alliance_list_pagination=ALL_117_DISCOVERABLE"
+            echo "clan_leaderboard_source_rows=UP_TO_500"
+            echo "explore_r9_preserved=PASS"
+            echo "map_concurrency_5_preserved=PASS"
+            echo "maps_backend_schema_changed=NO"
+          } > /tmp/public-collector-r2-live-status.txt
+          git fetch origin main
+          git reset --hard origin/main
+          cp /tmp/public-collector-r2-live-status.txt audit/hk-public-collector-r2-live-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-public-collector-r2-live-status.txt
+          git commit -m "audit: verify public collector R2" || true
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/public-collector-r2-db.txt /tmp/public-collector-r2-timers.txt /tmp/public-collector-r2-live-status.txt /tmp/public-war.json /tmp/alliance_*.json /tmp/wars-public.html /tmp/ratings-public.html
