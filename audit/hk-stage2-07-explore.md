@@ -903,3 +903,125 @@ Reload Explore and verify that:
 
 Do not start E3 automatically.
 
+## E2 — USER PASS / E3 r8 single-building live candidate
+
+E2 status: **PASS**
+
+User confirmed the read-only Explore flow far enough to proceed:
+- fresh account capability state is populated;
+- district/type filters produce a valid candidate set;
+- plan calculation returns candidates;
+- user requested an actual Run action.
+
+The detailed per-building ID cards were explicitly rejected as unnecessary. The plan UI now shows only aggregate counts:
+- buildings after filters;
+- candidates;
+- **buildings to process**.
+
+No individual building IDs are displayed in the normal plan summary.
+
+## E3 r8 — single-building canonical action core
+
+Status: **LIVE CANDIDATE / USER SINGLE-BUILDING TEST PENDING**
+
+Marker:
+`HK_EXPLORE_CANON_REV = 'explore-e3-single-20260920-r8'`
+
+Live/baseline sync commit:
+`ffa72351299a076d7cabf5f1bdd88f823cb09611`
+
+### UI
+
+After **Рассчитать план** and when at least one candidate exists, Explore now enables:
+
+`Запустить тест E3 · 1 здание`
+
+This is deliberately limited to the first candidate only. E4 multi-building processing is not enabled yet.
+
+Before mutation, the UI asks for explicit confirmation that exactly one test building will be processed.
+
+### Canonical E3 mechanics
+
+The one-building runner implements the donor action sequence:
+
+- full building detail read;
+- fast-completion cost check;
+- fast completion when allowed by player level;
+- target-tier behavior;
+- automatic battles from active Remort Consigliere capability;
+- manual-battle fallback with donor faction-counter selection;
+- stop after 5 consecutive non-advancing manual battle responses;
+- remort cost/resource guard;
+- remort with tier-increase verification;
+- Instant MAX via fast-remort cost/action;
+- optional missing beams/nails purchase when the user enabled that toggle;
+- maximum 100 internal building iterations.
+
+Donor references:
+- per-building/Instant MAX runner: fileciteturn211file0
+- normal fast-completion flow: fileciteturn209file0
+- remort flow: fileciteturn212file0
+- manual-battle counter behavior: fileciteturn217file0
+
+### Mutation safety
+
+The two cost endpoints are explicitly classified as read-only POST requests:
+
+- `/player/building/fast_completion/cost`
+- `/player/building/fast_remort/cost`
+
+Actual actions remain mutations behind the existing serialized mutation gate:
+
+- `/player/building/fast_completion`
+- `/player/battle/fast`
+- `/player/battle?...faction_id=...`
+- `/player/building/remort?...building_id=...`
+- `/player/building/fast_remort`
+- optional `/shop/buy`
+
+Mutation requests use no blind network retry.
+
+After every mutation attempt, E3 rereads authoritative player state and the exact building detail before deciding whether the action applied. An uncertain transport response therefore is not blindly repeated.
+
+### Scope guard
+
+- E4 multi-building queue: **NOT ENABLED**;
+- E3 scope: **exactly one building**;
+- map scanner concurrency: **5 preserved**;
+- Maps backend/schema: **unchanged**.
+
+### Live verification
+
+- source live SHA256:
+  `4b58e9866bdf77fc3a298b47743da6c7e80f5eb618fb5f25f07c1e648e2e7584`;
+- deployed/public SHA256:
+  `cd210c35e6579fb594439b81fd0a08dd8089a35b3598b9e245478b959f4f6a3a`;
+- syntax: PASS;
+- service/deploy: PASS;
+- public byte equality: PASS;
+- plan detail cards removed: PASS;
+- Run button enabled after a non-empty plan: PASS;
+- fast completion / battles / remort / Instant MAX core present: PASS;
+- no-blind-retry mutation behavior: PASS;
+- post-action authoritative reconciliation: PASS.
+
+Evidence:
+`audit/hk-stage2-explore-e3-r8-live-status.txt`
+
+Several preliminary r8 workflow attempts failed during local patch/predeploy validation and therefore did not change live. The final race-safe deploy completed successfully.
+
+### E3 stop gate
+
+User test:
+
+1. reload the game / HK panel;
+2. open **Исследование**;
+3. choose the intended filters/target;
+4. click **Рассчитать план**;
+5. verify only the aggregate building count is shown;
+6. click **Запустить тест E3 · 1 здание**;
+7. confirm the one-building prompt;
+8. report the resulting runner/log and resulting building state.
+
+Do not enable E4 multi-building processing until this one-building test passes.
+
