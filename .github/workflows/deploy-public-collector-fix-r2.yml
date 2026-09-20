@@ -25,7 +25,7 @@ jobs:
           grep -Fq "ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py ratings" deploy/topking/hamsterking-public-collector.service
           grep -Fq "OnCalendar=*-*-* 00/3:15:00" deploy/topking/hamsterking-public-collector.timer
           grep -Fq "ExecStart=/usr/bin/python3 /opt/hamsterking-license/public_collector.py war" deploy/topking/hamsterking-public-war.service
-          grep -Fq "OnCalendar=*-*-* *:0/10:00" deploy/topking/hamsterking-public-war.timer
+          grep -Fq "OnCalendar=*-*-* *:03/10:00" deploy/topking/hamsterking-public-war.timer
           grep -Fq "setInterval(load,60000)" wars/index.html
           grep -Fq "setInterval(load,300000)" ratings/index.html
 
@@ -63,13 +63,14 @@ jobs:
             systemctl is-active --quiet hamsterking-public-war.timer
           '
 
-      - name: Run fresh ratings and war snapshot
+      - name: Run fresh war then ratings snapshot
         run: |
           set -euo pipefail
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
-            systemctl start hamsterking-public-collector.service
+            systemctl reset-failed hamsterking-public-war.service || true
             systemctl start hamsterking-public-war.service
+            systemctl start hamsterking-public-collector.service
           '
 
       - name: Verify DB
