@@ -1,0 +1,93 @@
+name: Check TopKing Map Coords Backend R2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/map-coords-backend-r2-check-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: check-topking-map-coords
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact live inputs
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          node --check /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile /tmp/server.py
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r5'" /tmp/HamsterKingMobile.user.js
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "d4c84856ffcad0617ce783451c054205491f7d0d956bf7e7ec1ae5315480680a"
+
+      - name: Compile patches
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/patch_maps_coords_marker_r6.py
+          python3 -m py_compile deploy/topking/patch_server_map_coords_r2.py
+
+      - name: Apply and validate only
+        run: |
+          set -euo pipefail
+          source_server_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
+          python3 deploy/topking/patch_maps_coords_marker_r6.py
+          python3 deploy/topking/patch_server_map_coords_r2.py
+          node --check /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile /tmp/server.py
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "coord_revision:'column-row-v1'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r5'" /tmp/HamsterKingMobile.user.js
+          grep -Fq 'trusted_coords = area.get("coord_revision") == "column-row-v1"' /tmp/server.py
+          grep -Fq 'SET x=?,y=?,last_player_id=?,last_seen=?' /tmp/server.py
+          grep -Fq 'if total and known >= total:' /tmp/server.py
+          client_sha="$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')"
+          server_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
+          {
+            echo "MAP_COORDS_BACKEND_R2_BUILD=PASS"
+            echo "source_client_sha256=d4c84856ffcad0617ce783451c054205491f7d0d956bf7e7ec1ae5315480680a"
+            echo "source_server_sha256=$source_server_sha"
+            echo "candidate_client_sha256=$client_sha"
+            echo "candidate_server_sha256=$server_sha"
+            echo "client_syntax=PASS"
+            echo "server_compile=PASS"
+            echo "deployed=no"
+          } > audit/hk-stage2-map-coords-backend-r2-build-status.txt
+
+      - name: Commit build status
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-map-coords-backend-r2-build-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: verify map coordinate backend r2 build"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/server.py
