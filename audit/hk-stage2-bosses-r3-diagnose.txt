@@ -1,0 +1,5 @@
+stage=r2
+live_sha256=0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7
+syntax=PASS
+public_byte_equality=PASS
+has_r3_calc_marker=0
