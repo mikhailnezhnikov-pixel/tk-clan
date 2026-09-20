@@ -1,0 +1,9 @@
+version=1.17.4
+hotfix=login-gate-hotfix-20260920-r2
+launcher=launcher-hotfix-20260920-r1
+leaflet_game_ready=PASS
+osm_game_ready=PASS
+game_api_traffic_ready=PASS
+syntax=ok
+roundtrip=identical
+sha256=80fef00c8d2a55bf47e55e4e024399936954c16d9ffb3509dd7250709393767e
