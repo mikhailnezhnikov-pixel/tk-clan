@@ -34,14 +34,14 @@ replace="      let selectedPlan=plans.find(row=>row.id===String(old.planId||''))
 if needle not in s: raise SystemExit('selected plan declaration missing')
 s=s.replace(needle,replace,1)
 
-nedle="""      const rewardTargetMin=tournamentActive&&rewardTiers.some(tier=>tier.minScore===pitCanonWhole(old.rewardTargetMin))?pitCanonWhole(old.rewardTargetMin):0;
+needle="""      const rewardTargetMin=tournamentActive&&rewardTiers.some(tier=>tier.minScore===pitCanonWhole(old.rewardTargetMin))?pitCanonWhole(old.rewardTargetMin):0;
       const row={definition:def,state,activeState,active,available,maximum,itemPasses,paws,plans,targets,sniperTargets,
 """
 replace="""      const rewardTargetMin=tournamentActive&&rewardTiers.some(tier=>tier.minScore===pitCanonWhole(old.rewardTargetMin))?pitCanonWhole(old.rewardTargetMin):0;
       if(!active&&!sniper&&String(old.planId||'')==='reward-0'&&rewardTargetMin>0)selectedPlan=pitCanonRewardOnlyPlan();
       const row={definition:def,state,activeState,active,available,maximum,itemPasses,paws,plans,targets,sniperTargets,
 """
-if needle not in s: raise SystemExit('reward target selected plan anchor missing')
+if needle not in s: raise SystemExit('reward selected-plan anchor missing')
 s=s.replace(needle,replace,1)
 
 needle="""  function pitCanonPlanLabel(plan) {
@@ -58,7 +58,7 @@ s=s.replace(needle,replace,1)
 
 needle="""          : row.active
             ? `<option value="active">${either('Продолжить активную Яму','Continue active Pit')} ×${activeBatch||1}</option>`
-            : row.plans.map(plan=>`<option value="${escapeHtml(plan.id)}" ${plan.id===row.planId?'selected':'} ${plan.paymentMode==='ITEM'&&!plan.affordable?'disabled':'}>${escapeHtml(pitCanonPlanLabel(plan))}</option>`).join('');
+            : row.plans.map(plan=>`<option value="${escapeHtml(plan.id)}" ${plan.id===row.planId?'selected':''} ${plan.paymentMode==='ITEM'&&!plan.affordable?'disabled':''}>${escapeHtml(pitCanonPlanLabel(plan))}</option>`).join('');
 """
 replace="""          : row.active
             ? `<option value="active">${either('Продолжить активную Яму','Continue active Pit')} ×${activeBatch||1}</option>`
@@ -67,7 +67,7 @@ replace="""          : row.active
 if needle not in s: raise SystemExit('plan options anchor missing')
 s=s.replace(needle,replace,1)
 
-nedle="""      }else{
+needle="""      }else{
         const plan=row.plans.find(x=>x.id===row.planId);if(!plan)return null;
         const chunks=row.autofinish?[...plan.chunks]:plan.chunks.slice(0,1);
         base={definition:row.definition,planId:plan.id,steps:chunks.map(chunk=>({chunk,payment:plan.paymentMode,source:'base'})),target:pitCanonWhole(target?.level),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:false,crystalBudget:pitCanonWhole(plan.crystalCost),itemPassBudget:pitCanonWhole(plan.itemCost),sniper:false,sniperPayment:''};
@@ -91,4 +91,6 @@ for x in [
     "row.planId==='reward-0'",
     "plan.kind==='reward-zero'?[]"
 ]:
-    if x not in s: raise SystemExit('m
+    if x not in s: raise SystemExit('missing r16 invariant: '+x)
+p.write_text(s,encoding='utf-8')
+print('PITS_REWARD_ONLY_R16_PATCH_OK')
