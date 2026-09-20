@@ -61,6 +61,12 @@ if isinstance(me,dict):
 summarize("/clan/active_battles")
 summarize("/clan/active_defense_wars")
 alli=summarize("/alliance/list")
+for probe in ("/alliance/list?offset=10&limit=10","/alliance/list?offset=0&limit=100"):
+    pv=summarize(probe)
+    if isinstance(pv,dict):
+        pg=pv.get("pagination") if isinstance(pv.get("pagination"),dict) else {}
+        rr=pv.get("result") if isinstance(pv.get("result"),list) else []
+        print(" PAGINATION_PROBE",probe,"PAGINATION",pg,"FIRST",safe_name(rr[0]) if rr else "","LAST",safe_name(rr[-1]) if rr else "")
 
 rows=[]
 if isinstance(alli,dict):
