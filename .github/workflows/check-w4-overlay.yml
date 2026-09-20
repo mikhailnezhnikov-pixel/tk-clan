@@ -1,0 +1,81 @@
+name: Check W4 canonical website overlay
+on:
+  push:
+    paths: ['deploy/topking/w4-check-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ssh
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+      - name: patch
+        run: |
+          set -euo pipefail
+          test "$(sha256sum /tmp/server.py|awk '{print $1}')" = "26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4"
+          python3 deploy/topking/patch_server_maps_shared_kb_w4.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq HK_MAP_WEBSITE_OVERLAY_W4_V1 /tmp/server.py
+      - name: temp regression
+        run: |
+          python3 - <<'PY'
+          import importlib.util,os,tempfile,json
+          spec=importlib.util.spec_from_file_location('s','/tmp/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          fd,path=tempfile.mkstemp(suffix='.db');os.close(fd)
+          try:
+            s.DB_PATH=path;s.init_db();now=s.utc_now();area='area-w4'
+            with s.db_session() as db:
+              db.execute("INSERT INTO map_areas(area_id,city_id,city_name,x,y,last_player_id,last_seen) VALUES(?,?,?,?,?,?,?)",(area,'c','Test',1,2,'p',now))
+              db.execute("INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen) VALUES(?,?,?,?)",(area,area,now,now))
+              db.execute("INSERT INTO hk_maps_catalog(map_key,city,grid,open_url,published,updated_at) VALUES(?,?,?,?,?,?)",('hk_test0102','Test','02:01','/x',1,now))
+              db.execute("INSERT INTO hk_map_points(map_key,points_json,point_count,updated_at) VALUES(?,?,?,?)",('hk_test0102','[100000,200000,2,10,10,9]',2,now))
+              db.execute("INSERT INTO hk_map_area_links(map_key,canonical_area_id,match_method,linked_at) VALUES(?,?,?,?)",('hk_test0102',area,'exact_area_id',now))
+              for bid,room in [('way1',0),('way2',3)]:
+                db.execute("INSERT INTO map_buildings(area_id,building_id,room_count,last_player_id,last_seen) VALUES(?,?,?,?,?)",(area,bid,room,'game',now))
+            linked=s.link_hk_map_points('hk_test0102',[{'point_index':0,'building_id':'way1'},{'point_index':1,'building_id':'way2'}])
+            assert linked['total']==2,linked
+            first=s.hk_map_data('hk_test0102',public=True)
+            assert first['points']==[100000,200000,0,10,10,11],first
+            assert first['canonical']['applied_points']==2,first
+            with s.db_session() as db:
+              db.execute("UPDATE map_buildings SET room_count=4 WHERE area_id=? AND building_id='way1'",(area,))
+              raw=db.execute("SELECT points_json FROM hk_map_points WHERE map_key='hk_test0102'").fetchone()[0]
+            second=s.hk_map_data('hk_test0102',public=True)
+            assert second['points']==[100000,200000,4,10,10,11],second
+            assert raw=='[100000,200000,2,10,10,9]',raw
+            assert second['points'][0:2]==first['points'][0:2] and second['points'][3:5]==first['points'][3:5]
+            print('W4_DYNAMIC_CANONICAL_READ=PASS')
+            print('W4_INVESTMENT_BIT_PRESERVED=PASS')
+            print('W4_GEOMETRY_UNCHANGED=PASS')
+          finally:
+            try:os.remove(path)
+            except OSError:pass
+          PY
+      - name: status
+        run: |
+          sha="$(sha256sum /tmp/server.py|awk '{print $1}')"
+          cat > audit/hk-stage2-maps-shared-kb-w4-build-status.txt <<EOF
+          MAPS_SHARED_KB_W4_BUILD=PASS
+          source_server_sha256=26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4
+          candidate_server_sha256=$sha
+          dynamic_canonical_read=PASS
+          investment_bit_preserved=PASS
+          geometry_unchanged=PASS
+          bulk_migration=NO
+          deployed=NO
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w4-build-status.txt
+          git commit -m "audit: verify W4 website overlay build"
+          git pull --rebase origin main
+          git push
