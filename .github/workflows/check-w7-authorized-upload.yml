@@ -86,7 +86,7 @@ jobs:
               by={r['building_id']:r for r in d['buildings']}
               assert by['way1']['room_count']==1 and by['way1']['knowledge_source']=='hk_maps_import',by['way1']
               assert by['way2']['room_count']==2 and by['way2']['knowledge_source']=='hk_maps_import',by['way2']
-              web=s.hk_map_data('hk_test0102',public=True)
+              web=s.hk_map_data('hk_test0102',member={'telegram_id':'w7-test','maps_manage':1,'maps_access':1})
               assert web['canonical']['enabled'] is True and web['canonical']['applied_points']==2,web['canonical']
               assert web['points']==[1000000,2000000,1,100,100,10],web['points']
 
