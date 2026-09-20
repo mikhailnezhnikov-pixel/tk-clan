@@ -1,0 +1,15 @@
+MAPS_SHARED_KB_W3_OSM_RECOVERY_AUDIT=PASS
+pilot=hk_moscow1226
+decoded_hist={"1":17,"2":12,"3":3}
+decoded_investment_count=3
+canonical_ids=117
+overpass_elements=116
+overpass_canonical_features=116
+unique_matches=29
+unique_building_ids=29
+unmatched=3
+ambiguous=0
+current_room_hist_for_matches={"0":26,"null":3}
+source_hist_for_matches={"anon-6403b21637693573f475c25c":29}
+live_mutation=NO
+nonunique_points=[{"candidates":[],"index":11,"point":{"crystals":3,"investment":false,"lat":55.69664,"lon":37.49304}},{"candidates":[],"index":14,"point":{"crystals":3,"investment":false,"lat":55.69372,"lon":37.49406}},{"candidates":[],"index":29,"point":{"crystals":1,"investment":false,"lat":55.69648,"lon":37.49838}}]
