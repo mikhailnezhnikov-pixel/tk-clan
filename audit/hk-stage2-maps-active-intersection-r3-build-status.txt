@@ -1,0 +1,5 @@
+MAPS_ACTIVE_INTERSECTION_R3_BUILD=PASS
+source_live_sha256=f52ed4a3c61a3833941f8bf0c5e8016be8a59eac2ca4f6f352dd28ee16c3b290
+candidate_sha256=f8a34bff26fd449f315f07a2ef8e6a8a6e8169ea62f463e7efe527766d698101
+syntax=PASS
+deployed=no
