@@ -1,0 +1,17 @@
+MAPS_SHARED_KB_W3_PREFLIGHT=PASS
+pilot_map_key=hk_moscow1226
+pilot_canonical_area_id=9ea6ff78-b881-45b3-b92d-a8f1da8eca05
+point_count_db=32
+points_type=list
+points_len=96
+points_sample_keys=[null,null,null]
+canonical_buildings_total=117
+canonical_known_rooms=114
+canonical_room_hist={"0":114,"null":3}
+full_candidates=[]
+full_features=None
+full_game_buildings=None
+full_known_crystals=None
+full_property_keys=null
+full_known_samples=null
+live_mutation=NO
