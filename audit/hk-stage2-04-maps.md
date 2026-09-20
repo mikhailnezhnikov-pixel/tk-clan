@@ -226,3 +226,30 @@ Live verification:
 - baseline sync: PASS.
 
 Current status remains **LIVE_CANDIDATE** pending user timing/behavior confirmation.
+
+
+## Parallel active-building reader r5
+
+Marker:
+`HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r5'`
+
+Performance tuning over r4:
+- concurrent read-only `/player/building` workers increased from 6 to 10;
+- map submit batch size increased from 100 to 200 building observations;
+- safe active-building intersection and event-catalog guards are unchanged;
+- existing retry/backoff for 429/transient/player-lock responses remains active;
+- unopened buildings remain excluded.
+
+Build verification:
+- source live SHA256: `f4f5a74ed8a4cc25b63ef11adf714d358ada0399f95a765bfedb21728a6162ca`;
+- candidate SHA256: `d4c84856ffcad0617ce783451c054205491f7d0d956bf7e7ec1ae5315480680a`;
+- syntax: PASS.
+
+Live verification:
+- deploy: PASS;
+- service: PASS;
+- public byte equality: PASS;
+- live/public SHA256: `d4c84856ffcad0617ce783451c054205491f7d0d956bf7e7ec1ae5315480680a`;
+- baseline sync: PASS.
+
+Current status remains **LIVE_CANDIDATE** pending user timing/behavior confirmation.
