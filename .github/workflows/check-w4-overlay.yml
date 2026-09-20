@@ -1,16 +1,18 @@
-name: W6 dry-run all website maps
+name: W6 dry-run all 235 maps - chunked
+
 on:
   push:
-    paths: ['deploy/topking/w6-dryrun-trigger.txt']
+    paths: ['deploy/topking/w6-chunked-trigger.txt']
+
 permissions:
   contents: write
+
 jobs:
-  dryrun:
+  classify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
-        with: {fetch-depth: 0}
       - name: prepare ssh
         env:
           SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
@@ -18,56 +20,118 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
           chmod 600 ~/.ssh/topking
-      - name: export live map data read-only
+      - name: classify all maps read-only
         run: |
-          cat > /tmp/w6-export.py <<'PY'
+          cat > /tmp/w6-classify.py <<'PY'
           import importlib.util,json,sqlite3
-          DB='file:/var/lib/hamsterking-license/licenses.db?mode=ro'
           spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
           s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-          db=sqlite3.connect(DB,uri=True);db.row_factory=sqlite3.Row
-          catalog=db.execute("SELECT map_key,city,grid FROM hk_maps_catalog ORDER BY map_key").fetchall()
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          maps=[]
           links={r['map_key']:dict(r) for r in db.execute("SELECT map_key,canonical_area_id,match_method,linked_at FROM hk_map_area_links")}
-          out={'maps':[],'catalog_count':len(catalog),'existing_links':list(links.values())}
-          for row in catalog:
-              key=row['map_key']
-              disc=s.discover_hk_map_area(db,key)
-              item={'map_key':key,'city':row['city'],'grid':row['grid'],'discovery':disc,'existing_link':links.get(key)}
-              p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(key,)).fetchone()
-              item['point_count']=int(p['point_count']) if p else 0
-              item['points']=json.loads(p['points_json'] or '[]') if p else []
-              if len(disc.get('candidates') or [])==1:
-                  area=disc['candidates'][0]
-                  item['canonical_area_id']=area
-                  item['canonical_buildings']=[dict(r) for r in db.execute(
-                      """SELECT building_id,room_count,is_invest,knowledge_source,knowledge_observed_at
-                         FROM map_buildings WHERE area_id=? ORDER BY building_id""",(area,))]
-              out['maps'].append(item)
-          out['map_areas_count']=db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0]
-          out['map_buildings_count']=db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0]
-          print(json.dumps(out,ensure_ascii=False,separators=(',',':')))
+          for r in db.execute("SELECT map_key,city,grid FROM hk_maps_catalog ORDER BY map_key"):
+              d=s.discover_hk_map_area(db,r['map_key'])
+              maps.append({'map_key':r['map_key'],'city':r['city'],'grid':r['grid'],'candidates':d.get('candidates') or [],'existing_link':links.get(r['map_key'])})
+          out={'total_maps':len(maps),'maps':maps,'existing_links':list(links.values()),
+               'map_areas_count':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
+               'map_buildings_count':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0]}
+          print(json.dumps(out,ensure_ascii=False))
           db.close()
           PY
-          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-export.py root@89.125.1.71:/tmp/w6-export.py
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w6-export.py' > /tmp/w6-input.json
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-classify.py root@89.125.1.71:/tmp/w6-classify.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w6-classify.py' > w6-classification.json
           python3 - <<'PY'
           import json
-          d=json.load(open('/tmp/w6-input.json'))
-          assert d['catalog_count']==235,d['catalog_count']
-          print('W6_EXPORT=PASS maps=',d['catalog_count'],'areas=',d['map_areas_count'],'buildings=',d['map_buildings_count'])
+          d=json.load(open('w6-classification.json'))
+          assert d['total_maps']==235,d['total_maps']
+          u=[m['map_key'] for m in d['maps'] if len(m['candidates'])==1]
+          assert len(u)==26,len(u)
+          print('unique=',len(u),'unresolved=',sum(len(m['candidates'])==0 for m in d['maps']),'ambiguous=',sum(len(m['candidates'])>1 for m in d['maps']))
           PY
-      - name: resolve positive points against OSM
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w6-classification
+          path: w6-classification.json
+          retention-days: 2
+
+  analyze:
+    needs: classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        map_key:
+          - hk_dubai5335
+          - hk_lagos0843
+          - hk_moscow1226
+          - hk_newyork0001
+          - hk_newyork0002
+          - hk_newyork0438
+          - hk_newyork1437
+          - hk_newyork1706
+          - hk_newyork2508
+          - hk_newyork2520
+          - hk_newyork2528
+          - hk_newyork3110
+          - hk_newyork3111
+          - hk_newyork3307
+          - hk_newyork3504
+          - hk_newyork3707
+          - hk_newyork4016
+          - hk_newyork4026
+          - hk_newyork4617
+          - hk_newyork4639
+          - hk_newyork4727
+          - hk_newyork4825
+          - hk_riodejaneiro0217
+          - hk_riodejaneiro1730
+          - hk_saintpetersburg0001
+          - hk_saintpetersburg0003
+    steps:
+      - uses: actions/checkout@v4
+      - name: prepare ssh
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
         run: |
-          cat > /tmp/w6-analyze.py <<'PY'
-          import json,time,urllib.parse,urllib.request
-          from collections import Counter,defaultdict
-          src=json.load(open('/tmp/w6-input.json'))
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+      - name: export one resolved map read-only
+        env:
+          MAP_KEY: ${{ matrix.map_key }}
+        run: |
+          cat > /tmp/w6-one.py <<'PY'
+          import importlib.util,json,os,sqlite3
+          key=os.environ['MAP_KEY']
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          d=s.discover_hk_map_area(db,key);c=d.get('candidates') or []
+          assert len(c)==1,(key,c)
+          area=c[0]
+          p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(key,)).fetchone()
+          buildings=[dict(r) for r in db.execute("""SELECT building_id,room_count,is_invest,knowledge_source,knowledge_observed_at
+                                                   FROM map_buildings WHERE area_id=? ORDER BY building_id""",(area,))]
+          print(json.dumps({'map_key':key,'canonical_area_id':area,'points':json.loads(p['points_json'] or '[]'),'point_count':p['point_count'],'canonical_buildings':buildings},ensure_ascii=False))
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-one.py root@89.125.1.71:/tmp/w6-one.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new "MAP_KEY=$MAP_KEY python3 /tmp/w6-one.py" > /tmp/w6-one.json
+      - name: resolve building IDs
+        env:
+          MAP_KEY: ${{ matrix.map_key }}
+        run: |
+          cat > /tmp/w6-resolve.py <<'PY'
+          import json,os,time,urllib.parse,urllib.request
+          src=json.load(open('/tmp/w6-one.json'));key=src['map_key']
           def decode(flat):
               lng=lat=0;out=[]
               for i in range(0,len(flat),3):
-                  lng+=int(flat[i]);lat+=int(flat[i+1]);flag=int(flat[i+2])
-                  inv=flag>=7;rooms=flag-8 if inv else flag
-                  out.append({'point_index':i//3,'lon':lng/1e5,'lat':lat/1e5,'room_count':rooms,'investment':inv,'source_flag':flag})
+                  lng+=int(flat[i]);lat+=int(flat[i+1]);f=int(flat[i+2]);inv=f>=7;rooms=f-8 if inv else f
+                  out.append({'point_index':i//3,'lon':lng/1e5,'lat':lat/1e5,'room_count':rooms,'investment':inv,'source_flag':f})
               return out
           def inside(ring,x,y):
               if len(ring)<3:return False
@@ -75,8 +139,8 @@ jobs:
               for i in range(len(ring)):
                   xi,yi=ring[i];xj,yj=ring[j]
                   if ((yi>y)!=(yj>y)):
-                      cross=(xj-xi)*(y-yi)/(yj-yi)+xi
-                      if x<cross:ok=not ok
+                      z=(xj-xi)*(y-yi)/(yj-yi)+xi
+                      if x<z:ok=not ok
                   j=i
               return ok
           def polygons(e):
@@ -93,123 +157,140 @@ jobs:
                   ring=segs.pop(0);changed=True
                   while changed and segs:
                       changed=False
-                      for k,g in enumerate(segs):
-                          if ring[-1]==g[0]:ring.extend(g[1:]);segs.pop(k);changed=True;break
-                          if ring[-1]==g[-1]:ring.extend(list(reversed(g[:-1])));segs.pop(k);changed=True;break
-                          if ring[0]==g[-1]:ring=g[:-1]+ring;segs.pop(k);changed=True;break
-                          if ring[0]==g[0]:ring=list(reversed(g[1:]))+ring;segs.pop(k);changed=True;break
+                      for i,g in enumerate(segs):
+                          if ring[-1]==g[0]:ring.extend(g[1:]);segs.pop(i);changed=True;break
+                          if ring[-1]==g[-1]:ring.extend(list(reversed(g[:-1])));segs.pop(i);changed=True;break
+                          if ring[0]==g[-1]:ring=g[:-1]+ring;segs.pop(i);changed=True;break
+                          if ring[0]==g[0]:ring=list(reversed(g[1:]))+ring;segs.pop(i);changed=True;break
                   if len(ring)>=3:rings.append(ring)
               return rings
           def call(q):
-              body=urllib.parse.urlencode({'data':q}).encode()
-              last=None
-              endpoints=('https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.nchc.org.tw/api/interpreter')
-              for endpoint in endpoints:
-                  for attempt in range(3):
+              body=urllib.parse.urlencode({'data':q}).encode();last=None
+              endpoints=('https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter')
+              for round_no in range(4):
+                  for endpoint in endpoints:
                       try:
-                          req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6-dryrun/2.0'})
-                          with urllib.request.urlopen(req,timeout=55) as r:return json.load(r)
-                      except Exception as exc:
-                          last=repr(exc);time.sleep(2+attempt*2)
-              raise RuntimeError(str(last))
-          def canonical_features(ids):
-              ways=[int(x[3:]) for x in ids if x.startswith('way') and x[3:].isdigit()]
-              rels=[int(x[8:]) for x in ids if x.startswith('relation') and x[8:].isdigit()]
-              chunks=[]
-              for x in ways:chunks.append(f'way({x});')
-              for x in rels:chunks.append(f'relation({x});')
-              if not chunks:return {}
-              data=call('[out:json][timeout:45];('+''.join(chunks)+');out geom;')
-              out={}
+                          req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6/3.0'})
+                          with urllib.request.urlopen(req,timeout=30) as r:return json.load(r)
+                      except Exception as e:last=repr(e)
+                  time.sleep(3+round_no*2)
+              raise RuntimeError('OSM query failed '+str(last))
+          def add_elements(out,data):
               for e in data.get('elements',[]):
                   typ=e.get('type');eid=e.get('id')
                   if typ not in ('way','relation') or eid is None:continue
                   ps=polygons(e)
                   if ps:out[('way' if typ=='way' else 'relation')+str(eid)]=ps
-              return out
-          def local_features(p):
-              d=0.00045;south=p['lat']-d;north=p['lat']+d;west=p['lon']-d;east=p['lon']+d
-              q=f'[out:json][timeout:25];(way["building"]({south},{west},{north},{east});relation["building"]({south},{west},{north},{east}););out geom;'
-              data=call(q);out={}
-              for e in data.get('elements',[]):
-                  typ=e.get('type');eid=e.get('id')
-                  if typ not in ('way','relation') or eid is None:continue
-                  ps=polygons(e)
-                  if ps:out[('way' if typ=='way' else 'relation')+str(eid)]=ps
-              return out
-          metrics=Counter();map_rows=[];manifests=[];target_to_maps=defaultdict(list)
-          for m in src['maps']:
-              c=m['discovery'].get('candidates') or []
-              if len(c)==1:
-                  metrics['city_grid_yx_matches']+=1;target_to_maps[c[0]].append(m['map_key'])
+          can={x['building_id']:x for x in src['canonical_buildings']}
+          ids=list(can);features={}
+          for start in range(0,len(ids),60):
+              chunk=ids[start:start+60];clauses=[]
+              for bid in chunk:
+                  if bid.startswith('way') and bid[3:].isdigit():clauses.append(f"way({int(bid[3:])});")
+                  elif bid.startswith('relation') and bid[8:].isdigit():clauses.append(f"relation({int(bid[8:])});")
+              if clauses:add_elements(features,call('[out:json][timeout:25];('+''.join(clauses)+');out geom;'))
+          pts=decode(src['points']);unique=[];unmatched=[];amb=[];used={}
+          for p in pts:
+              hits=[bid for bid,ps in features.items() if any(inside(poly,p['lon'],p['lat']) for poly in ps)]
+              if len(hits)==0:
+                  d=0.00045;s=p['lat']-d;n=p['lat']+d;w=p['lon']-d;e=p['lon']+d
+                  local={};add_elements(local,call(f'[out:json][timeout:20];(way["building"]({s},{w},{n},{e});relation["building"]({s},{w},{n},{e}););out geom;'))
+                  hits=[bid for bid,ps in local.items() if any(inside(poly,p['lon'],p['lat']) for poly in ps)]
+              if len(hits)==0:unmatched.append(p);continue
+              if len(hits)>1:amb.append({**p,'candidates':sorted(hits),'reason':'multiple_buildings'});continue
+              bid=hits[0]
+              if bid in used:amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]});continue
+              used[bid]=p['point_index'];cur=can.get(bid)
+              r={**p,'building_id':bid,'existing':bool(cur)}
+              if cur:r.update({'canonical_room_count':cur['room_count'],'canonical_source':cur['knowledge_source'],'canonical_observed_at':cur['knowledge_observed_at']})
+              unique.append(r)
+          out={'map_key':key,'canonical_area_id':src['canonical_area_id'],'point_count':len(pts),'points':unique,'unmatched':unmatched,'ambiguous':amb}
+          open(f'w6-{key}.json','w').write(json.dumps(out,ensure_ascii=False,indent=2,sort_keys=True))
+          print(key,'points',len(pts),'unique',len(unique),'unmatched',len(unmatched),'ambiguous',len(amb))
+          PY
+          python3 /tmp/w6-resolve.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w6-map-${{ matrix.map_key }}
+          path: w6-${{ matrix.map_key }}.json
+          retention-days: 2
+
+  aggregate:
+    needs: [classify, analyze]
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/download-artifact@v4
+        with:
+          name: w6-classification
+          path: /tmp/classification
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: w6-map-*
+          path: /tmp/maps
+          merge-multiple: true
+      - name: aggregate complete dry-run
+        run: |
+          python3 - <<'PY'
+          import glob,json
+          from collections import Counter,defaultdict
+          cls=json.load(open('/tmp/classification/w6-classification.json'))
+          files=glob.glob('/tmp/maps/w6-*.json')
+          assert len(files)==26,len(files)
+          results=[json.load(open(f)) for f in files]
+          bykey={r['map_key']:r for r in results}
+          unique_keys={m['map_key'] for m in cls['maps'] if len(m['candidates'])==1}
+          assert set(bykey)==unique_keys,(len(bykey),len(unique_keys),sorted(unique_keys-set(bykey)))
+          metrics=Counter();targets=defaultdict(list)
+          for m in cls['maps']:
+              c=m['candidates']
+              if len(c)==1:metrics['city_grid_yx_matches']+=1;targets[c[0]].append(m['map_key'])
               elif len(c)==0:metrics['unresolved_maps']+=1
               else:metrics['ambiguous_maps']+=1
-          metrics['exact_area_id_matches']=sum(1 for x in src['existing_links'] if x['match_method']=='exact_area_id')
-          duplicate_targets={k:v for k,v in target_to_maps.items() if len(v)>1}
-          metrics['duplicate_target_groups']=len(duplicate_targets);metrics['duplicate_target_maps']=sum(len(v) for v in duplicate_targets.values())
-          resolved_i=0
-          for m in src['maps']:
-              c=m['discovery'].get('candidates') or []
-              row={'map_key':m['map_key'],'city':m['city'],'grid':m['grid'],'candidate_count':len(c),'candidates':c,'existing_link':m.get('existing_link')}
-              if len(c)!=1:map_rows.append(row);continue
-              resolved_i+=1;area=c[0];pts=decode(m['points']);can={x['building_id']:x for x in m.get('canonical_buildings') or []}
-              feats=canonical_features(list(can))
-              unique=[];unmatched=[];amb=[];used={}
-              for p in pts:
-                  hits=[bid for bid,polys in feats.items() if any(inside(poly,p['lon'],p['lat']) for poly in polys)]
-                  if len(hits)==1:
-                      bid=hits[0]
-                  elif len(hits)>1:
-                      amb.append({**p,'candidates':sorted(hits),'reason':'multiple_canonical_buildings'});continue
+          metrics['exact_area_id_matches']=sum(1 for x in cls['existing_links'] if x['match_method']=='exact_area_id')
+          dup={a:k for a,k in targets.items() if len(k)>1}
+          for r in results:
+              metrics['source_positive_points']+=r['point_count']
+              metrics['point_unique_matches']+=len(r['points'])
+              metrics['point_unmatched']+=len(r['unmatched'])
+              metrics['point_ambiguous']+=len(r['ambiguous'])
+              for p in r['points']:
+                  if not p['existing']:
+                      metrics['building_rows_to_add']+=1;continue
+                  metrics['building_rows_already_known']+=1
+                  cur=p.get('canonical_room_count')
+                  if cur is None:metrics['existing_null_fill_candidates']+=1
+                  elif int(cur)==int(p['room_count']):metrics['room_count_same']+=1
                   else:
-                      local=local_features(p)
-                      local_hits=[bid for bid,polys in local.items() if any(inside(poly,p['lon'],p['lat']) for poly in polys)]
-                      if len(local_hits)==1:bid=local_hits[0]
-                      elif len(local_hits)>1:
-                          amb.append({**p,'candidates':sorted(local_hits),'reason':'multiple_local_buildings'});continue
-                      else:
-                          unmatched.append(p);continue
-                  if bid in used:
-                      amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]});continue
-                  used[bid]=p['point_index'];cur=can.get(bid)
-                  rec={**p,'building_id':bid,'existing':bool(cur)}
-                  if cur:
-                      rec['canonical_room_count']=cur['room_count'];rec['canonical_source']=cur['knowledge_source'];rec['canonical_observed_at']=cur['knowledge_observed_at']
-                      metrics['building_rows_already_known']+=1
-                      if cur['room_count'] is None:metrics['existing_null_fill_candidates']+=1
-                      elif int(cur['room_count'])!=int(p['room_count']):
-                          metrics['room_count_conflicts_total']+=1;metrics['room_count_conflicts_'+str(cur['knowledge_source'])]+=1
-                      else:metrics['room_count_same']+=1
-                  else:metrics['building_rows_to_add']+=1
-                  unique.append(rec)
-              metrics['source_positive_points']+=len(pts);metrics['point_unique_matches']+=len(unique);metrics['point_unmatched']+=len(unmatched);metrics['point_ambiguous']+=len(amb)
-              row.update({'canonical_area_id':area,'source_points':len(pts),'unique_points':len(unique),'unmatched_points':len(unmatched),'ambiguous_points':len(amb)})
-              map_rows.append(row);manifests.append({'map_key':m['map_key'],'canonical_area_id':area,'area_match_method':'city_grid_yx','points':unique,'unmatched':unmatched,'ambiguous':amb})
-              print(f"[resolved {resolved_i}/{metrics['city_grid_yx_matches']}] {m['map_key']} unique={len(unique)} unmatched={len(unmatched)} ambiguous={len(amb)}",flush=True)
-              time.sleep(0.25)
-          report={'stage':'W6','dry_run':True,'total_maps':src['catalog_count'],'existing_links_before':len(src['existing_links']),
+                      metrics['room_count_conflicts_total']+=1
+                      metrics['room_count_conflicts_'+str(p.get('canonical_source'))]+=1
+          report={'stage':'W6','dry_run':True,'total_maps':cls['total_maps'],'existing_links_before':len(cls['existing_links']),
             'exact_area_id_matches':metrics['exact_area_id_matches'],'city_grid_yx_matches':metrics['city_grid_yx_matches'],
             'unresolved_maps':metrics['unresolved_maps'],'ambiguous_maps':metrics['ambiguous_maps'],
-            'duplicate_target_groups':metrics['duplicate_target_groups'],'duplicate_target_maps':metrics['duplicate_target_maps'],'duplicate_targets':duplicate_targets,
-            'source_positive_points':metrics['source_positive_points'],'point_unique_matches':metrics['point_unique_matches'],'point_unmatched':metrics['point_unmatched'],'point_ambiguous':metrics['point_ambiguous'],
+            'duplicate_target_groups':len(dup),'duplicate_target_maps':sum(len(v) for v in dup.values()),'duplicate_targets':dup,
+            'source_positive_points':metrics['source_positive_points'],'point_unique_matches':metrics['point_unique_matches'],
+            'point_unmatched':metrics['point_unmatched'],'point_ambiguous':metrics['point_ambiguous'],
             'building_rows_to_add':metrics['building_rows_to_add'],'building_rows_already_known':metrics['building_rows_already_known'],
             'existing_null_fill_candidates':metrics['existing_null_fill_candidates'],'room_count_same':metrics['room_count_same'],
             'room_count_conflicts_total':metrics['room_count_conflicts_total'],
             'room_count_conflicts_by_source':{'game_live':metrics['room_count_conflicts_game_live'],'hk_maps_import':metrics['room_count_conflicts_hk_maps_import'],'legacy':metrics['room_count_conflicts_legacy']},
-            'maps':map_rows,'migration_manifest':manifests}
+            'classification_maps':cls['maps'],'migration_manifest':sorted(results,key=lambda x:x['map_key'])}
           assert report['total_maps']==235
-          assert report['city_grid_yx_matches']+report['unresolved_maps']+report['ambiguous_maps']==235
-          open('audit/hk-stage2-w6-dryrun.json','w',encoding='utf-8').write(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
-          summary={k:v for k,v in report.items() if k not in ('maps','migration_manifest','duplicate_targets')}
-          open('audit/hk-stage2-w6-dryrun-summary.txt','w',encoding='utf-8').write('\n'.join(f'{k}={v}' for k,v in summary.items())+'\n')
+          assert report['city_grid_yx_matches']==26
+          assert report['unresolved_maps']==209
+          assert report['ambiguous_maps']==0
+          open('audit/hk-stage2-w6-dryrun.json','w').write(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
+          summary={k:v for k,v in report.items() if k not in ('classification_maps','migration_manifest','duplicate_targets')}
+          open('audit/hk-stage2-w6-dryrun-summary.txt','w').write('\n'.join(f'{k}={v}' for k,v in summary.items())+'\n')
           print(json.dumps(summary,ensure_ascii=False,indent=2,sort_keys=True))
           PY
-          python3 /tmp/w6-analyze.py
       - name: commit dry-run
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add audit/hk-stage2-w6-dryrun.json audit/hk-stage2-w6-dryrun-summary.txt
-          git commit -m "audit: W6 dry-run all 235 website maps"
+          git commit -m "audit: W6 complete dry-run all 235 maps"
           git pull --rebase origin main
           git push origin HEAD:main
