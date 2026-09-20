@@ -33,6 +33,11 @@ jobs:
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
           echo "ACTUAL_INPUT_SHA=$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')"
+          echo "BASELINE_SHA=$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')"
+          echo "--- PIT MARKERS ---"
+          grep -E "HK_PITS_.*REV" /tmp/HamsterKingMobile.user.js | tail -n 30 || true
+          echo "--- LIVE VS BASELINE DIFF ---"
+          diff -u baseline/topking/HamsterKingMobile.current.user.js /tmp/HamsterKingMobile.user.js | head -n 160 || true
           grep -Fq "HK_PITS_REWARD_ONLY_REV = 'pits-reward-only-plan-20260920-r16'" /tmp/HamsterKingMobile.user.js
           test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "7a94ab3ce598fca1c12bc3daab4e41f46bc0bdccd517869f9662bf723dd3afdf"
 
