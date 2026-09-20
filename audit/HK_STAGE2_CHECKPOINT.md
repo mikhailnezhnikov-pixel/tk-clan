@@ -19,7 +19,7 @@ Each module:
 - status: IN_PROGRESS
 - current module: Pits / Ямы
 - current module file: audit/hk-stage2-02-pits.md
-- current module status: SOURCE_PREFLIGHT_PASS_IN_PROGRESS
+- current module status: BUG_CONFIRMED_FIX_PENDING
 - next module after LIVE PASS: Bosses / Боссы
 - Today / Сегодня: LIVE PASS
 
@@ -85,3 +85,13 @@ Each module:
 - CRLF → LF canonical SHA256 verified: `28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1`
 - previous BLOCKED status resolved
 - Stage 2.02 Pits preflight resumed
+
+
+## Pits canonical transfer bug
+
+- bug: `audit/hk-stage2-bug-pits-canonical-transfer-gap.md`
+- live verification run: `35490479912`
+- status: CONFIRMED
+- active live path: legacy single-Pit `pitLoop()`
+- donor canonical three-Pit `runPits(configs)`: missing
+- next action: fix Pits only; do not advance to Bosses
