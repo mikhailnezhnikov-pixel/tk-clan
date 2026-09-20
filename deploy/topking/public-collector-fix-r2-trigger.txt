@@ -1,1 +1,1 @@
-2026-09-21 war-safe deploy: single war read, preserve unexpired server snapshot, no forced ratings\n
+2026-09-21 war-safe deploy retry after workflow YAML fix\n
