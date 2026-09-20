@@ -1,0 +1,108 @@
+{
+  "old_area": [
+    {
+      "area_id": "79cb821a-ecc1-4605-a96d-0d8ee504b74c",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 53,
+      "y": 35,
+      "invest_count": 8,
+      "expected_buildings": 299,
+      "last_player_id": "anon-bbcf15d5417be29f8a5be305",
+      "last_seen": 1789913555
+    }
+  ],
+  "old_alias": [
+    {
+      "source_area_id": "79cb821a-ecc1-4605-a96d-0d8ee504b74c",
+      "canonical_area_id": "79cb821a-ecc1-4605-a96d-0d8ee504b74c",
+      "first_seen": 1786648484,
+      "last_seen": 1789913555
+    }
+  ],
+  "dubai_35_53": [],
+  "dubai_53_35": [
+    {
+      "area_id": "79cb821a-ecc1-4605-a96d-0d8ee504b74c",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 53,
+      "y": 35,
+      "last_seen": 1789913555
+    }
+  ],
+  "dubai_nearby": [
+    {
+      "area_id": "36de9881-f17e-4cf5-860c-cb29ab7acfb2",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 31,
+      "y": 35,
+      "last_seen": 1787902900
+    },
+    {
+      "area_id": "cd5dfe41-60fd-4234-bbae-89459511cb59",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 32,
+      "y": 35,
+      "last_seen": 1787902882
+    },
+    {
+      "area_id": "9f27e5fe-3842-463f-9074-ee2b6812423e",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 33,
+      "y": 36,
+      "last_seen": 1787902858
+    },
+    {
+      "area_id": "9f2f7cc2-d9c9-4b2b-a407-0ad04379bc8c",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 36,
+      "y": 37,
+      "last_seen": 1789688185
+    },
+    {
+      "area_id": "2c867098-1cbc-49de-b13d-2fe104dac45c",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 37,
+      "y": 36,
+      "last_seen": 1789688159
+    },
+    {
+      "area_id": "59ebbdb5-92c2-46aa-9509-3e651fcb9afa",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 38,
+      "y": 40,
+      "last_seen": 1789688167
+    },
+    {
+      "area_id": "8d09e9c1-4b8e-45af-b70b-d56c196940e6",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 39,
+      "y": 39,
+      "last_seen": 1789913617
+    },
+    {
+      "area_id": "6658e316-cbfc-4607-a890-8cb0f21b92e9",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 40,
+      "y": 40,
+      "last_seen": 1789913438
+    },
+    {
+      "area_id": "79cb821a-ecc1-4605-a96d-0d8ee504b74c",
+      "city_id": "7b396fb3-2d66-4afd-85e4-98b9fd58a90a",
+      "city_name": "Dubai",
+      "x": 53,
+      "y": 35,
+      "last_seen": 1789913555
+    }
+  ]
+}
