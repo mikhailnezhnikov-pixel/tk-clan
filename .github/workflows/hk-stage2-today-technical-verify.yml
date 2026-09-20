@@ -1,0 +1,50 @@
+name: HK Stage 2 Today Technical Verify
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/stage2-today-verify-trigger.txt'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live and check Today paths
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          node --check /tmp/live.js
+          grep -q '^// @version      1.17.4$' /tmp/live.js
+          grep -Fq "HK_STARTUP_ERROR_SCOPE_REV = 'startup-error-scope-20260920-r9'" /tmp/live.js
+          for needle in             "function renderDailyTasks"             "async function refreshDailyTasks"             "function selectedDailyActions"             "function dailyPlanTotals"             "async function runDailySelected"             "async function runDailyAd"             "async function runDailyRumors"             "async function runDailyClanPurchases"             "apiJson('/player/me', 'POST')"             "apiJson('/shop/view', 'GET')"; do
+            grep -Fq "$needle" /tmp/live.js
+          done
+          sha256sum /tmp/live.js | tee /tmp/live.sha
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "systemctl is-active --quiet hamsterking-license.service"
+
+      - name: Public round trip
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 "https://hk-license.89.125.1.71.sslip.io/panel.js?stage2-today=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/live.js /tmp/public.js
+          echo "LIVE_SHA=$(awk '{print $1}' /tmp/live.sha)"
+          echo "PUBLIC_SHA=$(sha256sum /tmp/public.js | awk '{print $1}')"
+          echo "TODAY_TECHNICAL_VERIFY=PASS"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js /tmp/public.js /tmp/live.sha
