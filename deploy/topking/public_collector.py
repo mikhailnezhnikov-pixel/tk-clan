@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request, fcntl
+import json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request, fcntl, hashlib
 
 REV = "public-server-collector-20260920-r1"
 GAME_API = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_API", "https://hk-game-api.hwgame.cloud").rstrip("/")
@@ -66,10 +66,20 @@ def game_json(path, method="GET", body=None):
         try:
             _last_request=time.monotonic()
             with urllib.request.urlopen(req,timeout=20) as response:
-                raw=response.read(2_000_000)
+                raw=response.read(5_000_000)
                 if response.status<200 or response.status>=300:
                     raise RuntimeError(f"HTTP {response.status}")
-                return json.loads(raw.decode("utf-8"))
+                text=raw.decode("utf-8-sig").strip("\x00\r\n\t ")
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError as exc:
+                    log(
+                        f"json decode path={path} status={response.status} "
+                        f"ctype={response.headers.get('Content-Type','')} bytes={len(raw)} "
+                        f"sha16={hashlib.sha256(raw).hexdigest()[:16]} "
+                        f"error={exc.msg}@{exc.pos}"
+                    )
+                    raise
         except urllib.error.HTTPError as exc:
             last=exc
             if exc.code==429 or exc.code>=500:
