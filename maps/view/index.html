@@ -134,6 +134,6 @@ function renderPoints(data){
 document.getElementById('show-all').onclick=()=>{if(mode==='full'){const all=selected.size===CRYSTALS.length;selected=all?new Set():new Set(CRYSTALS);document.querySelectorAll('#filters input').forEach(x=>x.checked=!all);refreshFullHighlight()}else{selected=new Set(CRYSTALS);document.querySelectorAll('#filters input').forEach(x=>x.checked=true);if(map?.getLayer('points'))map.setFilter('points',['in',['get','crystals_key'],['literal',CRYSTALS]])}};
 document.getElementById('fit').onclick=()=>{if(map&&fitBoundsValue)map.fitBounds(fitBoundsValue,{padding:35,duration:250})};
 </script>
-<script src="../../assets/site-nav.js?v=20260920-8"></script>
+<script src="../../assets/site-nav.js?v=20260920-11"></script>
 </body>
 </html>
