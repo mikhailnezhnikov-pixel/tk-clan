@@ -1,0 +1,10 @@
+MAPS_SHARED_KB_W7_BUILD=PASS
+source_server_sha256=8fe91e74f49ecec9ea662e5ec85c32f07854a6dd5ed03864f70a3261a43dc245
+candidate_server_sha256=b5189981acade420e1aaa533dec8b745c0e16969bf1def0c5008aa297f2a2812
+create_canonical=PASS
+resolve_canonical=PASS
+direct_shared_knowledge=PASS
+no_separate_sync=PASS
+game_live_priority=PASS
+idempotent_reupload=PASS
+deployed=NO
