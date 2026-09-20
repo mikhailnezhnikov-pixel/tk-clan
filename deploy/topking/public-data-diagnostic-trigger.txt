@@ -10,3 +10,4 @@ inspect clan metric mapping for alliance totals
 post-v3 public snapshot check
 check public snapshot after V4 live deploy
 check after user game reload
+inspect live v4 collector and recent submissions
