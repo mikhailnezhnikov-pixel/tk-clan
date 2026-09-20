@@ -757,6 +757,7 @@
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
+  const HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2';
   const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   const HK_AUTO_ROUTINES_REV = 'auto-routines-20260920-r1';
@@ -1397,6 +1398,236 @@
     return ids;
   }
 
+  let buildingCanonPlan = null;
+  let buildingCanonBusy = false;
+
+  function buildingCanonSettings() {
+    const stored=load().buildingCanonSettings||{};
+    return {
+      minCrystals:Number.isSafeInteger(Number(stored.minCrystals))&&Number(stored.minCrystals)>=0?Number(stored.minCrystals):3,
+      favoriteFrom:Number.isSafeInteger(Number(stored.favoriteFrom))&&Number(stored.favoriteFrom)>=0?Number(stored.favoriteFrom):2,
+      buildingType:['all','normal','investment'].includes(String(stored.buildingType||''))?String(stored.buildingType):'normal'
+    };
+  }
+
+  function buildingCanonSaveSettings(settings) {
+    save({buildingCanonSettings:{
+      minCrystals:Math.max(0,Math.trunc(Number(settings?.minCrystals)||0)),
+      favoriteFrom:Math.max(0,Math.trunc(Number(settings?.favoriteFrom)||0)),
+      buildingType:['all','normal','investment'].includes(String(settings?.buildingType||''))?String(settings.buildingType):'normal'
+    }});
+  }
+
+  function buildingCanonReadSettingsFromDom() {
+    const box=root?.querySelector('#hk-buildings-content');
+    if(!box)return buildingCanonSettings();
+    const settings={
+      minCrystals:Math.max(0,Math.trunc(Number(box.querySelector('#hk-building-min-crystals')?.value)||0)),
+      favoriteFrom:Math.max(0,Math.trunc(Number(box.querySelector('#hk-building-favorite-from')?.value)||0)),
+      buildingType:String(box.querySelector('#hk-building-type')?.value||'normal')
+    };
+    if(!['all','normal','investment'].includes(settings.buildingType))settings.buildingType='normal';
+    buildingCanonSaveSettings(settings);
+    return settings;
+  }
+
+  function buildingCanonActiveRows(documentValue=playerDocument) {
+    const state=documentValue||{};
+    const rows=Array.isArray(state?.buildings)?state.buildings:(Array.isArray(state?.player?.buildings)?state.player.buildings:[]);
+    return rows.filter(row=>row&&String(row?.id||row?.building_id||''));
+  }
+
+  function buildingCanonActiveIds(documentValue=playerDocument) {
+    return new Set(buildingCanonActiveRows(documentValue).map(row=>String(row?.id||row?.building_id||'')));
+  }
+
+  function buildingCanonCapacity(documentValue=playerDocument) {
+    const state=documentValue||{},player=state?.player||{};
+    const active=buildingCanonActiveRows(state);
+    const maxRaw=player?.max_buildings??state?.max_buildings;
+    const max=Number.isFinite(Number(maxRaw))&&Number(maxRaw)>=0?Math.trunc(Number(maxRaw)):null;
+    const favoriteRows=active.filter(row=>row?.is_favorite===true||row?.favorite===true);
+    const favoriteMaxRaw=player?.max_favorite_building??state?.max_favorite_building;
+    const favoriteMax=Number.isFinite(Number(favoriteMaxRaw))&&Number(favoriteMaxRaw)>=0?Math.trunc(Number(favoriteMaxRaw)):null;
+    return {
+      active:active.length,
+      max,
+      free:max===null?null:Math.max(0,max-active.length),
+      favorites:favoriteRows.length,
+      favoriteMax,
+      favoriteFree:favoriteMax===null?null:Math.max(0,favoriteMax-favoriteRows.length)
+    };
+  }
+
+  function buildingCanonMapRow(areaId) {
+    const id=String(areaId||'');
+    return (mapRows||[]).find(row=>String(row?.area_id||'')===id||(Array.isArray(row?.aliases)&&row.aliases.map(String).includes(id)))||null;
+  }
+
+  function buildingCanonMetric(row,key) {
+    const value=Number(row?.[key]);
+    return Number.isFinite(value)&&value>=0?value:null;
+  }
+
+  async function buildingCanonBuildPlan(refreshPlayer=true) {
+    if(refreshPlayer)playerDocument=await hkAuthoritativePlayerRead('buildings:plan');
+    if(!Array.isArray(mapRows)||!mapRows.length){
+      const index=await mapServerJson('/list');
+      mapRows=Array.isArray(index?.maps)?index.maps:[];
+    }
+    const settings=buildingCanonSettings();
+    const owned=(playerDocument?.areas?.areas||[]).filter(row=>row?.gamearea_id||row?.area_id);
+    const active=buildingCanonActiveIds(playerDocument);
+    const seen=new Set(),candidates=[];
+    let mappedAreas=0,unknownMetric=0;
+    for(const area of owned){
+      const ownedId=String(area?.gamearea_id||area?.area_id||'');
+      const indexRow=buildingCanonMapRow(ownedId);
+      if(!indexRow)continue;
+      let detail=null;
+      try{detail=(await mapServerJson('/detail',{area_id:String(indexRow.area_id||ownedId)}))?.detail||null;}catch(_){continue;}
+      if(!detail)continue;
+      mappedAreas+=1;
+      for(const row of detail?.buildings||[]){
+        const buildingId=String(row?.building_id||'');
+        if(!buildingId||active.has(buildingId)||seen.has(buildingId))continue;
+        const crystals=buildingCanonMetric(row,'room_count');
+        if(crystals===null){unknownMetric+=1;continue;}
+        const isInvest=row?.is_invest===true;
+        if(settings.buildingType==='investment'&&!isInvest)continue;
+        if(settings.buildingType==='normal'&&isInvest)continue;
+        if(crystals<settings.minCrystals)continue;
+        seen.add(buildingId);
+        const totalEvents=buildingCanonMetric(row,'total_events');
+        candidates.push({buildingId,crystals,totalEvents,isInvest,areaId:ownedId,cityId:String(area?.city_id||'')});
+      }
+    }
+    candidates.sort((a,b)=>b.crystals-a.crystals-0||Number(b.totalEvents||0)-Number(a.totalEvents||0)||a.buildingId.localeCompare(b.buildingId));
+    return {
+      at:Date.now(),settings,candidates,
+      ownedAreas:owned.length,mappedAreas,unknownMetric,
+      capacity:buildingCanonCapacity(playerDocument)
+    };
+  }
+
+  function buildingCanonActualMetrics(data,fallback={}) {
+    const building=data?.building||data||{};
+    const events=Array.isArray(building?.events)?building.events:null;
+    if(!events)return {crystals:Number(fallback.crystals||0),totalEvents:Number(fallback.totalEvents||0)};
+    let crystals=0,sideEvents=0;
+    for(const event of events){
+      const sides=Array.isArray(event?.side_events)?event.side_events:[];
+      sideEvents+=sides.length;
+      for(const side of sides){
+        const items=Array.isArray(side?.reward_view?.items)?side.reward_view.items:[];
+        for(const item of items)if(String(item?.id||'')==='item_fake_prematmaxeventlvl')crystals+=1;
+      }
+    }
+    return {crystals,totalEvents:events.length+sideEvents};
+  }
+
+  function buildingCanonCapacityError(error) {
+    const text=String(error?.apiData?.description||error?.apiData?.message||error?.message||'').toLowerCase();
+    return Number(error?.httpStatus||0)===409&&/maximum number of active building|max(?:imum)?.*active building|building.*limit/.test(text);
+  }
+
+  function buildingCanonFavoriteFullError(error) {
+    const text=String(error?.apiData?.description||error?.apiData?.message||error?.message||'').toLowerCase();
+    return /favorite.*(?:max|limit|full)|maximum.*favorite/.test(text);
+  }
+
+  async function buildingCanonOpen(buildingId) {
+    const path='/player/building?building_id='+encodeURIComponent(String(buildingId||''));
+    return hkMutationGate.run('/player/building',()=>apiJsonCore(path,'POST',null,true,0));
+  }
+
+  async function buildingCanonFavorite(buildingId) {
+    return apiJson('/player/building/favorite/add?building_id='+encodeURIComponent(String(buildingId||'')),'POST',null,true,0);
+  }
+
+  async function buildingCanonPreparePlan(showLog=true) {
+    if(buildingCanonBusy)return buildingCanonPlan;
+    buildingCanonBusy=true;renderBuildings();
+    try{
+      buildingCanonPlan=await buildingCanonBuildPlan(true);
+      if(showLog)log(either(
+        `Здания: кандидатов ${buildingCanonPlan.candidates.length}, карт районов ${buildingCanonPlan.mappedAreas}/${buildingCanonPlan.ownedAreas}`,
+        `Buildings: candidates ${buildingCanonPlan.candidates.length}, mapped districts ${buildingCanonPlan.mappedAreas}/${buildingCanonPlan.ownedAreas}`
+      ),buildingCanonPlan.candidates.length?'ok':'warn');
+      return buildingCanonPlan;
+    }catch(error){
+      buildingCanonPlan=null;
+      log(either('Ошибка расчёта зданий','Building plan error')+': '+(error?.message||error),'bad');
+      return null;
+    }finally{buildingCanonBusy=false;renderBuildings();}
+  }
+
+  async function runBuildingsCanonical() {
+    if(!requireLicense()||buildingCanonBusy)return;
+    if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
+    buildingCanonSaveSettings(buildingCanonReadSettingsFromDom());
+    buildingCanonBusy=true;renderBuildings();
+    let opened=0,favorites=0,errors=0,capacityStopped=false,favoriteEnabled=true;
+    try{
+      buildingCanonPlan=await buildingCanonBuildPlan(true);
+      const capacity=buildingCanonPlan.capacity;
+      const source=buildingCanonPlan.candidates;
+      const candidates=capacity.free===null?source:source.slice(0,capacity.free);
+      if(!candidates.length){log(either('Подходящих неоткрытых зданий нет.','No eligible unopened buildings.'),'warn');return;}
+      const preview=candidates.slice(0,12).map((row,index)=>`${index+1}. ${row.buildingId} · 💎 ${row.crystals}${row.isInvest?' · ◆':''}`).join('\n');
+      const more=candidates.length>12?either(`\n…и ещё ${candidates.length-12}`,`\n…and ${candidates.length-12} more`):'';
+      if(!confirm(either(
+        `Открыть подходящие здания: ${candidates.length}?\n\n${preview}${more}`,
+        `Open eligible buildings: ${candidates.length}?\n\n${preview}${more}`
+      )))return;
+      hkRunner.start({title:either('Здания','Buildings'),total:candidates.length,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+      let done=0;
+      for(const candidate of candidates){
+        if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        playerDocument=await hkAuthoritativePlayerRead('buildings:before-open');
+        if(buildingCanonActiveIds(playerDocument).has(candidate.buildingId)){
+          done+=1;hkRunner.setStep(either('Уже открыто — пропуск','Already open — skipped'),done,candidates.length);continue;
+        }
+        const liveCapacity=buildingCanonCapacity(playerDocument);
+        if(liveCapacity.free!==null&&liveCapacity.free<=0){capacityStopped=true;log(either('Свободных слотов зданий больше нет.','No free building slots remain.'),'warn');break;}
+        hkRunner.setStep(`${either('Открываю','Opening')} ${candidate.buildingId}`,done,candidates.length);
+        let result;
+        try{result=await buildingCanonOpen(candidate.buildingId);}catch(error){
+          if(buildingCanonCapacityError(error)){capacityStopped=true;log(either('Игра сообщила: достигнут лимит активных зданий.','Game reports the active-building limit was reached.'),'warn');break;}
+          errors+=1;done+=1;log(`✗ ${candidate.buildingId}: ${error?.message||error}`,'bad');hkRunner.setStep(candidate.buildingId,done,candidates.length);continue;
+        }
+        opened+=1;
+        try{buildingStudyCache.set(candidate.buildingId,result);await acceptBuildingStudy((apiBase||GAME_API_FALLBACK)+'/player/building?building_id='+encodeURIComponent(candidate.buildingId),apiHeaders,result);}catch(_){}
+        const metrics=buildingCanonActualMetrics(result,candidate);
+        log(`✓ ${candidate.buildingId} · 💎 ${metrics.crystals} · ${either('событий','events')} ${metrics.totalEvents}`,'ok');
+        if(favoriteEnabled&&metrics.crystals>=buildingCanonPlan.settings.favoriteFrom){
+          const favCap=buildingCanonCapacity(playerDocument);
+          if(favCap.favoriteFree!==null&&favCap.favoriteFree<=0){favoriteEnabled=false;log(either('Свободных мест в избранном больше нет.','No favorite slots remain.'),'warn');}
+          else{
+            try{await buildingCanonFavorite(candidate.buildingId);favorites+=1;log(`★ ${candidate.buildingId} · ${either('добавлено в избранное','added to favorites')}`,'ok');}
+            catch(error){if(buildingCanonFavoriteFullError(error)){favoriteEnabled=false;log(either('Лимит избранных зданий достигнут.','Favorite building limit reached.'),'warn');}else log(`↷ ${candidate.buildingId} · ${either('не удалось добавить в избранное','favorite failed')}: ${error?.message||error}`,'warn');}
+          }
+        }
+        done+=1;hkRunner.setStep(candidate.buildingId,done,candidates.length);
+        playerDocument=await hkAuthoritativePlayerRead('buildings:after-open');
+        if(done<candidates.length)await gameRetryDelay(3000+Math.floor(Math.random()*5001));
+      }
+      playerDocument=await hkAuthoritativePlayerRead('buildings:complete');
+      buildingCanonPlan=await buildingCanonBuildPlan(false);
+      renderBuildings();
+      hkRunner.finish(either('Открытие зданий завершено','Building opening completed'));
+      log(either(
+        `Здания: открыто ${opened}, в избранное ${favorites}, ошибок ${errors}${capacityStopped?' · лимит слотов достигнут':''}`,
+        `Buildings: opened ${opened}, favorited ${favorites}, errors ${errors}${capacityStopped?' · slot limit reached':''}`
+      ),errors?'warn':'ok');
+    }catch(error){
+      if(error?.name==='AbortError'){hkRunner.reset();log(either('Открытие зданий остановлено','Building opening stopped'),'warn');}
+      else{hkRunner.fail(error);log(either('Ошибка открытия зданий','Building opening error')+': '+(error?.message||error),'bad');}
+      try{playerDocument=await hkAuthoritativePlayerRead('buildings:error-reread');}catch(_){}
+    }finally{buildingCanonBusy=false;renderBuildings();}
+  }
+
   function accountBuildingRows() {
     const state=hkStateStore.snapshot||playerDocument||{};
     const rows=Array.isArray(state?.buildings)?state.buildings:(Array.isArray(state?.player?.buildings)?state.player.buildings:[]);
@@ -1421,17 +1652,28 @@
   function renderBuildings() {
     const box=root?.querySelector('#hk-buildings-content');
     if(!box)return;
-    const rows=accountBuildingRows();
+    const rows=accountBuildingRows(),settings=buildingCanonSettings(),plan=buildingCanonPlan;
     const content=rows.length?rows.map(row=>{
       const crystal=row.crystalRooms==null?'?':Number(row.crystalRooms).toLocaleString(locale());
       return '<div class="hk-card"><div class="hk-business-info"><b class="hk-business-name">'+escapeHtml(row.id)+'</b><small>'+
         either('Тир','Tier')+' '+Number(row.tier)+' · '+either('уровень','level')+' '+Number(row.level)+' · '+either('комнат','rooms')+' '+Number(row.roomCount)+' · 💎 '+crystal+
-        '</small></div><button class="hk-secondary" data-building-read="'+escapeHtml(row.id)+'">'+either('Считать','Read')+'</button></div>';
+        '</small></div><button class="hk-secondary" data-building-read="'+escapeHtml(row.id)+'" '+(buildingCanonBusy?'disabled':'')+'>'+either('Считать','Read')+'</button></div>';
     }).join(''):'<p class="hk-muted">'+either('Здания аккаунта пока не считаны.','Account buildings have not been read yet.')+'</p>';
-    box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Здания','Buildings')+'</h3><small>'+either('Используется игровой /player/building из старого скрипта','Uses the historical in-game /player/building reader')+'</small></div><button id="hk-buildings-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><div class="hk-cards">'+content+'</div>';
+    const capacity=plan?.capacity||buildingCanonCapacity(playerDocument);
+    const candidateRows=(plan?.candidates||[]).slice(0,12).map(row=>'<div class="hk-card"><div class="hk-business-info"><b>'+escapeHtml(row.buildingId)+'</b><small>💎 '+Number(row.crystals).toLocaleString(locale())+(row.isInvest?' · ◆ '+either('инвест','investment'):' · '+either('обычное','normal'))+'</small></div><strong>'+escapeHtml(row.areaId||'')+'</strong></div>').join('');
+    const planSummary=plan?'<div class="hk-cardbox"><b>'+either('План открытия','Opening plan')+'</b><p class="hk-muted">'+either('Районов с картой','Mapped districts')+': '+plan.mappedAreas+'/'+plan.ownedAreas+' · '+either('кандидатов','candidates')+': '+plan.candidates.length+' · '+either('активных','active')+': '+capacity.active+(capacity.max===null?'':'/'+capacity.max)+'</p>'+(plan.unknownMetric?'<p class="hk-muted">'+either('Пропущено зданий без известного числа кристальных комнат','Buildings skipped because crystal-room count is unknown')+': '+plan.unknownMetric+'</p>':'')+(candidateRows||'<p class="hk-muted">'+either('Подходящих кандидатов нет','No eligible candidates')+'</p>')+(plan.candidates.length>12?'<p class="hk-muted">… +'+(plan.candidates.length-12)+'</p>':'')+'</div>':'<p class="hk-muted">'+either('Нажмите «Рассчитать кандидатов» перед запуском.','Press “Calculate candidates” before starting.')+'</p>';
+    box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Здания','Buildings')+'</h3><small>'+either('Ручное чтение и каноническое автооткрытие подходящих зданий','Manual read and canonical automatic opening of eligible buildings')+'</small></div><button id="hk-buildings-refresh" class="hk-secondary" '+(buildingCanonBusy?'disabled':'')+'>'+either('Обновить','Refresh')+'</button></div>'+
+      '<div class="hk-cardbox"><div class="hk-grid"><label>'+either('Минимум кристаллов','Minimum crystals')+'</label><input id="hk-building-min-crystals" type="number" min="0" step="1" value="'+settings.minCrystals+'"><label>'+either('В избранное от кристаллов','Favorite from crystals')+'</label><input id="hk-building-favorite-from" type="number" min="0" step="1" value="'+settings.favoriteFrom+'"><label>'+either('Тип здания','Building type')+'</label><select id="hk-building-type"><option value="normal" '+(settings.buildingType==='normal'?'selected':'')+'>'+either('Обычные','Normal')+'</option><option value="investment" '+(settings.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные','Investment')+'</option><option value="all" '+(settings.buildingType==='all'?'selected':'')+'>'+either('Все','All')+'</option></select></div><div class="hk-toolbar"><button id="hk-building-plan" class="hk-secondary" '+(buildingCanonBusy?'disabled':'')+'>'+either('Рассчитать кандидатов','Calculate candidates')+'</button><button id="hk-building-run" class="hk-primary" '+(buildingCanonBusy||!plan?.candidates?.length?'disabled':'')+'>'+either('Открыть подходящие','Open eligible')+'</button></div></div>'+planSummary+'<div class="hk-cards">'+content+'</div>';
+    const saveControls=()=>{buildingCanonSaveSettings(buildingCanonReadSettingsFromDom());buildingCanonPlan=null;renderBuildings();};
     box.querySelector('#hk-buildings-refresh')?.addEventListener('click',()=>void refreshBuildings(true));
+    box.querySelector('#hk-building-plan')?.addEventListener('click',()=>{buildingCanonSaveSettings(buildingCanonReadSettingsFromDom());buildingCanonPlan=null;void buildingCanonPreparePlan(true);});
+    box.querySelector('#hk-building-run')?.addEventListener('click',()=>void runBuildingsCanonical());
+    box.querySelector('#hk-building-min-crystals')?.addEventListener('change',saveControls);
+    box.querySelector('#hk-building-favorite-from')?.addEventListener('change',saveControls);
+    box.querySelector('#hk-building-type')?.addEventListener('change',saveControls);
     box.querySelectorAll('[data-building-read]').forEach(button=>button.addEventListener('click',()=>void readBuildingStudy(button.dataset.buildingRead)));
   }
+
 
   async function refreshBuildings(force=false) {
     if(!requireLicense())return null;
