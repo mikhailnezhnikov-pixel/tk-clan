@@ -278,3 +278,28 @@ Verification:
 
 Current coordinate marker:
 `HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2'`
+
+## Parallel active-building reader r6 — safe5 throttle
+
+Marker:
+`HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r6-safe5'`
+
+Safety tuning over r5:
+- concurrent read-only `/player/building` workers reduced from 10 to 5;
+- submit batch remains 200 observations;
+- active-building intersection, unopened-building exclusion, event-catalog guards and retry/backoff behavior are unchanged;
+- no Explore behavior changed; Explore r4 marker was verified intact after deploy.
+
+Live verification:
+- source live SHA256: `78f120fb0a3f83f66378a60dd950673de143d1d1f8dc4067bcdb8572483aa5f6`;
+- deployed/public SHA256: `416e214c462285389e3e905de53c2011e6bfb217ffd6286cebefe8206d3ae318`;
+- syntax: PASS;
+- service/deploy: PASS;
+- public byte equality: PASS;
+- parallel reads: 5;
+- submit batch: 200;
+- Explore r4 preserved: PASS.
+
+Evidence:
+`audit/hk-stage2-maps-parallel-read-r6-safe5-live-status.txt`
+
