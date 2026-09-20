@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
+status: PASSPLAN_SNIPER_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
 
 ## Required Stage 2 chain
 
@@ -135,3 +135,83 @@ These stay for the next Pits block after the core UI/live-read is visually confi
 
 Current status:
 **CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK**
+
+
+## UI alignment r2
+
+Marker:
+`HK_PITS_UI_REV = 'pits-ui-align-20260920-r2'`
+
+Workflow:
+`Deploy TopKing Pits UI Align R2`
+
+Successful run:
+`35492472689`
+
+Result:
+- card controls aligned into a bounded grid;
+- Restoration Paws checkbox/input alignment corrected;
+- Core r1 gameplay/API logic unchanged;
+- live/public SHA256 after r2: `a3df20e0996ced42e4efa39baa5f25b9e41af979657854079c8e645e57b16708`.
+
+## Pass-plan + Sniper r3 deployed
+
+Pinned donor used:
+- uploaded `скрипт Kokkaras,.txt`;
+- version: `5.3.22-ui-icons-pit-dim`;
+- canonical CRLF→LF SHA256: `28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1`.
+- donor file is not committed to the repository by user choice; future chat must use the same exact upload/SHA if donor code is needed again.
+
+Confirmed donor behavior transferred in this block:
+- Pit is active only when its state has `is_finish === false`;
+- finished Pit snapshots no longer lock the Pass plan merely because an old `mass_multiplier` remains;
+- normal Pass plan remains donor-compatible: Exact / Rounded / Direct / Pit Pass;
+- Sniper mode is independent per Pit;
+- standalone Sniper uses multiplier ×1;
+- Sniper payment is selectable as FREE / PREM / ITEM when that payment is live-available;
+- Sniper recommended target = `floor(currentLevel / 5) * 5 + 15`;
+- Sniper target choices start at the recommended target and higher available target levels;
+- active ×1 Pit can preserve Sniper flag, while active non-×1 Pit cannot enable Sniper;
+- saved normal Pass plan/target remain separate from Sniper target/payment.
+
+Marker:
+`HK_PITS_SNIPER_REV = 'pits-passplan-sniper-20260920-r3'`
+
+Workflow:
+`Deploy TopKing Pits PassPlan Sniper R3`
+
+Successful run:
+`35493218772`
+
+Technical result:
+- exact pre-deploy r2 SHA verification: PASS;
+- Python patch compile: PASS;
+- donor-transfer anchors: PASS;
+- JS syntax: PASS;
+- backup/deploy: PASS;
+- service active: PASS;
+- public round-trip: PASS;
+- live/public byte equality: PASS;
+- live/public SHA256: `42d39c573c5bb8bf445f8166a72a6b0a16fde14295365a0ebea0ee43e71b6f64`.
+
+Baseline sync:
+- workflow: `Sync TopKing Current From Live`;
+- run: `35493258548`;
+- result: SUCCESS;
+- `baseline/topking/HamsterKingMobile.current.user.js` contains the r3 marker.
+
+Current status:
+**PASSPLAN_SNIPER_LIVE_CANDIDATE_PENDING_USER_UI_CHECK**
+
+Required user check:
+1. reload the game;
+2. open HK → Ямы;
+3. do NOT start the Pits yet;
+4. verify that completed/non-active Pits have a selectable Pass plan;
+5. verify Sniper mode appears on each Pit;
+6. enable Sniper on one non-active Pit and verify:
+   - Pass plan becomes ×1;
+   - Pass payment selector appears;
+   - target list starts at the recommended Sniper level and allows higher targets.
+
+Do not advance to tournament reward planning, restoration decision logic, or Bosses until this UI/live-read check is confirmed.
