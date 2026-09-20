@@ -755,8 +755,8 @@
   const HK_STAGE2_STATE_REV = 'stage2c-state-20260919-r1';
   const HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1';
   const HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1';
-  const HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r5';
-  const HK_MAP_READ_CONCURRENCY = 10;
+  const HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r6-safe5';
+  const HK_MAP_READ_CONCURRENCY = 5;
   const HK_MAP_SUBMIT_BATCH = 200;
   const HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2';
   const HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1';
