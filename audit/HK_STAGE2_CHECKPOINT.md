@@ -974,6 +974,43 @@ PASS gate:
 - explicit regression test proves imported data cannot overwrite newer `game_live` knowledge;
 - source and timestamp are inspectable.
 
+#### W5 result — PASS (2026-09-20)
+
+- audit evidence: `audit/HK_STAGE2_W5_MAPS_PROVENANCE.md`;
+- live status: `audit/hk-stage2-maps-shared-kb-w5-live-status.txt`;
+- schema added to `map_buildings`:
+  - `knowledge_source`;
+  - `knowledge_observed_at`;
+- normalized sources: `game_live`, `hk_maps_import`, `legacy`;
+- live backfill: **162170** rows total:
+  - `game_live=162167`;
+  - `hk_maps_import=3`;
+  - `legacy=0`;
+- invalid/zero provenance timestamps after migration: **0**;
+- current live-game submissions are authoritative and can refresh room knowledge even on a fully complete district;
+- `hk_maps_import` remains NULL-only and cannot overwrite an existing non-null value;
+- legacy/Kokkaras imports cannot overwrite complete canonical room knowledge;
+- duplicate-area merge path now preserves provenance and prefers newer `game_live` knowledge over non-game/older live knowledge;
+- explicit temp-DB conflict regression run `35512193549`: PASS:
+  - `game_live` overwrites prior import on complete district;
+  - later HK Maps import cannot overwrite that `game_live`;
+  - later legacy import cannot overwrite it;
+  - source + timestamp visible through `map_detail()`;
+- live deploy/verification run `35512251926`: PASS;
+- live server SHA: `8e3664d5a437ea7e924e91f4b6de3944e75b80e0bafbed5fc10769e37f71b22d`;
+- pilot `hk_moscow1226` provenance after W5:
+  - `game_live:114`;
+  - `hk_maps_import:3`;
+  - room histogram remains `0:114,2:3`;
+- W4 website render remains `0:26,1:1,2:3,3:2`;
+- geometry SHA unchanged: `58ead2cc505d010b676ff5aac55b230c9609809600b69681c99f793d593c6cd6`;
+- current public userscript SHA unchanged by W5: `df677e603e0a180e0e2e2b5ce27af268ab788ced12e4e6b2036d4c9b23c78115`;
+- Maps scanner remains `maps-parallel-read-20260920-r6-safe5` with **5** read-only workers;
+- coordinate marker remains `maps-coordinates-column-row-20260920-r2`;
+- bulk 235-map migration: **NO**;
+- **W6 NOT STARTED**; stop here until explicit user instruction.
+
+
 ### Stage W6 — Dry-run and migration of all 235 website maps
 
 Before any bulk write, produce a dry-run report:
