@@ -1,6 +1,6 @@
 # HK Stage 2.01 — Today / Сегодня
 
-status: LIVE_CANDIDATE_R2_PENDING_USER_UI_CHECK
+status: LIVE_CANDIDATE_R3_PENDING_USER_UI_CHECK
 
 ## Donor reference
 
@@ -120,3 +120,28 @@ Technical verification:
 - deploy/service: PASS
 - public round-trip: PASS
 - live/public SHA256: `3bcf43a3fbc805d81d4e64cd41d13ca0ee1fccd85fded13f877a66c05bbfabae`
+
+
+## r3 cleanup — remove redundant Today toolbar buttons
+
+User approved removal of:
+- `Только проверить` / `#hk-daily-refresh`
+- `Очистить журнал` / `#hk-daily-clear`
+
+Reason:
+- Today already auto-refreshes on module activation through `refreshModuleLive('daily')`;
+- the old manual refresh button duplicated that behavior;
+- `Очистить журнал` cleared the technical log, not the expense journal, so the label was misleading.
+
+Applied marker:
+`HK_TODAY_TOOLBAR_REV = 'today-toolbar-clean-20260920-r3'`
+
+Verification:
+- workflow run: `35489765172`
+- patch: PASS
+- syntax: PASS
+- backup/deploy: PASS
+- service: PASS
+- public round-trip: PASS
+- auto-refresh path retained: PASS
+- live/public SHA256: `303f6813d6e001751b53b32d83c6098f307aeedcee6a3cf320887bc93a07a117`
