@@ -1,0 +1,71 @@
+name: Sync TopKing Bosses Area Calculator R3
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/bosses-area-calculator-r3-sync-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Verify r3 live and public
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          node --check /tmp/live.js
+          grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-area-calculator-20260920-r3'" /tmp/live.js
+          grep -Fq "HK_BOSSES_CALC_REV='bosses-area-calculator-20260920-r3'" /tmp/live.js
+          grep -Fq "function bossCanonOpenCalculator" /tmp/live.js
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?bosses-r3-sync=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/live.js /tmp/public.js
+          sha="$(sha256sum /tmp/live.js | awk '{print $1}')"
+          {
+            echo "BOSSES_AREA_CALCULATOR_R3=PASS"
+            echo "live_sha256=$sha"
+            echo "public_sha256=$sha"
+            echo "public_byte_equality=PASS"
+            echo "syntax=PASS"
+          } > audit/hk-stage2-bosses-r3-live-status.txt
+          cp /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
+
+      - name: Commit synchronized baseline
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-stage2-bosses-r3-live-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "stage2: sync Bosses area calculator r3 live candidate"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js /tmp/public.js
