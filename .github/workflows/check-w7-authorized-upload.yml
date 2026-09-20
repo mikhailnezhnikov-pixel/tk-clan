@@ -1,0 +1,171 @@
+name: Check W7 authorized map upload
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/w7-check-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact W6 live server
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "8fe91e74f49ecec9ea662e5ec85c32f07854a6dd5ed03864f70a3261a43dc245"
+
+      - name: Apply W7 patch
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/patch_server_maps_shared_kb_w7.py
+          python3 deploy/topking/patch_server_maps_shared_kb_w7.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq 'HK_MAP_AUTHORIZED_UPLOAD_W7_V1' /tmp/server.py
+          grep -Fq -- '--import-hk-authorized-map' /tmp/server.py
+
+      - name: Regression on temporary DB
+        run: |
+          python3 - <<'PY'
+          import importlib.util,os,tempfile
+          spec=importlib.util.spec_from_file_location('s','/tmp/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          fd,path=tempfile.mkstemp(prefix='hk-w7-',suffix='.db');os.close(fd)
+          try:
+              s.DB_PATH=path
+              s.init_db()
+
+              def poly(cx,cy,d=.00025):
+                  return {'type':'Polygon','coordinates':[[
+                      [cx-d,cy-d],[cx+d,cy-d],[cx+d,cy+d],[cx-d,cy+d],[cx-d,cy-d]
+                  ]]}
+
+              upload={
+                  'catalog':{
+                      'key':'hk_test0102','city':'Test','grid':'02:01','invest':1,'buildings':2,'unknown':0,
+                      'crystals':[0,1,1,0,0,0],'eventBuildings':2,'totalEvents':3,'progress':100,'score':10,
+                      'reward':{'max':1,'normal':1,'investment':1}
+                  },
+                  'points':[1000000,2000000,1,100,100,10],
+                  'meta':{
+                      'area_id':'web-area-1','city_id':'city-test','city_name':'Test','x':1,'y':2,
+                      'coord_revision':'column-row-v1'
+                  },
+                  'buildingsGeoJSON':{'type':'FeatureCollection','features':[
+                      {'type':'Feature','id':'way1','geometry':poly(10.0,20.0),
+                       'properties':{'is_game':True,'building_id':'way1','crystals':1,'is_investment':False}},
+                      {'type':'Feature','id':'way2','geometry':poly(10.001,20.001),
+                       'properties':{'is_game':True,'building_id':'way2','crystals':2,'is_investment':True}},
+                  ]}
+              }
+              first=s.import_hk_authorized_map_upload(upload)
+              assert first['ok'] and first['direct_shared'] is True and first['sync_required'] is False,first
+              assert first['canonical_area_id']=='web-area-1',first
+              assert first['matched_points']==2 and first['point_links']==2,first
+              d=s.map_detail('web-area-1')
+              by={r['building_id']:r for r in d['buildings']}
+              assert by['way1']['room_count']==1 and by['way1']['knowledge_source']=='hk_maps_import',by['way1']
+              assert by['way2']['room_count']==2 and by['way2']['knowledge_source']=='hk_maps_import',by['way2']
+              web=s.hk_map_data('hk_test0102',public=True)
+              assert web['canonical']['enabled'] is True and web['canonical']['applied_points']==2,web['canonical']
+              assert web['points']==[1000000,2000000,1,100,100,10],web['points']
+
+              # A newer live observation must stay authoritative on re-upload.
+              with s.db_session() as db:
+                  now=s.utc_now()+10
+                  db.execute("""UPDATE map_buildings SET room_count=4,has_events=1,
+                                last_player_id='anon-live',last_seen=?,knowledge_source='game_live',knowledge_observed_at=?
+                                WHERE area_id='web-area-1' AND building_id='way1'""",(now,now))
+              second=s.import_hk_authorized_map_upload(upload)
+              d2=s.map_detail('web-area-1');by2={r['building_id']:r for r in d2['buildings']}
+              assert by2['way1']['room_count']==4 and by2['way1']['knowledge_source']=='game_live',by2['way1']
+              assert by2['way2']['room_count']==2 and by2['way2']['knowledge_source']=='hk_maps_import',by2['way2']
+              with s.db_session() as db:
+                  assert db.execute("SELECT COUNT(*) FROM map_areas WHERE city_name='Test' AND x=1 AND y=2").fetchone()[0]==1
+                  assert db.execute("SELECT COUNT(*) FROM hk_map_area_links WHERE map_key='hk_test0102'").fetchone()[0]==1
+                  assert db.execute("SELECT COUNT(*) FROM hk_map_point_links WHERE map_key='hk_test0102'").fetchone()[0]==2
+
+              # Resolve an upload to an already-existing canonical district.
+              now=s.utc_now()
+              with s.db_session() as db:
+                  db.execute("""INSERT INTO map_areas(area_id,city_id,city_name,x,y,expected_buildings,last_player_id,last_seen)
+                                VALUES(?,?,?,?,?,?,?,?)""",('game-area-2','city-two','Two',3,4,1,'anon-game',now))
+                  db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                                VALUES(?,?,?,?)""",('game-area-2','game-area-2',now,now))
+              upload2={
+                  'catalog':{'key':'hk_two0403','city':'Two','grid':'04:03','buildings':1,'unknown':0,
+                             'crystals':[0,1,0,0,0,0],'eventBuildings':1,'totalEvents':1,'progress':100,'score':1,
+                             'reward':{}},
+                  'points':[3000000,4000000,1],
+                  'meta':{'area_id':'web-area-2','city_id':'city-two','city_name':'Two','x':3,'y':4,
+                          'coord_revision':'column-row-v1'},
+                  'buildingsGeoJSON':{'type':'FeatureCollection','features':[
+                      {'type':'Feature','id':'way3','geometry':poly(30.0,40.0),
+                       'properties':{'is_game':True,'building_id':'way3','crystals':1,'is_investment':False}}
+                  ]}
+              }
+              resolved=s.import_hk_authorized_map_upload(upload2)
+              assert resolved['canonical_area_id']=='game-area-2',resolved
+              with s.db_session() as db:
+                  assert db.execute("SELECT COUNT(*) FROM map_areas WHERE city_name='Two' AND x=3 AND y=4").fetchone()[0]==1
+                  link=db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key='hk_two0403'").fetchone()
+                  assert link and link[0]=='game-area-2'
+
+              print('W7_CREATE_CANONICAL=PASS')
+              print('W7_RESOLVE_CANONICAL=PASS')
+              print('W7_DIRECT_SHARED_KNOWLEDGE=PASS')
+              print('W7_NO_SEPARATE_SYNC=PASS')
+              print('W7_GAME_LIVE_PRIORITY=PASS')
+              print('W7_IDEMPOTENT_REUPLOAD=PASS')
+          finally:
+              try:os.remove(path)
+              except OSError:pass
+          PY
+
+      - name: Record build status
+        run: |
+          set -euo pipefail
+          candidate="$(sha256sum /tmp/server.py | awk '{print $1}')"
+          {
+            echo "MAPS_SHARED_KB_W7_BUILD=PASS"
+            echo "source_server_sha256=8fe91e74f49ecec9ea662e5ec85c32f07854a6dd5ed03864f70a3261a43dc245"
+            echo "candidate_server_sha256=$candidate"
+            echo "create_canonical=PASS"
+            echo "resolve_canonical=PASS"
+            echo "direct_shared_knowledge=PASS"
+            echo "no_separate_sync=PASS"
+            echo "game_live_priority=PASS"
+            echo "idempotent_reupload=PASS"
+            echo "deployed=NO"
+          } > audit/hk-stage2-maps-shared-kb-w7-build-status.txt
+          cat audit/hk-stage2-maps-shared-kb-w7-build-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w7-build-status.txt
+          git commit -m "audit: verify Maps shared KB W7 build"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py
