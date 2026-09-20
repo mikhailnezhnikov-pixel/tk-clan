@@ -1,0 +1,158 @@
+name: Deploy TopKing Maps Shared KB W3 Pilot
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-shared-kb-w3-live-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Build exact server candidate
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e"
+          python3 deploy/topking/patch_server_maps_shared_kb_w3.py
+          python3 -m py_compile /tmp/server.py
+          test "$(sha256sum /tmp/server.py | awk '{print $1}')" = "26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4"
+
+      - name: Backup and deploy server only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.w3.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.w3.$stamp"
+            install -m 0644 /tmp/server.w3.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+
+      - name: Import three verified null room counts
+        run: |
+          set -euo pipefail
+          cat > /tmp/w3-rooms.json <<'JSON'
+          [{"building_id":"way29242551","room_count":2},{"building_id":"way29242552","room_count":2},{"building_id":"way430609368","room_count":2}]
+          JSON
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w3-rooms.json root@89.125.1.71:/tmp/w3-rooms.json
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            'python3 /opt/hamsterking-license/server.py --import-hk-map-room-knowledge hk_moscow1226 /tmp/w3-rooms.json' > /tmp/w3-import.json
+          cat /tmp/w3-import.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w3-import.json'))
+          assert d['filled']==3,d
+          assert d['preserved_nonnull']==0,d
+          assert d['missing_buildings']==0,d
+          PY
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            'python3 /opt/hamsterking-license/server.py --import-hk-map-room-knowledge hk_moscow1226 /tmp/w3-rooms.json' > /tmp/w3-rerun.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w3-rerun.json'))
+          assert d['filled']==0,d
+          assert d['preserved_nonnull']==3,d
+          PY
+
+      - name: Verify live shared knowledge
+        run: |
+          set -euo pipefail
+          cat > /tmp/w3-verify.py <<'PY'
+          import importlib.util,json,sqlite3
+          A='9ea6ff78-b881-45b3-b92d-a8f1da8eca05'
+          T=['way29242551','way29242552','way430609368']
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          d=s.map_detail(A)
+          by={x['building_id']:x for x in d['buildings']}
+          assert all(by[x]['room_count']==2 for x in T)
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          rows=db.execute("SELECT building_id,room_count,last_player_id FROM map_buildings WHERE area_id=?",(A,)).fetchall()
+          hist={}
+          for r in rows:
+              k='null' if r['room_count'] is None else str(r['room_count']);hist[k]=hist.get(k,0)+1
+          assert hist=={'0':114,'2':3},hist
+          assert all(next(r for r in rows if r['building_id']==x)['last_player_id']=='source-hk-maps-import' for x in T)
+          assert db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0]==1
+          p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key='hk_moscow1226'").fetchone()
+          flat=json.loads(p['points_json']);lng=lat=0;h={}
+          for i in range(0,len(flat),3):
+              lng+=flat[i];lat+=flat[i+1];f=flat[i+2];c=f-8 if f>=7 else f;h[str(c)]=h.get(str(c),0)+1
+          assert p['point_count']==32 and h=={'1':17,'2':12,'3':3},(p['point_count'],h)
+          same=db.execute("SELECT area_id FROM map_areas WHERE x=26 AND y=12 AND lower(trim(city_name))='moscow'").fetchall()
+          assert len(same)==1 and same[0]['area_id']==A
+          print(json.dumps({'room_hist':hist,'point_hist':h,'map_detail_rooms':{x:by[x]['room_count'] for x in T}},sort_keys=True))
+          db.close()
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w3-verify.py root@89.125.1.71:/tmp/w3-verify.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            'python3 /tmp/w3-verify.py' > /tmp/w3-verify.json
+          cat /tmp/w3-verify.json
+          test "$(ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'sha256sum /opt/hamsterking-license/server.py' | awk '{print $1}')" = "26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4"
+
+      - name: Verify userscript unchanged
+        run: |
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 "https://hk-license.89.125.1.71.sslip.io/panel.js?w3=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          test "$(sha256sum /tmp/public.js | awk '{print $1}')" = "1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6"
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r5'" /tmp/public.js
+
+      - name: Record W3 live PASS
+        run: |
+          cat > audit/hk-stage2-maps-shared-kb-w3-live-status.txt <<'EOF'
+          MAPS_SHARED_KB_W3_LIVE=PASS
+          server_sha256=26cf4729b90dd47da881760794b5bdcaef783c41b8fd4fba8e71b191f4d4f7e4
+          client_sha256=1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6
+          pilot_map_key=hk_moscow1226
+          pilot_canonical_area_id=9ea6ff78-b881-45b3-b92d-a8f1da8eca05
+          filled=3
+          filled_ids=way29242551,way29242552,way430609368
+          room_count=2
+          source=source-hk-maps-import
+          nonnull_overwrite=0
+          map_detail_read=PASS
+          rerun_idempotent=PASS
+          pilot_room_hist=0:114,2:3
+          compact_point_hist=1:17,2:12,3:3
+          geometry_changed=NO
+          district_duplicate=NO
+          bridge_rows=1
+          bulk_migration=NO
+          userscript_changed=NO
+          explore_changed=NO
+          scanner_changed=NO
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w3-live-status.txt
+          git commit -m "audit: record Maps shared KB W3 live PASS"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/public.js /tmp/w3-rooms.json /tmp/w3-import.json /tmp/w3-rerun.json /tmp/w3-verify.py /tmp/w3-verify.json
