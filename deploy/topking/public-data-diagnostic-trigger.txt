@@ -17,3 +17,4 @@ inspect live license version gate
 inspect exact map room source fields
 inspect live map crystal room source
 rerun exact live map room source grep
+inspect exact map room count source
