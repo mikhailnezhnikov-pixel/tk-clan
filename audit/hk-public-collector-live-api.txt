@@ -44,6 +44,14 @@ ENDPOINT /clan/active_defense_wars STATUS 400 TYPE dict KEYS ['_error']
 ENDPOINT /alliance/list STATUS 200 TYPE dict KEYS ['description', 'pagination', 'result', 'timestamp', 'type', 'version']
  OBJ pagination KEYS ['hasNextPage', 'hasPrevPage', 'limit', 'offset', 'total'] NAME 
  LIST result LEN 10 ITEM_KEYS ['defense_point', 'id', 'members_count', 'members_max', 'name']
+ENDPOINT /alliance/list?offset=10&limit=10 STATUS 200 TYPE dict KEYS ['description', 'pagination', 'result', 'timestamp', 'type', 'version']
+ OBJ pagination KEYS ['hasNextPage', 'hasPrevPage', 'limit', 'offset', 'total'] NAME 
+ LIST result LEN 10 ITEM_KEYS ['defense_point', 'id', 'members_count', 'members_max', 'name']
+ PAGINATION_PROBE /alliance/list?offset=10&limit=10 PAGINATION {'hasNextPage': True, 'hasPrevPage': True, 'limit': 10, 'offset': 10, 'total': 117} FIRST Минск LAST Колпино 2.0
+ENDPOINT /alliance/list?offset=0&limit=100 STATUS 200 TYPE dict KEYS ['description', 'pagination', 'result', 'timestamp', 'type', 'version']
+ OBJ pagination KEYS ['hasNextPage', 'hasPrevPage', 'limit', 'offset', 'total'] NAME 
+ LIST result LEN 50 ITEM_KEYS ['defense_point', 'id', 'members_count', 'members_max', 'name']
+ PAGINATION_PROBE /alliance/list?offset=0&limit=100 PAGINATION {'hasNextPage': True, 'hasPrevPage': False, 'limit': 50, 'offset': 0, 'total': 117} FIRST Iran plus LAST UFO
 ALLIANCE_ROW Iran plus ID_PRESENT True KEYS ['defense_point', 'id', 'members_count', 'members_max', 'name']
 ENDPOINT /alliance/members?alliance_id=d44aa742-572c-46e6-967d-5022327a740a STATUS 200 TYPE dict KEYS ['core_clan', 'description', 'satellite_clans', 'timestamp', 'type', 'version']
  OBJ core_clan KEYS ['cur_alliance', 'current_level', 'defense_point', 'exp_points', 'has_chat', 'id', 'leader_id', 'max_members_from_bonuses', 'name', 'next_level', 'number_of_members', 'private', 'required_legendary_buildings', 'required_power', 'role', 'vault_clan_alliance_currency'] NAME Iran plus
