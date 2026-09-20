@@ -1,0 +1,1 @@
+finalize pinned Kokkaras donor sha256=454f7bd810be7b39582f947f955d011042878eb10dd4b2cfd985d28b07190f0a\n
