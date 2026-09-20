@@ -1,0 +1,101 @@
+name: Capture Kokkaras Donor Reference
+
+on:
+  push:
+    paths:
+      - 'reference/topking/capture-kokkaras-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capture-kokkaras-reference
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch exact Kokkaras donor
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/kokkaras reference/topking
+          curl -fsSL --retry 3 --connect-timeout 20 \
+            'https://kokkaras.com/hk_maps/panel.js' \
+            -o /tmp/kokkaras/panel.js
+
+          expected='28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1'
+          actual="$(sha256sum /tmp/kokkaras/panel.js | awk '{print $1}')"
+          echo "EXPECTED_SHA=$expected"
+          echo "ACTUAL_SHA=$actual"
+          test "$actual" = "$expected"
+
+          node --check /tmp/kokkaras/panel.js
+
+          grep -Fq "baseUrl: 'https://kokkaras.com/hk_maps/'" /tmp/kokkaras/panel.js
+          grep -Fq "loaderUrl: 'https://kokkaras.com/hk_maps/panel.js'" /tmp/kokkaras/panel.js
+          grep -Fq "version:'5.3.22-ui-icons-pit-dim'" /tmp/kokkaras/panel.js
+          grep -Fq "storageNeighborhoodBattlesKey" /tmp/kokkaras/panel.js
+          grep -Fq "ratHuntEnable" /tmp/kokkaras/panel.js
+          grep -Fq "clanWars" /tmp/kokkaras/panel.js
+
+      - name: Write immutable and current donor files
+        run: |
+          set -euo pipefail
+          version='5.3.22-ui-icons-pit-dim'
+          sha='28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1'
+          short="${sha:0:12}"
+          immutable="kokkaras-panel.${version}-${short}.js"
+
+          cp /tmp/kokkaras/panel.js reference/topking/donor.current.js
+          cp /tmp/kokkaras/panel.js "reference/topking/${immutable}"
+
+          cat > reference/topking/REFERENCE.json <<EOF
+          {
+            "schema": "hk-donor-reference-v1",
+            "name": "Kokkaras HK Control Panel",
+            "source_url": "https://kokkaras.com/hk_maps/panel.js",
+            "version": "${version}",
+            "sha256": "${sha}",
+            "current_file": "reference/topking/donor.current.js",
+            "immutable_file": "reference/topking/${immutable}",
+            "role": "primary donor/reference for copied HK mechanics, API behavior, calculations and flows",
+            "captured_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "verified_against_user_upload": true
+          }
+          EOF
+
+          cat > reference/topking/REFERENCE_STATUS.txt <<EOF
+          name=Kokkaras HK Control Panel
+          version=${version}
+          sha256=${sha}
+          source=https://kokkaras.com/hk_maps/panel.js
+          syntax=ok
+          uploaded_copy_match=PASS
+          donor_current_match=PASS
+          EOF
+
+          cmp -s /tmp/kokkaras/panel.js reference/topking/donor.current.js
+          cmp -s reference/topking/donor.current.js "reference/topking/${immutable}"
+
+      - name: Commit donor reference
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reference/topking
+          if ! git diff --cached --quiet; then
+            git commit -m "reference: capture Kokkaras HK donor script"
+            for attempt in 1 2 3 4; do
+              git pull --rebase origin main || true
+              if git push origin HEAD:main; then exit 0; fi
+              sleep $((attempt * 2))
+            done
+            exit 1
+          fi
