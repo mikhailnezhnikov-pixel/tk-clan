@@ -1182,6 +1182,82 @@ Only after user confirmation:
 - normal Stage 2 may resume on the **next explicit user instruction**; stop here.
 
 
+### Unified Maps Runtime U1 — PASS (2026-09-21)
+
+User-requested continuation after W8: one Personal Cabinet map list plus shared map knowledge consumed by the userscript before direct building research.
+
+Evidence:
+- audit: `audit/HK_STAGE2_UNIFIED_MAPS_RUNTIME_U1.md`;
+- build status: `audit/hk-stage2-unified-maps-u1-build-status.txt`;
+- live status: `audit/hk-stage2-unified-maps-u1-live-status.txt`;
+- backend preflight: `audit/hk-stage2-unified-maps-preflight.txt`.
+
+Implemented:
+- Personal Cabinet `cabinet_maps()` now returns one unified list with source states:
+  - `website`;
+  - `script`;
+  - `combined`;
+- safely linked website+canonical districts appear once;
+- script-only canonical districts are included;
+- unresolved historical website maps remain visible as website-only rows until proven by a real game scan;
+- current production unified list:
+  - `combined=25`;
+  - `script=285`;
+  - `website=210`;
+  - total unified rows: **520**;
+- no bulk force-link of the 210 unresolved maps;
+- normal player area scan now carries current game building geometry when shared knowledge is enabled;
+- server accepts a historical website match only for exactly one normalized city + proven historical Y:X → canonical X:Y candidate;
+- website point → canonical `building_id` matching uses strict point-in-polygon against the current game geometry;
+- safely matched historical room knowledge is imported as `hk_maps_import`;
+- W5 priority remains `game_live > hk_maps_import`;
+- a failed/ambiguous historical hydration cannot fail the primary game map submission.
+
+Userscript:
+- new scanner marker: `maps-shared-runtime-20260921-r7-safe5`;
+- shared runtime marker: `maps-shared-knowledge-20260921-r1`;
+- new setting: **Использовать общую базу карт**;
+- default: **ON**;
+- before direct game reads the script loads shared canonical knowledge for owned/selected areas;
+- active buildings with already-known non-NULL room counts are removed from the direct read queue;
+- only still-unknown active buildings are queried from the game;
+- original safe active-building intersection remains intact;
+- max direct read concurrency remains **5**.
+
+Build verification:
+- run `35521561010`, job `106106419454`: PASS;
+- unified cabinet dedupe: PASS;
+- legacy website auto-hydration: PASS;
+- shared preload filter: PASS;
+- safe active intersection: PASS;
+- game-live priority: PASS.
+
+Live deployment:
+- initial run `35521677077` installed both verified candidates and restarted the service;
+- that run then failed only in its nested shell SHA assertion because `$1` was expanded under `set -u`;
+- no second deployment was performed;
+- post-deploy verification run `35521752892`, rerun job `106107338994`: **PASS**.
+
+Current live SHAs:
+- server: `f8b10a30a42d7dbb19ea11ee746eaccd89704a70ddb577631bf72c6ecca26df3`;
+- userscript: `46c6b95688a589e7d4b02a10403c9bd32c5012a8e92b6e0e768364aad54d55b5`.
+
+Production verification immediately after deployment:
+- `hk_maps_catalog=235`;
+- `hk_map_points=235`;
+- `hk_map_area_links=25`;
+- `hk_map_point_links=2007`;
+- `map_areas=310`;
+- `map_buildings=167690`;
+- production test rows: **0**.
+
+Live Personal Cabinet unified UI: PASS after GitHub Pages deployment completed.
+
+**Unified Maps Runtime U1 = PASS.**
+
+Stop here until the next explicit user instruction.
+
+
 ### Execution rule for W1–W8
 
 Work in short sessions.
