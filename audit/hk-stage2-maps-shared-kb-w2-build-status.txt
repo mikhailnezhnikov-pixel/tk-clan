@@ -1,0 +1,9 @@
+MAPS_SHARED_KB_W2_BUILD=PASS
+source_server_sha256=1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1
+candidate_server_sha256=1fe9fc44953713032bad755bc658233e881cba1941d7fae53747e6d27e7a7e3e
+schema_bridge=PASS
+city_grid_yx_discovery=PASS
+exact_area_id_alias_resolution=PASS
+no_duplicate_area=PASS
+building_migration=NO
+deployed=NO
