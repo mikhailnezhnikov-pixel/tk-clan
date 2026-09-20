@@ -714,3 +714,55 @@ Evidence:
 User should now verify that normal selects and checkboxes actually switch and remain selected, then run **Рассчитать план**.
 Do not start E3 automatically.
 
+## E2 r5 — dynamic filter state
+
+Status: **LIVE CANDIDATE / USER FILTER CHECK PENDING**
+
+Marker:
+`HK_EXPLORE_CANON_REV = 'explore-readonly-plan-20260920-r5-filters'`
+
+Live/baseline sync commit:
+`3842c8a7f9055dd92ae6f83c1f71c2aad441963d`
+
+### User-reported issue
+
+After r4, native controls switched correctly, but changing District / Building type did not update the visible tier counts or candidate expectation until an explicit Calculate Plan action. This made the filters appear non-functional.
+
+### Donor parity re-check
+
+Pinned donor behavior was re-checked:
+- `renderExploreDynamicState()` recalculates filtered buildings immediately when district/building-type changes;
+- visible tier building counts and completed-battle counts are updated from that filtered set;
+- `filterExploreBuildings()` applies exact metadata fields `gamearea_id` and `building_type`.
+
+### r5 behavior
+
+- changing district/type/start tiers/target/priorities saves settings in-place;
+- no full Explore rerender on native control change;
+- tier `total / battles complete` counters update immediately from already-loaded state;
+- a local preliminary candidate count updates immediately without extra target-tier detail requests;
+- the exact read-only plan remains behind **Calculate plan**;
+- if account state is not loaded, tier counters show `—` instead of pretending that `0/0` is authoritative;
+- failed automatic Explore refresh is no longer cached as a successful module refresh.
+
+### Safety / scope
+
+- no E3 actions;
+- Explore mutation endpoints: 0;
+- Map scanner r6 safe5 preserved;
+- map concurrency remains 5;
+- Maps backend/schema unchanged.
+
+### Live verification
+
+- source live SHA256: `416e214c462285389e3e905de53c2011e6bfb217ffd6286cebefe8206d3ae318`;
+- deployed/public SHA256: `df677e603e0a180e0e2e2b5ce27af268ab788ced12e4e6b2036d4c9b23c78115`;
+- syntax: PASS;
+- public byte equality: PASS;
+- dynamic filter counts: PASS;
+- failed auto-refresh cached as success: NO;
+- map concurrency 5 preserved: PASS.
+
+Evidence:
+`audit/hk-stage2-explore-e2-filters-r5-live-status.txt`
+
