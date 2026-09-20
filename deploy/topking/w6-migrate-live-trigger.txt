@@ -1,1 +1,1 @@
-w6 migrate live 2
+w6 migrate live bitmask final
