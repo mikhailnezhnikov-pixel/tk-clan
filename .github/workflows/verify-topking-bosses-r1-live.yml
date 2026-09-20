@@ -1,0 +1,79 @@
+name: Verify TopKing Bosses R1 Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/bosses-r1-verify-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Read current live
+        id: live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          node --check /tmp/live.js
+          sha="$(sha256sum /tmp/live.js | awk '{print $1}')"
+          if grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-canon-core-20260920-r1'" /tmp/live.js; then
+            marker="BOSSES_R1"
+          elif grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-readonly-20260920-r1'" /tmp/live.js; then
+            marker="BOSSES_READONLY"
+          else
+            marker="BOSSES_UNKNOWN"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "marker=$marker" >> "$GITHUB_OUTPUT"
+
+      - name: Public equality
+        id: public
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?bosses-verify=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          psha="$(sha256sum /tmp/public.js | awk '{print $1}')"
+          echo "sha=$psha" >> "$GITHUB_OUTPUT"
+          if cmp -s /tmp/live.js /tmp/public.js; then echo "equal=PASS" >> "$GITHUB_OUTPUT"; else echo "equal=FAIL" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Write verification status
+        run: |
+          set -euo pipefail
+          cat > audit/hk-stage2-03-bosses-live-status.txt <<EOF
+          checked_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          marker=${{ steps.live.outputs.marker }}
+          live_sha256=${{ steps.live.outputs.sha }}
+          public_sha256=${{ steps.public.outputs.sha }}
+          public_byte_equality=${{ steps.public.outputs.equal }}
+          syntax=PASS
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-03-bosses-live-status.txt
+          git commit -m "stage2: verify Bosses r1 live status" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js /tmp/public.js
