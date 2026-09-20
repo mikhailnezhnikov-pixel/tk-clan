@@ -53,6 +53,7 @@
   // userscript managers instead of looking like the script simply vanished.
   const HK_STARTUP_STAGE_REV = 'startup-stages-20260920-r7';
   const HK_STARTUP_ERROR_TRAP_REV = 'startup-error-trap-20260920-r8';
+  const HK_STARTUP_ERROR_SCOPE_REV = 'startup-error-scope-20260920-r9';
   let hkStartupStage = 'BOOT';
   let bootstrapProblem = '';
   let bootstrapButton = null;
@@ -87,13 +88,34 @@
     } catch (_) {}
   }
 
-  window.addEventListener('error', event => {
-    hkStartupFailure('error', event?.error || event?.message || event);
-  }, true);
+  const hkStartupTrapActive = () => (
+    hkStartupStage === 'BOOT' ||
+    hkStartupStage === 'WAIT_BODY' ||
+    hkStartupStage === 'BODY' ||
+    hkStartupStage === 'RENDER'
+  );
 
-  window.addEventListener('unhandledrejection', event => {
+  const hkStartupErrorHandler = event => {
+    if (!hkStartupTrapActive()) return;
+    const filename = String(event?.filename || '');
+    const message = String(event?.message || '');
+    if (filename && !filename.includes('/panel.js') && !filename.includes('HamsterKingMobile')) return;
+    if (!filename && message === 'Script error.') return;
+    hkStartupFailure('error', event?.error || event?.message || event);
+  };
+
+  const hkStartupRejectionHandler = event => {
+    if (!hkStartupTrapActive()) return;
     hkStartupFailure('promise', event?.reason || event);
-  }, true);
+  };
+
+  window.addEventListener('error', hkStartupErrorHandler, true);
+  window.addEventListener('unhandledrejection', hkStartupRejectionHandler, true);
+
+  function disarmStartupErrorTrap() {
+    try { window.removeEventListener('error', hkStartupErrorHandler, true); } catch (_) {}
+    try { window.removeEventListener('unhandledrejection', hkStartupRejectionHandler, true); } catch (_) {}
+  }
 
   showBootstrap();
   // HK UI is intentionally deferred until the native game login has completed.
@@ -425,10 +447,11 @@
   let dailyRumorRoute = [];
   let dailyAccountAreaIndex = [];
   let dailyShopRows = [];
+  let dailyClientConfigDocument = null;
   let dailyRunning = false;
   let dailyAdController = null;
   let dailySnapshot = load().today?.snapshot || null;
-  let dailySelection = {...{advertisement:true, rumors:true, recruits:false, cartels:false, investments:false}, ...(load().today?.selection || {})};
+  let dailySelection = {...{advertisement:true,rumors:true,dailyQuests:true,claimLeaderboardRewards:true,claimAreaBossBattlePass:true}, ...(load().today?.selection || {})};
   let dailyPurchaseCounts = {...(load().today?.purchaseCounts || {})};
   let dailyStoreTab = String(load().today?.storeTab || 'regular');
   let sharedPitRows = [];
@@ -4928,50 +4951,34 @@
     return {raw, lotId, type:String(raw.type || (card ? 'external' : '')).toLowerCase(), timer, available:!!lotId && !timer};
   }
 
-  function dailyActionRows() {
-    const ad = dailyAdvertisement();
-    const actions = [
-      {id:'rumors', label:either('Слухи','Rumors'), kind:'rumors', uiGroup:'free', free:true, available:dailyRumorRoute.length > 0},
-      {id:'advertisement', label:tr('dailyAds'), kind:'advertisement', uiGroup:'free', free:true, available:ad.available}
-    ];
-    for (const row of pitLimitSummaries()) {
-      const count = selectedPitMoves(row.id, row.current);
-      if (count > 0) actions.push({id:`pit:${row.id}`, label:tr(row.textKey), textKey:row.textKey, kind:'pit', uiGroup:'pit',
-        free:true, available:true, pitType:row.id, count});
-    }
-    const rows = dailyShopRows.filter(row => row.safe && !excludedDailyClanLot(row) && (
-      // Keep every lot of the current regular event visible, including lots
-      // already bought today. Required recruit/cartel cards also remain visible
-      // after purchase so the Today page shows their complete daily state.
-      row.section === 'regular' || row.group === 'invest' || mandatoryDailyClanLot(row) || clanSkillPointLot(row) || (row.remaining > 0 && (
-        (row.section === 'ordinary' && !row.unlimited) || (row.section === 'clan' && row.clanGroup === 'personal')
-      ))
-    ));
-    for (const row of rows) {
-      const label = row.section === 'regular' ? tr('regularShop') : row.section === 'clan' ? tr('clanShop') :
-        row.group === 'invest' ? tr('investShop') : row.group === 'resources' ? tr('resourcesShop') : tr('renovationShop');
-      const section = row.section === 'clan' ? 'clan' : 'shop';
-      const actionId = `lot:${row.lotId}`;
-      const mandatory = mandatoryDailyClanLot(row);
-      const savedCount = Math.max(0, Math.floor(Number(dailyPurchaseCounts[actionId] || 0)));
-      const count = mandatory ? Math.max(0, Number(row.remaining || 0)) :
-        Math.min(Math.max(0, Number(row.remaining || 0)), savedCount || (dailySelection[actionId] ? 1 : 0));
-      if (mandatory && row.remaining > 0) {
-        dailySelection[actionId] = true;
-        dailyPurchaseCounts[actionId] = count;
-      }
-      actions.push({id:actionId, label:`${label}: ${gameText(row.name) || row.rewardId || row.lotId}`, kind:'purchase',
-        uiGroup:row.group === 'invest' ? 'invest' : row.section, category:row.group || row.section, section, free:false, mandatory,
-        available:row.remaining > 0 && row.affordable, boughtOut:row.remaining <= 0,
-        row, count, cost:row.cost, signature:costSignature(row.cost)});
-    }
-    return actions;
-  }
 
-  function selectedDailyActions() {
-    return dailyActionRows().filter(action => action.available && (action.kind === 'pit' ? dailySelection[action.id] !== false : dailySelection[action.id] === true) &&
-      (action.kind !== 'purchase' || action.count > 0));
+  const DAILY_CANON_CLAN_IDS=new Set(['mf_clan_shoplot_recruits_lvl_5','mf_clan_shoplot_hballs_lvl_5','mf_clan_shoplot_recruits_lvl_10','mf_clan_shoplot_hballs_lvl_10','mf_clan_shoplot_recruits_lvl_15','mf_clan_shoplot_hballs_lvl_15','mf_clan_shoplot_recruits_lvl_20','mf_clan_shoplot_hballs_lvl_20']);
+  const DAILY_CANON_INVEST_IDS=new Set(['mf_shoplot_building_helpers_offer_01','mf_shoplot_building_helpers_offer_02']);
+  const DAILY_CANON_EVENT_RE=/(?:_hballs|_hs_tokens|_crypto_hgen_fragments_5_4cur)$/i;
+  const DAILY_CANON_LB_RE=/^(?:(?:clan_)?pit(?:_2|_3)?_daily_lb|(?:clan_)?area_boss_daily_lb|beast_boss_(?:cat|dog|pigeon)_monthly_lb|(?:clan_)?pit_gen_lb)$/;
+  function dailyCanonInit(a){if(!a||Object.prototype.hasOwnProperty.call(dailySelection,a.id))return;let v=['advertisement','rumors','dailyQuests','claimLeaderboardRewards','claimAreaBossBattlePass'].includes(a.kind),id=String(a.row?.lotId||'');if(a.uiGroup==='clan')v=DAILY_CANON_CLAN_IDS.has(id);else if(a.uiGroup==='invest')v=DAILY_CANON_INVEST_IDS.has(id);else if(a.uiGroup==='event')v=DAILY_CANON_EVENT_RE.test(id);dailySelection[a.id]=v;}
+  function dailyQuestRows(v,out=[],d=0){if(d>8||v==null)return out;if(Array.isArray(v)){for(const x of v)dailyQuestRows(x,out,d+1);return out}if(typeof v!=='object')return out;if(v.id)out.push(v);for(const x of Object.values(v))dailyQuestRows(x,out,d+1);return out}
+  async function dailyClaimCompletedQuestsCurrent(){let n=0,b=new Set();for(let g=0;g<100;g++){await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');const q=dailyQuestRows(playerDocument?.quests||{}).find(x=>{const id=String(x?.id||'');return id.startsWith('qst_clan_daily_')&&!b.has(id)&&x?.completed!==true&&Number(x?.goal||0)>0&&Number(x?.progress||0)>=Number(x?.goal||0)});if(!q)break;try{const r=await apiJson('/quest/claim','POST',{quest_id:String(q.id)});playerDocument=hkStateStore.snapshot||r||playerDocument;n++;log(either('Получена награда ежедневного задания','Daily quest reward claimed')+': '+q.id,'ok')}catch(e){b.add(String(q.id));if(!/HTTP 409/.test(String(e?.message||e)))log(String(q.id)+' — '+(e?.message||e),'warn')}}return n}
+  function dailyLbSort(x){const id=String(x?.id||'');if(/^(?:clan_)?pit_daily_lb$/.test(id))return id.startsWith('clan_')?1:0;if(/^(?:clan_)?pit_2_daily_lb$/.test(id))return 10+(id.startsWith('clan_')?1:0);if(/^(?:clan_)?pit_3_daily_lb$/.test(id))return 20+(id.startsWith('clan_')?1:0);if(/^(?:clan_)?area_boss_daily_lb$/.test(id))return 30+(id.startsWith('clan_')?1:0);if(id==='beast_boss_cat_monthly_lb')return 40;if(id==='beast_boss_dog_monthly_lb')return 41;if(id==='beast_boss_pigeon_monthly_lb')return 42;return 50}
+  async function dailyClaimLeaderboardRewardsCurrent(){let n=0,v;try{v=await apiJson('/leaderboards/view','GET')}catch(e){log(e?.message||e,'warn');return 0}const a=Array.isArray(v)?v:(v?.leaderboards||v?.items||[]);for(const row of a.filter(x=>x&&DAILY_CANON_LB_RE.test(String(x.id||''))).sort((x,y)=>dailyLbSort(x)-dailyLbSort(y))){await hkRunner.waitIfPaused();let lb;try{lb=await apiJson('/leaderboard','POST',{leaderboard_type:String(row.id),leaderboard_status:'RELOAD'})}catch(e){continue}const slot=lb?.your_lb_slot;if(String(lb?.status||'').toUpperCase()!=='RELOAD'||!slot||slot.is_claimed!==false||!slot.reward_view)continue;try{const r=await apiJson('/leaderboard/reward','POST',{leaderboard_id:String(lb.id)});playerDocument=hkStateStore.snapshot||r||playerDocument;n++;log(either('Получена рейтинговая награда','Leaderboard reward claimed')+': '+row.id,'ok')}catch(e){if(!/HTTP 409/.test(String(e?.message||e)))log(e?.message||e,'warn')}}return n}
+  function dailyBpNum(id){if(id==='bp_personal_area_boss')return 0;const m=String(id||'').match(/_([0-9]+)$/);return m?Number(m[1]):-1}
+  function dailyBpIds(c){return [...new Set((((c?.points||{}).battle_pass_score)||[]).map(x=>x?.id).filter(id=>typeof id==='string'&&id.startsWith('bp_personal_area_boss')))].sort((a,b)=>dailyBpNum(b)-dailyBpNum(a))}
+  async function dailyBpState(id,status){try{return await apiJson('/battlepass?battle_pass_type='+encodeURIComponent(id)+'&status='+encodeURIComponent(status),'GET')}catch(e){if(/HTTP (404|409)/.test(String(e?.message||e)))return null;throw e}}
+  async function dailyClaimAreaBossBattlePassCurrent(){let n=0;try{const c=dailyClientConfigDocument||await apiJson('/client_config','GET');dailyClientConfigDocument=c;const ids=dailyBpIds(c);let cur=null;for(const id of ids){const d=await dailyBpState(id,'ACTUAL');const bp=d?.player_battle_pass;if(bp&&Number(bp.start_timer??1)<=0&&Number(bp.end_exp_timer??-1)>0){cur=bp;break}}if(!cur)return 0;const targets=[],i=ids.indexOf(String(cur.id));if(i>=0&&i+1<ids.length){const prev=(await dailyBpState(ids[i+1],'RELOAD'))?.player_battle_pass;if(prev&&Number(prev.end_reward_timer||0)>0)targets.push(prev)}targets.push(cur);for(const bp of targets){const count=Math.max(0,Number(bp?.rewards_may_claim||0));if(!bp?.id||Number(bp?.end_reward_timer||0)<=0||count<=0)continue;try{const r=await apiJson('/battlepass/claim','POST',{battle_pass_instance_id:String(bp.id)});playerDocument=hkStateStore.snapshot||r||playerDocument;n++;log(either('Получена награда Battle Pass боссов','Area Boss Battle Pass reward claimed')+': '+bp.id,'ok')}catch(e){if(!/HTTP 409/.test(String(e?.message||e)))log(e?.message||e,'warn')}}}catch(e){log(e?.message||e,'warn')}return n}
+  function dailyActionRows() {
+    const actions=[],ad=dailyAdvertisement();
+    if(ad.available)actions.push({id:'advertisement',label:tr('dailyAds'),kind:'advertisement',uiGroup:'activities',free:true,available:true});
+    if(dailyRumorRoute.length)actions.push({id:'rumors',label:either('Слухи','Rumors'),kind:'rumors',uiGroup:'activities',free:true,available:true});
+    actions.push({id:'dailyQuests',label:either('Ежедневные задания (Ω)','Daily quests (Ω)'),kind:'dailyQuests',uiGroup:'activities',free:true,available:true});
+    const rows=dailyShopRows.filter(x=>x?.safe),push=(row,ui)=>{const id='lot:'+row.lotId,a={id,label:(ui==='clan'?tr('clanShop'):ui==='invest'?tr('investShop'):either('Обычное предложение события','Event regular deal'))+': '+(gameText(row.name)||row.rewardId||row.lotId),kind:'purchase',uiGroup:ui,section:ui==='clan'?'clan':'shop',free:false,mandatory:false,available:row.remaining>0&&row.affordable,boughtOut:row.remaining<=0,row,count:0,cost:row.cost,signature:costSignature(row.cost)};dailyCanonInit(a);const saved=Math.max(0,Math.floor(Number(dailyPurchaseCounts[id]||0)));a.count=Math.min(Math.max(0,Number(row.remaining||0)),saved||(dailySelection[id]?1:0));actions.push(a)};
+    rows.filter(x=>x.section==='clan'&&x.clanGroup==='personal'&&!excludedDailyClanLot(x)&&String(x.lotId||'')!=='mf_clan_shoplot_refill_lvl_15').forEach(x=>push(x,'clan'));
+    rows.filter(x=>DAILY_CANON_INVEST_IDS.has(String(x.lotId||''))).forEach(x=>push(x,'invest'));
+    rows.filter(x=>x.section==='regular').forEach(x=>push(x,'event'));
+    actions.push({id:'claimLeaderboardRewards',label:either('Награды рейтинга: Ямы / Боссы / Крысы','Leaderboard rewards: Pits / Bosses / Rats'),kind:'claimLeaderboardRewards',uiGroup:'rewards',free:true,available:true});
+    actions.push({id:'claimAreaBossBattlePass',label:either('Battle Pass боссов — получить награды','Area Boss Battle Pass — claim rewards'),kind:'claimAreaBossBattlePass',uiGroup:'rewards',free:true,available:true});
+    actions.forEach(dailyCanonInit);return actions;
   }
+  function selectedDailyActions(){return dailyActionRows().filter(a=>a.available&&dailySelection[a.id]===true&&(a.kind!=='purchase'||a.count>0));}
 
   function saveDailySelection() {
     const today = {...(load().today || {}), selection:{...dailySelection}, purchaseCounts:{...dailyPurchaseCounts}, storeTab:dailyStoreTab, snapshot:dailySnapshot};
@@ -5235,17 +5242,6 @@
     const selected = selectedDailyActions();
     const totals = dailyPlanTotals(selected);
     const currencies = discoveredCurrencyIds();
-    const rumorsStored = load().today?.rumors || {};
-    const rumorPeriodStart = gamePeriodBounds().dayStart;
-    const routeHtml = dailyRumorRoute.length ? '<ul>' + dailyRumorRoute.map(row => {
-      const progress = rumorsStored[dailyCityKey(row.city)];
-      const count = progress?.periodStart === rumorPeriodStart ? Math.min(3,Number(progress.completed || 0)) : 0;
-      const points = (row.points || []).map(point => Number(point.x) + ':' + String(Number(point.y)).padStart(2,'0')).join(' · ');
-      return '<li><b>' + escapeHtml(row.city) + '</b><span>' + count + '/3 · ' + escapeHtml(points) + '</span></li>';
-    }).join('') + '</ul>' : '<span>' + either('Маршрут слухов не опубликован','Rumor route is not published') + '</span>';
-    const ad = dailyAdvertisement();
-    const adTimer = ad.timer?.timestamp || firstTimer(ad.raw);
-    const pit = pitState();
     const balancesHtml = currencies.map(id => {
       const amount = walletAmount(id);
       return `<div class="hk-today-balance">${fairIconHtml(paymentIcon({id,kind:id.startsWith('cur_') ? 'currencies' : 'items'}),'hk-price-icon')}<span>${escapeHtml(paymentLabel(id))}</span><b>${amount === null ? '—' : amount.toLocaleString(locale())}</b></div>`;
@@ -5262,17 +5258,8 @@
         action.kind === 'purchase' ? `${costVisual(action.cost)}${quantity}` : `<span class="hk-free">${either('бесплатно','free')}</span>`;
       return `<div class="hk-today-action ${lotVisual ? 'has-lot-icon' : ''} ${action.mandatory ? 'mandatory' : ''} ${action.available ? (decision.allowed ? '' : 'budget-warning') : 'locked'}"><input type="checkbox" data-daily-action="${escapeHtml(action.id)}" ${checked ? 'checked' : ''} ${action.available && !action.mandatory ? '' : 'disabled'}>${lotVisual}<span><b>${escapeHtml(action.label)}</b><small>${price}${availability}${action.mandatory ? ` · ${either('обязательный ежедневный лот','required daily lot')}` : ''}${decision.problems.length ? ` · ${escapeHtml(decision.problems.join('; '))}` : ''}</small></span>${quantityControl}</div>`;
     };
-    const freeRows = actions.filter(action => action.uiGroup === 'free');
-    const paidGroups = [
-      ['regular', tr('dailyRegularActions')], ['ordinary', tr('dailyOrdinaryActions')],
-      ['clan', tr('dailyClanActions')], ['invest', tr('dailyInvestActions')]
-    ].map(([key,title]) => ({key,title,rows:actions.filter(action => action.uiGroup === key)})).filter(group => group.rows.length);
-    if (!paidGroups.some(group => group.key === dailyStoreTab)) dailyStoreTab = paidGroups[0]?.key || 'regular';
-    const activePaid = paidGroups.find(group => group.key === dailyStoreTab);
-    const freeHtml = freeRows.length ? `<details class="hk-today-action-group" open><summary><b>${escapeHtml(tr('dailyFreeActions'))}</b><span>${freeRows.length}</span></summary><div>${freeRows.map(actionRowHtml).join('')}</div></details>` : '';
-    const storeTabs = paidGroups.length ? `<div class="hk-today-store-tabs">${paidGroups.map(group => `<button type="button" data-daily-store-tab="${group.key}" class="${group.key === dailyStoreTab ? 'active' : ''}">${escapeHtml(group.title)} <span>${group.rows.length}</span></button>`).join('')}</div>` : '';
-    const paidHtml = activePaid ? `<div class="hk-today-action-group hk-today-store-page"><div>${activePaid.rows.map(actionRowHtml).join('')}</div></div>` : '';
-    const actionHtml = `${freeHtml}${storeTabs}${paidHtml}`;
+    const canonicalGroups=[['activities',either('1. Действия','1. Activities')],['clan',either('2. Магазин клана','2. Clan shop')],['invest',either('3. Инвестиционные предложения','3. Invest deals')],['event',either('4. Обычные предложения события','4. Event regular deals')],['rewards',either('5. Получение наград','5. Claim rewards')]];
+    const actionHtml=canonicalGroups.map(([key,title])=>{const rows=actions.filter(a=>a.uiGroup===key);return rows.length?'<details class="hk-today-action-group" open><summary><b>'+escapeHtml(title)+'</b><span>'+rows.length+'</span></summary><div>'+rows.map(actionRowHtml).join('')+'</div></details>':''}).join('');
     const planRows = selected.map((action,index) => {
       const decision = action.kind === 'purchase' ? budgetDecision(action.cost, action.section, action.count) : {allowed:true,problems:[]};
       return `<li class="${decision.allowed ? '' : 'blocked'}"><b>${index + 1}. ${escapeHtml(action.label)}${action.count > 1 ? ` ×${action.count}` : ''}</b><span>${action.kind === 'purchase' ? costVisual(action.cost) : either('без расходов','no cost')}${decision.problems.length ? `<br>${escapeHtml(decision.problems.join('; '))}` : ''}</span></li>`;
@@ -5289,24 +5276,12 @@
     const journalHtml = expenseJournal().slice(-12).reverse().map(row => `<li class="${row.status === 'ok' ? 'ok' : 'failed'}"><span>${new Date(row.time).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · ${escapeHtml(row.name || row.lotId || '')}</span><b>${Number(row.amount || 0).toLocaleString(locale())} ${escapeHtml(paymentLabel(row.currencyId))}</b><small>${escapeHtml(row.result || row.status || '')}</small></li>`).join('') || `<li><span>${either('Операций пока нет','No operations yet')}</span></li>`;
     dailyBox.innerHTML = `<div class="hk-daily-progress"><div><b>${tr('dailyCurrent')}</b><span>${dailyRunning ? either('выполняется','running') : dailySnapshot ? `${either('проверено','checked')} ${new Date(dailySnapshot.checkedAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'})}` : tr('dailyReady')}</span></div><i><em style="width:${dailyRunning ? 45 : dailySnapshot ? 100 : 0}%"></em></i></div>
       <section class="hk-today-section"><h4>${tr('dailyBalances')}</h4><div class="hk-today-balances">${balancesHtml}</div></section>
-      <section class="hk-today-section"><h4>${either('Слухи','Rumors')}</h4>${routeHtml}</section>
-      <div class="hk-today-grid"><section class="hk-today-section"><h4>${tr('dailyAds')}</h4><p>${ad.lotId ? (adTimer ? either('Ожидание','Cooldown') : either('Доступна','Available')) : either('Недоступна','Unavailable')}${adTimer ? ` · ${countdownLabel(adTimer)}` : ''}</p></section>
-      <section class="hk-today-section"><h4>${tr('dailyPit')}</h4>${pitLimitsHtml()}${pit.round ? `<p>${tr('round')}: <b>${pit.round}</b>${pit.enemyText ? ` · ${escapeHtml(pit.enemyText)}` : ''}</p>` : ''}</section></div>
-      <section class="hk-today-section"><h4>${tr('dailyStores')}</h4><div class="hk-today-action-groups">${actionHtml}</div></section>
+      <section class="hk-today-section"><h4>${either('Порядок действий','Action order')}</h4><div class="hk-today-action-groups">${actionHtml}</div></section>
       <section class="hk-today-section hk-today-plan"><h4>${tr('dailyPlan')}</h4><small>${tr('exactPlan')}</small><ol>${planRows}</ol>${walletForecastHtml(totals)}</section>
       <details class="hk-today-section hk-budget"><summary>${tr('dailyBudget')}</summary>${budgetRows}<h4>${either('Журнал расходов','Expense journal')}</h4><ul class="hk-expense-journal">${journalHtml}</ul><div class="hk-toolbar"><button id="hk-settings-export">${tr('exportSettings')}</button><button id="hk-settings-import">${tr('importSettings')}</button></div></details>`;
     installIconFallbacks(dailyBox);
     const run = root?.querySelector('#hk-daily-run');
     if (run) run.disabled = dailyRunning || !selected.length;
-    dailyBox.querySelectorAll('[data-pit-moves]').forEach(select => select.onchange = () => {
-      savePitMoves(select.dataset.pitMoves, select.value);
-      renderDailyTasks();
-    });
-    dailyBox.querySelectorAll('[data-pit-enabled]').forEach(input => input.onchange = () => {
-      dailySelection[`pit:${input.dataset.pitEnabled}`] = input.checked;
-      saveDailySelection();
-      renderDailyTasks();
-    });
     dailyBox.querySelectorAll('[data-daily-action]').forEach(input => input.onchange = () => {
       dailySelection[input.dataset.dailyAction] = input.checked;
       if (input.dataset.dailyAction.startsWith('lot:')) {
@@ -5322,10 +5297,6 @@
       dailySelection[id] = count > 0;
       saveDailySelection(); renderDailyTasks();
     });
-    dailyBox.querySelectorAll('[data-daily-store-tab]').forEach(button => button.onclick = () => {
-      dailyStoreTab = button.dataset.dailyStoreTab || 'regular';
-      saveDailySelection(); renderDailyTasks();
-    });
     dailyBox.querySelectorAll('[data-budget-row]').forEach(row => {
       const id = row.dataset.budgetRow;
       row.querySelectorAll('[data-budget-field]').forEach(input => input.onchange = () => saveCurrencyBudget(id, {[input.dataset.budgetField]:Math.max(0,Number(input.value || 0))}));
@@ -5336,6 +5307,7 @@
     const importButton = dailyBox.querySelector('#hk-settings-import'); if (importButton) importButton.onclick = importMobileSettings;
   }
 
+  const HK_TODAY_CANON_REV = 'today-kokkaras-order-20260920-r1';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
@@ -5344,6 +5316,7 @@
       log(either('Проверяю доступные ежедневные задачи…', 'Checking available daily tasks…'));
       playerDocument = await apiJson('/player/me', 'POST');
       shopViewDocument = await apiJson('/shop/view', 'GET');
+      dailyClientConfigDocument = await apiJson('/client_config', 'GET').catch(()=>dailyClientConfigDocument);
       dailyShopRows = shopViewDocument ? normalizeRegularShop() : [];
       if (!shopViewDocument) log(tr('dailyNoShop'), 'warn');
       await loadRumorRoute();
@@ -5775,10 +5748,12 @@
         hkRunner.setStep(action.label, completed + skipped, actions.length);
         try {
           log(`${either('Выполняю','Running')}: ${action.label}`);
-          if (action.kind === 'rumors') await runDailyRumors(true);
-          else if (action.kind === 'advertisement') await runDailyAd(true);
-          else if (action.kind === 'pit') await executeDailyPit(action);
+          if (action.kind === 'advertisement') await runDailyAd(true);
+          else if (action.kind === 'rumors') await runDailyRumors(true);
+          else if (action.kind === 'dailyQuests') await dailyClaimCompletedQuestsCurrent();
           else if (action.kind === 'purchase') await executeDailyPurchase(action);
+          else if (action.kind === 'claimLeaderboardRewards') await dailyClaimLeaderboardRewardsCurrent();
+          else if (action.kind === 'claimAreaBossBattlePass') await dailyClaimAreaBossBattlePassCurrent();
           completed++;
         } catch (error) {
           if (error?.name === 'AbortError' || hkRunner.signal?.aborted) break;
@@ -9239,6 +9214,7 @@
     }, 1000);
     setInterval(updateWatermark, 30000);
     hkStartupStage = 'READY';
+    disarmStartupErrorTrap();
   }
 
   function startNetworkCapture() {
