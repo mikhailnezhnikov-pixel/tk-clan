@@ -1,9 +1,9 @@
 [Unit]
-Description=Run TopKing public collector every 3 hours
+Description=Run TopKing public ratings collector daily at 16:00 Moscow time
 
 [Timer]
-OnCalendar=*-*-* 00/3:15:00
-RandomizedDelaySec=300
+OnCalendar=*-*-* 16:00:00 Europe/Moscow
+RandomizedDelaySec=0
 Persistent=true
 Unit=hamsterking-public-collector.service
 
