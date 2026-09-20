@@ -1,0 +1,111 @@
+name: Deploy TopKing Maps Parallel Read R4
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-parallel-read-r4-deploy-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact current live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-active-intersection-20260920-r3'" /tmp/HamsterKingMobile.user.js
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "f8a34bff26fd449f315f07a2ef8e6a8a6e8169ea62f463e7efe527766d698101"
+
+      - name: Compile and apply patch
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/patch_maps_parallel_read_r4.py
+          python3 deploy/topking/patch_maps_parallel_read_r4.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r4'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 6;" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_SUBMIT_BATCH = 100;" /tmp/HamsterKingMobile.user.js
+          grep -Fq "Promise.all(Array.from({length:workers},()=>worker()))" /tmp/HamsterKingMobile.user.js
+          grep -Fq "activePlayerBuildingIds(state)" /tmp/HamsterKingMobile.user.js
+          grep -Fq "ensureCrystalEventCatalog()" /tmp/HamsterKingMobile.user.js
+          grep -Fq "hkMutationGate.run('/player/building'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1'" /tmp/HamsterKingMobile.user.js
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "f4f5a74ed8a4cc25b63ef11adf714d358ada0399f95a765bfedb21728a6162ca"
+
+      - name: Backup and deploy
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.maps-parallel-r4.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            node --check /tmp/HamsterKingMobile.maps-parallel-r4.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.maps-parallel-r4.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.maps-parallel-r4.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+
+      - name: Verify public round trip
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?maps-parallel-r4=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r4'" /tmp/public.js
+          sha="$(sha256sum /tmp/public.js | awk '{print $1}')"
+          test "$sha" = "f4f5a74ed8a4cc25b63ef11adf714d358ada0399f95a765bfedb21728a6162ca"
+          {
+            echo "MAPS_PARALLEL_READ_R4_LIVE=PASS"
+            echo "live_sha256=$sha"
+            echo "public_sha256=$sha"
+            echo "public_byte_equality=PASS"
+            echo "syntax=PASS"
+            echo "scanner=maps-parallel-read-20260920-r4"
+            echo "parallel_reads=6"
+            echo "submit_batch=100"
+          } > audit/hk-stage2-maps-parallel-read-r4-live-status.txt
+
+      - name: Sync verified baseline
+        run: |
+          set -euo pipefail
+          cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-stage2-maps-parallel-read-r4-live-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "stage2: sync parallel map reader r4 live candidate"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.maps-parallel-r4.user.js /tmp/public.js
