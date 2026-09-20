@@ -1,1 +1,1 @@
-pits canon core r1 2026-09-20
+pits canon core r1 retry css-anchor 2026-09-20
