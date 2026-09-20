@@ -1,0 +1,6 @@
+MAP_COORDS_BACKEND_R2_LIVE=PASS
+client_sha256=1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6
+server_sha256=1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1
+public_byte_equality=PASS
+completed_map_coordinate_update=PASS
+coord_revision=column-row-v1

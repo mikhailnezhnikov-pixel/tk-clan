@@ -758,7 +758,7 @@
   const HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r5';
   const HK_MAP_READ_CONCURRENCY = 10;
   const HK_MAP_SUBMIT_BATCH = 200;
-  const HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r1';
+  const HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2';
   const HK_STAGE2F_RUNNER_REV = 'stage2f-clan-20260919-r1';
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
@@ -8050,7 +8050,8 @@
     const city = cities.find(row => String(row?.id) === cityId) || {};
     // Game API exposes district grid axes as row/column. Public/user-facing
     // coordinates are X:Y = column:row, so canonical map storage must swap them.
-    return {area_id:areaId, city_id:cityId, city_name:cityLabel(city), x:full?.info?.y ?? full?.meta?.gamearea_coords?.y,
+    return {area_id:areaId, city_id:cityId, city_name:cityLabel(city), coord_revision:'column-row-v1',
+      x:full?.info?.y ?? full?.meta?.gamearea_coords?.y,
       y:full?.info?.x ?? full?.meta?.gamearea_coords?.x, invest_count:Number(full?.info?.invest_count || invest.size),
       expected_buildings:Math.max(buildings.length, Number(full?.meta?.buildings_total || 0)), buildings};
   }
