@@ -31,6 +31,73 @@ def hk_map_data(map_key: str, member: dict | None = None, public: bool = False) 
     return {"ok": True, "map": hk_map_row(row), "point_count": row["point_count"],
             "render": "points", "points": points, "canonical": canonical}
 
+### discover_hk_map_area
+def discover_hk_map_area(db: sqlite3.Connection, map_key: str) -> dict:
+    key = str(map_key or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key):
+        raise ValueError("invalid map key")
+    row = db.execute("SELECT map_key,city,grid FROM hk_maps_catalog WHERE map_key=?", (key,)).fetchone()
+    if not row:
+        raise LookupError("map not found")
+    match = re.fullmatch(r"\s*(\d{1,3})\s*:\s*(\d{1,3})\s*", str(row["grid"] or ""))
+    if not match:
+        return {"map_key": key, "city": row["city"], "grid": row["grid"],
+                "match_method": "city_grid_yx", "candidates": []}
+    # Historical HK Maps labels grid as Y:X. Canonical TopKing stores X:Y.
+    y, x = int(match.group(1)), int(match.group(2))
+    city_key = map_city_key(row["city"])
+    candidates: set[str] = set()
+    for area in db.execute(
+        "SELECT area_id,city_id,city_name FROM map_areas WHERE x=? AND y=?",
+        (x, y),
+    ).fetchall():
+        area_city_keys = {map_city_key(area["city_name"]), map_city_key(area["city_id"])}
+        if city_key not in area_city_keys:
+            continue
+        canonical = _canonical_area_id(db, str(area["area_id"]))
+        if canonical:
+            candidates.add(canonical)
+    return {"map_key": key, "city": row["city"], "grid": row["grid"],
+            "x": x, "y": y, "match_method": "city_grid_yx",
+            "candidates": sorted(candidates)}
+
+### link_hk_map_area
+def link_hk_map_area(map_key: str, area_id: str = "") -> dict:
+    key = str(map_key or "").strip()
+    with db_session() as db:
+        map_row = db.execute("SELECT 1 FROM hk_maps_catalog WHERE map_key=?", (key,)).fetchone()
+        if not map_row:
+            raise LookupError("map not found")
+        requested = str(area_id or "").strip()
+        if requested:
+            canonical = _canonical_area_id(db, requested)
+            if not canonical:
+                raise LookupError("canonical area not found")
+            method = "exact_area_id"
+            candidates = [canonical]
+        else:
+            discovered = discover_hk_map_area(db, key)
+            candidates = discovered["candidates"]
+            method = discovered["match_method"]
+            if len(candidates) != 1:
+                raise ValueError(f"map link requires exactly one canonical candidate, got {len(candidates)}")
+            canonical = candidates[0]
+        now = utc_now()
+        db.execute(
+            """INSERT INTO hk_map_area_links(map_key,canonical_area_id,match_method,linked_at)
+               VALUES(?,?,?,?)
+               ON CONFLICT(map_key) DO UPDATE SET
+               canonical_area_id=excluded.canonical_area_id,
+               match_method=excluded.match_method,
+               linked_at=excluded.linked_at""",
+            (key, canonical, method, now),
+        )
+        linked = db.execute(
+            "SELECT map_key,canonical_area_id,match_method,linked_at FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+    return {"ok": True, "link": dict(linked), "candidates": candidates}
+
 ### cabinet_maps
 def cabinet_maps(member: dict) -> dict:
     ensure_scoped_hk_map_access_schema()
@@ -62,6 +129,122 @@ def cabinet_maps(member: dict) -> dict:
                 members.append(item)
     return {'ok': True, 'can_manage': bool(member.get('maps_manage')),
             'maps': [hk_map_row(row) for row in rows], 'members': members}
+
+### normalize_map_area
+def normalize_map_area(value: object) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("invalid map area")
+    area_id, city_id = str(value.get("area_id", "")), str(value.get("city_id", ""))
+    if not ID_RE.fullmatch(area_id) or not ID_RE.fullmatch(city_id):
+        raise ValueError("invalid map ids")
+    buildings = value.get("buildings")
+    if not isinstance(buildings, list) or len(buildings) > 5000:
+        raise ValueError("invalid map buildings")
+    normalized = []
+    for row in buildings:
+        if not isinstance(row, dict): continue
+        building_id = str(row.get("building_id", ""))
+        if not ID_RE.fullmatch(building_id): continue
+        rooms = row.get("room_count")
+        rooms = None if rooms is None else max(0, min(20, int(rooms)))
+        normalized.append({"building_id":building_id, "opened":bool(row.get("opened")), "room_count":rooms,
+                           "has_events":bool(row.get("has_events")), "is_invest":bool(row.get("is_invest")),
+                           "tier":None if row.get("tier") is None else max(0,min(99,int(row.get("tier")))),
+                           "faction":str(row.get("faction", ""))[:40], "building_type":str(row.get("building_type", ""))[:100]})
+    return {"area_id":area_id, "city_id":city_id, "city_name":str(value.get("city_name", ""))[:120],
+            "coord_revision":str(value.get("coord_revision", ""))[:64],
+            "x":None if value.get("x") is None else int(value.get("x")), "y":None if value.get("y") is None else int(value.get("y")),
+            "invest_count":max(0,int(value.get("invest_count") or 0)), "expected_buildings":max(0,int(value.get("expected_buildings") or len(normalized))),
+            "buildings":normalized}
+
+### submit_map_area
+def submit_map_area(player_id: str, value: object) -> dict:
+    area, now = normalize_map_area(value), utc_now()
+    knowledge_source = map_knowledge_source(player_id)
+    player_id = contributor_id(player_id)
+    with db_session() as db:
+        canonical_id = canonical_map_area(db, area)
+        existing = db.execute("SELECT 1 FROM map_areas WHERE area_id=?", (canonical_id,)).fetchone()
+        trusted_coords = area.get("coord_revision") == "column-row-v1"
+        if existing:
+            # Coordinates in older rows were stored in raw API row:column order.
+            # Only the explicitly versioned column:row payload may replace them.
+            # Do this before the completed-map early return.
+            if trusted_coords and area["x"] is not None and area["y"] is not None:
+                db.execute("""UPDATE map_areas
+                              SET x=?,y=?,last_player_id=?,last_seen=?
+                              WHERE area_id=?""",
+                           (area["x"],area["y"],player_id,now,canonical_id))
+            known, total, progress = map_completion(db, canonical_id)
+            db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                          VALUES(?,?,?,?) ON CONFLICT(source_area_id) DO UPDATE SET
+                          canonical_area_id=excluded.canonical_area_id,last_seen=excluded.last_seen""",
+                       (area["area_id"], canonical_id, now, now))
+            if total and known >= total and knowledge_source != "game_live":
+                return {"ok":True,"area_id":canonical_id,"source_area_id":area["area_id"],"ignored_complete":True,
+                        "progress":progress,"buildings":total,"added_buildings":0,"enriched_buildings":0}
+        db.execute("""INSERT INTO map_areas(area_id,city_id,city_name,x,y,invest_count,expected_buildings,last_player_id,last_seen)
+                    VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(area_id) DO UPDATE SET
+                    city_name=CASE WHEN map_areas.city_name='' AND excluded.city_name<>'' THEN excluded.city_name ELSE map_areas.city_name END,
+                    x=COALESCE(map_areas.x,excluded.x),y=COALESCE(map_areas.y,excluded.y),invest_count=MAX(map_areas.invest_count,excluded.invest_count),
+                    expected_buildings=MAX(map_areas.expected_buildings,excluded.expected_buildings),last_player_id=excluded.last_player_id,last_seen=excluded.last_seen""",
+                   (canonical_id,area["city_id"],area["city_name"],area["x"],area["y"],area["invest_count"],area["expected_buildings"],player_id,now))
+        db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                      VALUES(?,?,?,?) ON CONFLICT(source_area_id) DO UPDATE SET
+                      canonical_area_id=excluded.canonical_area_id,last_seen=excluded.last_seen""",
+                   (area["area_id"], canonical_id, now, now))
+        db.execute("""INSERT OR IGNORE INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                      VALUES(?,?,?,?)""", (canonical_id, canonical_id, now, now))
+        added = enriched = 0
+        for row in area["buildings"]:
+            before = db.execute("""SELECT opened,room_count,has_events,is_invest,tier,faction,building_type,
+                                         knowledge_source,knowledge_observed_at
+                                  FROM map_buildings WHERE area_id=? AND building_id=?""",
+                                (canonical_id, row["building_id"])).fetchone()
+            if not before:
+                added += 1
+            elif ((before["room_count"] is None and row["room_count"] is not None) or
+                  (knowledge_source == "game_live" and row["room_count"] is not None and before["room_count"] != row["room_count"]) or
+                  (not before["opened"] and row["opened"]) or (before["tier"] is None and row["tier"] is not None) or
+                  (not before["faction"] and row["faction"]) or (not before["building_type"] and row["building_type"])):
+                enriched += 1
+            db.execute("""INSERT INTO map_buildings(
+                            area_id,building_id,opened,room_count,has_events,is_invest,tier,faction,building_type,
+                            last_player_id,last_seen,knowledge_source,knowledge_observed_at)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(area_id,building_id) DO UPDATE SET
+                        opened=MAX(map_buildings.opened,excluded.opened),
+                        room_count=CASE
+                          WHEN excluded.room_count IS NULL THEN map_buildings.room_count
+                          WHEN excluded.knowledge_source='game_live' THEN excluded.room_count
+                          WHEN map_buildings.room_count IS NULL THEN excluded.room_count
+                          ELSE map_buildings.room_count END,
+                        has_events=CASE
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.has_events
+                          ELSE MAX(map_buildings.has_events,excluded.has_events) END,
+                        is_invest=MAX(map_buildings.is_invest,excluded.is_invest),
+                        tier=COALESCE(map_buildings.tier,excluded.tier),
+                        faction=CASE WHEN map_buildings.faction='' THEN excluded.faction ELSE map_buildings.faction END,
+                        building_type=CASE WHEN map_buildings.building_type='' THEN excluded.building_type ELSE map_buildings.building_type END,
+                        last_player_id=CASE
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.last_player_id ELSE map_buildings.last_player_id END,
+                        last_seen=MAX(map_buildings.last_seen,excluded.last_seen),
+                        knowledge_source=CASE
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.knowledge_source ELSE map_buildings.knowledge_source END,
+                        knowledge_observed_at=CASE
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.knowledge_observed_at ELSE map_buildings.knowledge_observed_at END""",
+                       (canonical_id,row["building_id"],int(row["opened"]),row["room_count"],int(row["has_events"]),int(row["is_invest"]),
+                        row["tier"],row["faction"],row["building_type"],player_id,now,knowledge_source,now))
+        known, total, progress = map_completion(db, canonical_id)
+    return {"ok":True,"area_id":canonical_id,"source_area_id":area["area_id"],"ignored_complete":False,
+            "progress":progress,"buildings":total,"known_buildings":known,"added_buildings":added,"enriched_buildings":enriched}
 
 ### map_index
 def map_index() -> list[dict]:
