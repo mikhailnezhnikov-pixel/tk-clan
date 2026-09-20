@@ -1,0 +1,78 @@
+name: Deploy TopKing 1.17.4 Startup Error Scope R9
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/startup-error-scope-r9-trigger.txt'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact live 1.17.4
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "f7415cc08dc60f651bf95f7579407779ba16cbf2de876aeffb4f51463377d91e"
+          grep -q '^// @version      1.17.4$' /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_STARTUP_ERROR_TRAP_REV = 'startup-error-trap-20260920-r8'" /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Apply startup error scope r9
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/patch_startup_error_scope_r9_1174.py
+          grep -Fq "HK_STARTUP_ERROR_SCOPE_REV = 'startup-error-scope-20260920-r9'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function disarmStartupErrorTrap()" /tmp/HamsterKingMobile.user.js
+          grep -Fq "disarmStartupErrorTrap();" /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          echo "PATCHED_SHA=$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')"
+
+      - name: Deploy with backup
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            node --check /tmp/HamsterKingMobile.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+            grep -Fq "HK_STARTUP_ERROR_SCOPE_REV = '''startup-error-scope-20260920-r9'''" /opt/hamsterking-license/HamsterKingMobile.user.js
+            node --check /opt/hamsterking-license/HamsterKingMobile.user.js
+          '
+
+      - name: Verify public round trip
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?r9=$(date +%s)" -o /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          grep -Fq "HK_STARTUP_ERROR_SCOPE_REV = 'startup-error-scope-20260920-r9'" /tmp/public.js
+          node --check /tmp/public.js
+          echo "PUBLIC_SHA=$(sha256sum /tmp/public.js | awk '{print $1}')"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js
