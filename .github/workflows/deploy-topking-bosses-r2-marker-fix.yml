@@ -1,0 +1,87 @@
+name: Deploy TopKing Bosses R2 Marker Fix
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/bosses-r2-marker-fix-trigger.txt'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact Bosses r2 live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_BOSSES_CANON_REV='bosses-canon-core-20260920-r1'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_BOSSES_TARGET_REV='bosses-area-target-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function bossCanonTargetPlan" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function bossCanonRewardOnlyPlan" /tmp/HamsterKingMobile.user.js
+          grep -Fq "async function bossCanonRunAreaTargetContinuation" /tmp/HamsterKingMobile.user.js
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "d53d17ca2c6251a1591fe740f85bf1366d70ff674f22b050512e1151ae7a544b"
+
+      - name: Apply marker fix
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/patch_bosses_r2_inner_marker_fix.py
+          python3 deploy/topking/patch_bosses_r2_inner_marker_fix.py | tee /tmp/fix.out
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_BOSSES_CANON_REV='bosses-area-target-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_BOSSES_TARGET_REV='bosses-area-target-20260920-r2'" /tmp/HamsterKingMobile.user.js
+          ! grep -Fq "HK_BOSSES_CANON_REV='bosses-canon-core-20260920-r1'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function bossCanonTargetPlan" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function bossCanonRewardOnlyPlan" /tmp/HamsterKingMobile.user.js
+          grep -Fq "async function bossCanonRunAreaTargetContinuation" /tmp/HamsterKingMobile.user.js
+          echo "PATCHED_SHA=$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')"
+
+      - name: Backup and deploy
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.bosses-r2-markerfix.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            node --check /tmp/HamsterKingMobile.bosses-r2-markerfix.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.bosses-r2-markerfix.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.bosses-r2-markerfix.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+
+      - name: Verify public round trip
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?bosses-r2-markerfix=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          grep -Fq "HK_BOSSES_CANON_REV='bosses-area-target-20260920-r2'" /tmp/public.js
+          grep -Fq "HK_BOSSES_TARGET_REV='bosses-area-target-20260920-r2'" /tmp/public.js
+          echo "PUBLIC_SHA=$(sha256sum /tmp/public.js | awk '{print $1}')"
+          echo "BOSSES_R2_MARKER_FIX=PASS"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/fix.out
