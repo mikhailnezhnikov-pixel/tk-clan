@@ -380,3 +380,33 @@ Baseline sync:
 - run: `35494109901` — SUCCESS.
 
 No Pits action logic changed in r7.
+
+
+## Highlighted runner history r9
+
+User feedback:
+- Pits runner was technically visible but easy to miss;
+- user requested stronger visual emphasis and about 10 recent execution lines;
+- persistent bottom journal must remain unchanged.
+
+r9 behavior:
+- Pits runner gets a dedicated amber accent while a Pit task is active;
+- runner includes a compact per-run history area;
+- stores and shows the last 10 Pits execution messages;
+- history is cleared at the beginning of every new runner task;
+- Pits messages are mirrored into runner history while still continuing to the existing persistent journal unchanged;
+- other modules do not populate this Pits-specific history unless they explicitly use runner notes.
+
+Marker:
+`HK_PITS_RUNNER_HISTORY_REV = 'pits-runner-history-20260920-r9'`
+
+Deploy:
+- workflow: `Deploy TopKing Pits Runner History R9`;
+- run: `35494398235` — SUCCESS;
+- live/public SHA256: `bbc766dc775c7ce637302f1ecf1edfae28b835afeab8408c214abe47b4950fdd`;
+- public round-trip byte equality: PASS.
+
+Baseline sync:
+- run: `35494440507` — SUCCESS.
+
+No Pit calculation/API endpoint/spending logic changed in r9.
