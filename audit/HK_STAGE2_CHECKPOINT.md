@@ -346,3 +346,14 @@ Do not advance to Bosses yet.
 
 Pending Pits live checks remain r11 restoration decision and r13 reward execution.
 Do not advance to Bosses yet.
+
+
+## Pits shared tournament forecast r15
+
+- donor shared Pit Pass/Tribute Box/passive-income forecast transferred;
+- maximum reachable reward tier shown;
+- no spending logic changed;
+- marker: `pits-shared-reward-forecast-20260920-r15`;
+- deploy `35496976601` — PASS;
+- live/public SHA256: `c5806b911ddc4c89aec36ad5dc99a672e18ba8a1870adfc03c31ecd4632bce9c`;
+- baseline sync `35497018252` — PASS.
