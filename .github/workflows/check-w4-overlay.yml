@@ -167,13 +167,13 @@ jobs:
           def call(q):
               body=urllib.parse.urlencode({'data':q}).encode();last=None
               endpoints=('https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter')
-              for round_no in range(4):
+              for round_no in range(2):
                   for endpoint in endpoints:
                       try:
-                          req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6/3.0'})
-                          with urllib.request.urlopen(req,timeout=30) as r:return json.load(r)
+                          req=urllib.request.Request(endpoint,data=body,headers={'User-Agent':'TopKing-W6/4.0'})
+                          with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
                       except Exception as e:last=repr(e)
-                  time.sleep(3+round_no*2)
+                  time.sleep(2+round_no*2)
               raise RuntimeError('OSM query failed '+str(last))
           def add_elements(out,data):
               for e in data.get('elements',[]):
@@ -193,10 +193,8 @@ jobs:
           for p in pts:
               hits=[bid for bid,ps in features.items() if any(inside(poly,p['lon'],p['lat']) for poly in ps)]
               if len(hits)==0:
-                  d=0.00045;s=p['lat']-d;n=p['lat']+d;w=p['lon']-d;e=p['lon']+d
-                  local={};add_elements(local,call(f'[out:json][timeout:20];(way["building"]({s},{w},{n},{e});relation["building"]({s},{w},{n},{e}););out geom;'))
-                  hits=[bid for bid,ps in local.items() if any(inside(poly,p['lon'],p['lat']) for poly in ps)]
-              if len(hits)==0:unmatched.append(p);continue
+                  unmatched.append({**p,'reason':'no_existing_canonical_building_match'})
+                  continue
               if len(hits)>1:amb.append({**p,'candidates':sorted(hits),'reason':'multiple_buildings'});continue
               bid=hits[0]
               if bid in used:amb.append({**p,'candidates':[bid],'reason':'duplicate_building_point','other_point_index':used[bid]});continue
@@ -204,7 +202,7 @@ jobs:
               r={**p,'building_id':bid,'existing':bool(cur)}
               if cur:r.update({'canonical_room_count':cur['room_count'],'canonical_source':cur['knowledge_source'],'canonical_observed_at':cur['knowledge_observed_at']})
               unique.append(r)
-          out={'map_key':key,'canonical_area_id':src['canonical_area_id'],'point_count':len(pts),'points':unique,'unmatched':unmatched,'ambiguous':amb}
+          out={'map_key':key,'canonical_area_id':src['canonical_area_id'],'point_count':len(pts),'points':unique,'unmatched':unmatched,'ambiguous':amb,'safe_new_building_rows':0}
           open(f'w6-{key}.json','w').write(json.dumps(out,ensure_ascii=False,indent=2,sort_keys=True))
           print(key,'points',len(pts),'unique',len(unique),'unmatched',len(unmatched),'ambiguous',len(amb))
           PY
@@ -257,8 +255,7 @@ jobs:
               metrics['point_unmatched']+=len(r['unmatched'])
               metrics['point_ambiguous']+=len(r['ambiguous'])
               for p in r['points']:
-                  if not p['existing']:
-                      metrics['building_rows_to_add']+=1;continue
+                  assert p['existing'] is True,p
                   metrics['building_rows_already_known']+=1
                   cur=p.get('canonical_room_count')
                   if cur is None:metrics['existing_null_fill_candidates']+=1
@@ -272,7 +269,7 @@ jobs:
             'duplicate_target_groups':len(dup),'duplicate_target_maps':sum(len(v) for v in dup.values()),'duplicate_targets':dup,
             'source_positive_points':metrics['source_positive_points'],'point_unique_matches':metrics['point_unique_matches'],
             'point_unmatched':metrics['point_unmatched'],'point_ambiguous':metrics['point_ambiguous'],
-            'building_rows_to_add':metrics['building_rows_to_add'],'building_rows_already_known':metrics['building_rows_already_known'],
+            'building_rows_to_add':0,'building_rows_already_known':metrics['building_rows_already_known'],
             'existing_null_fill_candidates':metrics['existing_null_fill_candidates'],'room_count_same':metrics['room_count_same'],
             'room_count_conflicts_total':metrics['room_count_conflicts_total'],
             'room_count_conflicts_by_source':{'game_live':metrics['room_count_conflicts_game_live'],'hk_maps_import':metrics['room_count_conflicts_hk_maps_import'],'legacy':metrics['room_count_conflicts_legacy']},
