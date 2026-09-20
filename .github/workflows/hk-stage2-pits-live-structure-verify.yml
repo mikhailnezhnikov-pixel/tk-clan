@@ -1,0 +1,47 @@
+name: HK Stage 2 Pits Live Structure Verify
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/stage2-pits-verify-trigger.txt'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect exact live Pits implementation
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          node --check /tmp/live.js
+          echo "LIVE_SHA=$(sha256sum /tmp/live.js | awk '{print $1}')"
+          echo "VERSION=$(grep -m1 '^// @version' /tmp/live.js | awk '{print $3}')"
+          echo "PIT_LOOP_DEFS=$(grep -c 'async function pitLoop()' /tmp/live.js || true)"
+          echo "PIT_LOOP_CALLS=$(grep -c 'await pitLoop()' /tmp/live.js || true)"
+          echo "EXECUTE_DAILY_PIT_DEFS=$(grep -c 'async function executeDailyPit' /tmp/live.js || true)"
+          echo "EXECUTE_DAILY_PIT_CALLS=$(grep -c 'executeDailyPit(' /tmp/live.js || true)"
+          echo "CANON_PIT_READ_CONFIGS=$(grep -c 'function pitReadRunConfigs' /tmp/live.js || true)"
+          echo "CANON_RUN_PITS=$(grep -c 'async function runPits(configs)' /tmp/live.js || true)"
+          echo "CANON_PIT_BUILD_MENU=$(grep -c 'function pitBuildMenuState' /tmp/live.js || true)"
+          echo "CANON_PIT_DEFINITIONS=$(grep -c "id:'pit1'.*id:'pit2'.*id:'pit3'" /tmp/live.js || true)"
+          grep -Fq 'id="hk-pit-start"' /tmp/live.js
+          grep -Fq 'id="hk-target"' /tmp/live.js
+          grep -Fq 'id="hk-activation-limit"' /tmp/live.js
+          grep -Fq 'id="hk-restore-limit"' /tmp/live.js
+          grep -Fq 'id="hk-pit-collect-only"' /tmp/live.js
+          echo "LEGACY_SINGLE_PIT_UI=YES"
+          echo "PITS_LIVE_STRUCTURE_VERIFY=PASS"
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js
