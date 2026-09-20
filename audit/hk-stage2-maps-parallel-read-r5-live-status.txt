@@ -1,0 +1,8 @@
+MAPS_PARALLEL_READ_R5_LIVE=PASS
+live_sha256=d4c84856ffcad0617ce783451c054205491f7d0d956bf7e7ec1ae5315480680a
+public_sha256=d4c84856ffcad0617ce783451c054205491f7d0d956bf7e7ec1ae5315480680a
+public_byte_equality=PASS
+syntax=PASS
+scanner=maps-parallel-read-20260920-r5
+parallel_reads=10
+submit_batch=200
