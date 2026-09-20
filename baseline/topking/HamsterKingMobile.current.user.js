@@ -1879,9 +1879,9 @@
     {id:'gang', textKey:'pitGang', currencyId:'cur_pit_3_pass', currencyType:'pve-pit-ticket', heading:/^(?:Яма Банд|Gang Pit)$/i}
   ];
   const PIT_DAILY_API = {
-    normal:{stateKeys:['pit'], start:'/player/pit/start', battle:'/player/pit/battle', finish:'/player/pit/finish'},
-    boss:{stateKeys:['pit2','boss_pit'], start:'/player/boss_pit/start', battle:'/player/boss_pit/battle', finish:'/player/boss_pit/finish'},
-    gang:{stateKeys:['pit_pve'], start:'/player/pit_pve/start', battle:'/player/pit_pve/battle', finish:'/player/pit_pve/finish'}
+    normal:{stateKeys:['pit'], start:'/player/pit/start', pass:'/player/pit/pass', battle:'/player/pit/battle', respawn:'/player/pit/respawn', finish:'/player/pit/finish'},
+    boss:{stateKeys:['pit2','boss_pit'], start:'/player/boss_pit/start', pass:'/player/boss_pit/pass', battle:'/player/boss_pit/battle', respawn:'/player/boss_pit/respawn', finish:'/player/boss_pit/finish'},
+    gang:{stateKeys:['pit_pve'], start:'/player/pit_pve/start', pass:'/player/pit_pve/pass', battle:'/player/pit_pve/battle', respawn:'/player/pit_pve/respawn', finish:'/player/pit_pve/finish'}
   };
 
   function persistPitLimits(limits) {
@@ -2458,6 +2458,318 @@
     box.innerHTML = `<h4>${tr('pitForecast')}</h4><div class="hk-pit-targets">${targets}</div><p>${either('Расчёт: обычная Яма — итоговая сила лучшего картеля из предпросмотра боя, включая генералов, текущую эффективность и всю поддержку; Яма боссов — итоговая сила всех картелей из личного предпросмотра; Яма банд — восемь индивидуальных пар с их фактической силой, эффективностью и поддержкой, общий успех требует минимум 5 побед из 8. Проценты рассчитываются индивидуально. Один жетон восстановления даёт 5 дополнительных попыток.','Calculation: Normal Pit uses the best cartel final power from the local preview, including generals, current efficiency and all support; Boss Pit uses the local preview final power of all cartels; Gang Pit uses eight individual matchups with their actual power, efficiency and support, and requires at least 5 wins out of 8. Chances are calculated individually. One recovery token gives five extra attempts.')}</p><p>${tr('pitTokenBudget',{n:Number(settings.activationLimit||0)+Number(settings.restoreLimit||0)})}</p>${comparison}${table?`<details ${pitPowerTableOpen?'open':''}><summary>${tr('pitPowerTable')}</summary><div class="hk-pit-table-wrap"><table><thead><tr><th>${either('Уровень','Level')}</th><th>${tr('pitNormal')}</th><th>${tr('pitBoss')}</th><th>${tr('pitGang')}</th></tr></thead><tbody>${table}</tbody></table></div></details>`:''}`;
     const details = box.querySelector('details');
     if (details) details.addEventListener('toggle',()=>{ pitPowerTableOpen=details.open; });
+  }
+
+  const HK_PITS_CANON_DEFINITIONS = [
+    {id:'normal', textKey:'pitNormal', currencyId:'cur_pit_pass', icon:'https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/pit-icon.png'},
+    {id:'boss', textKey:'pitBoss', currencyId:'cur_pit_2_pass', icon:'https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/boss-pit-icon.png'},
+    {id:'gang', textKey:'pitGang', currencyId:'cur_pit_3_pass', icon:'https://cdn-prod-front-dist.hwgame.cloud/assets/images/ui/pve-pit-icon.png'}
+  ];
+  const HK_PITS_CANON_BATCHES = [50,20,10,5,1];
+  const HK_PIT_PASS_ITEM_ID = 'item_pit_pass_ticket';
+  const HK_PIT_RESTORATION_ITEM_ID = 'item_pit_health_ticket';
+
+  function pitCanonWhole(value) {
+    const n=Number(value);
+    return Number.isFinite(n) ? Math.max(0,Math.trunc(n)) : 0;
+  }
+
+  function pitCanonCostQuantity(cost,id,kind='item') {
+    const rows=kind==='currency' ? (cost?.currencies||[]) : (cost?.items||[]);
+    const row=rows.find(x=>String(x?.id||x?.currency_id||x?.item_id||'')===String(id||''));
+    return row ? pitCanonWhole(row.quantity) : null;
+  }
+
+  function pitCanonResourceQuantity(documentValue,id,kind='item') {
+    const roots=[documentValue,documentValue?.player].filter(Boolean);
+    for(const root of roots){
+      const rows=kind==='currency' ? (root?.currencies||[]) : (root?.items||[]);
+      const field=kind==='currency' ? 'currency_id' : 'item_id';
+      const row=(Array.isArray(rows)?rows:[]).find(x=>String(x?.[field]||x?.id||'')===String(id||''));
+      if(row)return pitCanonWhole(row?.quantity ?? row?.value);
+    }
+    return 0;
+  }
+
+  function pitCanonCurrencyMax(documentValue,id) {
+    const roots=[documentValue,documentValue?.player].filter(Boolean);
+    for(const root of roots){
+      const row=(root?.currencies||[]).find(x=>String(x?.currency_id||x?.id||'')===String(id||''));
+      const value=Number(row?.max_value ?? row?.maxValue ?? row?.limit);
+      if(Number.isFinite(value)&&value>0)return Math.trunc(value);
+    }
+    return 0;
+  }
+
+  function pitCanonPremiumUnitPrice(index) {
+    if(index<=3)return 25;
+    if(index<=6)return 50;
+    if(index<=8)return 100;
+    if(index<=10)return 125;
+    if(index===11)return 150;
+    if(index<=13)return 175;
+    return 200;
+  }
+
+  function pitCanonPremiumCumulative(count) {
+    let total=0;
+    for(let index=1;index<=pitCanonWhole(count);index++)total+=pitCanonPremiumUnitPrice(index);
+    return total;
+  }
+
+  function pitCanonPremiumPairs(state,available) {
+    const result=[];
+    for(const row of state?.pass_costs||[]){
+      if(row?.is_prem!==true)continue;
+      const mass=pitCanonWhole(row.mass_multiplier);
+      const deficit=Math.max(0,mass-pitCanonWhole(available));
+      const cost=pitCanonCostQuantity(row?.cost,'cur_prem','currency');
+      if(deficit>0&&cost!==null)result.push({deficit,cost,mass});
+    }
+    return result;
+  }
+
+  function pitCanonPremiumOffset(state,available) {
+    const pairs=pitCanonPremiumPairs(state,available);
+    if(!pairs.length)return 0;
+    for(let offset=0;offset<=250;offset++){
+      if(pairs.every(pair=>pitCanonPremiumCumulative(offset+pair.deficit)-pitCanonPremiumCumulative(offset)===pair.cost))return offset;
+    }
+    return null;
+  }
+
+  function pitCanonPremiumCost(state,available,deficit) {
+    deficit=pitCanonWhole(deficit);
+    if(deficit<=0)return {cost:0,verified:true};
+    const offset=pitCanonPremiumOffset(state,available);
+    if(offset!==null)return {cost:pitCanonPremiumCumulative(offset+deficit)-pitCanonPremiumCumulative(offset),verified:true};
+    const direct=pitCanonPremiumPairs(state,available).find(pair=>pair.deficit===deficit);
+    return {cost:direct?.cost??0,verified:!!direct};
+  }
+
+  function pitCanonDecompose(total) {
+    let remaining=pitCanonWhole(total),result=[];
+    for(const chunk of HK_PITS_CANON_BATCHES){
+      while(remaining>=chunk){result.push(chunk);remaining-=chunk;}
+    }
+    return result;
+  }
+
+  function pitCanonDirectPassCost(state,mass,payment) {
+    const prem=payment==='PREM';
+    const row=(state?.pass_costs||[]).find(entry=>entry?.is_prem===prem&&pitCanonWhole(entry?.mass_multiplier)===pitCanonWhole(mass));
+    if(!row)return null;
+    return pitCanonCostQuantity(row?.cost,prem?'cur_prem':HK_PIT_PASS_ITEM_ID,prem?'currency':'item');
+  }
+
+  function pitCanonPlans(state,available,itemPasses) {
+    available=pitCanonWhole(available);
+    itemPasses=pitCanonWhole(itemPasses);
+    if(!state)return [];
+    const plans=[],seen=new Set();
+    const addAuto=(kind,total,fallback=null)=>{
+      total=pitCanonWhole(total);
+      if(!total)return;
+      const chunks=pitCanonDecompose(total);
+      const sig=chunks.join('+');
+      if(!chunks.length||seen.has('A:'+sig))return;
+      const extra=Math.max(0,total-available);
+      const premium=pitCanonPremiumCost(state,available,extra);
+      if(extra>0&&!premium.verified&&fallback===null)return;
+      seen.add('A:'+sig);
+      plans.push({id:`${kind}-${sig}`,kind,total,chunks,paymentMode:'AUTO',crystalCost:premium.verified?premium.cost:pitCanonWhole(fallback),itemCost:0,affordable:true});
+    };
+    if(available>0)addAuto('exact',available);
+    if(available===0){
+      addAuto('direct',1,pitCanonPremiumCumulative(1));
+      addAuto('rounded',5,pitCanonPremiumCumulative(5));
+    }else{
+      const rounded=Math.ceil(available/5)*5;
+      if(rounded>available)addAuto('rounded',rounded,pitCanonPremiumCumulative(rounded-available));
+      const standards=[1,5,10,20,50];
+      let direct=standards.find(value=>value>=available);
+      if(direct===available)direct=standards.find(value=>value>available);
+      if(direct)addAuto('direct',direct,pitCanonPremiumCumulative(Math.max(0,direct-available)));
+      else if(available>50){
+        const combined=Math.ceil((available+1)/10)*10;
+        addAuto('direct',combined,pitCanonPremiumCumulative(Math.max(0,combined-available)));
+      }
+    }
+    for(const batch of HK_PITS_CANON_BATCHES){
+      const cost=pitCanonDirectPassCost(state,batch,'ITEM');
+      if(cost===null)continue;
+      plans.push({id:`item-${batch}`,kind:'item',total:batch,chunks:[batch],paymentMode:'ITEM',crystalCost:0,itemCost:cost,affordable:itemPasses>=cost});
+    }
+    return plans;
+  }
+
+  function pitCanonTargetChoices(state) {
+    const current=Math.max(1,pitCanonWhole(state?.level ?? state?.min_pit_level));
+    const first=Math.ceil(current/5)*5;
+    return [{id:'any',level:0},...Array.from({length:6},(_,index)=>({id:`minimum:${first+index*5}`,level:first+index*5}))];
+  }
+
+  function pitCanonStored() {
+    const value=load().pitsCanon;
+    return value&&typeof value==='object'&&value.pits&&typeof value.pits==='object'?value:{pits:{}};
+  }
+
+  function pitCanonDefinitionName(def) { return tr(def.textKey); }
+
+  function pitCanonBuildRows(documentValue=playerDocument) {
+    const saved=pitCanonStored();
+    const itemPasses=pitCanonResourceQuantity(documentValue,HK_PIT_PASS_ITEM_ID,'item');
+    const paws=pitCanonResourceQuantity(documentValue,HK_PIT_RESTORATION_ITEM_ID,'item');
+    return HK_PITS_CANON_DEFINITIONS.map(def=>{
+      const state=pitRaceSnapshot(def.id,documentValue);
+      const activeState=pitRaceState(def.id,documentValue);
+      const active=!!activeState;
+      const available=pitCanonResourceQuantity(documentValue,def.currencyId,'currency');
+      const maximum=Math.max(available,pitCanonCurrencyMax(documentValue,def.currencyId));
+      const plans=active?[]:pitCanonPlans(state,available,itemPasses);
+      const old=saved.pits?.[def.id]||{};
+      const selectedPlan=plans.find(row=>row.id===String(old.planId||''))||plans.find(row=>row.kind==='exact')||plans.find(row=>row.affordable)||plans[0]||null;
+      const targets=pitCanonTargetChoices(state);
+      const savedTarget=String(old.targetId||'any');
+      const target=targets.find(row=>row.id===savedTarget)||targets[0];
+      const runnable=active||!!selectedPlan;
+      return {definition:def,state,activeState,active,available,maximum,itemPasses,paws,plans,targets,
+        enabled:!!old.enabled&&runnable,planId:selectedPlan?.id||'',targetId:target?.id||'any',
+        maxRestoration:Math.min(paws,pitCanonWhole(old.maxRestoration)),autofinish:!!old.autofinish};
+    });
+  }
+
+  function pitCanonPlanLabel(plan) {
+    if(!plan)return either('Нет доступного плана','No available plan');
+    const batch=pitCanonDecompose(plan.total).map(value=>`×${value}`).join(' + ');
+    if(plan.kind==='exact')return `${either('Точно по доступным пропускам','Exact available passes')}: ${batch}`;
+    if(plan.kind==='rounded')return `${either('Округлить вверх','Round up')}: ${batch}${plan.crystalCost?` · 💎 ${plan.crystalCost}`:''}`;
+    if(plan.kind==='item')return `${either('Пропуск Ямы','Pit Pass')}: ${batch} · 🎟 ${plan.itemCost}`;
+    return `${either('Прямой пакет','Direct batch')}: ${batch}${plan.crystalCost?` · 💎 ${plan.crystalCost}`:''}`;
+  }
+
+  function pitCanonSaveDom() {
+    const box=root?.querySelector('#hk-pits-content');
+    if(!box)return;
+    const oldStored=pitCanonStored(),pits={};
+    for(const def of HK_PITS_CANON_DEFINITIONS){
+      const old=oldStored.pits?.[def.id]||{};
+      pits[def.id]={enabled:!!box.querySelector(`[data-pit-canon-enabled="${def.id}"]`)?.checked,
+        planId:String(box.querySelector(`[data-pit-canon-plan="${def.id}"]`)?.value||old.planId||''),
+        targetId:String(box.querySelector(`[data-pit-canon-target="${def.id}"]`)?.value||old.targetId||'any'),
+        maxRestoration:pitCanonWhole(box.querySelector(`[data-pit-canon-paws="${def.id}"]`)?.value??old.maxRestoration),
+        autofinish:!!box.querySelector(`[data-pit-canon-autofinish="${def.id}"]`)?.checked};
+    }
+    save({pitsCanon:{pits}});
+  }
+
+  function pitCanonRender() {
+    const box=root?.querySelector('#hk-pits-content');
+    if(!box)return;
+    const rows=pitCanonBuildRows();
+    const paws=pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item');
+    const itemPasses=pitCanonResourceQuantity(playerDocument,HK_PIT_PASS_ITEM_ID,'item');
+    const crystals=pitCanonResourceQuantity(playerDocument,'cur_prem','currency');
+    const allAutofinish=rows.length>0&&rows.every(row=>row.autofinish);
+    box.innerHTML=`
+      <div class="hk-pits-summary">
+        <div><small>${either('Лапы восстановления','Restoration Paws')}</small><b>🐾 ${paws.toLocaleString(locale())}</b></div>
+        <div><small>${either('Пропуски Ямы','Pit Passes')}</small><b>🎟 ${itemPasses.toLocaleString(locale())}</b></div>
+        <div><small>${either('Кристаллы','Crystals')}</small><b>💎 ${crystals.toLocaleString(locale())}</b></div>
+      </div>
+      <div class="hk-pits-toolbar"><button id="hk-pits-refresh" class="hk-secondary">${either('Обновить данные','Refresh live data')}</button><label class="hk-pit-canon-global"><input id="hk-pits-autofinish-all" type="checkbox" ${allAutofinish?'checked':''}><span>${either('Автозавершение всех Ям','Auto-finish all Pits')}</span></label></div>
+      <div class="hk-pits-cards">${rows.map(row=>{
+        const def=row.definition,currentLevel=pitCanonWhole(row.state?.level ?? row.state?.min_pit_level),health=row.activeState?pitCanonWhole(row.activeState.health):null;
+        const activeBatch=row.active?pitCanonWhole(row.activeState?.mass_multiplier ?? row.activeState?.multiplier):0,runnable=row.active||row.plans.length>0;
+        const planOptions=row.active?`<option value="active">${either('Продолжить активную Яму','Continue active Pit')} ×${activeBatch||1}</option>`:row.plans.map(plan=>`<option value="${escapeHtml(plan.id)}" ${plan.id===row.planId?'selected':''} ${plan.paymentMode==='ITEM'&&!plan.affordable?'disabled':''}>${escapeHtml(pitCanonPlanLabel(plan))}</option>`).join('');
+        const targetOptions=row.targets.map(target=>`<option value="${escapeHtml(target.id)}" ${target.id===row.targetId?'selected':''}>${target.level?`≥ ${target.level}`:either('Неважно — идти как можно дальше','Go as far as possible')}</option>`).join('');
+        return `<section class="hk-pit-canon-card ${row.enabled?'selected':''}"><div class="hk-pit-canon-head"><img src="${escapeHtml(def.icon)}" alt=""><div><b>${escapeHtml(pitCanonDefinitionName(def))}</b><small>${row.active?either(`Активна · пакет ×${activeBatch||1}${health===null?'':` · HP ${health}`}`,`Active · batch ×${activeBatch||1}${health===null?'':` · HP ${health}`}`):either('Готова к запуску','Ready')}</small></div><label><input type="checkbox" data-pit-canon-enabled="${def.id}" ${row.enabled?'checked':''} ${runnable?'':'disabled'}><span>${either('Запустить','Run')}</span></label></div><div class="hk-pit-canon-meta"><span>${either('Доступно','Available')}: <b>${row.available.toLocaleString(locale())}</b>${row.maximum?` / ${row.maximum.toLocaleString(locale())}`:''}</span><span>${either('Уровень','Level')}: <b>${currentLevel||'—'}</b></span></div><div class="hk-pit-canon-grid"><label><span>${either('План пропусков','Pass plan')}</span><select data-pit-canon-plan="${def.id}" ${row.active?'disabled':''}>${planOptions}</select></label><label><span>${either('Целевой уровень','Target level')}</span><select data-pit-canon-target="${def.id}">${targetOptions}</select></label><label><span>${either('Макс. Лап восстановления на раунд','Max Restoration Paws per round')}</span><input data-pit-canon-paws="${def.id}" type="number" min="0" max="${paws}" value="${row.maxRestoration}"></label><label class="hk-pit-canon-check"><span>${either('Автозавершение Ямы','Auto-finish Pit')}</span><input data-pit-canon-autofinish="${def.id}" type="checkbox" ${row.autofinish?'checked':''}></label></div></section>`;
+      }).join('')}</div><button id="hk-pits-start" class="hk-primary">${either('Запустить выбранные Ямы','Start selected Pits')}</button><section id="hk-pit-forecast" class="hk-pit-forecast"></section>`;
+    box.querySelector('#hk-pits-refresh').onclick=()=>refreshModuleLive('pit',{force:true});
+    box.querySelector('#hk-pits-autofinish-all').onchange=event=>{box.querySelectorAll('[data-pit-canon-autofinish]').forEach(input=>{input.checked=event.target.checked;});pitCanonSaveDom();pitCanonRender();};
+    box.querySelectorAll('[data-pit-canon-enabled],[data-pit-canon-plan],[data-pit-canon-target],[data-pit-canon-paws],[data-pit-canon-autofinish]').forEach(input=>{input.onchange=()=>{pitCanonSaveDom();pitCanonRender();};});
+    box.querySelector('#hk-pits-start').onclick=runPitsCanonical;
+    renderPitForecast();
+  }
+
+  function pitCanonReadRunConfigs() {
+    pitCanonSaveDom();
+    const rows=pitCanonBuildRows();
+    return rows.filter(row=>row.enabled).map(row=>{
+      const target=row.targets.find(x=>x.id===row.targetId)||row.targets[0];
+      if(row.active){const chunk=Math.max(1,pitCanonWhole(row.activeState?.mass_multiplier ?? row.activeState?.multiplier));return {definition:row.definition,planId:'active',steps:[{chunk,payment:'ACTIVE'}],target:pitCanonWhole(target?.level),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:true,crystalBudget:0,itemPassBudget:0};}
+      const plan=row.plans.find(x=>x.id===row.planId);if(!plan)return null;
+      const chunks=row.autofinish?[...plan.chunks]:plan.chunks.slice(0,1);
+      return {definition:row.definition,planId:plan.id,steps:chunks.map(chunk=>({chunk,payment:plan.paymentMode})),target:pitCanonWhole(target?.level),maxRestoration:row.maxRestoration,autofinish:row.autofinish,resume:false,crystalBudget:pitCanonWhole(plan.crystalCost),itemPassBudget:pitCanonWhole(plan.itemCost)};
+    }).filter(config=>config?.steps?.length);
+  }
+
+  function pitCanonRespawnCost(state,chunk) {
+    const options=Array.isArray(state?.respawn_costs)?state.respawn_costs:[];
+    for(const option of options){if(option?.is_prem===true)continue;const value=pitCanonCostQuantity(option,HK_PIT_RESTORATION_ITEM_ID,'item');if(value!==null&&value>0)return value;}
+    return Math.max(1,pitCanonWhole(chunk));
+  }
+
+  async function pitCanonRunOne(config,progress) {
+    const def=config.definition,api=PIT_DAILY_API[def.id];
+    if(!api)throw new Error(`${pitCanonDefinitionName(def)}: ${either('неизвестный тип Ямы','unknown Pit type')}`);
+    playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:before`);
+    let state=pitRaceSnapshot(def.id,playerDocument),spentCrystals=0,spentItems=0;
+    for(let index=0;index<config.steps.length;index++){
+      await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+      let step=config.steps[index],chunk=pitCanonWhole(step.chunk);
+      playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:round-${index+1}:pre`);state=pitRaceSnapshot(def.id,playerDocument);
+      const active=pitRaceState(def.id,playerDocument),available=pitCanonResourceQuantity(playerDocument,def.currencyId,'currency'),resuming=step.payment==='ACTIVE';
+      if(resuming){if(!active)throw new Error(`${pitCanonDefinitionName(def)}: ${either('активная Яма изменилась','active Pit changed')}`);chunk=Math.max(1,pitCanonWhole(active.mass_multiplier ?? active.multiplier));state=active;}
+      else{
+        if(active)throw new Error(`${pitCanonDefinitionName(def)}: ${either('Яма уже активна — обновите данные','Pit is already active — refresh')}`);
+        let payment=step.payment;if(payment==='AUTO')payment=available>=chunk?'FREE':'PREM';
+        const premCost=payment==='PREM'?pitCanonDirectPassCost(state,chunk,'PREM'):0,itemCost=payment==='ITEM'?pitCanonDirectPassCost(state,chunk,'ITEM'):0;
+        if(payment==='FREE'&&available<chunk)throw new Error(`${pitCanonDefinitionName(def)}: ${either('количество пропусков изменилось','available passes changed')}`);
+        if(payment==='PREM'&&premCost===null)throw new Error(`${pitCanonDefinitionName(def)}: ${either('стоимость платного запуска изменилась','paid pass cost changed')}`);
+        if(payment==='ITEM'&&itemCost===null)throw new Error(`${pitCanonDefinitionName(def)}: ${either('стоимость Пропуска Ямы изменилась','Pit Pass cost changed')}`);
+        if(spentCrystals+pitCanonWhole(premCost)>config.crystalBudget)throw new Error(`${pitCanonDefinitionName(def)}: ${either('стоимость в кристаллах выросла','crystal cost increased')}`);
+        if(spentItems+pitCanonWhole(itemCost)>config.itemPassBudget)throw new Error(`${pitCanonDefinitionName(def)}: ${either('стоимость в Пропусках Ямы выросла','Pit Pass cost increased')}`);
+        if(payment==='PREM'&&pitCanonResourceQuantity(playerDocument,'cur_prem','currency')<pitCanonWhole(premCost))throw new Error(either('Недостаточно кристаллов','Not enough crystals'));
+        if(payment==='ITEM'&&pitCanonResourceQuantity(playerDocument,HK_PIT_PASS_ITEM_ID,'item')<pitCanonWhole(itemCost))throw new Error(either('Недостаточно Пропусков Ямы','Not enough Pit Passes'));
+        hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('запуск','start')} ×${chunk}`,progress.done,progress.total);
+        if(payment==='FREE')await apiJson(api.start,'POST',{mass_multiplier:chunk});else await apiJson(api.pass,'POST',{mass_multiplier:chunk,payment_type:payment});
+        spentCrystals+=pitCanonWhole(premCost);spentItems+=pitCanonWhole(itemCost);
+        playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-start`);state=pitRaceSnapshot(def.id,playerDocument);
+        if(!pitRaceState(def.id,playerDocument))throw new Error(`${pitCanonDefinitionName(def)}: ${either('Яма не запустилась','Pit did not start')}`);
+      }
+      let restorationSpent=0,battles=0;
+      while(state&&state.is_finish===false){
+        await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');if(++battles>1000)throw new Error(`${pitCanonDefinitionName(def)}: ${either('защитный лимит боёв','battle safety limit')}`);
+        const level=pitCanonWhole(state.level),targetReached=config.target>0&&level>=config.target;
+        if(targetReached){log(`✓ ${pitCanonDefinitionName(def)}: ${either('цель достигнута','target reached')} ${level}`,'ok');break;}
+        if(pitCanonWhole(state.health)<=0){
+          const cost=pitCanonRespawnCost(state,chunk),paws=pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item');
+          if(cost<=0||restorationSpent+cost>config.maxRestoration||paws<cost){log(`${pitCanonDefinitionName(def)}: ${either('остановка по лимиту Лап восстановления','Restoration Paws limit reached')} (${restorationSpent}/${config.maxRestoration})`,'warn');break;}
+          hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('восстановление','restoration')} 🐾 ${cost}`,progress.done,progress.total);await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;
+          playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-respawn`);state=pitRaceSnapshot(def.id,playerDocument);continue;
+        }
+        hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('бой','battle')} ${level} → ${level+1}`,progress.done,progress.total);await apiJson(api.battle,'POST');
+        playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-battle`);state=pitRaceSnapshot(def.id,playerDocument);
+      }
+      state=pitRaceSnapshot(def.id,playerDocument);
+      if(state&&state.is_finish===false&&config.autofinish){hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('завершение','finish')}`,progress.done,progress.total);try{await apiJson(api.finish,'POST');}catch(error){if(!pitAlreadyFinishedError(error))throw error;}playerDocument=await hkAuthoritativePlayerRead(`pits:${def.id}:after-finish`);}
+      progress.done+=1;hkRunner.setStep(`${pitCanonDefinitionName(def)} · ${either('раунд завершён','round completed')}`,progress.done,progress.total);log(`✓ ${pitCanonDefinitionName(def)}: ×${chunk} · 🐾 ${restorationSpent}${config.autofinish?` · ${either('автозавершение','auto-finish')}`:''}`,'ok');
+      if(!config.autofinish)break;
+    }
+  }
+
+  async function runPitsCanonical() {
+    if(!requireLicense())return;if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
+    try{
+      playerDocument=await hkAuthoritativePlayerRead('pits:prepare');pitCanonRender();const configs=pitCanonReadRunConfigs();if(!configs.length){alert(either('Выберите хотя бы одну Яму','Select at least one Pit'));return;}
+      const total=configs.reduce((sum,row)=>sum+row.steps.length,0),progress={done:0,total};hkRunner.start({title:either('Ямы','Pits'),step:either('Подготовка','Preparing'),total,pausable:true,stoppable:true});
+      for(const config of configs)await pitCanonRunOne(config,progress);
+      playerDocument=await hkAuthoritativePlayerRead('pits:complete');pitCanonRender();hkRunner.finish(either('Ямы завершены','Pits completed'));log(either('Выбранные Ямы завершены.','Selected Pits completed.'),'ok');
+    }catch(error){
+      if(error?.name==='AbortError'){hkRunner.reset();log(either('Ямы остановлены пользователем','Pits stopped by user'),'warn');}else{hkRunner.fail(error);log(`${either('Ошибка Ям','Pits error')}: ${error?.message||error}`,'bad');}
+      try{playerDocument=await hkAuthoritativePlayerRead('pits:error-reread');pitCanonRender();}catch(_){}
+    }
   }
 
   async function pitLoop() {
@@ -4965,6 +5277,37 @@
   function dailyBpIds(c){return [...new Set((((c?.points||{}).battle_pass_score)||[]).map(x=>x?.id).filter(id=>typeof id==='string'&&id.startsWith('bp_personal_area_boss')))].sort((a,b)=>dailyBpNum(b)-dailyBpNum(a))}
   async function dailyBpState(id,status){try{return await apiJson('/battlepass?battle_pass_type='+encodeURIComponent(id)+'&status='+encodeURIComponent(status),'GET')}catch(e){if(/HTTP (404|409)/.test(String(e?.message||e)))return null;throw e}}
   async function dailyClaimAreaBossBattlePassCurrent(){let n=0;try{const c=dailyClientConfigDocument||await apiJson('/client_config','GET');dailyClientConfigDocument=c;const ids=dailyBpIds(c);let cur=null;for(const id of ids){const d=await dailyBpState(id,'ACTUAL');const bp=d?.player_battle_pass;if(bp&&Number(bp.start_timer??1)<=0&&Number(bp.end_exp_timer??-1)>0){cur=bp;break}}if(!cur)return 0;const targets=[],i=ids.indexOf(String(cur.id));if(i>=0&&i+1<ids.length){const prev=(await dailyBpState(ids[i+1],'RELOAD'))?.player_battle_pass;if(prev&&Number(prev.end_reward_timer||0)>0)targets.push(prev)}targets.push(cur);for(const bp of targets){const count=Math.max(0,Number(bp?.rewards_may_claim||0));if(!bp?.id||Number(bp?.end_reward_timer||0)<=0||count<=0)continue;try{const r=await apiJson('/battlepass/claim','POST',{battle_pass_instance_id:String(bp.id)});playerDocument=hkStateStore.snapshot||r||playerDocument;n++;log(either('Получена награда Battle Pass боссов','Area Boss Battle Pass reward claimed')+': '+bp.id,'ok')}catch(e){if(!/HTTP 409/.test(String(e?.message||e)))log(e?.message||e,'warn')}}}catch(e){log(e?.message||e,'warn')}return n}
+  function dailyCanonEventRegularRows() {
+    const tabs = dailyClientConfigDocument?.event?.tabs || [];
+    let activeTab = String(tabs.find(tab => String(tab?.type || '') === 'shop' && tab?.tab)?.tab || '');
+    if (!activeTab) {
+      const fallback = tabs.find(tab => String(tab?.type || '') === 'quests' && String(tab?.zone || '').startsWith('event_'));
+      activeTab = String(fallback?.zone || '');
+    }
+    if (!activeTab) return [];
+
+    const normalized = new Map(dailyShopRows.map(row => [String(row?.lotId || ''), row]));
+    const lots = Array.isArray(shopViewDocument?.shop_lots) ? shopViewDocument.shop_lots : [];
+    return lots.filter(lot => {
+      if (!lot?.id) return false;
+      const view = lot?.lot_view || {};
+      if (String(view?.tab || '') !== activeTab) return false;
+      if (String(view?.type || '').toLowerCase() === 'hidden') return false;
+      if (lot?.is_ad === true || lot?.external_cost) return false;
+      if (!String(view?.group || '').toLowerCase().includes('event_repeatable_daily_offers')) return false;
+      if ((lot?.cost?.currencies || []).some(row => ['cur_prem','cur_hard'].includes(String(row?.id || '')))) return false;
+      const limits = (lot?.limit || []).filter(row =>
+        String(row?.type || '').toUpperCase() === 'PLAYER' &&
+        String(row?.reset_type || '').toUpperCase() === 'DAILY'
+      );
+      if (!limits.length) return false;
+      const total = Math.max(0, ...limits.map(row => Math.max(0, Number(row?.limit || 0) + Number(row?.bonus || 0))));
+      return total > 0;
+    }).sort((a,b) => Number(b?.priority || 0) - Number(a?.priority || 0))
+      .map(lot => normalized.get(String(lot.id || '')))
+      .filter(row => row?.safe);
+  }
+
   function dailyActionRows() {
     const actions=[],ad=dailyAdvertisement();
     if(ad.available)actions.push({id:'advertisement',label:tr('dailyAds'),kind:'advertisement',uiGroup:'activities',free:true,available:true});
@@ -4973,9 +5316,9 @@
     const rows=dailyShopRows.filter(x=>x?.safe),push=(row,ui)=>{const id='lot:'+row.lotId,a={id,label:(ui==='clan'?tr('clanShop'):ui==='invest'?tr('investShop'):either('Обычное предложение события','Event regular deal'))+': '+(gameText(row.name)||row.rewardId||row.lotId),kind:'purchase',uiGroup:ui,section:ui==='clan'?'clan':'shop',free:false,mandatory:false,available:row.remaining>0&&row.affordable,boughtOut:row.remaining<=0,row,count:0,cost:row.cost,signature:costSignature(row.cost)};dailyCanonInit(a);const saved=Math.max(0,Math.floor(Number(dailyPurchaseCounts[id]||0)));a.count=Math.min(Math.max(0,Number(row.remaining||0)),saved||(dailySelection[id]?1:0));actions.push(a)};
     rows.filter(x=>x.section==='clan'&&x.clanGroup==='personal'&&!excludedDailyClanLot(x)&&String(x.lotId||'')!=='mf_clan_shoplot_refill_lvl_15').forEach(x=>push(x,'clan'));
     rows.filter(x=>DAILY_CANON_INVEST_IDS.has(String(x.lotId||''))).forEach(x=>push(x,'invest'));
-    rows.filter(x=>x.section==='regular').forEach(x=>push(x,'event'));
-    actions.push({id:'claimLeaderboardRewards',label:either('Награды рейтинга: Ямы / Боссы / Крысы','Leaderboard rewards: Pits / Bosses / Rats'),kind:'claimLeaderboardRewards',uiGroup:'rewards',free:true,available:true});
-    actions.push({id:'claimAreaBossBattlePass',label:either('Battle Pass боссов — получить награды','Area Boss Battle Pass — claim rewards'),kind:'claimAreaBossBattlePass',uiGroup:'rewards',free:true,available:true});
+    dailyCanonEventRegularRows().forEach(x=>push(x,'event'));
+    actions.push({id:'claimLeaderboardRewards',label:either('Собрать награды рейтинга: Ямы / Боссы / Крысы','Claim leaderboard rewards: Pits / Bosses / Rats'),kind:'claimLeaderboardRewards',uiGroup:'rewards',free:true,available:true});
+    actions.push({id:'claimAreaBossBattlePass',label:either('Собрать награды Battle Pass боссов','Claim Area Boss Battle Pass rewards'),kind:'claimAreaBossBattlePass',uiGroup:'rewards',free:true,available:true});
     actions.forEach(dailyCanonInit);return actions;
   }
   function selectedDailyActions(){return dailyActionRows().filter(a=>a.available&&dailySelection[a.id]===true&&(a.kind!=='purchase'||a.count>0));}
@@ -5308,6 +5651,9 @@
   }
 
   const HK_TODAY_CANON_REV = 'today-kokkaras-order-20260920-r1';
+  const HK_TODAY_CANON_FILTER_REV = 'today-kokkaras-filter-20260920-r2';
+  const HK_TODAY_TOOLBAR_REV = 'today-toolbar-clean-20260920-r3';
+  const HK_PITS_CANON_REV = 'pits-canon-core-20260920-r1';
   // HK_TODAY_LIVE_VERIFY_V1 stage3a-today-live-20260920-r2
   // HK_TODAY_REFRESH_FRESH_V1 stage3a-today-live-20260920-r3
   async function refreshDailyTasks() {
@@ -8649,7 +8995,7 @@
         if (key === 'pit') {
           playerDocument = await apiJson('/player/me','POST');
           acceptPitDocument(`${apiBase}/player/me`,playerDocument);
-          updatePitStatus(pitState()); updatePitButtons();
+          pitCanonRender();
           liveReadOk=true;return playerDocument;
         }
         if (key === 'bosses') {const value=await refreshBosses(false);liveReadOk=true;return value;}
@@ -8722,7 +9068,8 @@
       #hk-watermark{position:fixed;inset:-40px;z-index:20;pointer-events:none;display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));grid-auto-rows:minmax(120px,1fr);align-items:center;justify-items:center;overflow:hidden;transition:transform .5s ease}#hk-watermark span{display:block;max-width:310px;color:#fff;font:700 11px ui-monospace,monospace;letter-spacing:.4px;opacity:.035;transform:rotate(-24deg);white-space:nowrap;text-shadow:0 1px 2px #000}
       .hk-license{padding:11px;border:1px solid #3b4a61;border-radius:12px;background:#101a28;margin:14px 0;color:#c8d4e5}.hk-license.ok{border-color:#287b60}.hk-license.bad{border-color:#803b49}.hk-update{display:none;margin:0 0 14px;padding:12px;border:1px solid #ffad1f;border-radius:13px;background:#2a2418;color:#fff}.hk-update.required{border-color:#ff6b75;background:#351b22}.hk-update b,.hk-update small{display:block}.hk-update small{margin-top:5px;color:#cbd5e5}.hk-update .hk-primary{margin-top:10px}.hk-locked .hk-tabs,.hk-locked .hk-subnav,.hk-locked .hk-runner,.hk-locked .hk-page{display:none!important}
       .hk-health{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0 0 8px}.hk-health-chip{display:grid;grid-template-columns:9px minmax(0,1fr);align-items:center;column-gap:7px;padding:9px 8px;border:1px solid #34445c;border-radius:11px;background:#111a27;color:#d3dbe8;min-width:0}.hk-health-chip:before{content:'';width:8px;height:8px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}.hk-health-chip.ok{border-color:#24694f;background:#10231d}.hk-health-chip.ok:before{background:#52d296;box-shadow:0 0 0 3px #52d29622}.hk-health-chip.bad{border-color:#7a3443;background:#29151b}.hk-health-chip.bad:before{background:#ff6b7a;box-shadow:0 0 0 3px #ff6b7a22}.hk-health-chip b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-chip small{grid-column:2;color:#8392a7;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-health-actions{display:flex;gap:7px;margin:0 0 14px}.hk-health-actions button{flex:1;min-height:36px;font-size:12px}@media(max-width:430px){.hk-health{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}.hk-growth-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.hk-growth-stats>div{padding:11px;border:1px solid #304057;border-radius:12px;background:#0e1723}.hk-growth-stats small{display:block;color:#8797ad;font-size:10px}.hk-growth-stats b{display:block;margin-top:4px;color:#ffe083;font-size:15px}.hk-growth-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-growth-actions button{margin-top:0}.hk-growth-options{display:grid;gap:9px;margin:10px 0}.hk-growth-option{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-option span{display:grid;gap:3px}.hk-growth-option small{color:#8998ad;font-size:10px}.hk-growth-option select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:9px}.hk-growth-check{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-check input{width:20px;height:20px;accent-color:#ffad1f}.hk-growth-live{display:grid;gap:3px;padding:9px 10px;border:1px solid #245d48;border-radius:11px;background:#0d211b}.hk-growth-live span{font-size:11px;font-weight:900;color:#6ee7a8}.hk-growth-live small{font-size:9px;color:#8fa89f}.hk-growth-plan{display:grid;gap:6px;margin:4px 0 10px;padding:11px;border:1px solid #3a4659;border-radius:12px;background:#0e1723}.hk-growth-plan>b{color:#ffe083}.hk-growth-plan>span{font-size:11px;color:#d4deea}.hk-growth-plan>small{font-size:9px;color:#8290a4;line-height:1.4}.hk-growth-priority-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-growth-priority-head h3{margin:0}.hk-growth-priority-list{display:grid;gap:7px;margin-top:8px}.hk-growth-priority{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px;border:1px solid #2d3a4e;border-radius:10px;background:#101927}.hk-growth-priority>b{color:#ffe083}.hk-growth-priority>span{font-size:9px;color:#8797ad}.hk-growth-priority>div{display:flex;gap:4px}.hk-growth-priority button{min-width:30px;margin:0;padding:6px 8px}.hk-growth-stats>div:nth-child(n+5){background:#121a28}@media(max-width:430px){.hk-tab{min-height:58px;padding:8px}.hk-tab-icon{width:32px;height:32px;font-size:19px}}
+      .hk-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 10px}.hk-tab{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:9px;align-items:center;min-width:0;min-height:62px;border:1px solid #30425d;border-radius:15px;padding:9px 10px;background:linear-gradient(145deg,#1d293b,#141e2d);color:#eef4ff;text-align:left;overflow:hidden}.hk-tab:last-child:nth-child(odd){grid-column:1/-1}.hk-tab-icon{grid-row:1/3;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ffffff0d;border:1px solid #ffffff12;font-size:21px}.hk-tab-label{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab-hint{font-size:9px;color:#8797ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-tab.active{border-color:#ffbd37;background:linear-gradient(145deg,#3a2c15,#282117);box-shadow:0 0 0 2px #ffad1f22,0 5px 14px #0006}.hk-tab.active .hk-tab-icon{background:#ffad1f;color:#1b1308;border-color:#ffca62}.hk-tab.active .hk-tab-hint{color:#d9b96d}.hk-tab-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:10px}.hk-tab.active .hk-tab-icon img{filter:saturate(1.08) brightness(1.05)}.hk-subnav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 12px;scrollbar-width:none}.hk-subnav::-webkit-scrollbar{display:none}.hk-subnav button{flex:0 0 auto;border:1px solid #314058;border-radius:999px;padding:8px 12px;background:#111b29;color:#9fb0c6;font-size:11px;font-weight:800;white-space:nowrap}.hk-subnav button.active{border-color:#ffad1f;background:#3b2b13;color:#fff}.hk-subnav button.planned{opacity:.42;border-style:dashed}.hk-runner{display:none;margin:0 0 12px;padding:11px;border:1px solid #36506f;border-radius:14px;background:linear-gradient(145deg,#111c2a,#0d1520)}.hk-runner.show{display:block}.hk-runner-head{display:flex;align-items:center;gap:8px}.hk-runner-head b{flex:1;font-size:12px}.hk-runner-state{font-size:9px;color:#8fa1b8;text-transform:uppercase;letter-spacing:.4px}.hk-runner-step{margin-top:5px;color:#b9c6d7;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-runner-track{height:6px;margin:9px 0 8px;border-radius:999px;background:#263246;overflow:hidden}.hk-runner-fill{height:100%;width:0;background:linear-gradient(90deg,#ffad1f,#ffd45c);transition:width .2s ease}.hk-runner-actions{display:flex;gap:7px}.hk-runner-actions button{flex:1;min-height:34px;font-size:11px}.hk-roadmap{display:grid;gap:9px}.hk-roadmap-item{padding:12px;border:1px solid #2d3a4e;border-radius:13px;background:#111925}.hk-roadmap-item b{display:block;color:#ffe08a}.hk-roadmap-item small{display:block;margin-top:4px;color:#8d9bb0;line-height:1.35}      .hk-pits-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 10px}.hk-pits-summary>div{padding:9px;border:1px solid #304057;border-radius:12px;background:#0e1723;min-width:0}.hk-pits-summary small{display:block;color:#8797ad;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk-pits-summary b{display:block;margin-top:4px;color:#ffe083;font-size:13px}.hk-pits-toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-bottom:10px}.hk-pit-canon-global{display:flex;align-items:center;gap:7px;padding:9px;border:1px solid #304057;border-radius:12px;background:#101927;color:#cbd6e5;font-size:10px;font-weight:800}.hk-pit-canon-global input,.hk-pit-canon-head input,.hk-pit-canon-check input{accent-color:#ffad1f}.hk-pits-cards{display:grid;gap:10px}.hk-pit-canon-card{padding:12px;border:1px solid #304057;border-radius:15px;background:linear-gradient(145deg,#121d2b,#0d1622)}.hk-pit-canon-card.selected{border-color:#a96e20;box-shadow:0 0 0 1px #ffad1f26 inset}.hk-pit-canon-head{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:9px;align-items:center}.hk-pit-canon-head img{width:42px;height:42px;object-fit:contain;border-radius:11px;background:#ffffff0b}.hk-pit-canon-head b{display:block;font-size:13px}.hk-pit-canon-head small{display:block;margin-top:3px;color:#8393aa;font-size:9px}.hk-pit-canon-head>label{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:900;color:#ffd77b}.hk-pit-canon-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin:9px 0;color:#96a6ba;font-size:10px}.hk-pit-canon-meta b{color:#fff}.hk-pit-canon-grid{display:grid;gap:8px}.hk-pit-canon-grid>label{display:grid;grid-template-columns:minmax(0,1fr) 145px;gap:8px;align-items:center}.hk-pit-canon-grid>label>span{font-size:10px;color:#b9c6d7;line-height:1.25}.hk-pit-canon-grid select,.hk-pit-canon-grid input[type=number]{width:100%;min-width:0;background:#0b111b;color:#fff;border:1px solid #3b4a61;border-radius:10px;padding:8px;font-size:10px}.hk-pit-canon-check input{justify-self:end;width:18px;height:18px}.hk-pits-cards+.hk-primary{margin-top:12px}@media(max-width:430px){.hk-pits-summary{grid-template-columns:1fr 1fr}.hk-pits-summary>div:last-child{grid-column:1/-1}.hk-pits-toolbar{grid-template-columns:1fr}.hk-pit-canon-grid>label{grid-template-columns:1fr}.hk-pit-canon-head{grid-template-columns:38px minmax(0,1fr)}.hk-pit-canon-head img{width:38px;height:38px}.hk-pit-canon-head>label{grid-column:1/-1}}
+.hk-growth-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.hk-growth-stats>div{padding:11px;border:1px solid #304057;border-radius:12px;background:#0e1723}.hk-growth-stats small{display:block;color:#8797ad;font-size:10px}.hk-growth-stats b{display:block;margin-top:4px;color:#ffe083;font-size:15px}.hk-growth-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hk-growth-actions button{margin-top:0}.hk-growth-options{display:grid;gap:9px;margin:10px 0}.hk-growth-option{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-option span{display:grid;gap:3px}.hk-growth-option small{color:#8998ad;font-size:10px}.hk-growth-option select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:9px}.hk-growth-check{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #2d3a4e;border-radius:12px;background:#101927}.hk-growth-check input{width:20px;height:20px;accent-color:#ffad1f}.hk-growth-live{display:grid;gap:3px;padding:9px 10px;border:1px solid #245d48;border-radius:11px;background:#0d211b}.hk-growth-live span{font-size:11px;font-weight:900;color:#6ee7a8}.hk-growth-live small{font-size:9px;color:#8fa89f}.hk-growth-plan{display:grid;gap:6px;margin:4px 0 10px;padding:11px;border:1px solid #3a4659;border-radius:12px;background:#0e1723}.hk-growth-plan>b{color:#ffe083}.hk-growth-plan>span{font-size:11px;color:#d4deea}.hk-growth-plan>small{font-size:9px;color:#8290a4;line-height:1.4}.hk-growth-priority-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-growth-priority-head h3{margin:0}.hk-growth-priority-list{display:grid;gap:7px;margin-top:8px}.hk-growth-priority{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px;border:1px solid #2d3a4e;border-radius:10px;background:#101927}.hk-growth-priority>b{color:#ffe083}.hk-growth-priority>span{font-size:9px;color:#8797ad}.hk-growth-priority>div{display:flex;gap:4px}.hk-growth-priority button{min-width:30px;margin:0;padding:6px 8px}.hk-growth-stats>div:nth-child(n+5){background:#121a28}@media(max-width:430px){.hk-tab{min-height:58px;padding:8px}.hk-tab-icon{width:32px;height:32px;font-size:19px}}
       .hk-business-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.hk-business-tab{border:1px solid #34445b;border-radius:11px;padding:11px;background:#172234;color:#b8c4d6;font-weight:700}.hk-business-tab.active{border-color:#ffad1f;background:#3a2a0f;color:#fff}.hk-business-pane{display:none}.hk-business-pane.active{display:block}
       .hk-page{display:none}.hk-page.active{display:block}.hk-cardbox{background:#151d29;border:1px solid #2a374a;border-radius:16px;padding:14px;margin-bottom:12px}.hk-grid{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center}
       input,select,button{font:inherit}.hk-grid input,.hk-grid select,.hk-toolbar select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-primary,.hk-secondary,.hk-danger{width:100%;border:0;border-radius:12px;padding:13px;margin-top:9px;font-weight:800}.hk-primary{background:#ffad1f;color:#16110a}.hk-secondary{background:#28364a;color:white}.hk-danger{background:#642a32;color:#fff}.hk-primary:disabled,.hk-secondary:disabled{opacity:.45}
@@ -8778,23 +9125,14 @@
       <div id="hk-subnav" class="hk-subnav"></div>
       <div id="hk-runner" class="hk-runner"><div class="hk-runner-head"><b id="hk-runner-title"></b><span id="hk-runner-state" class="hk-runner-state"></span></div><div id="hk-runner-step" class="hk-runner-step"></div><div class="hk-runner-track"><div id="hk-runner-fill" class="hk-runner-fill"></div></div><div class="hk-runner-actions"><button id="hk-runner-pause" class="hk-secondary"></button><button id="hk-runner-stop" class="hk-danger"></button></div></div>
       <div class="hk-page active" data-content="daily">
-        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div class="hk-toolbar"><button id="hk-daily-refresh" class="hk-secondary" data-i18n="dailyRefresh">${tr('dailyRefresh')}</button><button id="hk-daily-clear" data-i18n="dailyClear">${tr('dailyClear')}</button></div><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
+        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
       </div>
       <div class="hk-page" data-content="resources">
         <div id="hk-resource-content" class="hk-cardbox"></div>
       </div>
       <div class="hk-page" data-content="bosses"><div id="hk-boss-content" class="hk-cardbox"><h3>${either('Боссы','Bosses')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать состояние босса.','Open this tab to read boss state.')}</p></div></div>
           <div class="hk-page" data-content="pit">
-        <div class="hk-cardbox"><div class="hk-grid">
-          <label data-i18n="targetRound">${tr('targetRound')}</label><input id="hk-target" type="number" min="1" value="${settings.target}">
-          <label data-i18n="delay">${tr('delay')}</label><input id="hk-interval" type="number" min="0.7" step="0.1" value="${settings.interval}">
-          <label data-i18n="activationTokens">${tr('activationTokens')}</label><input id="hk-activation-limit" type="number" min="0" value="${settings.activationLimit}">
-          <label data-i18n="restoreTokens">${tr('restoreTokens')}</label><input id="hk-restore-limit" type="number" min="0" value="${settings.restoreLimit}">
-          <label data-i18n="allowTokens">${tr('allowTokens')}</label><input id="hk-allow-tokens" type="checkbox" ${settings.allowTokens ? 'checked' : ''}>
-          <label data-i18n="pitCollectOnly">${tr('pitCollectOnly')}</label><input id="hk-pit-collect-only" type="checkbox" ${settings.collectOnly ? 'checked' : ''}>
-        </div><div id="hk-pit-live" class="hk-live">${tr('round')}: —</div><section id="hk-pit-forecast" class="hk-pit-forecast"></section>
-        <button id="hk-pit-start" class="hk-primary" data-i18n="startBattle">${tr('startBattle')}</button><button id="hk-pit-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
-        <button id="hk-export" class="hk-secondary" data-i18n="exportCsv">${tr('exportCsv')}</button></div>
+        <div id="hk-pits-content" class="hk-cardbox"><h3>${either('Ямы','Pits')}</h3><p class="hk-muted">${either('Загрузка live-данных трёх Ям…','Loading live data for all three Pits…')}</p></div>
       </div>
       <div class="hk-page" data-content="routines">
         <div id="hk-routines-content" class="hk-cardbox"></div>
@@ -9078,52 +9416,8 @@
       }
     };
     runtime.navigate = page => { try { activateModule(page,true); panel?.classList.add('open'); } catch (_) {} };
-    root.querySelector('#hk-daily-refresh').onclick = () => refreshModuleLive('daily',{force:true});
     root.querySelector('#hk-daily-run').onclick = runDailySelected;
-    root.querySelector('#hk-daily-clear').onclick = () => { if (logBox) logBox.innerHTML = ''; if (statusLine) statusLine.textContent = tr('dailyReady'); };
-    root.querySelector('#hk-pit-start').onclick = async () => {
-      if (!requireLicense()) return;
-      if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
-      settings = {
-        target: Math.max(1, Number(root.querySelector('#hk-target').value || 1)),
-        interval: Math.max(.7, Number(root.querySelector('#hk-interval').value || 1.2)),
-        activationLimit: Math.max(0, Number(root.querySelector('#hk-activation-limit').value || 0)),
-        restoreLimit: Math.max(0, Number(root.querySelector('#hk-restore-limit').value || 0)),
-        allowTokens: root.querySelector('#hk-allow-tokens').checked,
-        collectOnly: root.querySelector('#hk-pit-collect-only').checked
-      };
-      save({settings});
-      activationSpent = 0;
-      restoreSpent = 0;
-      pitRunStart = (() => { const state=pitState(); return {round:state.round,power:pitPowerValue(state)}; })();
-      hkRunner.start({title:either('Яма','Pit'),step:either('Автобой','Auto battle'),pausable:true,stoppable:true});
-      pitRunning = true;
-      updatePitButtons();
-      log(settings.collectOnly ? either('Запущен безопасный сбор данных Ямы без боя','Started safe Pit data collection without battle') : `Автобой запущен до раунда ${settings.target}`);
-      try {
-        await pitLoop();
-        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
-        hkRunner.finish(either('Яма завершена','Pit completed'));
-      } catch (error) {
-        if (error?.name === 'AbortError') {
-          hkRunner.reset();
-          log(either('Автобой остановлен','Auto battle stopped'),'warn');
-        } else {
-          hkRunner.fail(error);
-          log(`${either('Ошибка Ямы','Pit error')}: ${error?.message || error}`,'bad');
-        }
-      } finally {
-        pitRunning = false;
-        updatePitButtons();
-      }
-    };
-    root.querySelector('#hk-pit-stop').onclick = () => {
-      pitRunning = false;
-      hkRunner.stop('pit');
-      updatePitButtons();
-      log(either('Останавливаю автобой…','Stopping auto battle…'),'warn');
-    };
-    root.querySelector('#hk-export').onclick = exportPowers;
+    // Canonical Pits controls are rendered and bound dynamically by pitCanonRender().
     root.querySelector('#hk-refresh-game').onclick = () => location.reload();
     root.querySelector('#hk-optimizer-calculate').onclick = calculateBusinessOptimizer;
     root.querySelector('#hk-optimizer-restore').onclick = prepareOriginalBusinessRestore;
