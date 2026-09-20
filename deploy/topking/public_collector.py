@@ -132,33 +132,53 @@ def normalize_ranking(document, kind, max_rank=100, limit=100):
     return best
 
 def active_war():
-    me=game_json("/player/me","POST",{})
-    own=first_text(
-        (me.get("player") or {}).get("clan_name") if isinstance(me,dict) else "",
-        ((me.get("player") or {}).get("clan") or {}).get("name") if isinstance((me.get("player") or {}).get("clan"),dict) else "",
-        (me.get("clan") or {}).get("name") if isinstance(me.get("clan"),dict) else "",
-        "Top King",
-    )
+    # Current war does not need /player/me. That document is >2 MB for
+    # developed accounts and is unnecessary load for this lightweight path.
+    own=clean_name(os.environ.get("HK_PUBLIC_COLLECTOR_CLAN_NAME","Top🏆King")) or "Top King"
     value=game_json("/clan/active_battles")
     attack=value.get("alliance_attack_war") if isinstance(value,dict) else None
     if isinstance(attack,dict):
         timer=finite(attack.get("end_timer")) or 0
-        war={"our_clan":own,"opponent":first_text(attack.get("name"),attack.get("defender_clan_name"),"—"),"our_score":0,"opponent_score":0,"status":"active","started_at":0,"ends_at":int(time.time()+timer/1000)}
-        cur=finite(attack.get("health")); maximum=finite(attack.get("initial_health"))
-        if cur is not None: war["opponent_hp"]=round(cur)
-        if maximum and maximum>0: war["opponent_hp_max"]=round(maximum)
+        war={
+            "our_clan":own,
+            "opponent":first_text(attack.get("name"),attack.get("defender_clan_name"),"—"),
+            "our_score":0,
+            "opponent_score":0,
+            "status":"active",
+            "started_at":0,
+            "ends_at":int(time.time()+timer/1000),
+        }
+        cur=finite(attack.get("health"))
+        maximum=finite(attack.get("initial_health"))
+        if cur is not None:
+            war["opponent_hp"]=round(cur)
+        if maximum and maximum>0:
+            war["opponent_hp_max"]=round(maximum)
         return True,war
+
     defenses=value.get("clan_defense_wars") if isinstance(value,dict) else None
     if isinstance(defenses,list) and defenses:
         defenses=[x for x in defenses if isinstance(x,dict)]
         defenses.sort(key=lambda x: finite(x.get("end_timer")) or 0)
         defense=defenses[0]
         timer=finite(defense.get("end_timer")) or 0
-        war={"our_clan":own,"opponent":first_text(defense.get("name"),defense.get("attacker_alliance_name"),"—"),"our_score":0,"opponent_score":0,"status":"active","started_at":0,"ends_at":int(time.time()+timer/1000)}
-        cur=finite(defense.get("health")); maximum=finite(defense.get("initial_health"))
-        if cur is not None: war["our_hp"]=round(cur)
-        if maximum and maximum>0: war["our_hp_max"]=round(maximum)
+        war={
+            "our_clan":own,
+            "opponent":first_text(defense.get("name"),defense.get("attacker_alliance_name"),"—"),
+            "our_score":0,
+            "opponent_score":0,
+            "status":"active",
+            "started_at":0,
+            "ends_at":int(time.time()+timer/1000),
+        }
+        cur=finite(defense.get("health"))
+        maximum=finite(defense.get("initial_health"))
+        if cur is not None:
+            war["our_hp"]=round(cur)
+        if maximum and maximum>0:
+            war["our_hp_max"]=round(maximum)
         return True,war
+
     return True,None
 
 def alliance_list(document):
