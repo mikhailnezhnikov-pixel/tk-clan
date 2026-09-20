@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- current module: Buildings / Здания
-- current module file: audit/hk-stage2-06-buildings.md
-- current module status: CANON_CORE_R1_LIVE_CANDIDATE
-- next module after LIVE PASS: Explore / Исследование
+- current module: Maps / Карты — scanner repair
+- current module file: audit/hk-stage2-04-maps.md
+- current module status: SCANNER_R2_LIVE_CANDIDATE
+- next module after LIVE PASS: Buildings / Здания — resume live confirmation
 - Today / Сегодня: LIVE PASS
 
 ## Module order
@@ -75,7 +75,7 @@ Each module:
   - final marker: `bosses-area-target-20260920-r2`
   - final SHA256: `0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7`
   - Area Boss Calculator intentionally remains website-only
-- 2.04 Maps / Карты — LIVE PASS
+- 2.04 Maps / Карты — REOPENED: SCANNER_R2_LIVE_CANDIDATE
   - marker: `stage2e-maps-20260919-r1`
   - no new patch required
 - 2.05 Resources / Ресурсы — LIVE PASS
@@ -623,3 +623,22 @@ Transfer Buildings first; Explore follows only after Buildings live candidate.
 - current module status: **CANON_CORE_R1_LIVE_CANDIDATE**.
 
 Pending: one live open/favorite/state-rerun confirmation. Explore transfer gap remains queued for Stage 2.07 and is not part of this Buildings patch.
+
+
+## Maps scanner r2 repair
+
+User live screenshot exposed a real building-study attribution/backfill bug in Maps. The earlier Maps LIVE PASS is reopened.
+
+Fix:
+- `maps-building-scan-20260920-r2`;
+- persistent `building_id -> area_id` relation;
+- lazy owned-area lookup when relation is missing;
+- safe full-study reread for already-active buildings during account scan;
+- exact crystal-room submission back to the matching district/building;
+- no closed building is opened by scanner backfill.
+
+Technical live verification: PASS.
+Live/public SHA256: `a250839d884d23ff12fb2808364338d62b5555554fad2edc4d7b4a1e0cec177e`.
+
+Current status: **SCANNER_R2_LIVE_CANDIDATE**.
+Buildings r1 remains deployed but its live confirmation is paused until Maps scanner r2 is confirmed. Explore remains blocked.
