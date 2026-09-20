@@ -40,7 +40,8 @@ jobs:
           grep -Fq "HK_PITS_RESPAWN_REV = 'pits-respawn-cost-20260920-r6'" /tmp/live.js
           grep -Fq "HK_PITS_POWER_TABLE_REV = 'pits-power-table-collapsed-20260920-r7'" /tmp/live.js
           grep -Fq "HK_PITS_PROGRESS_REV = 'pits-battle-progress-20260920-r8'" /tmp/live.js
-          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "2ec1d1aac5f5685b593e6abc5fdb508c11fe59c4a49a1ab1dbfca3928de6e751"
+          grep -Fq "HK_PITS_RUNNER_HISTORY_REV = 'pits-runner-history-20260920-r9'" /tmp/live.js
+          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "bbc766dc775c7ce637302f1ecf1edfae28b835afeab8408c214abe47b4950fdd"
           cp /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
       - name: Commit current snapshot
         run: |
@@ -49,7 +50,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js
           if ! git diff --cached --quiet; then
-            git commit -m "stage2: sync Pits battle progress r8 live candidate"
+            git commit -m "stage2: sync Pits runner history r9 live candidate"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
