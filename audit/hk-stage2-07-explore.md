@@ -1025,3 +1025,72 @@ User test:
 
 Do not enable E4 multi-building processing until this one-building test passes.
 
+## E3 r9 — staged Explore runner UI
+
+Status: **LIVE CANDIDATE / USER VISUAL CHECK PENDING**
+
+Marker:
+`HK_EXPLORE_CANON_REV = 'explore-e3-single-20260920-r9-runner'`
+
+Live/baseline sync commit:
+`8b6149836104e1d6e07587f9ddde02e1d8d91235`
+
+### User request
+
+The E3 runner needed the same visual clarity as the Pit runner:
+- visually highlighted execution panel;
+- several persistent stage rows;
+- obvious current step;
+- obvious completed / pending / skipped / failed state;
+- enough time after completion to inspect the result.
+
+### r9 behavior
+
+Explore E3 now renders a highlighted runner with five stage rows:
+
+1. Building state read
+2. Explore events
+3. Battles
+4. Tier progression / Instant MAX
+5. Final verification
+
+Stage statuses:
+- `○` pending;
+- `▶` running;
+- `✓` completed;
+- `—` skipped;
+- `×` error.
+
+The current row receives the active highlight, completed rows are green, skipped rows are muted/warn-colored, and failed rows are red.
+
+The runner keeps the existing Pause / Stop controls.
+
+For Explore E3 only, a successful completed runner remains visible for 15 seconds instead of the generic 1.8-second completion timeout, so the user can visually inspect what finished.
+
+### Scope
+
+- E3 action mechanics: unchanged;
+- E4: not started;
+- Maps scanner concurrency: 5 preserved;
+- Maps backend/schema: unchanged.
+
+### Live verification
+
+- source live SHA256: `cd210c35e6579fb594439b81fd0a08dd8089a35b3598b9e245478b959f4f6a3a`;
+- deployed/public SHA256: `d41ca53e345efb346be393283bee982ff3112234fea2394e4c4efe8e70cd741f`;
+- syntax: PASS;
+- service/deploy: PASS;
+- public byte equality: PASS;
+- Explore runner highlight: PASS;
+- Explore staged rows: PASS;
+- completed runner linger: 15s;
+- map concurrency 5 preserved: PASS.
+
+Evidence:
+`audit/hk-stage2-explore-e3-runner-r9-live-status.txt`
+
+### Next
+
+Continue E3 single-building validation.
+Do not enable E4 until the single-building action path passes user verification.
+
