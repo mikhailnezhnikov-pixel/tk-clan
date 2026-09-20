@@ -1,105 +1,197 @@
-]ãN	 BÇêêT—OHò€€ú›◊‘U◊‘‘QQ‘ëUàH	‹]ÀYò\›XﬁX€KLåçåLå\åL	Œ»ÇìPTíœHò€€ú›◊‘U◊—P“T“S”ó‘ëUàH	‹]À\ô\›‹ò][€ãYX⁄\⁄[€ãLåçåLå\åLIŒ»ÇöYàPTí»[àŒÇàòZ\ŸHﬁ\›[Q^]
-	ÿ[ôXYH\YY	 BöYàêT—Hõ›[àŒÇàòZ\ŸHﬁ\›[Q^]
-	‹åLX\öŸ\àZ\‹⁄[ô… Búœ\Àúô\XŸJêT—KêT—J»óàä”PTíÀJBÇò[ò⁄‹èHàù[ò›[€à]ÿ[õ€ëò\›ﬁX€Q[^JYã€ö\\èYò[ŸJH◊àÇö[\úœ\àààà€€ú›]ÿ[õ€ëX⁄\⁄[€êùYŸ]^‹ô[Y[Xô\éôò[ŸKô[XZ[ö[ôŒåN¬àù[ò›[€à]ÿ[õ€ëX⁄\⁄[€êùYŸ]ô\Ÿ]
+from pathlib import Path
+p=Path('/tmp/HamsterKingMobile.user.js')
+s=p.read_text(encoding='utf-8')
 
-^¬à]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[Y[Xô\èYò[ŸN¬à]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[XZ[ö[ôœL¬àBàù[ò›[€à]ÿ[õ€ëX⁄\⁄[€êùYŸ]ÿ[î‹[ô
-€‹›\‘]‹ ^¬àYä\]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[Y[Xô\üZ\‘]‹ \ô]\õàò[ŸN¬àYäSù[Xô\ãö\—ö[ö]J]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[XZ[ö[ô J\ô]\õàùYN¬àô]\õà]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[XZ[ö[ôœèSX]õX^
-]ÿ[õ€ï⁄€J€‹›
-JN¬àBàù[ò›[€à]ÿ[õ€ëX⁄\⁄[€êùYŸ]\JX⁄\⁄[€ä^¬àYäX⁄\⁄[€èÀòX›[€àOOI‹‹[ô	 \ô]\õé¬àYäX⁄\⁄[€ãúô[Y[Xô\ä^¬à]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[Y[Xô\è]ùYN¬à]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[XZ[ö[ôœYX⁄\⁄[€ãô^òS[Z]å‹]ÿ[õ€ï⁄€JX⁄\⁄[€ãô^òS[Z]
-Nìù[Xô\ãî‘“UUëW“SëíSíUN¬àY[ŸH]ÿ[õ€ëX⁄\⁄[€êùYŸ]ô\Ÿ]
+BASE="const HK_PITS_SPEED_REV = 'pits-fast-cycle-20260920-r10';"
+MARK="const HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11';"
+if MARK in s:
+    raise SystemExit('already applied')
+if BASE not in s:
+    raise SystemExit('r10 marker missing')
+s=s.replace(BASE, BASE+"\n  "+MARK, 1)
 
-N¬àBàù[ò›[€à]ÿ[õ€ëX⁄\⁄[€êùYŸ]€€ú›[YJ€‹›
-^¬àYä\]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[Y[Xô\üSù[Xô\ãö\—ö[ö]J]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[XZ[ö[ô J\ô]\õé¬à]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[XZ[ö[ôœSX]õX^
-]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[XZ[ö[ôÀSX]õX^
-]ÿ[õ€ï⁄€J€‹›
-JJN¬àYä]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[XZ[ö[ôœL
-\]ÿ[õ€ëX⁄\⁄[€êùYŸ]ô\Ÿ]
+anchor="  function pitCanonFastCycleDelay(def,sniper=false) {\n"
+helpers=r"""  const pitCanonDecisionBudget={remember:false,remaining:0};
+  function pitCanonDecisionBudgetReset(){
+    pitCanonDecisionBudget.remember=false;
+    pitCanonDecisionBudget.remaining=0;
+  }
+  function pitCanonDecisionBudgetCanSpend(cost,hasPaws){
+    if(!pitCanonDecisionBudget.remember||!hasPaws)return false;
+    if(!Number.isFinite(pitCanonDecisionBudget.remaining))return true;
+    return pitCanonDecisionBudget.remaining>=Math.max(0,pitCanonWhole(cost));
+  }
+  function pitCanonDecisionBudgetApply(decision){
+    if(decision?.action!=='spend')return;
+    if(decision.remember){
+      pitCanonDecisionBudget.remember=true;
+      pitCanonDecisionBudget.remaining=decision.extraLimit>0?pitCanonWhole(decision.extraLimit):Number.POSITIVE_INFINITY;
+    }else pitCanonDecisionBudgetReset();
+  }
+  function pitCanonDecisionBudgetConsume(cost){
+    if(!pitCanonDecisionBudget.remember||!Number.isFinite(pitCanonDecisionBudget.remaining))return;
+    pitCanonDecisionBudget.remaining=Math.max(0,pitCanonDecisionBudget.remaining-Math.max(0,pitCanonWhole(cost)));
+    if(pitCanonDecisionBudget.remaining<=0)pitCanonDecisionBudgetReset();
+  }
 
-N¬àBÇàù[ò›[€à]ÿ[õ€ê\⁄‘ô\›‹ò][€ëX⁄\⁄[€äŸYã]ô[\ôŸ]€‹›]‹ﬂJ^¬àô]\õàô]»õ€Z\ŸJô\€€ôOOû¬àõ€›Àú]Y\ûTŸ[X›‹ä	»⁄À\]\ô\›‹ò][€ãYX⁄\⁄[€â OÀúô[[›ôJ
-N¬à€€ú››ô\õ^OYÿ›[Y[ùò‹ôX]Q[[Y[ù
-	Ÿ]â N¬à›ô\õ^KöYI⁄À\]\ô\›‹ò][€ãYX⁄\⁄[€âŒ¬à›ô\õ^Kò€\‹”ò[YOI⁄À\]YX⁄\⁄[€ã[›ô\õ^IŒ¬à€€ú›\ôŸ]^]\ôŸ]åÿ8¢iH	‹]ÿ[õ€ï⁄€J\ôŸ]
-_XôZ]\ä	Ù&¥,4.à4/4/¥-¥/t/à4-4,4.Ùc4b4-IÀ	–\»ò\à\»‹‹⁄XõI N¬à›ô\õ^Kö[õô\íSX]à€\‹œHöÀ\]YX⁄\⁄[€ãXÿ\ôèÇà]à€\‹œHöÀ\]YX⁄\⁄[€ãZXYèè]èè€X[âŸZ]\ä	Ù+Ù/4b»0≠»4`¥`4-t,t`Ù-t`¥`tc»4`4-tb4-t/t.4-IÀ	‘]»0≠»X⁄\⁄[€àô\]Z\ôY	 _O‹€X[èœâŸ\ÿÿ\R[
-]ÿ[õ€ëYö[ö][€ìò[YJYäJ_O⁄œèŸ]èè‹[èº'‰/è‹‹[èèŸ]èÇà€\‹œHöÀ\]YX⁄\⁄[€ãZ[ùõ»èâŸZ]\ä	Ù$¥bÙ,t`4,4/t/t,4c»4a¥-t.Ùc4-tbtdH4/t-H4-4/¥`t`¥.4,Ù/t`Ù`¥,4,4-4.Ùc»4/Ù`4/¥-4/¥.Ù-¥-t/t.4c»4`¥`4-t,t`Ù-t`¥`tc»4,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t.4-KâÀ	’HŸ[X›Y\ôŸ]\»õ›ôY[àôXX⁄Y[ôô\›‹ò][€à\»ô\]Z\ôY»€€ù[ùYKâ _O‹Çà]à€\‹œHöÀ\]YX⁄\⁄[€ãY‹öYèÇà]èè‹[èâŸZ]\ä	Ù(¥-t.¥`Ùbt.4.H4`Ù`4/¥,¥-t/tc	À	–›\úô[ù]ô[	 _O‹‹[èèèâ‹]ÿ[õ€ï⁄€J]ô[
-_OÿèèŸ]èÇà]èè‹[èâŸZ]\ä	Ù$¥bÙ,t`4,4/t/t,4c»4a¥-t.Ùc	À	‘Ÿ[X›Y\ôŸ]	 _O‹‹[èèèâŸ\ÿÿ\R[
-\ôŸ]^
-_OÿèèŸ]èÇà]èè‹[èâŸZ]\ä	Ù't`Ù-¥/t/à4`t-t.taÙ,4`IÀ	‘ô\]Z\ôYõ›… _O‹‹[èèèº'‰/à	‹]ÿ[õ€ï⁄€J€‹›
-_OÿèèŸ]èÇà]èè‹[èâŸZ]\ä	Ù%4/¥`t`¥`Ù/Ù/t/à4`t-t.taÙ,4`IÀ	–]òZ[XõHõ›… _O‹‹[èèèº'‰/à	‹]ÿ[õ€ï⁄€J]‹ _OÿèèŸ]èÇà]èè‹[èâŸZ]\ä	Ù'¥`t`¥,4/t-t`¥`tc»4/Ù/¥`t.Ù-H4`¥`4,4`¥b…À	‘ô[XZ[ö[ô»Yù\à‹[ô	 _O‹‹[èèèº'‰/à	”X]õX^
-]ÿ[õ€ï⁄€J]‹ K\]ÿ[õ€ï⁄€J€‹›
-J_OÿèèŸ]èÇàŸ]èÇà]à€\‹œHöÀ\]YX⁄\⁄[€ãXùYŸ]èÇàXô[è‹[èâŸZ]\ä	Ù'4,4.¥`t.4/4`Ù/4-4/¥/Ù/¥.Ù/t.4`¥-t.Ùc4/tbÙaH4&Ù,4/»4`H4ct`¥/¥,Ù/à4/4/¥/4-t/t`¥,	À	”X^[][HY][€ò[]‹»úõ€Hõ›… _O‹‹[èè[ú]YHöÀ\]YX⁄\⁄[€ã[[Z]à\OHõù[Xô\ààZ[èHåàX^Hâ‹]ÿ[õ€ï⁄€J]‹ _Hàò[YOHåèè€Xô[ÇàXô[€\‹œHöÀ\]YX⁄\⁄[€ã\ô[Y[Xô\àèè[ú]YHöÀ\]YX⁄\⁄[€ã\ô[Y[Xô\àà\OHò⁄X⁄ÿõﬁèè‹[èâŸZ]\ä	Ù%Ù,4/Ù/¥/4/t.4`¥c4/4/¥.H4,¥bÙ,t/¥`4-4.Ùc»4ct`¥/¥,Ù/à4-Ù,4/Ù`Ù`t.¥,	À	‘ô[Y[Xô\à^H⁄⁄XŸHõ‹à\»ù[â _O‹‹[èè€Xô[Çà€X[âŸZ]\ä	Ù%t`t.Ù.4.Ù.4/4.4`à4,t/¥.Ùc4b4-H4,¥bÙ,t/¥`4-Ù,4/Ù/¥/4.4/t,4-t`¥`tc»4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥.4-4/à4.4`taÙ-t`4/Ù,4/t.4c»4ct`¥/¥,Ù/à4-4/¥/Ù/¥.Ù/t.4`¥-t.Ùc4/t/¥,Ù/à4.Ù.4/4.4`¥,âÀ	“YàH[Z]\»Xõ›ôHH⁄⁄XŸH\»ô[Y[Xô\ôY]]€X]Xÿ[H[ù[]Y][€ò[ùYŸ]\»^]\›Yâ _O‹€X[ÇàŸ]èÇà]à€\‹œHöÀ\]YX⁄\⁄[€ãXX›[€ú»èÇàù]€à]K\]YX⁄\⁄[€èHú‹[ôà€\‹œHöÀ\ö[X\ûHà	‹]ÿ[õ€ï⁄€J]‹ O]ÿ[õ€ï⁄€J€‹›
-O…Ÿ\ÿXõY	Œâ…ﬂOâŸZ]\ä	Ù'Ù/¥`¥`4,4`¥.4`¥c4&Ù,4/Ùb»4.4/Ù`4/¥-4/¥.Ù-¥.4`¥c	À	‘‹[ô]‹»[ô€€ù[ùYI _H
-<'‰/à	‹]ÿ[õ€ï⁄€J€‹›
-_JOÿù]€èÇàù]€à]K\]YX⁄\⁄[€èHò€€X›à€\‹œHöÀ\ŸX€€ô\ûHèâŸZ]\ä	Ù%Ù,4,¥-t`4b4.4`¥c4`¥-t.¥`Ùbt.4.H4`4,4`Ù/t-4.4/Ù`4/¥-4/¥.Ù-¥.4`¥c	À	—ö[ö\⁄›\úô[ùõ›[ô[ô€€ù[ùYI _Oÿù]€èÇàù]€à]K\]YX⁄\⁄[€èHõX[ùX[èâŸZ]\ä	Ù'¥`t`¥,4,¥.4`¥c4+Ù/4`»4-4.Ùc»4`4`ÙaÙ/t/¥,Ù/à4`t,t/¥`4,4.4/Ù-t`4-t.t`¥.4-4,4.Ùc4b4-IÀ	”X]ôH]õ‹àX[ùX[€€X›[€à[ô€€ù[ùYI _Oÿù]€èÇàù]€à]K\]YX⁄\⁄[€èHú›‹à€\‹œHöÀY[ôŸ\àèâŸZ]\ä	Ù'Ù/¥.Ù/t/¥`t`¥c4cà4/¥`t`¥,4/t/¥,¥.4`¥c	À	‘›‹€€\][I _Oÿù]€èÇàŸ]èÇàŸ]èò¬àõ€›Àò\[ô⁄[
-›ô\õ^JN¬à]ö[ö\⁄YYò[ŸN¬à][Y\è[ù[¬à€€ú›ö[ö\⁄XX›[€èOû¬àYäö[ö\⁄Y
-\ô]\õéŸö[ö\⁄Y]ùYN¬àYä[Y\äX€X\í[ù\ùò[
-[Y\äN¬à€€ú›[Z]SX]õX^
-]ÿ[õ€ï⁄€J›ô\õ^Kú]Y\ûTŸ[X›‹ä	»⁄À\]YX⁄\⁄[€ã[[Z]	 OÀùò[YJJN¬à€€ú›ô[Y[Xô\èXX›[€èOOI‹‹[ô	…âä›ô\õ^Kú]Y\ûTŸ[X›‹ä	»⁄À\]YX⁄\⁄[€ã\ô[Y[Xô\â OÀò⁄X⁄ŸYOO]ùY_[Z]å
-N¬à›ô\õ^Kúô[[›ôJ
-N¬àô\€€ôJÿX›[€ãô[Y[Xô\ã^òS[Z]õ[Z]JN¬àN¬à›ô\õ^Kú]Y\ûTŸ[X›‹ê[
-	÷Ÿ]K\]YX⁄\⁄[€óI Kôõ‹ëXX⁄
-ù]€èOòù]€ãõ€ò€X⁄œJ
-OOôö[ö\⁄
-›ö[ô ù]€ãô]\Ÿ]ú]X⁄\⁄[€ü	‹›‹	 JJN¬à[Y\è\Ÿ][ù\ùò[
+  function pitCanonAskRestorationDecision({def,level,target,cost,paws}){
+    return new Promise(resolve=>{
+      root?.querySelector('#hk-pit-restoration-decision')?.remove();
+      const overlay=document.createElement('div');
+      overlay.id='hk-pit-restoration-decision';
+      overlay.className='hk-pit-decision-overlay';
+      const targetText=target>0?`‚â• ${pitCanonWhole(target)}`:either('–ö–∞–∫ –º–æ–∂–Ω–æ –¥–∞–ª—å—à–µ','As far as possible');
+      overlay.innerHTML=`<div class="hk-pit-decision-card">
+        <div class="hk-pit-decision-head"><div><small>${either('–Ø–º—ã ¬∑ —Ç—Ä–µ–±—É–µ—Ç—Å—è —Ä–µ—à–µ–Ω–∏–µ','Pits ¬∑ decision required')}</small><h3>${escapeHtml(pitCanonDefinitionName(def))}</h3></div><span>üêæ</span></div>
+        <p class="hk-pit-decision-intro">${either('–í—ã–±—Ä–∞–Ω–Ω–∞—è —Ü–µ–ª—å –µ—â—ë –Ω–µ –¥–æ—Å—Ç–∏–≥–Ω—É—Ç–∞, –∞ –¥–ª—è –ø—Ä–æ–¥–æ–ª–∂–µ–Ω–∏—è —Ç—Ä–µ–±—É–µ—Ç—Å—è –≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏–µ.','The selected target has not been reached and restoration is required to continue.')}</p>
+        <div class="hk-pit-decision-grid">
+          <div><span>${either('–¢–µ–∫—É—â–∏–π —É—Ä–æ–≤–µ–Ω—å','Current level')}</span><b>${pitCanonWhole(level)}</b></div>
+          <div><span>${either('–í—ã–±—Ä–∞–Ω–Ω–∞—è —Ü–µ–ª—å','Selected target')}</span><b>${escapeHtml(targetText)}</b></div>
+          <div><span>${either('–ù—É–∂–Ω–æ —Å–µ–π—á–∞—Å','Required now')}</span><b>üêæ ${pitCanonWhole(cost)}</b></div>
+          <div><span>${either('–î–æ—Å—Ç—É–ø–Ω–æ —Å–µ–π—á–∞—Å','Available now')}</span><b>üêæ ${pitCanonWhole(paws)}</b></div>
+          <div><span>${either('–û—Å—Ç–∞–Ω–µ—Ç—Å—è –ø–æ—Å–ª–µ —Ç—Ä–∞—Ç—ã','Remaining after spend')}</span><b>üêæ ${Math.max(0,pitCanonWhole(paws)-pitCanonWhole(cost))}</b></div>
+        </div>
+        <div class="hk-pit-decision-budget">
+          <label><span>${either('–ú–∞–∫—Å–∏–º—É–º –¥–æ–ø–æ–ª–Ω–∏—Ç–µ–ª—å–Ω—ã—Ö –õ–∞–ø —Å —ç—Ç–æ–≥–æ –º–æ–º–µ–Ω—Ç–∞','Maximum additional Paws from now')}</span><input id="hk-pit-decision-limit" type="number" min="0" max="${pitCanonWhole(paws)}" value="0"></label>
+          <label class="hk-pit-decision-remember"><input id="hk-pit-decision-remember" type="checkbox"><span>${either('–ó–∞–ø–æ–º–Ω–∏—Ç—å –º–æ–π –≤—ã–±–æ—Ä –¥–ª—è —ç—Ç–æ–≥–æ –∑–∞–ø—É—Å–∫–∞','Remember my choice for this run')}</span></label>
+          <small>${either('–ï—Å–ª–∏ –ª–∏–º–∏—Ç –±–æ–ª—å—à–µ 0, –≤—ã–±–æ—Ä –∑–∞–ø–æ–º–∏–Ω–∞–µ—Ç—Å—è –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏ –¥–æ –∏—Å—á–µ—Ä–ø–∞–Ω–∏—è —ç—Ç–æ–≥–æ –¥–æ–ø–æ–ª–Ω–∏—Ç–µ–ª—å–Ω–æ–≥–æ –ª–∏–º–∏—Ç–∞.','If the limit is above 0, the choice is remembered automatically until that additional budget is exhausted.')}</small>
+        </div>
+        <div class="hk-pit-decision-actions">
+          <button data-pit-decision="spend" class="hk-primary" ${pitCanonWhole(paws)<pitCanonWhole(cost)?'disabled':''}>${either('–ü–æ—Ç—Ä–∞—Ç–∏—Ç—å –õ–∞–ø—ã –∏ –ø—Ä–æ–¥–æ–ª–∂–∏—Ç—å','Spend Paws and continue')} (üêæ ${pitCanonWhole(cost)})</button>
+          <button data-pit-decision="collect" class="hk-secondary">${either('–ó–∞–≤–µ—Ä—à–∏—Ç—å —Ç–µ–∫—É—â–∏–π —Ä–∞—É–Ω–¥ –∏ –ø—Ä–æ–¥–æ–ª–∂–∏—Ç—å','Finish current round and continue')}</button>
+          <button data-pit-decision="manual">${either('–û—Å—Ç–∞–≤–∏—Ç—å –Ø–º—É –¥–ª—è —Ä—É—á–Ω–æ–≥–æ —Å–±–æ—Ä–∞ –∏ –ø–µ—Ä–µ–π—Ç–∏ –¥–∞–ª—å—à–µ','Leave Pit for manual collection and continue')}</button>
+          <button data-pit-decision="stop" class="hk-danger">${either('–ü–æ–ª–Ω–æ—Å—Ç—å—é –æ—Å—Ç–∞–Ω–æ–≤–∏—Ç—å','Stop completely')}</button>
+        </div>
+      </div>`;
+      root?.appendChild(overlay);
+      let finished=false;
+      let timer=null;
+      const finish=action=>{
+        if(finished)return;finished=true;
+        if(timer)clearInterval(timer);
+        const limit=Math.max(0,pitCanonWhole(overlay.querySelector('#hk-pit-decision-limit')?.value));
+        const remember=action==='spend'&&(overlay.querySelector('#hk-pit-decision-remember')?.checked===true||limit>0);
+        overlay.remove();
+        resolve({action,remember,extraLimit:limit});
+      };
+      overlay.querySelectorAll('[data-pit-decision]').forEach(button=>button.onclick=()=>finish(String(button.dataset.pitDecision||'stop')));
+      timer=setInterval(()=>{if(hkRunner.signal?.aborted)finish('stop')},150);
+    });
+  }
 
+"""
+if anchor not in s:
+    raise SystemExit('fast cycle anchor missing')
+s=s.replace(anchor,helpers+anchor,1)
 
-OOû⁄Yä‘ù[õô\ãú⁄Y€ò[ÀòXõ‹ùY
-Yö[ö\⁄
-	‹›‹	 _KML
-N¬àJN¬àBÇàààÇöYà[ò⁄‹àõ›[àŒÇàòZ\ŸHﬁ\›[Q^]
-	Ÿò\›ﬁX€H[ò⁄‹àZ\‹⁄[ô… Búœ\Àúô\XŸJ[ò⁄‹ã[\ú ÿ[ò⁄‹ãJBÇò‹‹◊ÿ[ò⁄‹èHãöÀ\]ÀXù\ﬁ^€‹X⁄]NãéKöÀ\]ÀXù\ﬁHöÀ\]Xÿ[õ€ãXÿ\ôŸö[\éúÿ]\ò]JéJ_HÇò‹‹◊ÿYHãöÀ\]YX⁄\⁄[€ã[›ô\õ^^‹‹⁄][€éôö^Y⁄[úŸ]åﬁãZ[ô^åçLŸ\‹^Nô‹öY‹XŸKZ][\ŒòŸ[ù\é‹Y[ôŒåNÿòX⁄Ÿ‹õ›[ôàÃLÿŒÿòX⁄Ÿõ‹Yö[\éòõ\ä
-_KöÀ\]YX⁄\⁄[€ãXÿ\ô›⁄YõZ[äMåL	JN€X^ZZY⁄òÿ[ LöHÕú
-N€›ô\ôõ›Œò]]Œÿõ‹ô\éå\€€YŸôòYYéÿõ‹ô\ã\òY]\ŒåMúÿòX⁄Ÿ‹õ›[ôõ[ôX\ãY‹òYY[ù
-MYYÀÃYXåMãÃLMÃåäNÿõﬁ\⁄Y›ŒåååÃãúŸôòYYååé‹Y[ôŒåMKöÀ\]YX⁄\⁄[€ãZXYŸ\‹^Nôõ^ÿ[Y€ãZ][\ŒòŸ[ù\é⁄ù\›YûKX€€ù[ùú‹XŸKXô]ŸY[éŸÿ\åLúKöÀ\]YX⁄\⁄[€ãZXY€X[ÿ€€‹éàŸôòŸçÃŒŸõ€ù]ŸZY⁄éKöÀ\]YX⁄\⁄[€ãZXYﬁ€X\ô⁄[éå‹Ÿõ€ù\⁄^ôNåNKöÀ\]YX⁄\⁄[€ãZXYú‹[ûŸõ€ù\⁄^ôNåÃKöÀ\]YX⁄\⁄[€ãZ[ùõﬁ€X\ô⁄[éåLÿ€€‹éàÿÿôYLNŸõ€ù\⁄^ôNåLúKöÀ\]YX⁄\⁄[€ãY‹öYŸ\‹^Nô‹öYŸ‹öY][\]KX€€[[úŒúô\X]
-ãZ[õX^
-YúäJNŸÿ\ç‹KöÀ\]YX⁄\⁄[€ãY‹öYô]û‹Y[ôŒé\ÿõ‹ô\éå\€€YÃÕXŒÿõ‹ô\ã\òY]\ŒåLÿòX⁄Ÿ‹õ›[ôàÃåLLXüKöÀ\]YX⁄\⁄[€ãY‹öY‹[ûŸ\‹^Nòõÿ⁄Œÿ€€‹éàŒòLXéŸõ€ù\⁄^ôNåLKöÀ\]YX⁄\⁄[€ãY‹öYûŸ\‹^Nòõÿ⁄Œ€X\ô⁄[ã]‹å‹Ÿõ€ù\⁄^ôNåL‹KöÀ\]YX⁄\⁄[€ãXùYŸ]Ÿ\‹^Nô‹öYŸÿ\ç‹€X\ô⁄[éåL‹Y[ôŒåLÿõ‹ô\éå\€€YÃÿMçNÿõ‹ô\ã\òY]\ŒåL\ÿòX⁄Ÿ‹õ›[ôàÃLLNKöÀ\]YX⁄\⁄[€ãXùYŸ]Xô[õõ›
-öÀ\]YX⁄\⁄[€ã\ô[Y[Xô\ä^Ÿ\‹^Nô‹öYŸ‹öY][\]KX€€[[úŒõZ[õX^
-YúäHLŸÿ\éÿ[Y€ãZ][\ŒòŸ[ù\üKöÀ\]YX⁄\⁄[€ãXùYŸ][ú]›\O[ù[Xô\ó^›⁄YåL	Nÿõﬁ\⁄^ö[ôŒòõ‹ô\ãXõﬁKöÀ\]YX⁄\⁄[€ã\ô[Y[Xô\ûŸ\‹^Nôõ^Ÿÿ\ç‹ÿ[Y€ãZ][\ŒòŸ[ù\üKöÀ\]YX⁄\⁄[€ãXùYŸ]€X[ÿ€€‹éàŒéLXMNŸõ€ù\⁄^ôNé\KöÀ\]YX⁄\⁄[€ãXX›[€úﬁŸ\‹^Nô‹öYŸÿ\ç‹KöÀ\]YX⁄\⁄[€ãXX›[€ú»ù]€û€Z[ãZZY⁄çúKöÀ\]YX⁄\⁄[€ãXX›[€ú»ù]€éô\ÿXõY€‹X⁄]Nãç_PYYXJX^]⁄YçLå
-^ÀöÀ\]YX⁄\⁄[€ãY‹öYŸ‹öY][\]KX€€[[úŒåYúüKöÀ\]YX⁄\⁄[€ãXùYŸ]Xô[õõ›
-öÀ\]YX⁄\⁄[€ã\ô[Y[Xô\ä^Ÿ‹öY][\]KX€€[[úŒåYúü_HÇöYà‹‹◊ÿ[ò⁄‹åàõ›[àŒÇàòZ\ŸHﬁ\›[Q^]
-	‘]»ù\ﬁH‹‹»[ò⁄‹àZ\‹⁄[ô… Búœ\Àúô\XŸJ‹‹◊ÿ[ò⁄‹ã‹‹◊ÿ[ò⁄‹äÿ‹‹◊ÿYJBÇú›\ù\Àö[ô^
-à\ﬁ[ò»ù[ò›[€à]ÿ[õ€îù[ì€ôJ€€ôöYÀõŸ‹ô\‹ H»äBô[ô\Àö[ô^
-óà\ﬁ[ò»ù[ò›[€àù[î]–ÿ[õ€öXÿ[
+css_anchor=".hk-pits-busy{opacity:.88}.hk-pits-busy .hk-pit-canon-card{filter:saturate(.85)}"
+css_add=".hk-pit-decision-overlay{position:fixed;inset:0;z-index:250;display:grid;place-items:center;padding:18px;background:#05080dcc;backdrop-filter:blur(8px)}.hk-pit-decision-card{width:min(560px,100%);max-height:calc(100vh - 36px);overflow:auto;border:1px solid #ffad1f;border-radius:16px;background:linear-gradient(145deg,#1d1b16,#101722);box-shadow:0 20px 60px #000b,0 0 0 2px #ffad1f22;padding:14px}.hk-pit-decision-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.hk-pit-decision-head small{color:#ffcf73;font-weight:800}.hk-pit-decision-head h3{margin:3px 0 0;font-size:18px}.hk-pit-decision-head>span{font-size:30px}.hk-pit-decision-intro{margin:10px 0;color:#cbd5e1;font-size:12px}.hk-pit-decision-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.hk-pit-decision-grid>div{padding:9px;border:1px solid #34445c;border-radius:10px;background:#0b111b}.hk-pit-decision-grid span{display:block;color:#8fa1b8;font-size:10px}.hk-pit-decision-grid b{display:block;margin-top:3px;font-size:13px}.hk-pit-decision-budget{display:grid;gap:7px;margin:10px 0;padding:10px;border:1px solid #3a4658;border-radius:11px;background:#0a1018}.hk-pit-decision-budget label:not(.hk-pit-decision-remember){display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:8px;align-items:center}.hk-pit-decision-budget input[type=number]{width:100%;box-sizing:border-box}.hk-pit-decision-remember{display:flex;gap:7px;align-items:center}.hk-pit-decision-budget small{color:#8291a5;font-size:9px}.hk-pit-decision-actions{display:grid;gap:7px}.hk-pit-decision-actions button{min-height:42px}.hk-pit-decision-actions button:disabled{opacity:.45}@media(max-width:520px){.hk-pit-decision-grid{grid-template-columns:1fr}.hk-pit-decision-budget label:not(.hk-pit-decision-remember){grid-template-columns:1fr}}"
+if css_anchor not in s:
+    raise SystemExit('Pits busy css anchor missing')
+s=s.replace(css_anchor,css_anchor+css_add,1)
 
-Hã›\ù
-BöYà›\ù‹à[ôÇàòZ\ŸHﬁ\›[Q^]
-	‹]ÿ[õ€îù[ì€ôH[ò⁄‹ú»Z\‹⁄[ô… Bòõÿ⁄œ\÷‹›\ùô[ôBÇõ€Hà]ô\›‹ò][€î‹[ùLò]\œL◊àÇõô]œHà]ô\›‹ò][€î‹[ùLò]\œLõ‹òŸQö[ö\⁄Yò[ŸKX]ôSX[ùX[Yò[ŸN◊àÇöYà€õ›[àõÿ⁄ŒÇàòZ\ŸHﬁ\›[Q^]
-	‹õ›[ôÿÿ[›]H[ò⁄‹àZ\‹⁄[ô… Bòõÿ⁄œXõÿ⁄Àúô\XŸJ€ô]ÀJBÇõ€\ààààYä]ÿ[õ€ï⁄€J›]KöX[
-OL
-^¬à€€ú›€‹›\]ÿ[õ€îô\‹]€ê€‹›
-›]K⁄[ö K]‹œ\]ÿ[õ€îô\€›\òŸT]X[ù]J^Y\ëÿ›[Y[ù◊‘U‘ëT’‘êUS”ó“USW“Q	⁄][I N¬àYä€‹›Lô\›‹ò][€î‹[ù
-ÿ€‹›ò€€ôöYÀõX^ô\›‹ò][€ü]‹œ€‹›
-^‹]ÿ[õ€îù[õô\ìŸ 	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_Nà	ŸZ]\ä	Ù/¥`t`¥,4/t/¥,¥.¥,4/Ù/à4.Ù.4/4.4`¥`»4&Ù,4/»4,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t.4c…À	‘ô\›‹ò][€à]‹»[Z]ôXX⁄Y	 _H
-	‹ô\›‹ò][€î‹[ùK…ÿ€€ôöYÀõX^ô\›‹ò][€üJX	›ÿ\õâ NÿúôXZŒﬂBà‘ù[õô\ãúŸ]›\
-	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_H0≠»	ŸZ]\ä	Ù,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t.4-IÀ	‹ô\›‹ò][€â _H<'‰/à	ÿ€‹›XõŸ‹ô\‹Àô€ôKõŸ‹ô\‹Àù›[
-N¬à]ÿ[õ€îù[õô\ìŸ 	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_H8†%	ŸZ]\ä	Ù,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t.4-IÀ	‹ô\›‹ò][€â _Nà<'‰/à	ÿ€‹›H0≠»	ŸZ]\ä	Ù/Ù/¥`¥`4,4aÙ-t/t/à4`t.¥`4.4/Ù`¥/¥/	À	‹‹[ùûHÿ‹ö\	 _Nà	‹ô\›‹ò][€î‹[ù
-ÿ€‹›K…ÿ€€ôöYÀõX^ô\›‹ò][€üX	›ÿ\õâ N¬à€€ú›ô\‹]€îô\‹€úŸOX]ÿZ]\Rú€€ä\Kúô\‹]€ã	‘‘’	À‹^[Y[ù›\Nâ“USIﬂJN‹ô\›‹ò][€î‹[ù
-œX€‹›¬à¬à€€ú›]]][€è\]ÿ[õ€î›]PYù\ì]]][€äYãô\‹]€îô\‹€úŸK]ŒâŸYãöYNòYù\ã\ô\‹]€ò
-N¬à›]O[]]][€ãú›]N¬àYä]]][€ãõôYY‘ô\ôXY
-^‹^Y\ëÿ›[Y[ùX]ÿZ]–]]‹ö]]]ôT^Y\îôXY
-]]][€ãúôX\€€äN‹›]O\]òXŸT€ò\⁄›
-YãöY^Y\ëÿ›[Y[ù
-NﬂBàBà]ÿ[õ€îù[õô\ìŸ 8ß$»	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_H8†%	ŸZ]\ä	Ù,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t/âÀ	‹ô\›‹ôY	 _H0≠»	‹]ÿ[õ€ï⁄€J›]OÀöX[
-_H0≠»<'‰/à	‹]ÿ[õ€îô\€›\òŸT]X[ù]J^Y\ëÿ›[Y[ù◊‘U‘ëT’‘êUS”ó“USW“Q	⁄][I _H	ŸZ]\ä	Ù/¥`t`¥,4.Ù/¥`tc	À	‹ô[XZ[ö[ô… _X	€⁄… N¬à]ÿZ]€Y\
-]ÿ[õ€ëò\›ﬁX€Q[^JYã€€ôöYÀú€ö\\äJN¬à€€ù[ùYN¬àBàààÇõô]œ\ààààYä]ÿ[õ€ï⁄€J›]KöX[
-OL
-^¬à€€ú›€‹›\]ÿ[õ€îô\‹]€ê€‹›
-›]K⁄[ö K]‹œ\]ÿ[õ€îô\€›\òŸT]X[ù]J^Y\ëÿ›[Y[ù◊‘U‘ëT’‘êUS”ó“USW“Q	⁄][I N¬à€€ú›€€ôöY›\ôY[›ŸYX€‹›å	âúô\›‹ò][€î‹[ù
-ÿ€‹›X€€ôöYÀõX^ô\›‹ò][€ââú]‹œèX€‹›¬à€€ú›ô[Y[Xô\ôY[›ŸYHX€€ôöY›\ôY[›ŸY	âú]ÿ[õ€ëX⁄\⁄[€êùYŸ]ÿ[î‹[ô
-€‹›]‹œèX€‹›
-N¬àYäX€€ôöY›\ôY[›ŸY	âà\ô[Y[Xô\ôY[›ŸY
-^¬à‘ù[õô\ãúŸ]›\
-	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_H0≠»	ŸZ]\ä	Ù/t`Ù-¥/t/à4`4-tb4-t/t.4-H4/Ù/à4,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t.4câÀ	‹ô\›‹ò][€àX⁄\⁄[€àô\]Z\ôY	 _H<'‰/à	ÿ€‹›XõŸ‹ô\‹Àô€ôKõŸ‹ô\‹Àù›[
-N¬à]ÿ[õ€îù[õô\ìŸ 	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_H8†%	ŸZ]\ä	Ù/t`Ù-¥/t/à4`4-tb4-t/t.4-H4/Ù/à4&Ù,4/Ù,4/4,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t.4c…À	‘ô\›‹ò][€à]‹»X⁄\⁄[€àô\]Z\ôY	 _H0≠»<'‰/à	ÿ€‹›X	›ÿ\õâ N¬à€€ú›X⁄\⁄[€èX]ÿZ]]ÿ[õ€ê\⁄‘ô\›‹ò][€ëX⁄\⁄[€äŸYã]ô[\ôŸ]ò€€ôöYÀù\ôŸ]€‹›]‹ﬂJN¬àYäX⁄\⁄[€ãòX›[€èOOI‹›‹	 ^¬à‘ù[õô\ãú›‹
-	‹]\ô\›‹ò][€ãYX⁄\⁄[€â N¬àõ›»ô]»”Q^Ÿ\[€ä	–Xõ‹ùY	À	–Xõ‹ù\úõ‹â N¬àBàYäX⁄\⁄[€ãòX›[€èOOI€X[ùX[	 ^¬àX]ôSX[ùX[]ùYN¬à]ÿ[õ€îù[õô\ìŸ 	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_H8†%	ŸZ]\ä	Ù/¥`t`¥,4,¥.Ù-t/t,4-4.Ùc»4`4`ÙaÙ/t/¥,Ù/à4`t,t/¥`4,	À	€Yùõ‹àX[ùX[€€X›[€â _X	›ÿ\õâ N¬àúôXZŒ¬àBàYäX⁄\⁄[€ãòX›[€èOOIÿ€€X›	 ^¬àõ‹òŸQö[ö\⁄]ùYN¬à]ÿ[õ€îù[õô\ìŸ 	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_H8†%	ŸZ]\ä	Ù-Ù,4,¥-t`4b4,4cà4`¥-t.¥`Ùbt.4.H4`4,4`Ù/t-4.4/Ù`4/¥-4/¥.Ù-¥,4câÀ	Ÿö[ö\⁄[ô»›\úô[ùõ›[ô[ô€€ù[ùZ[ô… _X	⁄[ôõ… N¬àúôXZŒ¬àBàYäX⁄\⁄[€ãòX›[€èOOI‹‹[ô	ﬂ€‹›L]‹œ€‹›
-^¬àX]ôSX[ùX[]ùYN¬àúôXZŒ¬àBà]ÿ[õ€ëX⁄\⁄[€êùYŸ]\JX⁄\⁄[€äN¬àBà‘ù[õô\ãúŸ]›\
-	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_H0≠»	ŸZ]\ä	Ù,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t.4-IÀ	‹ô\›‹ò][€â _H<'‰/à	ÿ€‹›XõŸ‹ô\‹Àô€ôKõŸ‹ô\‹Àù›[
-N¬à]ÿ[õ€îù[õô\ìŸ 	‹]ÿ[õ€ëYö[ö][€ìò[YJYä_H8†%	ŸZ]\ä	Ù,¥/¥`t`t`¥,4`4,¥-t/t.4-IÀ	‹ô\›‹ò][€â _Nà<'‰/à	ÿ€‹›H0≠»	ŸZ]\ä	Ù/Ù/¥`¥`4,4aÙ-t/t/à4`t.¥`4.4/Ù`¥/¥/	À	‹‹[ùûHÿ‹ö\	 _Nà	‹ô\›‹ò][€î‹[ù
-ÿ€‹›Iÿ€€ôöYÀõX^ô\›‹ò][€èÿ»	ÿ€€ôöYÀõX^ô\›‹ò][€üXâ…ﬂX	›ÿ\õâ N¬à€€ú›ô\‹]€îô\‹€úŸOX]ÿZ]\Rú€€ä\Kúô\‹]€ã	‘‘’	À‹^[Y[ù›\Nâ“USIﬂJN‹ô\›‹ò][€î‹[ù
-œX€‹›¬àYäô[Y[Xô\ôY[›ŸY]ÿ[õ€ëX⁄\⁄[€êùYŸ]úô[Y[Xô\ä\]ÿ[õ€ëX⁄\⁄[€êùYŸ]€€ú›[YJ€‹›
-N¬à¬à€€ú›]]][€è\]ÿ[õ€î›]PYù\ì]]][€äYãô\‹]€îô\‹€úŸK]ŒâŸYãöYNòYù\ã\ô\‹]€ò
-N¬à›]O[]]][€ãú›]N¬àYä]]][€ãõôYY‘ô\ôXY
-^‹^Y\ëÿ›[Y[ùX]ÿZ]–]]‹ö]]]ôT^Y\îôXY
-]]][€ãúôX\€€äN‹›]O\]òXŸT€ò\⁄›
-YãöY^Y\ëÿ›[Y[ù
-NﬂBàBà]ÿ[õ€îù[õô\ìŸ )…2G∑óD6Êˆ‰FVfñÊóFñˆ‰Ê÷RÜFVbó“(	BG∂VóFÜW"Ç}-Ì-›Ì-Ω]›‚r¬w&W7F˜&VBró“+rÖG∑óD6ÊˆÂvÜˆ∆Rá7FFSÚÊÜV«FÇó“+r	˘‚G∑óD6ÊˆÂ&W6˜W&6UVÁFóGíá∆ñW$Fˆ7V÷VÁBƒÑµıïEı$U5Dı$DîÙÂÙïDT’ÙîB¬vóFV“ró“G∂VóFÜW"Ç}Ì-ΩÌ¬r¬w&V÷ñÊñÊrró÷¬vˆ≤rì∞¢vóB6∆VWáóD6Êˆ‰f7D7ñ6∆TFV∆íÜFVb∆6ˆÊfñrÁ6ÊóW"íì∞¢6ˆÁFñÁVS∞¢–¢"" ¶ñbˆ∆BÊ˜Bñ‚&∆ˆ6≥†¢&ó6R7ó7FV‘WÜóBÇvˆ∆B&W7F˜&Fñˆ‚'&Ê6Ç÷ó76ñÊrrê¶&∆ˆ6≥÷&∆ˆ6≤Á&W∆6RÜˆ∆B∆ÊWr√ê†¶ˆ∆C“"7FFS◊óE&6U6Ê6Ü˜BÜFVbÊñB«∆ñW$Fˆ7V÷VÁBìµ∆‚ñbá7FFRbg7FFRÊó5ˆfñÊó6É””÷f«6Rbf6ˆÊfñrÊWFˆfñÊó6Çóµ∆‚ ¶ÊWs“"7FFS◊óE&6U6Ê6Ü˜BÜFVbÊñB«∆ñW$Fˆ7V÷VÁBìµ∆‚ñbÜ∆VfT÷ÁV¬ó&WGW&„µ∆‚ñbá7FFRbg7FFRÊó5ˆfñÊó6É””÷f«6RbbÜ6ˆÊfñrÊWFˆfñÊó6á«∆f˜&6TfñÊó6Çíóµ∆‚ ¶ñbˆ∆BÊ˜Bñ‚&∆ˆ6≥†¢&ó6R7ó7FV‘WÜóBÇvfñÊó6ÇvFRÊ6Ü˜"÷ó76ñÊrrê¶&∆ˆ6≥÷&∆ˆ6≤Á&W∆6RÜˆ∆B∆ÊWr√êß3◊5≥ß7F'E“∂&∆ˆ6≤∑5∂VÊC•–†ß7F'EˆÊ6Ü˜#“"Üµ'VÊÊW"Á7F'Bá∑FóF∆S¶VóFÜW"Ç}
-˝Õ≤r¬uóG2rí«7FW¶VóFÜW"Ç}	˝ÌM=Ì-Ì-≠r¬u&W&ñÊrrí«F˜F¬«W6&∆SßG'VR«7F˜&∆SßG'VW“ìµ∆‚óD6ÊˆÂ6WD'W7íáG'VRìµ∆‚ ß7F'EˆÊWs“"Üµ'VÊÊW"Á7F'Bá∑FóF∆S¶VóFÜW"Ç}
-˝Õ≤r¬uóG2rí«7FW¶VóFÜW"Ç}	˝ÌM=Ì-Ì-≠r¬u&W&ñÊrrí«F˜F¬«W6&∆SßG'VR«7F˜&∆SßG'VW“ìµ∆‚óD6Êˆ‰FV6ó6ñˆ‰'VFvWE&W6WBÇìµ∆‚óD6ÊˆÂ6WD'W7íáG'VRìµ∆‚ ¶ñb7F'EˆÊ6Ü˜"Ê˜Bñ‚3†¢&ó6R7ó7FV‘WÜóBÇw'V‚7F'B&W6WBÊ6Ü˜"÷ó76ñÊrrêß3◊2Á&W∆6Rá7F'EˆÊ6Ü˜"«7F'EˆÊWr√ê†¶f˜"ÊVVF∆Rñ‚∞¢‘$≤¿¢&gVÊ7Fñˆ‚óD6Êˆ‰6µ&W7F˜&Fñˆ‰FV6ó6ñˆ‚"¿¢'óD6Êˆ‰FV6ó6ñˆ‰'VFvWE&W6WBÇì≤"¿¢'óD6Êˆ‰FV6ó6ñˆ‰'VFvWD6Â7VÊB"¿¢vñC“&Ü≤◊óB◊&W7F˜&Fñˆ‚÷FV6ó6ñˆ‚"r¿¢vFF◊óB÷FV6ó6ñˆ„“'7VÊB"r¿¢&FV6ó6ñˆ‚Ê7Fñˆ„””“v÷ÁV¬r"¿¢&FV6ó6ñˆ‚Ê7Fñˆ„””“v6ˆ∆∆V7Br"¿¢"Ü6ˆÊfñrÊWFˆfñÊó6á«∆f˜&6TfñÊó6Çí •”†¢ñbÊVVF∆RÊ˜Bñ‚3†¢&ó6R7ó7FV‘WÜóBÇv÷ó76ñÊr#ñÁf&ñÁC¢r∂ÊVVF∆Rê†ßÁw&óFU˜FWáBá2∆VÊ6ˆFñÊs“wWFb”Çrêß&ñÁBÇuïE5ı$U5Dı$DîÙÂÙDT4ï4îÙÂı#ıD4ÖÙÙ≤rê
+start=s.find("  async function pitCanonRunOne(config,progress) {")
+end=s.find("\n  async function runPitsCanonical()",start)
+if start<0 or end<0:
+    raise SystemExit('pitCanonRunOne anchors missing')
+block=s[start:end]
+
+old="      let restorationSpent=0,battles=0;\n"
+new="      let restorationSpent=0,battles=0,forceFinish=false,leaveManual=false;\n"
+if old not in block:
+    raise SystemExit('round local state anchor missing')
+block=block.replace(old,new,1)
+
+old=r"""        if(pitCanonWhole(state.health)<=0){
+          const cost=pitCanonRespawnCost(state,chunk),paws=pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item');
+          if(cost<=0||restorationSpent+cost>config.maxRestoration||paws<cost){pitCanonRunnerLog(`${pitCanonDefinitionName(def)}: ${either('–æ—Å—Ç–∞–Ω–æ–≤–∫–∞ –ø–æ –ª–∏–º–∏—Ç—É –õ–∞–ø –≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏—è','Restoration Paws limit reached')} (${restorationSpent}/${config.maxRestoration})`,'warn');break;}
+          hkRunner.setStep(`${pitCanonDefinitionName(def)} ¬∑ ${either('–≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏–µ','restoration')} üêæ ${cost}`,progress.done,progress.total);
+          pitCanonRunnerLog(`${pitCanonDefinitionName(def)} ‚Äî ${either('–≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏–µ','restoration')}: üêæ ${cost} ¬∑ ${either('–ø–æ—Ç—Ä–∞—á–µ–Ω–æ —Å–∫—Ä–∏–ø—Ç–æ–º','spent by script')}: ${restorationSpent+cost}/${config.maxRestoration}`,'warn');
+          const respawnResponse=await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;
+          {
+            const mutation=pitCanonStateAfterMutation(def,respawnResponse,`pits:${def.id}:after-respawn`);
+            state=mutation.state;
+            if(mutation.needsReread){playerDocument=await hkAuthoritativePlayerRead(mutation.reason);state=pitRaceSnapshot(def.id,playerDocument);}
+          }
+          pitCanonRunnerLog(`‚úì ${pitCanonDefinitionName(def)} ‚Äî ${either('–≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–æ','restored')} ¬∑ HP ${pitCanonWhole(state?.health)} ¬∑ üêæ ${pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item')} ${either('–æ—Å—Ç–∞–ª–æ—Å—å','remaining')}`,'ok');
+          await sleep(pitCanonFastCycleDelay(def,config.sniper));
+          continue;
+        }
+"""
+new=r"""        if(pitCanonWhole(state.health)<=0){
+          const cost=pitCanonRespawnCost(state,chunk),paws=pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item');
+          const configuredAllowed=cost>0&&restorationSpent+cost<=config.maxRestoration&&paws>=cost;
+          const rememberedAllowed=!configuredAllowed&&pitCanonDecisionBudgetCanSpend(cost,paws>=cost);
+          if(!configuredAllowed&&!rememberedAllowed){
+            hkRunner.setStep(`${pitCanonDefinitionName(def)} ¬∑ ${either('–Ω—É–∂–Ω–æ —Ä–µ—à–µ–Ω–∏–µ –ø–æ –≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏—é','restoration decision required')} üêæ ${cost}`,progress.done,progress.total);
+            pitCanonRunnerLog(`${pitCanonDefinitionName(def)} ‚Äî ${either('–Ω—É–∂–Ω–æ —Ä–µ—à–µ–Ω–∏–µ –ø–æ –õ–∞–ø–∞–º –≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏—è','Restoration Paws decision required')} ¬∑ üêæ ${cost}`,'warn');
+            const decision=await pitCanonAskRestorationDecision({def,level,target:config.target,cost,paws});
+            if(decision.action==='stop'){
+              hkRunner.stop('pit-restoration-decision');
+              throw new DOMException('Aborted','AbortError');
+            }
+            if(decision.action==='manual'){
+              leaveManual=true;
+              pitCanonRunnerLog(`${pitCanonDefinitionName(def)} ‚Äî ${either('–æ—Å—Ç–∞–≤–ª–µ–Ω–∞ –¥–ª—è —Ä—É—á–Ω–æ–≥–æ —Å–±–æ—Ä–∞','left for manual collection')}`,'warn');
+              break;
+            }
+            if(decision.action==='collect'){
+              forceFinish=true;
+              pitCanonRunnerLog(`${pitCanonDefinitionName(def)} ‚Äî ${either('–∑–∞–≤–µ—Ä—à–∞—é —Ç–µ–∫—É—â–∏–π —Ä–∞—É–Ω–¥ –∏ –ø—Ä–æ–¥–æ–ª–∂–∞—é','finishing current round and continuing')}`,'info');
+              break;
+            }
+            if(decision.action!=='spend'||cost<=0||paws<cost){
+              leaveManual=true;
+              break;
+            }
+            pitCanonDecisionBudgetApply(decision);
+          }
+          hkRunner.setStep(`${pitCanonDefinitionName(def)} ¬∑ ${either('–≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏–µ','restoration')} üêæ ${cost}`,progress.done,progress.total);
+          pitCanonRunnerLog(`${pitCanonDefinitionName(def)} ‚Äî ${either('–≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏–µ','restoration')}: üêæ ${cost} ¬∑ ${either('–ø–æ—Ç—Ä–∞—á–µ–Ω–æ —Å–∫—Ä–∏–ø—Ç–æ–º','spent by script')}: ${restorationSpent+cost}`,'warn');
+          const respawnResponse=await apiJson(api.respawn,'POST',{payment_type:'ITEM'});restorationSpent+=cost;
+          if(rememberedAllowed||pitCanonDecisionBudget.remember)pitCanonDecisionBudgetConsume(cost);
+          {
+            const mutation=pitCanonStateAfterMutation(def,respawnResponse,`pits:${def.id}:after-respawn`);
+            state=mutation.state;
+            if(mutation.needsReread){playerDocument=await hkAuthoritativePlayerRead(mutation.reason);state=pitRaceSnapshot(def.id,playerDocument);}
+          }
+          pitCanonRunnerLog(`‚úì ${pitCanonDefinitionName(def)} ‚Äî ${either('–≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–æ','restored')} ¬∑ HP ${pitCanonWhole(state?.health)} ¬∑ üêæ ${pitCanonResourceQuantity(playerDocument,HK_PIT_RESTORATION_ITEM_ID,'item')} ${either('–æ—Å—Ç–∞–ª–æ—Å—å','remaining')}`,'ok');
+          await sleep(pitCanonFastCycleDelay(def,config.sniper));
+          continue;
+        }
+"""
+old=old.replace('`',chr(96)).replace('¬ß'+chr(123),'$'+chr(123))
+new=new.replace('`',chr(96)).replace('¬ß'+chr(123),'$'+chr(123))
+if old not in block:
+    raise SystemExit('old restoration branch missing')
+block=block.replace(old,new,1)
+
+old="      state=pitRaceSnapshot(def.id,playerDocument);\n      if(state&&state.is_finish===false&&config.autofinish){\n"
+new="      state=pitRaceSnapshot(def.id,playerDocument);\n      if(leaveManual)return;\n      if(state&&state.is_finish===false&&(config.autofinish||forceFinish)){\n"
+if old not in block:
+    raise SystemExit('finish gate anchor missing')
+block=block.replace(old,new,1)
+s=s[:start]+block+s[end:]
+
+start_anchor="    hkRunner.start({title:either('–Ø–º—ã','Pits'),step:either('–ü–æ–¥–≥–æ—Ç–æ–≤–∫–∞','Preparing'),total,pausable:true,stoppable:true});\n    pitCanonSetBusy(true);\n"
+start_new="    hkRunner.start({title:either('–Ø–º—ã','Pits'),step:either('–ü–æ–¥–≥–æ—Ç–æ–≤–∫–∞','Preparing'),total,pausable:true,stoppable:true});\n    pitCanonDecisionBudgetReset();\n    pitCanonSetBusy(true);\n"
+if start_anchor not in s:
+    raise SystemExit('run start reset anchor missing')
+s=s.replace(start_anchor,start_new,1)
+
+for needle in [
+    MARK,
+    "function pitCanonAskRestorationDecision",
+    "pitCanonDecisionBudgetReset();",
+    "pitCanonDecisionBudgetCanSpend",
+    'id="hk-pit-restoration-decision"',
+    'data-pit-decision="spend"',
+    "decision.action==='manual'",
+    "decision.action==='collect'",
+    "(config.autofinish||forceFinish)"
+]:
+    if needle not in s:
+        raise SystemExit('missing r11 invariant: '+needle)
+
+p.write_text(s,encoding='utf-8')
+print('PITS_RESTORATION_DECISION_R11_PATCH_OK')
