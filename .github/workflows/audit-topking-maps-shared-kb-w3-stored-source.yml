@@ -24,12 +24,14 @@ jobs:
           cat deploy/maps/hk-positive.part*.b64 | base64 -d > /tmp/hk-positive.gz
           gzip -dc /tmp/hk-positive.gz > /tmp/hk-positive.decoded 2>/tmp/hk-positive-gzip.err || true
           base64 -d maps/generated/source-pack.b64 > /tmp/source-pack.decoded || true
+          gzip -dc /tmp/source-pack.decoded > /tmp/source-pack.unpacked 2>/tmp/source-pack-gzip.err || true
           {
             echo "HK_POSITIVE_FILE=$(file -b /tmp/hk-positive.decoded)"
             echo "HK_POSITIVE_BYTES=$(wc -c < /tmp/hk-positive.decoded)"
             echo "HK_POSITIVE_GZIP_ERROR=$(tr '\\n' ' ' < /tmp/hk-positive-gzip.err)"
             echo "SOURCE_PACK_FILE=$(file -b /tmp/source-pack.decoded 2>/dev/null || true)"
             echo "SOURCE_PACK_BYTES=$(wc -c < /tmp/source-pack.decoded 2>/dev/null || echo 0)"
+            echo "SOURCE_PACK_UNPACKED_BYTES=$(wc -c < /tmp/source-pack.unpacked 2>/dev/null || echo 0)"
           }
 
       - name: Inspect pilot content
@@ -71,15 +73,32 @@ jobs:
               sraw=sp.read_bytes()
               result['source_pack_bytes']=len(sraw)
               result['source_pack_magic']=list(sraw[:8])
+          sup=pathlib.Path('/tmp/source-pack.unpacked')
+          if sup.exists():
+              uraw=sup.read_bytes()
+              result['source_pack_unpacked_bytes']=len(uraw)
               try:
-                  st=sraw.decode('utf-8')
+                  st=uraw.decode('utf-8')
                   result['source_pack_text']=True
                   result['source_pack_contains_pilot']=pilot in st
-                  j=st.find(pilot)
-                  if j>=0:
-                      result['source_pack_pilot_excerpt']=st[max(0,j-500):j+5000]
-              except Exception:
+                  result['source_pack_contains_moscow_1226']=('moscow' in st.lower() and '12:26' in st)
+                  for needle in (pilot,'12:26','Moscow','moscow'):
+                      j=st.find(needle)
+                      if j>=0:
+                          result['source_pack_pilot_excerpt']=st[max(0,j-1000):j+9000]
+                          break
+                  try:
+                      sobj=json.loads(st)
+                      result['source_pack_json_type']=type(sobj).__name__
+                      if isinstance(sobj,dict):
+                          result['source_pack_top_keys']=list(sobj)[:40]
+                      elif isinstance(sobj,list):
+                          result['source_pack_list_len']=len(sobj)
+                  except Exception as e:
+                      result['source_pack_json_error']=repr(e)
+              except Exception as e:
                   result['source_pack_text']=False
+                  result['source_pack_text_error']=repr(e)
 
           pathlib.Path('/tmp/w3-stored-source.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
           print(json.dumps({
@@ -108,7 +127,10 @@ jobs:
             f"hk_positive_json_type={d.get('hk_positive_json_type')}",
             f"hk_positive_pilot_type={d.get('hk_positive_pilot_type')}",
             f"source_pack_bytes={d.get('source_pack_bytes')}",
+            f"source_pack_unpacked_bytes={d.get('source_pack_unpacked_bytes')}",
             f"source_pack_contains_pilot={d.get('source_pack_contains_pilot')}",
+            f"source_pack_contains_moscow_1226={d.get('source_pack_contains_moscow_1226')}",
+            f"source_pack_json_type={d.get('source_pack_json_type')}",
             'live_mutation=NO',
           ]
           if isinstance(d.get('hk_positive_pilot'),dict):
