@@ -1,1 +1,1 @@
-w6 fast 12m dryrun 8
+w6 vk-overpass dryrun 9
