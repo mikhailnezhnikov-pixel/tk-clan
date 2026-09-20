@@ -64,7 +64,10 @@ jobs:
           assert after.count("'/player/building/fast_completion/cost'")>=2
           assert after.count("'/player/building/fast_remort/cost'")>=2
           assert "const HK_MAP_READ_CONCURRENCY = 5;" in after
-          assert after[after.index("  async function acceptBuildingStudy("):]==before[before.index("  async function acceptBuildingStudy("):]
+          btail=before[before.index("  async function acceptBuildingStudy("):]
+          atail=after[after.index("  async function acceptBuildingStudy("):]
+          expected_tail=btail.replace("    '/player/building',\n    '/shop/view',","    '/player/building',\n    '/player/building/fast_completion/cost',\n    '/player/building/fast_remort/cost',\n    '/shop/view',",1)
+          assert expected_tail==atail
           PY
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
 
