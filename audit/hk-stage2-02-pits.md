@@ -640,3 +640,33 @@ Outstanding:
 - r11 restoration-decision modal still lacks a dedicated user-path confirmation;
 - r13 reward execution/recalculation needs one live user test.
 Do not advance to Bosses until these Stage 2.02 live checks are complete.
+
+
+## Plan summary and execution totals r14
+
+Transferred from pinned Kokkaras donor:
+- execution-plan summary before start;
+- selected Pits count and total planned rounds;
+- maximum crystal / Pit Pass / Restoration Paws budgets;
+- per-Pit start level and execution mode;
+- actual per-Pit totals after execution;
+- overall totals across all selected Pits.
+
+Counters are based on actual successful actions:
+- active/resumed Pit does not count already-spent passes;
+- newly started round adds its real multiplier to passes used;
+- crystals and Pit Pass items count actual live start costs;
+- Restoration Paws count only successful respawns.
+
+Marker:
+`HK_PITS_SUMMARY_REV = 'pits-plan-totals-20260920-r14'`
+
+Deploy:
+- run `35496803315` — PASS;
+- live/public SHA256: `0079d453a830fc452b7d1d953cc3c2991ac023daea7543112377ccd90c1cade9`;
+- public byte equality: PASS.
+
+Baseline sync:
+- run `35496845598` — PASS.
+
+No Pit API/action logic changed in r14.
