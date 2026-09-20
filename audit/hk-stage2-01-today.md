@@ -1,6 +1,6 @@
 # HK Stage 2.01 — Today / Сегодня
 
-status: LIVE_CANDIDATE_PENDING_USER_UI_CHECK
+status: LIVE_CANDIDATE_R2_PENDING_USER_UI_CHECK
 
 ## Donor reference
 
@@ -85,3 +85,38 @@ Need to confirm after page reload:
 - module opens/refreshes without error.
 
 Do not advance to Pits until this is confirmed or a concrete Today bug is recorded.
+
+
+## r2 correction — exact donor event filter and claim wording
+
+User reported that Event Regular Deals contained non-event/exchange-like lots.
+
+Root cause:
+- r1 selected every normalized row with `section === 'regular'`;
+- Kokkaras does not do that.
+
+Pinned donor filter verified:
+- active event shop tab from `client_config.event.tabs`;
+- exact `lot_view.tab === activeTab`;
+- `lot_view.type !== hidden`;
+- no ad / no external cost;
+- `lot_view.group` contains `event_repeatable_daily_offers`;
+- no `cur_prem` or `cur_hard` cost;
+- PLAYER limit with `reset_type === DAILY` and positive total limit;
+- priority descending.
+
+Applied marker:
+`HK_TODAY_CANON_FILTER_REV = 'today-kokkaras-filter-20260920-r2'`
+
+Reward actions renamed to explicit operations:
+- **Собрать награды рейтинга: Ямы / Боссы / Крысы**
+- **Собрать награды Battle Pass боссов**
+
+They remain selected actions executed by the common **Выполнить выбранное** button, matching donor behavior.
+
+Technical verification:
+- workflow run: `35489608943`
+- syntax: PASS
+- deploy/service: PASS
+- public round-trip: PASS
+- live/public SHA256: `3bcf43a3fbc805d81d4e64cd41d13ca0ee1fccd85fded13f877a66c05bbfabae`
