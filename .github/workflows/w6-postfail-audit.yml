@@ -1,0 +1,36 @@
+name: W6 post-failure live audit
+on:
+  push:
+    paths: ['deploy/topking/w6-postfail-audit-trigger.txt']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: prepare ssh
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+      - name: read-only verify partial state
+        run: |
+          cat > /tmp/w6-postfail.py <<'PY'
+          import json,sqlite3
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          out={
+            'area_links':[dict(r) for r in db.execute("SELECT map_key,canonical_area_id,match_method FROM hk_map_area_links ORDER BY map_key")],
+            'area_link_count':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
+            'point_link_count':db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0],
+            'hk_maps_import_rows':db.execute("SELECT COUNT(*) FROM map_buildings WHERE knowledge_source='hk_maps_import'").fetchone()[0],
+            'map_areas':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
+            'map_buildings':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0],
+          }
+          print(json.dumps(out,sort_keys=True))
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/w6-postfail.py root@89.125.1.71:/tmp/w6-postfail.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/w6-postfail.py'
