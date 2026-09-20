@@ -410,3 +410,45 @@ Baseline sync:
 - run: `35494440507` — SUCCESS.
 
 No Pit calculation/API endpoint/spending logic changed in r9.
+
+
+## Faster battle/respawn cycle r10
+
+User feedback:
+- Pit action works, but battle/respawn cadence feels slower than necessary.
+
+Donor reference:
+- Kokkaras uses explicit battle pacing: normal/boss 1000 ms, gang 2000 ms; sniper 200/400 ms.
+- Current HK was slower in practice because it additionally forced a full authoritative `/player/me` reread after every battle and respawn.
+
+r10 change:
+- mutation responses remain merged into the shared authoritative state store;
+- after battle/respawn HK first uses the state already returned/merged by that mutation;
+- full `/player/me` is now fallback only when the mutation response does not expose Pit state;
+- short anti-lock pacing remains:
+  - normal/boss: 120 ms;
+  - gang: 180 ms;
+  - sniper normal/boss: 80 ms;
+  - sniper gang: 120 ms;
+- pre-start resource validation and post-finish authoritative rereads remain unchanged;
+- player-state-lock retries in the mutation layer remain unchanged.
+
+Marker:
+`HK_PITS_SPEED_REV = 'pits-fast-cycle-20260920-r10'`
+
+Deploy:
+- workflow: `Deploy TopKing Pits Fast Cycle R10`;
+- run: `35494689254` — SUCCESS;
+- live/public SHA256: `973e1b1788b86caaefac7a26b66f0eb42bc497ed49a618c277ebf36df63e6e25`;
+- public round-trip byte equality: PASS.
+
+Baseline sync:
+- run: `35494718699` — SUCCESS.
+
+Current status remains:
+**RESPAWN_RETEST_PENDING**
+
+Next user check:
+- compare battle → result → respawn cadence;
+- confirm no `player state is locked` errors;
+- continue action → state update → rerun verification.
