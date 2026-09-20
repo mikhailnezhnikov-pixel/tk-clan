@@ -1,0 +1,73 @@
+name: Deploy TopKing Today Toolbar R3
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/today-toolbar-r3-trigger.txt'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact Today r2 live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          test "$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')" = "3bcf43a3fbc805d81d4e64cd41d13ca0ee1fccd85fded13f877a66c05bbfabae"
+          grep -Fq "HK_TODAY_CANON_FILTER_REV = 'today-kokkaras-filter-20260920-r2'" /tmp/HamsterKingMobile.user.js
+
+      - name: Apply r3
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/patch_today_toolbar_r3_1174.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_TODAY_TOOLBAR_REV = 'today-toolbar-clean-20260920-r3'" /tmp/HamsterKingMobile.user.js
+          ! grep -Fq 'id="hk-daily-refresh"' /tmp/HamsterKingMobile.user.js
+          ! grep -Fq 'id="hk-daily-clear"' /tmp/HamsterKingMobile.user.js
+          grep -Fq "refreshModuleLive(finalPage)" /tmp/HamsterKingMobile.user.js
+          echo "PATCHED_SHA=$(sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}')"
+
+      - name: Backup and deploy
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.today-r3.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            node --check /tmp/HamsterKingMobile.today-r3.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.today-r3.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.today-r3.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+
+      - name: Verify public round trip
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 "https://hk-license.89.125.1.71.sslip.io/panel.js?today-r3=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          grep -Fq "HK_TODAY_TOOLBAR_REV = 'today-toolbar-clean-20260920-r3'" /tmp/public.js
+          echo "PUBLIC_SHA=$(sha256sum /tmp/public.js | awk '{print $1}')"
+          echo "TODAY_TOOLBAR_R3=PASS"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js
