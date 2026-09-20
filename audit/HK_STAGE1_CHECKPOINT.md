@@ -28,9 +28,9 @@ Do not run the full Stage 1 in one long session.
 - donor version: 5.3.22-ui-icons-pit-dim
 - donor SHA256: 28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1
 - prior migration audits: FOUND / READ
-- current block: 1C
+- current block: 1D
 - current block status: READY_TO_START
-- next action: audit donor -> current/live automation, mutation paths and hidden helpers
+- next action: audit donor -> current/live navigation and real execution paths
 - overall Stage 1 status: IN_PROGRESS
 
 ## Resume command
@@ -58,4 +58,12 @@ Then:
   - historical missing constants: 0
   - /city/{id}/game_area confirmed present
   - Kokkaras service/storage constants classified as architecture-specific reference
+  - no gameplay code changed
+
+
+- 1C — automation/mutation/helpers: PASS_WITH_STAGE7_REFERENCE
+  - historical genuinely missing helpers: 0
+  - mutation gate / runner / state refresh / budget guards present
+  - Kokkaras Business Auto Routines 1/2/3 are not equivalent to current generic Auto Routines
+  - exact donor Business Auto Routine decision deferred to Stage 7
   - no gameplay code changed
