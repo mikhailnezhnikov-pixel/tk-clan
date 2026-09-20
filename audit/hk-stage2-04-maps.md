@@ -253,3 +253,28 @@ Live verification:
 - baseline sync: PASS.
 
 Current status remains **LIVE_CANDIDATE** pending user timing/behavior confirmation.
+
+
+## Canonical coordinate backend r2
+
+Confirmed live backend bug:
+- userscript was already submitting corrected X:Y = column:row;
+- existing `map_areas.x/y` were sticky because backend used `x=COALESCE(map_areas.x,excluded.x)` and the same for y;
+- completed maps returned `ignored_complete=True` before any coordinate update.
+
+Fix:
+- userscript now sends `coord_revision: column-row-v1` with full district payloads;
+- backend accepts coordinate replacement only for this explicit revision;
+- trusted x/y update is performed before the completed-map early return;
+- legacy/unversioned submissions cannot overwrite corrected coordinates;
+- building-only batch submissions do not carry coordinates and therefore cannot change district numbers.
+
+Verification:
+- complete-map regression test: old 32:23 -> submitted 23:32 -> stored 23:32 while `ignored_complete=True`: PASS;
+- client SHA256: `1932f3984a330edf234c02e80c0f27e1b845b299f3bb09875d166397dcded9d6`;
+- server SHA256: `1fb8007651c6772400a1e6bc8b7f3152d0f907942a7fa0140e854e17d7f2a2e1`;
+- public byte equality: PASS;
+- service: PASS.
+
+Current coordinate marker:
+`HK_MAP_COORDS_REV = 'maps-coordinates-column-row-20260920-r2'`
