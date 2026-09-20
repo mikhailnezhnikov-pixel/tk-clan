@@ -1,0 +1,102 @@
+name: Audit TopKing W3 Pilot Canonical Rows
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-shared-kb-w3-canonical-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Read pilot canonical rows
+        run: |
+          cat > /tmp/w3-canonical-rows.py <<'PY'
+          import json, sqlite3
+          PILOT='hk_moscow1226'
+          AREA='9ea6ff78-b881-45b3-b92d-a8f1da8eca05'
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True)
+          db.row_factory=sqlite3.Row
+          p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(PILOT,)).fetchone()
+          points=json.loads(p['points_json'] or '[]')
+          rows=db.execute("""SELECT building_id,room_count,last_player_id,last_seen
+                             FROM map_buildings WHERE area_id=? ORDER BY building_id""",(AREA,)).fetchall()
+          src_hist={}
+          room_src={}
+          for r in rows:
+              src=str(r['last_player_id'])
+              src_hist[src]=src_hist.get(src,0)+1
+              room='null' if r['room_count'] is None else str(r['room_count'])
+              room_src.setdefault(room,{})
+              room_src[room][src]=room_src[room].get(src,0)+1
+          out={
+              'point_triples':[points[i:i+3] for i in range(0,len(points),3)],
+              'building_id_sample':[r['building_id'] for r in rows[:40]],
+              'last_player_hist':src_hist,
+              'room_source_hist':room_src,
+              'last_seen_min':min((r['last_seen'] for r in rows),default=None),
+              'last_seen_max':max((r['last_seen'] for r in rows),default=None),
+          }
+          print(json.dumps(out,ensure_ascii=False,indent=2,sort_keys=True))
+          db.close()
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w3-canonical-rows.py root@89.125.1.71:/tmp/w3-canonical-rows.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w3-canonical-rows.py' | tee /tmp/w3-canonical-rows.json
+
+      - name: Validate and record
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w3-canonical-rows.json',encoding='utf-8'))
+          assert len(d['point_triples'])==32
+          lines=[
+            'MAPS_SHARED_KB_W3_CANONICAL_ROWS=PASS',
+            'pilot=hk_moscow1226',
+            'point_triples=32',
+            'last_player_hist='+json.dumps(d['last_player_hist'],sort_keys=True,separators=(',',':')),
+            'room_source_hist='+json.dumps(d['room_source_hist'],sort_keys=True,separators=(',',':')),
+            f"last_seen_min={d['last_seen_min']}",
+            f"last_seen_max={d['last_seen_max']}",
+            'building_id_sample='+json.dumps(d['building_id_sample'],ensure_ascii=False,separators=(',',':')),
+            'point_sample='+json.dumps(d['point_triples'][:5],separators=(',',':')),
+            'live_mutation=NO',
+          ]
+          open('audit/hk-stage2-maps-shared-kb-w3-canonical-rows.txt','w',encoding='utf-8').write('\n'.join(lines)+'\n')
+          print('\n'.join(lines))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w3-canonical-rows.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: inspect W3 pilot canonical rows"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'rm -f /tmp/w3-canonical-rows.py' || true
+          rm -f "$HOME/.ssh/topking" /tmp/w3-canonical-rows.py /tmp/w3-canonical-rows.json
