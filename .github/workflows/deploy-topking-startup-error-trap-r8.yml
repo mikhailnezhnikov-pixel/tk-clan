@@ -1,0 +1,72 @@
+name: Deploy TopKing 1.17.4 Startup Error Trap R8
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/startup-error-trap-r8-trigger.txt'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_STARTUP_STAGE_REV = 'startup-stages-20260920-r7'" /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Apply startup error trap r8
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/patch_startup_error_trap_r8_1174.py
+          grep -Fq "HK_STARTUP_ERROR_TRAP_REV = 'startup-error-trap-20260920-r8'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "window.addEventListener('error'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "window.addEventListener('unhandledrejection'" /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+      - name: Deploy
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -euo pipefail;
+            stamp="$(date +%Y%m%d-%H%M%S)";
+            node --check /tmp/HamsterKingMobile.user.js;
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.$stamp";
+            install -m 0644 /tmp/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js;
+            systemctl restart hamsterking-license.service;
+            systemctl is-active --quiet hamsterking-license.service;
+            grep -Fq "HK_STARTUP_ERROR_TRAP_REV = '\''startup-error-trap-20260920-r8'\''" /opt/hamsterking-license/HamsterKingMobile.user.js;
+            node --check /opt/hamsterking-license/HamsterKingMobile.user.js'
+
+      - name: Verify public
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 2 --connect-timeout 15 "https://hk-license.89.125.1.71.sslip.io/panel.js?v=$(date +%s)" -o /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          grep -Fq "HK_STARTUP_ERROR_TRAP_REV = 'startup-error-trap-20260920-r8'" /tmp/public.js
+          node --check /tmp/public.js
+          echo "PUBLIC_SHA=$(sha256sum /tmp/public.js | awk '{print $1}')"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js
