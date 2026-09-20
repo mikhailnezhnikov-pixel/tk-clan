@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh TopKing current war cache every 10 minutes
+
+[Timer]
+OnCalendar=*-*-* *:0/10:00
+RandomizedDelaySec=30
+Persistent=true
+Unit=hamsterking-public-war.service
+
+[Install]
+WantedBy=timers.target
