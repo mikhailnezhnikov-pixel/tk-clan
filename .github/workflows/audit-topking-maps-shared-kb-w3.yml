@@ -1,0 +1,166 @@
+name: Audit TopKing Maps Shared KB W3 Pilot Source
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-shared-kb-w3-preflight-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: audit-topking-maps-shared-kb-w3
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Build read-only W3 probe
+        run: |
+          cat > /tmp/w3-probe.py <<'PY'
+          import gzip, json, os, sqlite3, glob
+          DB='file:/var/lib/hamsterking-license/licenses.db?mode=ro'
+          PILOT='hk_moscow1226'
+          AREA='9ea6ff78-b881-45b3-b92d-a8f1da8eca05'
+          db=sqlite3.connect(DB,uri=True)
+          db.row_factory=sqlite3.Row
+          out={}
+          link=db.execute("SELECT map_key,canonical_area_id,match_method FROM hk_map_area_links WHERE map_key=?",(PILOT,)).fetchone()
+          out['link']=dict(link) if link else None
+          row=db.execute("SELECT city,grid FROM hk_maps_catalog WHERE map_key=?",(PILOT,)).fetchone()
+          out['catalog']=dict(row) if row else None
+          p=db.execute("SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",(PILOT,)).fetchone()
+          if p:
+              try:
+                  points=json.loads(p['points_json'] or '[]')
+              except Exception as e:
+                  points=[]
+                  out['points_parse_error']=repr(e)
+              out['point_count_db']=p['point_count']
+              out['points_type']=type(points).__name__
+              out['points_len']=len(points) if hasattr(points,'__len__') else None
+              sample=points[:3] if isinstance(points,list) else []
+              out['points_sample_types']=[type(x).__name__ for x in sample]
+              out['points_sample_keys']=[sorted(x.keys()) if isinstance(x,dict) else None for x in sample]
+              if sample:
+                  out['points_sample'] = sample
+          current=db.execute("""SELECT building_id,room_count,opened,has_events,is_invest,last_player_id,last_seen
+                                FROM map_buildings WHERE area_id=?""",(AREA,)).fetchall()
+          out['canonical_buildings_total']=len(current)
+          out['canonical_known_rooms']=sum(r['room_count'] is not None for r in current)
+          out['canonical_room_hist']={}
+          for r in current:
+              k='null' if r['room_count'] is None else str(r['room_count'])
+              out['canonical_room_hist'][k]=out['canonical_room_hist'].get(k,0)+1
+          out['full_candidates']=glob.glob('/opt/hamsterking-license/private-maps/full/'+PILOT+'*')
+          full=None
+          for path in out['full_candidates']:
+              try:
+                  opener=gzip.open if path.endswith('.gz') else open
+                  with opener(path,'rt',encoding='utf-8') as f:
+                      full=json.load(f)
+                  out['full_path']=path
+                  break
+              except Exception as e:
+                  out.setdefault('full_errors',[]).append(path+':'+repr(e))
+          if isinstance(full,dict):
+              out['full_keys']=sorted(full.keys())
+              bg=full.get('buildingsGeoJSON') or full.get('buildings')
+              feats=bg.get('features') if isinstance(bg,dict) else None
+              if isinstance(feats,list):
+                  game=[]
+                  for feat in feats:
+                      prop=feat.get('properties') if isinstance(feat,dict) else None
+                      if isinstance(prop,dict) and prop.get('is_game') and prop.get('building_id'):
+                          game.append(prop)
+                  out['full_features']=len(feats)
+                  out['full_game_buildings']=len(game)
+                  out['full_known_crystals']=sum(p.get('crystals') is not None for p in game)
+                  out['full_property_keys']=sorted({k for p in game[:500] for k in p.keys()})
+                  out['full_known_samples']=[
+                      {k:p.get(k) for k in ('building_id','crystals','is_investment','faction','building_generator')}
+                      for p in game if p.get('crystals') is not None
+                  ][:5]
+          db.close()
+          print(json.dumps(out,ensure_ascii=False,indent=2,sort_keys=True))
+          PY
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/w3-probe.py root@89.125.1.71:/tmp/w3-probe.py
+
+      - name: Run read-only W3 probe
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/w3-probe.py' | tee /tmp/w3-probe.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w3-probe.json',encoding='utf-8'))
+          assert d['link']['canonical_area_id']=='9ea6ff78-b881-45b3-b92d-a8f1da8eca05',d.get('link')
+          assert d['catalog']['city']=='Moscow' and d['catalog']['grid']=='12:26',d.get('catalog')
+          print('W3_LINK_PRECHECK=PASS')
+          print('W3_POINTS_TYPE='+str(d.get('points_type')))
+          print('W3_POINTS_LEN='+str(d.get('points_len')))
+          print('W3_CANONICAL_BUILDINGS='+str(d.get('canonical_buildings_total')))
+          print('W3_CANONICAL_KNOWN='+str(d.get('canonical_known_rooms')))
+          print('W3_FULL_GAME_BUILDINGS='+str(d.get('full_game_buildings')))
+          print('W3_FULL_KNOWN_CRYSTALS='+str(d.get('full_known_crystals')))
+          PY
+
+      - name: Record preflight evidence
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/w3-probe.json',encoding='utf-8'))
+          lines=[
+            'MAPS_SHARED_KB_W3_PREFLIGHT=PASS',
+            'pilot_map_key=hk_moscow1226',
+            'pilot_canonical_area_id=9ea6ff78-b881-45b3-b92d-a8f1da8eca05',
+            f"point_count_db={d.get('point_count_db')}",
+            f"points_type={d.get('points_type')}",
+            f"points_len={d.get('points_len')}",
+            'points_sample_keys='+json.dumps(d.get('points_sample_keys'),ensure_ascii=False,separators=(',',':')),
+            f"canonical_buildings_total={d.get('canonical_buildings_total')}",
+            f"canonical_known_rooms={d.get('canonical_known_rooms')}",
+            f"canonical_room_hist={json.dumps(d.get('canonical_room_hist'),sort_keys=True,separators=(',',':'))}",
+            'full_candidates='+json.dumps(d.get('full_candidates'),ensure_ascii=False,separators=(',',':')),
+            f"full_features={d.get('full_features')}",
+            f"full_game_buildings={d.get('full_game_buildings')}",
+            f"full_known_crystals={d.get('full_known_crystals')}",
+            'full_property_keys='+json.dumps(d.get('full_property_keys'),ensure_ascii=False,separators=(',',':')),
+            'full_known_samples='+json.dumps(d.get('full_known_samples'),ensure_ascii=False,separators=(',',':')),
+            'live_mutation=NO',
+          ]
+          open('audit/hk-stage2-maps-shared-kb-w3-preflight.txt','w',encoding='utf-8').write('\n'.join(lines)+'\n')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-maps-shared-kb-w3-preflight.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: inspect Maps shared KB W3 pilot source"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$HOME/.ssh/topking" /tmp/w3-probe.py /tmp/w3-probe.json
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'rm -f /tmp/w3-probe.py' || true
