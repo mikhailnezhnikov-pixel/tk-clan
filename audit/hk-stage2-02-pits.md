@@ -1,6 +1,6 @@
 # HK Stage 2.02 — Pits / Ямы
 
-status: REWARD_PLANNER_CORE_LIVE_CANDIDATE_PENDING_USER_UI_CHECK
+status: REWARD_EXECUTION_R13_LIVE_CANDIDATE_PENDING_USER_CHECK
 
 ## Required Stage 2 chain
 
@@ -578,3 +578,65 @@ Outstanding checks before reward execution:
 1. r11 restoration decision modal still needs user-path confirmation when a Paws limit is hit;
 2. r12 tournament section must be checked against live tournament values;
 3. only after r12 UI/live-read/calculation is confirmed should automatic extra Pit Pass execution and after-run recalculation be enabled.
+
+
+## Tournament reward execution r13
+
+User accepted the r12 planner UI and asked to continue.
+
+Pinned donor execution behavior used:
+- reward-enabled Pits may open available Tribute Boxes before reward continuation;
+- reward continuation uses ITEM-paid Pit rounds;
+- after every completed round the live leaderboard score is reread;
+- remaining reward steps are recalculated from live score, future base steps and future daily points;
+- if the target is already reached or future scheduled work is enough, remaining reward steps are removed;
+- gradual/upfront/last-day scheduling follows the donor requested-now formula;
+- actual Pit Pass balance and direct ITEM cost are revalidated immediately before every reward round.
+
+r13 includes:
+- reward steps are appended to the selected Pit execution config only when r12 marks the reward plan valid;
+- base steps are tagged separately from reward-generated ITEM steps;
+- Tribute Boxes are opened only in full x100 batches;
+- box opening is reread authoritatively before reward spending continues;
+- live leaderboard score is refreshed after every completed round;
+- reward continuation is recalculated dynamically and the runner total is adjusted;
+- reaching the reward target removes unnecessary remaining reward x1;
+- if actual Pit Pass balance is insufficient even after available x100 boxes are opened, remaining reward steps are removed and the reward branch stops safely instead of overspending;
+- every ITEM reward start still passes through the existing live cost and balance checks.
+
+Marker:
+`HK_PITS_REWARD_EXEC_REV = 'pits-reward-execution-20260920-r13'`
+
+Deploy:
+- workflow: `Deploy TopKing Pits Reward Execution R13`;
+- run: `35496430554` — SUCCESS;
+- Python patch compile: PASS;
+- JS syntax: PASS;
+- backup/deploy: PASS;
+- service active: PASS;
+- public round-trip byte equality: PASS;
+- live/public SHA256: `c51b1549bd631bcc4ea87df8b37a4be990db2300470f6c446a81319532c3ef6b`.
+
+Baseline sync:
+- run: `35496474389` — SUCCESS.
+
+Current status:
+**REWARD_EXECUTION_R13_LIVE_CANDIDATE_PENDING_USER_CHECK**
+
+Required user-path check:
+1. choose one Pit with an active tournament and exact target level;
+2. select a reachable reward target and strategy;
+3. enable the Pit and start;
+4. expected runner behavior:
+   - full x100 Tribute Box openings appear first if available and reward planning needs them;
+   - normal/base Pit round(s) execute;
+   - live tournament score is reread;
+   - runner logs `дополнительные x1 пересчитаны: before → after` when the continuation changes;
+   - only then ITEM reward rounds execute;
+   - if target is reached early, remaining reward rounds disappear;
+   - if actual Pit Pass balance is insufficient, reward continuation stops safely without a paid request.
+
+Outstanding:
+- r11 restoration-decision modal still lacks a dedicated user-path confirmation;
+- r13 reward execution/recalculation needs one live user test.
+Do not advance to Bosses until these Stage 2.02 live checks are complete.
