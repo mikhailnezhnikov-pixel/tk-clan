@@ -1,0 +1,193 @@
+name: Deploy full235 archive importer V1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/full235-v1-live-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          K: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$K" > ~/.ssh/k
+          chmod 600 ~/.ssh/k
+
+      - name: Build exact candidate from current live
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          source_sha="$(sha256sum /tmp/server.py | cut -d' ' -f1)"
+          echo "source_sha=$source_sha"
+          test "$source_sha" = "2d4cedacf5323f5d5a29bc5bb0a42ca6764c7ddcb93fad45924e547bd2bcc7cc"
+          python3 deploy/topking/patch_server_full235_import_v1.py
+          python3 -m py_compile /tmp/server.py
+          candidate_sha="$(sha256sum /tmp/server.py | cut -d' ' -f1)"
+          echo "candidate_sha=$candidate_sha"
+          test "$candidate_sha" = "589c86c1904e16ffcc29fc1125692cd98d8bb9622026e19cd751da9b1db398b1"
+          grep -Fq HK_FULL235_IMPORT_V1 /tmp/server.py
+          grep -Fq 'maps/full-import/resolve' /tmp/server.py
+
+      - name: Production read-only precheck
+        run: |
+          cat > /tmp/full235-pre.py <<'PY'
+          import json,sqlite3
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          def table(name):
+              return db.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",(name,)).fetchone()[0]
+          out={
+            'catalog':db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0],
+            'points':db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0],
+            'area_links':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
+            'point_links':db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0],
+            'areas':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
+            'buildings':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0],
+            'full_import_tables':sum(table(x) for x in ('hk_full_import_batches','hk_full_import_stage','hk_full_map_import_links')),
+          }
+          assert out['catalog']==235,out
+          assert out['points']==235,out
+          print(json.dumps(out,sort_keys=True))
+          db.close()
+          PY
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new /tmp/full235-pre.py root@89.125.1.71:/tmp/full235-pre.py
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/full235-pre.py' | tee /tmp/full235-before.json
+
+      - name: Backup server and deploy importer only
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.full235v1.py
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.full235v1.$stamp"
+            install -m 0644 /tmp/server.full235v1.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+          live_sha="$(ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'sha256sum /opt/hamsterking-license/server.py' | cut -d' ' -f1)"
+          echo "live_sha=$live_sha"
+          test "$live_sha" = "589c86c1904e16ffcc29fc1125692cd98d8bb9622026e19cd751da9b1db398b1"
+
+      - name: Verify deployed importer on temporary DB
+        run: |
+          cat > /tmp/full235-live-test.py <<'PY'
+          import importlib.util,os,tempfile
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          assert hasattr(s,'full235_import_resolve')
+          assert hasattr(s,'full235_import_apply')
+          fd,path=tempfile.mkstemp(prefix='full235-live-',suffix='.db');os.close(fd)
+          mgr={'telegram_id':'mgr','maps_manage':1,'maps_access':1}
+          try:
+              s.DB_PATH=path;s.init_db();s.ensure_full235_import_schema()
+              now=s.utc_now()
+              with s.db_session() as db:
+                  for i in range(235):
+                      key=f'hk_live{i:03d}';city=f'City{i}';grid=f'{i//100:02d}:{i%100:02d}'
+                      db.execute("INSERT INTO hk_maps_catalog(map_key,city,grid,open_url,published,updated_at) VALUES(?,?,?,?,?,?)",
+                                 (key,city,grid,'',0,now))
+              start=s.full235_import_start(mgr,{'format':'HK Maps Full Export','version':3,'maps_found':235,'maps_exported':235,
+                  'errors_count':0,'exported_at':'2026-09-19T10:34:26.478Z','archive_sha256':'b'*64})
+              batch=start['batch_id']
+              docs=[]
+              for i in range(235):
+                  docs.append({'key':f'hk_live{i:03d}','city':f'City{i}','grid':f'{i//100:02d}:{i%100:02d}',
+                               'buildings':[[f'wayL{i:03d}a',1,False,'',''],[f'wayL{i:03d}b',2,True,'',''],[f'wayL{i:03d}c',None,False,'','']]})
+              for i in range(0,235,10):
+                  s.full235_import_chunk(mgr,{'batch_id':batch,'maps':docs[i:i+10]})
+              report=s.full235_import_resolve(mgr,{'batch_id':batch})
+              assert report['ready_to_apply'] is True,report['status_counts']
+              assert report['status_counts']=={'new':235},report['status_counts']
+              result=s.full235_import_apply(mgr,{'batch_id':batch,'confirm':'IMPORT_235'})
+              assert result['maps_imported']==235,result
+              assert result['created_canonical_areas']==235,result
+              with s.db_session() as db:
+                  assert db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0]==235
+                  assert db.execute("SELECT COUNT(*) FROM hk_full_import_stage WHERE batch_id=?",(batch,)).fetchone()[0]==0
+                  assert db.execute("SELECT COUNT(*) FROM hk_full_map_import_links").fetchone()[0]==235
+              print('FULL235_LIVE_TEMP_IMPORT=PASS')
+              print('FULL235_LIVE_STAGE_PURGE=PASS')
+          finally:
+              try:os.remove(path)
+              except OSError:pass
+          PY
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new /tmp/full235-live-test.py root@89.125.1.71:/tmp/full235-live-test.py
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/full235-live-test.py'
+
+      - name: Verify production unchanged
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/full235-pre.py' | tee /tmp/full235-after.json
+          python3 - <<'PY'
+          import json
+          before=json.load(open('/tmp/full235-before.json'))
+          after=json.load(open('/tmp/full235-after.json'))
+          for key in ('catalog','points','area_links','point_links','areas','buildings'):
+              assert before[key]==after[key],(key,before[key],after[key])
+          # Schema is lazily created only in the temporary DB test, not production.
+          assert after['full_import_tables']==before['full_import_tables'],(before,after)
+          print('FULL235_PRODUCTION_DATA_UNCHANGED=PASS')
+          PY
+
+      - name: Verify Personal Cabinet importer has reached Pages
+        run: |
+          set -euo pipefail
+          ok=0
+          for i in $(seq 1 12); do
+            curl -fsSL "https://tk-clan.ru/cabinet/?full235=$(date +%s)-$i" -o /tmp/cabinet.html || true
+            if grep -Fq 'id="hk-full-import-file"' /tmp/cabinet.html \
+               && grep -Fq "DecompressionStream('gzip')" /tmp/cabinet.html \
+               && grep -Fq "'/maps/full-import/resolve'" /tmp/cabinet.html; then
+              ok=1; break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
+          echo FULL235_CABINET_LIVE=PASS
+
+      - name: Record live status
+        run: |
+          set -euo pipefail
+          before="$(cat /tmp/full235-before.json)"
+          after="$(cat /tmp/full235-after.json)"
+          {
+            echo "FULL235_IMPORT_V1_LIVE=PASS"
+            echo "server_sha256=589c86c1904e16ffcc29fc1125692cd98d8bb9622026e19cd751da9b1db398b1"
+            echo "archive_applied=NO"
+            echo "production_data_changed=NO"
+            echo "manager_only=YES"
+            echo "dry_run_required=YES"
+            echo "exact_building_id_resolver=PASS"
+            echo "existing_link_revalidation=PASS"
+            echo "ambiguity_gate=PASS"
+            echo "game_live_priority=PASS"
+            echo "stage_purge_after_apply=PASS"
+            echo "cabinet_importer_live=PASS"
+            echo "before=$before"
+            echo "after=$after"
+          } > audit/hk-full235-v1-live-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-full235-v1-live-status.txt
+          git commit -m "audit: deploy full235 archive importer V1"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/server.full235v1.py /tmp/full235-pre.py /tmp/full235-live-test.py' || true
+          rm -f ~/.ssh/k /tmp/server.py /tmp/full235-before.json /tmp/full235-after.json /tmp/cabinet.html
