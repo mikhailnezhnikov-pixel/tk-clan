@@ -60,31 +60,31 @@ jobs:
             journalctl -u hamsterking-public-collector.service -n 30 --no-pager || true
             echo "=== DB SUMMARY ==="
             python3 - <<"PY"
-import json, sqlite3
-db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
-try:
-    row=db.execute("select snapshot_json,source_player_id,updated_at from public_clan_war_snapshot where singleton=1").fetchone()
-    if row:
-        try: doc=json.loads(row[0])
-        except Exception: doc={}
-        print("war_present=1")
-        print("war_source="+str(row[1]))
-        print("war_updated_at="+str(row[2]))
-        print("war_opponent="+str(doc.get("opponent","")))
-        print("war_hp="+str(doc.get("opponent_hp","")))
-        print("war_hp_max="+str(doc.get("opponent_hp_max","")))
-    else:
-        print("war_present=0")
-    for kind in ("alliance_defense","alliance_influence","alliance_power"):
-        count,source,updated=db.execute(
-            "select count(*),min(source_player_id),max(updated_at) from public_rating_snapshots where kind=?",(kind,)
-        ).fetchone()
-        print(f"{kind}_count={count}")
-        print(f"{kind}_source={source}")
-        print(f"{kind}_updated_at={updated}")
-finally:
-    db.close()
-PY
+          import json, sqlite3
+          db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
+          try:
+              row=db.execute("select snapshot_json,source_player_id,updated_at from public_clan_war_snapshot where singleton=1").fetchone()
+              if row:
+                  try: doc=json.loads(row[0])
+                  except Exception: doc={}
+                  print("war_present=1")
+                  print("war_source="+str(row[1]))
+                  print("war_updated_at="+str(row[2]))
+                  print("war_opponent="+str(doc.get("opponent","")))
+                  print("war_hp="+str(doc.get("opponent_hp","")))
+                  print("war_hp_max="+str(doc.get("opponent_hp_max","")))
+              else:
+                  print("war_present=0")
+              for kind in ("alliance_defense","alliance_influence","alliance_power"):
+                  count,source,updated=db.execute(
+                      "select count(*),min(source_player_id),max(updated_at) from public_rating_snapshots where kind=?",(kind,)
+                  ).fetchone()
+                  print(f"{kind}_count={count}")
+                  print(f"{kind}_source={source}")
+                  print(f"{kind}_updated_at={updated}")
+          finally:
+              db.close()
+          PY
           ' > /tmp/public-collector-r2-preflight.txt
           cat /tmp/public-collector-r2-preflight.txt
 
