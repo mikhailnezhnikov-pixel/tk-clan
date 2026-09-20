@@ -357,3 +357,18 @@ Do not advance to Bosses yet.
 - deploy `35496976601` — PASS;
 - live/public SHA256: `c5806b911ddc4c89aec36ad5dc99a672e18ba8a1870adfc03c31ecd4632bce9c`;
 - baseline sync `35497018252` — PASS.
+
+
+## Pits reward-only plan r16
+
+- donor `reward-0` mode transferred;
+- reward target only / zero base runs;
+- only computed tournament reward ITEM continuation executes;
+- marker: `pits-reward-only-plan-20260920-r16`;
+- deploy `35497301664` — PASS;
+- live/public SHA256: `7a94ab3ce598fca1c12bc3daab4e41f46bc0bdccd517869f9662bf723dd3afdf`;
+- baseline sync `35497344758` — PASS.
+
+Still pending before Pits LIVE PASS:
+- r11 restoration decision user-path check;
+- r13 reward execution/recalculation user-path check.
