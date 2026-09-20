@@ -1286,7 +1286,7 @@
         archive_sha256:pack.sha
       })});
       hkFullImportBatch=start.batch_id;
-      const chunkSize=8;
+      const chunkSize=6;
       for(let i=0;i<pack.maps.length;i+=chunkSize){
         const chunk=pack.maps.slice(i,i+chunkSize);
         const uploaded=await request('/maps/full-import/chunk',{method:'POST',body:JSON.stringify({batch_id:hkFullImportBatch,maps:chunk})});
