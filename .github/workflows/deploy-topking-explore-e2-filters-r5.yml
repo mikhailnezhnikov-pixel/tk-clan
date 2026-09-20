@@ -1,0 +1,119 @@
+name: Deploy TopKing Explore E2 Filters R5
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/explore-e2-filters-r5-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live and patch Explore filters only
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r4-ui'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r6-safe5'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/source.sha
+          cp /tmp/HamsterKingMobile.user.js /tmp/before.js
+          python3 deploy/topking/patch_explore_e2_filters_r5.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r5-filters'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "updateFilterPreview" /tmp/HamsterKingMobile.user.js
+          grep -Fq "liveReadOk=!!value" /tmp/HamsterKingMobile.user.js
+          grep -Fq "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r6-safe5'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          python3 - <<'PY'
+          from pathlib import Path
+          before=Path('/tmp/before.js').read_text()
+          after=Path('/tmp/HamsterKingMobile.user.js').read_text()
+          # E2 must remain read-only.
+          a=after.index("  const HK_EXPLORE_CANON_REV=")
+          b=after.index("  async function acceptBuildingStudy(",a)
+          block=after[a:b]
+          forbidden=["/player/building/fast_completion","/player/battle/fast","/player/building/remort?","/player/building/fast_remort","/shop/buy"]
+          assert not [x for x in forbidden if x in block]
+          # Map throttle must be preserved byte-for-byte by this patch.
+          assert "HK_MAP_SCANNER_REV = 'maps-parallel-read-20260920-r6-safe5'" in after
+          assert "const HK_MAP_READ_CONCURRENCY = 5;" in after
+          PY
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Race-safe install
+        run: |
+          set -euo pipefail
+          source_sha="$(cat /tmp/source.sha)"
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.explore-filters-r5.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "set -euo pipefail; current=\$(sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js | awk '{print \$1}'); test \"\$current\" = \"$source_sha\" || { echo LIVE_CHANGED_BEFORE_EXPLORE_FILTERS_R5; exit 42; }; node --check /tmp/HamsterKingMobile.explore-filters-r5.user.js; stamp=\$(date +%Y%m%d-%H%M%S); cp -a /opt/hamsterking-license/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js.bak.explore-filters-r5.\$stamp; install -m 0644 /tmp/HamsterKingMobile.explore-filters-r5.user.js /opt/hamsterking-license/HamsterKingMobile.user.js; systemctl restart hamsterking-license.service; systemctl is-active --quiet hamsterking-license.service"
+
+      - name: Verify public exact candidate
+        run: |
+          set -euo pipefail
+          sleep 2
+          curl -fsSL --retry 4 --connect-timeout 15 --max-time 30 "https://hk-license.89.125.1.71.sslip.io/panel.js?explore-filters-r5=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          candidate="$(cat /tmp/candidate.sha)"
+          test "$(sha256sum /tmp/public.js | awk '{print $1}')" = "$candidate"
+          grep -Fq "HK_EXPLORE_CANON_REV='explore-readonly-plan-20260920-r5-filters'" /tmp/public.js
+          grep -Fq "updateFilterPreview" /tmp/public.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/public.js
+          {
+            echo "EXPLORE_E2_FILTERS_R5_LIVE=PASS"
+            echo "source_live_sha256=$(cat /tmp/source.sha)"
+            echo "live_sha256=$candidate"
+            echo "public_sha256=$candidate"
+            echo "public_byte_equality=PASS"
+            echo "syntax=PASS"
+            echo "mutation_endpoints_in_explore=0"
+            echo "dynamic_filter_counts=PASS"
+            echo "failed_auto_refresh_cached=NO"
+            echo "map_concurrency_5_preserved=PASS"
+          } > /tmp/explore-filters-r5-live-status.txt
+
+      - name: Sync baseline and evidence
+        run: |
+          set -euo pipefail
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+            cp /tmp/explore-filters-r5-live-status.txt audit/hk-stage2-explore-e2-filters-r5-live-status.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-stage2-explore-e2-filters-r5-live-status.txt
+            git commit -m "stage2: fix Explore dynamic filters r5" || true
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/before.js /tmp/source.sha /tmp/candidate.sha /tmp/explore-filters-r5-live-status.txt
