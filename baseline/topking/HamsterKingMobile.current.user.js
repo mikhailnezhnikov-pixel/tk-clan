@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.15
+// @version      1.17.16
+// @release-note Исправлен расчёт активных зданий: план и запуск теперь используют реальные активные слоты игры.
 // @release-note На экране «Здания» убран лишний перечень всех активных зданий; оставлен только счётчик.
 // @release-note Приведён в порядок экран «Здания»: компактные фильтры и план без ломающихся ID.
 // @release-note Исправлено подключение HK, если игра уже успела авторизоваться до запуска панели.
@@ -15,9 +16,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.15';
+  const BUILD_VERSION = '1.17.16';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r17-buildings-ui-compact';
+  const HK_CORE_REVISION = 'core-20260921-r18-buildings-active-fix';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -779,6 +780,7 @@
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1';
   const HK_BUILDINGS_UI_REV = 'buildings-ui-20260921-r3';
+  const HK_BUILDINGS_ACTIVE_REV = 'buildings-active-semantics-20260921-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2';
   const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   const HK_AUTO_ROUTINES_REV = 'auto-routines-20260920-r1';
@@ -1564,10 +1566,30 @@
     return settings;
   }
 
-  function buildingCanonActiveRows(documentValue=playerDocument) {
+  function buildingCanonAllRows(documentValue=playerDocument) {
     const state=documentValue||{};
     const rows=Array.isArray(state?.buildings)?state.buildings:(Array.isArray(state?.player?.buildings)?state.player.buildings:[]);
     return rows.filter(row=>row&&String(row?.id||row?.building_id||''));
+  }
+
+  function buildingCanonReportedActiveCount(documentValue=playerDocument) {
+    const state=documentValue||{},player=state?.player||{};
+    const raw=player?.player_active_building??state?.player_active_building;
+    const value=Number(raw);
+    return Number.isFinite(value)&&value>=0?Math.trunc(value):null;
+  }
+
+  function buildingCanonActiveRows(documentValue=playerDocument) {
+    const rows=buildingCanonAllRows(documentValue);
+    const reported=buildingCanonReportedActiveCount(documentValue);
+    // Current /player/me schema keeps every known building in `buildings`.
+    // Only active rows have a numeric next_tier_level. The game also exposes
+    // player_active_building; require both signals to agree before trusting the
+    // row-level active set. If schema drifts, fail closed for ID exclusion.
+    const flagged=rows.filter(row=>row?.next_tier_level!==null&&row?.next_tier_level!==undefined&&Number.isFinite(Number(row.next_tier_level)));
+    if(reported!==null&&flagged.length===reported)return flagged;
+    if(reported===null&&flagged.length)return flagged;
+    return rows;
   }
 
   function buildingCanonActiveIds(documentValue=playerDocument) {
@@ -1576,16 +1598,19 @@
 
   function buildingCanonCapacity(documentValue=playerDocument) {
     const state=documentValue||{},player=state?.player||{};
-    const active=buildingCanonActiveRows(state);
+    const allRows=buildingCanonAllRows(state);
+    const activeRows=buildingCanonActiveRows(state);
+    const reportedActive=buildingCanonReportedActiveCount(state);
+    const active=reportedActive===null?activeRows.length:reportedActive;
     const maxRaw=player?.max_buildings??state?.max_buildings;
     const max=Number.isFinite(Number(maxRaw))&&Number(maxRaw)>=0?Math.trunc(Number(maxRaw)):null;
-    const favoriteRows=active.filter(row=>row?.is_favorite===true||row?.favorite===true);
+    const favoriteRows=allRows.filter(row=>row?.is_favorite===true||row?.favorite===true);
     const favoriteMaxRaw=player?.max_favorite_building??state?.max_favorite_building;
     const favoriteMax=Number.isFinite(Number(favoriteMaxRaw))&&Number(favoriteMaxRaw)>=0?Math.trunc(Number(favoriteMaxRaw)):null;
     return {
-      active:active.length,
+      active,
       max,
-      free:max===null?null:Math.max(0,max-active.length),
+      free:max===null?null:Math.max(0,max-active),
       favorites:favoriteRows.length,
       favoriteMax,
       favoriteFree:favoriteMax===null?null:Math.max(0,favoriteMax-favoriteRows.length)
@@ -1705,8 +1730,9 @@
       buildingCanonPlan=await buildingCanonBuildPlan(true);
       const capacity=buildingCanonPlan.capacity;
       const source=buildingCanonPlan.candidates;
+      if(!source.length){log(either('Подходящих неактивных зданий нет.','No eligible inactive buildings.'),'warn');return;}
+      if(capacity.free!==null&&capacity.free<=0){log(either('Подходящие здания есть, но свободных активных слотов нет.','Eligible buildings exist, but there are no free active-building slots.'),'warn');return;}
       const candidates=capacity.free===null?source:source.slice(0,capacity.free);
-      if(!candidates.length){log(either('Подходящих неоткрытых зданий нет.','No eligible unopened buildings.'),'warn');return;}
       const preview=candidates.slice(0,12).map((row,index)=>`${index+1}. ${row.buildingId} · 💎 ${row.crystals}${row.isInvest?' · ◆':''}`).join('\n');
       const more=candidates.length>12?either(`\n…и ещё ${candidates.length-12}`,`\n…and ${candidates.length-12} more`):'';
       if(!confirm(either(
