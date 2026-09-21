@@ -51,10 +51,11 @@ jobs:
           s=Path('/tmp/live.js').read_text(encoding='utf-8')
 
           required=[
-              "// @version      1.17.15",
-              "const BUILD_VERSION = '1.17.15';",
+              "// @version      1.17.16",
+              "const BUILD_VERSION = '1.17.16';",
               "const HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1';",
               "const HK_BUILDINGS_UI_REV = 'buildings-ui-20260921-r3';",
+              "const HK_BUILDINGS_ACTIVE_REV = 'buildings-active-semantics-20260921-r1';",
               "async function buildingCanonBuildPlan(refreshPlayer=true)",
               "async function buildingCanonOpen(buildingId)",
               "async function buildingCanonFavorite(buildingId)",
@@ -81,6 +82,13 @@ jobs:
               a=s.index(start)
               b=s.index(end,a)
               return s[a:b]
+
+          active_helpers=block("function buildingCanonAllRows(documentValue=playerDocument)","function buildingCanonMapRow(areaId)")
+          assert "player_active_building" in active_helpers
+          assert "next_tier_level" in active_helpers
+          assert "flagged.length===reported" in active_helpers
+          assert "active=reportedActive===null?activeRows.length:reportedActive" in active_helpers
+          assert "free:max===null?null:Math.max(0,max-active)" in active_helpers
 
           plan=block("async function buildingCanonBuildPlan(refreshPlayer=true)","function buildingCanonActualMetrics")
           assert "active.has(buildingId)" in plan
@@ -112,6 +120,9 @@ jobs:
           assert "liveCapacity.free!==null&&liveCapacity.free<=0" in runner
           assert "hkRunner.signal?.aborted" in runner
           assert "hkRunner.waitIfPaused()" in runner
+          assert "if(!source.length)" in runner
+          assert "Подходящих неактивных зданий нет." in runner
+          assert "Подходящие здания есть, но свободных активных слотов нет." in runner
 
           ui=block("function renderBuildings()","async function refreshBuildings")
           assert "data-building-read=" not in ui
@@ -137,6 +148,8 @@ jobs:
           print("buildings_ui_wiring=PASS")
           print("buildings_active_list_hidden=PASS")
           print("buildings_active_count_kept=PASS")
+          print("buildings_active_semantics=PASS")
+          print("buildings_capacity_reported_active=PASS")
           print("protected_maps_explore=PASS")
           print("userscript_1_17_15=PASS")
           print("BUILDINGS_CANON_R1_TECHNICAL_REVALIDATION=PASS")
