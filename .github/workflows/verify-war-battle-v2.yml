@@ -22,7 +22,7 @@ jobs:
           set -euo pipefail
           for f in assets/war/battle/*.js; do node --check "$f"; done
           grep -Fq 'TopKingBattleV4' assets/war/battle/battle-runtime-v4.js
-          grep -Fq "version:'4.0.1-milestone-1'" assets/war/battle/battle-runtime-v4.js
+          grep -Fq "version:'4.0.2-fast-start'" assets/war/battle/battle-runtime-v4.js
           grep -Fq 'class BattleScene' assets/war/battle/BattleScene.js
           grep -Fq 'class Fighter' assets/war/battle/Fighter.js
           grep -Fq 'class BattleAnimator' assets/war/battle/BattleAnimator.js
@@ -34,6 +34,8 @@ jobs:
           grep -Fq 'id="battle-canvas"' wars/index.html
           grep -Fq 'TopKingBattleV4?.update(currentWar,info,{onHp:applyBattleHp})' wars/index.html
           grep -Fq 'battle-stage-v4 .battle-art-layer{display:none}' wars/index.html
+          grep -Fq 'battle-stage-v4-ready .battle-v2-loading{opacity:0' wars/index.html
+          grep -Fq 'canvasHost.replaceChildren(this.app.canvas)' assets/war/battle/BattleScene.js
           if grep -Fq 'battle-engine-v2.js?v=' wars/index.html; then
             echo 'Legacy battle engine still wired into wars page' >&2
             exit 1
