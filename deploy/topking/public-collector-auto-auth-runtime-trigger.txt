@@ -1,1 +1,1 @@
-2026-09-21 inspect auth probe request after 1.17.10 reload
+2026-09-21 verify live license response auth-sync flag
