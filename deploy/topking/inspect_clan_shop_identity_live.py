@@ -43,3 +43,20 @@ for row in db.execute("""SELECT player_id,nickname,scanned_at
     if pid not in skills and row["nickname"]:
         skills[pid]=row["nickname"]
 print("SKILL_NAMES", json.dumps(skills, ensure_ascii=False))
+
+
+purchase_ids={str(r.get("player_id") or "") for r in payload.get("items",[]) if r.get("player_id")}
+linked={}
+if purchase_ids:
+    placeholders=",".join("?" for _ in purchase_ids)
+    q=f"""SELECT linked_player_id,note,first_name,username,active
+          FROM clan_members
+          WHERE linked_player_id IN ({placeholders})"""
+    for row in db.execute(q,tuple(sorted(purchase_ids))):
+        linked[str(row["linked_player_id"] or "")]={
+            "note":str(row["note"] or ""),
+            "first_name":str(row["first_name"] or ""),
+            "username":str(row["username"] or ""),
+            "active":int(row["active"] or 0),
+        }
+print("LINKED_MEMBERS",json.dumps(linked,ensure_ascii=False))
