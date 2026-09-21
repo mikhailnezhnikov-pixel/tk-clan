@@ -1,1 +1,1 @@
-2026-09-21 verify live HTTP license flags after userscript 1.17.12
+2026-09-21 verify live HTTP auth-sync flag after license service restart
