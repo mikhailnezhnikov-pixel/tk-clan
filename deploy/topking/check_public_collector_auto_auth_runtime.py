@@ -401,6 +401,42 @@ except Exception:
     print("identity_file_permission_check=unavailable")
 
 try:
+    status_text=open(f"/proc/{int(main_pid)}/status",encoding="utf-8",errors="replace").read() if main_pid and main_pid!="0" else ""
+    gid_line=next((line for line in status_text.splitlines() if line.startswith("Gid:")), "")
+    service_gid=int(gid_line.split()[1]) if gid_line else -1
+    print("license_service_gid="+str(service_gid))
+    data_dir=os.path.dirname(IDENTITY_PATH)
+    data_stat=os.stat(data_dir)
+    import stat
+    print("collector_data_dir_uid="+str(data_stat.st_uid))
+    print("collector_data_dir_gid="+str(data_stat.st_gid))
+    print("collector_data_dir_mode="+oct(stat.S_IMODE(data_stat.st_mode)))
+    for path,label in ((TOKEN_PATH,"collector_token"),(AUTH_PATH,"collector_bootstrap")):
+        if os.path.exists(path):
+            st=os.stat(path)
+            print(label+"_uid="+str(st.st_uid))
+            print(label+"_gid="+str(st.st_gid))
+            print(label+"_mode="+oct(stat.S_IMODE(st.st_mode)))
+        else:
+            print(label+"_present=no")
+    for unit,label in (("hamsterking-public-war.service","war_service"),("hamsterking-public-collector.service","ratings_service")):
+        try:
+            value=subprocess.check_output(["systemctl","show",unit,"--property=MainPID","--no-pager"],text=True,stderr=subprocess.STDOUT,timeout=10)
+            pid=value.strip().split("=",1)[1] if "=" in value else ""
+            if pid and pid!="0":
+                stxt=open(f"/proc/{int(pid)}/status",encoding="utf-8",errors="replace").read()
+                uline=next((line for line in stxt.splitlines() if line.startswith("Uid:")), "")
+                gline=next((line for line in stxt.splitlines() if line.startswith("Gid:")), "")
+                print(label+"_uid="+str(int(uline.split()[1]) if uline else -1))
+                print(label+"_gid="+str(int(gline.split()[1]) if gline else -1))
+            else:
+                print(label+"_running=no")
+        except Exception:
+            print(label+"_runtime=unavailable")
+except Exception:
+    print("collector_file_permission_check=unavailable")
+
+try:
     live_server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
     print("live_server_license_check_defs="+str(live_server_src.count("def license_check(")))
     print("live_server_check_route_occurrences="+str(live_server_src.count('path == "/api/v1/check"')))
