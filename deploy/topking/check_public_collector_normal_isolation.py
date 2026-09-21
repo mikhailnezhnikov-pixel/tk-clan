@@ -34,13 +34,22 @@ LIMIT 200
 """,(now,)).fetchall()
 db.close()
 
+def version_tuple(value):
+    parts=[]
+    for item in str(value or "").strip().split("."):
+        try:
+            parts.append(int(item))
+        except Exception:
+            return ()
+    return tuple(parts)
+
 candidate=None
 for row in rows:
     digest=hashlib.sha256(str(row["player_id"]).encode()).hexdigest()
     if expected and digest==expected:
         continue
     version=str(row["script_version"] or "").strip()
-    if not version:
+    if not version or version_tuple(version)<(1,17,8):
         continue
     candidate=row
     break
