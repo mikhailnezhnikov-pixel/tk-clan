@@ -1,1 +1,1 @@
-2026-09-21 verify steady runtime after forced collector token refresh PASS
+2026-09-21 verify next natural war timer cycle after token refresh\n
