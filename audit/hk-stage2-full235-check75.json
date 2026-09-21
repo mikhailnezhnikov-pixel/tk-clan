@@ -1,0 +1,533 @@
+{
+  "existing_alias": 0,
+  "existing_area": 0,
+  "existing_link": 0,
+  "maps": 75,
+  "rows": [
+    {
+      "area_id": "9b97ee80-1026-4a3c-a9c6-ef4a9ed40f2f",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_riodejaneiro3430"
+    },
+    {
+      "area_id": "e7907b87-1b18-4f2b-81ad-4c927118694f",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai6808"
+    },
+    {
+      "area_id": "35c80ab3-3173-48e5-9356-ad7a0400f8d2",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai4433"
+    },
+    {
+      "area_id": "9a2a6b3f-a935-45a2-a8c1-93c127670871",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai6409"
+    },
+    {
+      "area_id": "6856318b-28c1-4090-904d-e4e0ebf03287",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_paris3122"
+    },
+    {
+      "area_id": "40273907-c157-48c3-b5a6-8385dee8aff4",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai4329"
+    },
+    {
+      "area_id": "eba83f40-dc9f-4278-ba1d-8048c64f40a0",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_riodejaneiro3530"
+    },
+    {
+      "area_id": "9d5ce193-1ca2-4b80-9403-07abbd1f4b5d",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai5216"
+    },
+    {
+      "area_id": "2593c04d-f3d1-4477-899c-e3ea7c89059c",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai5315"
+    },
+    {
+      "area_id": "5af04afd-bdab-40d3-b283-d4a98aac848c",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_london3424"
+    },
+    {
+      "area_id": "0869b1b1-51d6-4c58-829f-dd0777d2f692",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork3208"
+    },
+    {
+      "area_id": "b6977834-bfed-4519-bfb2-5f9c87fc1f4c",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai4229"
+    },
+    {
+      "area_id": "031a4440-6c08-4e6f-b4ba-209fa8d58f74",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai6210"
+    },
+    {
+      "area_id": "fbe4f037-df7b-425f-8d25-e902da6b792b",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai6308"
+    },
+    {
+      "area_id": "a21e02e6-7273-4627-9093-90e9ac53588e",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai5316"
+    },
+    {
+      "area_id": "fdcdea06-8cd6-468e-937a-3ed249bae21a",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai6212"
+    },
+    {
+      "area_id": "ee25687a-495b-45d6-a540-119e96942290",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai5414"
+    },
+    {
+      "area_id": "5bd75ffb-bf25-4f0b-a56d-81be89ac76f3",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork2521"
+    },
+    {
+      "area_id": "8e45b719-d07a-48d8-8808-c39ab2588403",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork2421"
+    },
+    {
+      "area_id": "906c807d-1306-48ff-adf1-3037045d75d3",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_dubai7003"
+    },
+    {
+      "area_id": "f4135d17-0348-4a86-8811-c38f531ef618",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_riodejaneiro5441"
+    },
+    {
+      "area_id": "bc5a6599-3ddb-4dfd-855e-38c3ceda3165",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_saintpetersburg2219"
+    },
+    {
+      "area_id": "12e6f3ce-9b68-4c61-86db-44662dbb0064",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_london3025"
+    },
+    {
+      "area_id": "914199bc-0946-419d-ba8d-a43fedfa9742",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork2620"
+    },
+    {
+      "area_id": "ec0ffc0e-41b2-437e-b9b7-e5605ce53c9b",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_paris3022"
+    },
+    {
+      "area_id": "7e6b1875-f390-4b25-93ab-74ee473b9615",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork3210"
+    },
+    {
+      "area_id": "cf17aca2-b6a3-4c35-a62e-c15cf0d9b988",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_paris3223"
+    },
+    {
+      "area_id": "0f0c1217-7401-46d6-ad11-2f1668234ad1",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_london3125"
+    },
+    {
+      "area_id": "411dde71-adc6-47a2-979a-476b8c818f6e",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork2522"
+    },
+    {
+      "area_id": "10510846-4330-49c7-8d4e-e4d5e3c4d215",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_paris3222"
+    },
+    {
+      "area_id": "e66a6a1d-24ec-48d4-8b36-44cf8643f03d",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork2518"
+    },
+    {
+      "area_id": "0a7573ac-8deb-424f-8939-c7434a31283b",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_london3124"
+    },
+    {
+      "area_id": "8877f108-79d9-4742-821a-dcb180f8f384",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_paris2822"
+    },
+    {
+      "area_id": "8a82f8b2-f2cc-4d62-a707-2b22c8e931d7",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork2422"
+    },
+    {
+      "area_id": "7f0b22e3-18d5-4ecd-a914-e9dcb18801ad",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_london3324"
+    },
+    {
+      "area_id": "0af366c8-006d-4e70-ad41-de0631ee829a",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_losangeles4137"
+    },
+    {
+      "area_id": "ce5c6284-67ea-4b10-bdf8-6497a1d54bbc",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_lagos2256"
+    },
+    {
+      "area_id": "e4aef74e-40da-498f-afa2-3188125c0041",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_saintpetersburg2121"
+    },
+    {
+      "area_id": "d19eb338-3a37-4177-afef-344628aed571",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_paris3324"
+    },
+    {
+      "area_id": "0ec685ad-7b75-47f1-a1d7-fecb24174f9e",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_paris3322"
+    },
+    {
+      "area_id": "b33978d5-feaa-46a7-a664-acf7623d77ab",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_saintpetersburg2220"
+    },
+    {
+      "area_id": "87728349-7188-4fd3-93db-edbaadaa122b",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_losangeles4136"
+    },
+    {
+      "area_id": "6dd774e4-c042-4d94-b6e6-57d6273c5254",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_paris3323"
+    },
+    {
+      "area_id": "e2a49d73-0931-4161-9257-b9c475f695ae",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_singapore3818"
+    },
+    {
+      "area_id": "3fddb622-111f-488f-a70e-b31b563ce145",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_moscow1918"
+    },
+    {
+      "area_id": "23d4c221-b89a-459a-af5e-dceaa8fda578",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_moscow2118"
+    },
+    {
+      "area_id": "898a4ce2-3ebc-4797-8ba7-7651a15742fe",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_losangeles3031"
+    },
+    {
+      "area_id": "6ddb2d6f-7dcf-4e1b-81aa-1685cff88803",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_auckland1515"
+    },
+    {
+      "area_id": "a58cca24-528a-4a8e-ab7d-aade55aaad69",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_moscow2218"
+    },
+    {
+      "area_id": "8fe5bc49-04f3-4a1c-9a6d-5ecbe4bc9236",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_losangeles1839"
+    },
+    {
+      "area_id": "2071a3a8-2543-44cc-83b8-0e94c475c8be",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_lagos3141"
+    },
+    {
+      "area_id": "8b14b348-0cf8-413f-82d6-8e8aa66d90a1",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_lagos2750"
+    },
+    {
+      "area_id": "0c9eab48-2d54-4883-8e1b-0836cb2c8520",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_berlin1818"
+    },
+    {
+      "area_id": "090d4543-e438-4998-afbf-978028187f83",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_saintpetersburg1917"
+    },
+    {
+      "area_id": "40a6a980-b5ef-4ae3-b1cd-4007588ffcfe",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_lagos4822"
+    },
+    {
+      "area_id": "788379db-eeee-4f08-9b85-d9b05070cafd",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork1608"
+    },
+    {
+      "area_id": "4f4a7107-2704-4ca4-9c34-1901e92d1e90",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_berlin2620"
+    },
+    {
+      "area_id": "e0b4bd6b-a3cb-4938-b098-1acb1ccbbff4",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_berlin1717"
+    },
+    {
+      "area_id": "4fa16b33-f928-4c22-9974-21f9ee10eb60",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_lagos4815"
+    },
+    {
+      "area_id": "39c0a369-9b47-49d5-8470-cce86b827a5f",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_losangeles3734"
+    },
+    {
+      "area_id": "92023e2b-baef-4e8f-8838-b9d6f98660e0",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_london3423"
+    },
+    {
+      "area_id": "bb513dfb-24e7-4f16-9f9c-4cd2b4e3fe99",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_berlin2514"
+    },
+    {
+      "area_id": "7aec1fff-1603-4e30-928f-d1195e0190d4",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_losangeles4037"
+    },
+    {
+      "area_id": "8da59791-4c63-4153-9c83-16b0440b6fba",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_berlin2513"
+    },
+    {
+      "area_id": "274095c4-1a42-490e-a495-008091844d23",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork3832"
+    },
+    {
+      "area_id": "8cdc3165-c7c7-484f-8f74-6d0add7e1e59",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_losangeles3638"
+    },
+    {
+      "area_id": "fc27729c-7b46-4e70-9dde-d4f75fb49cff",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_riodejaneiro4326"
+    },
+    {
+      "area_id": "8562176f-4ef0-47cf-9865-0ec75d28c0f3",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_berlin1718"
+    },
+    {
+      "area_id": "d20f2e38-5593-4451-94b9-6d2d337f34c3",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_minsk1306"
+    },
+    {
+      "area_id": "c0008d01-89b9-4476-8959-5eb13f127a0b",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_berlin2412"
+    },
+    {
+      "area_id": "e54c5820-d79f-4f47-b19f-49a0775ca30b",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork0332"
+    },
+    {
+      "area_id": "9bc14c89-38ed-4e87-8dd6-ef9c4aeb24cd",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_losangeles3524"
+    },
+    {
+      "area_id": "2faf617c-35d0-4cbc-a7b6-98bc0eebdc4d",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_newyork2440"
+    },
+    {
+      "area_id": "0eb39a03-c3b2-4cab-ad01-49b67b9ed9e0",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_lagos3228"
+    },
+    {
+      "area_id": "0c2194e3-2fe1-445e-9094-4526e32ee5bd",
+      "existing_alias": null,
+      "existing_area": null,
+      "existing_link": null,
+      "map_key": "hk_saintpetersburg1921"
+    }
+  ]
+}

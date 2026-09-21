@@ -1,0 +1,5 @@
+subject=CN = TopKing Private HK Maps Upload
+issuer=CN = TopKing Private HK Maps Upload
+sha256 Fingerprint=86:9C:28:0A:69:27:62:91:F7:CC:34:3B:73:A9:A9:B5:0F:5A:4F:6A:6D:11:BF:53:63:EB:03:0E:E0:B1:5A:BB
+{"existing_alias": 0, "existing_area": 0, "existing_link": 0, "maps": 75}
+production_writes=NO
