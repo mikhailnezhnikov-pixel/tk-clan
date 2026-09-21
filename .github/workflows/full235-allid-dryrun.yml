@@ -31,7 +31,7 @@ jobs:
       - name: Decode and verify compact source IDs
         run: |
           set -euo pipefail
-          cat audit-tools/full235-allids.part.00 audit-tools/full235-allids.part.01 | base64 -d > /tmp/full235-allids.bin.gz
+          cat audit-tools/full235-allids15.part.00 audit-tools/full235-allids15.part.01 audit-tools/full235-allids15.part.02 audit-tools/full235-allids15.part.03 audit-tools/full235-allids15.part.04 audit-tools/full235-allids15.part.05 audit-tools/full235-allids15.part.06 audit-tools/full235-allids15.part.07 | base64 -d > /tmp/full235-allids.bin.gz
           test "$(sha256sum /tmp/full235-allids.bin.gz | cut -d' ' -f1)" = "470737a9007d45c1e770b422c9a6d507f610225d28bf281863c03b0cd558b411"
           gzip -dc /tmp/full235-allids.bin.gz > /tmp/full235-allids.bin
           test "$(sha256sum /tmp/full235-allids.bin | cut -d' ' -f1)" = "1ddcadbb50e5a88555a6772538e56476575a771edc22fb85200299c8cbc28f48"
