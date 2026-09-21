@@ -170,6 +170,7 @@ try:
     print("license_check_present="+("yes" if li>=0 else "no"))
     print("license_check_uses_min_version="+("yes" if "MIN_SCRIPT_VERSION" in block else "no"))
     print("license_check_returns_update_required="+("yes" if "update_required" in block else "no"))
+    print("license_check_returns_auth_sync_flag="+("yes" if "public_collector_auth_sync" in block else "no"))
 except Exception:
     print("server_release_gate_check=unavailable")
 
