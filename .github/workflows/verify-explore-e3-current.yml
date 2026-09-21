@@ -51,16 +51,16 @@ jobs:
           s=Path('/tmp/live.js').read_text(encoding='utf-8')
 
           required=[
-              "// @version      1.17.21",
-              "const BUILD_VERSION = '1.17.21';",
-              "const HK_CORE_REVISION = 'core-20260921-r23-explore-e4-queue';",
+              "// @version      1.17.22",
+              "const BUILD_VERSION = '1.17.22';",
+              "const HK_CORE_REVISION = 'core-20260921-r24-explore-production-ui';",
               "const HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner';",
               "const HK_EXPLORE_SPEED_REV='explore-e3-speed-20260921-r1';",
               "const HK_EXPLORE_E4_REV='explore-e4-queue-20260921-r1';",
+              "const HK_EXPLORE_UI_REV='explore-production-ui-20260921-r1';",
               "async function exploreE3ProcessOne(initial,settings)",
               "async function runExploreE3Single()",
               "async function runExploreE4Queue()",
-              "id=\"hk-ex-run-one\"",
               "id=\"hk-ex-run-queue\"",
               "const HK_MAP_READ_CONCURRENCY = 5;",
               "maps-shared-runtime-20260921-r7-safe5",
@@ -111,10 +111,11 @@ jobs:
           assert "actionDelayMaxMs=legacyDefaultSpeed?2000" in s
           assert "battleDelayMs=legacyDefaultSpeed?700" in s
 
-          # E4 is only a bounded sequential queue over the E3 core.
+          # Production queue reuses E3 core; maxBuildings is the single queue cap.
           assert "const result=await exploreE3ProcessOne(candidate,settings)" in e4
-          assert "const queue=limit===0?source:source.slice(0,Math.max(1,limit||1));" in e4
-          assert "runLimit:[1,5,10,15,20].includes(Number(x.runLimit))" in s
+          assert "const queue=source;" in e4
+          assert "maxBuildings:clamp(x.maxBuildings,1,5000,500)" in s
+          assert "selected:settings.exploreTargetTier?candidates.slice(0,settings.maxBuildings):candidates" in s
           assert "await hkRunner.waitIfPaused()" in e4
           assert "await exploreE4BetweenDelay(settings)" in e4
           assert "result.status==='resources_exhausted'?'skipped':'error'" in e4
@@ -124,9 +125,17 @@ jobs:
           # E3/E4 use the same staged runner UI and 15-second completion visibility.
           for key in ["'prepare'","'events'","'battles'","'tier'","'verify'"]:
               assert key in s
-          assert "Explore · E3" in s and "Explore · E4" in s
+          assert "Explore · E3" in s and "either('Исследование','Explore')" in s
           assert "const keep=exploreTitle?15000:1800" in s
           assert "(buildingsRun||exploreRun)&&state.total" in s
+
+          # Production UI has no test button or duplicate run-limit control.
+          render=block("function renderExplore()","async function refreshExplore")
+          assert 'id="hk-ex-run-queue"' in render
+          assert "either('Запустить','Run')" in render
+          assert 'Будет обработано зданий:' in render
+          for bad in ['id="hk-ex-run-one"','id="hk-ex-run-limit"','Лимит запуска E4','Тест E3 · 1 здание','Запустить E4','s.runLimit','settings.runLimit']:
+              assert bad not in s
 
           # Protected current work.
           assert "const HK_BUILDINGS_NATIVE_SYNC_REV = 'buildings-native-sync-20260921-r1';" in s
@@ -138,12 +147,13 @@ jobs:
           print("explore_e3_authoritative_reconcile=PASS")
           print("explore_e3_speed_profile=PASS")
           print("explore_e4_reuses_e3_core=PASS")
-          print("explore_e4_queue_limits=PASS")
+          print("explore_single_max_buildings_limit=PASS")
+          print("explore_test_controls_removed=PASS")
           print("explore_e4_sequential_stop_safety=PASS")
           print("explore_runner_e3_e4=PASS")
           print("protected_buildings_maps_auth=PASS")
           print("userscript_1_17_21=PASS")
-          print("EXPLORE_E3_E4_CURRENT_REVALIDATION=PASS")
+          print("EXPLORE_PRODUCTION_UI_CURRENT_REVALIDATION=PASS")
           PY
 
       - name: Cleanup
