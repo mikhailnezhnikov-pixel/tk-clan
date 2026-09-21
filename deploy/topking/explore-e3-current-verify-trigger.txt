@@ -1,1 +1,1 @@
-2026-09-21 verify Explore E3 r9 on current userscript 1.17.19
+2026-09-21 rerun Explore E3 r9 current verification after mutation-gate verifier fix
