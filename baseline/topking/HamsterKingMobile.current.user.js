@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.23
+// @version      1.17.24
+// @release-note Перестановка бизнесов: на desktop «достать» слева, «вставить» справа; T4–T6 полностью защищены от снятия.
 // @release-note В «Бизнесы» добавлен read-only каталог: поиск, фильтры бонусов, лимиты, наличие и известные рецепты.
 // @release-note Упрощён экран исследования: убраны тестовая кнопка и дублирующий лимит; очередь использует «Максимум зданий».
 // @release-note Добавлена безопасная очередь исследования нескольких зданий.
@@ -25,9 +26,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.23';
+  const BUILD_VERSION = '1.17.24';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r25-businesses-catalog';
+  const HK_CORE_REVISION = 'core-20260921-r26-businesses-rearrange-guard';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -278,7 +279,7 @@
       targetRound:'Дойти до раунда', delay:'Пауза, секунд', activationTokens:'Жетоны на активацию', pitCollectOnly:'Только собирать данные — не нажимать бой', pitForecast:'Прогноз до цели', pitObserved:'Сохранено уровней: {n}', pitPredictedPower:'Прогноз силы на раунде {round}: {power}', pitTokenBudget:'Максимальный разрешённый расход: {n} жетонов', pitComparison:'За запуск: раунд {before} → {after}, сила {powerBefore} → {powerAfter}', pitPowerTable:'Сохранённая сила уровней',
       restoreTokens:'Жетоны на восстановление', allowTokens:'Разрешить жетоны', round:'Раунд', startBattle:'Запустить автобой',
       stop:'Остановить', exportCsv:'Скачать силу уровней CSV', refreshGame:'Обновить игру', waiting:'Ожидание подключения…',
-      savedSets:'Сохранённые наборы', saveNew:'Сохранить новый', delete:'Удалить', removeAll:'Достать: все тиры',
+      savedSets:'Сохранённые наборы', saveNew:'Сохранить новый', delete:'Удалить', removeAll:'Достать: T1–T3',
       emptySlots:'Пустые слоты', removeTier:'Достать: T{n}', selectAll:'Выбрать все', insertAll:'Вставить: все тиры',
       insertTier:'Вставить: T{n}', loadFair:'Обновить ярмарку', chooseFair:'Выберите ярмарку', readFirst:'Сначала считайте данные',
       searchLot:'Поиск лота', choosePurchases:'Выберите покупки', selectedLots:'Выбрано лотов: {n}', totalPurchases:'Всего покупок',
@@ -317,7 +318,7 @@
       targetRound:'Reach round', delay:'Delay, seconds', activationTokens:'Activation tokens', pitCollectOnly:'Collect data only — never click battle', pitForecast:'Forecast to target', pitObserved:'Saved levels: {n}', pitPredictedPower:'Predicted power at round {round}: {power}', pitTokenBudget:'Maximum allowed spend: {n} tokens', pitComparison:'This run: round {before} → {after}, power {powerBefore} → {powerAfter}', pitPowerTable:'Saved level powers', restoreTokens:'Recovery tokens',
       allowTokens:'Allow tokens', round:'Round', startBattle:'Start auto battle', stop:'Stop', exportCsv:'Download level power CSV',
       refreshGame:'Refresh game', waiting:'Waiting for connection…', savedSets:'Saved sets', saveNew:'Save new', delete:'Delete',
-      removeAll:'Remove: all tiers', emptySlots:'Empty slots', removeTier:'Remove: T{n}', selectAll:'Select all',
+      removeAll:'Remove: T1–T3', emptySlots:'Empty slots', removeTier:'Remove: T{n}', selectAll:'Select all',
       insertAll:'Insert: all tiers', insertTier:'Insert: T{n}', loadFair:'Refresh fair', chooseFair:'Choose a fair',
       readFirst:'Read the data first', searchLot:'Search lots', choosePurchases:'Choose purchases', selectedLots:'Selected lots: {n}',
       totalPurchases:'Total purchases', maxRerolls:'Max rerolls', allowDiamonds:'Allow diamonds for rerolls and purchases',
@@ -2034,6 +2035,7 @@
   const HK_EXPLORE_E4_REV='explore-e4-queue-20260921-r1';
   const HK_EXPLORE_UI_REV='explore-production-ui-20260921-r1';
   const HK_BUSINESSES_CANON_REV='businesses-catalog-readonly-20260921-r1';
+  const HK_BUSINESSES_REARRANGE_REV='businesses-rearrange-desktop-safe-t123-20260921-r1';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -9645,13 +9647,31 @@
     finally { bureauRunning = false; renderProjectBureau(); }
   }
 
+  function businessRemovalAllowed(businessId) {
+    if (!businessId) return true;
+    const value = Number(tier(businessId) || 0);
+    return value >= 1 && value <= 3;
+  }
+
+  function assertBusinessRemovalPlanAllowed(plan) {
+    const blocked = (Array.isArray(plan) ? plan : []).filter(([row]) =>
+      row?.businessId && !businessRemovalAllowed(row.businessId));
+    if (blocked.length) throw new Error(either(
+      'T4, T5 и T6 защищены от снятия.',
+      'T4, T5 and T6 are protected from removal.'));
+    return plan;
+  }
+
   function refreshBusinessData() {
     if (!playerDocument) return;
     layout = normalizeLayout(playerDocument)
       .filter(row => row.timer == null || Number(row.timer) === 0)
       .filter(row => row.businessId ? row.status === 'ACTIVE' : ['INACTIVE', '', null].includes(row.status));
     inventory = normalizeInventory(playerDocument);
-    selectedSlots = new Set([...selectedSlots].filter(key => layout.some(row => row.key === key)));
+    selectedSlots = new Set([...selectedSlots].filter(key => {
+      const row = layout.find(item => item.key === key);
+      return row && (!row.businessId || businessRemovalAllowed(row.businessId));
+    }));
     // Empty active slots are destinations, not businesses to remove. They must
     // always increase insertion capacity even when a tier filter hides them.
     if (!preparedBusinessPlan) for (const row of layout) if (!row.businessId) selectedSlots.add(row.key);
@@ -9998,7 +10018,7 @@
     const stored = load().businessOptimizer || {};
     const legacyTiers = Array.isArray(stored.allowedTiers) ? stored.allowedTiers : [1,2,3,4,5,6];
     const normalizeTiers = values => values.map(Number).filter(value => value >= 1 && value <= 6);
-    const removeTiers = normalizeTiers(Array.isArray(stored.removeTiers) ? stored.removeTiers : legacyTiers);
+    const removeTiers = normalizeTiers(Array.isArray(stored.removeTiers) ? stored.removeTiers : legacyTiers).filter(value => value <= 3);
     const insertTiers = normalizeTiers(Array.isArray(stored.insertTiers) ? stored.insertTiers : legacyTiers);
     return {removeTiers:new Set(removeTiers), insertTiers:new Set(insertTiers),
       lockedBusinessIds:new Set(Array.isArray(stored.lockedBusinessIds) ? stored.lockedBusinessIds.map(String) : []),
@@ -10019,7 +10039,7 @@
     const stored = load().businessOptimizer || {};
     const excluded = excludedInsertBusinessIds ?? new Set(Array.isArray(stored.excludedInsertBusinessIds) ? stored.excludedInsertBusinessIds.map(String) : []);
     save({businessOptimizer:{...(load().businessOptimizer || {}),
-      removeTiers:[...removeTiers].sort((a,b)=>a-b), insertTiers:[...insertTiers].sort((a,b)=>a-b),
+      removeTiers:[...removeTiers].filter(value => value >= 1 && value <= 3).sort((a,b)=>a-b), insertTiers:[...insertTiers].sort((a,b)=>a-b),
       lockedBusinessIds:[...lockedBusinessIds].sort(), excludedInsertBusinessIds:[...excluded].sort()}});
   }
 
@@ -10030,9 +10050,9 @@
     const stockBox = root?.querySelector('#hk-optimizer-stock-allowed');
     if (!removeTierBox || !insertTierBox || !replaceBox || !stockBox) return;
     const preferences = businessOptimizerPreferences();
-    const tierChoices = (kind, selected) => [1,2,3,4,5,6].map(value => `<label class="hk-tier-choice"><input type="checkbox" data-optimizer-${kind}-tier="${value}" ${selected.has(value)?'checked':''}><b>T${value}</b></label>`).join('');
-    removeTierBox.innerHTML = tierChoices('remove',preferences.removeTiers);
-    insertTierBox.innerHTML = tierChoices('insert',preferences.insertTiers);
+    const tierChoices = (kind, selected, values) => values.map(value => `<label class="hk-tier-choice"><input type="checkbox" data-optimizer-${kind}-tier="${value}" ${selected.has(value)?'checked':''}><b>T${value}</b></label>`).join('');
+    removeTierBox.innerHTML = tierChoices('remove',preferences.removeTiers,[1,2,3]);
+    insertTierBox.innerHTML = tierChoices('insert',preferences.insertTiers,[1,2,3,4,5,6]);
     const installed = [...businessCounts(layout.map(row => row.businessId))].map(([businessId,count]) => ({businessId,count,tier:tier(businessId) || 0,details:businessCardDetails(businessId)}))
       .sort((a,b) => a.tier-b.tier || a.details.name.localeCompare(b.details.name,locale()));
     replaceBox.innerHTML = installed.length ? installed.map(row => {
@@ -10130,7 +10150,7 @@
     // boss invitations or influence funds. For the income goal, preserve every
     // installed positive income producer and improve only the remaining slots.
     const protectedByGoal = row => goal === 'income' && row.businessId && businessHasPositiveGoalEffect(row.businessId,goal,keyword);
-    const canRemove = row => !row.businessId || (!protectedByGoal(row) && preferences.removeTiers.has(Number(tier(row.businessId) || 0)) && !preferences.lockedBusinessIds.has(row.businessId));
+    const canRemove = row => !row.businessId || (businessRemovalAllowed(row.businessId) && !protectedByGoal(row) && preferences.removeTiers.has(Number(tier(row.businessId) || 0)) && !preferences.lockedBusinessIds.has(row.businessId));
     const fixedRows = layout.filter(row => !canRemove(row));
     const replaceableRows = layout.filter(canRemove);
     const activeCounts = businessCounts(layout.map(row => row.businessId));
@@ -10248,7 +10268,7 @@
     const removeFilter = Number(document.querySelector('#hk-remove-tier')?.value || 0);
     const insertFilter = Number(document.querySelector('#hk-insert-tier')?.value || 0);
     const outgoing = layout.filter(row => removeFilter === -1 ? !row.businessId :
-      !!row.businessId && (!removeFilter || tier(row.businessId) === removeFilter));
+      !!row.businessId && businessRemovalAllowed(row.businessId) && (!removeFilter || tier(row.businessId) === removeFilter));
     const incoming = inventory.filter(row => !insertFilter || tier(row.businessId) === insertFilter);
     businessLists.innerHTML = `
       <section><h3>${tr('chooseBuildingSlots')}</h3><div class="hk-cards">${outgoing.map(row => {
@@ -10318,8 +10338,9 @@
 
   function makePlan() {
     const prepared = resolvedPreparedBusinessPlan();
-    if (prepared) return prepared;
+    if (prepared) return assertBusinessRemovalPlanAllowed(prepared);
     const remaining = layout.filter(row => selectedSlots.has(row.key));
+    assertBusinessRemovalPlanAllowed(remaining.map(row => [row, '']));
     const incoming = selectedIncoming();
     if (!remaining.length || !incoming.length) throw new Error(either(
       'Выберите хотя бы один бизнес для замены и один для вставки',
@@ -10586,6 +10607,13 @@
       if (String(current.businessId || '') !== wanted) pairs.push([current,wanted]);
     }
     if (!pairs.length) { alert(either('Исходная схема уже установлена.', 'The original setup is already active.')); return; }
+    const protectedPairs = pairs.filter(([row]) => row.businessId && !businessRemovalAllowed(row.businessId));
+    if (protectedPairs.length) {
+      alert(either(
+        'Восстановление остановлено: T4, T5 и T6 нельзя снимать.',
+        'Restore stopped: T4, T5 and T6 cannot be removed.'));
+      return;
+    }
     preparedBusinessPlan = pairs.map(([row,id]) => [{key:row.key,businessId:row.businessId || ''},id]);
     preparedBusinessPlanSource = 'restore';
     selectedSlots = new Set(pairs.map(([row]) => row.key)); selectedStock.clear();
@@ -10647,7 +10675,7 @@
     const insertValue = insert?.value || '0';
     if (remove) {
       remove.innerHTML = `<option value="0">${tr('removeAll')}</option><option value="-1">${tr('emptySlots')}</option>` +
-        Array.from({length:6}, (_,i) => `<option value="${i+1}">${tr('removeTier',{n:i+1})}</option>`).join('');
+        Array.from({length:3}, (_,i) => `<option value="${i+1}">${tr('removeTier',{n:i+1})}</option>`).join('');
       remove.value = [...remove.options].some(option => option.value === removeValue) ? removeValue : '0';
     }
     if (insert) {
@@ -11904,7 +11932,7 @@
       .hk-building-empty{padding:12px;border:1px dashed #34445b;border-radius:11px;color:#8fa0b8;text-align:center}.hk-building-more{margin:8px 0 0;color:#8fa0b8;font-size:11px}
       @media(max-width:760px){.hk-building-controls{grid-template-columns:1fr}.hk-building-stats{grid-template-columns:1fr 1fr}.hk-building-actions{grid-template-columns:1fr}.hk-buildings-head{align-items:flex-start}.hk-buildings-head .hk-secondary{min-width:96px}.hk-building-area{max-width:120px}.hk-runner.buildings-run .hk-runner-actions{display:grid;grid-template-columns:1fr 1fr}.hk-runner.buildings-run .hk-runner-actions button{width:100%;min-width:0}}
       @media(max-width:460px){.hk-buildings-head{display:grid;grid-template-columns:1fr auto}.hk-buildings-head small{grid-column:1/3}.hk-building-stats{grid-template-columns:1fr}.hk-building-row,.hk-building-candidate-row{grid-template-columns:minmax(0,1fr) auto}.hk-building-read{min-width:72px;padding:8px 10px!important}.hk-building-area{display:none}}
-      #hk-business-lists{display:grid;grid-template-columns:1fr;gap:12px}h3{font-size:16px;margin:8px 0}.hk-cards{display:grid;gap:8px}.hk-card{display:flex;align-items:center;gap:10px;background:#151d29;border:1px solid #2a374a;border-radius:14px;padding:9px}.hk-card.selected{border-color:#ffad1f;background:#2a2418}.hk-card.empty{border-style:dashed}.hk-card input{width:22px;height:22px}.hk-card select{margin-left:auto;background:#0b111b;color:white;border:1px solid #455672;border-radius:9px;padding:8px;min-width:58px}.hk-card>.hk-business-info{display:flex;flex:1;min-width:0;flex-direction:column}.hk-card small{color:#a9b5c7;margin-top:3px}.hk-business-name{line-height:1.25;overflow-wrap:anywhere}.hk-business-properties{color:#e3c66e!important;font-size:11px;line-height:1.3;overflow-wrap:anywhere}.hk-icon{width:46px;height:46px;object-fit:contain;flex:0 0 46px}.hk-empty-icon{width:46px;height:46px;border:2px dashed #6381a8;border-radius:50%;display:flex!important;align-items:center;justify-content:center;color:#77baff;font-size:27px;flex:0 0 46px}.hk-empty-icon.compact{width:34px;height:34px;flex-basis:34px;font-size:20px}.hk-plan-row{display:flex;align-items:center;gap:6px;overflow:hidden;margin:10px 0}.hk-plan-row .hk-icon{width:34px;height:34px;flex-basis:34px}.hk-count{font-weight:800}.hk-muted{color:#9aa8bc}.hk-log{max-height:150px;overflow:auto;font:12px ui-monospace,monospace;background:#080d14;border-radius:12px;padding:9px;margin-top:12px}.hk-log>div{padding:3px 0;border-bottom:1px solid #182130}.hk-log-ok{color:#6ee7a8}.hk-log-warn{color:#ffd166}.hk-log-bad{color:#ff8792}.hk-status{font-size:12px;color:#aebbd0;margin-top:8px}
+      .hk-business-rearrange-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}#hk-business-lists{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}#hk-business-lists>section{min-width:0}@media(max-width:760px){.hk-business-rearrange-controls,#hk-business-lists{grid-template-columns:1fr}}h3{font-size:16px;margin:8px 0}.hk-cards{display:grid;gap:8px}.hk-card{display:flex;align-items:center;gap:10px;background:#151d29;border:1px solid #2a374a;border-radius:14px;padding:9px}.hk-card.selected{border-color:#ffad1f;background:#2a2418}.hk-card.empty{border-style:dashed}.hk-card input{width:22px;height:22px}.hk-card select{margin-left:auto;background:#0b111b;color:white;border:1px solid #455672;border-radius:9px;padding:8px;min-width:58px}.hk-card>.hk-business-info{display:flex;flex:1;min-width:0;flex-direction:column}.hk-card small{color:#a9b5c7;margin-top:3px}.hk-business-name{line-height:1.25;overflow-wrap:anywhere}.hk-business-properties{color:#e3c66e!important;font-size:11px;line-height:1.3;overflow-wrap:anywhere}.hk-icon{width:46px;height:46px;object-fit:contain;flex:0 0 46px}.hk-empty-icon{width:46px;height:46px;border:2px dashed #6381a8;border-radius:50%;display:flex!important;align-items:center;justify-content:center;color:#77baff;font-size:27px;flex:0 0 46px}.hk-empty-icon.compact{width:34px;height:34px;flex-basis:34px;font-size:20px}.hk-plan-row{display:flex;align-items:center;gap:6px;overflow:hidden;margin:10px 0}.hk-plan-row .hk-icon{width:34px;height:34px;flex-basis:34px}.hk-count{font-weight:800}.hk-muted{color:#9aa8bc}.hk-log{max-height:150px;overflow:auto;font:12px ui-monospace,monospace;background:#080d14;border-radius:12px;padding:9px;margin-top:12px}.hk-log>div{padding:3px 0;border-bottom:1px solid #182130}.hk-log-ok{color:#6ee7a8}.hk-log-warn{color:#ffd166}.hk-log-bad{color:#ff8792}.hk-status{font-size:12px;color:#aebbd0;margin-top:8px}
       .hk-optimizer{margin:10px 0;padding:11px;border:1px solid #34445b;border-radius:14px;background:#0d1520}.hk-optimizer h3{margin-top:0}.hk-optimizer-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hk-optimizer-controls label{display:grid;gap:4px;color:#aebbd0;font-size:11px}.hk-optimizer-controls select,.hk-optimizer-controls input{min-width:0;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:9px;padding:9px}.hk-optimizer-filter{display:grid;gap:6px;margin-top:9px;padding:9px;border:1px solid #2d3d54;border-radius:10px;background:#101927}.hk-optimizer-filter>small{color:#8fa0b8}.hk-optimizer-collapsible>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none}.hk-optimizer-collapsible>summary::-webkit-details-marker{display:none}.hk-optimizer-collapsible>summary:before{content:'▸';color:#ffbd3f;font-size:15px}.hk-optimizer-collapsible[open]>summary:before{content:'▾'}.hk-optimizer-collapsible:not([open])>small,.hk-optimizer-collapsible:not([open])>.hk-optimizer-replaceable{display:none}.hk-optimizer-tiers{display:flex;gap:6px;flex-wrap:wrap}.hk-tier-choice{display:flex;align-items:center;gap:4px;padding:6px 9px;border:1px solid #42536d;border-radius:9px;background:#0b111b}.hk-optimizer-replaceable{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;max-height:250px;overflow:auto}.hk-optimizer-business-choice{display:grid;grid-template-columns:22px 42px 1fr;align-items:center;gap:6px;padding:6px;border:1px solid #34445b;border-radius:9px;background:#0b111b}.hk-optimizer-business-choice.locked{border-color:#a64d5b;background:#27151b}.hk-optimizer-business-choice.tier-disabled{border-color:#34445b;background:#0b111b;opacity:.48;cursor:not-allowed}.hk-optimizer-business-choice.tier-disabled input{pointer-events:none}.hk-optimizer-business-choice .hk-icon{width:40px;height:40px}.hk-optimizer-business-choice>span{display:grid;gap:2px;min-width:0}.hk-optimizer-business-choice b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hk-optimizer-business-choice small{color:#9eabc0}.hk-optimizer-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.hk-optimizer-result{display:grid;gap:8px;margin-top:9px}.hk-optimizer-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.hk-optimizer-summary span{padding:8px;border-radius:9px;background:#111c2b;color:#aebbd0;font-size:11px}.hk-optimizer-summary b{display:block;color:#f4f7fb;margin-top:3px}.hk-optimizer-result ul{list-style:none;padding:0;margin:0;display:grid;gap:5px}.hk-optimizer-result li{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:8px;background:#111c2b;font-size:11px}.hk-optimizer-result li strong.positive{color:#6ee7a8}.hk-optimizer-result li strong.negative{color:#ff8792}.hk-optimizer-safety{padding:8px;border-radius:9px;background:#10281f;color:#6ee7a8}.hk-optimizer-safety.blocked{background:#301820;color:#ff8792}.hk-optimizer-flow{display:flex;align-items:center;gap:5px;overflow-x:auto;padding:4px 0}.hk-optimizer-flow .hk-icon{width:34px;height:34px;flex-basis:34px}@media(max-width:620px){.hk-optimizer-controls,.hk-optimizer-actions{grid-template-columns:1fr}.hk-optimizer-summary{grid-template-columns:1fr 1fr}.hk-optimizer-replaceable{grid-template-columns:1fr}}
       .hk-business-catalog-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,.7fr) auto auto;gap:8px;align-items:center;margin:10px 0}.hk-business-catalog-toolbar input,.hk-business-catalog-toolbar select,.hk-business-catalog-plan-stats input{min-width:0;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:9px;padding:9px}.hk-business-catalog-toolbar label{display:flex;gap:6px;align-items:center;color:#aebbd0;font-size:11px}.hk-business-catalog-summary{display:flex;justify-content:space-between;gap:10px;color:#aebbd0;margin:8px 0}.hk-business-catalog-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px}.hk-business-catalog-card{display:grid;grid-template-columns:46px minmax(0,1fr);gap:9px;text-align:left;align-items:center;border:1px solid #2a374a;border-radius:12px;padding:9px;background:#111925;color:#fff}.hk-business-catalog-card.selected{border-color:#ffad1f;background:#2a2418}.hk-business-catalog-copy{display:grid;gap:3px;min-width:0}.hk-business-catalog-copy>b,.hk-business-catalog-copy>small{overflow:hidden;text-overflow:ellipsis}.hk-business-catalog-bonuses{display:flex;gap:4px;flex-wrap:wrap}.hk-business-catalog-bonuses span{font-size:9px;padding:2px 6px;border-radius:999px;background:#202c3d;color:#b9c8dc}.hk-business-catalog-planner{margin:10px 0}.hk-business-catalog-plan-head{display:flex;justify-content:space-between;gap:8px}.hk-business-catalog-plan-head span{color:#ffd166}.hk-business-catalog-plan-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:9px 0}.hk-business-catalog-plan-stats>div,.hk-business-catalog-plan-stats>label{display:grid;gap:4px;padding:8px;border:1px solid #2c3a4d;border-radius:9px;background:#101824}.hk-business-catalog-plan-stats span{font-size:10px;color:#91a2b9}.hk-business-routes{display:grid;gap:7px}.hk-business-route{padding:8px;border:1px solid #2b3a4e;border-radius:10px;background:#0e1722}.hk-business-route>div{display:flex;align-items:center;gap:5px;overflow-x:auto;margin-top:6px}.hk-business-route-part{display:grid;justify-items:center;gap:2px;min-width:70px}.hk-business-route-part .hk-icon{width:34px;height:34px;flex-basis:34px}.hk-business-route-part small{max-width:80px;text-align:center;font-size:9px;color:#9fb0c7}@media(max-width:760px){.hk-business-catalog-toolbar{grid-template-columns:1fr}.hk-business-catalog-plan-stats{grid-template-columns:1fr 1fr}.hk-business-tabs{grid-template-columns:1fr}.hk-business-catalog-grid{grid-template-columns:1fr}}.hk-bonus-analyzer{margin:10px 0;padding:11px;border:1px solid #34445b;border-radius:14px;background:#0d1520}.hk-bonus-analyzer h3,.hk-bonus-analyzer h4{margin:4px 0 8px}.hk-bonus-analysis-list{display:grid;gap:6px}.hk-bonus-analysis-row{background:#111c2b;border:1px solid #2c3b50;border-radius:10px;padding:8px}.hk-bonus-analysis-row summary{display:grid;grid-template-columns:1fr auto;gap:3px 8px;cursor:pointer}.hk-bonus-analysis-row summary small{grid-column:1/3;color:#95a5bc}.hk-bonus-analysis-row>div{display:grid;gap:5px;margin-top:7px}.hk-bonus-source,.hk-limited-businesses>span{display:flex;align-items:center;gap:7px}.hk-bonus-source .hk-icon,.hk-limited-businesses .hk-icon{width:30px;height:30px;flex-basis:30px}.hk-best-business{display:flex;align-items:center;gap:10px;background:#10281f;border:1px solid #286148;border-radius:11px;padding:9px}.hk-best-business span{display:grid;gap:3px}.hk-best-business small{color:#b5c2d4}.hk-limited-businesses{display:flex;gap:8px;overflow-x:auto}.hk-limited-businesses>span{min-width:150px;background:#301820;border-radius:9px;padding:6px;color:#ffb0b7}
       .hk-resource-type-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}.hk-resource-type-tabs button{display:grid;gap:3px;padding:11px 8px;border:1px solid #40516a;border-radius:12px;background:#101a28;color:#d7dfeb}.hk-resource-type-tabs button b{font-size:13px;overflow-wrap:anywhere}.hk-resource-type-tabs button small{color:#96a5ba}.hk-resource-type-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#ffe083;box-shadow:0 0 0 2px #ffad1f2b}.hk-resource-type-tabs button.active small{color:#ffd36a}.hk-resource-head{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(260px,1.4fr) minmax(210px,.48fr);gap:10px;align-items:end}.hk-resource-head h3{margin:0}.hk-resource-head small{display:block;margin-top:4px;color:#96a5ba}.hk-resource-tiers{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;align-self:center}.hk-resource-tiers button{min-width:42px;padding:9px 10px;border:1px solid #40516a;border-radius:50px;background:#101a28;color:#b8c5d8;font-weight:900}.hk-resource-tiers button.active{border-color:#ffad1f;background:#3a2b14;color:#ffe083;box-shadow:0 0 0 2px #ffad1f2b}.hk-resource-repeat{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:10px 12px;border:1px solid #304159;border-radius:10px;background:#101a28}.hk-resource-repeat select{min-width:90px}.hk-resource-maximum{width:100%;margin-top:8px}.hk-resource-buildings{display:grid;gap:10px;margin:12px 0}.hk-resource-building{padding:10px;border:1px solid #304159;border-radius:12px;background:#101a28}.hk-resource-building h4{margin:0 0 8px;color:#f4f7fb}.hk-resource-building h4 small{color:#ffe083}.hk-resource-task{display:grid;grid-template-columns:minmax(150px,1fr) minmax(210px,.9fr) 110px;gap:9px;align-items:center;padding:8px 0;border-top:1px solid #26364b}.hk-resource-task>div{display:grid;gap:3px}.hk-resource-task small{color:#96a5ba}.hk-resource-task.protected{opacity:.6}.hk-resource-task.protected button{border-color:#596578;background:#222c3a;color:#aeb8c8}.hk-resource-task button{padding:10px 6px;border-color:#d99d18;background:#3a2b14;color:#ffe083;font-weight:900}.hk-resource-cost{display:grid;gap:4px;justify-items:end}.hk-resource-balance{display:grid;grid-template-columns:25px auto 8px auto;gap:4px;align-items:center;font-size:10px;color:#aebbd0}.hk-resource-balance .hk-price-icon{width:25px;height:25px}.hk-resource-balance i{display:grid;font-style:normal}.hk-resource-balance em{font-style:normal;color:#748399}.hk-resource-balance b{font-size:12px;color:#f5f7fa}.hk-resource-balance.ok b{color:#72e8ae}.hk-resource-balance.short b{color:#ff8992}.hk-resource-buildings+.hk-primary{width:100%}@media(max-width:820px){.hk-resource-head{grid-template-columns:1fr}.hk-resource-tiers{justify-content:flex-start}}@media(max-width:620px){.hk-resource-type-tabs button{padding:9px 4px}.hk-resource-type-tabs button b{font-size:11px}.hk-resource-type-tabs button small{font-size:10px}.hk-resource-task{grid-template-columns:1fr 110px}.hk-resource-cost{grid-column:1/2;justify-items:start}.hk-resource-task button{grid-column:2;grid-row:1/3}}
@@ -11967,8 +11995,8 @@
         <div class="hk-cardbox"><div class="hk-toolbar"><button id="hk-refresh-game" data-i18n="refreshGame">${tr('refreshGame')}</button><span id="hk-connect">${tr('waiting')}</span></div>
         <div class="hk-business-tabs"><button class="hk-business-tab active" data-business-tab="regular" data-i18n="businessRegular">${tr('businessRegular')}</button><button class="hk-business-tab" data-business-tab="optimizer" data-i18n="businessOptimizer">${tr('businessOptimizer')}</button><button class="hk-business-tab" data-business-tab="catalog" data-i18n="businessCatalog">Каталог</button></div>
         <div class="hk-business-pane active" data-business-pane="regular"><div class="hk-toolbar"><select id="hk-preset"><option>${tr('savedSets')}</option></select><button id="hk-save-preset" data-i18n="saveNew">${tr('saveNew')}</button><button id="hk-delete-preset" data-i18n="delete">${tr('delete')}</button></div>
-        <div class="hk-toolbar"><select id="hk-remove-tier"></select><button id="hk-select-remove" data-i18n="selectAll">${tr('selectAll')}</button></div>
-        <div class="hk-toolbar"><select id="hk-insert-tier"></select></div>
+        <div class="hk-business-rearrange-controls"><div class="hk-toolbar"><select id="hk-remove-tier"></select><button id="hk-select-remove" data-i18n="selectAll">${tr('selectAll')}</button></div>
+        <div class="hk-toolbar"><select id="hk-insert-tier"></select></div></div>
         <div id="hk-business-lists"></div><div id="hk-plan" class="hk-cardbox"></div></div>
         <div class="hk-business-pane" data-business-pane="optimizer"><section class="hk-optimizer"><h3 data-i18n="optimizer">${tr('optimizer')}</h3><div class="hk-optimizer-controls"><label><span data-i18n="optimizerGoal">${tr('optimizerGoal')}</span><select id="hk-optimizer-goal"><option value="pit" data-i18n="optimizerPit">${tr('optimizerPit')}</option><option value="income" data-i18n="optimizerIncome">${tr('optimizerIncome')}</option><option value="energy" data-i18n="optimizerEnergy">${tr('optimizerEnergy')}</option><option value="buildings" data-i18n="optimizerBuildings">${tr('optimizerBuildings')}</option></select></label></div><div class="hk-optimizer-filter"><b data-i18n="optimizerRemoveTiers">${tr('optimizerRemoveTiers')}</b><div id="hk-optimizer-remove-tiers" class="hk-optimizer-tiers"></div></div><div class="hk-optimizer-filter"><b data-i18n="optimizerInsertTiers">${tr('optimizerInsertTiers')}</b><div id="hk-optimizer-insert-tiers" class="hk-optimizer-tiers"></div></div><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="replaceable" ${optimizerSectionOpen('replaceable')?'open':''}><summary><b data-i18n="optimizerReplaceable">${tr('optimizerReplaceable')}</b></summary><small data-i18n="optimizerReplaceHint">${tr('optimizerReplaceHint')}</small><div id="hk-optimizer-replaceable" class="hk-optimizer-replaceable"></div></details><details class="hk-optimizer-filter hk-optimizer-collapsible" data-optimizer-section="stock" ${optimizerSectionOpen('stock')?'open':''}><summary><b data-i18n="optimizerStockAllowed">${tr('optimizerStockAllowed')}</b></summary><small data-i18n="optimizerStockHint">${tr('optimizerStockHint')}</small><div id="hk-optimizer-stock-allowed" class="hk-optimizer-replaceable"></div></details><div class="hk-optimizer-actions"><button id="hk-optimizer-calculate" class="hk-secondary" data-i18n="optimizerCalculate">${tr('optimizerCalculate')}</button><button id="hk-optimizer-restore" data-i18n="optimizerRestore">${tr('optimizerRestore')}</button></div><div id="hk-optimizer-result" class="hk-optimizer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section>
         <section class="hk-bonus-analyzer"><h3 data-i18n="bonusAnalyzer">${tr('bonusAnalyzer')}</h3><div id="hk-bonus-analyzer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section></div>
@@ -12260,7 +12288,8 @@
     root.querySelector('#hk-select-remove').onclick = () => {
       preparedBusinessPlan = null; preparedBusinessPlanSource = '';
       const filter = Number(root.querySelector('#hk-remove-tier').value || 0);
-      layout.filter(row => filter === 0 ? true : filter === -1 ? !row.businessId : !!row.businessId && tier(row.businessId) === filter)
+      layout.filter(row => filter === 0 ? (!row.businessId || businessRemovalAllowed(row.businessId)) :
+        filter === -1 ? !row.businessId : !!row.businessId && businessRemovalAllowed(row.businessId) && tier(row.businessId) === filter)
         .forEach(row => selectedSlots.add(row.key));
       renderBusinessLists();
     };
