@@ -1,0 +1,79 @@
+name: Inspect legacy private full235 payload
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/full235-private-inspect-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+      - name: Inspect private payload read-only
+        run: |
+          cat > /tmp/inspect-private.py <<'PY'
+          import importlib.util,json,os,hashlib,gzip
+          path='/opt/hamsterking-license/private-maps/hk_maps_points.bin.gz'
+          out={'exists':os.path.exists(path),'size':os.path.getsize(path) if os.path.exists(path) else 0}
+          if os.path.exists(path):
+              out['sha256']=hashlib.sha256(open(path,'rb').read()).hexdigest()
+              try:
+                  raw=gzip.open(path,'rb').read()
+                  out['uncompressed_size']=len(raw)
+                  out['raw_head_hex']=raw[:40].hex()
+                  out['raw_head_text']=raw[:120].decode('utf-8','replace')
+              except Exception as e:
+                  out['gzip_error']=repr(e)
+          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          out['has_private_loader']=hasattr(s,'_load_private_hk_maps')
+          out['has_private_data']=hasattr(s,'private_hk_map_data')
+          if out['has_private_loader']:
+              maps=s._load_private_hk_maps()
+              out['loader_maps']=len(maps)
+              first_key=sorted(maps)[0] if maps else ''
+              out['first_key']=first_key
+              if first_key:
+                  sample=maps[first_key]
+                  out['sample_type']=type(sample).__name__
+                  if isinstance(sample,dict):
+                      out['sample_keys']=sorted(sample.keys())
+                      for k,v in sample.items():
+                          if isinstance(v,list): out['sample_list_len_'+k]=len(v)
+                          elif isinstance(v,dict): out['sample_dict_keys_'+k]=list(v)[:20]
+              if hasattr(s,'private_hk_map_data'):
+                  for key in ['hk_newyork2332','hk_moscow1226']:
+                      try:
+                          d=s.private_hk_map_data(key)
+                          out[key+'_keys']=sorted(d.keys())
+                          for k,v in d.items():
+                              if isinstance(v,list):out[key+'_len_'+k]=len(v)
+                              elif isinstance(v,dict):out[key+'_dict_keys_'+k]=list(v)[:20]
+                      except Exception as e:
+                          out[key+'_error']=repr(e)
+          print(json.dumps(out,ensure_ascii=False,indent=2,sort_keys=True))
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/inspect-private.py root@89.125.1.71:/tmp/inspect-private.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/inspect-private.py' > audit/hk-stage2-full235-private-payload-inspect.json
+          cat audit/hk-stage2-full235-private-payload-inspect.json
+      - name: Record
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-full235-private-payload-inspect.json
+          git commit -m "audit: inspect legacy full235 private payload"
+          git pull --rebase origin main
+          git push origin HEAD:main
