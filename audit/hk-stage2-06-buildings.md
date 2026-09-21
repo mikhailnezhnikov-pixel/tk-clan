@@ -187,3 +187,55 @@ Verification:
 Current status:
 **UI_R3_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING**
 
+## Buildings active-slot semantics r1 — userscript 1.17.16 (2026-09-21)
+
+User live test exposed a real contradiction:
+- calculated plan showed **92 candidates**;
+- the same page showed **Active 2175/698**;
+- pressing Open then reported that no eligible unopened buildings existed.
+
+Root cause confirmed from a read-only live `/player/me` schema diagnostic:
+- top-level `buildings` contains **2175 known building records**, not only active buildings;
+- `player.max_buildings=698`;
+- `player.player_active_building=467`;
+- exactly **467** building rows have numeric `next_tier_level`;
+- the old helper treated all 2175 known rows as active;
+- therefore free capacity became 0 and the runner sliced the 92-plan down to an empty execution list.
+
+Fix delivered in userscript `1.17.16`:
+- core: `core-20260921-r18-buildings-active-fix`;
+- marker: `buildings-active-semantics-20260921-r1`;
+- active-slot count uses authoritative `player_active_building`;
+- row-level active IDs use `next_tier_level` only when that row count agrees with the authoritative active count;
+- schema mismatch fails closed instead of guessing;
+- free slots now use `max_buildings - player_active_building`;
+- candidates and no-free-slots are now separate states/messages.
+
+Live evidence:
+- schema diagnostic run `35567254035`: PASS;
+- refined activity diagnostic run `35567342973`: PASS;
+- observed schema: 2175 known / 467 active / max 698;
+- predeploy fixture run `35567569494`: PASS;
+- expected fixture result: 467 active, 698 max, **231 free**;
+- deploy/public round-trip run `35567837973`: PASS;
+- loader core-r18 verification run `35567970830`: PASS;
+- Buildings live verification run `35567975463`: PASS;
+- `buildings_active_semantics=PASS`;
+- `buildings_capacity_reported_active=PASS`;
+- public E2E retry run `35568104811`: **PASS**;
+- Wars/Ratings/site/timers/userscript safety: PASS;
+- Maps/Explore protected invariants: PASS.
+
+Current status:
+**ACTIVE_SEMANTICS_R1_LIVE_CANDIDATE_USER_ACTION_CHECK_PENDING**
+
+Remaining live gate:
+1. reload game and HK;
+2. open Buildings and calculate candidates;
+3. confirm Active shows the real active/max count rather than all known building records;
+4. click Open eligible;
+5. confirm the runner no longer converts a non-empty plan into “no candidates”;
+6. complete at least one controlled building open, then recalculate and confirm that building disappears from candidates.
+
+Do not advance Explore to E4 until this action/state/rerun gate and Explore E3 single-building gate are confirmed.
+
