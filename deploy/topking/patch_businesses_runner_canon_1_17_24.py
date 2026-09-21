@@ -47,8 +47,8 @@ new_state = """    const visibleState=state.status!=='idle',title=String(state.t
 replace_once(old_state,new_state,"runner mode detection")
 
 replace_once(
-    "root.querySelector('#hk-runner-state').textContent=(buildingsRun||exploreRun)&&state.total?\`\${stateLabel} · \${state.done}/\${state.total}\`:stateLabel;",
-    "root.querySelector('#hk-runner-state').textContent=(buildingsRun||exploreRun||businessesRun)&&state.total?\`\${stateLabel} · \${state.done}/\${state.total}\`:stateLabel;",
+    "root.querySelector('#hk-runner-state').textContent=(buildingsRun||exploreRun)&&state.total?`${stateLabel} · ${state.done}/${state.total}`:stateLabel;",
+    "root.querySelector('#hk-runner-state').textContent=(buildingsRun||exploreRun||businessesRun)&&state.total?`${stateLabel} · ${state.done}/${state.total}`:stateLabel;",
     "runner state counter"
 )
 
