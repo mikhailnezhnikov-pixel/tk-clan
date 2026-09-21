@@ -17,13 +17,13 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.21
-- current module: Explore / Исследование — E3 speed refinement
+- userscript: 1.17.22
+- current module: Explore / Исследование — production UI final visual check
 - current module file: audit/hk-stage2-07-explore.md
-- current module status: E4_QUEUE_R1_TECHNICAL_PASS_USER_MULTI_BUILDING_CHECK_PENDING
+- current module status: PRODUCTION_UI_R1_TECHNICAL_PASS_USER_VISUAL_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
-- Explore E4 multi-building: TECHNICAL PASS / USER LIVE CHECK PENDING
+- Explore E4 multi-building: LIVE PASS
 - parallel FULL235: separate track; do not mix into Stage 2 module gate
 
 ## Module order
@@ -1696,4 +1696,30 @@ Next user live test:
 3. set E4 limit to 5;
 4. launch E4;
 5. confirm sequential 1/5 → 5/5 processing and correct final plan refresh.
+
+### Explore queue — LIVE PASS / production UI cleanup r1 (2026-09-21)
+
+User confirmed the multi-building queue works correctly in live use.
+
+Functional status:
+**Explore E4 multi-building = LIVE PASS**
+
+Production UI cleanup in userscript `1.17.22`:
+- removed the E3 test button from normal UI;
+- removed the duplicate E4 run-limit selector;
+- **Maximum buildings** is now the only queue-size limit;
+- normal actions reduced to **Calculate plan** and **Run**;
+- queue mechanics and E3 core are unchanged.
+
+Verification:
+- predeploy `35579236728`: PASS;
+- deploy `35579341358`: PASS;
+- loader core-r24 `35579489161`: PASS;
+- Explore verifier `35579499230`: PASS;
+- public E2E `35579510611`: PASS.
+
+Current Stage 2 gate:
+**Explore 2.07 — PRODUCTION_UI_R1_TECHNICAL_PASS_USER_VISUAL_CHECK_PENDING**.
+
+After the user confirms the cleaned UI, Explore can be closed and Stage 2 advances to **Businesses / Бизнесы**.
 
