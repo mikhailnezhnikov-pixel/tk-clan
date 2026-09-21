@@ -150,6 +150,13 @@ jobs:
                       hits+=1
               if hits_any:
                   found.append(url)
+          for url,body in bodies.items():
+              key='this._setChosenTier(t??n)'
+              i=body.find(key)
+              if i>=0:
+                  frag=body[max(0,i-1800):i+1500].replace('\n',' ')
+                  print('claim_method_context='+re.sub(r'\s+',' ',frag))
+                  break
           print('matched_bundles='+str(len(found)))
           if not found:
               raise SystemExit('no building/favorite semantics found in crawled bundles')
