@@ -1,1 +1,1 @@
-2026-09-21 verify live HTTP auth-sync flag after license service restart
+2026-09-21 inspect live license systemd and nginx wiring safely
