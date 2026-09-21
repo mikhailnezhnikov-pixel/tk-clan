@@ -1621,3 +1621,20 @@ Stage 2 now resumes at:
 
 E4 multi-building remains blocked until the E3 single-building path receives user PASS.
 
+### Explore E3 r9 — current-production revalidation PASS (2026-09-21)
+
+With Buildings 2.06 closed as LIVE PASS, the existing Explore E3 one-building runner was revalidated against userscript `1.17.19`.
+
+Run `35576298312`: **PASS**
+- one-building scope: PASS;
+- shared mutation gate/no blind retry: PASS;
+- authoritative reconciliation: PASS;
+- fast completion/battles/remort/Instant MAX paths: PASS;
+- staged runner UI: PASS;
+- 15-second completion visibility: PASS;
+- E4 absent: PASS;
+- Buildings/Maps/auth protections preserved: PASS.
+
+Current Stage 2 gate:
+**Explore 2.07 — E3_R9_SINGLE_BUILDING_LIVE_TEST_PENDING**.
+
