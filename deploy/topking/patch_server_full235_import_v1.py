@@ -11,6 +11,25 @@ if _hk_os.environ.get("GITHUB_ACTIONS")=="true" and _hk_mode=="KEYGEN":
     print("FULL235_TRANSPORT_KEYGEN=PASS")
     raise SystemExit(0)
 
+# FULL235_PUBLIC_SOURCE_PROBE_20260921
+if _hk_os.environ.get("GITHUB_ACTIONS")=="true" and _hk_mode=="PROBE":
+    import urllib.request as _hk_urllib, hashlib as _hk_hashlib, re as _hk_re
+    _hk_url="https://kokkaras.com/hk_maps/hk_newyork2332.php"
+    _hk_req=_hk_urllib.Request(_hk_url,headers={"User-Agent":"Mozilla/5.0"})
+    _hk_html=_hk_urllib.urlopen(_hk_req,timeout=30).read().decode("utf-8","replace")
+    print("FULL235_PROBE_HTTP_BYTES="+str(len(_hk_html.encode("utf-8"))))
+    print("FULL235_PROBE_SHA256="+_hk_hashlib.sha256(_hk_html.encode("utf-8")).hexdigest())
+    for _hk_needle in ("FeatureCollection","building_id","crystals","is_investment","building_generator","var ","const "):
+        _hk_pos=_hk_html.find(_hk_needle)
+        print("FULL235_PROBE_POS_"+_hk_needle.replace(" ","_")+"="+str(_hk_pos))
+        if _hk_pos>=0:
+            _hk_a=max(0,_hk_pos-600);_hk_b=min(len(_hk_html),_hk_pos+2400)
+            print("FULL235_PROBE_SNIP_BEGIN_"+_hk_needle.replace(" ","_"))
+            print(_hk_html[_hk_a:_hk_b])
+            print("FULL235_PROBE_SNIP_END_"+_hk_needle.replace(" ","_"))
+    print("FULL235_PUBLIC_SOURCE_PROBE=PASS")
+    raise SystemExit(0)
+
 from pathlib import Path
 
 TARGET=Path("/tmp/server.py")
