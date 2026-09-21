@@ -84,14 +84,14 @@ jobs:
           cat /tmp/userscript-1-17-6-install.txt
           grep -Fq 'userscript_1_17_6_install=PASS' /tmp/userscript-1-17-6-install.txt
 
-      - name: Verify live 1.17.5
+      - name: Verify live 1.17.6
         run: |
           set -euo pipefail
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             node --check /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq "// @version      1.17.6" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "const BUILD_VERSION = '"'"'1.17.5'"'"';" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "const BUILD_VERSION = '"'"'1.17.6'"'"';" /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq explore-e3-single-20260920-r9-runner /opt/hamsterking-license/HamsterKingMobile.user.js
