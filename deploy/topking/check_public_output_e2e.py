@@ -236,11 +236,41 @@ client_probe_guard=("!licenseState.publicCollectorAuthSync" in probe_block)
 client_sync_guard=("!licenseState.publicCollectorAuthSync" in sync_block)
 client_xhr=("AUTH_BRIDGE_XHR_TRANSPORT_R1" in userscript_src and "function publicCollectorServerPost" in userscript_src)
 client_passive=("AUTH_PASSIVE_SAFETY_R1" in userscript_src and "auth-create-blocked-passive-only" in userscript_src)
+start_i=userscript_src.find("function startAfterNativeGameLogin()")
+start_block=userscript_src[start_i:start_i+3200] if start_i>=0 else ""
+ensure_i=userscript_src.find("async function ensureGameAuthorization")
+ensure_block=userscript_src[ensure_i:ensure_i+2400] if ensure_i>=0 else ""
+prelogin_marker=("PRELOGIN_ZERO_GAME_API_R1" in userscript_src)
+startup_no_bootstrap_player_me=(
+    start_i>=0
+    and "bootstrapLateGameConnection()" not in start_block
+    and "apiJson('/player/me'" not in start_block
+    and 'apiJson("/player/me"' not in start_block
+)
+ensure_never_creates_auth=(ensure_i>=0 and "createFreshGameAuthorization(" not in ensure_block)
+explore_canon_ok=("HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" in userscript_src)
+map_concurrency_ok=("const HK_MAP_READ_CONCURRENCY = 5;" in userscript_src)
+public_snapshot_canon_ok=("HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2'" in userscript_src)
+
 print("client_probe_technical_guard="+yes(client_probe_guard))
 print("client_sync_technical_guard="+yes(client_sync_guard))
 print("client_auth_bridge_xhr="+yes(client_xhr))
 print("client_auth_create_passive="+yes(client_passive))
+print("client_prelogin_zero_game_api_marker="+yes(prelogin_marker))
+print("client_startup_no_bootstrap_player_me="+yes(startup_no_bootstrap_player_me))
+print("client_ensure_never_creates_auth="+yes(ensure_never_creates_auth))
+print("protected_explore_canon="+yes(explore_canon_ok))
+print("protected_map_concurrency_5="+yes(map_concurrency_ok))
+print("protected_public_snapshot_canon="+yes(public_snapshot_canon_ok))
 collector_isolation_static_ok=(server_guard_ok and client_probe_guard and client_sync_guard and client_xhr and client_passive)
+userscript_safety_invariants_ok=all((
+    prelogin_marker,
+    startup_no_bootstrap_player_me,
+    ensure_never_creates_auth,
+    explore_canon_ok,
+    map_concurrency_ok,
+    public_snapshot_canon_ok,
+))
 
 # Live credential filesystem permissions. The token may be last written either
 # by the root collector or by the unprivileged license service; both owners are
@@ -319,9 +349,10 @@ print("ratings_e2e="+("PASS" if ratings_all_ok else "FAIL"))
 print("site_binding_e2e="+("PASS" if site_ok else "FAIL"))
 print("collector_timers_e2e="+("PASS" if timers_ok else "FAIL"))
 print("collector_isolation_static="+("PASS" if collector_isolation_static_ok else "FAIL"))
+print("userscript_safety_invariants="+("PASS" if userscript_safety_invariants_ok else "FAIL"))
 print("collector_credential_permissions="+("PASS" if credential_permissions_ok else "FAIL"))
 
-if not (war_ok and ratings_all_ok and site_ok and timers_ok and collector_isolation_static_ok and credential_permissions_ok):
+if not (war_ok and ratings_all_ok and site_ok and timers_ok and collector_isolation_static_ok and userscript_safety_invariants_ok and credential_permissions_ok):
     raise SystemExit(2)
 
 print("PUBLIC_OUTPUT_E2E=PASS")
