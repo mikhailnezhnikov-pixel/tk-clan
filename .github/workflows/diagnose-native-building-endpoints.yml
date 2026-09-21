@@ -1,0 +1,73 @@
+name: Diagnose Native Building Mutation Endpoints
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/building-native-endpoints-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect public game bundles read-only
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re, urllib.request, urllib.parse
+
+          base='https://app.hamsterking.games/'
+          html=urllib.request.urlopen(base,timeout=20).read().decode('utf-8','ignore')
+          srcs=re.findall(r'<script[^>]+src=["\']([^"\']+)["\']',html,re.I)
+          urls=[]
+          for src in srcs:
+              url=urllib.parse.urljoin(base,src)
+              if url not in urls: urls.append(url)
+          print('bundle_count='+str(len(urls)))
+
+          needles=[
+              '/player/building',
+              'favorite/add',
+              'favorite/remove',
+              'building/activate',
+              'building/open',
+              'building/add',
+              'active_building',
+              'max_buildings',
+          ]
+          found=[]
+          for url in urls:
+              try:
+                  body=urllib.request.urlopen(url,timeout=30).read().decode('utf-8','ignore')
+              except Exception:
+                  continue
+              if not any(n in body for n in needles):
+                  continue
+              print('bundle_match='+url.rsplit('/',1)[-1][:120])
+              # Print only endpoint-like literals and short nearby code fragments.
+              endpoints=sorted(set(re.findall(r'["\'](/[^"\']*building[^"\']*)["\']',body,re.I)))
+              for ep in endpoints:
+                  if len(ep)<=180:
+                      print('endpoint='+ep)
+              for needle in needles:
+                  start=0
+                  hits=0
+                  while hits<12:
+                      i=body.find(needle,start)
+                      if i<0: break
+                      frag=body[max(0,i-220):i+420].replace('\n',' ')
+                      frag=re.sub(r'\s+',' ',frag)
+                      print('context_'+re.sub(r'[^a-z0-9]+','_',needle.lower()).strip('_')+'='+frag[:700])
+                      start=i+len(needle)
+                      hits+=1
+              found.append(url)
+          print('matched_bundles='+str(len(found)))
+          if not found:
+              raise SystemExit('no building endpoints found in public bundles')
+          print('NATIVE_BUILDING_ENDPOINT_DIAGNOSTIC=PASS')
+          PY
