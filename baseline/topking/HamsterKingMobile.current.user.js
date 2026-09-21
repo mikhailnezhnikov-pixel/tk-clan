@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.11
+// @version      1.17.12
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
-// @release-note AUTH_BRIDGE_EARLY_ISOLATED_R1: технический auth probe/heartbeat запускаются сразу после лицензии и независимо от остальных модулей.
+// @release-note AUTH_BRIDGE_XHR_TRANSPORT_R1: технический probe/heartbeat используют отдельный XHR к license-серверу; Game API не затрагивается.
 // @match        https://app.hamsterking.games/*
 // @run-at       document-start
 // @grant        none
@@ -11,9 +11,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.11';
+  const BUILD_VERSION = '1.17.12';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r13-auth-bridge-early-isolated';
+  const HK_CORE_REVISION = 'core-20260921-r14-auth-bridge-xhr';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -1094,27 +1094,36 @@
     };
   }
 
+  function publicCollectorServerPost(url, payload, timeoutMs = 12000) {
+    // AUTH_BRIDGE_XHR_TRANSPORT_R1
+    // Deliberately independent from the game fetch/runner path.
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.timeout = Math.max(1000, Number(timeoutMs) || 12000);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + String(licenseState.token || ''));
+      xhr.onload = () => {
+        let body = null;
+        try { body = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
+        resolve({ok:xhr.status >= 200 && xhr.status < 300, status:xhr.status, body});
+      };
+      xhr.onerror = () => reject(new Error('network_error'));
+      xhr.ontimeout = () => reject(new Error('timeout'));
+      xhr.send(JSON.stringify(payload || {}));
+    });
+  }
+
   async function sendPublicCollectorAuthProbe() {
     if (publicCollectorAuthProbeSent) return true;
     if (!licenseState.allowed || !licenseState.publicCollectorAuthSync || !licenseState.token) return false;
     publicCollectorAuthProbeSent=true;
     try {
       const probe=await buildPublicCollectorAuthProbe();
-      const request=nativeNetworkFetch || window.fetch.bind(window);
-      const result=await gameFetchText(
-        request,
-        PUBLIC_COLLECTOR_AUTH_PROBE_URL,
-        {
-          method:'POST',
-          cache:'no-store',
-          headers:{'Content-Type':'application/json',Authorization:'Bearer '+licenseState.token},
-          body:JSON.stringify(probe)
-        },
-        12000
-      );
-      let body=null; try { body=JSON.parse(result.text); } catch (_) {}
-      if (!result.response.ok || !body?.accepted) {
-        recordDiagnostic('collector-auth-probe-failed',{status:result.response.status});
+      const result=await publicCollectorServerPost(PUBLIC_COLLECTOR_AUTH_PROBE_URL, probe, 12000);
+      const body=result.body;
+      if (!result.ok || !body?.accepted) {
+        recordDiagnostic('collector-auth-probe-failed',{status:result.status});
         publicCollectorAuthProbeSent=false;
         return false;
       }
@@ -1147,31 +1156,20 @@
         recordDiagnostic('collector-auth-sync-skipped',{reason:'bootstrap-unavailable'});
         return false;
       }
-      const request = nativeNetworkFetch || window.fetch.bind(window);
       try {
-        const result = await gameFetchText(
-          request,
+        const result = await publicCollectorServerPost(
           PUBLIC_COLLECTOR_AUTH_SYNC_URL,
           {
-            method:'POST',
-            cache:'no-store',
-            headers:{
-              'Content-Type':'application/json',
-              Authorization:'Bearer '+licenseState.token
-            },
-            body:JSON.stringify({
-              game_token:token,
-              auth_type:params.authType,
-              auth_data:params.authData,
-              platform:params.platform
-            })
+            game_token:token,
+            auth_type:params.authType,
+            auth_data:params.authData,
+            platform:params.platform
           },
           15000
         );
-        const response=result.response, text=result.text;
-        let documentValue=null; try { documentValue=JSON.parse(text); } catch (_) {}
-        if (!response.ok || !documentValue?.accepted) {
-          recordDiagnostic('collector-auth-sync-failed',{status:response.status});
+        const documentValue=result.body;
+        if (!result.ok || !documentValue?.accepted) {
+          recordDiagnostic('collector-auth-sync-failed',{status:result.status});
           return false;
         }
         publicCollectorAuthLastFingerprint=fingerprint;
@@ -12081,3 +12079,8 @@
 // const BUILD_VERSION = '1.17.10';
 // core-20260921-r12-technical-auth-storage-probe
 // WORKFLOW_COMPAT_1_17_10_END
+// WORKFLOW_COMPAT_1_17_11_BEGIN
+// @version      1.17.11
+// const BUILD_VERSION = '1.17.11';
+// core-20260921-r13-auth-bridge-early-isolated
+// WORKFLOW_COMPAT_1_17_11_END
