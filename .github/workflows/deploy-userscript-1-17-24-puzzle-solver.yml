@@ -1,4 +1,4 @@
-name: Deploy Userscript 1.17.24 Puzzle Solver Regex Hotfix
+name: Deploy Userscript 1.17.24 Native Gameplay Lock Hotfix
 
 on:
   push:
@@ -44,17 +44,16 @@ jobs:
           cmp -s /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           echo "LIVE_BASELINE_INPUT=PASS"
 
-      - name: Apply Puzzle Solver regex hotfix
+      - name: Apply native gameplay lock hotfix
         run: |
           set -euo pipefail
-          python3 -m py_compile deploy/topking/patch_puzzle_solver_regex_hotfix_1_17_24.py
-          python3 deploy/topking/patch_puzzle_solver_regex_hotfix_1_17_24.py
+          python3 -m py_compile deploy/topking/patch_native_game_priority_1_17_24.py
+          python3 deploy/topking/patch_native_game_priority_1_17_24.py
           node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "native-game-priority-no-bridge-race-20260921-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "puzzle-solver-v3-embedded-20260921-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "mf_fairlot_lights_out_sl(\\d+)_(true|false)" /tmp/HamsterKingMobile.user.js
-          grep -Fq "mf_treasurelot_sword_\\d+_(\\d+)" /tmp/HamsterKingMobile.user.js
-          grep -Fq "enemy_type_(01|02|03)_(\\d+)_sl(\\d+)" /tmp/HamsterKingMobile.user.js
-          echo "PUZZLE_SOLVER_REGEX_HOTFIX_CANDIDATE=PASS"
+          grep -Fq "businesses-finalize-single-snapshot-20260921-r1" /tmp/HamsterKingMobile.user.js
+          echo "NATIVE_GAME_PRIORITY_CANDIDATE=PASS"
 
       - name: Static regression verification
         run: |
@@ -62,34 +61,20 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          network=s[s.index("  function installNetworkCapture()"):s.index("  function pitState()",s.index("  function installNetworkCapture()"))]
           checks={
             'version_preserved':"// @version      1.17.24" in s and "const BUILD_VERSION = '1.17.24';" in s,
-            'loader_core_preserved':"core-20260921-r27-businesses-runner-canon" in s,
-            'puzzle_marker':"puzzle-solver-v3-embedded-20260921-r1" in s,
-            'background_start':"hkPuzzleSolver.start();" in s,
-            'destroy_cleanup':"hkPuzzleSolver.stop();" in s,
-            'lights_selector':'mf_fairlot_lights_out_sl' in s,
-            'battle_sword':'mf_treasurelot_sword_' in s,
-            'battle_enemy':'mf_treasurelot_enemy_type_' in s,
-            'lights_regex':'/mf_fairlot_lights_out_sl(\\d+)_(true|false)/' in s,
-            'battle_sword_regex':'/mf_treasurelot_sword_\\d+_(\\d+)/' in s,
-            'battle_enemy_regex':'/enemy_type_(01|02|03)_(\\d+)_sl(\\d+)/' in s,
-            'broken_regexes_gone':all(x not in s for x in [
-              '/mf_fairlot_lights_out_sl(d+)_(true|false)/',
-              '/mf_treasurelot_sword_d+_(d+)/',
-              '/enemy_type_(01|02|03)_(d+)_sl(d+)/'
-            ]),
-            'lights_search':'for (let mask=1;mask<512;mask++)' in s,
-            'battle_memo':'const memo = new Map();' in s,
-            'scan_500ms':'setInterval(checkPuzzle,500)' in s,
-            'initial_300ms':'setTimeout(checkPuzzle,300)' in s,
-            'no_auto_click':'.click()' not in s[s.index("const HK_PUZZLE_SOLVER_REV"):s.index("runtime.destroy = () => {")],
+            'core_preserved':"core-20260921-r27-businesses-runner-canon" in s,
+            'priority_marker':"native-game-priority-no-bridge-race-20260921-r1" in s,
+            'native_fetch_passive':"hkGameBridge.noteMutation(" not in network,
+            'script_mutation_bridge_preserved':"hkGameBridge.noteMutation(path, method);" in s,
+            'puzzle_preserved':"puzzle-solver-v3-embedded-20260921-r1" in s,
+            'puzzle_regex_fixed':"/mf_treasurelot_sword_\\d+_(\\d+)/" in s,
             'business_finalize_preserved':"businesses-finalize-single-snapshot-20260921-r1" in s,
             't4_t6_guard_preserved':"function businessRemovalAllowed(" in s,
             'catalog_preserved':"businesses-catalog-readonly-20260921-r1" in s,
             'explore_preserved':"explore-production-ui-20260921-r1" in s,
             'buildings_preserved':"buildings-native-sync-20260921-r1" in s,
-            'maps_preserved':"maps-shared-runtime-20260921-r7-safe5" in s,
           }
           failed=[k for k,v in checks.items() if not v]
           for k,v in checks.items(): print(f"{k}={'PASS' if v else 'FAIL'}")
@@ -100,13 +85,13 @@ jobs:
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.24.puzzle-solver.user.js
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.24.native-game-priority.user.js
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             stamp="$(date +%Y%m%d-%H%M%S)"
-            node --check /tmp/HamsterKingMobile.1.17.24.puzzle-solver.user.js
+            node --check /tmp/HamsterKingMobile.1.17.24.native-game-priority.user.js
             cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.24.puzzle-solver.$stamp"
-            install -m 0644 /tmp/HamsterKingMobile.1.17.24.puzzle-solver.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            install -m 0644 /tmp/HamsterKingMobile.1.17.24.native-game-priority.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
           '
@@ -115,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 30 \
-            "https://hk-license.89.125.1.71.sslip.io/panel.js?puzzle-solver=$(date +%s)" -o /tmp/public.js
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?native-game-priority=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
           grep -Fq "puzzle-solver-v3-embedded-20260921-r1" /tmp/public.js
@@ -123,18 +108,18 @@ jobs:
           grep -Fq "mf_fairlot_lights_out_sl(\\d+)_(true|false)" /tmp/public.js
           grep -Fq "mf_treasurelot_sword_\\d+_(\\d+)" /tmp/public.js
           grep -Fq "enemy_type_(01|02|03)_(\\d+)_sl(\\d+)" /tmp/public.js
-          echo "PUBLIC_PUZZLE_SOLVER_REGEX_HOTFIX=PASS"
+          echo "PUBLIC_NATIVE_GAME_PRIORITY_HOTFIX=PASS"
 
       - name: Sync verified baseline
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           {
-            echo "USERSCRIPT_1_17_24_PUZZLE_SOLVER_REGEX_HOTFIX=PASS"
+            echo "USERSCRIPT_1_17_24_NATIVE_GAME_PRIORITY=PASS"
             echo "version=1.17.24"
             echo "core=core-20260921-r27-businesses-runner-canon"
             echo "puzzle_solver=puzzle-solver-v3-embedded-20260921-r1"
-            echo "regex_hotfix=PASS"
+            echo "native_game_priority=PASS"
             echo "background_scan_500ms=PASS"
             echo "initial_scan_300ms=PASS"
             echo "lights_out_3x3=PASS"
@@ -149,11 +134,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-24-puzzle-solver-status.txt
           if ! git diff --cached --quiet; then
-            git commit -m "hotfix: repair embedded Puzzle Solver regexes"
+            git commit -m "hotfix: stop native gameplay request races"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.24.puzzle-solver.user.js /tmp/public.js
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.24.native-game-priority.user.js /tmp/public.js
