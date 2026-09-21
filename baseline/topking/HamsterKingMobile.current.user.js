@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.14
-// @release-note Приведён в порядок экран «Здания»: компактные фильтры, план и списки без ломающихся ID.
+// @version      1.17.15
+// @release-note На экране «Здания» убран лишний перечень всех активных зданий; оставлен только счётчик.
+// @release-note Приведён в порядок экран «Здания»: компактные фильтры и план без ломающихся ID.
 // @release-note Исправлено подключение HK, если игра уже успела авторизоваться до запуска панели.
 // @release-note Исправлена проверка авторизации после входа в игру.
 // @release-note Улучшена стабильность запуска скрипта после авторизации.
@@ -14,9 +15,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.14';
+  const BUILD_VERSION = '1.17.15';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r16-buildings-ui';
+  const HK_CORE_REVISION = 'core-20260921-r17-buildings-ui-compact';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -777,7 +778,7 @@
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1';
-  const HK_BUILDINGS_UI_REV = 'buildings-ui-20260921-r2';
+  const HK_BUILDINGS_UI_REV = 'buildings-ui-20260921-r3';
   const HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2';
   const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   const HK_AUTO_ROUTINES_REV = 'auto-routines-20260920-r1';
@@ -1784,18 +1785,7 @@
   function renderBuildings() {
     const box=root?.querySelector('#hk-buildings-content');
     if(!box)return;
-    const rows=accountBuildingRows(),settings=buildingCanonSettings(),plan=buildingCanonPlan;
-    const content=rows.length?rows.map(row=>{
-      const crystal=row.crystalRooms==null?'?':Number(row.crystalRooms).toLocaleString(locale());
-      const id=String(row.id||'');
-      return '<div class="hk-building-row"><div class="hk-business-info"><b class="hk-building-id" title="'+escapeHtml(id)+'">'+escapeHtml(id)+'</b><div class="hk-building-meta">'+
-        '<span>'+either('Тир','Tier')+' '+Number(row.tier)+'</span>'+
-        '<span>'+either('Ур.','Lvl')+' '+Number(row.level)+'</span>'+
-        '<span>'+either('Комнат','Rooms')+' '+Number(row.roomCount)+'</span>'+
-        '<span class="crystal">💎 '+crystal+'</span>'+
-        '</div></div><button class="hk-secondary hk-building-read" data-building-read="'+escapeHtml(id)+'" '+(buildingCanonBusy?'disabled':'')+'>'+either('Считать','Read')+'</button></div>';
-    }).join(''):'<div class="hk-building-empty">'+either('Активные здания пока не считаны.','Active buildings have not been read yet.')+'</div>';
-
+    const settings=buildingCanonSettings(),plan=buildingCanonPlan;
     const capacity=plan?.capacity||buildingCanonCapacity(playerDocument);
     const candidateRows=(plan?.candidates||[]).slice(0,12).map(row=>{
       const id=String(row.buildingId||'');
@@ -1831,8 +1821,7 @@
         '</div>'+
         '<div class="hk-building-actions"><button id="hk-building-plan" class="hk-secondary" '+(buildingCanonBusy?'disabled':'')+'>'+either('Рассчитать кандидатов','Calculate candidates')+'</button><button id="hk-building-run" class="hk-primary" '+(buildingCanonBusy||!plan?.candidates?.length?'disabled':'')+'>'+either('Открыть подходящие','Open eligible')+'</button></div>'+
       '</div>'+
-      planSummary+
-      '<div class="hk-cardbox"><div class="hk-building-section-head"><b>'+either('Активные здания','Active buildings')+'</b><span>'+rows.length+'</span></div><div class="hk-buildings-list">'+content+'</div></div>';
+      planSummary;
 
     const saveControls=()=>{buildingCanonSaveSettings(buildingCanonReadSettingsFromDom());buildingCanonPlan=null;renderBuildings();};
     box.querySelector('#hk-buildings-refresh')?.addEventListener('click',()=>void refreshBuildings(true));
@@ -1841,7 +1830,6 @@
     box.querySelector('#hk-building-min-crystals')?.addEventListener('change',saveControls);
     box.querySelector('#hk-building-favorite-from')?.addEventListener('change',saveControls);
     box.querySelector('#hk-building-type')?.addEventListener('change',saveControls);
-    box.querySelectorAll('[data-building-read]').forEach(button=>button.addEventListener('click',()=>void readBuildingStudy(button.dataset.buildingRead)));
   }
 
   async function refreshBuildings(force=false) {
