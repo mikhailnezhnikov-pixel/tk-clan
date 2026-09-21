@@ -1,1 +1,1 @@
-2026-09-21 verify collector auth endpoint effects after successful technical reload
+2026-09-21 verify steady runtime after forced collector token refresh PASS
