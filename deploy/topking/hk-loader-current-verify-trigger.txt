@@ -1,0 +1,1 @@
+2026-09-21 verify public HK loader matches userscript core r14
