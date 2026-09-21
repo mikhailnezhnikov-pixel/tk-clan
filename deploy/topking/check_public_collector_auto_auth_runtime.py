@@ -118,6 +118,35 @@ try:
                 print("technical_license_check_allowed="+("yes" if bool(response.get("allowed")) else "no"))
                 print("technical_license_check_auth_sync="+("yes" if bool(response.get("public_collector_auth_sync")) else "no"))
                 print("technical_license_check_token_present="+("yes" if bool(str(response.get("token") or "").strip()) else "no"))
+                # Verify the response from the actually running HTTP service, not
+                # only the freshly imported server.py source. Never print identity,
+                # device ID, token, response body, or auth data.
+                try:
+                    import urllib.request, urllib.error
+                    payload=json.dumps({
+                        "player_id":str(matched["player_id"]),
+                        "device_id":device_id,
+                        "script_version":str(device["script_version"] if device else "1.17.12"),
+                    },separators=(",",":")).encode("utf-8")
+                    req=urllib.request.Request(
+                        "https://hk-license.89.125.1.71.sslip.io/api/v1/check",
+                        data=payload,
+                        headers={
+                            "Content-Type":"application/json",
+                            "Origin":"https://app.hamsterking.games",
+                            "User-Agent":"TopKing-Safe-Runtime-Check/1",
+                        },
+                        method="POST",
+                    )
+                    with urllib.request.urlopen(req,timeout=15) as http_response:
+                        live_status=int(http_response.status)
+                        live_body=json.loads(http_response.read(200000).decode("utf-8"))
+                    print("technical_live_http_check_status="+str(live_status))
+                    print("technical_live_http_check_allowed="+("yes" if bool(live_body.get("allowed")) else "no"))
+                    print("technical_live_http_check_auth_sync="+("yes" if bool(live_body.get("public_collector_auth_sync")) else "no"))
+                    print("technical_live_http_check_token_present="+("yes" if bool(str(live_body.get("token") or "").strip()) else "no"))
+                except Exception:
+                    print("technical_live_http_check_status=unavailable")
             except Exception:
                 print("technical_license_check_allowed=unavailable")
         except Exception:
