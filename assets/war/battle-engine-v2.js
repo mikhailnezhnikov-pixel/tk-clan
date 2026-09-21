@@ -458,49 +458,67 @@
     clearLoops();
     resetArt();
     resetVisiblePose();
-    if(reduced||!currentWar||!ourArtEl||!enemyArtEl)return;
+    if(reduced||!currentWar||!ourFighter||!enemyFighter)return;
 
     const isBot=kindOf(currentWar)==='bot';
+    const ourBaseX=ourFighter.x, ourBaseY=ourFighter.y;
+    const enemyBaseX=enemyFighter.x, enemyBaseY=enemyFighter.y;
+    const ourWeaponBase=ourFighter._weapon.rotation;
+    const enemyWeaponBase=enemyFighter._weapon.rotation;
+
     const duel=gsap.timeline({repeat:-1,repeatDelay:.65});
 
     duel
       .call(()=>{resetArt();resetVisiblePose()},null,0)
-      .call(()=>setArt('ours','attack'),null,.38)
-      .to(ourArtEl,{x:32,y:-8,rotation:2,scaleX:1.03,scaleY:1.03,duration:.18,ease:'power2.out'},.42)
-      .to(ourArtEl,{x:168,y:-2,rotation:8,scaleX:1.08,scaleY:1.08,duration:.24,ease:'power4.in'},.60)
-      .call(()=>{setArt('enemy','hit');visibleImpact('ours')},null,.82)
-      .to(enemyArtEl,{x:62,y:8,rotation:-8,scaleX:-1.06,scaleY:1.06,duration:.16,ease:'power3.out'},.82)
-      .to(enemyArtEl,{x:30,y:2,rotation:-3,scaleX:-1.02,scaleY:1.02,duration:.24,ease:'back.out(1.5)'},.98)
-      .to(ourArtEl,{x:0,y:0,rotation:-1,scaleX:1,scaleY:1,duration:.40,ease:'back.out(1.4)'},.98)
+
+      // Top King attacks.
+      .call(()=>setArt('ours','attack'),null,.34)
+      .to(ourFighter,{x:ourBaseX+26,y:ourBaseY-7,duration:.18,ease:'power2.out'},.36)
+      .to(ourFighter._weapon,{rotation:ourWeaponBase+.72,duration:.18,ease:'power3.in'},.38)
+      .to(ourFighter,{x:ourBaseX+122,y:ourBaseY-2,duration:.24,ease:'power4.in'},.56)
+      .to(ourFighter._weapon,{rotation:ourWeaponBase+1.18,duration:.20,ease:'power4.in'},.56)
+      .to(ourArtEl||{}, {x:168,y:-2,rotation:8,scaleX:1.08,scaleY:1.08,duration:.24,ease:'power4.in'},.56)
+      .call(()=>{setArt('enemy','hit');visibleImpact('ours')},null,.80)
+      .to(enemyFighter,{x:enemyBaseX+58,y:enemyBaseY+9,rotation:.10,duration:.14,ease:'power3.out'},.80)
+      .to(enemyFighter._weapon,{rotation:enemyWeaponBase-.35,duration:.14,ease:'power3.out'},.80)
+      .to(enemyFighter,{x:enemyBaseX+24,y:enemyBaseY+2,rotation:.03,duration:.24,ease:'back.out(1.5)'},.94)
+      .to(ourFighter,{x:ourBaseX,y:ourBaseY,rotation:0,duration:.40,ease:'back.out(1.4)'},.96)
+      .to(ourFighter._weapon,{rotation:ourWeaponBase,duration:.38,ease:'power2.out'},.96)
       .call(()=>{setArt('ours','idle');setArt('enemy','idle')},null,1.30)
-      .to(enemyArtEl,{x:0,y:0,rotation:1,scaleX:-1,scaleY:1,duration:.24,ease:'power2.out'},1.28);
+      .to(enemyFighter,{x:enemyBaseX,y:enemyBaseY,rotation:0,duration:.22,ease:'power2.out'},1.28)
+      .to(enemyFighter._weapon,{rotation:enemyWeaponBase,duration:.22,ease:'power2.out'},1.28)
+
+      // Opponent answers.
+      .call(()=>setArt('enemy','attack'),null,1.68)
+      .to(enemyFighter,{x:enemyBaseX-24,y:enemyBaseY-6,duration:.18,ease:'power2.out'},1.70)
+      .to(enemyFighter._weapon,{rotation:enemyWeaponBase-.65,duration:.18,ease:'power3.in'},1.72);
 
     if(isBot){
       duel
-        .call(()=>setArt('enemy','attack'),null,1.72)
-        .to(enemyArtEl,{x:-18,y:-4,rotation:-2,scaleX:-1.03,scaleY:1.03,duration:.20,ease:'power2.out'},1.74)
         .call(()=>fireBotShot(),null,1.90)
-        .call(()=>{setArt('ours','hit');visibleImpact('enemy')},null,2.20)
-        .to(ourArtEl,{x:-58,y:9,rotation:-9,scaleX:1.05,scaleY:1.05,duration:.17,ease:'power3.out'},2.20)
-        .to(ourArtEl,{x:-24,y:2,rotation:-3,scaleX:1.02,scaleY:1.02,duration:.25,ease:'back.out(1.4)'},2.37);
+        .call(()=>{setArt('ours','hit');visibleImpact('enemy')},null,2.20);
     }else{
       duel
-        .call(()=>setArt('enemy','attack'),null,1.72)
-        .to(enemyArtEl,{x:-34,y:-7,rotation:-2,scaleX:-1.03,scaleY:1.03,duration:.18,ease:'power2.out'},1.76)
-        .to(enemyArtEl,{x:-166,y:-1,rotation:-8,scaleX:-1.08,scaleY:1.08,duration:.24,ease:'power4.in'},1.94)
-        .call(()=>{setArt('ours','hit');visibleImpact('enemy')},null,2.16)
-        .to(ourArtEl,{x:-60,y:8,rotation:-8,scaleX:1.06,scaleY:1.06,duration:.16,ease:'power3.out'},2.16)
-        .to(ourArtEl,{x:-26,y:2,rotation:-3,scaleX:1.02,scaleY:1.02,duration:.25,ease:'back.out(1.4)'},2.32)
-        .to(enemyArtEl,{x:0,y:0,rotation:1,scaleX:-1,scaleY:1,duration:.40,ease:'back.out(1.4)'},2.34);
+        .to(enemyFighter,{x:enemyBaseX-118,y:enemyBaseY-1,duration:.24,ease:'power4.in'},1.90)
+        .to(enemyFighter._weapon,{rotation:enemyWeaponBase-1.10,duration:.20,ease:'power4.in'},1.90)
+        .call(()=>{setArt('ours','hit');visibleImpact('enemy')},null,2.14);
     }
 
     duel
-      .call(()=>{setArt('ours','idle');setArt('enemy','idle')},null,2.64)
-      .to(ourArtEl,{x:0,y:0,rotation:-1,scaleX:1,scaleY:1,duration:.28,ease:'power2.out'},2.62)
-      .to(enemyArtEl,{x:0,y:0,rotation:1,scaleX:-1,scaleY:1,duration:.28,ease:'power2.out'},2.62)
-      .to({}, {duration:.9},2.90);
+      .to(ourFighter,{x:ourBaseX-56,y:ourBaseY+8,rotation:-.10,duration:.15,ease:'power3.out'},2.14)
+      .to(ourFighter,{x:ourBaseX-22,y:ourBaseY+2,rotation:-.03,duration:.24,ease:'back.out(1.4)'},2.29)
+      .to(enemyFighter,{x:enemyBaseX,y:enemyBaseY,rotation:0,duration:.38,ease:'back.out(1.4)'},2.30)
+      .to(enemyFighter._weapon,{rotation:enemyWeaponBase,duration:.36,ease:'power2.out'},2.30)
+      .call(()=>{setArt('ours','idle');setArt('enemy','idle')},null,2.62)
+      .to(ourFighter,{x:ourBaseX,y:ourBaseY,rotation:0,duration:.26,ease:'power2.out'},2.62)
+      .to(ourFighter._weapon,{rotation:ourWeaponBase,duration:.26,ease:'power2.out'},2.62)
+      .to({}, {duration:.82},2.88);
 
     loops.push(duel);
+
+    const auraA=gsap.to(ourFighter._aura,{alpha:.34,scaleX:1.20,scaleY:.56,duration:1.1,yoyo:true,repeat:-1,ease:'sine.inOut'});
+    const auraB=gsap.to(enemyFighter._aura,{alpha:.36,scaleX:1.18,scaleY:.54,duration:1.25,yoyo:true,repeat:-1,ease:'sine.inOut'});
+    loops.push(auraA,auraB);
   }
 
   function impact(){
@@ -623,7 +641,9 @@
       // V3 art characters are rendered by the HTML art layer; keep the procedural
       // Pixi fighters only as hidden timing rigs so their GSAP timeline continues
       // to drive impact particles/camera shake without double-drawing characters.
-      fightersLayer.visible=false;
+      // Keep the procedural fighters visible as the guaranteed live combat layer.
+      // V3 raster art is an enhancement, never a single point of failure.
+      fightersLayer.visible=true;
       effectsLayer=new PIXI.Container();effectsLayer.label='Impact effects';
       hudLayer=new PIXI.Container();hudLayer.label='Canvas HUD';
       world.addChild(atmosphere,fightersLayer,effectsLayer,hudLayer);
@@ -679,5 +699,5 @@
     app=null;ready=false;initPromise=null;
   }
 
-  window.TopKingBattleV2={init,update,destroy,version:'3.3.0-visible-choreography'};
+  window.TopKingBattleV2={init,update,destroy,version:'3.4.0-guaranteed-fighters'};
 })();
