@@ -93,7 +93,7 @@ jobs:
             set -euo pipefail
             node --check /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq "// @version      1.17.8" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "const BUILD_VERSION = '"'"'1.17.7'"'"';" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "const BUILD_VERSION = '"'"'1.17.8'"'"';" /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq AUTH_PASSIVE_SAFETY_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
