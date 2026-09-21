@@ -1,1 +1,1 @@
-2026-09-21 verify Explore E3 speed tune on userscript 1.17.20
+2026-09-21 verify Explore E3/E4 current live on userscript 1.17.21
