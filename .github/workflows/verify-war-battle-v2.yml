@@ -1,11 +1,11 @@
-name: Verify War Battle V2
+name: Verify War Battle V4
 
 on:
   workflow_dispatch:
   push:
     paths:
       - 'wars/index.html'
-      - 'assets/war/battle-engine-v2.js'
+      - 'assets/war/battle/**'
       - '.github/workflows/verify-war-battle-v2.yml'
 
 permissions:
@@ -20,11 +20,22 @@ jobs:
       - name: Syntax and wiring checks
         run: |
           set -euo pipefail
-          node --check assets/war/battle-engine-v2.js
-          grep -Fq 'TopKingBattleV2' assets/war/battle-engine-v2.js
+          for f in assets/war/battle/*.js; do node --check "$f"; done
+          grep -Fq 'TopKingBattleV4' assets/war/battle/battle-runtime-v4.js
+          grep -Fq "version:'4.0.0-milestone-1'" assets/war/battle/battle-runtime-v4.js
+          grep -Fq 'class BattleScene' assets/war/battle/BattleScene.js
+          grep -Fq 'class Fighter' assets/war/battle/Fighter.js
+          grep -Fq 'class BattleAnimator' assets/war/battle/BattleAnimator.js
+          grep -Fq 'class EffectsManager' assets/war/battle/EffectsManager.js
+          grep -Fq 'class BattleEventQueue' assets/war/battle/BattleEventQueue.js
+          grep -Fq 'class WarEventAdapter' assets/war/battle/WarEventAdapter.js
           grep -Fq 'pixi.js@8.21.0/dist/pixi.min.js' wars/index.html
           grep -Fq 'gsap@3.15.0/dist/gsap.min.js' wars/index.html
           grep -Fq 'id="battle-canvas"' wars/index.html
-          grep -Fq 'window.TopKingBattleV2?.update(war,info)' wars/index.html
-          grep -Fq 'PIXI_BATTLE_V2' wars/index.html
-          echo 'WAR_BATTLE_V2_STATIC=PASS'
+          grep -Fq 'TopKingBattleV4?.update(currentWar,info,{onHp:applyBattleHp})' wars/index.html
+          grep -Fq 'battle-stage-v4 .battle-art-layer{display:none}' wars/index.html
+          if grep -Fq 'battle-engine-v2.js?v=' wars/index.html; then
+            echo 'Legacy battle engine still wired into wars page' >&2
+            exit 1
+          fi
+          echo 'WAR_BATTLE_V4_STATIC=PASS'
