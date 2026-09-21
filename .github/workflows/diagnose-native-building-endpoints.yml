@@ -54,44 +54,74 @@ jobs:
                       if url not in urls: urls.append(url)
               print('bundle_count_after_manifests='+str(len(urls)))
 
-          needles=[
-              '/player/building',
-              'favorite/add',
-              'favorite/remove',
-              'building/activate',
-              'building/open',
-              'building/add',
-              'active_building',
-              'max_buildings',
-          ]
-          found=[]
-          for url in urls:
+          # Crawl direct and dynamically imported JS chunks from the current client.
+          queue=list(urls)
+          seen=set()
+          bodies={}
+          while queue and len(seen)<350:
+              url=queue.pop(0)
+              if url in seen: continue
+              seen.add(url)
               try:
                   body=urllib.request.urlopen(url,timeout=30).read().decode('utf-8','ignore')
               except Exception:
                   continue
-              if not any(n in body for n in needles):
+              bodies[url]=body
+              refs=set()
+              refs.update(re.findall(r'["\']([^"\']+\.js(?:\?[^"\']*)?)["\']',body,re.I))
+              refs.update(re.findall(r'([^\s"\']+/assets/[^\s"\']+\.js)',body,re.I))
+              for ref in refs:
+                  child=urllib.parse.urljoin(url,ref)
+                  if child.startswith(base) and child not in seen and child not in queue:
+                      queue.append(child)
+
+          print('crawled_js='+str(len(bodies)))
+          needles=[
+              '/player/building',
+              'favorite/add',
+              'favorite/remove',
+              'favorite',
+              'player_active_building',
+              'max_buildings',
+              'building_id',
+              'next_tier_level',
+              'chosen_tier',
+          ]
+          found=[]
+          for url,body in bodies.items():
+              low=body.lower()
+              if 'building' not in low and 'favorite' not in low:
                   continue
-              print('bundle_match='+url.rsplit('/',1)[-1][:120])
-              # Print only endpoint-like literals and short nearby code fragments.
-              endpoints=sorted(set(re.findall(r'["\'](/[^"\']*building[^"\']*)["\']',body,re.I)))
-              for ep in endpoints:
-                  if len(ep)<=180:
-                      print('endpoint='+ep)
+              hits_any=False
+              literals=sorted(set(re.findall(r'["\']([^"\']{1,220})["\']',body)))
+              interesting=[]
+              for value in literals:
+                  lv=value.lower()
+                  if ('building' in lv or 'favorite' in lv) and (
+                      '/' in value or 'player' in lv or 'active' in lv or 'add' in lv or 'remove' in lv or 'slot' in lv or 'tier' in lv
+                  ):
+                      interesting.append(value)
+              if interesting:
+                  hits_any=True
+                  print('bundle_match='+url.rsplit('/',1)[-1][:120])
+                  for value in interesting[:120]:
+                      print('literal='+value[:220])
               for needle in needles:
-                  start=0
+                  start_i=0
                   hits=0
                   while hits<12:
-                      i=body.find(needle,start)
+                      i=body.find(needle,start_i)
                       if i<0: break
-                      frag=body[max(0,i-220):i+420].replace('\n',' ')
+                      hits_any=True
+                      frag=body[max(0,i-260):i+520].replace('\n',' ')
                       frag=re.sub(r'\s+',' ',frag)
-                      print('context_'+re.sub(r'[^a-z0-9]+','_',needle.lower()).strip('_')+'='+frag[:700])
-                      start=i+len(needle)
+                      print('context_'+re.sub(r'[^a-z0-9]+','_',needle.lower()).strip('_')+'='+frag[:820])
+                      start_i=i+len(needle)
                       hits+=1
-              found.append(url)
+              if hits_any:
+                  found.append(url)
           print('matched_bundles='+str(len(found)))
           if not found:
-              raise SystemExit('no building endpoints found in public bundles')
+              raise SystemExit('no building/favorite semantics found in crawled bundles')
           print('NATIVE_BUILDING_ENDPOINT_DIAGNOSTIC=PASS')
           PY
