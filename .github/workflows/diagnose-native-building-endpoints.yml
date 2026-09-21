@@ -43,6 +43,8 @@ jobs:
           print('html_preview='+re.sub(r'\s+',' ',html)[:5000])
           print('asset_candidates='+str(len(candidates)))
           print('bundle_count='+str(len(urls)))
+          for url in urls:
+              print('bundle_url='+url)
           if not urls:
               for extra in ['manifest.json','asset-manifest.json','vite-manifest.json','service-worker.js','sw.js']:
                   try:
@@ -64,7 +66,8 @@ jobs:
               seen.add(url)
               try:
                   body=urllib.request.urlopen(url,timeout=30).read().decode('utf-8','ignore')
-              except Exception:
+              except Exception as exc:
+                  print('bundle_fetch_error='+url+' :: '+str(exc)[:180])
                   continue
               bodies[url]=body
               refs=set()
