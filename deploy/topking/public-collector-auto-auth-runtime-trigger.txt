@@ -1,1 +1,1 @@
-2026-09-21 verify auth-sync after identity ownership repair
+2026-09-21 verify auth probe and sync after technical account reload on 1.17.12
