@@ -1,0 +1,103 @@
+name: Validate 75 original area IDs
+
+on:
+  push:
+    paths:
+      - 'deploy/maps/full235-nooverlap-area-ids.json'
+      - 'deploy/topking/full235-validate75-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+
+      - name: Read-only DB check
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new deploy/maps/full235-nooverlap-area-ids.json root@89.125.1.71:/tmp/full235-area75.json
+          cat > /tmp/check75.py <<'PY'
+          import json,sqlite3
+          ids=json.load(open('/tmp/full235-area75.json'))
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          rows=[]
+          for key,area_id in ids.items():
+              area=db.execute("SELECT area_id,city_id,city_name,x,y,last_seen FROM map_areas WHERE area_id=?",(area_id,)).fetchone()
+              alias=db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",(area_id,)).fetchone()
+              link=db.execute("SELECT canonical_area_id,match_method FROM hk_map_area_links WHERE map_key=?",(key,)).fetchone()
+              rows.append({
+                  'map_key':key,'area_id':area_id,
+                  'existing_area':dict(area) if area else None,
+                  'existing_alias':dict(alias) if alias else None,
+                  'existing_link':dict(link) if link else None,
+              })
+          out={
+              'maps':len(rows),
+              'existing_area':sum(1 for r in rows if r['existing_area']),
+              'existing_alias':sum(1 for r in rows if r['existing_alias']),
+              'existing_link':sum(1 for r in rows if r['existing_link']),
+              'rows':rows,
+          }
+          print(json.dumps({k:v for k,v in out.items() if k!='rows'},sort_keys=True))
+          open('/tmp/full235-check75.json','w').write(json.dumps(out,ensure_ascii=False,indent=2,sort_keys=True))
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/check75.py root@89.125.1.71:/tmp/check75.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/check75.py' | tee /tmp/check75-summary.txt
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/tmp/full235-check75.json audit/hk-stage2-full235-check75.json
+
+      - name: Copy public upload certificate
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/private-maps/upload-cert.pem /tmp/upload-cert.pem
+          openssl x509 -in /tmp/upload-cert.pem -noout -subject -issuer -fingerprint -sha256 | tee audit/hk-stage2-full235-upload-cert-info.txt
+          cp /tmp/upload-cert.pem deploy/maps/full235-upload-cert.pem
+
+      - name: Validate and record
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          d=json.load(open('audit/hk-stage2-full235-check75.json'))
+          assert d['maps']==75,d
+          # UUIDs may already exist as aliases/areas if a player scanned them meanwhile,
+          # but an existing website link to another area would be a conflict.
+          conflicts=[]
+          for r in d['rows']:
+              link=r['existing_link']
+              if link and link['canonical_area_id']!=r['area_id']:
+                  conflicts.append([r['map_key'],link['canonical_area_id'],r['area_id']])
+          assert not conflicts,conflicts
+          print('FULL235_UUID75_READONLY=PASS')
+          print('existing_area=',d['existing_area'])
+          print('existing_alias=',d['existing_alias'])
+          print('existing_link=',d['existing_link'])
+          PY
+          cat /tmp/check75-summary.txt >> audit/hk-stage2-full235-upload-cert-info.txt
+          echo "production_writes=NO" >> audit/hk-stage2-full235-upload-cert-info.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-full235-check75.json audit/hk-stage2-full235-upload-cert-info.txt deploy/maps/full235-upload-cert.pem
+          git commit -m "audit: validate original area IDs for 75 full maps"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/full235-area75.json /tmp/check75.py /tmp/full235-check75.json' || true
+          rm -f ~/.ssh/topking /tmp/check75.py /tmp/check75-summary.txt /tmp/upload-cert.pem
