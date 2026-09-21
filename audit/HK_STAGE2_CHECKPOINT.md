@@ -17,13 +17,13 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.20
+- userscript: 1.17.21
 - current module: Explore / Исследование — E3 speed refinement
 - current module file: audit/hk-stage2-07-explore.md
-- current module status: E3_SPEED_R1_LIVE_USER_FEEL_CHECK_PENDING
+- current module status: E4_QUEUE_R1_TECHNICAL_PASS_USER_MULTI_BUILDING_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
-- Explore E4 multi-building: NOT STARTED
+- Explore E4 multi-building: TECHNICAL PASS / USER LIVE CHECK PENDING
 - parallel FULL235: separate track; do not mix into Stage 2 module gate
 
 ## Module order
@@ -1663,4 +1663,37 @@ Current Stage 2 gate:
 **Explore 2.07 — E3_SPEED_R1_LIVE_USER_FEEL_CHECK_PENDING**.
 
 Once the user confirms the new pace feels right, E3 can be closed and the next checkpoint can move to E4.
+
+### Explore E4 queue r1 — technical PASS / user multi-building check pending (2026-09-21)
+
+User asked to continue after the E3 speed refinement, so E3 remains LIVE PASS and Stage 2 advanced to E4.
+
+Delivered in userscript `1.17.21`:
+- E4 queue limit: **1 / 5 / 10 / 15 / 20 / All selected**;
+- safe default: **1**;
+- sequential processing only;
+- each queue item reuses the validated E3 building core;
+- authoritative reconciliation after every building;
+- resource exhaustion/error stops the queue;
+- skipped building may be recorded and queue may continue;
+- overall progress `N/M`;
+- same staged runner UI, Pause and Stop.
+
+Verification:
+- predeploy `35577683410`: PASS;
+- deploy `35577789532`: PASS;
+- loader core-r23 `35577988627`: PASS;
+- Explore current verifier `35577999810`: PASS;
+- public E2E `35578012994`: PASS;
+- Buildings/Maps/auth protected invariants: PASS.
+
+Current Stage 2 gate:
+**Explore 2.07 — E4_QUEUE_R1_TECHNICAL_PASS_USER_MULTI_BUILDING_CHECK_PENDING**.
+
+Next user live test:
+1. reload game/HK;
+2. calculate Explore plan;
+3. set E4 limit to 5;
+4. launch E4;
+5. confirm sequential 1/5 → 5/5 processing and correct final plan refresh.
 
