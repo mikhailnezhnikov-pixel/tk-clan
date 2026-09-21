@@ -1,1 +1,1 @@
-2026-09-21 predeploy Businesses read-only catalog r1
+2026-09-21 rerun Businesses read-only catalog r1 after pane-anchor fix
