@@ -1,0 +1,28 @@
+name: Verify War Battle V2
+
+on:
+  push:
+    paths:
+      - 'wars/index.html'
+      - 'assets/war/battle-engine-v2.js'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and wiring checks
+        run: |
+          set -euo pipefail
+          node --check assets/war/battle-engine-v2.js
+          grep -Fq 'TopKingBattleV2' assets/war/battle-engine-v2.js
+          grep -Fq 'pixi.js@8.21.0/dist/pixi.min.js' wars/index.html
+          grep -Fq 'gsap@3.15.0/dist/gsap.min.js' wars/index.html
+          grep -Fq 'id="battle-canvas"' wars/index.html
+          grep -Fq 'window.TopKingBattleV2?.update(war,info)' wars/index.html
+          grep -Fq 'PIXI_BATTLE_V2' wars/index.html
+          echo 'WAR_BATTLE_V2_STATIC=PASS'
