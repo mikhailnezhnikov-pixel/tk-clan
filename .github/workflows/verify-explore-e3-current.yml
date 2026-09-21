@@ -1,0 +1,148 @@
+name: Verify Explore E3 R9 Current Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/explore-e3-current-verify-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-explore-e3-current
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch current live/public
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          curl -fsSL --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?explore-e3-current=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/live.js
+          node --check /tmp/public.js
+          cmp -s /tmp/live.js /tmp/public.js
+          cmp -s /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
+          echo "live_public_baseline_equality=PASS"
+
+      - name: Verify E3 one-building action contract without mutations
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          s=Path('/tmp/live.js').read_text(encoding='utf-8')
+
+          required=[
+              "// @version      1.17.19",
+              "const BUILD_VERSION = '1.17.19';",
+              "const HK_CORE_REVISION = 'core-20260921-r21-buildings-native-sync';",
+              "const HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner';",
+              "async function exploreBuildPlan()",
+              "async function exploreE3ProcessOne(initial,settings)",
+              "async function runExploreE3Single()",
+              "id=\"hk-ex-run-one\"",
+              "Запустить тест E3 · 1 здание",
+              "function exploreE3Stage(",
+              "function exploreE3InitStages(",
+              "const HK_MAP_READ_CONCURRENCY = 5;",
+              "maps-shared-runtime-20260921-r7-safe5",
+              "AUTH_PASSIVE_SAFETY_R1",
+          ]
+          missing=[x for x in required if x not in s]
+          if missing:
+              raise SystemExit("missing required markers: "+repr(missing))
+
+          def block(a,b):
+              i=s.index(a); j=s.index(b,i); return s[i:j]
+
+          e3=block("async function exploreE3ProcessOne(initial,settings)","async function runExploreE3Single()")
+          run=block("async function runExploreE3Single()","function renderExplore()")
+          mut=block("async function exploreE3Mutation(path,body,buildingId,reason)","async function exploreE3LoadTiers()")
+
+          # Exactly one building from the selected plan.
+          assert "const candidate=explorePlan.selected[0]" in run
+          assert "E3: обработать 1 тестовое здание из " in run
+          assert "hkRunner.start({title:either('Исследование · E3','Explore · E3'),total:1" in run
+          assert "const result=await exploreE3ProcessOne(candidate,settings)" in run
+
+          # Mutation safety: no blind mutation retry, always authoritative reconcile.
+          assert "hkMutationGate.run(path" in mut
+          assert "exploreE3Reconcile(buildingId,reason)" in mut
+          assert "retry:false" in mut or "apiJsonCore(path,'POST'" in mut
+
+          # Canonical E3 paths.
+          for marker in [
+              "/player/building/fast_completion/cost",
+              "/player/building/fast_completion",
+              "/player/battle/fast",
+              "/player/battle?building_id=",
+              "/player/building/remort?building_id=",
+              "/player/building/fast_remort/cost",
+              "/player/building/fast_remort",
+              "/shop/buy",
+          ]:
+              assert marker in s
+
+          # Progress/postconditions.
+          assert "5 consecutive battles without progress" in s
+          assert "if(Number(current?.tier||0)<=beforeTier)" in e3
+          assert "if(Number(current?.tier||0)<7)" in e3
+          assert "await exploreE3Reconcile(String(candidate.id||''),'explore:e3-final')" in run
+
+          # Five staged runner rows and 15-second completed visibility.
+          for key in ["'prepare'","'events'","'battles'","'tier'","'verify'"]:
+              assert key in s
+          assert "String(state.title||'')===either('Исследование · E3','Explore · E3')?15000:1800" in s
+
+          # E4 must still not exist.
+          forbidden=[
+              "runExploreE4",
+              "EXPLORE_E4",
+              "explore-e4",
+              "Запустить очередь E4",
+          ]
+          for marker in forbidden:
+              assert marker not in s
+
+          # Protected current work.
+          assert "const HK_BUILDINGS_NATIVE_SYNC_REV = 'buildings-native-sync-20260921-r1';" in s
+          assert "PUBLIC_COLLECTOR_AUTH_PROBE_URL" not in s
+          assert "/api/v1/public-collector/auth-probe" not in s
+
+          print("explore_e3_marker=PASS")
+          print("explore_e3_single_building_scope=PASS")
+          print("explore_e3_mutation_gate=PASS")
+          print("explore_e3_authoritative_reconcile=PASS")
+          print("explore_e3_fast_completion=PASS")
+          print("explore_e3_battles=PASS")
+          print("explore_e3_remort=PASS")
+          print("explore_e3_instant_max=PASS")
+          print("explore_e3_runner_stages=PASS")
+          print("explore_e3_linger_15s=PASS")
+          print("explore_e4_absent=PASS")
+          print("protected_buildings_maps_auth=PASS")
+          print("userscript_1_17_19=PASS")
+          print("EXPLORE_E3_R9_CURRENT_REVALIDATION=PASS")
+          PY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js /tmp/public.js
