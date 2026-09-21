@@ -1,1 +1,1 @@
-2026-09-21 deploy userscript 1.17.11 auth bridge early isolated via compatible workflow
+2026-09-21 deploy userscript 1.17.12 auth bridge xhr transport
