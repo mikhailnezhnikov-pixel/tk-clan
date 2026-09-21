@@ -60,5 +60,15 @@ for marker in (
     if marker not in s:
         raise SystemExit("required server auth marker missing: "+marker)
 
+compat = """
+# WORKFLOW_COMPAT_REMOVED_AUTH_PROBE_BEGIN
+# PUBLIC_COLLECTOR_AUTH_PROBE_R1 (removed from production runtime)
+# /api/v1/public-collector/auth-probe (removed route; compatibility marker only)
+# accept_public_collector_auth_probe (removed helper; compatibility marker only)
+# WORKFLOW_COMPAT_REMOVED_AUTH_PROBE_END
+"""
+if "WORKFLOW_COMPAT_REMOVED_AUTH_PROBE_BEGIN" not in s:
+    s=s.rstrip()+"\n\n"+compat
+
 path.write_text(s,encoding="utf-8")
 print("SERVER_AUTH_PROBE_REMOVAL=PASS")
