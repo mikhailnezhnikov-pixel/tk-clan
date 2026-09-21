@@ -1,1 +1,1 @@
-2026-09-21 predeploy Buildings UI r3 remove active list
+2026-09-21 rerun Buildings UI r3 predeploy after stale-handler cleanup
