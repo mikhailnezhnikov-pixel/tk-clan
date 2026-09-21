@@ -42,11 +42,15 @@ jobs:
           names={}
           try:
               tables=[r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")]
-              for table in [t for t in tables if "clan" in t and "snapshot" in t]:
-                  cols=[r[1] for r in db.execute(f"PRAGMA table_info({table})")]
-                  json_cols=[c for c in cols if "json" in c or c in ("snapshot","payload","data")]
+              snapshot_tables=[t for t in tables if "clan" in t and "snapshot" in t]
+              print("SNAPSHOT_TABLES",json.dumps(snapshot_tables,ensure_ascii=False))
+              for table in snapshot_tables:
+                  quoted='"'+table.replace('"','""')+'"'
+                  cols=[r[1] for r in db.execute(f"PRAGMA table_info({quoted})")]
+                  print("SNAPSHOT_SCHEMA",table,json.dumps(cols,ensure_ascii=False))
+                  json_cols=[c for c in cols if "json" in c.lower() or c in ("snapshot","payload","data","document")]
                   order_col="captured_at" if "captured_at" in cols else ("updated_at" if "updated_at" in cols else None)
-                  q=f"SELECT * FROM {table}"+(f" ORDER BY {order_col} DESC" if order_col else "")+" LIMIT 3"
+                  q=f"SELECT * FROM {quoted}"+(f' ORDER BY "{order_col}" DESC' if order_col else "")+" LIMIT 3"
                   for row in db.execute(q):
                       for c in json_cols:
                           raw=row[c]
@@ -57,8 +61,8 @@ jobs:
                           while stack:
                               v=stack.pop()
                               if isinstance(v,dict):
-                                  pid=str(v.get("player_id") or v.get("playerId") or v.get("id") or "").strip()
-                                  nick=str(v.get("nickname") or v.get("name") or "").strip()
+                                  pid=str(v.get("player_id") or v.get("playerId") or v.get("player") or "").strip()
+                                  nick=str(v.get("nickname") or v.get("name") or v.get("player_name") or "").strip()
                                   if pid and nick and pid.isdigit(): names.setdefault(pid,nick)
                                   stack.extend(v.values())
                               elif isinstance(v,list): stack.extend(v)
