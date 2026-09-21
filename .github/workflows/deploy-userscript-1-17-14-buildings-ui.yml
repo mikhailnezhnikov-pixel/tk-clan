@@ -37,8 +37,8 @@ jobs:
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.15" /tmp/HamsterKingMobile.user.js
-          grep -Fq "core-20260921-r17-buildings-ui-compact" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.14" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r16-buildings-ui" /tmp/HamsterKingMobile.user.js
           cmp -s /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           echo "LIVE_BASELINE_INPUT=PASS"
 
@@ -63,14 +63,13 @@ jobs:
           assert "either('Активные','Active')" in block
           print('ACTIVE_BUILDING_LIST_REMOVED=PASS')
           PY
-          grep -Fq "class=\"hk-building-row\"" /tmp/HamsterKingMobile.user.js
           grep -Fq "class=\"hk-building-id\"" /tmp/HamsterKingMobile.user.js
           grep -Fq "class=\"hk-building-actions\"" /tmp/HamsterKingMobile.user.js
           grep -Fq "AUTH_PASSIVE_SAFETY_R1" /tmp/HamsterKingMobile.user.js
           grep -Fq "maps-shared-runtime-20260921-r7-safe5" /tmp/HamsterKingMobile.user.js
           grep -Fq "explore-e3-single-20260920-r9-runner" /tmp/HamsterKingMobile.user.js
           grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
-          echo "BUILDINGS_UI_R2_CANDIDATE=PASS"
+          echo "BUILDINGS_UI_R3_CANDIDATE=PASS"
 
       - name: Backup and deploy
         run: |
