@@ -112,7 +112,7 @@ if old_settings not in s:
     raise SystemExit("building settings block not found")
 s=s.replace(old_settings,new_settings,1)
 
-old_candidates="""      const capacity=buildingCanonPlan.capacity;
+old_candidates=r"""      const capacity=buildingCanonPlan.capacity;
       const source=buildingCanonPlan.candidates;
       if(!source.length){log(either('Подходящих неактивных зданий нет.','No eligible inactive buildings.'),'warn');return;}
       if(capacity.free!==null&&capacity.free<=0){log(either('Подходящие здания есть, но свободных активных слотов нет.','Eligible buildings exist, but there are no free active-building slots.'),'warn');return;}
@@ -124,7 +124,7 @@ old_candidates="""      const capacity=buildingCanonPlan.capacity;
         `Open eligible buildings: ${candidates.length}?\n\n${preview}${more}`
       )))return;
 """
-new_candidates="""      const capacity=buildingCanonPlan.capacity;
+new_candidates=r"""      const capacity=buildingCanonPlan.capacity;
       const source=buildingCanonPlan.candidates;
       if(!source.length){log(either('Подходящих неактивных зданий нет.','No eligible inactive buildings.'),'warn');return;}
       if(capacity.free!==null&&capacity.free<=0){log(either('Подходящие здания есть, но свободных активных слотов нет.','Eligible buildings exist, but there are no free active-building slots.'),'warn');return;}
