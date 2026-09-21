@@ -31,6 +31,8 @@ jobs:
             set -euo pipefail
             echo "server_only_marker="
             grep -F "PUBLIC_SNAPSHOT_SERVER_ONLY_R3" /opt/hamsterking-license/server.py | head -1
+            echo "ratings_server_only_marker="
+            grep -F "PUBLIC_RATINGS_SERVER_ONLY_R3" /opt/hamsterking-license/server.py | head -1 || true
             echo "=== DB ==="
             python3 - <<"PY"
           import json, sqlite3
@@ -58,6 +60,12 @@ jobs:
             journalctl -u hamsterking-public-war.service --since "2026-09-20 16:20:00" --no-pager | tail -80
             echo "=== RATINGS JOURNAL ==="
             journalctl -u hamsterking-public-collector.service --since "2026-09-20 16:20:00" --no-pager | tail -120
+            echo "=== PUBLIC QUERY ENDPOINTS ==="
+            for kind in alliance_defense alliance_influence alliance_power; do
+              printf "%s=" "$kind"
+              curl -fsS "http://127.0.0.1:8787/api/v1/public/ratings?kind=$kind" 2>/dev/null || curl -fsS "http://127.0.0.1:3188/api/v1/public/ratings?kind=$kind" 2>/dev/null || true
+              echo
+            done
             echo "=== LEGACY POSTS AFTER PATCH ==="
             journalctl -u hamsterking-license.service --since "2026-09-20 16:20:00" --no-pager | grep "POST /api/v1/public-snapshot" | tail -30 || true
           '
