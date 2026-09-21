@@ -30,6 +30,9 @@ jobs:
           print('client_build='+str(build))
           print('page='+page)
           html=urllib.request.urlopen(page_url,timeout=20).read().decode('utf-8','ignore')
+          client_match=re.search(r'client:"([^"]+)"',html)
+          client_base=client_match.group(1) if client_match else base
+          print('client_asset_base='+client_base)
           candidates=[]
           candidates += re.findall(r'<script[^>]+src=["\']([^"\']+)["\']',html,re.I)
           candidates += re.findall(r'<link[^>]+href=["\']([^"\']+\.js(?:\?[^"\']*)?)["\']',html,re.I)
@@ -37,7 +40,10 @@ jobs:
           candidates += re.findall(r'([^\s"\']+/assets/[^\s"\']+\.js)',html,re.I)
           urls=[]
           for src in candidates:
-              url=urllib.parse.urljoin(base,src)
+              if str(src).startswith('/assets/'):
+                  url=urllib.parse.urljoin(client_base,str(src).lstrip('/'))
+              else:
+                  url=urllib.parse.urljoin(base,src)
               if url not in urls: urls.append(url)
           print('html_size='+str(len(html)))
           print('html_preview='+re.sub(r'\s+',' ',html)[:5000])
@@ -75,7 +81,7 @@ jobs:
               refs.update(re.findall(r'([^\s"\']+/assets/[^\s"\']+\.js)',body,re.I))
               for ref in refs:
                   child=urllib.parse.urljoin(url,ref)
-                  if child.startswith(base) and child not in seen and child not in queue:
+                  if (child.startswith(base) or child.startswith(client_base)) and child not in seen and child not in queue:
                       queue.append(child)
 
           print('crawled_js='+str(len(bodies)))
