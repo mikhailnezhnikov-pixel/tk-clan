@@ -1,4 +1,4 @@
-name: Deploy Userscript 1.17.8 Prelogin Zero Game API
+name: Deploy Userscript 1.17.9 Technical Passive Auth Bridge
 
 on:
   push:
@@ -31,8 +31,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile \
-            deploy/topking/patch_userscript_prelogin_zero_api_1_17_8.py \
-            deploy/topking/install_userscript_version_1_17_8.py
+            deploy/topking/patch_userscript_technical_passive_auth_1_17_9.py \
+            deploy/topking/install_userscript_version_1_17_9.py
 
       - name: Prepare SSH
         env:
@@ -49,84 +49,98 @@ jobs:
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/userscript-source.sha
-          grep -Fq '// @version      1.17.7' /tmp/HamsterKingMobile.user.js
-          grep -Fq "const BUILD_VERSION = '1.17.7';" /tmp/HamsterKingMobile.user.js
-          grep -Fq 'PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1' /tmp/HamsterKingMobile.user.js
+          grep -Fq '// @version      1.17.8' /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.8';" /tmp/HamsterKingMobile.user.js
+          grep -Fq 'PRELOGIN_ZERO_GAME_API_R1' /tmp/HamsterKingMobile.user.js
+          grep -Fq 'AUTH_PASSIVE_SAFETY_R1' /tmp/HamsterKingMobile.user.js
+          grep -Fq 'PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1' /tmp/HamsterKingMobile.user.js
           grep -Fq 'explore-e3-single-20260920-r9-runner' /tmp/HamsterKingMobile.user.js
           grep -Fq 'const HK_MAP_READ_CONCURRENCY = 5;' /tmp/HamsterKingMobile.user.js
           grep -Fq 'public-server-only-20260920-r2' /tmp/HamsterKingMobile.user.js
 
-      - name: Build 1.17.8 candidate
+      - name: Build 1.17.9 candidate
         run: |
           set -euo pipefail
-          python3 deploy/topking/patch_userscript_prelogin_zero_api_1_17_8.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_userscript_technical_passive_auth_1_17_9.py /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq '// @version      1.17.8' /tmp/HamsterKingMobile.user.js
-          grep -Fq "const BUILD_VERSION = '1.17.8';" /tmp/HamsterKingMobile.user.js
-          grep -Fq "core-20260921-r10-prelogin-zero-api" /tmp/HamsterKingMobile.user.js
-          grep -Fq 'PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1' /tmp/HamsterKingMobile.user.js
-          grep -Fq 'AUTH_PASSIVE_SAFETY_R1' /tmp/HamsterKingMobile.user.js
+          grep -Fq '// @version      1.17.9' /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.9';" /tmp/HamsterKingMobile.user.js
+          grep -Fq 'core-20260921-r11-technical-passive-auth-bridge' /tmp/HamsterKingMobile.user.js
+          grep -Fq 'TECHNICAL_PASSIVE_AUTH_BRIDGE_R1' /tmp/HamsterKingMobile.user.js
           grep -Fq 'PRELOGIN_ZERO_GAME_API_R1' /tmp/HamsterKingMobile.user.js
+          grep -Fq 'AUTH_PASSIVE_SAFETY_R1' /tmp/HamsterKingMobile.user.js
           grep -Fq 'explore-e3-single-20260920-r9-runner' /tmp/HamsterKingMobile.user.js
           grep -Fq 'const HK_MAP_READ_CONCURRENCY = 5;' /tmp/HamsterKingMobile.user.js
           grep -Fq 'public-server-only-20260920-r2' /tmp/HamsterKingMobile.user.js
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text()
+          a=s.index('async function checkGameBearer')
+          b=s.index('async function ensureGameAuthorization',a)
+          block=s[a:b]
+          assert '/auth/check' not in block
+          assert 'gameFetchText' not in block
+          assert 'native game exclusively owns /auth/create' in block
+          print('passive_auth_static=PASS')
+          PY
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/userscript-candidate.sha
 
       - name: Upload and race-safe install
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.8.user.js
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.9.user.js
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            deploy/topking/install_userscript_version_1_17_8.py root@89.125.1.71:/tmp/install_userscript_version_1_17_8.py
+            deploy/topking/install_userscript_version_1_17_9.py root@89.125.1.71:/tmp/install_userscript_version_1_17_9.py
           source_sha="$(cat /tmp/userscript-source.sha)"
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71 "python3 /tmp/install_userscript_version_1_17_8.py '$source_sha'" \
-            > /tmp/userscript-1-17-8-install.txt
-          cat /tmp/userscript-1-17-8-install.txt
-          grep -Fq 'userscript_1_17_8_install=PASS' /tmp/userscript-1-17-8-install.txt
+            root@89.125.1.71 "python3 /tmp/install_userscript_version_1_17_9.py '$source_sha'" \
+            > /tmp/userscript-1-17-9-install.txt
+          cat /tmp/userscript-1-17-9-install.txt
+          grep -Fq 'userscript_1_17_9_install=PASS' /tmp/userscript-1-17-9-install.txt
 
-      - name: Verify live 1.17.8
+      - name: Verify live 1.17.9
         run: |
           set -euo pipefail
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             node --check /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "// @version      1.17.8" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "const BUILD_VERSION = '"'"'1.17.8'"'"';" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq AUTH_PASSIVE_SAFETY_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "// @version      1.17.9" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "const BUILD_VERSION = '"'"'1.17.9'"'"';" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq TECHNICAL_PASSIVE_AUTH_BRIDGE_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq PRELOGIN_ZERO_GAME_API_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq AUTH_PASSIVE_SAFETY_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq explore-e3-single-20260920-r9-runner /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq public-server-only-20260920-r2 /opt/hamsterking-license/HamsterKingMobile.user.js
-            echo userscript_1_17_8_live=PASS
+            echo userscript_1_17_9_live=PASS
             echo protected_maps_explore=PASS
-          ' > /tmp/userscript-1-17-8-status.txt
-          cat /tmp/userscript-1-17-8-status.txt
+          ' > /tmp/userscript-1-17-9-status.txt
+          cat /tmp/userscript-1-17-9-status.txt
 
       - name: Sync baseline and audit
         run: |
           set -euo pipefail
-          cp /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.8.final.user.js
+          cp /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.9.final.user.js
           {
-            echo 'USERSCRIPT_1_17_8_LIVE=PASS'
-            cat /tmp/userscript-1-17-8-status.txt
-            cat /tmp/userscript-1-17-8-install.txt
+            echo 'USERSCRIPT_1_17_9_LIVE=PASS'
+            cat /tmp/userscript-1-17-9-status.txt
+            cat /tmp/userscript-1-17-9-install.txt
             echo "source_sha=$(cat /tmp/userscript-source.sha)"
             echo "candidate_sha=$(cat /tmp/userscript-candidate.sha)"
-          } > /tmp/hk-userscript-1-17-8.txt
+            echo 'game_auth_requests_from_bridge=ZERO'
+            echo 'technical_only_transmit=SERVER_GATED'
+          } > /tmp/hk-userscript-1-17-9.txt
           pushed=0
           for attempt in 1 2 3; do
             git fetch origin main
             git reset --hard origin/main
-            cp /tmp/HamsterKingMobile.1.17.8.final.user.js baseline/topking/HamsterKingMobile.current.user.js
-            cp /tmp/hk-userscript-1-17-8.txt audit/hk-userscript-1-17-8.txt
+            cp /tmp/HamsterKingMobile.1.17.9.final.user.js baseline/topking/HamsterKingMobile.current.user.js
+            cp /tmp/hk-userscript-1-17-9.txt audit/hk-userscript-1-17-9.txt
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-8.txt
-            git commit -m 'hotfix: publish userscript 1.17.8 prelogin zero Game API' || true
+            git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-9.txt
+            git commit -m 'release: publish userscript 1.17.9 technical passive auth bridge' || true
             if git push origin HEAD:main; then pushed=1; break; fi
             sleep 2
           done
@@ -134,4 +148,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.8.final.user.js /tmp/userscript-source.sha /tmp/userscript-candidate.sha /tmp/userscript-1-17-8-install.txt /tmp/userscript-1-17-8-status.txt /tmp/hk-userscript-1-17-8.txt
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.9.final.user.js /tmp/userscript-source.sha /tmp/userscript-candidate.sha /tmp/userscript-1-17-9-install.txt /tmp/userscript-1-17-9-status.txt /tmp/hk-userscript-1-17-9.txt
