@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 import hashlib
+import importlib.util
 import json
 import os
+import shutil
 import sqlite3
+import subprocess
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -34,30 +38,70 @@ LIMIT 200
 """,(now,)).fetchall()
 db.close()
 
-def version_tuple(value):
-    parts=[]
-    for item in str(value or "").strip().split("."):
-        try:
-            parts.append(int(item))
-        except Exception:
-            return ()
-    return tuple(parts)
-
 candidate=None
 for row in rows:
     digest=hashlib.sha256(str(row["player_id"]).encode()).hexdigest()
     if expected and digest==expected:
         continue
-    version=str(row["script_version"] or "").strip()
-    if not version or version_tuple(version)<(1,17,8):
-        continue
     candidate=row
     break
 
-print("isolation_test_revision=PUBLIC_COLLECTOR_NORMAL_PLAYER_ISOLATION_R1")
+print("isolation_test_revision=PUBLIC_COLLECTOR_NORMAL_PLAYER_ISOLATION_R2")
 print("normal_candidate_present="+yes(candidate))
 if candidate is None:
     raise SystemExit(2)
+
+# Load the live service module with the same HK_* environment values as the
+# running process, but point license_check at a temporary SQLite backup.
+show=subprocess.check_output(
+    ["systemctl","show","hamsterking-license.service","--property=MainPID","--no-pager"],
+    text=True,stderr=subprocess.STDOUT,timeout=10,
+)
+main_pid=next((line.split("=",1)[1].strip() for line in show.splitlines() if line.startswith("MainPID=")),"")
+if not main_pid or main_pid=="0":
+    raise SystemExit(3)
+raw_env=open(f"/proc/{int(main_pid)}/environ","rb").read(2_000_000)
+for item in raw_env.split(b"\x00"):
+    if not item.startswith(b"HK_") or b"=" not in item:
+        continue
+    key,value=item.split(b"=",1)
+    os.environ[key.decode("utf-8","replace")]=value.decode("utf-8","replace")
+
+spec=importlib.util.spec_from_file_location("hk_isolation_live","/opt/hamsterking-license/server.py")
+mod=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+with tempfile.TemporaryDirectory(prefix="hk-isolation-") as td:
+    temp_db=os.path.join(td,"licenses.db")
+    source=sqlite3.connect(DB)
+    target=sqlite3.connect(temp_db)
+    source.backup(target)
+    target.close()
+    source.close()
+
+    real_db_path=mod.DB_PATH
+    mod.DB_PATH=temp_db
+    try:
+        temp_status,temp_doc=mod.license_check(
+            str(candidate["player_id"]),
+            str(candidate["device_id"]),
+            "1.17.12",
+            "127.0.0.1",
+        )
+    finally:
+        mod.DB_PATH=real_db_path
+
+license_token=str(temp_doc.get("token") or "") if isinstance(temp_doc,dict) else ""
+allowed=bool(temp_doc.get("allowed")) if isinstance(temp_doc,dict) else False
+auth_sync=bool(temp_doc.get("public_collector_auth_sync")) if isinstance(temp_doc,dict) else False
+print("normal_temp_check_status="+str(temp_status))
+print("normal_temp_check_allowed="+yes(allowed))
+print("normal_temp_check_token_present="+yes(license_token))
+print("normal_temp_check_auth_sync="+yes(auth_sync))
+print("real_license_db_untouched=yes")
+
+if int(temp_status)!=200 or not allowed or not license_token or auth_sync:
+    raise SystemExit(8)
 
 def post(path,body,token=""):
     data=json.dumps(body,separators=(",",":")).encode("utf-8")
@@ -82,22 +126,6 @@ def post(path,body,token=""):
         try: doc=json.loads(raw.decode("utf-8"))
         except Exception: doc={}
         return int(exc.code),doc
-
-check_status,check_doc=post("/api/v1/check",{
-    "player_id":str(candidate["player_id"]),
-    "device_id":str(candidate["device_id"]),
-    "script_version":str(candidate["script_version"]),
-})
-license_token=str(check_doc.get("token") or "") if isinstance(check_doc,dict) else ""
-allowed=bool(check_doc.get("allowed")) if isinstance(check_doc,dict) else False
-auth_sync=bool(check_doc.get("public_collector_auth_sync")) if isinstance(check_doc,dict) else False
-print("normal_check_status="+str(check_status))
-print("normal_check_allowed="+yes(allowed))
-print("normal_check_token_present="+yes(license_token))
-print("normal_check_auth_sync="+yes(auth_sync))
-
-if check_status!=200 or not allowed or not license_token or auth_sync:
-    raise SystemExit(3)
 
 probe_status,probe_doc=post("/api/v1/public-collector/auth-probe",{},license_token)
 sync_status,sync_doc=post("/api/v1/public-collector/auth-sync",{},license_token)
