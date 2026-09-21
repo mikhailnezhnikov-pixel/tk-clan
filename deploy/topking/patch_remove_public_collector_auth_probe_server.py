@@ -6,6 +6,18 @@ import sys
 path=Path(sys.argv[1])
 s=path.read_text(encoding="utf-8")
 
+# Remove our own inert compatibility footer before re-applying the cleanup so
+# workflow retries stay idempotent.
+compat_begin="# WORKFLOW_COMPAT_REMOVED_AUTH_PROBE_BEGIN"
+compat_end="# WORKFLOW_COMPAT_REMOVED_AUTH_PROBE_END"
+if compat_begin in s:
+    start=s.find(compat_begin)
+    end=s.find(compat_end,start)
+    if end<0:
+        raise SystemExit("incomplete removed-probe compatibility footer")
+    end += len(compat_end)
+    s=(s[:start].rstrip()+"\n"+s[end:].lstrip("\n"))
+
 if '/api/v1/public-collector/auth-sync' not in s:
     raise SystemExit("auth-sync route missing before cleanup")
 if "public_collector_auth_sync_allowed" not in s or "accept_public_collector_auth" not in s:
