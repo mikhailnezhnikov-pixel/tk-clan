@@ -92,3 +92,22 @@ Only remaining gate before Stage 2.06 LIVE PASS:
 
 Do not advance Explore to E4 until this live action/state/rerun gate and Explore E3 single-building gate are confirmed.
 
+## Userscript 1.17.13 startup handoff revalidation — 2026-09-21
+
+After fixing the late-start BOOT deadlock:
+- userscript version: `1.17.13`;
+- core: `core-20260921-r15-late-login-handoff`;
+- read-only Buildings verification run `35564647224`: **PASS**;
+- live = public = baseline: PASS;
+- Buildings canonical plan/action contract: PASS;
+- Maps shared runtime and concurrency 5 preserved: PASS;
+- Explore E3 r9 preserved: PASS.
+
+Public E2E run `35564651904`: **PASS**.
+Wars, Ratings, collector isolation, passive auth safety, Maps and Explore protected invariants all passed.
+
+Current status remains:
+**TECHNICAL_REVALIDATION_PASS_USER_ACTION_PENDING**
+
+Only the real one-building user action/state/rerun confirmation remains before Stage 2.06 LIVE PASS.
+
