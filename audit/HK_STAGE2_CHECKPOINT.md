@@ -1842,3 +1842,27 @@ Verification:
 - public E2E `35596856911`: PASS.
 
 Stage 2.08 remains open for user live recheck and further comments.
+
+
+### Businesses completion loader compatibility final (2026-09-21)
+
+The completion hotfix itself is unchanged, but its core identifier is pinned back to the already-public loader contract:
+- userscript: `1.17.24`;
+- core: `core-20260921-r27-businesses-runner-canon`;
+- finalization marker: `businesses-finalize-single-snapshot-20260921-r1`.
+
+Reason:
+GitHub Pages publication of a new loader revision was queued. Keeping the hotfix on the already-public `loader-20260921-r24 → core r27` contract avoids any temporary launcher mismatch while preserving the new finalization behavior.
+
+Final verification:
+- loader compatibility deploy `35597317859`: PASS;
+- public loader verification `35597375147`: PASS;
+- Businesses current-live `35597379988`: PASS;
+- public E2E `35597399052`: PASS.
+
+Current behavior:
+- no per-slot O(N) final reread tail;
+- one authoritative final snapshot;
+- targeted recovery only for unresolved slots;
+- progress reaches 100% after mutation rows;
+- successful Runner shows **Перестановка завершена** for 6 seconds.
