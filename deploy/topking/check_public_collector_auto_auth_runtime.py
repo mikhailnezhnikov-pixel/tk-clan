@@ -301,7 +301,7 @@ try:
     import re, urllib.request
     local_port=""
     for line in service_lines if "service_lines" in globals() else []:
-        match=re.search(r"127\\.0\\.0\\.1:(\\d+)",line)
+        match=re.search(r"127\.0\.0\.1:(\d+)",line)
         if match:
             local_port=match.group(1)
             break
