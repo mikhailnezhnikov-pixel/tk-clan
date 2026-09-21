@@ -40,7 +40,7 @@ if _hk_os.environ.get("GITHUB_ACTIONS")=="true" and _hk_mode=="PROBE2":
     print("FULL235_PROBE2_BYTES="+str(len(_hk_raw)))
     print("FULL235_PROBE2_SHA256="+_hk_hashlib.sha256(_hk_raw).hexdigest())
     print("FULL235_PROBE2_URLS_BEGIN")
-    for _hk_u in sorted(set(_hk_re.findall(r'''(?:src|href)=[\"']([^\"']+)|(?:fetch|axios\.get)\s*\(\s*[\"']([^\"']+)|[\"']([^\"']+\.(?:json|geojson|js|php)(?:\?[^\\"']*)?)[\"']''',_hk_html,re.I))):
+    for _hk_u in sorted(set(_hk_re.findall(r'''(?:src|href)=[\"']([^\"']+)|(?:fetch|axios\.get)\s*\(\s*[\"']([^\"']+)|[\"']([^\"']+\.(?:json|geojson|js|php)(?:\?[^\\"']*)?)[\"']''',_hk_html,_hk_re.I))):
         print("|".join(x for x in _hk_u if x))
     print("FULL235_PROBE2_URLS_END")
     print("FULL235_PROBE2_HTML_BEGIN")
