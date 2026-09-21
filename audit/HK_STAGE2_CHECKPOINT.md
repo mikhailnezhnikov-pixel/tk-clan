@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.14
+- userscript: 1.17.15
 - current module: Buildings / Здания — final live action gate
 - current module file: audit/hk-stage2-06-buildings.md
-- current module status: UI_R2_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING
+- current module status: UI_R3_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - next after Buildings LIVE PASS: Explore / Исследование — E3 single-building user validation
 - Explore E4 multi-building: NOT STARTED
@@ -1438,4 +1438,28 @@ Verification:
 
 Current Stage 2 gate:
 **Buildings 2.06 — UI_R2_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING**.
+
+### Buildings UI r3 — active list removed (2026-09-21)
+
+User requested a simpler Buildings page with no full list of already-active buildings.
+
+Delivered:
+- userscript `1.17.15`;
+- core `core-20260921-r17-buildings-ui-compact`;
+- full Active buildings list removed;
+- per-active-building Read buttons removed from this page;
+- active slot count retained in Opening plan;
+- candidate list retained;
+- Buildings action logic unchanged.
+
+Verification:
+- predeploy `35565570357`: PASS;
+- deploy `35565665494`: PASS;
+- loader verification `35565756294`: PASS;
+- Buildings verification `35565811595`: PASS;
+- public E2E `35565773961`: PASS;
+- Maps/Explore/auth protected invariants: PASS.
+
+Current Stage 2 gate:
+**Buildings 2.06 — UI_R3_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING**.
 
