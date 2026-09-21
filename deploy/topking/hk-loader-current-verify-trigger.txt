@@ -1,1 +1,1 @@
-2026-09-21 verify public HK loader core r18 after Buildings active fix
+2026-09-21 recheck public HK loader core r18 after Pages deploy
