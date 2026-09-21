@@ -65,6 +65,16 @@ print("api_war_stale="+yes(isinstance(war_doc,dict) and war_doc.get("stale")))
 print("api_war_cors_site="+yes(war_cors==SITE))
 print("api_war_matches_db_updated_at="+yes(api_war_updated==db_war_updated and api_war_updated>0))
 print("api_war_age_seconds="+str(max(0,now-api_war_updated) if api_war_updated else 0))
+war_payload=war_doc.get("war") if isinstance(war_doc,dict) and isinstance(war_doc.get("war"),dict) else {}
+war_opponent_ok=bool(str(war_payload.get("opponent") or "").strip())
+try:
+    war_hp=float(war_payload.get("opponent_hp"))
+    war_hp_max=float(war_payload.get("opponent_hp_max"))
+    war_hp_ok=(war_hp>=0 and war_hp_max>0 and war_hp<=war_hp_max)
+except Exception:
+    war_hp_ok=False
+print("api_war_opponent_present="+yes(war_opponent_ok))
+print("api_war_hp_shape_ok="+yes(war_hp_ok))
 
 ratings_all_ok=True
 for kind in KINDS:
@@ -84,6 +94,20 @@ for kind in KINDS:
         except Exception:
             pass
     sorted_unique=(ranks==sorted(ranks) and len(ranks)==len(set(ranks)))
+    row_shape_ok=True
+    for item in rows:
+        if not isinstance(item,dict):
+            row_shape_ok=False
+            break
+        try:
+            rank_value=int(item.get("rank"))
+            value_number=float(item.get("value"))
+        except Exception:
+            row_shape_ok=False
+            break
+        if rank_value<1 or not str(item.get("name") or "").strip() or value_number<0:
+            row_shape_ok=False
+            break
     kind_ok=(
         status==200
         and bool(doc.get("ok"))
@@ -92,6 +116,7 @@ for kind in KINDS:
         and api_updated==db_updated
         and api_updated>0
         and sorted_unique
+        and row_shape_ok
         and cors==SITE
     )
     ratings_all_ok=ratings_all_ok and kind_ok
@@ -100,6 +125,7 @@ for kind in KINDS:
     print("rating_"+kind+"_api_count="+str(len(rows)))
     print("rating_"+kind+"_matches_db="+yes(len(rows)==db_count and api_updated==db_updated and db_count>0))
     print("rating_"+kind+"_ranks_sorted_unique="+yes(sorted_unique))
+    print("rating_"+kind+"_row_shape_ok="+yes(row_shape_ok))
     print("rating_"+kind+"_cors_site="+yes(cors==SITE))
     print("rating_"+kind+"_stale="+yes(doc.get("stale") if isinstance(doc,dict) else True))
     print("rating_"+kind+"_age_seconds="+str(max(0,now-api_updated) if api_updated else 0))
@@ -163,6 +189,8 @@ war_ok=(
     and api_war_updated==db_war_updated
     and api_war_updated>0
     and war_cors==SITE
+    and war_opponent_ok
+    and war_hp_ok
 )
 site_ok=(
     wars_status==200
