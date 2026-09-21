@@ -1,9 +1,9 @@
-name: Deploy Userscript 1.17.16 Buildings Active Semantics R1
+name: Deploy Userscript 1.17.17 Buildings Limit Runner R1
 
 on:
   push:
     paths:
-      - 'deploy/topking/userscript-1-17-16-trigger.txt'
+      - 'deploy/topking/userscript-1-17-17-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -37,51 +37,47 @@ jobs:
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.15" /tmp/HamsterKingMobile.user.js
-          grep -Fq "core-20260921-r17-buildings-ui-compact" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.16" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r18-buildings-active-fix" /tmp/HamsterKingMobile.user.js
           cmp -s /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           echo "LIVE_BASELINE_INPUT=PASS"
 
-      - name: Apply Buildings active semantics r1
+      - name: Apply Buildings limit and runner patch
         run: |
           set -euo pipefail
-          python3 -m py_compile deploy/topking/patch_buildings_active_semantics_1_17_16.py
-          python3 deploy/topking/patch_buildings_active_semantics_1_17_16.py
+          python3 -m py_compile deploy/topking/patch_buildings_limit_runner_1_17_17.py
+          python3 deploy/topking/patch_buildings_limit_runner_1_17_17.py
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.16" /tmp/HamsterKingMobile.user.js
-          grep -Fq "core-20260921-r18-buildings-active-fix" /tmp/HamsterKingMobile.user.js
-          grep -Fq "buildings-ui-20260921-r3" /tmp/HamsterKingMobile.user.js\n          grep -Fq "buildings-active-semantics-20260921-r1" /tmp/HamsterKingMobile.user.js\n          grep -Fq "player_active_building" /tmp/HamsterKingMobile.user.js\n          grep -Fq "next_tier_level" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.17" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r19-buildings-limit-runner" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-open-limit-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-runner-ui-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-active-semantics-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "maps-shared-runtime-20260921-r7-safe5" /tmp/HamsterKingMobile.user.js
+          grep -Fq "explore-e3-single-20260920-r9-runner" /tmp/HamsterKingMobile.user.js
+          grep -Fq "AUTH_PASSIVE_SAFETY_R1" /tmp/HamsterKingMobile.user.js
           python3 - <<'PY'
           from pathlib import Path
           s=Path('/tmp/HamsterKingMobile.user.js').read_text()
-          a=s.index('  function renderBuildings() {')
-          b=s.index('\n\n  async function refreshBuildings',a)
-          block=s[a:b]
-          assert 'Активные здания' not in block
-          assert 'Active buildings' not in block
-          assert 'data-building-read' not in block
-          assert "either('Активные','Active')" in block
-          print('ACTIVE_BUILDING_LIST_REMOVED=PASS')
+          assert 'id="hk-building-open-limit"' in s
+          assert "openLimit:[1,10,15,20].includes(parsedLimit)||parsedLimit===0?parsedLimit:1" in s
+          assert "const candidates=limit===0?capacityCandidates:capacityCandidates.slice(0,Math.max(1,limit||1));" in s
+          assert "box.classList.toggle('buildings-run',buildingsRun)" in s
+          assert ".hk-runner.buildings-run" in s
+          print("BUILDINGS_LIMIT_RUNNER_R1_CANDIDATE=PASS")
           PY
-          grep -Fq "class=\"hk-building-id\"" /tmp/HamsterKingMobile.user.js
-          grep -Fq "class=\"hk-building-actions\"" /tmp/HamsterKingMobile.user.js
-          grep -Fq "AUTH_PASSIVE_SAFETY_R1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "maps-shared-runtime-20260921-r7-safe5" /tmp/HamsterKingMobile.user.js
-          grep -Fq "explore-e3-single-20260920-r9-runner" /tmp/HamsterKingMobile.user.js
-          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
-          echo "BUILDINGS_ACTIVE_SEMANTICS_R1_CANDIDATE=PASS"
 
       - name: Backup and deploy
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.16.user.js
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.17.user.js
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             stamp="$(date +%Y%m%d-%H%M%S)"
-            node --check /tmp/HamsterKingMobile.1.17.16.user.js
-            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.16.$stamp"
-            install -m 0644 /tmp/HamsterKingMobile.1.17.16.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            node --check /tmp/HamsterKingMobile.1.17.17.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.17.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.1.17.17.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
           '
@@ -90,38 +86,38 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 30 \
-            "https://hk-license.89.125.1.71.sslip.io/panel.js?buildings-active-r1=$(date +%s)" -o /tmp/public.js
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?buildings-limit-runner=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
-          grep -Fq "// @version      1.17.16" /tmp/public.js
-          grep -Fq "core-20260921-r18-buildings-active-fix" /tmp/public.js
-          grep -Fq "buildings-ui-20260921-r3" /tmp/public.js\n          grep -Fq "buildings-active-semantics-20260921-r1" /tmp/public.js
-          echo "PUBLIC_USERSCRIPT_1_17_16=PASS"
+          grep -Fq "// @version      1.17.17" /tmp/public.js
+          grep -Fq "core-20260921-r19-buildings-limit-runner" /tmp/public.js
+          grep -Fq "buildings-open-limit-20260921-r1" /tmp/public.js
+          echo "PUBLIC_USERSCRIPT_1_17_17=PASS"
 
       - name: Sync verified baseline
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           {
-            echo "USERSCRIPT_1_17_16_BUILDINGS_ACTIVE_SEMANTICS_R1=PASS"
-            echo "version=1.17.16"
-            echo "core=core-20260921-r18-buildings-active-fix"
-            echo "buildings_ui=buildings-ui-20260921-r3"
-            echo "active_building_list=REMOVED"
-            echo "active_count=KEPT"
-            echo "buildings_action_logic=UNCHANGED"
+            echo "USERSCRIPT_1_17_17_BUILDINGS_LIMIT_RUNNER_R1=PASS"
+            echo "version=1.17.17"
+            echo "core=core-20260921-r19-buildings-limit-runner"
+            echo "open_limit=1,10,15,20,all"
+            echo "default_open_limit=1"
+            echo "buildings_runner_ui=CANON"
+            echo "active_semantics=PASS"
             echo "maps_safe5=PASS"
             echo "explore_e3_r9=PASS"
-          } > audit/hk-userscript-1-17-16-buildings-active-status.txt
+          } > audit/hk-userscript-1-17-17-buildings-limit-runner-status.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-16-buildings-active-status.txt
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-17-buildings-limit-runner-status.txt
           if ! git diff --cached --quiet; then
-            git commit -m "release: publish userscript 1.17.16 Buildings active semantics"
+            git commit -m "release: publish userscript 1.17.17 Buildings limit runner"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.16.user.js /tmp/public.js
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.17.user.js /tmp/public.js
