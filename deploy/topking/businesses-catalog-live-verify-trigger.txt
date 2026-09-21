@@ -1,1 +1,1 @@
-2026-09-21 verify Businesses completion hotfix current live on userscript 1.17.24
+2026-09-21 retry Businesses completion hotfix current live verifier after workflow fix
