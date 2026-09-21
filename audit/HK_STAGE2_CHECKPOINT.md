@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.19
-- current module: Explore / Исследование — E3 single-building live validation
+- userscript: 1.17.20
+- current module: Explore / Исследование — E3 speed refinement
 - current module file: audit/hk-stage2-07-explore.md
-- current module status: E3_R9_SINGLE_BUILDING_LIVE_TEST_PENDING
+- current module status: E3_SPEED_R1_LIVE_USER_FEEL_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: NOT STARTED
@@ -1637,4 +1637,30 @@ Run `35576298312`: **PASS**
 
 Current Stage 2 gate:
 **Explore 2.07 — E3_R9_SINGLE_BUILDING_LIVE_TEST_PENDING**.
+
+### Explore E3 — LIVE PASS + speed r1 deployed (2026-09-21)
+
+User confirmed the E3 single-building action and staged runner work correctly.
+
+Functional gate:
+**Explore E3 = LIVE PASS**
+
+Timing refinement in userscript `1.17.20`:
+- action delay: 0.7–2.0 s;
+- battle delay: 0.7 s;
+- old standard 1/3/1 profile migrates automatically;
+- safety/reconciliation/action mechanics unchanged;
+- E4 still not enabled.
+
+Verification:
+- predeploy `35576826016`: PASS;
+- deploy `35576921480`: PASS;
+- Explore current verifier `35577054251`: PASS;
+- loader core-r22 `35577128071`: PASS;
+- public E2E `35577067567`: PASS.
+
+Current Stage 2 gate:
+**Explore 2.07 — E3_SPEED_R1_LIVE_USER_FEEL_CHECK_PENDING**.
+
+Once the user confirms the new pace feels right, E3 can be closed and the next checkpoint can move to E4.
 
