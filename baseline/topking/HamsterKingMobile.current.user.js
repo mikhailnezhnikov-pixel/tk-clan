@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.19
+// @version      1.17.20
+// @release-note Исследование E3 слегка ускорено: стандартные паузы между действиями и боями уменьшены без снятия проверок состояния.
 // @release-note После открытия зданий HK теперь проверяет native-store игры и синхронизирует карту; при необходимости выполняется одна безопасная перезагрузка.
 // @release-note Исправлено открытие зданий: кандидаты теперь исключают все уже полученные здания, а успех проверяется по /player/me.
 // @release-note Избранное теперь подтверждается повторным чтением состояния, без ложного сообщения об успехе.
@@ -21,9 +22,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.19';
+  const BUILD_VERSION = '1.17.20';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r21-buildings-native-sync';
+  const HK_CORE_REVISION = 'core-20260921-r22-explore-speed-tune';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -2019,6 +2020,7 @@
   }
 
   const HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner';
+  const HK_EXPLORE_SPEED_REV='explore-e3-speed-20260921-r1';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -2050,6 +2052,13 @@
   function explorePriority(v){return ['min','max','any'].includes(String(v||''))?String(v):'any';}
   function exploreSettings(){
     const x=load().exploreCanonSettings||{},clamp=(v,a,b,d)=>Number.isFinite(Number(v))?Math.min(b,Math.max(a,Math.trunc(Number(v)))):d;
+    const legacyDefaultSpeed=String(x.speedProfileRev||'')!==HK_EXPLORE_SPEED_REV
+      && Number(x.actionDelayMinMs??1000)===1000
+      && Number(x.actionDelayMaxMs??3000)===3000
+      && Number(x.battleDelayMs??1000)===1000;
+    const actionDelayMinMs=legacyDefaultSpeed?700:clamp(x.actionDelayMinMs,0,60000,700);
+    const actionDelayMaxMs=legacyDefaultSpeed?2000:clamp(x.actionDelayMaxMs,0,60000,2000);
+    const battleDelayMs=legacyDefaultSpeed?700:clamp(x.battleDelayMs,0,60000,700);
     const st=Array.isArray(x.startTiers)?[...new Set(x.startTiers.map(Number).filter(v=>Number.isInteger(v)&&v>=0&&v<=7))]:[0,1,2];
     const target=clamp(x.targetTier,1,8,3),targetActionsAllowed=target>=1&&target<=6&&x.exploreTargetTier===true;
     const maxStart=targetActionsAllowed?target:Math.min(target,7)-1,selectedStart=st.filter(v=>v<=maxStart);
@@ -2058,9 +2067,10 @@
       districtId:String(x.districtId||'all'),buildingType:['all','normal','investment'].includes(String(x.buildingType||''))?String(x.buildingType):'all',
       battleLevel:explorePriority(x.battleLevel||'min'),level:explorePriority(x.level||'min'),
       nextTierLevel:explorePriority(x.nextTierLevel||'max'),totalEvents:explorePriority(x.totalEvents||'any'),
-      actionDelayMinMs:clamp(x.actionDelayMinMs,0,60000,1000),actionDelayMaxMs:clamp(x.actionDelayMaxMs,0,60000,3000),
-      battleDelayMs:clamp(x.battleDelayMs,0,60000,1000),betweenBuildingsDelayMinMs:clamp(x.betweenBuildingsDelayMinMs,0,120000,2000),
+      actionDelayMinMs,actionDelayMaxMs,battleDelayMs,
+      betweenBuildingsDelayMinMs:clamp(x.betweenBuildingsDelayMinMs,0,120000,2000),
       betweenBuildingsDelayMaxMs:clamp(x.betweenBuildingsDelayMaxMs,0,120000,7000),buyMissingMaterials:x.buyMissingMaterials===true,
+      speedProfileRev:HK_EXPLORE_SPEED_REV,
       exploreTargetTier:targetActionsAllowed,exploreTargetBattles:targetActionsAllowed&&x.exploreTargetBattles===true
     };
   }
@@ -2072,6 +2082,7 @@
     if(!x.startTiers.length)x.startTiers=[0];
     if(x.actionDelayMaxMs<x.actionDelayMinMs)x.actionDelayMaxMs=x.actionDelayMinMs;
     if(x.betweenBuildingsDelayMaxMs<x.betweenBuildingsDelayMinMs)x.betweenBuildingsDelayMaxMs=x.betweenBuildingsDelayMinMs;
+    x.speedProfileRev=HK_EXPLORE_SPEED_REV;
     x.exploreTargetTier=targetActionsAllowed;if(!x.exploreTargetTier)x.exploreTargetBattles=false;
     save({exploreCanonSettings:x});return x;
   }
@@ -2438,7 +2449,7 @@
             '<label class="hk-ex-row"><span>'+either('До следующего тира','Next-tier level')+'</span><select id="hk-ex-pr-next">'+explorePrOptions(s.nextTierLevel)+'</select></label>'+
             '<label class="hk-ex-row"><span>'+either('Всего событий','Total events')+'</span><select id="hk-ex-pr-events">'+explorePrOptions(s.totalEvents)+'</select></label>'+
           '</div></div>'+
-          '<div class="hk-cardbox"><b>'+either('Задержки будущего запуска','Future run delays')+'</b><div class="hk-ex-rows">'+
+          '<div class="hk-cardbox"><b>'+either('Задержки выполнения','Execution delays')+'</b><div class="hk-ex-rows">'+
             '<label class="hk-ex-row"><span>'+either('Действие, мин. сек','Action min, sec')+'</span><input id="hk-ex-action-min" type="number" min="0" step="0.1" value="'+s.actionDelayMinMs/1000+'"></label>'+
             '<label class="hk-ex-row"><span>'+either('Действие, макс. сек','Action max, sec')+'</span><input id="hk-ex-action-max" type="number" min="0" step="0.1" value="'+s.actionDelayMaxMs/1000+'"></label>'+
             '<label class="hk-ex-row"><span>'+either('Бой, сек','Battle, sec')+'</span><input id="hk-ex-battle" type="number" min="0" step="0.1" value="'+s.battleDelayMs/1000+'"></label>'+
