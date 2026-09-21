@@ -212,6 +212,40 @@ try:
 except Exception:
     print("server_release_gate_check=unavailable")
 
+# Safe runtime wiring check: confirm which process systemd runs and which
+# local upstream nginx targets. Never print environment variables or request data.
+try:
+    show=subprocess.check_output(
+        ["systemctl","show","hamsterking-license.service","--property=MainPID","--property=ExecStart","--no-pager"],
+        text=True,stderr=subprocess.STDOUT,timeout=10,
+    )
+    main_pid=""
+    for line in show.splitlines():
+        if line.startswith("MainPID="):
+            main_pid=line.split("=",1)[1].strip()
+    print("license_service_main_pid_present="+("yes" if main_pid and main_pid!="0" else "no"))
+    print("license_service_execstart_live_server="+("yes" if "/opt/hamsterking-license/server.py" in show else "no"))
+    if main_pid and main_pid!="0":
+        try:
+            cmd=open(f"/proc/{int(main_pid)}/cmdline","rb").read(8192).replace(b"\\x00",b" ").decode("utf-8","replace")
+        except Exception:
+            cmd=""
+        print("license_service_cmdline_live_server="+("yes" if "/opt/hamsterking-license/server.py" in cmd else "no"))
+except Exception:
+    print("license_service_wiring=unavailable")
+
+try:
+    nginx_text=subprocess.check_output(["nginx","-T"],text=True,stderr=subprocess.STDOUT,timeout=10)
+    import re
+    proxy_targets=[]
+    for target in re.findall(r"\\bproxy_pass\\s+(https?://[^;\\s]+)",nginx_text):
+        if target not in proxy_targets:
+            proxy_targets.append(target)
+    print("nginx_proxy_targets="+json.dumps(proxy_targets,ensure_ascii=False))
+    print("nginx_config_mentions_license_host="+("yes" if "hk-license.89.125.1.71.sslip.io" in nginx_text else "no"))
+except Exception:
+    print("nginx_runtime_wiring=unavailable")
+
 for unit,label in (
     ("hamsterking-public-war.service","war_journal"),
     ("hamsterking-public-collector.service","ratings_journal"),
