@@ -77,6 +77,11 @@
   let ourArtEl=null;
   let enemyArtEl=null;
   let enemyArtKey='raider';
+  let slashEl=null;
+  let shotEl=null;
+  let hitFlashEl=null;
+  let hitLabelEl=null;
+  let impactEl=null;
   const artPreload=[];
 
   function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
@@ -397,6 +402,48 @@
     setArt('enemy','idle');
   }
 
+  function resetVisiblePose(){
+    if(ourArtEl)gsap.set(ourArtEl,{x:0,y:0,rotation:-1,scaleX:1,scaleY:1,opacity:1});
+    if(enemyArtEl)gsap.set(enemyArtEl,{x:0,y:0,rotation:1,scaleX:-1,scaleY:1,opacity:1});
+    if(slashEl)gsap.set(slashEl,{opacity:0,scaleX:.15,scaleY:1,x:0,y:0,rotation:-18});
+    if(shotEl)gsap.set(shotEl,{opacity:0,x:0,y:0,scale:1});
+    if(hitFlashEl)gsap.set(hitFlashEl,{opacity:0});
+    if(hitLabelEl)gsap.set(hitLabelEl,{opacity:0,xPercent:-50,yPercent:-50,scale:.65,y:0});
+    if(impactEl)gsap.set(impactEl,{opacity:0,scale:.2});
+  }
+
+  function visibleImpact(attacker){
+    if(impactEl){
+      gsap.killTweensOf(impactEl);
+      gsap.set(impactEl,{opacity:1,scale:.25});
+      gsap.to(impactEl,{opacity:0,scale:5,duration:.34,ease:'power2.out'});
+    }
+    if(hitFlashEl){
+      gsap.killTweensOf(hitFlashEl);
+      gsap.set(hitFlashEl,{opacity:.9});
+      gsap.to(hitFlashEl,{opacity:0,duration:.28,ease:'power2.out'});
+    }
+    if(slashEl){
+      gsap.killTweensOf(slashEl);
+      gsap.set(slashEl,{opacity:1,scaleX:.18,scaleY:1,rotation:attacker==='ours'?-18:18,x:attacker==='ours'?-10:10});
+      gsap.to(slashEl,{opacity:0,scaleX:1.65,duration:.28,ease:'power3.out'});
+    }
+    if(hitLabelEl){
+      gsap.killTweensOf(hitLabelEl);
+      gsap.set(hitLabelEl,{opacity:1,scale:.72,y:8});
+      gsap.to(hitLabelEl,{opacity:0,scale:1.12,y:-24,duration:.48,ease:'power2.out'});
+    }
+    impact();
+  }
+
+  function fireBotShot(){
+    if(!shotEl||!stageEl)return;
+    const travel=Math.max(280,stageEl.clientWidth*.52);
+    gsap.killTweensOf(shotEl);
+    gsap.set(shotEl,{opacity:1,x:0,y:0,scale:.7});
+    gsap.to(shotEl,{x:-travel,scale:1.25,duration:.34,ease:'power2.in',onComplete:()=>gsap.set(shotEl,{opacity:0})});
+  }
+
   function clearLoops(){
     loops.forEach(t=>{try{t.kill()}catch(_){}});
     loops=[];
@@ -404,44 +451,56 @@
     if(enemyFighter){gsap.killTweensOf(enemyFighter);gsap.killTweensOf(enemyFighter._weapon);gsap.killTweensOf(enemyFighter._aura);}
     if(ourArtEl)gsap.killTweensOf(ourArtEl);
     if(enemyArtEl)gsap.killTweensOf(enemyArtEl);
+    for(const el of [slashEl,shotEl,hitFlashEl,hitLabelEl,impactEl])if(el)gsap.killTweensOf(el);
   }
 
   function setupLoops(){
     clearLoops();
     resetArt();
-    if(reduced||!ourFighter||!enemyFighter)return;
+    resetVisiblePose();
+    if(reduced||!currentWar||!ourArtEl||!enemyArtEl)return;
 
-    const ourBaseX=ourFighter.x;
-    const enemyBaseX=enemyFighter.x;
-    const ourWeaponBase=ourFighter._weapon.rotation;
-    const enemyWeaponBase=enemyFighter._weapon.rotation;
+    const isBot=kindOf(currentWar)==='bot';
+    const duel=gsap.timeline({repeat:-1,repeatDelay:.65});
 
-    const our=gsap.timeline({repeat:-1,repeatDelay:.35});
-    our
-      .call(()=>{setArt('ours','attack');setArt('enemy','attack')},null,.28)
-      .to(ourFighter,{x:ourBaseX+18,y:'-=5',duration:.23,ease:'power2.out'},.35)
-      .to(ourFighter._weapon,{rotation:ourWeaponBase+.62,duration:.22,ease:'power3.in'},.39)
-      .to(ourFighter,{x:ourBaseX+78,duration:.18,ease:'power4.in'},.58)
-      .to(ourFighter._weapon,{rotation:ourWeaponBase+1.10,duration:.16,ease:'power4.in'},.58)
-      .call(()=>{setArt('ours','hit');setArt('enemy','hit');impact()},null,.73)
-      .call(()=>resetArt(),null,1.02)
-      .to(ourFighter,{x:ourBaseX,y:'+=5',duration:.48,ease:'back.out(1.3)'},.82)
-      .to(ourFighter._weapon,{rotation:ourWeaponBase,duration:.46,ease:'power2.out'},.80);
+    duel
+      .call(()=>{resetArt();resetVisiblePose()},null,0)
+      .call(()=>setArt('ours','attack'),null,.38)
+      .to(ourArtEl,{x:32,y:-8,rotation:2,scaleX:1.03,scaleY:1.03,duration:.18,ease:'power2.out'},.42)
+      .to(ourArtEl,{x:168,y:-2,rotation:8,scaleX:1.08,scaleY:1.08,duration:.24,ease:'power4.in'},.60)
+      .call(()=>{setArt('enemy','hit');visibleImpact('ours')},null,.82)
+      .to(enemyArtEl,{x:62,y:8,rotation:-8,scaleX:-1.06,scaleY:1.06,duration:.16,ease:'power3.out'},.82)
+      .to(enemyArtEl,{x:30,y:2,rotation:-3,scaleX:-1.02,scaleY:1.02,duration:.24,ease:'back.out(1.5)'},.98)
+      .to(ourArtEl,{x:0,y:0,rotation:-1,scaleX:1,scaleY:1,duration:.40,ease:'back.out(1.4)'},.98)
+      .call(()=>{setArt('ours','idle');setArt('enemy','idle')},null,1.30)
+      .to(enemyArtEl,{x:0,y:0,rotation:1,scaleX:-1,scaleY:1,duration:.24,ease:'power2.out'},1.28);
 
-    const enemy=gsap.timeline({repeat:-1,repeatDelay:.35,delay:.06});
-    enemy
-      .to(enemyFighter,{x:enemyBaseX-14,y:'-=3',duration:.25,ease:'power2.out'},.38)
-      .to(enemyFighter._weapon,{rotation:enemyWeaponBase-.50,duration:.23,ease:'power3.in'},.44)
-      .to(enemyFighter,{x:enemyBaseX-62,duration:.18,ease:'power4.in'},.61)
-      .to(enemyFighter._weapon,{rotation:enemyWeaponBase-.92,duration:.16,ease:'power4.in'},.61)
-      .to(enemyFighter,{x:enemyBaseX,y:'+=3',duration:.50,ease:'back.out(1.2)'},.86)
-      .to(enemyFighter._weapon,{rotation:enemyWeaponBase,duration:.45,ease:'power2.out'},.84);
+    if(isBot){
+      duel
+        .call(()=>setArt('enemy','attack'),null,1.72)
+        .to(enemyArtEl,{x:-18,y:-4,rotation:-2,scaleX:-1.03,scaleY:1.03,duration:.20,ease:'power2.out'},1.74)
+        .call(()=>fireBotShot(),null,1.90)
+        .call(()=>{setArt('ours','hit');visibleImpact('enemy')},null,2.20)
+        .to(ourArtEl,{x:-58,y:9,rotation:-9,scaleX:1.05,scaleY:1.05,duration:.17,ease:'power3.out'},2.20)
+        .to(ourArtEl,{x:-24,y:2,rotation:-3,scaleX:1.02,scaleY:1.02,duration:.25,ease:'back.out(1.4)'},2.37);
+    }else{
+      duel
+        .call(()=>setArt('enemy','attack'),null,1.72)
+        .to(enemyArtEl,{x:-34,y:-7,rotation:-2,scaleX:-1.03,scaleY:1.03,duration:.18,ease:'power2.out'},1.76)
+        .to(enemyArtEl,{x:-166,y:-1,rotation:-8,scaleX:-1.08,scaleY:1.08,duration:.24,ease:'power4.in'},1.94)
+        .call(()=>{setArt('ours','hit');visibleImpact('enemy')},null,2.16)
+        .to(ourArtEl,{x:-60,y:8,rotation:-8,scaleX:1.06,scaleY:1.06,duration:.16,ease:'power3.out'},2.16)
+        .to(ourArtEl,{x:-26,y:2,rotation:-3,scaleX:1.02,scaleY:1.02,duration:.25,ease:'back.out(1.4)'},2.32)
+        .to(enemyArtEl,{x:0,y:0,rotation:1,scaleX:-1,scaleY:1,duration:.40,ease:'back.out(1.4)'},2.34);
+    }
 
-    loops.push(our,enemy);
+    duel
+      .call(()=>{setArt('ours','idle');setArt('enemy','idle')},null,2.64)
+      .to(ourArtEl,{x:0,y:0,rotation:-1,scaleX:1,scaleY:1,duration:.28,ease:'power2.out'},2.62)
+      .to(enemyArtEl,{x:0,y:0,rotation:1,scaleX:-1,scaleY:1,duration:.28,ease:'power2.out'},2.62)
+      .to({}, {duration:.9},2.90);
 
-    const auraA=gsap.to(ourFighter._aura,{alpha:.34,scaleX:1.20,scaleY:.56,duration:1.15,yoyo:true,repeat:-1,ease:'sine.inOut'});
-    const auraB=gsap.to(enemyFighter._aura,{alpha:.36,scaleX:1.18,scaleY:.54,duration:1.30,yoyo:true,repeat:-1,ease:'sine.inOut'});
-    loops.push(auraA,auraB);
+    loops.push(duel);
   }
 
   function impact(){
@@ -535,6 +594,11 @@
       stageEl=document.getElementById(STAGE_ID);
       ourArtEl=document.getElementById('battle-art-ours');
       enemyArtEl=document.getElementById('battle-art-enemy');
+      impactEl=document.getElementById('battle-art-impact');
+      slashEl=document.getElementById('battle-slash');
+      shotEl=document.getElementById('battle-shot');
+      hitFlashEl=document.getElementById('battle-hit-flash');
+      hitLabelEl=document.getElementById('battle-hit-label');
       preloadBattleArt();
       if(!host||!stageEl||!PIXI||!gsap){
         stageEl?.classList.add('battle-v2-failed');
@@ -565,21 +629,9 @@
       world.addChild(atmosphere,fightersLayer,effectsLayer,hudLayer);
       app.stage.addChild(world);
 
-      try{
-        const texture=await PIXI.Assets.load(BG_URL);
-        bgSprite=new PIXI.Sprite(texture);
-        bgSprite.label='Battle background';
-        bgSprite.alpha=.72;
-        app.stage.addChildAt(bgSprite,0);
-        if(!reduced){
-          const base={scale:1};
-          const t=gsap.to(base,{scale:1.035,duration:9,yoyo:true,repeat:-1,ease:'sine.inOut',
-            onUpdate:()=>{if(bgSprite)bgSprite.rotation=Math.sin(performance.now()/7000)*.003}});
-          loops.push(t);
-        }
-      }catch(_){
-        stageEl.classList.add('battle-bg-fallback');
-      }
+      // V3 uses a clean procedural arena. The old illustrated battle image
+      // looked like a second static fight behind the real characters.
+      bgSprite=null;
 
       ourFighter=makeFighter(OUR_STYLE,'ours','clan');
       fightersLayer.addChild(ourFighter);
@@ -627,5 +679,5 @@
     app=null;ready=false;initPromise=null;
   }
 
-  window.TopKingBattleV2={init,update,destroy,version:'3.2.0-bot-states'};
+  window.TopKingBattleV2={init,update,destroy,version:'3.3.0-visible-choreography'};
 })();
