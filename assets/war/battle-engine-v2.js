@@ -10,6 +10,18 @@
   const HOST_ID='battle-canvas';
   const STAGE_ID='battle-stage';
   const BG_URL='../assets/war/hamster-clan-battle-hq.webp';
+  const ART_V3={
+    topking:{
+      idle:'../assets/war/units/topking/idle.webp?v=20260921-2',
+      attack:'../assets/war/units/topking/attack.webp?v=20260921-2',
+      hit:'../assets/war/units/topking/hit.webp?v=20260921-2'
+    },
+    raider:{
+      idle:'../assets/war/units/raider/idle.webp?v=20260921-2',
+      attack:'../assets/war/units/raider/attack.webp?v=20260921-2',
+      hit:'../assets/war/units/raider/hit.webp?v=20260921-2'
+    }
+  };
 
   const ARCHETYPES=[
     {key:'raider', emblem:'☠', weapon:'axe',      primary:0xef4940, secondary:0x7a1515, metal:0xc9c4bb},
@@ -57,6 +69,10 @@
   let sparks=[];
   let fog=[];
   let lastImpact=0;
+  let ourArtEl=null;
+  let enemyArtEl=null;
+  let enemyArtKey='raider';
+  const artPreload=[];
 
   function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
   function normalize(value){return String(value||'').trim().toLowerCase().replace(/\s+/g,' ')}
@@ -349,15 +365,45 @@
     }
   }
 
+  function preloadBattleArt(){
+    for(const pack of Object.values(ART_V3)){
+      for(const src of Object.values(pack)){
+        const img=new Image();
+        img.decoding='async';
+        img.src=src;
+        artPreload.push(img);
+      }
+    }
+  }
+
+  function setArt(side,state){
+    const el=side==='ours'?ourArtEl:enemyArtEl;
+    if(!el)return;
+    const key=side==='ours'?'topking':enemyArtKey;
+    const pack=ART_V3[key]||ART_V3.raider;
+    const src=pack[state]||pack.idle;
+    if(el.dataset.battleState===state&&el.getAttribute('src')===src)return;
+    el.dataset.battleState=state;
+    el.src=src;
+  }
+
+  function resetArt(){
+    setArt('ours','idle');
+    setArt('enemy','idle');
+  }
+
   function clearLoops(){
     loops.forEach(t=>{try{t.kill()}catch(_){}});
     loops=[];
     if(ourFighter){gsap.killTweensOf(ourFighter);gsap.killTweensOf(ourFighter._weapon);gsap.killTweensOf(ourFighter._aura);}
     if(enemyFighter){gsap.killTweensOf(enemyFighter);gsap.killTweensOf(enemyFighter._weapon);gsap.killTweensOf(enemyFighter._aura);}
+    if(ourArtEl)gsap.killTweensOf(ourArtEl);
+    if(enemyArtEl)gsap.killTweensOf(enemyArtEl);
   }
 
   function setupLoops(){
     clearLoops();
+    resetArt();
     if(reduced||!ourFighter||!enemyFighter)return;
 
     const ourBaseX=ourFighter.x;
@@ -367,11 +413,13 @@
 
     const our=gsap.timeline({repeat:-1,repeatDelay:.35});
     our
+      .call(()=>{setArt('ours','attack');setArt('enemy','attack')},null,.28)
       .to(ourFighter,{x:ourBaseX+18,y:'-=5',duration:.23,ease:'power2.out'},.35)
       .to(ourFighter._weapon,{rotation:ourWeaponBase+.62,duration:.22,ease:'power3.in'},.39)
       .to(ourFighter,{x:ourBaseX+78,duration:.18,ease:'power4.in'},.58)
       .to(ourFighter._weapon,{rotation:ourWeaponBase+1.10,duration:.16,ease:'power4.in'},.58)
-      .call(()=>impact(),null,.73)
+      .call(()=>{setArt('ours','hit');setArt('enemy','hit');impact()},null,.73)
+      .call(()=>resetArt(),null,1.02)
       .to(ourFighter,{x:ourBaseX,y:'+=5',duration:.48,ease:'back.out(1.3)'},.82)
       .to(ourFighter._weapon,{rotation:ourWeaponBase,duration:.46,ease:'power2.out'},.80);
 
@@ -441,6 +489,7 @@
     if(!fightersLayer||!currentWar)return;
     const kind=kindOf(currentWar);
     const style=enemyStyle(currentWar.opponent,currentInfo,kind);
+    enemyArtKey=kind==='bot'?'raider':'raider';
     const sig=kind+'|'+normalize(currentWar.opponent)+'|'+style.key+'|'+style.primary+'|'+style.secondary;
     if(sig===enemySignature&&enemyFighter)return;
     enemySignature=sig;
@@ -479,6 +528,9 @@
     initPromise=(async()=>{
       host=document.getElementById(HOST_ID);
       stageEl=document.getElementById(STAGE_ID);
+      ourArtEl=document.getElementById('battle-art-ours');
+      enemyArtEl=document.getElementById('battle-art-enemy');
+      preloadBattleArt();
       if(!host||!stageEl||!PIXI||!gsap){
         stageEl?.classList.add('battle-v2-failed');
         return false;
@@ -552,6 +604,7 @@
     if(!ok)return;
     if(!currentWar){
       clearLoops();
+      resetArt();
       if(enemyFighter){enemyFighter.alpha=.28}
       if(ourFighter){ourFighter.alpha=.45}
       return;
@@ -569,5 +622,5 @@
     app=null;ready=false;initPromise=null;
   }
 
-  window.TopKingBattleV2={init,update,destroy,version:'3.0.0-art'};
+  window.TopKingBattleV2={init,update,destroy,version:'3.1.0-art-states'};
 })();
