@@ -1767,3 +1767,32 @@ Verification:
 Current Stage 2 gate:
 **Businesses 2.08 — CATALOG_R1_LIVE_CANDIDATE_USER_UI_CHECK_PENDING**.
 
+
+
+### Businesses rearrangement guard r1 — 1.17.24 live candidate (2026-09-21)
+
+User feedback on the current Businesses rearrangement screen was applied as a focused Stage 2.08 correction, while the Kokkaras donor remains authoritative.
+
+Delivered:
+- desktop: existing remove side on the left, insert side on the right;
+- mobile: stacked layout preserved;
+- full user-driven removal protection for T4/T5/T6;
+- manual remove selector limited to T1–T3;
+- optimizer remove tiers limited to T1–T3;
+- stale preset selections sanitized;
+- original-layout restore blocked when it would remove T4–T6;
+- runtime plan guard prevents stale plans from removing T4–T6;
+- rollback transaction safety preserved.
+
+Live:
+- userscript `1.17.24`;
+- core `core-20260921-r26-businesses-rearrange-guard`;
+- deploy/public round-trip `35590711750`: PASS;
+- Businesses current-live `35590863403`: PASS;
+- loader core-r26 `35590914106`: PASS;
+- public E2E `35590987942`: PASS.
+
+Stage 2.08 remains at the live UI gate:
+**CATALOG_R1_LIVE_CANDIDATE_USER_UI_CHECK_PENDING · REARRANGE_UI_GUARD_R1_LIVE_CANDIDATE_USER_VISUAL_CHECK_PENDING**
+
+No catalog mutation actions are enabled yet.
