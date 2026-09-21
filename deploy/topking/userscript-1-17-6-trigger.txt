@@ -1,1 +1,1 @@
-2026-09-21 deploy userscript 1.17.12 auth bridge xhr transport
+2026-09-21 remove retired auth-probe from userscript 1.17.12; keep technical auth-sync
