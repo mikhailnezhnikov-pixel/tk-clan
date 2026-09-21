@@ -1,9 +1,9 @@
-name: Deploy Userscript 1.17.18 Buildings Owned Postcondition R1
+name: Deploy Userscript 1.17.19 Buildings Native Sync R1
 
 on:
   push:
     paths:
-      - 'deploy/topking/userscript-1-17-18-trigger.txt'
+      - 'deploy/topking/userscript-1-17-19-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -37,22 +37,20 @@ jobs:
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.17" /tmp/HamsterKingMobile.user.js
-          grep -Fq "core-20260921-r19-buildings-limit-runner" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.18" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r20-buildings-owned-postcondition" /tmp/HamsterKingMobile.user.js
           cmp -s /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           echo "LIVE_BASELINE_INPUT=PASS"
 
-      - name: Apply Buildings owned/postcondition patch
+      - name: Apply Buildings native sync patch
         run: |
           set -euo pipefail
-          python3 -m py_compile deploy/topking/patch_buildings_owned_postcondition_1_17_18.py
-          python3 deploy/topking/patch_buildings_owned_postcondition_1_17_18.py
+          python3 -m py_compile deploy/topking/patch_buildings_native_sync_1_17_19.py
+          python3 deploy/topking/patch_buildings_native_sync_1_17_19.py
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.18" /tmp/HamsterKingMobile.user.js
-          grep -Fq "core-20260921-r20-buildings-owned-postcondition" /tmp/HamsterKingMobile.user.js
-          grep -Fq "buildings-open-limit-20260921-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "buildings-runner-ui-20260921-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "buildings-active-semantics-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.19" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r21-buildings-native-sync" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-native-sync-20260921-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "buildings-owned-semantics-20260921-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "buildings-postcondition-20260921-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "maps-shared-runtime-20260921-r7-safe5" /tmp/HamsterKingMobile.user.js
@@ -61,29 +59,27 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           s=Path('/tmp/HamsterKingMobile.user.js').read_text()
-          assert 'id="hk-building-open-limit"' in s
-          assert "openLimit:[1,10,15,20].includes(parsedLimit)||parsedLimit===0?parsedLimit:1" in s
-          assert "const candidates=limit===0?capacityCandidates:capacityCandidates.slice(0,Math.max(1,limit||1));" in s
-          assert "box.classList.toggle('buildings-run',buildingsRun)" in s
-          assert ".hk-runner.buildings-run" in s
-          assert "const ownedBuildingIds=buildingCanonOwnedIds(playerDocument);" in s
-          assert "ownedBuildingIds.has(buildingId)" in s
-          assert "hkAuthoritativePlayerRead('buildings:after-claim')" in s
-          assert "buildingCanonIsFavorite(candidate.buildingId,playerDocument)" in s
-          print("BUILDINGS_OWNED_POSTCONDITION_R1_CANDIDATE=PASS")
+          runner=s[s.index('async function runBuildingsCanonical()'):s.index('function accountBuildingRows')]
+          bridge=s[s.index('const hkGameBridge = (() => {'):s.index('runtime.stateStore = hkStateStore')]
+          assert 'const buildingState = buildingId =>' in bridge
+          assert 'const bridgeOk=await hkGameBridge.flush(true);' in runner
+          assert 'hkGameBridge.buildingState(id)' in runner
+          assert 'setTimeout(()=>location.reload(),900);' in runner
+          assert runner.index("const bridgeOk=await hkGameBridge.flush(true);") < runner.index("hkRunner.finish(either('Открытие зданий завершено'")
+          print("BUILDINGS_NATIVE_SYNC_R1_CANDIDATE=PASS")
           PY
 
       - name: Backup and deploy
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.18.user.js
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.19.user.js
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             stamp="$(date +%Y%m%d-%H%M%S)"
-            node --check /tmp/HamsterKingMobile.1.17.18.user.js
-            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.18.$stamp"
-            install -m 0644 /tmp/HamsterKingMobile.1.17.18.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            node --check /tmp/HamsterKingMobile.1.17.19.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.19.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.1.17.19.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
           '
@@ -92,43 +88,40 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 30 \
-            "https://hk-license.89.125.1.71.sslip.io/panel.js?buildings-owned-postcondition=$(date +%s)" -o /tmp/public.js
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?buildings-native-sync=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
-          grep -Fq "// @version      1.17.18" /tmp/public.js
-          grep -Fq "core-20260921-r20-buildings-owned-postcondition" /tmp/public.js
-          grep -Fq "buildings-open-limit-20260921-r1" /tmp/public.js
-          grep -Fq "buildings-owned-semantics-20260921-r1" /tmp/public.js
-          grep -Fq "buildings-postcondition-20260921-r1" /tmp/public.js
-          echo "PUBLIC_USERSCRIPT_1_17_18=PASS"
+          grep -Fq "// @version      1.17.19" /tmp/public.js
+          grep -Fq "core-20260921-r21-buildings-native-sync" /tmp/public.js
+          grep -Fq "buildings-native-sync-20260921-r1" /tmp/public.js
+          echo "PUBLIC_USERSCRIPT_1_17_19=PASS"
 
       - name: Sync verified baseline
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           {
-            echo "USERSCRIPT_1_17_18_BUILDINGS_OWNED_POSTCONDITION_R1=PASS"
-            echo "version=1.17.18"
-            echo "core=core-20260921-r20-buildings-owned-postcondition"
-            echo "open_limit=1,10,15,20,all"
-            echo "default_open_limit=1"
-            echo "buildings_runner_ui=CANON"
-            echo "active_semantics=PASS"
+            echo "USERSCRIPT_1_17_19_BUILDINGS_NATIVE_SYNC_R1=PASS"
+            echo "version=1.17.19"
+            echo "core=core-20260921-r21-buildings-native-sync"
+            echo "native_store_sync=PASS"
+            echo "native_store_postcheck=PASS"
+            echo "reload_fallback=PASS"
             echo "owned_semantics=PASS"
             echo "claim_postcondition=PASS"
             echo "favorite_postcondition=PASS"
             echo "maps_safe5=PASS"
             echo "explore_e3_r9=PASS"
-          } > audit/hk-userscript-1-17-18-buildings-owned-postcondition-status.txt
+          } > audit/hk-userscript-1-17-19-buildings-native-sync-status.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-18-buildings-owned-postcondition-status.txt
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-19-buildings-native-sync-status.txt
           if ! git diff --cached --quiet; then
-            git commit -m "release: publish userscript 1.17.18 Buildings owned postcondition"
+            git commit -m "release: publish userscript 1.17.19 Buildings native sync"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.18.user.js /tmp/public.js
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.19.user.js /tmp/public.js
