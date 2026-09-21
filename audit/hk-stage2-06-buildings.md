@@ -289,3 +289,48 @@ Next live gate:
 6. verify canonical runner appearance and one-building execution;
 7. recalculate and confirm the opened building is no longer offered.
 
+## Buildings owned/postcondition r1 — userscript 1.17.18 (2026-09-21)
+
+User live action exposed two correctness bugs:
+- runner could report a building as opened even when the account state did not change;
+- favorite could be reported/requested without verifying that the building actually entered favorite slots.
+
+Read-only diagnostics confirmed the attempted runner building was already present in the player's `buildings` collection at max tier, and already had favorite state. The previous plan excluded only the 467 currently-active rows, so already-owned but inactive/maxed buildings could still be offered again as candidates.
+
+Delivered in userscript `1.17.18`:
+- core `core-20260921-r20-buildings-owned-postcondition`;
+- marker `buildings-owned-semantics-20260921-r1`;
+- marker `buildings-postcondition-20260921-r1`;
+- candidate plan excludes **all already-owned buildings**, not only current active rows;
+- before each claim, owned state is reread and already-owned rows are skipped;
+- a building is counted as opened only after authoritative `/player/me` confirms it exists in the player's owned building set;
+- claim confirmation retries up to 3 authoritative rereads before declaring failure;
+- favorite request is followed by authoritative reread and must be confirmed in player state;
+- favorite success counter/log increments only after confirmation;
+- plan now exposes current favorite usage/maximum;
+- existing open-limit, runner UI, active-slot semantics, Maps safe5 and Explore E3 are preserved.
+
+Verification:
+- live schema diagnostics: PASS;
+- owned/postcondition predeploy run `35571939466`: PASS;
+- userscript deploy/public round-trip run `35572226472`: PASS;
+- loader core-r20 verification run `35572447994`: PASS;
+- Buildings live verification run `35572452357`: PASS;
+- `buildings_owned_semantics=PASS`;
+- `buildings_claim_postcondition=PASS`;
+- `buildings_favorite_postcondition=PASS`;
+- public E2E run `35572333927`: PASS;
+- Maps/Explore/auth protected invariants: PASS.
+
+Current status:
+**OWNED_POSTCONDITION_R1_LIVE_USER_ACTION_CHECK_PENDING**
+
+Next live gate:
+1. reload game/HK;
+2. calculate candidates — already-owned/maxed buildings must no longer appear;
+3. keep Open limit at 1;
+4. open one candidate;
+5. require actual postcondition confirmation;
+6. recalculate and verify the newly-owned building disappears from candidates;
+7. if its crystal count meets Favorite-from and favorite slots are available, verify the Favorites counter increases.
+
