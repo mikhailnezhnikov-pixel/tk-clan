@@ -187,6 +187,13 @@
     .hkmap-open{display:inline-flex;align-items:center;justify-content:center;min-width:58px;padding:5px 9px;border:1px solid rgba(232,182,84,.42);border-radius:9px;color:#ffe0a0;background:rgba(232,182,84,.08);font-weight:900;text-decoration:none}
     .hkmap-open:hover{background:rgba(232,182,84,.14)}
     .hkmap-open.is-disabled{border-color:rgba(255,255,255,.09);color:#656d78;background:rgba(255,255,255,.025);cursor:not-allowed}
+    .hkmap-open.is-granted{border-color:rgba(98,214,142,.62);color:#a8efc1;background:rgba(65,177,103,.12)}
+    .hkmap-open.is-granted:hover{background:rgba(65,177,103,.20)}
+    .hkmap-open.is-locked{border-color:rgba(232,182,84,.58);color:#ffe09a;background:rgba(232,182,84,.10);cursor:not-allowed}
+    .hkmap-open.is-unavailable{border-color:rgba(224,94,94,.48);color:#f1a0a0;background:rgba(190,55,55,.08);cursor:not-allowed}
+    .hkmap-row.access-granted td:first-child{box-shadow:inset 3px 0 rgba(98,214,142,.72)}
+    .hkmap-row.access-locked td:first-child{box-shadow:inset 3px 0 rgba(232,182,84,.72)}
+    .hkmap-row.access-unavailable td:first-child{box-shadow:inset 3px 0 rgba(224,94,94,.68)}
     .hkmap-detail td{padding:0!important;background:#080b10}
     .hkmap-detail-box{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px}
     .hkmap-reward{padding:13px 14px;border:1px solid rgba(232,182,84,.18);border-radius:13px;background:rgba(232,182,84,.045)}
@@ -889,7 +896,7 @@
                   <th data-hkmap-sort="totalEvents">Total crystal events</th>
                   <th data-hkmap-sort="progress">Progress</th>
                   <th data-hkmap-sort="score" data-sort-direction="desc">Score</th>
-                  <th>Map</th>
+                  <th>Доступ к карте</th>
                   <th>Публикация</th>
                 </tr>
               </thead>
@@ -897,7 +904,7 @@
             </table>
           </div>
 
-          <p class="hkmap-note">Нажмите строку карты, чтобы увидеть максимальную награду. Публикация доступна только управляющим картами. После включения карта автоматически появляется в публичном разделе «Карты».</p>
+          <p class="hkmap-note"><b style="color:#9ee3b5">Зелёная</b> — доступ к карте открыт · <b style="color:#e8b654">жёлтая</b> — карта есть, но доступ не выдан · <b style="color:#e88f8f">красная</b> — отдельной визуализации карты нет. Нажмите строку, чтобы увидеть сводку. Публикацией управляют только управляющие картами.</p>
         </article>
       </section>
 
@@ -1119,11 +1126,20 @@
     return [...grouped.entries()].sort((a,b)=>a[0].localeCompare(b[0],'en',{numeric:true}));
   }
 
+  function hkMapAccessKey(map){
+    const explicit=String(map?.access_key||map?.website_key||'');
+    if(explicit)return explicit;
+    const key=String(map?.key||'');
+    return /^hk_[a-z0-9]+$/i.test(key)?key:'';
+  }
+
   function hkMemberRuleState(member,map){
+    const accessKey=hkMapAccessKey(map);
+    if(!accessKey||!map?.open_url)return false;
     const rules=member.map_rules||{};
     const cityRules=new Set(Array.isArray(rules.cities)?rules.cities:[]);
     const mapRules=rules.maps&&typeof rules.maps==='object'?rules.maps:{};
-    if(Object.prototype.hasOwnProperty.call(mapRules,map.key))return !!mapRules[map.key];
+    if(Object.prototype.hasOwnProperty.call(mapRules,accessKey))return !!mapRules[accessKey];
     return cityRules.has(map.city);
   }
 
@@ -1136,8 +1152,12 @@
     if(!member||!list)return;
     const maps=hkMaps.filter(x=>String(x.city)===city).sort((a,b)=>String(a.grid).localeCompare(String(b.grid),'en',{numeric:true}));
     list.innerHTML=maps.map(map=>{
+      const accessKey=hkMapAccessKey(map);
+      if(!accessKey||!map.open_url){
+        return '<span class="hkmap-map-item" style="cursor:default;opacity:.62"><span style="color:#e88f8f">●</span><span>'+safe(map.grid)+' · нет визуализации</span></span>';
+      }
       const checked=hkMemberRuleState(member,map);
-      return '<label class="hkmap-map-item"><input type="checkbox" data-hkmap-member-map="'+safe(telegramId)+'" data-map-key="'+safe(map.key)+'" '+(checked?'checked ':'')+'><span>'+safe(map.grid)+'</span></label>';
+      return '<label class="hkmap-map-item"><input type="checkbox" data-hkmap-member-map="'+safe(telegramId)+'" data-map-key="'+safe(accessKey)+'" '+(checked?'checked ':'')+'><span>'+safe(map.grid)+'</span></label>';
     }).join('')||'<div class="muted">В этом городе нет карт.</div>';
     details.dataset.rendered='1';
   }
@@ -1401,9 +1421,15 @@
       const sourceLabel=String(map.source_label||'Сайт');
       const hasWebsite=sourceKind==='website'||sourceKind==='combined'||!!map.website_key;
       const openUrl=String(map.open_url||'');
-      const openControl=openUrl
-        ? '<a class="hkmap-open" href="'+safe(openUrl)+'">Open</a>'
-        : '<span class="hkmap-open is-disabled" title="'+(hasWebsite?'Локальная карта ещё не загружена':'У района нет отдельной website-визуализации')+'">—</span>';
+      const accessState=hkMapsCanManage
+        ? (openUrl?'granted':'unavailable')
+        : String(map.access_state||(openUrl?(map.access_allowed?'granted':'locked'):'unavailable'));
+      const accessAllowed=accessState==='granted';
+      const openControl=openUrl&&accessAllowed
+        ? '<a class="hkmap-open is-granted" href="'+safe(openUrl)+'">Открыть</a>'
+        : (openUrl
+          ? '<span class="hkmap-open is-locked" title="Доступ к этой карте ещё не выдан">🔒 Закрыта</span>'
+          : '<span class="hkmap-open is-unavailable" title="'+(hasWebsite?'Визуализация карты пока недоступна':'У района нет отдельной website-визуализации')+'">Нет карты</span>');
       const publishControl=!hasWebsite
         ? '<span class="hkmap-private">Только скрипт</span>'
         : (hkMapsCanManage
@@ -1411,7 +1437,7 @@
           : (map.published?'<span class="hkmap-published">На сайте</span>':'<span class="hkmap-private">Закрыта</span>'));
       const progressClass=Number(map.progress)===100?' ready':'';
       const sourceBadge='<small style="display:block;margin-top:3px;opacity:.7">'+safe(sourceLabel)+'</small>';
-      return '<tr class="hkmap-row'+(opened?' is-open':'')+'" data-hkmap-key="'+safe(map.key)+'">'+
+      return '<tr class="hkmap-row access-'+safe(accessState)+(opened?' is-open':'')+'" data-hkmap-key="'+safe(map.key)+'">'+
         '<td><strong>'+safe(map.city)+'</strong>'+sourceBadge+'</td>'+
         '<td>'+safe(map.grid)+(map.canonical_grid&&map.canonical_grid!==map.grid?'<small style="display:block;opacity:.65">X:Y '+safe(map.canonical_grid)+'</small>':'')+'</td>'+
         '<td>'+formatNumber(map.invest)+'</td>'+
@@ -2505,9 +2531,9 @@
     $('dashboard').classList.remove('hidden');
 
     const m=data.member||{};
-    currentMapsAccess=!!(m.maps_access||m.maps_manage);
+    currentMapsAccess=true;
     const mapsTab=document.querySelector('[data-cab-tab="maps"]');
-    if(mapsTab)mapsTab.hidden=!currentMapsAccess;
+    if(mapsTab)mapsTab.hidden=false;
     if(!currentMapsAccess){
       hkMaps=[];hkMapsMembers=[];hkMapsLoaded=false;hkMapsCanManage=false;
       if(document.querySelector('[data-cab-tab="maps"].active'))setCabTab('overview');
