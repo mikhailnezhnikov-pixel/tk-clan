@@ -1,4 +1,4 @@
-name: Deploy Userscript 1.17.24 Native Play Performance Hotfix
+name: Deploy Userscript 1.17.24 Clan Shop Passive Facts
 
 on:
   push:
@@ -44,16 +44,16 @@ jobs:
           cmp -s /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           echo "LIVE_BASELINE_INPUT=PASS"
 
-      - name: Apply native play performance hotfix
+      - name: Apply Clan Shop passive facts patch
         run: |
           set -euo pipefail
-          python3 -m py_compile deploy/topking/patch_native_play_performance_1_17_24.py
-          python3 deploy/topking/patch_native_play_performance_1_17_24.py
+          python3 -m py_compile deploy/topking/patch_clan_shop_passive_facts_1_17_24.py
+          python3 deploy/topking/patch_clan_shop_passive_facts_1_17_24.py
           node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "clan-shop-passive-facts-20260922-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "native-play-performance-20260921-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "native-game-priority-no-bridge-race-20260921-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "puzzle-solver-v3-embedded-20260921-r1" /tmp/HamsterKingMobile.user.js
-          echo "NATIVE_PLAY_PERFORMANCE_CANDIDATE=PASS"
+          echo "CLAN_SHOP_PASSIVE_FACTS_CANDIDATE=PASS"
 
       - name: Static regression verification
         run: |
@@ -61,34 +61,36 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          block=s[s.index("const HK_CLAN_SHOP_PASSIVE_FACTS_REV"):s.index("async function loadShop()",s.index("const HK_CLAN_SHOP_PASSIVE_FACTS_REV"))]
           checks={
             'version_preserved':"// @version      1.17.24" in s,
-            'perf_marker':"native-play-performance-20260921-r1" in s,
-            'native_lock_fix_preserved':"native-game-priority-no-bridge-race-20260921-r1" in s,
-            'business_redraw_gated':"if(hkBusinessUiVisible()) refreshBusinessData();" in s,
-            'pit_scan_gated':"if(pitRunning || hkPitUiVisible()) updatePitStatus();" in s,
-            'heartbeat_5s':"}, 5000);" in s,
-            'health_dedup':"if(current?.ok===next.ok && current?.detail===next.detail) return;" in s,
+            'passive_marker':"clan-shop-passive-facts-20260922-r1" in s,
+            'native_perf_preserved':"native-play-performance-20260921-r1" in s,
+            'native_lock_preserved':"native-game-priority-no-bridge-race-20260921-r1" in s,
             'puzzle_preserved':"puzzle-solver-v3-embedded-20260921-r1" in s,
             'business_finalize_preserved':"businesses-finalize-single-snapshot-20260921-r1" in s,
+            'shop_view_hook':"scheduleClanShopActualFactsSync();" in s,
+            'fingerprint_dedupe':"fingerprint===clanShopFactLastFingerprint" in s,
+            'debounce_900ms':"},900);" in s,
+            'no_game_player_request':"apiJson('/player/me'" not in block,
+            'no_game_shop_request':"apiJson('/shop/view'" not in block,
           }
           failed=[k for k,v in checks.items() if not v]
           for k,v in checks.items(): print(f"{k}={'PASS' if v else 'FAIL'}")
           if failed: raise SystemExit("failed checks: "+", ".join(failed))
-          assert "setInterval(() => {\n      updatePitStatus();" not in s
           PY
 
       - name: Backup and deploy
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.24.native-play-performance.user.js
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.24.clan-shop-passive-facts.user.js
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             stamp="$(date +%Y%m%d-%H%M%S)"
-            node --check /tmp/HamsterKingMobile.1.17.24.native-play-performance.user.js
+            node --check /tmp/HamsterKingMobile.1.17.24.clan-shop-passive-facts.user.js
             cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.24.puzzle-solver.$stamp"
-            install -m 0644 /tmp/HamsterKingMobile.1.17.24.native-play-performance.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            install -m 0644 /tmp/HamsterKingMobile.1.17.24.clan-shop-passive-facts.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
           '
@@ -97,7 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 30 \
-            "https://hk-license.89.125.1.71.sslip.io/panel.js?native-play-performance=$(date +%s)" -o /tmp/public.js
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?clan-shop-passive-facts=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
           grep -Fq "puzzle-solver-v3-embedded-20260921-r1" /tmp/public.js
@@ -105,18 +107,19 @@ jobs:
           grep -Fq "mf_fairlot_lights_out_sl(\\d+)_(true|false)" /tmp/public.js
           grep -Fq "mf_treasurelot_sword_\\d+_(\\d+)" /tmp/public.js
           grep -Fq "enemy_type_(01|02|03)_(\\d+)_sl(\\d+)" /tmp/public.js
-          echo "PUBLIC_NATIVE_PLAY_PERFORMANCE_HOTFIX=PASS"
+          echo "PUBLIC_CLAN_SHOP_PASSIVE_FACTS=PASS"
 
       - name: Sync verified baseline
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           {
-            echo "USERSCRIPT_1_17_24_NATIVE_PLAY_PERFORMANCE=PASS"
+            echo "USERSCRIPT_1_17_24_CLAN_SHOP_PASSIVE_FACTS=PASS"
             echo "version=1.17.24"
             echo "core=core-20260921-r27-businesses-runner-canon"
             echo "puzzle_solver=puzzle-solver-v3-embedded-20260921-r1"
-            echo "native_play_performance=PASS"
+            echo "native_play_performance=PRESERVED"
+            echo "clan_shop_passive_facts=PASS"
             echo "background_scan_500ms=PASS"
             echo "initial_scan_300ms=PASS"
             echo "lights_out_3x3=PASS"
@@ -131,11 +134,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-24-puzzle-solver-status.txt
           if ! git diff --cached --quiet; then
-            git commit -m "hotfix: remove rhythmic native gameplay lag"
+            git commit -m "fix: passively sync Clan Shop player facts"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.24.native-play-performance.user.js /tmp/public.js
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.24.clan-shop-passive-facts.user.js /tmp/public.js
