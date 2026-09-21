@@ -1,0 +1,31 @@
+name: Inspect Clan Shop History Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/clan-shop-history-live-inspect-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect live payload
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 "python3 -c 'import importlib.util,json; p="/opt/hamsterking-license/server.py"; spec=importlib.util.spec_from_file_location("srv",p); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); print("MARKER", "CLAN_SHOP_IDENTITY_RESOLUTION_V6" in open(p,encoding="utf-8").read()); print(json.dumps(m.clan_shop_history_payload(),ensure_ascii=False))'"
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
