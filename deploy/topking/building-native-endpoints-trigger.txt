@@ -1,1 +1,1 @@
-2026-09-21 inspect native building endpoints from current client_build page
+2026-09-21 crawl dynamic game chunks for native building mutations
