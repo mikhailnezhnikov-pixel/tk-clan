@@ -1094,3 +1094,34 @@ Evidence:
 Continue E3 single-building validation.
 Do not enable E4 until the single-building action path passes user verification.
 
+## E3 r9 — current userscript 1.17.19 revalidation (2026-09-21)
+
+After Stage 2.06 Buildings reached LIVE PASS, Explore E3 was revalidated against the current production userscript.
+
+Current production:
+- userscript: `1.17.19`;
+- core: `core-20260921-r21-buildings-native-sync`;
+- Explore marker remains `explore-e3-single-20260920-r9-runner`.
+
+Read-only verification run `35576298312`: **PASS**.
+
+Verified:
+- live = public = baseline;
+- E3 scope remains exactly one building;
+- mutations still route through the shared serialized mutation gate;
+- mutation network retry remains disabled by the shared mutation path;
+- authoritative player/building reconciliation remains after every mutation attempt;
+- fast completion path present;
+- auto/manual battle paths present;
+- remort path present;
+- Instant MAX path present;
+- five staged runner rows present;
+- completed E3 runner remains visible for 15 seconds;
+- E4 remains absent/not enabled;
+- Buildings native-sync, Maps safe5 and passive auth protections remain present.
+
+Current status:
+**E3_R9_SINGLE_BUILDING_LIVE_TEST_PENDING**
+
+Next gate is the real one-building action test. Do not enable E4 before user PASS.
+
