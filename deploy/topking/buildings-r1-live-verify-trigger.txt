@@ -1,1 +1,1 @@
-2026-09-21 revalidate Buildings r1 on userscript 1.17.13 after late-login handoff
+2026-09-21 revalidate Buildings r1 contract on userscript 1.17.14 Buildings UI r2
