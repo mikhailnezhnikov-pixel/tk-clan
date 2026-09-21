@@ -151,6 +151,14 @@ jobs:
               if hits_any:
                   found.append(url)
           for url,body in bodies.items():
+              key='activeBuildings:l.player_active_building'
+              i=body.find(key)
+              if i>=0:
+                  frag=body[max(0,i-2600):i+2600].replace('\n',' ')
+                  print('player_buildings_map_context='+re.sub(r'\s+',' ',frag))
+                  break
+
+          for url,body in bodies.items():
               key='this._setChosenTier(t??n)'
               i=body.find(key)
               if i>=0:
