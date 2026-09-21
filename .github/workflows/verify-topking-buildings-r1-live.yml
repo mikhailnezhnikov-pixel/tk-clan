@@ -51,9 +51,10 @@ jobs:
           s=Path('/tmp/live.js').read_text(encoding='utf-8')
 
           required=[
-              "// @version      1.17.14",
-              "const BUILD_VERSION = '1.17.14';",
+              "// @version      1.17.15",
+              "const BUILD_VERSION = '1.17.15';",
               "const HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1';",
+              "const HK_BUILDINGS_UI_REV = 'buildings-ui-20260921-r3';",
               "async function buildingCanonBuildPlan(refreshPlayer=true)",
               "async function buildingCanonOpen(buildingId)",
               "async function buildingCanonFavorite(buildingId)",
@@ -131,7 +132,7 @@ jobs:
           print("buildings_pause_stop=PASS")
           print("buildings_ui_wiring=PASS")
           print("protected_maps_explore=PASS")
-          print("userscript_1_17_14=PASS")
+          print("userscript_1_17_15=PASS")
           print("BUILDINGS_CANON_R1_TECHNICAL_REVALIDATION=PASS")
           PY
 
