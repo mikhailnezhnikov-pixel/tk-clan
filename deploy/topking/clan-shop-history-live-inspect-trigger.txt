@@ -1,2 +1,2 @@
-inspect=live-clan-shop-history-r2
+inspect=live-clan-shop-history-r3
 stamp=2026-09-21
