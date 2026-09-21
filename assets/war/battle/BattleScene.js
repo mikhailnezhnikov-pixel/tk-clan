@@ -9,7 +9,24 @@
       const textures=await this.loadTextures();this.ours=new (CORE().Fighter)({PIXI,textures:textures.topking,side:'left',height:330,name:'Top King'});this.enemy=new (CORE().Fighter)({PIXI,textures:textures.raider,side:'right',height:330,name:'Opponent'});this.textureSets=textures;this.world.addChild(this.ours.container,this.enemy.container);
       this.effects=new (CORE().EffectsManager)({PIXI,gsap:this.gsap,world:this.world,overlay:this.overlay});this.animator=new (CORE().BattleAnimator)({gsap:this.gsap,scene:this,effects:this.effects,onContact});this.ready=true;this.host.classList.add('battle-stage-v4','battle-stage-v4-ready');this.layout();window.addEventListener('resize',this.resizeHandler,{passive:true});
     }
-    async loadSet(base){const states=['idle','attack','hit'];const loaded=await Promise.all(states.map(async state=>{try{return [state,await this.PIXI.Assets.load(base+'/'+state+'.webp?v=20260921-3')]}catch(e){console.warn('[BattleScene] asset failed',base,state,e);return [state,null]}}));return Object.fromEntries(loaded.filter(([,texture])=>texture))}
+    async loadTexture(url){
+      return new Promise((resolve,reject)=>{
+        const image=new Image();
+        image.decoding='async';
+        image.onload=()=>{try{resolve(this.PIXI.Texture.from(image))}catch(err){reject(err)}};
+        image.onerror=()=>reject(new Error('image_load_failed '+url));
+        image.src=url;
+      });
+    }
+    async loadSet(base){
+      const states=['idle','attack','hit'];
+      const loaded=await Promise.all(states.map(async state=>{
+        const url=base+'/'+state+'.webp?v=20260921-3';
+        try{return [state,await this.loadTexture(url)]}
+        catch(e){console.warn('[BattleScene] asset failed',url,e);return [state,null]}
+      }));
+      return Object.fromEntries(loaded.filter(([,texture])=>texture));
+    }
     async loadTextures(){const [topking,raider,bot]=await Promise.all([this.loadSet('../assets/war/units/topking'),this.loadSet('../assets/war/units/raider'),this.loadSet('../assets/war/units/bot')]);return {topking,raider,bot}}
     buildArena(){
       const {PIXI}=this;const floor=new PIXI.Graphics().ellipse(0,0,300,54).fill({color:0x0d1218,alpha:.68});floor.label='Arena floor';this.floor=floor;this.world.addChild(floor);this.particles=new PIXI.Container();this.world.addChild(this.particles);
