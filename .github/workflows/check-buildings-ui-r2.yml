@@ -1,0 +1,38 @@
+name: Check Buildings UI R2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/buildings-ui-r2-check-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build candidate from current baseline
+        run: |
+          set -euo pipefail
+          cp baseline/topking/HamsterKingMobile.current.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.13" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r15-late-login-handoff" /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile deploy/topking/patch_buildings_ui_r2_1_17_14.py
+          python3 deploy/topking/patch_buildings_ui_r2_1_17_14.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.14" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r16-buildings-ui" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-ui-20260921-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "class=\"hk-building-row\"" /tmp/HamsterKingMobile.user.js
+          grep -Fq "class=\"hk-building-id\"" /tmp/HamsterKingMobile.user.js
+          grep -Fq "class=\"hk-building-actions\"" /tmp/HamsterKingMobile.user.js
+          grep -Fq "maps-shared-runtime-20260921-r7-safe5" /tmp/HamsterKingMobile.user.js
+          grep -Fq "explore-e3-single-20260920-r9-runner" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          grep -Fq "AUTH_PASSIVE_SAFETY_R1" /tmp/HamsterKingMobile.user.js
+          echo "BUILDINGS_UI_R2_PREDEPLOY=PASS"
