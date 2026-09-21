@@ -214,25 +214,30 @@ print("ratings_timer_next_present="+yes(ratings_timer_next))
 # Security regression guards for the collector auth bridge. These are static
 # checks against the live server/userscript and do not touch player state.
 server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
-server_guard_ok=True
-for route,label in (
-    ("/api/v1/public-collector/auth-probe","probe"),
-    ("/api/v1/public-collector/auth-sync","sync"),
-):
-    i=server_src.find('path == "'+route+'"')
-    block=server_src[i:i+2600] if i>=0 else ""
-    guard=block.find("public_collector_auth_sync_allowed(player_id)")
-    read=block.find("self.read_json(")
-    ok=(i>=0 and guard>=0 and read>=0 and guard<read)
-    print("server_"+label+"_identity_guard_before_body="+yes(ok))
-    server_guard_ok=server_guard_ok and ok
+probe_route_absent=all(marker not in server_src for marker in (
+    "/api/v1/public-collector/auth-probe",
+    "accept_public_collector_auth_probe",
+    "PUBLIC_COLLECTOR_AUTH_PROBE",
+))
+sync_route_i=server_src.find('path == "/api/v1/public-collector/auth-sync"')
+sync_route_block=server_src[sync_route_i:sync_route_i+2600] if sync_route_i>=0 else ""
+sync_guard=sync_route_block.find("public_collector_auth_sync_allowed(player_id)")
+sync_read=sync_route_block.find("self.read_json(")
+server_sync_guard_ok=(sync_route_i>=0 and sync_guard>=0 and sync_read>=0 and sync_guard<sync_read)
+server_guard_ok=(probe_route_absent and server_sync_guard_ok)
+print("server_auth_probe_absent="+yes(probe_route_absent))
+print("server_sync_identity_guard_before_body="+yes(server_sync_guard_ok))
 
 userscript_src=open("/opt/hamsterking-license/HamsterKingMobile.user.js",encoding="utf-8").read()
-probe_i=userscript_src.find("async function sendPublicCollectorAuthProbe()")
-probe_block=userscript_src[probe_i:probe_i+1800] if probe_i>=0 else ""
+client_probe_absent=all(marker not in userscript_src for marker in (
+    "PUBLIC_COLLECTOR_AUTH_PROBE_URL",
+    "sendPublicCollectorAuthProbe",
+    "buildPublicCollectorAuthProbe",
+    "safeStorageProbeArea",
+    "/api/v1/public-collector/auth-probe",
+))
 sync_i=userscript_src.find("async function maybeSyncPublicCollectorAuthorization")
 sync_block=userscript_src[sync_i:sync_i+2200] if sync_i>=0 else ""
-client_probe_guard=("!licenseState.publicCollectorAuthSync" in probe_block)
 client_sync_guard=("!licenseState.publicCollectorAuthSync" in sync_block)
 client_xhr=("AUTH_BRIDGE_XHR_TRANSPORT_R1" in userscript_src and "function publicCollectorServerPost" in userscript_src)
 client_passive=("AUTH_PASSIVE_SAFETY_R1" in userscript_src and "auth-create-blocked-passive-only" in userscript_src)
@@ -252,7 +257,7 @@ explore_canon_ok=("HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" 
 map_concurrency_ok=("const HK_MAP_READ_CONCURRENCY = 5;" in userscript_src)
 public_snapshot_canon_ok=("HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2'" in userscript_src)
 
-print("client_probe_technical_guard="+yes(client_probe_guard))
+print("client_auth_probe_absent="+yes(client_probe_absent))
 print("client_sync_technical_guard="+yes(client_sync_guard))
 print("client_auth_bridge_xhr="+yes(client_xhr))
 print("client_auth_create_passive="+yes(client_passive))
@@ -262,7 +267,7 @@ print("client_ensure_never_creates_auth="+yes(ensure_never_creates_auth))
 print("protected_explore_canon="+yes(explore_canon_ok))
 print("protected_map_concurrency_5="+yes(map_concurrency_ok))
 print("protected_public_snapshot_canon="+yes(public_snapshot_canon_ok))
-collector_isolation_static_ok=(server_guard_ok and client_probe_guard and client_sync_guard and client_xhr and client_passive)
+collector_isolation_static_ok=(server_guard_ok and client_probe_absent and client_sync_guard and client_xhr and client_passive)
 userscript_safety_invariants_ok=all((
     prelogin_marker,
     startup_no_bootstrap_player_me,
@@ -310,7 +315,7 @@ except OSError:
     pass
 identity_perm_ok=(service_uid>=0 and mode_owner_ok(identity_path,0o600,{service_uid}))
 bootstrap_perm_ok=(service_uid>=0 and mode_owner_ok(bootstrap_path,0o600,{service_uid}))
-probe_perm_ok=(service_uid>=0 and mode_owner_ok(probe_path,0o600,{service_uid}))
+probe_absent=(not os.path.exists(probe_path))
 token_perm_ok=(service_uid>=0 and mode_owner_ok(token_path,0o600,{0,service_uid}))
 env_perm_ok=mode_owner_ok(env_path,0o600,{0})
 refresh_perm_ok=True
@@ -342,14 +347,14 @@ print("collector_data_dir_private="+yes(dir_ok))
 print("collector_identity_private="+yes(identity_perm_ok))
 print("collector_token_private="+yes(token_perm_ok))
 print("collector_bootstrap_private="+yes(bootstrap_perm_ok))
-print("collector_probe_private="+yes(probe_perm_ok))
+print("collector_probe_absent="+yes(probe_absent))
 print("collector_env_private="+yes(env_perm_ok))
 print("collector_refresh_status_private="+yes(refresh_perm_ok))
 print("collector_legacy_static_token_absent="+yes(legacy_static_token_absent))
 print("collector_token_file_env_present="+yes(token_file_env_present))
 print("collector_bootstrap_env_present="+yes(bootstrap_env_present))
 print("collector_self_heal_live="+yes(collector_self_heal_live))
-credential_permissions_ok=all((dir_ok,identity_perm_ok,token_perm_ok,bootstrap_perm_ok,probe_perm_ok,env_perm_ok,refresh_perm_ok))
+credential_permissions_ok=all((dir_ok,identity_perm_ok,token_perm_ok,bootstrap_perm_ok,probe_absent,env_perm_ok,refresh_perm_ok))
 
 war_ok=(
     war_status==200
