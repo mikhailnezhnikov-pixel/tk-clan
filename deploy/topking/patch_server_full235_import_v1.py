@@ -30,6 +30,25 @@ if _hk_os.environ.get("GITHUB_ACTIONS")=="true" and _hk_mode=="PROBE":
     print("FULL235_PUBLIC_SOURCE_PROBE=PASS")
     raise SystemExit(0)
 
+# FULL235_PUBLIC_SOURCE_PROBE2_20260921
+if _hk_os.environ.get("GITHUB_ACTIONS")=="true" and _hk_mode=="PROBE2":
+    import urllib.request as _hk_urllib, hashlib as _hk_hashlib, re as _hk_re, base64 as _hk_b64
+    _hk_url="https://kokkaras.com/hk_maps/hk_newyork2332.php"
+    _hk_req=_hk_urllib.Request(_hk_url,headers={"User-Agent":"Mozilla/5.0"})
+    _hk_raw=_hk_urllib.urlopen(_hk_req,timeout=30).read()
+    _hk_html=_hk_raw.decode("utf-8","replace")
+    print("FULL235_PROBE2_BYTES="+str(len(_hk_raw)))
+    print("FULL235_PROBE2_SHA256="+_hk_hashlib.sha256(_hk_raw).hexdigest())
+    print("FULL235_PROBE2_URLS_BEGIN")
+    for _hk_u in sorted(set(_hk_re.findall(r'''(?:src|href)=[\"']([^\"']+)|(?:fetch|axios\.get)\s*\(\s*[\"']([^\"']+)|[\"']([^\"']+\.(?:json|geojson|js|php)(?:\?[^\\"']*)?)[\"']''',_hk_html,re.I))):
+        print("|".join(x for x in _hk_u if x))
+    print("FULL235_PROBE2_URLS_END")
+    print("FULL235_PROBE2_HTML_BEGIN")
+    print(_hk_html)
+    print("FULL235_PROBE2_HTML_END")
+    print("FULL235_PUBLIC_SOURCE_PROBE2=PASS")
+    raise SystemExit(0)
+
 from pathlib import Path
 
 TARGET=Path("/tmp/server.py")
