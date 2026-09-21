@@ -841,22 +841,6 @@
             <div class="hkmap-mini"><span>Open подключено</span><b id="hkmap-ready">0</b></div>
           </div>
 
-          <section id="hk-full-import-admin" class="hidden" style="margin:14px 0;padding:14px;border:1px solid rgba(95,150,220,.35);border-radius:14px;background:rgba(14,25,40,.72)">
-            <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
-              <div style="max-width:720px">
-                <h3 style="margin:0 0 6px">Полный импорт HK Maps — 235 карт</h3>
-                <p class="muted" style="margin:0">Выберите исходный <code>hk_maps_235_full.json.gz</code>. Архив распаковывается в браузере; на сервер отправляются только ID зданий и знания по комнатам. Сначала выполняется dry-run без изменения карт.</p>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <input id="hk-full-import-file" type="file" accept=".json.gz,.gz,application/gzip" style="max-width:320px">
-                <button id="hk-full-import-check" class="button ghost" type="button">Проверить 235 карт</button>
-                <button id="hk-full-import-apply" class="button primary" type="button" disabled>Применить импорт</button>
-              </div>
-            </div>
-            <div id="hk-full-import-progress" class="muted" style="margin-top:10px"></div>
-            <div id="hk-full-import-result" style="margin-top:10px"></div>
-          </section>
-
           <details id="hkmap-access-admin" class="hkmap-access-admin hidden">
             <summary>
               <div>
@@ -1402,7 +1386,6 @@
       return (Number(av)-Number(bv))*hkMapsSort.dir;
     });
 
-    $('hk-full-import-admin')?.classList.toggle('hidden',!hkMapsCanManage);
     $('hkmap-total').textContent=formatNumber(source.length);
     $('hkmap-cities').textContent=formatNumber(hkGameCityCoverage(source))+' / '+HK_GAME_CITY_KEYS.size;
     $('hkmap-ready').textContent=formatNumber(source.filter(x=>x.open_url).length);
