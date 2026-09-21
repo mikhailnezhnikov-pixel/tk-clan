@@ -1,0 +1,110 @@
+name: Verify Businesses 2.08 Preflight
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/businesses-208-preflight-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact current live/public
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          curl -fsSL --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?businesses-208-preflight=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/live.js
+          node --check /tmp/public.js
+          cmp -s /tmp/live.js /tmp/public.js
+          cmp -s /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
+          echo "live_public_baseline_equality=PASS"
+
+      - name: Verify current Businesses baseline and canonical gap
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/live.js').read_text(encoding='utf-8')
+
+          required=[
+              "// @version      1.17.22",
+              "const BUILD_VERSION = '1.17.22';",
+              "const HK_CORE_REVISION = 'core-20260921-r24-explore-production-ui';",
+              "function refreshBusinessData()",
+              "function renderBusinessLists()",
+              "function renderBusinessOptimizerFilters()",
+              "function calculateBusinessOptimizer()",
+              "function renderBusinessOptimizer()",
+              "function bonusAnalyzerData()",
+              "function renderBonusAnalyzer()",
+              "async function executeBusinessPlan()",
+              "async function businessAction(action, row, businessId = null, timer = null)",
+              "async function readBusinessSlot(buildingId, slot, accept = null, attempts = 5)",
+              "async function finishPendingBusiness(",
+              "async function releaseFreeBusinessManagers()",
+              "hkAuthoritativePlayerRead('business-complete')",
+              "title:either('Перестановка бизнесов','Business rearrangement')",
+              "buildings-native-sync-20260921-r1",
+              "explore-production-ui-20260921-r1",
+              "maps-shared-runtime-20260921-r7-safe5",
+              "AUTH_PASSIVE_SAFETY_R1",
+          ]
+          missing=[m for m in required if m not in s]
+          if missing: raise SystemExit("missing baseline markers: "+repr(missing))
+
+          # Existing mutation path remains serialized and postcondition-driven.
+          api=s[s.index("async function apiJson(path"):s.index("async function hkAuthoritativePlayerRead")]
+          assert "hkMutationGate.run(" in api
+          business=s[s.index("async function executeBusinessPlan()"):s.index("function prepareOriginalBusinessRestore")]
+          assert "await hkRunner.waitIfPaused()" in business
+          assert "businessSlotIsActive" in business
+          assert "readBusinessSlot" in business
+          assert "hkAuthoritativePlayerRead('business-complete')" in business
+          assert "Пробую вернуть исходную схему" in business
+
+          # Donor catalog/planner layer is not yet transferred.
+          absent=[
+              "businessesBetaState",
+              "businessesPlannerCapacity",
+              "businessesPlannerRouteOptions",
+              "businessesPlannerOwnedCount",
+              "businessesPlannerOwnedBusinessInventory",
+              "businessesBetaModalTitle",
+              "businessesPlannerQuantity",
+          ]
+          unexpected=[m for m in absent if m in s]
+          if unexpected: raise SystemExit("canonical gap unexpectedly changed: "+repr(unexpected))
+
+          print("business_rearrangement_current=PASS")
+          print("business_optimizer_current=PASS")
+          print("business_bonus_analyzer_current=PASS")
+          print("business_runner_pause_stop=PASS")
+          print("business_authoritative_postcondition=PASS")
+          print("business_rollback_path=PASS")
+          print("business_donor_catalog_planner_absent=CONFIRMED")
+          print("protected_explore_buildings_maps_auth=PASS")
+          print("BUSINESSES_208_PREFLIGHT=PASS")
+          PY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js /tmp/public.js
