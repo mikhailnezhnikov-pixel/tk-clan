@@ -17,11 +17,14 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- current module: Maps / Карты — scanner repair
-- current module file: audit/hk-stage2-04-maps.md
-- current module status: BUG_CONFIRMED_NO_FIX_APPLIED
-- next module after LIVE PASS: Buildings / Здания — resume live confirmation
-- Today / Сегодня: LIVE PASS
+- userscript: 1.17.12
+- current module: Buildings / Здания — final live action gate
+- current module file: audit/hk-stage2-06-buildings.md
+- current module status: TECHNICAL_REVALIDATION_PASS_USER_ACTION_PENDING
+- Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
+- next after Buildings LIVE PASS: Explore / Исследование — E3 single-building user validation
+- Explore E4 multi-building: NOT STARTED
+- parallel FULL235: separate track; do not mix into Stage 2 module gate
 
 ## Module order
 
