@@ -74,7 +74,8 @@ jobs:
               "active","is_active","opened","is_open","is_opened","enabled","is_enabled",
               "chosen_tier","tier","level","building_level","state","status",
               "is_favorite","favorite","slots","slot_count","businesses","business_building",
-              "area_id","gamearea_id"
+              "area_id","gamearea_id","slot_index","active_passive_income","has_events",
+              "crystal_events_num","battle_level","max_battle_level","next_tier_level"
           ]
           for field in fields:
               vals=[r.get(field) for r in rows if isinstance(r,dict) and field in r]
@@ -95,6 +96,19 @@ jobs:
                   c=collections.Counter(vals)
                   safe=[(k,v) for k,v in c.most_common(20) if len(k)<=40 and "id" not in field.lower()]
                   print(f"field_{field}_values="+",".join(f"{k}:{v}" for k,v in safe))
+
+          slot_vals=[r.get("slot_index") for r in rows if isinstance(r,dict) and isinstance(r.get("slot_index"),(int,float)) and not isinstance(r.get("slot_index"),bool)]
+          if slot_vals:
+              print("slot_index_negative="+str(sum(v<0 for v in slot_vals)))
+              print("slot_index_zero="+str(sum(v==0 for v in slot_vals)))
+              print("slot_index_positive="+str(sum(v>0 for v in slot_vals)))
+              print("slot_index_nonnegative="+str(sum(v>=0 for v in slot_vals)))
+              print("slot_index_unique="+str(len(set(slot_vals))))
+          active_scalar=player.get("player_active_building")
+          print("player_active_building_scalar="+str(active_scalar))
+          if isinstance(active_scalar,(int,float)):
+              print("slot_nonnegative_matches_active="+("yes" if sum(v>=0 for v in slot_vals)==int(active_scalar) else "no"))
+              print("slot_positive_matches_active="+("yes" if sum(v>0 for v in slot_vals)==int(active_scalar) else "no"))
 
           # Shape-only counts for nested collections, no IDs or values.
           for name in ["slots","businesses","business_building"]:
