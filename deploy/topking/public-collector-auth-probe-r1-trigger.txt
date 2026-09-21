@@ -1,1 +1,1 @@
-2026-09-21 repair collector identity owner for license service uid and restart
+2026-09-21 remove retired production auth-probe while preserving technical auth-sync
