@@ -1,4 +1,2 @@
 token_claims {"exp":1789952446}
-war status 200 ctype application/json; charset=utf-8 bytes_read 468 sha16 11ecc822ed585753
-clan_leaderboard status 200 ctype application/json; charset=utf-8 bytes_read 1024 sha16 5db64086a0be5bd9
-player_me transport_error NameError
+player_auth_methods [{"type":"tg"},{"type":"google"},{"type":"YANDEX"}]
