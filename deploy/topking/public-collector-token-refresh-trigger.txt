@@ -1,1 +1,1 @@
-2026-09-21 validate real collector refresh plus automatic 60-second threshold branch\n
+2026-09-21 reverify token refresh after diagnostic auth-probe removal
