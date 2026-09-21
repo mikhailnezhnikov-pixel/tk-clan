@@ -2,6 +2,7 @@
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
 // @version      1.17.24
+// @release-note Исправлена совместимость с обычной игрой: HK больше не запускает дополнительное обновление player state после нативных действий пользователя.
 // @release-note Встроен фоновый HK Puzzle Solver v3: автоматически показывает порядок нажатий для Lights Out 3×3 и Battle.
 // @release-note Перестановка бизнесов: на desktop «достать» слева, «вставить» справа; T4–T6 полностью защищены от снятия.
 // @release-note В «Бизнесы» добавлен read-only каталог: поиск, фильтры бонусов, лимиты, наличие и известные рецепты.
@@ -2873,6 +2874,8 @@
     if(hkStateStore.revision!==before&&merged){playerDocument=merged;try{refreshBusinessData();}catch(_){}}
   }
 
+  const HK_NATIVE_GAME_PRIORITY_REV = 'native-game-priority-no-bridge-race-20260921-r1';
+
   function installNetworkCapture() {
     if (networkCaptureInstalled) return;
     if (typeof window.fetch !== 'function' || !window.XMLHttpRequest) throw new Error('Игровая сеть ещё не готова');
@@ -2891,7 +2894,9 @@
       if (path === '/auth/create' && response.ok) {
         response.clone().json().then(body => captureNativeGameAuthToken(body)).catch(() => {});
       }
-      if (hkNativeLoginRuntimeStarted && response.ok && isGameApiRequest(url)) hkGameBridge.noteMutation(path, init?.method || input?.method || 'GET');
+      // Native game traffic is observation-only. Never schedule HK's React
+      // refresh bridge from the game's own request; doing so creates a second
+      // player-state request while the server may still hold its lock.
       if(response.ok && isGameApiRequest(url) && path!=='/player/me') response.clone().json().then(body=>acceptSharedGameResponse(url,body)).catch(()=>{});
       if (path === '/player/me' && response.ok) {
         let partial = false;
@@ -2933,7 +2938,8 @@
               const path = new URL(this.__hkUrl, location.href).pathname;
               const body = JSON.parse(this.responseText);
               if (path === '/auth/create') captureNativeGameAuthToken(body);
-              if (hkNativeLoginRuntimeStarted) hkGameBridge.noteMutation(path, this.__hkMethod || 'GET');
+              // XHR from the native game is passive input for HK only.
+              // Do not trigger an HK-side player refresh after native mutations.
               if(path!=='/player/me')acceptSharedGameResponse(this.__hkUrl,body);
                if (path === '/player/me') {
                  let partial = false;
