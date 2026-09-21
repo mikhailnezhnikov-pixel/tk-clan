@@ -382,3 +382,20 @@ Next live gate:
 6. after completion, tap the same building — it must no longer show the initial “Исследовать это здание?” ownership prompt;
 7. verify favorite state remains visible and candidate disappears from the plan.
 
+## Stage 2.06 — LIVE PASS (2026-09-21)
+
+User confirmed the final native-sync live check:
+- the previously claimed building remained present after reload;
+- the game map recognized it as opened/owned;
+- the stale initial ownership prompt no longer appeared;
+- server-side active/favorite state and native client state are now consistent.
+
+Final Buildings result:
+**LIVE PASS**
+
+Final userscript at closure:
+- version: `1.17.19`;
+- core: `core-20260921-r21-buildings-native-sync`.
+
+Do not reopen Stage 2.06 unless a new Buildings regression is reported.
+
