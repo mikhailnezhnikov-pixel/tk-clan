@@ -1,1 +1,1 @@
-2026-09-21 public E2E after userscript 1.17.16 Buildings active fix
+2026-09-21 retry public E2E after transient SSH timeout; userscript 1.17.16 Buildings active fix
