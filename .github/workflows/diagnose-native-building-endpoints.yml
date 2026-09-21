@@ -107,6 +107,9 @@ jobs:
               'building_id',
               'next_tier_level',
               'chosen_tier',
+              'from_slot',
+              'canClaimBuilding',
+              '.claim(',
           ]
           found=[]
           for url,body in bodies.items():
