@@ -359,6 +359,54 @@
     @keyframes projectileEnemy{0%,47%{transform:translateX(75px) scaleX(.25);opacity:0}54%{opacity:1}62%{transform:translateX(-145px) scaleX(1);opacity:.9}70%,100%{transform:translateX(-190px) scaleX(.3);opacity:0}}
     @keyframes battleImpact{0%,53%{opacity:0;transform:translate(-50%,-50%) scale(.2)}59%{opacity:1;transform:translate(-50%,-50%) scale(1.8)}67%,100%{opacity:0;transform:translate(-50%,-50%) scale(4.5)}}
 
+
+    /* PIXI_BATTLE_V2 */
+    .battle-stage-v2{background:#05070a}
+    .battle-stage-v2>.battle-fallback-bg{transition:opacity .35s ease}
+    .battle-stage-v2.battle-v2-ready>.battle-fallback-bg{opacity:0}
+    .battle-stage-v2.battle-v2-ready>.battle-tint,
+    .battle-stage-v2.battle-v2-ready>.battle-smoke,
+    .battle-stage-v2.battle-v2-ready>.battle-heat{opacity:0;animation:none}
+    .battle-canvas{
+      position:absolute;inset:0;z-index:5;overflow:hidden;border-radius:inherit
+    }
+    .battle-canvas canvas{display:block;width:100%!important;height:100%!important}
+    .battle-v2-overlay{
+      position:absolute;inset:0;z-index:12;pointer-events:none;
+      display:grid;grid-template-columns:minmax(0,1fr) 210px minmax(0,1fr);
+      align-items:end;padding:0 28px 25px;gap:18px
+    }
+    .battle-v2-side{
+      min-width:0;padding:12px 15px;border:1px solid rgba(255,255,255,.12);border-radius:15px;
+      background:linear-gradient(145deg,rgba(5,8,13,.82),rgba(7,10,15,.64));
+      backdrop-filter:blur(11px);box-shadow:0 14px 34px rgba(0,0,0,.28)
+    }
+    .battle-v2-side-ours{justify-self:start;border-color:rgba(232,182,84,.36);box-shadow:0 14px 34px rgba(0,0,0,.28),0 0 28px rgba(63,143,228,.10)}
+    .battle-v2-side-enemy{justify-self:end;text-align:right;border-color:color-mix(in srgb,var(--war-accent) 40%,rgba(255,255,255,.08));box-shadow:0 14px 34px rgba(0,0,0,.28),0 0 28px var(--war-accent-soft)}
+    .battle-v2-kicker{display:block;color:#e8b654;font-size:9px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+    .battle-v2-side-enemy .battle-v2-kicker{color:var(--war-accent)}
+    .battle-v2-side strong{display:block;margin-top:4px;max-width:330px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;font-size:17px}
+    .battle-v2-side>span:last-child{display:block;margin-top:3px;color:#a7aeb9;font-size:10px;font-weight:780;letter-spacing:.08em;text-transform:uppercase}
+    .battle-v2-center{
+      align-self:end;justify-self:center;display:grid;justify-items:center;gap:4px;
+      padding:10px 13px 9px;border:1px solid rgba(255,255,255,.11);border-radius:16px;
+      background:rgba(5,8,13,.66);backdrop-filter:blur(10px);text-align:center
+    }
+    .battle-v2-center b{
+      width:44px;height:44px;display:grid;place-items:center;margin-top:-33px;border-radius:50%;
+      border:1px solid rgba(255,255,255,.18);background:radial-gradient(circle,rgba(255,255,255,.14),rgba(7,9,13,.92) 70%);
+      color:#fff;font-size:16px;box-shadow:0 0 28px color-mix(in srgb,var(--war-accent) 22%,rgba(83,168,255,.24))
+    }
+    .battle-v2-center strong{color:#fff;font-size:11px;letter-spacing:.12em}
+    .battle-v2-center span{color:#9da6b3;font-size:9px;font-weight:760}
+    .battle-v2-loading{
+      position:absolute;z-index:13;left:50%;top:50%;transform:translate(-50%,-50%);
+      padding:9px 13px;border:1px solid rgba(255,255,255,.10);border-radius:12px;background:rgba(7,9,13,.72);
+      color:#b9c0cb;font-size:11px;font-weight:750;transition:opacity .25s ease
+    }
+    .battle-v2-ready .battle-v2-loading{opacity:0}
+    .battle-v2-failed .battle-v2-loading{display:none}
+
     @media(max-width:760px){
       .wars-page{padding-top:calc(var(--header) + 24px)}
       .wars-heading{padding:24px 0 18px}
@@ -372,6 +420,14 @@
       .war-health-head{align-items:center}
       .war-health-values strong{font-size:21px}.war-health-values span{font-size:14px}
       .battle-stage{inset:260px 10px 10px;border-radius:16px}
+      .battle-v2-overlay{grid-template-columns:1fr 92px 1fr;padding:0 10px 12px;gap:7px}
+      .battle-v2-side{padding:8px 9px;border-radius:11px}
+      .battle-v2-side strong{font-size:11px;max-width:120px}
+      .battle-v2-kicker{font-size:7px}
+      .battle-v2-side>span:last-child{font-size:7px}
+      .battle-v2-center{padding:7px 6px;border-radius:11px}
+      .battle-v2-center b{width:34px;height:34px;margin-top:-25px;font-size:12px}
+      .battle-v2-center strong{font-size:8px}.battle-v2-center span{font-size:7px}
       .battle-side{bottom:18px;width:39%}
       .battle-side-ours{left:1%}.battle-side-enemy{right:1%}
       .battle-unit{width:118px;height:142px}
@@ -444,51 +500,35 @@
         </div>
       </article>
 
-      <div id="battle-stage" class="battle-stage" aria-label="Анимированная сцена текущего боя">
-        <img src="../assets/war/hamster-clan-battle-hq.webp" alt="" loading="eager" decoding="async">
+      <div id="battle-stage" class="battle-stage battle-stage-v2" aria-label="Анимированная сцена текущего боя">
+        <img class="battle-fallback-bg" src="../assets/war/hamster-clan-battle-hq.webp" alt="" loading="eager" decoding="async">
         <div class="battle-tint"></div>
         <div class="battle-smoke"></div>
         <div class="battle-heat"></div>
 
-        <div class="battle-side battle-side-ours">
-          <div class="battle-side-role">TOP KING</div>
-          <div class="battle-unit battle-unit-ours">
-            <div class="battle-unit-aura"></div>
-            <div id="battle-our-emblem" class="battle-unit-emblem">♛</div>
-            <div class="battle-unit-core"></div>
-            <div class="battle-unit-weapon"></div>
-          </div>
-          <div class="battle-nameplate">
+        <div id="battle-canvas" class="battle-canvas" aria-hidden="true"></div>
+
+        <div class="battle-v2-overlay">
+          <div class="battle-v2-side battle-v2-side-ours">
+            <span class="battle-v2-kicker">TOP KING</span>
             <strong id="battle-our-name">Top🏆King</strong>
             <span id="battle-our-state">Наш клан</span>
           </div>
-        </div>
 
-        <div class="battle-center">
-          <div class="battle-clash-ring"></div>
-          <div class="battle-versus">VS</div>
-          <strong id="battle-action">БИТВА ИДЁТ</strong>
-          <span id="battle-mode">Текущий бой</span>
-        </div>
-
-        <div class="battle-side battle-side-enemy">
-          <div id="battle-enemy-role" class="battle-side-role">ПРОТИВНИК</div>
-          <div class="battle-unit battle-unit-enemy">
-            <div class="battle-unit-aura"></div>
-            <div id="battle-enemy-emblem" class="battle-unit-emblem">☠</div>
-            <div class="battle-unit-core"></div>
-            <div class="battle-unit-weapon"></div>
+          <div class="battle-v2-center">
+            <b>VS</b>
+            <strong id="battle-action">БИТВА ИДЁТ</strong>
+            <span id="battle-mode">Текущий бой</span>
           </div>
-          <div class="battle-nameplate">
+
+          <div class="battle-v2-side battle-v2-side-enemy">
+            <span id="battle-enemy-role" class="battle-v2-kicker">ПРОТИВНИК</span>
             <strong id="battle-enemy-name">—</strong>
-            <span id="battle-enemy-style">Клан</span>
+            <span id="battle-enemy-style">Клан противника</span>
           </div>
         </div>
 
-        <i class="battle-projectile projectile-ours"></i>
-        <i class="battle-projectile projectile-enemy"></i>
-        <i class="battle-impact"></i>
-        <i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i><i class="spark s5"></i>
+        <div class="battle-v2-loading">Запускаю боевую сцену…</div>
       </div>
 
       <div id="war-message" class="war-message hidden"></div>
@@ -554,6 +594,9 @@ window.TK_PAGE_TRANSLATIONS={
 };
 </script>
 <script src="../assets/site-i18n.js?v=20260920-10"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8.21.0/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<script src="../assets/war/battle-engine-v2.js?v=20260921-2"></script>
 <script>
 const API='https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war';
 let currentWar=null;
@@ -614,7 +657,6 @@ function renderBattleScene(war,info){
   stage.style.setProperty('--enemy-battle-2',info.accent2||'#7a1515');
   document.getElementById('battle-our-name').textContent=own;
   document.getElementById('battle-enemy-name').textContent=enemy;
-  document.getElementById('battle-enemy-emblem').textContent=kind==='bot'?'⬢':(info.emblem||'⚔');
   document.getElementById('battle-enemy-role').textContent=kind==='bot'?'БОТ / БОСС':'ПРОТИВНИК';
   document.getElementById('battle-enemy-style').textContent=kind==='bot'?'Автоматический противник':'Клан противника';
 
@@ -624,6 +666,8 @@ function renderBattleScene(war,info){
   document.getElementById('battle-mode').textContent=defending?'Оборона Top King':'Атака Top King';
   document.getElementById('battle-our-state').textContent=defending?'Держим оборону':'Атакуем';
   document.getElementById('battle-action').textContent=kind==='bot'?'БОЙ С БОТОМ':'БИТВА ИДЁТ';
+
+  window.TopKingBattleV2?.update(war,info);
 }
 function fmtNumber(value){
   const n=Number(value);
@@ -657,6 +701,7 @@ function render(){
     document.getElementById('battle-enemy-style').textContent='Нет активного боя';
     document.getElementById('battle-action').textContent='ОЖИДАНИЕ БОЯ';
     document.getElementById('battle-mode').textContent='Активного боя сейчас нет';
+    window.TopKingBattleV2?.update(null,{theme:'iron',accent:'#bd6672',accent2:'#4a5360'});
     message.className='war-message hidden';
     return;
   }
