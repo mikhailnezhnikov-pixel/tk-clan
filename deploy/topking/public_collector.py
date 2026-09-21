@@ -1,14 +1,165 @@
 #!/usr/bin/env python3
-import json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request, fcntl, hashlib
+import base64, json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request, fcntl, hashlib, hmac
 
-REV = "public-server-collector-20260921-r3-alliance-id-sums"
+REV = "public-server-collector-20260921-r4-auto-auth"
 GAME_API = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_API", "https://hk-game-api.hwgame.cloud").rstrip("/")
 DB_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_DB", "/var/lib/hamsterking-license/licenses.db")
 STATUS_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_STATUS", "/var/lib/hamsterking-license/public-collector-status.json")
-TOKEN = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_TOKEN", "").strip()
+TOKEN_FILE = os.environ.get("HK_PUBLIC_COLLECTOR_TOKEN_FILE", "/var/lib/hamsterking-license/public-collector-token").strip()
+AUTH_BOOTSTRAP_FILE = os.environ.get("HK_PUBLIC_COLLECTOR_AUTH_BOOTSTRAP", "/var/lib/hamsterking-license/public-collector-auth.json").strip()
+IDENTITY_FILE = os.environ.get("HK_PUBLIC_COLLECTOR_IDENTITY_FILE", "/var/lib/hamsterking-license/public-collector-identity.sha256").strip()
+AUTH_REFRESH_STATUS_FILE = os.environ.get("HK_PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS", "/var/lib/hamsterking-license/public-collector-auth-refresh.json").strip()
+TOKEN = ""
 REQUEST_GAP = max(1.5, float(os.environ.get("HK_PUBLIC_COLLECTOR_REQUEST_GAP", "1.5")))
 SOURCE = "server-collector"
 RATING_KINDS = {"influence","power","clans","alliance_power","alliance_influence","alliance_defense"}
+
+def _read_text(path, maximum=100_000):
+    try:
+        with open(path,"r",encoding="utf-8") as f:
+            return f.read(maximum).strip()
+    except OSError:
+        return ""
+
+def _write_private(path, text):
+    directory=os.path.dirname(path)
+    if directory:
+        os.makedirs(directory,exist_ok=True)
+    tmp=path+".tmp"
+    with open(tmp,"w",encoding="utf-8") as f:
+        f.write(str(text))
+    os.chmod(tmp,0o600)
+    os.replace(tmp,path)
+
+def _load_token():
+    value=_read_text(TOKEN_FILE,16_384)
+    if not value:
+        value=os.environ.get("HK_PUBLIC_COLLECTOR_GAME_TOKEN","").strip()
+    return value[7:].strip() if value.lower().startswith("bearer ") else value.strip()
+
+def _jwt_payload(token):
+    try:
+        part=str(token or "").split(".")[1]
+        part += "=" * (-len(part) % 4)
+        return json.loads(base64.urlsafe_b64decode(part.encode()).decode())
+    except Exception:
+        return {}
+
+def _token_expiry(token):
+    try:
+        return int(_jwt_payload(token).get("exp") or 0)
+    except (TypeError,ValueError):
+        return 0
+
+def _player_identity(document):
+    if not isinstance(document,dict):
+        return ""
+    player=document.get("player") if isinstance(document.get("player"),dict) else document
+    if not isinstance(player,dict):
+        return ""
+    for name in ("id","player_id","playerId","uuid"):
+        value=player.get(name)
+        if value not in (None,""):
+            return str(value).strip()
+    return ""
+
+def _identity_matches(player_id):
+    expected=_read_text(IDENTITY_FILE,256)
+    if not expected or not player_id:
+        return False
+    actual=hashlib.sha256(str(player_id).encode()).hexdigest()
+    return hmac.compare_digest(expected,actual)
+
+def _request_gap():
+    global _last_request
+    wait=REQUEST_GAP-(time.monotonic()-_last_request)
+    if wait>0:
+        time.sleep(wait)
+
+def _direct_json(url, method="GET", body=None, token=""):
+    global _last_request
+    _request_gap()
+    headers={"Accept":"application/json","User-Agent":"TopKing-Public-Collector/2"}
+    if token:
+        headers["Authorization"]="Bearer "+token
+    data=None
+    if body is not None:
+        data=json.dumps(body,separators=(",",":")).encode()
+        headers["Content-Type"]="application/json"
+    req=urllib.request.Request(url,data=data,headers=headers,method=method)
+    _last_request=time.monotonic()
+    with urllib.request.urlopen(req,timeout=20) as response:
+        raw=response.read(5_000_000)
+        if response.status<200 or response.status>=300:
+            raise RuntimeError(f"HTTP {response.status}")
+        return json.loads(raw.decode("utf-8-sig").strip("\x00\r\n\t "))
+
+def _auth_refresh_backed_off():
+    try:
+        value=json.loads(_read_text(AUTH_REFRESH_STATUS_FILE,4096) or "{}")
+        failed_at=int(value.get("failed_at") or 0)
+        return bool(failed_at and time.time()-failed_at<3600)
+    except Exception:
+        return False
+
+def _set_auth_refresh_failure():
+    try:
+        _write_private(AUTH_REFRESH_STATUS_FILE,json.dumps({"failed_at":int(time.time())},separators=(",",":")))
+    except Exception:
+        pass
+
+def _clear_auth_refresh_failure():
+    try:
+        if os.path.exists(AUTH_REFRESH_STATUS_FILE):
+            os.unlink(AUTH_REFRESH_STATUS_FILE)
+    except OSError:
+        pass
+
+def refresh_game_token(force=False):
+    global TOKEN
+    if not force and _auth_refresh_backed_off():
+        return False
+    try:
+        bootstrap=json.loads(_read_text(AUTH_BOOTSTRAP_FILE,100_000) or "{}")
+        auth_type=str(bootstrap.get("auth_type") or "").strip()
+        auth_data=str(bootstrap.get("auth_data") or "")
+        platform=str(bootstrap.get("platform") or "").strip()
+        if not auth_type or not auth_data or not platform:
+            return False
+        if len(auth_type)>32 or len(auth_data)>50_000 or len(platform)>16:
+            raise RuntimeError("invalid auth bootstrap")
+        query=urllib.parse.urlencode({
+            "auth_type":auth_type,
+            "auth_data":auth_data,
+            "platform":platform,
+        })
+        created=_direct_json(GAME_API+"/auth/create?"+query,"POST",None,"")
+        candidate=str(created.get("token") or "").strip() if isinstance(created,dict) else ""
+        if not candidate:
+            raise RuntimeError("auth/create returned no token")
+        checked=_direct_json(GAME_API+"/player/me","POST",{},candidate)
+        player_id=_player_identity(checked)
+        if not _identity_matches(player_id):
+            raise RuntimeError("refreshed token identity mismatch")
+        _write_private(TOKEN_FILE,candidate+"\n")
+        TOKEN=candidate
+        _clear_auth_refresh_failure()
+        log("auth refresh success")
+        return True
+    except Exception as exc:
+        _set_auth_refresh_failure()
+        log(f"auth refresh deferred: {type(exc).__name__}")
+        return False
+
+def ensure_game_token():
+    global TOKEN
+    file_token=_load_token()
+    if file_token and file_token!=TOKEN:
+        TOKEN=file_token
+    expiry=_token_expiry(TOKEN)
+    if TOKEN and expiry and expiry<=int(time.time())+60:
+        refresh_game_token(force=False)
+    return bool(TOKEN)
 
 def write_status(ok, state, **extra):
     data = {"revision":REV,"ok":bool(ok),"state":state,"at":int(time.time()),**extra}
@@ -46,24 +197,28 @@ def finite(*values):
 
 _last_request=0.0
 def game_json(path, method="GET", body=None, retry_delays=None):
-    global _last_request
-    if not TOKEN:
+    global _last_request, TOKEN
+    if not ensure_game_token():
         raise RuntimeError("collector token missing")
-    wait=REQUEST_GAP-(time.monotonic()-_last_request)
-    if wait>0: time.sleep(wait)
     url=GAME_API+path
-    token=TOKEN[7:] if TOKEN.lower().startswith("bearer ") else TOKEN
-    headers={"Authorization":"Bearer "+token,"Accept":"application/json","User-Agent":"TopKing-Public-Collector/1"}
+    headers_base={"Accept":"application/json","User-Agent":"TopKing-Public-Collector/2"}
     data=None
     if body is not None:
         data=json.dumps(body,separators=(",",":")).encode()
-        headers["Content-Type"]="application/json"
     delays=tuple(retry_delays) if retry_delays is not None else (0,3,10,30)
     if not delays:
         delays=(0,)
     last=None
-    for attempt,delay in enumerate(delays):
-        if delay: time.sleep(delay)
+    auth_refreshed=False
+    attempt=0
+    while attempt<len(delays):
+        delay=delays[attempt]
+        if delay:
+            time.sleep(delay)
+        _request_gap()
+        headers={**headers_base,"Authorization":"Bearer "+TOKEN}
+        if body is not None:
+            headers["Content-Type"]="application/json"
         req=urllib.request.Request(url,data=data,headers=headers,method=method)
         try:
             _last_request=time.monotonic()
@@ -84,19 +239,25 @@ def game_json(path, method="GET", body=None, retry_delays=None):
                     raise
         except urllib.error.HTTPError as exc:
             last=exc
+            if exc.code==401 and not auth_refreshed:
+                auth_refreshed=True
+                if refresh_game_token(force=True):
+                    continue
             if exc.code==429 or exc.code>=500:
                 retry=exc.headers.get("Retry-After")
                 if retry:
                     try: time.sleep(min(120,max(0,float(retry))))
                     except ValueError: pass
+                attempt+=1
                 continue
             raise
         except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
             last=exc
-            if attempt+1<len(delays): continue
+            attempt+=1
+            if attempt<len(delays):
+                continue
             raise
     raise last or RuntimeError("request failed")
-
 def lists_in(value, depth=0):
     if depth>5:return []
     if isinstance(value,list):
@@ -509,9 +670,9 @@ def store_snapshot(war_read,war,ratings):
     finally:
         db.close()
 def main():
-    if not TOKEN:
+    if not ensure_game_token():
         write_status(True,"disabled_no_token")
-        log("disabled: HK_PUBLIC_COLLECTOR_GAME_TOKEN is not configured")
+        log("disabled: collector token/bootstrap is not configured")
         return 0
 
     mode=(sys.argv[1].strip().lower() if len(sys.argv)>1 else "all")
