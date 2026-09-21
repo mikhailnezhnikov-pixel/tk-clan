@@ -1,1 +1,1 @@
-2026-09-21 validate prelogin zero Game API and protected Maps Explore invariants\n
+2026-09-21 validate self-heal r5 and absence of legacy static collector token\n
