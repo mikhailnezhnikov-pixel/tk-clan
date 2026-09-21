@@ -1,1 +1,1 @@
-2026-09-21 verify Buildings owned/postconditions on userscript 1.17.18
+2026-09-21 rerun Buildings owned/postconditions verifier on userscript 1.17.18
