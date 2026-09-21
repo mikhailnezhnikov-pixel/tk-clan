@@ -214,3 +214,42 @@ Verification:
 - public E2E `35596336047`: PASS.
 
 Stage 2.08 remains open for the user's next UI comments.
+
+
+## Businesses completion hotfix r1 — userscript 1.17.24 (2026-09-21)
+
+User live screenshot showed a long tail after the visible rearrangement had already finished:
+- all business cards appeared to be moved/activated;
+- Runner progress remained just below completion;
+- status stayed **Выполняется**;
+- the final **Перестановка завершена** message did not appear promptly.
+
+Root cause:
+the old final phase reread `/player/me` separately for every inserted slot. With a large rearrangement (for example ~85 slots), the visible mutations could finish first while the Runner spent a long time doing sequential postcondition reads with no progress update.
+
+Hotfix:
+- marker: `businesses-finalize-single-snapshot-20260921-r1`;
+- core: `core-20260921-r28-businesses-finalize`;
+- after the last insertion, progress is updated to 100% and the Runner explicitly shows **Проверяю результат**;
+- normal final verification now uses one authoritative `/player/me` snapshot for all inserted businesses;
+- only genuinely unresolved slots receive targeted recovery reads;
+- the old O(N) final reread loop was removed;
+- completion still requires confirmed ACTIVE state for all inserted businesses;
+- successful completion calls Runner finish with **Перестановка завершена**;
+- completed Businesses Runner remains visible for 6 seconds so the user can see the final state.
+
+Preserved:
+- T4–T6 removal guard;
+- desktop left/right rearrangement layout;
+- Businesses Runner visual canon;
+- optimizer and catalog;
+- rollback and authoritative mutation safety;
+- Explore / Buildings / Maps protections.
+
+Verification:
+- deploy/public round-trip `35596770570`: PASS;
+- static finalization verification: PASS;
+- public E2E `35596856911`: PASS;
+- Businesses current-live retry `35596934604`: PASS.
+
+Loader publication/core-r28 verification is tracked separately because GitHub Pages publication was still queued at the moment this hotfix audit entry was written.
