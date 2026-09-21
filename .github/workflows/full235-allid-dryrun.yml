@@ -1,0 +1,237 @@
+name: Full235 all-ID canonical dry-run
+
+on:
+  push:
+    branches:
+      - audit-full235-stage-20260921
+    paths:
+      - 'audit-tools/full235-allids-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  allids:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+
+      - name: Decode and verify compact source IDs
+        run: |
+          set -euo pipefail
+          cat audit-tools/full235-allids.part.00 audit-tools/full235-allids.part.01 | base64 -d > /tmp/full235-allids.bin.gz
+          test "$(sha256sum /tmp/full235-allids.bin.gz | cut -d' ' -f1)" = "470737a9007d45c1e770b422c9a6d507f610225d28bf281863c03b0cd558b411"
+          gzip -dc /tmp/full235-allids.bin.gz > /tmp/full235-allids.bin
+          test "$(sha256sum /tmp/full235-allids.bin | cut -d' ' -f1)" = "1ddcadbb50e5a88555a6772538e56476575a771edc22fb85200299c8cbc28f48"
+          echo "ALLID_PAYLOAD_VERIFY=PASS"
+
+      - name: Match every source building ID against live canonical DB read-only
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/full235-allids.bin.gz root@89.125.1.71:/tmp/full235-allids.bin.gz
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new deploy/maps/full235-nooverlap-area-ids.json root@89.125.1.71:/tmp/full235-original75.json
+          cat > /tmp/full235-allid-match.py <<'PY'
+          import gzip,json,sqlite3,collections,hashlib
+
+          def read_varint(buf,pos):
+              n=0; shift=0
+              while True:
+                  if pos>=len(buf): raise ValueError('truncated varint')
+                  b=buf[pos]; pos+=1
+                  n |= (b & 0x7f) << shift
+                  if not (b & 0x80): return n,pos
+                  shift += 7
+                  if shift>63: raise ValueError('varint too long')
+
+          raw=gzip.open('/tmp/full235-allids.bin.gz','rb').read()
+          assert hashlib.sha256(raw).hexdigest()=='1ddcadbb50e5a88555a6772538e56476575a771edc22fb85200299c8cbc28f48'
+          assert raw[:5]==b'HKID1'
+          pos=5; source={}
+          while pos<len(raw):
+              n,pos=read_varint(raw,pos)
+              key=raw[pos:pos+n].decode(); pos+=n
+              ids=[]
+              for prefix in ('way','relation'):
+                  count,pos=read_varint(raw,pos)
+                  prev=0
+                  for _ in range(count):
+                      d,pos=read_varint(raw,pos); prev+=d
+                      ids.append(prefix+str(prev))
+              if key in source: raise AssertionError(('duplicate map',key))
+              source[key]=set(ids)
+
+          total=sum(map(len,source.values()))
+          union=set().union(*source.values())
+          assert len(source)==235,len(source)
+          assert total==152593,total
+          assert len(union)==152593,len(union)
+
+          DB='/var/lib/hamsterking-license/licenses.db'
+          db=sqlite3.connect('file:'+DB+'?mode=ro',uri=True); db.row_factory=sqlite3.Row
+
+          alias_rows=list(db.execute("SELECT source_area_id,canonical_area_id FROM map_area_aliases"))
+          aliases={str(r['source_area_id']):str(r['canonical_area_id']) for r in alias_rows}
+          def canon(a):
+              seen=set(); a=str(a)
+              while a in aliases and aliases[a]!=a and a not in seen:
+                  seen.add(a); a=aliases[a]
+              return a
+
+          # Build live ownership only for source IDs, and canonical full building counts.
+          bid_areas={}
+          ids=sorted(union)
+          for start in range(0,len(ids),700):
+              part=ids[start:start+700]
+              q=','.join('?' for _ in part)
+              for r in db.execute(f"SELECT building_id,area_id FROM map_buildings WHERE building_id IN ({q})",part):
+                  bid_areas.setdefault(str(r['building_id']),set()).add(canon(r['area_id']))
+
+          area_counts=collections.Counter()
+          for r in db.execute("SELECT area_id,COUNT(*) AS n FROM map_buildings GROUP BY area_id"):
+              area_counts[canon(r['area_id'])]+=int(r['n'])
+
+          links={str(r['map_key']):canon(r['canonical_area_id']) for r in db.execute(
+              "SELECT map_key,canonical_area_id FROM hk_map_area_links"
+          )}
+          original75=json.load(open('/tmp/full235-original75.json'))
+
+          exact=[]; zero=[]; conflicts=[]
+          duplicate_live_source_ids=[]
+          for key in sorted(source):
+              src=source[key]
+              counts=collections.Counter()
+              multi=[]
+              for bid in src:
+                  owners=bid_areas.get(bid,set())
+                  if len(owners)>1:
+                      multi.append((bid,sorted(owners)))
+                  for aid in owners:
+                      counts[aid]+=1
+              if multi:
+                  duplicate_live_source_ids.extend((key,bid,owners) for bid,owners in multi[:10])
+                  conflicts.append({'map_key':key,'reason':'building_id_multiple_canonical','examples':multi[:5]})
+                  continue
+              if len(counts)==1:
+                  area_id,overlap=next(iter(counts.items()))
+                  linked=links.get(key)
+                  if linked and linked!=area_id:
+                      conflicts.append({'map_key':key,'reason':'existing_link_disagrees','linked':linked,'building_area':area_id})
+                      continue
+                  exact.append({
+                      'map_key':key,'area_id':area_id,'overlap':overlap,
+                      'source_buildings':len(src),'live_canonical_buildings':area_counts[area_id],
+                      'source_coverage':round(overlap/len(src),6),
+                      'live_coverage':round(overlap/area_counts[area_id],6) if area_counts[area_id] else 0,
+                      'already_linked':bool(linked),
+                  })
+              elif len(counts)==0:
+                  target=original75.get(key)
+                  if not target:
+                      conflicts.append({'map_key':key,'reason':'zero_overlap_without_original_uuid'})
+                      continue
+                  target=canon(target)
+                  area=db.execute("SELECT area_id FROM map_areas WHERE area_id=?",(target,)).fetchone()
+                  alias=db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",(target,)).fetchone()
+                  linked=links.get(key)
+                  if area or (alias and canon(alias['canonical_area_id'])!=target) or (linked and linked!=target):
+                      conflicts.append({
+                          'map_key':key,'reason':'original_uuid_not_free','target':target,
+                          'area_exists':bool(area),'alias':dict(alias) if alias else None,'linked':linked
+                      })
+                      continue
+                  zero.append({'map_key':key,'target_area_id':target,'source_buildings':len(src)})
+              else:
+                  conflicts.append({'map_key':key,'reason':'multiple_canonical_overlaps','areas':counts.most_common(10)})
+
+          exact_targets=[x['area_id'] for x in exact]
+          duplicate_targets=[a for a,n in collections.Counter(exact_targets).items() if n>1]
+          zero_keys={x['map_key'] for x in zero}
+          expected_zero=set(original75)
+
+          catalog_count=db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0]
+          area_count=db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0]
+          link_count=db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0]
+          building_count=db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0]
+
+          exact_overlaps=[x['overlap'] for x in exact]
+          source_cov=[x['source_coverage'] for x in exact]
+          live_cov=[x['live_coverage'] for x in exact]
+          summary={
+              'source_maps':len(source),
+              'source_building_ids':len(union),
+              'exact_existing':len(exact),
+              'new_original':len(zero),
+              'conflicts':len(conflicts),
+              'duplicate_exact_targets':len(duplicate_targets),
+              'zero_keys_equal_original75':zero_keys==expected_zero,
+              'exact_already_linked':sum(x['already_linked'] for x in exact),
+              'exact_not_linked':sum(not x['already_linked'] for x in exact),
+              'overlap_min':min(exact_overlaps) if exact_overlaps else 0,
+              'overlap_max':max(exact_overlaps) if exact_overlaps else 0,
+              'source_coverage_min':min(source_cov) if source_cov else 0,
+              'source_coverage_max':max(source_cov) if source_cov else 0,
+              'live_coverage_min':min(live_cov) if live_cov else 0,
+              'live_coverage_max':max(live_cov) if live_cov else 0,
+              'live_catalog_maps':catalog_count,
+              'live_canonical_areas':area_count,
+              'live_area_links':link_count,
+              'live_buildings':building_count,
+              'projected_combined':len(exact),
+              'projected_website_only':len(zero),
+              'projected_script_only':area_count-len(exact),
+              'projected_unified_rows':area_count+len(zero),
+              'hidden_duplicates_vs_u1_baseline':len(exact)-25,
+          }
+          report={'summary':summary,'conflicts':conflicts,'duplicate_targets':duplicate_targets,'exact':exact,'new_original':zero}
+          print(json.dumps(summary,ensure_ascii=False,sort_keys=True))
+          open('/tmp/full235-allid-report.json','w').write(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
+          assert len(exact)==160,(len(exact),len(zero),len(conflicts))
+          assert len(zero)==75,(len(exact),len(zero),len(conflicts))
+          assert not conflicts,conflicts[:5]
+          assert not duplicate_targets,duplicate_targets[:10]
+          assert zero_keys==expected_zero
+          assert len(exact)+len(zero)==235
+          print('FULL235_ALL_ID_DRYRUN=PASS')
+          print('production_db_writes=NO')
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/full235-allid-match.py root@89.125.1.71:/tmp/full235-allid-match.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/full235-allid-match.py' | tee /tmp/full235-allid-summary.txt
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/tmp/full235-allid-report.json /tmp/full235-allid-report.json
+
+      - name: Record audit result on audit branch
+        run: |
+          set -euo pipefail
+          cp /tmp/full235-allid-report.json audit/hk-stage2-full235-allid-dryrun.json
+          cp /tmp/full235-allid-summary.txt audit/hk-stage2-full235-allid-summary.txt
+          {
+            echo
+            echo "source_archive_gz_sha256=a4b84c5239168182702090efe0b7241b54295942d63e5f020539092694e0a3e1"
+            echo "source_archive_json_sha256=42d447618899316582ad749f31c75525af53af780ae2507deec803d25c96881f"
+            echo "allid_binary_sha256=1ddcadbb50e5a88555a6772538e56476575a771edc22fb85200299c8cbc28f48"
+            echo "production_db_writes=NO"
+          } >> audit/hk-stage2-full235-allid-summary.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-full235-allid-dryrun.json audit/hk-stage2-full235-allid-summary.txt
+          git commit -m "audit: full235 all-building-ID dry-run PASS"
+          git pull --rebase origin audit-full235-stage-20260921
+          git push origin HEAD:audit-full235-stage-20260921
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/full235-allids.bin.gz /tmp/full235-original75.json /tmp/full235-allid-match.py /tmp/full235-allid-report.json' || true
+          rm -f ~/.ssh/topking /tmp/full235-allids.bin /tmp/full235-allids.bin.gz /tmp/full235-allid-report.json /tmp/full235-allid-summary.txt
