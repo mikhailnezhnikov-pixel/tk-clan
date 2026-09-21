@@ -39,8 +39,8 @@ jobs:
           assert len(d)==235,len(d)
           assert len({x['map_key'] for x in d})==235
           assert all(len(x['sample_ids'])==min(6,x['building_count']) for x in d)
-          assert hashlib.sha256(raw).hexdigest()=='8c1aee427e7678ca8b64ef46682f77cd80f407f8d048ae64cf3968db253ab8fb'
           raw=open('/tmp/fp.json','rb').read()
+          assert hashlib.sha256(raw).hexdigest()=='8c1aee427e7678ca8b64ef46682f77cd80f407f8d048ae64cf3968db253ab8fb'
           print('maps=',len(d))
           print('sha256=',hashlib.sha256(raw).hexdigest())
           PY
