@@ -77,4 +77,37 @@ print("post_refresh_status_ok="+yes(status.get("ok")))
 if run.returncode!=0 or not status.get("ok"):
     raise SystemExit(4)
 
+# Pure in-memory boundary test for the automatic expiry gate. This stubs the
+# refresh function, so it makes no Game API request and does not change the
+# token file.
+real_expiry=mod._token_expiry
+real_refresh=mod.refresh_game_token
+threshold_calls=[]
+try:
+    mod.TOKEN=""
+    mod._token_expiry=lambda _token: int(time.time())+30
+    mod.refresh_game_token=lambda force=False: threshold_calls.append(bool(force)) or True
+    threshold_result=bool(mod.ensure_game_token())
+finally:
+    mod._token_expiry=real_expiry
+    mod.refresh_game_token=real_refresh
+print("auto_threshold_30s_result="+yes(threshold_result))
+print("auto_threshold_30s_refresh_called="+yes(len(threshold_calls)==1))
+print("auto_threshold_30s_force_false="+yes(threshold_calls==[False]))
+
+above_calls=[]
+try:
+    mod.TOKEN=""
+    mod._token_expiry=lambda _token: int(time.time())+61
+    mod.refresh_game_token=lambda force=False: above_calls.append(bool(force)) or True
+    above_result=bool(mod.ensure_game_token())
+finally:
+    mod._token_expiry=real_expiry
+    mod.refresh_game_token=real_refresh
+print("auto_threshold_61s_result="+yes(above_result))
+print("auto_threshold_61s_refresh_not_called="+yes(len(above_calls)==0))
+
+if not threshold_result or threshold_calls!=[False] or not above_result or above_calls:
+    raise SystemExit(5)
+
 print("PUBLIC_COLLECTOR_TOKEN_REFRESH_TEST=PASS")
