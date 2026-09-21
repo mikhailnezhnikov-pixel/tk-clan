@@ -1,0 +1,181 @@
+name: Dry-run full235 fingerprint32 read-only
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/full235-fingerprint32-readonly-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dryrun32:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+
+      - name: Recover and verify original 32-ID fingerprints
+        run: |
+          set -euo pipefail
+          git show 55fdadb0ec5f77271e31e25d3a82eaa6fd8a707b:deploy/maps/hk_maps_235_fingerprints.b64 | base64 -d > /tmp/fp32.json.gz
+          gzip -dc /tmp/fp32.json.gz > /tmp/fp32.json
+          python3 - <<'PY'
+          import json,hashlib
+          p='/tmp/fp32.json'
+          d=json.load(open(p))
+          raw=open(p,'rb').read()
+          assert len(d)==235,len(d)
+          assert len({x['map_key'] for x in d})==235
+          assert all(len(x['sample_ids'])==min(32,x['building_count']) for x in d)
+          assert hashlib.sha256(raw).hexdigest()=='9a0e77f563c47fb6a6cd96cfa661007be665625854f04266c56a0c514c1859f0'
+          print('FP32_RECOVER=PASS maps=235 sha256='+hashlib.sha256(raw).hexdigest())
+          PY
+
+      - name: Match 32-ID fingerprints against live canonical DB read-only
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/fp32.json root@89.125.1.71:/tmp/full235-fp32.json
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new deploy/maps/full235-nooverlap-area-ids.json root@89.125.1.71:/tmp/full235-original75.json
+          cat > /tmp/full235-fp32-match.py <<'PY'
+          import json,sqlite3,collections,re
+          DB='/var/lib/hamsterking-license/licenses.db'
+          fps=json.load(open('/tmp/full235-fp32.json'))
+          original75=json.load(open('/tmp/full235-original75.json'))
+          db=sqlite3.connect('file:'+DB+'?mode=ro',uri=True); db.row_factory=sqlite3.Row
+
+          ids=sorted({bid for row in fps for bid in row['sample_ids']})
+          hits={}
+          for start in range(0,len(ids),700):
+              part=ids[start:start+700]
+              q=','.join('?' for _ in part)
+              for r in db.execute(f"""
+                  SELECT b.building_id,b.area_id,a.city_name,a.city_id,a.x,a.y,b.knowledge_source
+                  FROM map_buildings b JOIN map_areas a ON a.area_id=b.area_id
+                  WHERE b.building_id IN ({q})
+              """,part):
+                  hits.setdefault(r['building_id'],[]).append(dict(r))
+
+          links={r['map_key']:dict(r) for r in db.execute(
+              "SELECT map_key,canonical_area_id,match_method FROM hk_map_area_links"
+          )}
+
+          rows=[]; cats=collections.Counter()
+          for fp in fps:
+              by_area=collections.Counter()
+              dup_ids=0; hit_ids=0; meta={}
+              for bid in fp['sample_ids']:
+                  rr=hits.get(bid,[])
+                  if rr: hit_ids+=1
+                  if len(rr)>1: dup_ids+=1
+                  for item in rr:
+                      by_area[item['area_id']]+=1
+                      meta[item['area_id']]={'city_name':item['city_name'],'city_id':item['city_id'],'x':item['x'],'y':item['y']}
+              ranked=by_area.most_common()
+              top_area=ranked[0][0] if ranked else ''
+              top_hits=ranked[0][1] if ranked else 0
+              second_hits=ranked[1][1] if len(ranked)>1 else 0
+              if hit_ids==len(fp['sample_ids']) and top_hits==hit_ids and second_hits==0 and dup_ids==0:
+                  category='exact32'
+              elif hit_ids==0:
+                  category='no_overlap32'
+              else:
+                  category='review'
+              cats[category]+=1
+              link=links.get(fp['map_key'])
+              rows.append({
+                  **fp,'sample_hit_ids':hit_ids,'top_area_id':top_area,'top_hits':top_hits,
+                  'second_hits':second_hits,'duplicate_sample_hits':dup_ids,'category':category,
+                  'top_area_meta':meta.get(top_area,{}),'existing_link':link,
+                  'existing_link_agrees':bool(link and top_area and link['canonical_area_id']==top_area)
+              })
+
+          exact=[r for r in rows if r['category']=='exact32']
+          zero=[r for r in rows if r['category']=='no_overlap32']
+          review=[r for r in rows if r['category']=='review']
+          disagree=[r for r in exact if r['existing_link'] and not r['existing_link_agrees']]
+          missing_link=[r['map_key'] for r in exact if not r['existing_link']]
+          zero_keys={r['map_key'] for r in zero}
+          original_keys=set(original75)
+          uuid_conflicts=[]; uuid_existing=0; uuid_aliases=0; uuid_links=0
+          for key,area_id in original75.items():
+              a=db.execute("SELECT area_id,city_name,x,y FROM map_areas WHERE area_id=?",(area_id,)).fetchone()
+              al=db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",(area_id,)).fetchone()
+              lk=db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",(key,)).fetchone()
+              uuid_existing+=int(bool(a)); uuid_aliases+=int(bool(al)); uuid_links+=int(bool(lk))
+              if lk and lk['canonical_area_id']!=area_id:
+                  uuid_conflicts.append([key,lk['canonical_area_id'],area_id])
+
+          counts={
+              'map_areas':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
+              'map_buildings':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0],
+              'hk_maps_catalog':db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0],
+              'hk_map_area_links':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
+          }
+          report={
+              'maps':len(rows),'categories':dict(cats),
+              'exact_existing':len(exact),'new_original_candidates':len(zero),'review':len(review),
+              'exact_links_agree':sum(1 for r in exact if r['existing_link_agrees']),
+              'exact_missing_links':missing_link,'exact_link_disagreements':disagree,
+              'zero_keys_equal_original75':zero_keys==original_keys,
+              'original75_count':len(original75),'original75_existing_areas':uuid_existing,
+              'original75_aliases':uuid_aliases,'original75_links':uuid_links,'original75_conflicts':uuid_conflicts,
+              'live_counts':counts,'rows':rows
+          }
+          print(json.dumps({k:v for k,v in report.items() if k!='rows'},ensure_ascii=False,sort_keys=True))
+          open('/tmp/full235-fp32-report.json','w').write(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
+          assert len(rows)==235
+          assert len(exact)==160,(len(exact),dict(cats))
+          assert len(zero)==75,(len(zero),dict(cats))
+          assert not review,review[:5]
+          assert not disagree,disagree[:5]
+          assert not missing_link,missing_link[:5]
+          assert zero_keys==original_keys
+          assert len(original75)==75
+          assert uuid_existing==0
+          assert uuid_aliases==0
+          assert uuid_links==0
+          assert not uuid_conflicts
+          print('FULL235_FP32_DRYRUN=PASS')
+          print('production_db_writes=NO')
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/full235-fp32-match.py root@89.125.1.71:/tmp/full235-fp32-match.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/full235-fp32-match.py' | tee /tmp/full235-fp32-summary.txt
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/tmp/full235-fp32-report.json /tmp/full235-fp32-report.json
+
+      - name: Record read-only audit
+        run: |
+          set -euo pipefail
+          cp /tmp/full235-fp32-report.json audit/hk-stage2-full235-fingerprint32-dryrun.json
+          cp /tmp/full235-fp32-summary.txt audit/hk-stage2-full235-fingerprint32-summary.txt
+          {
+            echo
+            echo "fingerprint32_source_commit=55fdadb0ec5f77271e31e25d3a82eaa6fd8a707b"
+            echo "fingerprint32_source_sha256=9a0e77f563c47fb6a6cd96cfa661007be665625854f04266c56a0c514c1859f0"
+            echo "production_db_writes=NO"
+          } >> audit/hk-stage2-full235-fingerprint32-summary.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-full235-fingerprint32-dryrun.json audit/hk-stage2-full235-fingerprint32-summary.txt
+          git commit -m "audit: verify all 235 maps with 32 building IDs"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/full235-fp32.json /tmp/full235-original75.json /tmp/full235-fp32-match.py /tmp/full235-fp32-report.json' || true
+          rm -f ~/.ssh/topking /tmp/fp32.json /tmp/fp32.json.gz /tmp/full235-fp32-match.py /tmp/full235-fp32-report.json /tmp/full235-fp32-summary.txt
