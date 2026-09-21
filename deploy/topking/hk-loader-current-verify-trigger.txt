@@ -1,1 +1,1 @@
-2026-09-21 recheck public HK loader core r20 after Pages completion
+2026-09-21 verify public HK loader core r21 after userscript 1.17.19
