@@ -1,0 +1,11 @@
+USERSCRIPT_1_17_23_BUSINESSES_CATALOG_R1=PASS
+version=1.17.23
+core=core-20260921-r25-businesses-catalog
+catalog_read_only=PASS
+search_bonus_filters=PASS
+owned_missing_capacity=PASS
+known_recipe_routes=PASS
+existing_rearrangement=PRESERVED
+explore_live_pass=PRESERVED
+buildings_live_pass=PRESERVED
+maps_safe5=PASS
