@@ -1,0 +1,163 @@
+name: Audit full235 staged source read-only
+
+on:
+  push:
+    branches:
+      - audit-full235-stage-20260921
+    paths:
+      - 'audit-tools/full235-stage-trigger.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
+          chmod 600 ~/.ssh/topking
+
+      - name: Inspect full235 staging and run all-ID match if available
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new deploy/maps/full235-nooverlap-area-ids.json root@89.125.1.71:/tmp/full235-original75.json
+          cat > /tmp/audit-full235-stage.py <<'PY'
+          import json,sqlite3,collections
+          DB='/var/lib/hamsterking-license/licenses.db'
+          db=sqlite3.connect('file:'+DB+'?mode=ro',uri=True); db.row_factory=sqlite3.Row
+
+          def table(name):
+              return bool(db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",(name,)).fetchone())
+
+          out={'production_db_mode':'ro','tables':{}}
+          for t in ['hk_full_import_batches','hk_full_import_stage','map_buildings','map_areas','hk_map_area_links']:
+              out['tables'][t]=table(t)
+
+          if not out['tables']['hk_full_import_batches'] or not out['tables']['hk_full_import_stage']:
+              out['staged_source']='ABSENT'
+              print(json.dumps(out,sort_keys=True))
+              raise SystemExit(0)
+
+          batches=[dict(r) for r in db.execute(
+              """SELECT b.batch_id,b.archive_sha256,b.exported_at,b.expected_maps,b.created_at,b.status,
+                        COUNT(s.map_key) AS staged_maps,COALESCE(SUM(s.building_count),0) AS staged_buildings
+                 FROM hk_full_import_batches b
+                 LEFT JOIN hk_full_import_stage s ON s.batch_id=b.batch_id
+                 GROUP BY b.batch_id
+                 ORDER BY b.created_at DESC"""
+          )]
+          out['batches']=[{k:r[k] for k in ['batch_id','archive_sha256','exported_at','expected_maps','created_at','status','staged_maps','staged_buildings']} for r in batches]
+          complete=next((r for r in batches if int(r['staged_maps'])==235),None)
+          if not complete:
+              out['staged_source']='NO_COMPLETE_235_BATCH'
+              print(json.dumps(out,sort_keys=True))
+              raise SystemExit(0)
+
+          batch_id=complete['batch_id']
+          staged=list(db.execute(
+              "SELECT map_key,city,grid,buildings_json,building_count FROM hk_full_import_stage WHERE batch_id=? ORDER BY map_key",
+              (batch_id,)
+          ))
+          source_owner={}
+          duplicate_source=[]
+          source_by_map={}
+          total_rows=0
+          for r in staged:
+              arr=json.loads(r['buildings_json'] or '[]')
+              ids=[]
+              for item in arr:
+                  bid=str(item[0] or '')
+                  if not bid: continue
+                  total_rows+=1
+                  if bid in source_owner and source_owner[bid]!=r['map_key']:
+                      duplicate_source.append([bid,source_owner[bid],r['map_key']])
+                  else:
+                      source_owner[bid]=r['map_key']
+                  ids.append(bid)
+              source_by_map[r['map_key']]={'ids':set(ids),'city':r['city'],'grid':r['grid'],'count':len(ids)}
+
+          # Index live canonical ownership for source IDs in chunks.
+          bid_areas={}
+          all_ids=sorted(source_owner)
+          for start in range(0,len(all_ids),700):
+              part=all_ids[start:start+700]
+              q=','.join('?' for _ in part)
+              for rr in db.execute(f"SELECT building_id,area_id FROM map_buildings WHERE building_id IN ({q})",part):
+                  bid_areas.setdefault(rr['building_id'],set()).add(rr['area_id'])
+
+          links={r['map_key']:r['canonical_area_id'] for r in db.execute("SELECT map_key,canonical_area_id FROM hk_map_area_links")}
+          original75=json.load(open('/tmp/full235-original75.json'))
+          exact=[]; new=[]; conflicts=[]
+          for key,src in source_by_map.items():
+              counts=collections.Counter()
+              duplicate_live=[]
+              for bid in src['ids']:
+                  owners=bid_areas.get(bid,set())
+                  if len(owners)>1: duplicate_live.append([bid,sorted(owners)])
+                  for aid in owners: counts[aid]+=1
+              if duplicate_live:
+                  conflicts.append({'map_key':key,'reason':'building_id_in_multiple_live_areas','examples':duplicate_live[:5]})
+                  continue
+              if len(counts)==1:
+                  area_id,overlap=next(iter(counts.items()))
+                  if key in links and links[key]!=area_id:
+                      conflicts.append({'map_key':key,'reason':'existing_link_disagrees','link':links[key],'building_area':area_id})
+                  else:
+                      exact.append({'map_key':key,'area_id':area_id,'overlap':overlap,'source_buildings':src['count']})
+              elif len(counts)==0:
+                  target=original75.get(key)
+                  if not target:
+                      conflicts.append({'map_key':key,'reason':'zero_overlap_without_original_uuid'})
+                      continue
+                  a=db.execute("SELECT 1 FROM map_areas WHERE area_id=?",(target,)).fetchone()
+                  al=db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",(target,)).fetchone()
+                  lk=links.get(key)
+                  if a or al or (lk and lk!=target):
+                      conflicts.append({'map_key':key,'reason':'new_original_uuid_not_free','target':target,'area_exists':bool(a),'alias_exists':bool(al),'link':lk})
+                  else:
+                      new.append({'map_key':key,'area_id':target,'source_buildings':src['count']})
+              else:
+                  conflicts.append({'map_key':key,'reason':'multiple_canonical_overlaps','areas':counts.most_common(8)})
+
+          out.update({
+              'staged_source':'COMPLETE_235_BATCH',
+              'batch_id':batch_id,
+              'archive_sha256':complete['archive_sha256'],
+              'exported_at':complete['exported_at'],
+              'maps':len(source_by_map),
+              'source_building_rows':total_rows,
+              'unique_source_building_ids':len(source_owner),
+              'duplicate_source_building_ids':len(duplicate_source),
+              'exact_existing':len(exact),
+              'new_original':len(new),
+              'conflicts':len(conflicts),
+              'existing_links_total':len(links),
+              'exact_linked':sum(1 for x in exact if x['map_key'] in links),
+              'new_keys_match_original75':set(x['map_key'] for x in new)==set(original75),
+              'conflict_examples':conflicts[:20],
+          })
+          print(json.dumps(out,ensure_ascii=False,sort_keys=True))
+          if len(source_by_map)==235 and len(source_owner)==152593 and not duplicate_source and len(exact)==160 and len(new)==75 and not conflicts and set(x['map_key'] for x in new)==set(original75):
+              print('FULL235_ALL_ID_DRYRUN=PASS')
+          else:
+              print('FULL235_ALL_ID_DRYRUN=INCOMPLETE_OR_FAIL')
+          print('production_db_writes=NO')
+          db.close()
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/audit-full235-stage.py root@89.125.1.71:/tmp/audit-full235-stage.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/audit-full235-stage.py'
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/audit-full235-stage.py /tmp/full235-original75.json' || true
+          rm -f ~/.ssh/topking
