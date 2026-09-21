@@ -1,0 +1,120 @@
+name: Deploy Userscript 1.17.13 Late Login Handoff
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/userscript-1-17-13-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch current live userscript
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.12" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_CORE_REVISION = 'core-20260921-r14-auth-bridge-xhr';" /tmp/HamsterKingMobile.user.js
+          cmp -s /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+          echo "LIVE_BASELINE_INPUT=PASS"
+
+      - name: Apply late-login handoff patch
+        run: |
+          set -euo pipefail
+          cp deploy/topking/patch_userscript_late_login_handoff_1_17_13.py /tmp/patch.py
+          python3 -m py_compile /tmp/patch.py
+          python3 /tmp/patch.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.13" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r15-late-login-handoff" /tmp/HamsterKingMobile.user.js
+          grep -Fq "late-login-handoff-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "AUTH_PASSIVE_SAFETY_R1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "maps-shared-runtime-20260921-r7-safe5" /tmp/HamsterKingMobile.user.js
+          grep -Fq "explore-e3-single-20260920-r9-runner" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text()
+          a=s.index('async function createFreshGameAuthorization')
+          b=s.index('async function ensureGameAuthorization',a)
+          block=s[a:b]
+          assert "auth-create-blocked-passive-only" in block
+          assert "return '';" in block
+          print('PASSIVE_AUTH_CREATE_SAFETY=PASS')
+          PY
+
+      - name: Backup and deploy
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.13.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            node --check /tmp/HamsterKingMobile.1.17.13.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.13.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.1.17.13.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+
+      - name: Verify public userscript
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?late-handoff=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          grep -Fq "// @version      1.17.13" /tmp/public.js
+          grep -Fq "core-20260921-r15-late-login-handoff" /tmp/public.js
+          grep -Fq "late-login-handoff-20260921-r1" /tmp/public.js
+          echo "PUBLIC_USERSCRIPT_1_17_13=PASS"
+
+      - name: Sync verified baseline
+        run: |
+          set -euo pipefail
+          cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+          {
+            echo "USERSCRIPT_1_17_13_LATE_LOGIN_HANDOFF=PASS"
+            echo "version=1.17.13"
+            echo "core=core-20260921-r15-late-login-handoff"
+            echo "passive_auth_create=PASS"
+            echo "maps_safe5=PASS"
+            echo "explore_e3_r9=PASS"
+          } > audit/hk-userscript-1-17-13-late-login-handoff-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-13-late-login-handoff-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "release: publish userscript 1.17.13 late login handoff"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.13.user.js /tmp/public.js /tmp/patch.py
