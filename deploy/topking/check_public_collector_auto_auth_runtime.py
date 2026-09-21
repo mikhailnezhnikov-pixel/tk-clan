@@ -111,6 +111,19 @@ if sync_events:
     print("auth_sync_latest_time="+sync_events[-1][0])
     print("auth_sync_latest_status="+sync_events[-1][1])
 
+# Safe server release-gate inspection.
+try:
+    server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
+    min_line=next((line.strip() for line in server_src.splitlines() if line.startswith("MIN_SCRIPT_VERSION =")), "")
+    print("server_min_version_line="+min_line)
+    li=server_src.find("def license_check(")
+    block=server_src[li:li+7000] if li>=0 else ""
+    print("license_check_present="+("yes" if li>=0 else "no"))
+    print("license_check_uses_min_version="+("yes" if "MIN_SCRIPT_VERSION" in block else "no"))
+    print("license_check_returns_update_required="+("yes" if "update_required" in block else "no"))
+except Exception:
+    print("server_release_gate_check=unavailable")
+
 for unit,label in (
     ("hamsterking-public-war.service","war_journal"),
     ("hamsterking-public-collector.service","ratings_journal"),
