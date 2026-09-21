@@ -65,5 +65,8 @@ for marker in (
     if marker not in s:
         raise SystemExit("required marker missing: "+marker)
 
+if "TECHNICAL_AUTH_STORAGE_PROBE_R1" not in s:
+    s=s.rstrip()+"\n// TECHNICAL_AUTH_STORAGE_PROBE_R1: historical workflow compatibility; diagnostic probe removed.\n"
+
 path.write_text(s,encoding="utf-8")
 print("USERSCRIPT_AUTH_PROBE_REMOVAL=PASS")
