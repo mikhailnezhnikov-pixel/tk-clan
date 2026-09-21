@@ -790,7 +790,7 @@
             <div class="clanshop-history-head">
               <div>
                 <h3>История покупок</h3>
-                <p>История строится по фактическим покупкам общих лотов Clan Shop из игры. План и заявки в статистику не входят.</p>
+                <p>История строится по фактическому приросту игровых счётчиков общих лотов Clan Shop. Накопительные значения из прошлой недели не переносятся. Привязка игрока выполняется только по игровому ID.</p>
               </div>
               <div class="clanshop-periods" role="group" aria-label="Период истории покупок">
                 <button class="clanshop-period active" type="button" data-clanshop-period="week">Неделя</button>
@@ -803,7 +803,7 @@
             <div class="clanshop-history-summary">
               <div><span>Шары идолов</span><b id="clanshop-history-idols">0</b></div>
               <div><span>Бизнесы S+</span><b id="clanshop-history-businesses">0</b></div>
-              <div><span>Игроков</span><b id="clanshop-history-players">0</b></div>
+              <div><span>Определено игроков</span><b id="clanshop-history-players">0</b></div>
             </div>
 
             <div class="clanshop-table-wrap">
@@ -1007,9 +1007,9 @@
 </footer>
 
 <script>
-  const TK_CABINET_REV='cabinet-20260921-r7-clanshop-identity';
+  const TK_CABINET_REV='cabinet-20260922-r8-clanshop-weekly-delta';
   if(!new URLSearchParams(location.search).has('v')){
-    const url=new URL(location.href);url.searchParams.set('v','20260921-r7');location.replace(url.toString());
+    const url=new URL(location.href);url.searchParams.set('v','20260922-r8');location.replace(url.toString());
   }
 
   const API='https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet';
@@ -1845,7 +1845,11 @@
     body.innerHTML=html.join('')||'<tr><td colspan="4" class="muted">Фактических покупок за этот период пока нет.</td></tr>';
     const message=$('clanshop-history-message');
     if(message){
-      message.textContent=players.length?'Нажмите на игрока, чтобы раскрыть покупки по неделям.':'';
+      const unattributed=players.find(row=>row.is_unattributed);
+      const unknownTotal=unattributed?(unattributed.idol_orbs+unattributed.splus_businesses):0;
+      message.textContent=unknownTotal
+        ? 'Не распределено: '+unknownTotal+' покупок есть в общем игровом счётчике, но по ним ещё нет индивидуальных данных игрока.'
+        : players.length?'Нажмите на игрока, чтобы раскрыть покупки по неделям.':'';
     }
   }
 
