@@ -461,6 +461,20 @@ try:
 except Exception:
     print("live_server_structure_check=unavailable")
 
+try:
+    env_path="/etc/hamsterking-public-collector.env"
+    env_keys=set()
+    for raw in open(env_path,encoding="utf-8",errors="replace"):
+        line=raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        env_keys.add(line.split("=",1)[0].strip())
+    print("collector_env_static_game_token_key_present="+("yes" if "HK_PUBLIC_COLLECTOR_GAME_TOKEN" in env_keys else "no"))
+    print("collector_env_token_file_key_present="+("yes" if "HK_PUBLIC_COLLECTOR_TOKEN_FILE" in env_keys else "no"))
+    print("collector_env_bootstrap_key_present="+("yes" if "HK_PUBLIC_COLLECTOR_AUTH_BOOTSTRAP" in env_keys else "no"))
+except Exception:
+    print("collector_env_key_check=unavailable")
+
 for unit,label in (
     ("hamsterking-public-war.service","war_journal"),
     ("hamsterking-public-collector.service","ratings_journal"),
