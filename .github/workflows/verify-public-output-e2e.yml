@@ -1,0 +1,39 @@
+name: Verify Public Wars Ratings E2E
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-output-e2e-trigger.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Verify cache public API and live pages
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/check_public_output_e2e.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/check_public_output_e2e.py \
+            root@89.125.1.71:/tmp/check_public_output_e2e.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/check_public_output_e2e.py'
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
