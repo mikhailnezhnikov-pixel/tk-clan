@@ -1,0 +1,96 @@
+name: Deploy Public Ratings Daily Stale R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-ratings-daily-stale-r1-trigger.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-topking-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refresh current main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch and patch fresh live server
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-source.sha
+          python3 deploy/topking/patch_public_ratings_daily_stale_r1.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq PUBLIC_SNAPSHOT_SERVER_ONLY_R3 /tmp/server.py
+          grep -Fq PUBLIC_RATINGS_SERVER_ONLY_R3 /tmp/server.py
+          grep -Fq PUBLIC_RATINGS_DAILY_STALE_R1 /tmp/server.py
+          grep -Fq PUBLIC_COLLECTOR_AUTH_HEARTBEAT_R1 /tmp/server.py
+          grep -Fq PUBLIC_COLLECTOR_AUTH_PROBE_R1 /tmp/server.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.ratings-daily-stale-r1.py
+
+      - name: Race-safe install
+        run: |
+          set -euo pipefail
+          source_sha="$(cat /tmp/server-source.sha)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "
+            set -euo pipefail
+            current=\$(sha256sum /opt/hamsterking-license/server.py | awk '{print \$1}')
+            test \"\$current\" = \"$source_sha\" || { echo LIVE_SERVER_CHANGED_BEFORE_RATINGS_STALE_INSTALL; exit 42; }
+            stamp=\$(date +%Y%m%d-%H%M%S)
+            cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.ratings-daily-stale-r1.\$stamp
+            install -m 0644 /tmp/server.ratings-daily-stale-r1.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+            echo ratings_daily_stale_install=PASS
+          "
+
+      - name: Verify live public behavior
+        run: |
+          set -euo pipefail
+          sleep 2
+          python3 - <<'PY'
+          import json, urllib.request
+          base='https://hk-license.89.125.1.71.sslip.io/api/v1/public'
+          kinds=('influence','power','clans','alliance_power','alliance_influence','alliance_defense')
+          for kind in kinds:
+              with urllib.request.urlopen(base+'/ratings?kind='+kind,timeout=20) as r:
+                  d=json.load(r)
+              assert r.status==200
+              assert d.get('ok') is True
+              assert len(d.get('rows') or [])==100, (kind,len(d.get('rows') or []))
+              assert d.get('stale') is False, (kind,d.get('updated_at'))
+              print('rating_'+kind+'_fresh=yes')
+          with urllib.request.urlopen(base+'/clan-war',timeout=20) as r:
+              w=json.load(r)
+          assert r.status==200 and w.get('ok') is True
+          print('war_stale='+('yes' if w.get('stale') else 'no'))
+          print('PUBLIC_RATINGS_DAILY_STALE_R1_LIVE=PASS')
+          PY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/server-source.sha
