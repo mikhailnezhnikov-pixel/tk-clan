@@ -166,7 +166,7 @@ jobs:
           print("buildings_open_limit=PASS")
           print("buildings_runner_canon=PASS")
           print("protected_maps_explore=PASS")
-          print("userscript_1_17_16=PASS")
+          print("userscript_1_17_17=PASS")
           print("BUILDINGS_CANON_R1_TECHNICAL_REVALIDATION=PASS")
           PY
 
