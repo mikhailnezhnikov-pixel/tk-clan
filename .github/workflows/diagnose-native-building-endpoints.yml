@@ -110,6 +110,12 @@ jobs:
               'from_slot',
               'canClaimBuilding',
               '.claim(',
+              'po(mi.building',
+              'function po(',
+              'const po=',
+              'var po=',
+              'ck.claim(this.id',
+              'feature.properties.type===`slot`',
           ]
           found=[]
           for url,body in bodies.items():
