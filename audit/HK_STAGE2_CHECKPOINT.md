@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.16
+- userscript: 1.17.17
 - current module: Buildings / Здания — final live action gate
 - current module file: audit/hk-stage2-06-buildings.md
-- current module status: ACTIVE_SEMANTICS_R1_LIVE_CANDIDATE_USER_ACTION_CHECK_PENDING
+- current module status: LIMIT_RUNNER_R1_LIVE_CANDIDATE_USER_ACTION_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - next after Buildings LIVE PASS: Explore / Исследование — E3 single-building user validation
 - Explore E4 multi-building: NOT STARTED
@@ -1507,4 +1507,37 @@ Next user check:
 6. confirm the opened building is no longer offered.
 
 Do not advance Explore E4 before Buildings live action PASS and Explore E3 single-building PASS.
+
+### Buildings open-limit + canonical runner — PASS technical / user action pending (2026-09-21)
+
+User requested:
+- apply the current visual canon to the Buildings runner panel;
+- add an explicit number-of-buildings limit before mass opening.
+
+Delivered in userscript `1.17.17`:
+- Open limit: **1 / 10 / 15 / 20 / All available**;
+- safe default: **1**;
+- plan separates total candidates from **К запуску**;
+- run confirmation displays the exact number selected;
+- Buildings runner uses compact canonical styling and progress count;
+- active-slot fix from 1.17.16 remains intact.
+
+Verification:
+- predeploy `35569077513`: PASS;
+- deploy `35569168241`: PASS;
+- loader core-r19 `35569276675`: PASS;
+- Buildings verifier `35569279946`: PASS;
+- public E2E `35569283445`: PASS;
+- Maps/Explore/auth protected invariants: PASS.
+
+Current Stage 2 gate:
+**Buildings 2.06 — LIMIT_RUNNER_R1_LIVE_CANDIDATE_USER_ACTION_CHECK_PENDING**.
+
+Next user check:
+1. reload game/HK;
+2. confirm limit selector and canonical runner;
+3. keep limit at 1;
+4. calculate candidates;
+5. open exactly one building;
+6. recalculate and confirm it disappears from candidates.
 
