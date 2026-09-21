@@ -1,0 +1,11 @@
+USERSCRIPT_1_17_19_BUILDINGS_NATIVE_SYNC_R1=PASS
+version=1.17.19
+core=core-20260921-r21-buildings-native-sync
+native_store_sync=PASS
+native_store_postcheck=PASS
+reload_fallback=PASS
+owned_semantics=PASS
+claim_postcondition=PASS
+favorite_postcondition=PASS
+maps_safe5=PASS
+explore_e3_r9=PASS

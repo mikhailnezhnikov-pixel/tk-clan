@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.18
+// @version      1.17.19
+// @release-note После открытия зданий HK теперь проверяет native-store игры и синхронизирует карту; при необходимости выполняется одна безопасная перезагрузка.
 // @release-note Исправлено открытие зданий: кандидаты теперь исключают все уже полученные здания, а успех проверяется по /player/me.
 // @release-note Избранное теперь подтверждается повторным чтением состояния, без ложного сообщения об успехе.
 // @release-note Добавлен лимит открытия зданий: 1 / 10 / 15 / 20 / все доступные.
@@ -20,9 +21,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.18';
+  const BUILD_VERSION = '1.17.19';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r20-buildings-owned-postcondition';
+  const HK_CORE_REVISION = 'core-20260921-r21-buildings-native-sync';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -751,8 +752,21 @@
       recordDiagnostic('game-bridge-dirty',{path:route,method:verb});
       if (!hkRunner.running) schedule(180);
     };
+    const buildingState = buildingId => {
+      const id=String(buildingId||'');
+      if(!id)return {known:false,owned:null,favorite:null};
+      try{
+        if(!ready())discover(false);
+        const store=player?.buildings?.$;
+        if(!store||typeof store.has!=='function')return {known:false,owned:null,favorite:null};
+        const owned=store.has(id);
+        const row=owned&&typeof store.get==='function'?store.get(id):null;
+        const favorite=owned?!!(row&&row.favoriteSlot!==undefined&&row.favoriteSlot!==null):false;
+        return {known:true,owned,favorite};
+      }catch(_){return {known:false,owned:null,favorite:null};}
+    };
     const summary = () => ({ready:ready(),dirty,flushing,lastDiscoveryAt,lastFlushAt,discoveries,flushes,failures,hasGeneralViewStore:!!generalViewStore});
-    return {discover,flush,schedule,noteMutation,summary,get ready(){return ready();},get dirty(){return dirty;}};
+    return {discover,flush,schedule,noteMutation,summary,buildingState,get ready(){return ready();},get dirty(){return dirty;}};
   })();
 
   // Runner completion is the safest place to refresh the game's visible React
@@ -789,6 +803,7 @@
   const HK_BUILDINGS_RUNNER_UI_REV = 'buildings-runner-ui-20260921-r1';
   const HK_BUILDINGS_OWNED_REV = 'buildings-owned-semantics-20260921-r1';
   const HK_BUILDINGS_POSTCONDITION_REV = 'buildings-postcondition-20260921-r1';
+  const HK_BUILDINGS_NATIVE_SYNC_REV = 'buildings-native-sync-20260921-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2';
   const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   const HK_AUTO_ROUTINES_REV = 'auto-routines-20260920-r1';
@@ -1757,6 +1772,7 @@
     buildingCanonSaveSettings(buildingCanonReadSettingsFromDom());
     buildingCanonBusy=true;renderBuildings();
     let opened=0,favorites=0,errors=0,capacityStopped=false,favoriteEnabled=true;
+    const openedIds=[],favoriteIds=[];
     try{
       buildingCanonPlan=await buildingCanonBuildPlan(true);
       const capacity=buildingCanonPlan.capacity;
@@ -1806,7 +1822,7 @@
         }
 
         const afterCapacity=buildingCanonCapacity(playerDocument);
-        opened+=1;
+        opened+=1;openedIds.push(candidate.buildingId);
         const metrics=buildingCanonActualMetrics(result,candidate);
         const activeDelta=beforeCapacity.active!==null&&afterCapacity.active!==null?afterCapacity.active-beforeCapacity.active:null;
         log(`✓ ${candidate.buildingId} · 💎 ${metrics.crystals}${activeDelta===null?'':` · Δactive ${activeDelta>=0?'+':''}${activeDelta}`}`,'ok');
@@ -1825,7 +1841,7 @@
                 if(favAttempt<2)await gameRetryDelay(500*(favAttempt+1));
               }
               if(favoriteConfirmed){
-                favorites+=1;log(`★ ${candidate.buildingId} · ${either('избранное подтверждено','favorite confirmed')}`,'ok');
+                favorites+=1;favoriteIds.push(candidate.buildingId);log(`★ ${candidate.buildingId} · ${either('избранное подтверждено','favorite confirmed')}`,'ok');
               }else{
                 errors+=1;log(`↷ ${candidate.buildingId} · ${either('сервер не подтвердил добавление в избранное','server did not confirm favorite')}`,'warn');
               }
@@ -1842,6 +1858,38 @@
       playerDocument=await hkAuthoritativePlayerRead('buildings:complete');
       buildingCanonPlan=await buildingCanonBuildPlan(false);
       renderBuildings();
+
+      if(openedIds.length||favoriteIds.length){
+        hkRunner.setStep(either('Синхронизация игры','Syncing game'),done,candidates.length);
+        const bridgeOk=await hkGameBridge.flush(true);
+        let nativeConfirmed=bridgeOk;
+        if(nativeConfirmed){
+          for(const id of openedIds){
+            const state=hkGameBridge.buildingState(id);
+            if(!state.known||state.owned!==true){nativeConfirmed=false;break;}
+          }
+        }
+        if(nativeConfirmed){
+          for(const id of favoriteIds){
+            const state=hkGameBridge.buildingState(id);
+            if(!state.known||state.favorite!==true){nativeConfirmed=false;break;}
+          }
+        }
+        if(!nativeConfirmed){
+          log(either(
+            'Сервер подтвердил изменения, но интерфейс игры не синхронизировался. Выполняю одно обновление игры.',
+            'Server confirmed the changes, but the game UI did not sync. Reloading the game once.'
+          ),'warn');
+          showVisualNotice(
+            either('Синхронизация зданий','Building sync'),
+            either('Изменения сохранены. Игра обновится один раз, чтобы карта увидела новые здания.','Changes are saved. The game will reload once so the map sees the new buildings.')
+          );
+          setTimeout(()=>location.reload(),900);
+          return;
+        }
+        log(either('Карта игры синхронизирована с новыми зданиями.','Game map synced with the new buildings.'),'ok');
+      }
+
       hkRunner.finish(either('Открытие зданий завершено','Building opening completed'));
       log(either(
         `Здания: открыто ${opened}, в избранное ${favorites}, ошибок ${errors}${capacityStopped?' · лимит слотов достигнут':''}`,
