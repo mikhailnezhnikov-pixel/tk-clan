@@ -1,1 +1,1 @@
-2026-09-21 rerun safe technical license response flags after checker fix
+2026-09-21 verify runtime after userscript 1.17.12 XHR auth bridge deploy
