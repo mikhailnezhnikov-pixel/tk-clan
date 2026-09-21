@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import base64, json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request, fcntl, hashlib, hmac
 
-REV = "public-server-collector-20260921-r4-auto-auth"
+REV = "public-server-collector-20260921-r5-bootstrap-self-heal"
 GAME_API = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_API", "https://hk-game-api.hwgame.cloud").rstrip("/")
 DB_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_DB", "/var/lib/hamsterking-license/licenses.db")
 STATUS_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_STATUS", "/var/lib/hamsterking-license/public-collector-status.json")
@@ -151,11 +151,14 @@ def refresh_game_token(force=False):
         log(f"auth refresh deferred: {type(exc).__name__}")
         return False
 
+# PUBLIC_COLLECTOR_BOOTSTRAP_SELF_HEAL_R1
 def ensure_game_token():
     global TOKEN
     file_token=_load_token()
     if file_token and file_token!=TOKEN:
         TOKEN=file_token
+    if not TOKEN:
+        refresh_game_token(force=False)
     expiry=_token_expiry(TOKEN)
     if TOKEN and expiry and expiry<=int(time.time())+60:
         refresh_game_token(force=False)
