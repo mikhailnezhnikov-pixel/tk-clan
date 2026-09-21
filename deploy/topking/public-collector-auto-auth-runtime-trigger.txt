@@ -1,1 +1,1 @@
-2026-09-21 verify next natural war timer cycle after token refresh\n
+2026-09-21 verify live collector credential file ownership and permissions\n
