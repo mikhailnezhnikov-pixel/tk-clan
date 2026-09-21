@@ -1,1 +1,1 @@
-2026-09-21 restart live license runtime to load auth-sync/probe server code
+2026-09-21 repair collector identity owner for license service uid and restart
