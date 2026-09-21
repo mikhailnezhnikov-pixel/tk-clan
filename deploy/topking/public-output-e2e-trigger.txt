@@ -1,1 +1,1 @@
-2026-09-21 verify collector cache to public Wars Ratings and live site\n
+2026-09-21 rerun public Wars Ratings E2E after daily stale fix\n
