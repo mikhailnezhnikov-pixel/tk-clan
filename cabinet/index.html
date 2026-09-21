@@ -830,7 +830,7 @@
 
           <div class="hkmap-mini-stats">
             <div class="hkmap-mini"><span>Карт в индексе</span><b id="hkmap-total">235</b></div>
-            <div class="hkmap-mini"><span>Городов</span><b id="hkmap-cities">0</b></div>
+            <div class="hkmap-mini"><span>Городов в базе</span><b id="hkmap-cities">0 / 17</b></div>
             <div class="hkmap-mini"><span>Open подключено</span><b id="hkmap-ready">0</b></div>
           </div>
 
@@ -1021,6 +1021,41 @@
   const $=id=>document.getElementById(id);
   const safe=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const formatNumber=value=>Number(value||0).toLocaleString('ru-RU');
+  const HK_GAME_CITY_KEYS=new Set([
+    'auckland','berlin','boston','dubai','lagos','london','losangeles','minsk','moscow',
+    'newyork','paris','riodejaneiro','saintpetersburg','singapore','sydney','tokyo','washington'
+  ]);
+  const HK_GAME_CITY_ALIASES={
+    auckland:'auckland',окленд:'auckland',
+    berlin:'berlin',берлин:'berlin',
+    boston:'boston',бостон:'boston',
+    dubai:'dubai',дубай:'dubai',
+    lagos:'lagos',лагос:'lagos',
+    london:'london',лондон:'london',
+    losangeles:'losangeles',лосанджелес:'losangeles',
+    minsk:'minsk',минск:'minsk',
+    moscow:'moscow',москва:'moscow',
+    newyork:'newyork',ньюйорк:'newyork',
+    paris:'paris',париж:'paris',
+    riodejaneiro:'riodejaneiro',риодежанейро:'riodejaneiro',
+    saintpetersburg:'saintpetersburg',stpetersburg:'saintpetersburg',санктпетербург:'saintpetersburg',спб:'saintpetersburg',
+    singapore:'singapore',сингапур:'singapore',
+    sydney:'sydney',сидней:'sydney',
+    tokyo:'tokyo',токио:'tokyo',
+    washington:'washington',washingtondc:'washington',вашингтон:'washington'
+  };
+  const hkGameCityKey=value=>{
+    const raw=String(value||'').trim().toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,'');
+    return HK_GAME_CITY_ALIASES[raw]||raw;
+  };
+  const hkGameCityCoverage=maps=>{
+    const keys=new Set();
+    (maps||[]).forEach(map=>{
+      const key=hkGameCityKey(map?.city);
+      if(HK_GAME_CITY_KEYS.has(key))keys.add(key);
+    });
+    return keys.size;
+  };
   let session=localStorage.getItem(TOKEN_KEY)||'';
   let clanPlayers=[];
   let clanInfo={};
@@ -1349,7 +1384,7 @@
 
     $('hk-full-import-admin')?.classList.toggle('hidden',!hkMapsCanManage);
     $('hkmap-total').textContent=formatNumber(source.length);
-    $('hkmap-cities').textContent=formatNumber(new Set(source.map(x=>x.city)).size);
+    $('hkmap-cities').textContent=formatNumber(hkGameCityCoverage(source))+' / '+HK_GAME_CITY_KEYS.size;
     $('hkmap-ready').textContent=formatNumber(source.filter(x=>x.open_url).length);
     $('hkmap-count').textContent=filtered.length+'/'+source.length+' показано';
 
