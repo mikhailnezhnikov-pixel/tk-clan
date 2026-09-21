@@ -51,7 +51,7 @@ if war_row:
     except Exception:
         pass
 
-print("e2e_revision=PUBLIC_OUTPUT_E2E_R1")
+print("e2e_revision=PUBLIC_OUTPUT_E2E_R2")
 print("db_war_present="+yes(war_row))
 print("db_war_active="+yes(db_war_active))
 print("db_war_age_seconds="+str(max(0,now-db_war_updated) if db_war_updated else 0))
@@ -63,7 +63,12 @@ print("api_war_ok="+yes(isinstance(war_doc,dict) and war_doc.get("ok")))
 print("api_war_active="+yes(isinstance(war_doc,dict) and war_doc.get("active")))
 print("api_war_stale="+yes(isinstance(war_doc,dict) and war_doc.get("stale")))
 print("api_war_cors_site="+yes(war_cors==SITE))
-print("api_war_matches_db_updated_at="+yes(api_war_updated==db_war_updated and api_war_updated>0))
+api_war_active=bool(isinstance(war_doc,dict) and war_doc.get("active"))
+war_db_state_ok=(
+    (api_war_active and bool(war_row) and db_war_active and api_war_updated==db_war_updated and api_war_updated>0)
+    or ((not api_war_active) and (not war_row) and api_war_updated==0)
+)
+print("api_war_matches_db_state="+yes(war_db_state_ok))
 print("api_war_age_seconds="+str(max(0,now-api_war_updated) if api_war_updated else 0))
 war_payload=war_doc.get("war") if isinstance(war_doc,dict) and isinstance(war_doc.get("war"),dict) else {}
 war_opponent_ok=bool(str(war_payload.get("opponent") or "").strip())
@@ -73,8 +78,10 @@ try:
     war_hp_ok=(war_hp>=0 and war_hp_max>0 and war_hp<=war_hp_max)
 except Exception:
     war_hp_ok=False
+war_payload_shape_ok=(war_opponent_ok and war_hp_ok) if api_war_active else (not war_payload)
 print("api_war_opponent_present="+yes(war_opponent_ok))
 print("api_war_hp_shape_ok="+yes(war_hp_ok))
+print("api_war_payload_shape_ok="+yes(war_payload_shape_ok))
 
 ratings_all_ok=True
 for kind in KINDS:
@@ -186,11 +193,9 @@ print("ratings_timer_next_present="+yes(ratings_timer_next))
 war_ok=(
     war_status==200
     and bool(war_doc.get("ok"))
-    and api_war_updated==db_war_updated
-    and api_war_updated>0
+    and war_db_state_ok
     and war_cors==SITE
-    and war_opponent_ok
-    and war_hp_ok
+    and war_payload_shape_ok
 )
 site_ok=(
     wars_status==200
