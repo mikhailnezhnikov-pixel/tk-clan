@@ -49,8 +49,8 @@ jobs:
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/userscript-source.sha
-          grep -Fq '// @version      1.17.9' /tmp/HamsterKingMobile.user.js
-          grep -Fq "const BUILD_VERSION = '1.17.9';" /tmp/HamsterKingMobile.user.js
+          grep -Fq '// @version      1.17.10' /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.10';" /tmp/HamsterKingMobile.user.js
           grep -Fq 'PRELOGIN_ZERO_GAME_API_R1' /tmp/HamsterKingMobile.user.js
           grep -Fq 'AUTH_PASSIVE_SAFETY_R1' /tmp/HamsterKingMobile.user.js
           grep -Fq 'PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1' /tmp/HamsterKingMobile.user.js
@@ -108,7 +108,7 @@ jobs:
             set -euo pipefail
             node --check /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq "// @version      1.17.10" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "const BUILD_VERSION = '"'"'1.17.9'"'"';" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "const BUILD_VERSION = '"'"'1.17.10'"'"';" /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq TECHNICAL_PASSIVE_AUTH_BRIDGE_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq TECHNICAL_AUTH_STORAGE_PROBE_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq PRELOGIN_ZERO_GAME_API_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
