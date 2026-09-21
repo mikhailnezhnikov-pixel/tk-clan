@@ -18,12 +18,13 @@ Each module:
 - stage: 2
 - status: IN_PROGRESS
 - userscript: 1.17.22
-- current module: Explore / Исследование — production UI final visual check
-- current module file: audit/hk-stage2-07-explore.md
-- current module status: PRODUCTION_UI_R1_TECHNICAL_PASS_USER_VISUAL_CHECK_PENDING
+- current module: Businesses / Бизнесы — canonical source preflight
+- current module file: audit/hk-stage2-08-businesses.md
+- current module status: CANONICAL_TRANSFER_GAP_CONFIRMED
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: LIVE PASS
+- Explore / Исследование: LIVE PASS
 - parallel FULL235: separate track; do not mix into Stage 2 module gate
 
 ## Module order
@@ -1722,4 +1723,22 @@ Current Stage 2 gate:
 **Explore 2.07 — PRODUCTION_UI_R1_TECHNICAL_PASS_USER_VISUAL_CHECK_PENDING**.
 
 After the user confirms the cleaned UI, Explore can be closed and Stage 2 advances to **Businesses / Бизнесы**.
+
+### Explore 2.07 — LIVE PASS / Businesses 2.08 started (2026-09-21)
+
+User confirmed the cleaned Explore production UI is correct.
+
+Therefore:
+**Explore / Исследование 2.07 = LIVE PASS**
+
+Stage 2 advances to:
+**Businesses / Бизнесы 2.08**
+
+Initial Businesses source preflight:
+- current production rearrangement/optimizer code remains present and is not to be removed;
+- pinned Kokkaras donor contains a separate Businesses catalog/planner layer that is absent from current production;
+- canonical transfer gap is confirmed before any Businesses production mutation.
+
+Current Businesses status:
+**CANONICAL_TRANSFER_GAP_CONFIRMED**
 
