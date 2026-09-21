@@ -231,16 +231,15 @@ s,count=re.subn(pattern,r'\1<button class="hk-business-tab" data-business-tab="c
 if count!=1: raise SystemExit("business catalog tab insertion failed")
 
 # Add catalog pane before the business page closes.
-needle='''        <section class="hk-bonus-analyzer"><h3 data-i18n="bonusAnalyzer">'''
-start=s.find(needle)
-if start<0: raise SystemExit("bonus analyzer pane missing")
-clan=s.find('      <div class="hk-page" data-content="clan">',start)
-if clan<0: raise SystemExit("clan page anchor missing")
-close=s.rfind('      </div>\\n',start,clan)
-if close<0: raise SystemExit("business page close missing")
-catalog_pane='''        <div class="hk-business-pane" data-business-pane="catalog"><div id="hk-business-catalog"><p class="hk-muted">Каталог</p></div></div>
-'''
-s=s[:close]+catalog_pane+s[close:]
+page_close='''        <section class="hk-bonus-analyzer"><h3 data-i18n="bonusAnalyzer">${tr('bonusAnalyzer')}</h3><div id="hk-bonus-analyzer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section></div></div>
+      </div>
+      <div class="hk-page" data-content="clan">'''
+if page_close not in s: raise SystemExit("business page close missing")
+catalog_pane='''        <section class="hk-bonus-analyzer"><h3 data-i18n="bonusAnalyzer">${tr('bonusAnalyzer')}</h3><div id="hk-bonus-analyzer-result"><p class="hk-muted">${tr('optimizerNoPlan')}</p></div></section></div>
+        <div class="hk-business-pane" data-business-pane="catalog"><div id="hk-business-catalog"><p class="hk-muted">Каталог</p></div></div></div>
+      </div>
+      <div class="hk-page" data-content="clan">'''
+s=s.replace(page_close,catalog_pane,1)
 
 s=s.replace("const pane = paneName === 'optimizer' ? 'optimizer' : 'regular';",
             "const pane = ['optimizer','catalog'].includes(paneName) ? paneName : 'regular';",1)
