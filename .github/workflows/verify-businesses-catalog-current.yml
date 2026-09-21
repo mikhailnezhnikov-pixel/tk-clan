@@ -48,7 +48,7 @@ jobs:
           for marker in [
               "// @version      1.17.24",
               "const BUILD_VERSION = '1.17.24';",
-              "const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';",
+              "const HK_CORE_REVISION = 'core-20260921-r28-businesses-finalize';",
               "const HK_BUSINESSES_CANON_REV='businesses-catalog-readonly-20260921-r1';",
               "function businessCatalogOwnedCount(",
               "function businessCatalogCapacity(",
@@ -60,7 +60,7 @@ jobs:
               'data-business-tab="catalog"',
               'id="hk-business-catalog"',
               "const HK_BUSINESSES_REARRANGE_REV='businesses-rearrange-desktop-safe-t123-20260921-r1';",
-              "const HK_BUSINESSES_RUNNER_UI_REV='businesses-runner-canon-20260921-r1';",
+              "const HK_BUSINESSES_RUNNER_UI_REV='businesses-runner-canon-20260921-r1';",\n              "const HK_BUSINESSES_FINALIZE_REV='businesses-finalize-single-snapshot-20260921-r1';",
               "function businessRemovalAllowed(",
               "function assertBusinessRemovalPlanAllowed(",
               "removeAll:'Достать: T1–T3'",
@@ -78,7 +78,7 @@ jobs:
           rearrange=s[s.index("async function executeBusinessPlan()"):s.index("function prepareOriginalBusinessRestore")]
           assert "hkMutationGate.run(" in api
           assert "await hkRunner.waitIfPaused()" in rearrange
-          assert "hkAuthoritativePlayerRead('business-complete')" in rearrange
+          assert "hkAuthoritativePlayerRead('business-final-check')" in rearrange\n          assert "let processedInsertRows = 0;" in rearrange\n          assert "Проверяю результат" in rearrange\n          assert "value => businessSlotIsActive(value, id), 6" not in rearrange
           assert "businessSlotIsActive" in rearrange
           assert "readBusinessSlot" in rearrange
           assert "if (prepared) return assertBusinessRemovalPlanAllowed(prepared);" in s
