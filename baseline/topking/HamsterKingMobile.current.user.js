@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.17
+// @version      1.17.18
+// @release-note Исправлено открытие зданий: кандидаты теперь исключают все уже полученные здания, а успех проверяется по /player/me.
+// @release-note Избранное теперь подтверждается повторным чтением состояния, без ложного сообщения об успехе.
 // @release-note Добавлен лимит открытия зданий: 1 / 10 / 15 / 20 / все доступные.
 // @release-note Runner «Здания» приведён к компактному визуальному канону панели.
 // @release-note Исправлен расчёт активных зданий: план и запуск теперь используют реальные активные слоты игры.
@@ -18,9 +20,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.17';
+  const BUILD_VERSION = '1.17.18';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r19-buildings-limit-runner';
+  const HK_CORE_REVISION = 'core-20260921-r20-buildings-owned-postcondition';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -785,6 +787,8 @@
   const HK_BUILDINGS_ACTIVE_REV = 'buildings-active-semantics-20260921-r1';
   const HK_BUILDINGS_LIMIT_REV = 'buildings-open-limit-20260921-r1';
   const HK_BUILDINGS_RUNNER_UI_REV = 'buildings-runner-ui-20260921-r1';
+  const HK_BUILDINGS_OWNED_REV = 'buildings-owned-semantics-20260921-r1';
+  const HK_BUILDINGS_POSTCONDITION_REV = 'buildings-postcondition-20260921-r1';
   const HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2';
   const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   const HK_AUTO_ROUTINES_REV = 'auto-routines-20260920-r1';
@@ -1585,6 +1589,20 @@
     return rows.filter(row=>row&&String(row?.id||row?.building_id||''));
   }
 
+  function buildingCanonOwnedIds(documentValue=playerDocument) {
+    return new Set(buildingCanonAllRows(documentValue).map(row=>String(row?.id||row?.building_id||'')).filter(Boolean));
+  }
+
+  function buildingCanonOwnedRow(buildingId,documentValue=playerDocument) {
+    const id=String(buildingId||'');
+    return buildingCanonAllRows(documentValue).find(row=>String(row?.id||row?.building_id||'')===id)||null;
+  }
+
+  function buildingCanonIsFavorite(buildingId,documentValue=playerDocument) {
+    const row=buildingCanonOwnedRow(buildingId,documentValue);
+    return !!(row&&(row?.is_favorite===true||row?.favorite===true||row?.slot_index!==null&&row?.slot_index!==undefined));
+  }
+
   function buildingCanonReportedActiveCount(documentValue=playerDocument) {
     const state=documentValue||{},player=state?.player||{};
     const raw=player?.player_active_building??state?.player_active_building;
@@ -1648,7 +1666,7 @@
     }
     const settings=buildingCanonSettings();
     const owned=(playerDocument?.areas?.areas||[]).filter(row=>row?.gamearea_id||row?.area_id);
-    const active=buildingCanonActiveIds(playerDocument);
+    const ownedBuildingIds=buildingCanonOwnedIds(playerDocument);
     const seen=new Set(),candidates=[];
     let mappedAreas=0,unknownMetric=0;
     for(const area of owned){
@@ -1661,7 +1679,7 @@
       mappedAreas+=1;
       for(const row of detail?.buildings||[]){
         const buildingId=String(row?.building_id||'');
-        if(!buildingId||active.has(buildingId)||seen.has(buildingId))continue;
+        if(!buildingId||ownedBuildingIds.has(buildingId)||seen.has(buildingId))continue;
         const crystals=buildingCanonMetric(row,'room_count');
         if(crystals===null){unknownMetric+=1;continue;}
         const isInvest=row?.is_invest===true;
@@ -1743,7 +1761,7 @@
       buildingCanonPlan=await buildingCanonBuildPlan(true);
       const capacity=buildingCanonPlan.capacity;
       const source=buildingCanonPlan.candidates;
-      if(!source.length){log(either('Подходящих неактивных зданий нет.','No eligible inactive buildings.'),'warn');return;}
+      if(!source.length){log(either('Подходящих неоткрытых зданий нет.','No eligible unowned buildings.'),'warn');return;}
       if(capacity.free!==null&&capacity.free<=0){log(either('Подходящие здания есть, но свободных активных слотов нет.','Eligible buildings exist, but there are no free active-building slots.'),'warn');return;}
       const capacityCandidates=capacity.free===null?source:source.slice(0,capacity.free);
       const limit=Number(buildingCanonPlan.settings?.openLimit);
@@ -1760,10 +1778,11 @@
         if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
         await hkRunner.waitIfPaused();
         playerDocument=await hkAuthoritativePlayerRead('buildings:before-open');
-        if(buildingCanonActiveIds(playerDocument).has(candidate.buildingId)){
-          done+=1;hkRunner.setStep(either('Уже открыто — пропуск','Already open — skipped'),done,candidates.length);continue;
+        if(buildingCanonOwnedIds(playerDocument).has(candidate.buildingId)){
+          done+=1;hkRunner.setStep(either('Уже получено — пропуск','Already owned — skipped'),done,candidates.length);continue;
         }
-        const liveCapacity=buildingCanonCapacity(playerDocument);
+        const beforeCapacity=buildingCanonCapacity(playerDocument);
+        const liveCapacity=beforeCapacity;
         if(liveCapacity.free!==null&&liveCapacity.free<=0){capacityStopped=true;log(either('Свободных слотов зданий больше нет.','No free building slots remain.'),'warn');break;}
         hkRunner.setStep(`${either('Открываю','Opening')} ${candidate.buildingId}`,done,candidates.length);
         let result;
@@ -1771,16 +1790,49 @@
           if(buildingCanonCapacityError(error)){capacityStopped=true;log(either('Игра сообщила: достигнут лимит активных зданий.','Game reports the active-building limit was reached.'),'warn');break;}
           errors+=1;done+=1;log(`✗ ${candidate.buildingId}: ${error?.message||error}`,'bad');hkRunner.setStep(candidate.buildingId,done,candidates.length);continue;
         }
-        opened+=1;
         try{buildingStudyCache.set(candidate.buildingId,result);await acceptBuildingStudy((apiBase||GAME_API_FALLBACK)+'/player/building?building_id='+encodeURIComponent(candidate.buildingId),apiHeaders,result);}catch(_){}
+
+        let claimed=false;
+        for(let verifyAttempt=0;verifyAttempt<3;verifyAttempt+=1){
+          playerDocument=await hkAuthoritativePlayerRead('buildings:after-claim');
+          if(buildingCanonOwnedIds(playerDocument).has(candidate.buildingId)){claimed=true;break;}
+          if(verifyAttempt<2)await gameRetryDelay(700*(verifyAttempt+1));
+        }
+        if(!claimed){
+          errors+=1;done+=1;
+          log(`✗ ${candidate.buildingId} · ${either('сервер не подтвердил получение здания','server did not confirm building claim')}`,'bad');
+          hkRunner.setStep(either('Не подтверждено','Not confirmed'),done,candidates.length);
+          continue;
+        }
+
+        const afterCapacity=buildingCanonCapacity(playerDocument);
+        opened+=1;
         const metrics=buildingCanonActualMetrics(result,candidate);
-        log(`✓ ${candidate.buildingId} · 💎 ${metrics.crystals} · ${either('событий','events')} ${metrics.totalEvents}`,'ok');
+        const activeDelta=beforeCapacity.active!==null&&afterCapacity.active!==null?afterCapacity.active-beforeCapacity.active:null;
+        log(`✓ ${candidate.buildingId} · 💎 ${metrics.crystals}${activeDelta===null?'':` · Δactive ${activeDelta>=0?'+':''}${activeDelta}`}`,'ok');
+
         if(favoriteEnabled&&metrics.crystals>=buildingCanonPlan.settings.favoriteFrom){
           const favCap=buildingCanonCapacity(playerDocument);
-          if(favCap.favoriteFree!==null&&favCap.favoriteFree<=0){favoriteEnabled=false;log(either('Свободных мест в избранном больше нет.','No favorite slots remain.'),'warn');}
-          else{
-            try{await buildingCanonFavorite(candidate.buildingId);favorites+=1;log(`★ ${candidate.buildingId} · ${either('добавлено в избранное','added to favorites')}`,'ok');}
-            catch(error){if(buildingCanonFavoriteFullError(error)){favoriteEnabled=false;log(either('Лимит избранных зданий достигнут.','Favorite building limit reached.'),'warn');}else log(`↷ ${candidate.buildingId} · ${either('не удалось добавить в избранное','favorite failed')}: ${error?.message||error}`,'warn');}
+          if(favCap.favoriteFree!==null&&favCap.favoriteFree<=0){
+            favoriteEnabled=false;log(either('Свободных мест в избранном больше нет.','No favorite slots remain.'),'warn');
+          }else{
+            try{
+              await buildingCanonFavorite(candidate.buildingId);
+              let favoriteConfirmed=false;
+              for(let favAttempt=0;favAttempt<3;favAttempt+=1){
+                playerDocument=await hkAuthoritativePlayerRead('buildings:after-favorite');
+                if(buildingCanonIsFavorite(candidate.buildingId,playerDocument)){favoriteConfirmed=true;break;}
+                if(favAttempt<2)await gameRetryDelay(500*(favAttempt+1));
+              }
+              if(favoriteConfirmed){
+                favorites+=1;log(`★ ${candidate.buildingId} · ${either('избранное подтверждено','favorite confirmed')}`,'ok');
+              }else{
+                errors+=1;log(`↷ ${candidate.buildingId} · ${either('сервер не подтвердил добавление в избранное','server did not confirm favorite')}`,'warn');
+              }
+            }catch(error){
+              if(buildingCanonFavoriteFullError(error)){favoriteEnabled=false;log(either('Лимит избранных зданий достигнут.','Favorite building limit reached.'),'warn');}
+              else{errors+=1;log(`↷ ${candidate.buildingId} · ${either('не удалось добавить в избранное','favorite failed')}: ${error?.message||error}`,'warn');}
+            }
           }
         }
         done+=1;hkRunner.setStep(candidate.buildingId,done,candidates.length);
@@ -1847,6 +1899,7 @@
           '<div class="hk-building-stat"><span>'+either('Кандидаты','Candidates')+'</span><b>'+plan.candidates.length+'</b></div>'+
           '<div class="hk-building-stat"><span>'+either('К запуску','To open')+'</span><b>'+selectedRunCount+'</b></div>'+
           '<div class="hk-building-stat"><span>'+either('Активные','Active')+'</span><b>'+activeValue+'</b></div>'+
+          '<div class="hk-building-stat"><span>'+either('Избранное','Favorites')+'</span><b>'+capacity.favorites+(capacity.favoriteMax===null?'':'/'+capacity.favoriteMax)+'</b></div>'+
           '<div class="hk-building-stat"><span>'+either('Карты районов','Mapped districts')+'</span><b>'+plan.mappedAreas+'/'+plan.ownedAreas+'</b></div>'+
         '</div>'+
         (plan.unknownMetric?'<p class="hk-muted">'+either('Без данных о кристальных комнатах','Unknown crystal-room count')+': '+plan.unknownMetric+'</p>':'')+
@@ -11526,7 +11579,7 @@
       .hk-building-settings{padding:12px}.hk-building-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.hk-building-field{display:grid;gap:5px;min-width:0}.hk-building-field span{font-size:11px;color:#9eabc0}.hk-building-field input,.hk-building-field select{width:100%;min-width:0;box-sizing:border-box;background:#0b111b;color:#fff;border:1px solid #3b4a61;border-radius:10px;padding:10px}
       .hk-building-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.hk-building-actions button{margin:0}
       .hk-building-plan{margin-bottom:12px}.hk-building-plan-head,.hk-building-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.hk-building-plan-head b,.hk-building-section-head b{font-size:13px}.hk-building-section-head span{font-size:11px;color:#9eabc0}
-      .hk-building-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:9px}.hk-building-stat{padding:8px 9px;border:1px solid #2b3a50;border-radius:10px;background:#101927;min-width:0}.hk-building-stat span{display:block;font-size:10px;color:#8fa0b8}.hk-building-stat b{display:block;margin-top:2px;font-size:14px;color:#e7edf7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .hk-building-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-bottom:9px}.hk-building-stat{padding:8px 9px;border:1px solid #2b3a50;border-radius:10px;background:#101927;min-width:0}.hk-building-stat span{display:block;font-size:10px;color:#8fa0b8}.hk-building-stat b{display:block;margin-top:2px;font-size:14px;color:#e7edf7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .hk-buildings-list{display:grid;gap:6px}.hk-building-row,.hk-building-candidate-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 10px;border:1px solid #2a374a;border-radius:11px;background:#111925;min-width:0}.hk-building-row .hk-business-info,.hk-building-candidate-row .hk-business-info{min-width:0}.hk-building-id{display:block;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:700 12px ui-monospace,SFMono-Regular,Consolas,monospace;color:#e9eef7}.hk-building-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}.hk-building-meta span{display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;border-radius:999px;background:#202c3d;color:#b8c5d7;font-size:10px;white-space:nowrap}.hk-building-meta .crystal{color:#7dd3fc}.hk-building-meta .invest{color:#ffd166}.hk-building-area{max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#8fa0b8;font:11px ui-monospace,SFMono-Regular,Consolas,monospace}.hk-building-read{width:auto!important;min-width:86px;margin:0!important;padding:9px 14px!important}
       .hk-building-empty{padding:12px;border:1px dashed #34445b;border-radius:11px;color:#8fa0b8;text-align:center}.hk-building-more{margin:8px 0 0;color:#8fa0b8;font-size:11px}
       @media(max-width:760px){.hk-building-controls{grid-template-columns:1fr}.hk-building-stats{grid-template-columns:1fr 1fr}.hk-building-actions{grid-template-columns:1fr}.hk-buildings-head{align-items:flex-start}.hk-buildings-head .hk-secondary{min-width:96px}.hk-building-area{max-width:120px}.hk-runner.buildings-run .hk-runner-actions{display:grid;grid-template-columns:1fr 1fr}.hk-runner.buildings-run .hk-runner-actions button{width:100%;min-width:0}}
