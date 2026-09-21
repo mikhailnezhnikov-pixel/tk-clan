@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.4
+// @version      1.17.5
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
-// @release-note Hotfix версии bookmarklet: metadata и runtime version синхронизированы; аудит валют и live-state сохранён.
+// @release-note Автоматическое обновление авторизации серверного public collector для технического аккаунта; Maps и Explore без изменений.
 // @match        https://app.hamsterking.games/*
 // @run-at       document-start
 // @grant        none
@@ -11,9 +11,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.4';
+  const BUILD_VERSION = '1.17.5';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260920-r6';
+  const HK_CORE_REVISION = 'core-20260921-r7-auth-heartbeat';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
