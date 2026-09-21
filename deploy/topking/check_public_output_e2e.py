@@ -215,9 +215,9 @@ print("ratings_timer_next_present="+yes(ratings_timer_next))
 # checks against the live server/userscript and do not touch player state.
 server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
 probe_route_absent=all(marker not in server_src for marker in (
-    "/api/v1/public-collector/auth-probe",
-    "accept_public_collector_auth_probe",
-    "PUBLIC_COLLECTOR_AUTH_PROBE",
+    'path == "/api/v1/public-collector/auth-probe"',
+    "def accept_public_collector_auth_probe(",
+    "PUBLIC_COLLECTOR_AUTH_PROBE_PATH =",
 ))
 sync_route_i=server_src.find('path == "/api/v1/public-collector/auth-sync"')
 sync_route_block=server_src[sync_route_i:sync_route_i+2600] if sync_route_i>=0 else ""
