@@ -1,1 +1,1 @@
-2026-09-21 rerun collector credential permission health check after test import fix\n
+2026-09-21 validate prelogin zero Game API and protected Maps Explore invariants\n
