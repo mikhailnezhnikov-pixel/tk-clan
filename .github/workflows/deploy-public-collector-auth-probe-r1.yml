@@ -1,0 +1,79 @@
+name: Deploy Public Collector Auth Probe R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-auth-probe-r1-trigger.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch fresh live server
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-source.sha
+          python3 -m py_compile /tmp/server.py
+          grep -Fq 'PUBLIC_COLLECTOR_AUTH_HEARTBEAT_R1' /tmp/server.py
+          grep -Fq 'PUBLIC_SNAPSHOT_SERVER_ONLY_R3' /tmp/server.py
+          grep -Fq 'PUBLIC_RATINGS_SERVER_ONLY_R3' /tmp/server.py
+          grep -Fq 'FORCE_SAFE_USERSCRIPT_1_17_8_R1' /tmp/server.py
+
+      - name: Build auth probe candidate
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/patch_public_collector_auth_probe_r1.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq 'PUBLIC_COLLECTOR_AUTH_PROBE_R1' /tmp/server.py
+          grep -Fq '/api/v1/public-collector/auth-probe' /tmp/server.py
+          grep -Fq 'accept_public_collector_auth_probe' /tmp/server.py
+          grep -Fq 'PUBLIC_COLLECTOR_AUTH_HEARTBEAT_R1' /tmp/server.py
+          grep -Fq 'FORCE_SAFE_USERSCRIPT_1_17_8_R1' /tmp/server.py
+
+      - name: Upload and race-safe install
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.auth-probe-r1.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/install_public_collector_auth_probe_r1.py root@89.125.1.71:/tmp/install_public_collector_auth_probe_r1.py
+          expected="$(cat /tmp/server-source.sha)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "python3 /tmp/install_public_collector_auth_probe_r1.py '$expected'" \
+            > /tmp/auth-probe-install.txt
+          cat /tmp/auth-probe-install.txt
+          grep -Fq 'public_collector_auth_probe_install=PASS' /tmp/auth-probe-install.txt
+
+      - name: Verify live server
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            python3 -m py_compile /opt/hamsterking-license/server.py
+            systemctl is-active --quiet hamsterking-license.service
+            grep -Fq PUBLIC_COLLECTOR_AUTH_PROBE_R1 /opt/hamsterking-license/server.py
+            grep -Fq /api/v1/public-collector/auth-probe /opt/hamsterking-license/server.py
+            grep -Fq FORCE_SAFE_USERSCRIPT_1_17_8_R1 /opt/hamsterking-license/server.py
+            echo auth_probe_server=PASS
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/server-source.sha /tmp/auth-probe-install.txt
