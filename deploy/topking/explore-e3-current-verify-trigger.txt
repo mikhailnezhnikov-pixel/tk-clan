@@ -1,0 +1,1 @@
+2026-09-21 verify Explore E3 r9 on current userscript 1.17.19
