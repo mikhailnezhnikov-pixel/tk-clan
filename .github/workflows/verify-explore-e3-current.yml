@@ -51,10 +51,11 @@ jobs:
           s=Path('/tmp/live.js').read_text(encoding='utf-8')
 
           required=[
-              "// @version      1.17.19",
-              "const BUILD_VERSION = '1.17.19';",
-              "const HK_CORE_REVISION = 'core-20260921-r21-buildings-native-sync';",
+              "// @version      1.17.20",
+              "const BUILD_VERSION = '1.17.20';",
+              "const HK_CORE_REVISION = 'core-20260921-r22-explore-speed-tune';",
               "const HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner';",
+              "const HK_EXPLORE_SPEED_REV='explore-e3-speed-20260921-r1';",
               "async function exploreBuildPlan()",
               "async function exploreE3ProcessOne(initial,settings)",
               "async function runExploreE3Single()",
@@ -108,6 +109,13 @@ jobs:
           assert "if(Number(current?.tier||0)<=beforeTier)" in e3
           assert "if(Number(current?.tier||0)<7)" in e3
           assert "await exploreE3Reconcile(String(candidate.id||''),'explore:e3-final')" in run
+
+          # Speed refinement: only artificial delays changed.
+          assert "actionDelayMinMs=legacyDefaultSpeed?700" in s
+          assert "actionDelayMaxMs=legacyDefaultSpeed?2000" in s
+          assert "battleDelayMs=legacyDefaultSpeed?700" in s
+          assert "x.speedProfileRev=HK_EXPLORE_SPEED_REV;" in s
+          print("explore_e3_speed_profile=PASS")
 
           # Five staged runner rows and 15-second completed visibility.
           for key in ["'prepare'","'events'","'battles'","'tier'","'verify'"]:
