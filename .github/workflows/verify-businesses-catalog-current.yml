@@ -48,7 +48,7 @@ jobs:
           for marker in [
               "// @version      1.17.24",
               "const BUILD_VERSION = '1.17.24';",
-              "const HK_CORE_REVISION = 'core-20260921-r28-businesses-finalize';",
+              "const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';",
               "const HK_BUSINESSES_CANON_REV='businesses-catalog-readonly-20260921-r1';",
               "function businessCatalogOwnedCount(",
               "function businessCatalogCapacity(",
