@@ -706,10 +706,7 @@ function renderBattleScene(war,info){
 
   const enemyArt=document.getElementById('battle-art-enemy');
   if(enemyArt){
-    const isRaider=normalizeOpponent(enemy)==='шпана с окраины'||info.theme==='raiders';
-    enemyArt.src=kind==='bot'
-      ?'../assets/war/units/boss-action.webp'
-      :(isRaider?'../assets/war/units/raider-action.webp':'../assets/war/units/raider-action.webp');
+    enemyArt.src='../assets/war/units/raider/idle.webp?v=20260921-1';
     enemyArt.alt='';
   }
 
