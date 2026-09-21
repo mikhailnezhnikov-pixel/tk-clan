@@ -157,3 +157,33 @@ Next:
 5. perform one controlled eligible-building open;
 6. rerun plan and confirm opened building is removed from candidates and appears among active buildings.
 
+## Buildings UI r3 — active list removed (2026-09-21)
+
+User requested that the page not display the full list of already-active buildings.
+
+Delivered in userscript `1.17.15`:
+- core `core-20260921-r17-buildings-ui-compact`;
+- marker `buildings-ui-20260921-r3`;
+- removed the full Active buildings list;
+- removed per-active-building Read buttons from this page;
+- retained only the useful active-slot count in the Opening plan;
+- candidate list and all opening/favorite logic unchanged.
+
+Safety:
+- `runBuildingsCanonical()` action block remained byte-identical;
+- Maps shared runtime + concurrency 5 preserved;
+- Explore E3 r9 preserved;
+- passive auth safety preserved.
+
+Verification:
+- predeploy run `35565570357`: PASS;
+- deploy/public round-trip run `35565665494`: PASS;
+- public loader core-r17 verification run `35565756294`: PASS;
+- Buildings live verification run `35565811595`: PASS;
+- `buildings_active_list_hidden=PASS`;
+- `buildings_active_count_kept=PASS`;
+- public E2E run `35565773961`: PASS.
+
+Current status:
+**UI_R3_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING**
+
