@@ -382,6 +382,25 @@ except Exception:
     print("edge_runtime_inspection=unavailable")
 
 try:
+    import stat
+    if main_pid and main_pid!="0":
+        proc_stat=os.stat(f"/proc/{int(main_pid)}")
+        status_text=open(f"/proc/{int(main_pid)}/status",encoding="utf-8",errors="replace").read()
+        uid_line=next((line for line in status_text.splitlines() if line.startswith("Uid:")), "")
+        service_uid=int(uid_line.split()[1]) if uid_line else -1
+    else:
+        service_uid=-1
+    identity_stat=os.stat(IDENTITY_PATH)
+    print("license_service_uid="+str(service_uid))
+    print("identity_file_uid="+str(identity_stat.st_uid))
+    print("identity_file_gid="+str(identity_stat.st_gid))
+    print("identity_file_mode="+oct(stat.S_IMODE(identity_stat.st_mode)))
+    print("identity_file_owned_by_service="+("yes" if service_uid>=0 and identity_stat.st_uid==service_uid else "no"))
+    print("identity_file_service_readable_by_owner="+("yes" if identity_stat.st_uid==service_uid and bool(stat.S_IMODE(identity_stat.st_mode)&stat.S_IRUSR) else "no"))
+except Exception:
+    print("identity_file_permission_check=unavailable")
+
+try:
     live_server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
     print("live_server_license_check_defs="+str(live_server_src.count("def license_check(")))
     print("live_server_check_route_occurrences="+str(live_server_src.count('path == "/api/v1/check"')))
