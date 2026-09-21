@@ -1,1 +1,1 @@
-2026-09-21 verify final runtime after diagnostic auth-probe removal
+2026-09-21 final post-refresh post-self-heal auth and secret-log verification
