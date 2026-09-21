@@ -1,0 +1,71 @@
+name: Inspect Clan Shop Identity Mapping
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/clan-shop-identity-inspect-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect live Clan Shop identity mapping
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 - <<'"'"'PY'"'"'
+          import sqlite3, json, os
+          db_path=os.environ.get("HK_LICENSE_DB","/var/lib/hamsterking-license/licenses.db")
+          db=sqlite3.connect(db_path); db.row_factory=sqlite3.Row
+          actual=[]
+          try:
+              actual=[dict(r) for r in db.execute("""SELECT week_start,player_id,item_type,SUM(quantity) quantity
+                                                   FROM clan_shop_actual_players
+                                                   GROUP BY week_start,player_id,item_type
+                                                   ORDER BY week_start DESC,player_id,item_type LIMIT 100""")]
+          except Exception as e:
+              print("actual_error",repr(e))
+          print("ACTUAL_ROWS",json.dumps(actual,ensure_ascii=False))
+          names={}
+          try:
+              tables=[r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+              for table in [t for t in tables if "clan" in t and "snapshot" in t]:
+                  cols=[r[1] for r in db.execute(f"PRAGMA table_info({table})")]
+                  json_cols=[c for c in cols if "json" in c or c in ("snapshot","payload","data")]
+                  order_col="captured_at" if "captured_at" in cols else ("updated_at" if "updated_at" in cols else None)
+                  q=f"SELECT * FROM {table}"+(f" ORDER BY {order_col} DESC" if order_col else "")+" LIMIT 3"
+                  for row in db.execute(q):
+                      for c in json_cols:
+                          raw=row[c]
+                          if not isinstance(raw,str): continue
+                          try: doc=json.loads(raw)
+                          except Exception: continue
+                          stack=[doc]
+                          while stack:
+                              v=stack.pop()
+                              if isinstance(v,dict):
+                                  pid=str(v.get("player_id") or v.get("playerId") or v.get("id") or "").strip()
+                                  nick=str(v.get("nickname") or v.get("name") or "").strip()
+                                  if pid and nick and pid.isdigit(): names.setdefault(pid,nick)
+                                  stack.extend(v.values())
+                              elif isinstance(v,list): stack.extend(v)
+          except Exception as e:
+              print("snapshot_error",repr(e))
+          print("SNAPSHOT_NAME_MAP",json.dumps({r["player_id"]:names.get(str(r["player_id"]),"") for r in actual},ensure_ascii=False))
+          PY'
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
