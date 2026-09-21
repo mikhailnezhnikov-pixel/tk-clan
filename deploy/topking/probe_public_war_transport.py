@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, urllib.request, urllib.error, hashlib
+import json, urllib.request, urllib.error, hashlib, time
 
 env={}
 for line in open("/etc/hamsterking-public-collector.env",encoding="utf-8"):
@@ -44,16 +44,13 @@ try:
 except Exception:
     print("token_claims unavailable")
 
-probe("war","/clan/active_battles")
-probe("clan_leaderboard","/leaderboard","POST",{"leaderboard_type":"clan_player_level_lb"})
-
 # Read one /player/me document and only print sanitized auth method metadata.
 try:
     time.sleep(2)
     req=urllib.request.Request(
-        api+"/player/me",
+        base+"/player/me",
         data=b"{}",
-        headers={**headers,"Content-Type":"application/json"},
+        headers={"Authorization":"Bearer "+token,"Accept":"application/json","Content-Type":"application/json","User-Agent":"TopKing-Public-Probe/2"},
         method="POST",
     )
     with urllib.request.urlopen(req,timeout=20) as response:
