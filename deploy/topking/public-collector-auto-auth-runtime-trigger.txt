@@ -1,1 +1,1 @@
-2026-09-21 inspect license upstream and identity path safely
+2026-09-21 compare local license backend response safely
