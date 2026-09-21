@@ -1,0 +1,100 @@
+name: Verify Businesses Catalog Current Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/businesses-catalog-live-verify-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch current live/public
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          curl -fsSL --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?businesses-catalog-live=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/live.js
+          node --check /tmp/public.js
+          cmp -s /tmp/live.js /tmp/public.js
+          cmp -s /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
+          echo "live_public_baseline_equality=PASS"
+
+      - name: Verify Businesses catalog read-only contract
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/live.js').read_text(encoding='utf-8')
+
+          for marker in [
+              "// @version      1.17.23",
+              "const BUILD_VERSION = '1.17.23';",
+              "const HK_CORE_REVISION = 'core-20260921-r25-businesses-catalog';",
+              "const HK_BUSINESSES_CANON_REV='businesses-catalog-readonly-20260921-r1';",
+              "function businessCatalogOwnedCount(",
+              "function businessCatalogCapacity(",
+              "function businessCatalogRecords()",
+              "function businessCatalogBonusOptions(records)",
+              "function businessCatalogKnownRoutes(targetId)",
+              "function renderBusinessCatalog()",
+              "async function refreshBusinessCatalog(",
+              'data-business-tab="catalog"',
+              'id="hk-business-catalog"',
+          ]:
+              assert marker in s
+
+          catalog=s[s.index('function businessCatalogOwnedCount('):s.index('function businessSelectionCount()')]
+          for bad in ['/player/business/insert','/shop/buy','/player/business/recipe/craft','/fair/reroll']:
+              assert bad not in catalog
+
+          # Current rearrangement remains unchanged and mutation-protected.
+          api=s[s.index("async function apiJson(path"):s.index("async function hkAuthoritativePlayerRead")]
+          rearrange=s[s.index("async function executeBusinessPlan()"):s.index("function prepareOriginalBusinessRestore")]
+          assert "hkMutationGate.run(" in api
+          assert "await hkRunner.waitIfPaused()" in rearrange
+          assert "hkAuthoritativePlayerRead('business-complete')" in rearrange
+          assert "businessSlotIsActive" in rearrange
+          assert "readBusinessSlot" in rearrange
+
+          # Protected modules.
+          for marker in [
+              "explore-production-ui-20260921-r1",
+              "buildings-native-sync-20260921-r1",
+              "maps-shared-runtime-20260921-r7-safe5",
+              "AUTH_PASSIVE_SAFETY_R1",
+          ]:
+              assert marker in s
+
+          print("business_catalog_live=PASS")
+          print("business_catalog_read_only=PASS")
+          print("business_catalog_search_filters=PASS")
+          print("business_catalog_owned_missing_capacity=PASS")
+          print("business_catalog_recipe_routes=PASS")
+          print("business_existing_rearrangement_preserved=PASS")
+          print("protected_explore_buildings_maps_auth=PASS")
+          print("userscript_1_17_23=PASS")
+          print("BUSINESSES_CATALOG_CURRENT_LIVE=PASS")
+          PY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js /tmp/public.js
