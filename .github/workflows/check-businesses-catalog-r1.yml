@@ -1,0 +1,78 @@
+name: Check Businesses Catalog Readonly R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/businesses-catalog-r1-check-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          cp baseline/topking/HamsterKingMobile.current.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.22" /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile deploy/topking/patch_businesses_catalog_readonly_1_17_23.py
+          python3 deploy/topking/patch_businesses_catalog_readonly_1_17_23.py
+          node --check /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.17.23" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r25-businesses-catalog" /tmp/HamsterKingMobile.user.js
+          grep -Fq "businesses-catalog-readonly-20260921-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text()
+
+          for marker in [
+              'function businessCatalogOwnedCount(',
+              'function businessCatalogCapacity(',
+              'function businessCatalogRecords()',
+              'function businessCatalogBonusOptions(records)',
+              'function businessCatalogKnownRoutes(targetId)',
+              'function renderBusinessCatalog()',
+              'async function refreshBusinessCatalog(',
+              'data-business-tab="catalog"',
+              'id="hk-business-catalog"',
+          ]:
+              assert marker in s
+
+          catalog=s[s.index('function businessCatalogOwnedCount('):s.index('function businessSelectionCount()')]
+          for bad in ['/player/business/insert','/shop/buy','/player/business/recipe/craft','/fair/reroll']:
+              assert bad not in catalog
+
+          # Existing rearrangement/optimizer stay intact.
+          for marker in [
+              'async function executeBusinessPlan()',
+              'function calculateBusinessOptimizer()',
+              'function renderBonusAnalyzer()',
+              "hkAuthoritativePlayerRead('business-complete')",
+              "title:either('Перестановка бизнесов','Business rearrangement')",
+          ]:
+              assert marker in s
+
+          for marker in [
+              "explore-production-ui-20260921-r1",
+              "buildings-native-sync-20260921-r1",
+              "maps-shared-runtime-20260921-r7-safe5",
+              "AUTH_PASSIVE_SAFETY_R1",
+          ]:
+              assert marker in s
+
+          print('business_catalog_cards=PASS')
+          print('business_catalog_search_bonus_filters=PASS')
+          print('business_catalog_owned_missing_capacity=PASS')
+          print('business_catalog_known_recipe_routes=PASS')
+          print('business_catalog_read_only=PASS')
+          print('business_existing_rearrangement_preserved=PASS')
+          print('BUSINESSES_CATALOG_R1_PREDEPLOY=PASS')
+          PY
