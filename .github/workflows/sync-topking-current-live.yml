@@ -31,34 +31,14 @@ jobs:
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
           node --check /tmp/live.js
-          grep -Fq "HK_TODAY_CANON_REV = 'today-kokkaras-order-20260920-r1'" /tmp/live.js
-          grep -Fq "HK_PITS_CANON_REV = 'pits-canon-core-20260920-r1'" /tmp/live.js
-          grep -Fq "HK_PITS_UI_REV = 'pits-ui-align-20260920-r2'" /tmp/live.js
-          grep -Fq "HK_PITS_SNIPER_REV = 'pits-passplan-sniper-20260920-r3'" /tmp/live.js
-          grep -Fq "HK_PITS_TOOLBAR_REV = 'pits-toolbar-clean-20260920-r4'" /tmp/live.js
-          grep -Fq "HK_PITS_START_REV = 'pits-start-config-snapshot-20260920-r5'" /tmp/live.js
-          grep -Fq "HK_PITS_RESPAWN_REV = 'pits-respawn-cost-20260920-r6'" /tmp/live.js
-          grep -Fq "HK_PITS_POWER_TABLE_REV = 'pits-power-table-collapsed-20260920-r7'" /tmp/live.js
-          grep -Fq "HK_PITS_PROGRESS_REV = 'pits-battle-progress-20260920-r8'" /tmp/live.js
-          grep -Fq "HK_PITS_RUNNER_HISTORY_REV = 'pits-runner-history-20260920-r9'" /tmp/live.js
-          grep -Fq "HK_PITS_SPEED_REV = 'pits-fast-cycle-20260920-r10'" /tmp/live.js
-          grep -Fq "HK_PITS_DECISION_REV = 'pits-restoration-decision-20260920-r11'" /tmp/live.js
-          grep -Fq "HK_PITS_REWARD_REV = 'pits-reward-planner-core-20260920-r12'" /tmp/live.js
-          grep -Fq "HK_PITS_REWARD_EXEC_REV = 'pits-reward-execution-20260920-r13'" /tmp/live.js
-          grep -Fq "HK_PITS_SUMMARY_REV = 'pits-plan-totals-20260920-r14'" /tmp/live.js
-          grep -Fq "HK_PITS_SHARED_FORECAST_REV = 'pits-shared-reward-forecast-20260920-r15'" /tmp/live.js
-          grep -Fq "HK_PITS_REWARD_ONLY_REV = 'pits-reward-only-plan-20260920-r16'" /tmp/live.js
-          grep -Fq "HK_PITS_PREVIEW_REV = 'pits-runtime-preview-20260920-r17'" /tmp/live.js
-          grep -Fq "HK_PITS_REWARD_FIT_REV = 'pits-reward-fit-available-20260920-r18'" /tmp/live.js
-          grep -Fq "HK_PITS_PREFLIGHT_REV = 'pits-aggregate-preflight-20260920-r19'" /tmp/live.js
-          grep -Fq "HK_PITS_REWARD_PICKER_REV = 'pits-reward-picker-20260920-r20'" /tmp/live.js
-          grep -Fq "HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2'" /tmp/live.js
-          grep -Fq "HK_BOSSES_CANON_REV='bosses-area-target-20260920-r2'" /tmp/live.js
-          grep -Fq "HK_BOSSES_TARGET_REV='bosses-area-target-20260920-r2'" /tmp/live.js
-          grep -Fq "function bossCanonTargetPlan" /tmp/live.js
-          grep -Fq "function bossCanonRewardOnlyPlan" /tmp/live.js
-          grep -Fq "async function bossCanonRunAreaTargetContinuation" /tmp/live.js
-          test "$(sha256sum /tmp/live.js | awk '{print $1}')" = "0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7"
+          grep -Fq "// @version      1.17.8" /tmp/live.js
+          grep -Fq "const BUILD_VERSION = '1.17.8';" /tmp/live.js
+          grep -Fq "PRELOGIN_ZERO_GAME_API_R1" /tmp/live.js
+          grep -Fq "AUTH_PASSIVE_SAFETY_R1" /tmp/live.js
+          grep -Fq "PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1" /tmp/live.js
+          grep -Fq "explore-e3-single-20260920-r9-runner" /tmp/live.js
+          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/live.js
+          grep -Fq "public-server-only-20260920-r2" /tmp/live.js
           cp /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
       - name: Commit current snapshot
         run: |
@@ -67,7 +47,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js
           if ! git diff --cached --quiet; then
-            git commit -m "stage2: sync Bosses area target r2 live candidate"
+            git commit -m "hotfix: sync userscript 1.17.8 safe live baseline"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
