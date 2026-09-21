@@ -1,0 +1,2009 @@
+{
+  "conflicts": [],
+  "duplicate_targets": [],
+  "exact": [
+    {
+      "already_linked": true,
+      "area_id": "cd09c8b9-9abe-4c23-81d0-bf78bd6eff98",
+      "live_canonical_buildings": 1153,
+      "live_coverage": 1.0,
+      "map_key": "hk_auckland0115",
+      "overlap": 1153,
+      "source_buildings": 1153,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "5e57dcf7-eb84-431c-b77c-aab95ae9fa8c",
+      "live_canonical_buildings": 709,
+      "live_coverage": 1.0,
+      "map_key": "hk_auckland0211",
+      "overlap": 709,
+      "source_buildings": 709,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "17b8c7b2-31ee-4dc2-952e-d07699bce751",
+      "live_canonical_buildings": 110,
+      "live_coverage": 0.990909,
+      "map_key": "hk_auckland0224",
+      "overlap": 109,
+      "source_buildings": 109,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "4ed03ae6-9f06-4658-98c8-1b754ffff97c",
+      "live_canonical_buildings": 749,
+      "live_coverage": 1.0,
+      "map_key": "hk_auckland0312",
+      "overlap": 749,
+      "source_buildings": 749,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "f640999b-2a2a-4034-989f-35e8b2a6b152",
+      "live_canonical_buildings": 341,
+      "live_coverage": 1.0,
+      "map_key": "hk_auckland0902",
+      "overlap": 341,
+      "source_buildings": 341,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "88ed265c-391c-462f-8e22-80742fc5500e",
+      "live_canonical_buildings": 1173,
+      "live_coverage": 1.0,
+      "map_key": "hk_auckland1405",
+      "overlap": 1173,
+      "source_buildings": 1173,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "9db0002d-00b2-4007-be24-f673185af5e4",
+      "live_canonical_buildings": 958,
+      "live_coverage": 1.0,
+      "map_key": "hk_auckland1925",
+      "overlap": 958,
+      "source_buildings": 958,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "baf3eeba-a806-4fc2-ab4a-9bbeadb649e9",
+      "live_canonical_buildings": 671,
+      "live_coverage": 1.0,
+      "map_key": "hk_auckland2220",
+      "overlap": 671,
+      "source_buildings": 671,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "21d795c0-8723-4a3c-a0c6-66c0801f28d7",
+      "live_canonical_buildings": 836,
+      "live_coverage": 1.0,
+      "map_key": "hk_auckland2816",
+      "overlap": 836,
+      "source_buildings": 836,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "620e03f1-2005-48ff-9798-3d972540c062",
+      "live_canonical_buildings": 993,
+      "live_coverage": 1.0,
+      "map_key": "hk_auckland2922",
+      "overlap": 993,
+      "source_buildings": 993,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "216cb7f9-77f2-4897-a05d-fffea6e06fd0",
+      "live_canonical_buildings": 605,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin1427",
+      "overlap": 605,
+      "source_buildings": 605,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "c59d73e6-09bb-4735-a23c-429f32433afa",
+      "live_canonical_buildings": 723,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin1819",
+      "overlap": 723,
+      "source_buildings": 723,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7a18ed5e-336d-48f4-9207-fc96e1a18212",
+      "live_canonical_buildings": 918,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin1915",
+      "overlap": 918,
+      "source_buildings": 918,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "dcd02277-522e-4d2a-9ee3-7bacaeef45c7",
+      "live_canonical_buildings": 453,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin2218",
+      "overlap": 453,
+      "source_buildings": 453,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "4f03a0bf-f4b8-45e5-9cd7-265768689baa",
+      "live_canonical_buildings": 1033,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin2315",
+      "overlap": 1033,
+      "source_buildings": 1033,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "ef133a53-316b-4a16-a1ed-237e29af9644",
+      "live_canonical_buildings": 418,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin2317",
+      "overlap": 418,
+      "source_buildings": 418,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "4620b869-f66c-449a-8166-87878d81614d",
+      "live_canonical_buildings": 1170,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin2319",
+      "overlap": 1170,
+      "source_buildings": 1170,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "b86dd669-e7fb-4255-b52d-02fec9598eb5",
+      "live_canonical_buildings": 384,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin2417",
+      "overlap": 384,
+      "source_buildings": 384,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "dc7a8086-79e1-40b4-ae70-bcd1fa256733",
+      "live_canonical_buildings": 296,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin2616",
+      "overlap": 296,
+      "source_buildings": 296,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "4c44ece8-0db9-4dcc-bd31-5f1630e2d529",
+      "live_canonical_buildings": 824,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin2621",
+      "overlap": 824,
+      "source_buildings": 824,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "d961f526-246c-48ec-a472-dec1e4c6baa3",
+      "live_canonical_buildings": 341,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin3417",
+      "overlap": 341,
+      "source_buildings": 341,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7d22dbc3-4b5c-424c-ab42-6ff75994a772",
+      "live_canonical_buildings": 785,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin3530",
+      "overlap": 785,
+      "source_buildings": 785,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "5a30a78e-2954-40d2-bacd-4b3194b2d881",
+      "live_canonical_buildings": 481,
+      "live_coverage": 0.997921,
+      "map_key": "hk_berlin3626",
+      "overlap": 480,
+      "source_buildings": 480,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "4e8d1888-05c3-4ba5-95af-ac95aaba9c36",
+      "live_canonical_buildings": 550,
+      "live_coverage": 1.0,
+      "map_key": "hk_berlin3917",
+      "overlap": 550,
+      "source_buildings": 550,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "1ec72c9f-07a6-4f97-ab83-4f00cac26bc9",
+      "live_canonical_buildings": 385,
+      "live_coverage": 1.0,
+      "map_key": "hk_dubai2961",
+      "overlap": 385,
+      "source_buildings": 385,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "e5d0f34c-4d2a-48a1-add0-8ccf75a4a276",
+      "live_canonical_buildings": 445,
+      "live_coverage": 1.0,
+      "map_key": "hk_dubai4632",
+      "overlap": 445,
+      "source_buildings": 445,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "79cb821a-ecc1-4605-a96d-0d8ee504b74c",
+      "live_canonical_buildings": 299,
+      "live_coverage": 1.0,
+      "map_key": "hk_dubai5335",
+      "overlap": 299,
+      "source_buildings": 299,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "188d97fb-7ed6-482d-8756-45aa8569a70b",
+      "live_canonical_buildings": 510,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos0228",
+      "overlap": 510,
+      "source_buildings": 510,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "9c869a6e-31c7-4fc9-9e1e-06f348cb8757",
+      "live_canonical_buildings": 690,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos0242",
+      "overlap": 690,
+      "source_buildings": 690,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "2e3b1557-06f4-4de7-a541-15626b050a0c",
+      "live_canonical_buildings": 207,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos0843",
+      "overlap": 207,
+      "source_buildings": 207,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "468754b9-75e9-4847-96f5-0e3e19cef852",
+      "live_canonical_buildings": 195,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos2029",
+      "overlap": 195,
+      "source_buildings": 195,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "a1c525dc-ea0c-482d-b8a8-862d19eeb638",
+      "live_canonical_buildings": 413,
+      "live_coverage": 0.997579,
+      "map_key": "hk_lagos2150",
+      "overlap": 412,
+      "source_buildings": 412,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "c1b9e37a-0285-4fc5-b9af-2007ed86aa4c",
+      "live_canonical_buildings": 1279,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos2234",
+      "overlap": 1279,
+      "source_buildings": 1279,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "2b164f6a-58c5-4708-bc50-6e26c52beec8",
+      "live_canonical_buildings": 985,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos2314",
+      "overlap": 985,
+      "source_buildings": 985,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "033cafae-428f-4090-9653-9b8e511136c8",
+      "live_canonical_buildings": 1025,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos2549",
+      "overlap": 1025,
+      "source_buildings": 1025,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "015ebfeb-2da1-4be3-9026-15974d9a9e13",
+      "live_canonical_buildings": 372,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos2712",
+      "overlap": 372,
+      "source_buildings": 372,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "22d0e4f2-52f9-4812-90bf-968d24d6ac6c",
+      "live_canonical_buildings": 222,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos3235",
+      "overlap": 222,
+      "source_buildings": 222,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7611ca87-2c90-464f-9d6e-d8467fb4b4f2",
+      "live_canonical_buildings": 1078,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos3322",
+      "overlap": 1078,
+      "source_buildings": 1078,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "3ea78c49-ab85-414d-8ee9-a88cc11a1c51",
+      "live_canonical_buildings": 116,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos4005",
+      "overlap": 116,
+      "source_buildings": 116,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "b56bcf64-9078-4497-a7a0-9103b19d18e5",
+      "live_canonical_buildings": 1058,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos4134",
+      "overlap": 1058,
+      "source_buildings": 1058,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "2a1b2b04-65a9-4591-8444-efc18589b325",
+      "live_canonical_buildings": 681,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos4213",
+      "overlap": 681,
+      "source_buildings": 681,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "48895c7f-89a1-4670-9c92-1b8e9c59f044",
+      "live_canonical_buildings": 282,
+      "live_coverage": 1.0,
+      "map_key": "hk_lagos4401",
+      "overlap": 282,
+      "source_buildings": 282,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "65c4b6e6-ee60-4a48-81dd-8b9608ac38c2",
+      "live_canonical_buildings": 388,
+      "live_coverage": 1.0,
+      "map_key": "hk_london0711",
+      "overlap": 388,
+      "source_buildings": 388,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "72a0691d-6bab-405f-8807-f9f03ed55f56",
+      "live_canonical_buildings": 200,
+      "live_coverage": 1.0,
+      "map_key": "hk_london1834",
+      "overlap": 200,
+      "source_buildings": 200,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "75fd15b2-87cc-4fe8-ba04-4186bfdd2d7a",
+      "live_canonical_buildings": 1208,
+      "live_coverage": 1.0,
+      "map_key": "hk_london3031",
+      "overlap": 1208,
+      "source_buildings": 1208,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "ad948d4c-5a45-47b6-bd3d-857650c43174",
+      "live_canonical_buildings": 697,
+      "live_coverage": 1.0,
+      "map_key": "hk_london3327",
+      "overlap": 697,
+      "source_buildings": 697,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "b84b17f3-5245-458a-9947-5f233aca96db",
+      "live_canonical_buildings": 589,
+      "live_coverage": 1.0,
+      "map_key": "hk_london3516",
+      "overlap": 589,
+      "source_buildings": 589,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "be6f1eff-3bd8-4cd4-9f61-8fae029a6c3e",
+      "live_canonical_buildings": 535,
+      "live_coverage": 1.0,
+      "map_key": "hk_london3608",
+      "overlap": 535,
+      "source_buildings": 535,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "78c3b3db-aa7e-48a3-a752-2a451eac8c63",
+      "live_canonical_buildings": 141,
+      "live_coverage": 1.0,
+      "map_key": "hk_london3740",
+      "overlap": 141,
+      "source_buildings": 141,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "aace7456-8fcd-4ea1-a650-5e481772fa09",
+      "live_canonical_buildings": 721,
+      "live_coverage": 1.0,
+      "map_key": "hk_london3817",
+      "overlap": 721,
+      "source_buildings": 721,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "68263c91-0a08-4adf-9e5e-6e6dbe5515e0",
+      "live_canonical_buildings": 400,
+      "live_coverage": 1.0,
+      "map_key": "hk_london3924",
+      "overlap": 400,
+      "source_buildings": 400,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "ffb02f09-f2a6-4e9b-83fb-ebcd5d9cf543",
+      "live_canonical_buildings": 390,
+      "live_coverage": 1.0,
+      "map_key": "hk_london4224",
+      "overlap": 390,
+      "source_buildings": 390,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "9dea5838-b57b-48b0-9e68-0d073ec42c4f",
+      "live_canonical_buildings": 401,
+      "live_coverage": 1.0,
+      "map_key": "hk_london4827",
+      "overlap": 401,
+      "source_buildings": 401,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "6139d05a-0015-412d-8359-d46bd4dc3464",
+      "live_canonical_buildings": 349,
+      "live_coverage": 1.0,
+      "map_key": "hk_london4837",
+      "overlap": 349,
+      "source_buildings": 349,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "6624e863-2ca3-4ef2-9514-401524ef8f1e",
+      "live_canonical_buildings": 206,
+      "live_coverage": 1.0,
+      "map_key": "hk_losangeles1325",
+      "overlap": 206,
+      "source_buildings": 206,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "b6ef2014-ad03-4a4d-a11d-d7d183540d08",
+      "live_canonical_buildings": 707,
+      "live_coverage": 1.0,
+      "map_key": "hk_losangeles1411",
+      "overlap": 707,
+      "source_buildings": 707,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "881e3d6a-f89c-4e2e-9693-83e2141b5615",
+      "live_canonical_buildings": 113,
+      "live_coverage": 1.0,
+      "map_key": "hk_losangeles1832",
+      "overlap": 113,
+      "source_buildings": 113,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "a34e6048-1ab3-487a-bc99-537bd88f4c6f",
+      "live_canonical_buildings": 1213,
+      "live_coverage": 1.0,
+      "map_key": "hk_losangeles3222",
+      "overlap": 1213,
+      "source_buildings": 1213,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "692df656-8748-4ac1-9a91-da88d0784b3b",
+      "live_canonical_buildings": 943,
+      "live_coverage": 1.0,
+      "map_key": "hk_losangeles3428",
+      "overlap": 943,
+      "source_buildings": 943,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7aa929cc-9cfe-4ade-be28-c9a4307bf32d",
+      "live_canonical_buildings": 1140,
+      "live_coverage": 1.0,
+      "map_key": "hk_losangeles5334",
+      "overlap": 1140,
+      "source_buildings": 1140,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "201d2c05-fa84-4b50-8707-24cfb525421d",
+      "live_canonical_buildings": 700,
+      "live_coverage": 1.0,
+      "map_key": "hk_minsk1204",
+      "overlap": 700,
+      "source_buildings": 700,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "62a9875d-dec5-427f-b09c-2fe6f0d3900c",
+      "live_canonical_buildings": 202,
+      "live_coverage": 1.0,
+      "map_key": "hk_minsk1512",
+      "overlap": 202,
+      "source_buildings": 202,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "e91e3def-fc9c-4343-bd31-917a69d52474",
+      "live_canonical_buildings": 386,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow0100",
+      "overlap": 386,
+      "source_buildings": 386,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "a385b355-f76c-423e-91a7-920e03d9010d",
+      "live_canonical_buildings": 183,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow0112",
+      "overlap": 183,
+      "source_buildings": 183,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "b1cdbcb6-fd7c-46ee-92dc-27526100f943",
+      "live_canonical_buildings": 216,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1107",
+      "overlap": 216,
+      "source_buildings": 216,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "f2e99c77-16bb-4f85-9ad9-18bb088b1e9d",
+      "live_canonical_buildings": 130,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1207",
+      "overlap": 130,
+      "source_buildings": 130,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7b0ed130-cebc-4e7a-8075-bb0b4bc98136",
+      "live_canonical_buildings": 128,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1208",
+      "overlap": 128,
+      "source_buildings": 128,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "9ea6ff78-b881-45b3-b92d-a8f1da8eca05",
+      "live_canonical_buildings": 117,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1226",
+      "overlap": 117,
+      "source_buildings": 117,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "a8c3aadc-febc-4dce-9e9f-63b617fd8e5d",
+      "live_canonical_buildings": 268,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1409",
+      "overlap": 268,
+      "source_buildings": 268,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "72854a97-c3be-4289-9748-34803a9f15af",
+      "live_canonical_buildings": 189,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1601",
+      "overlap": 189,
+      "source_buildings": 189,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "3cd804db-0700-4d09-be35-e7a97d08db3b",
+      "live_canonical_buildings": 110,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1702",
+      "overlap": 110,
+      "source_buildings": 110,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "0ce4999d-4c21-4715-b267-a99c3abd27bf",
+      "live_canonical_buildings": 409,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1817",
+      "overlap": 409,
+      "source_buildings": 409,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "f87a568c-99db-4fb9-a79b-9ddf1a0c2f7f",
+      "live_canonical_buildings": 402,
+      "live_coverage": 0.995025,
+      "map_key": "hk_moscow1819",
+      "overlap": 400,
+      "source_buildings": 400,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "21182383-086a-476e-b898-336a0bed945b",
+      "live_canonical_buildings": 530,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1820",
+      "overlap": 530,
+      "source_buildings": 530,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "15126e46-6313-43b9-bc3e-78294a5feb71",
+      "live_canonical_buildings": 474,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1919",
+      "overlap": 474,
+      "source_buildings": 474,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "97c718e2-f748-4c69-ab87-faf25484d556",
+      "live_canonical_buildings": 280,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow1921",
+      "overlap": 280,
+      "source_buildings": 280,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "0af5aa65-5455-4437-a812-33de850f8b6b",
+      "live_canonical_buildings": 534,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow2018",
+      "overlap": 534,
+      "source_buildings": 534,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "8e39d9e5-eb13-4dcf-8bcf-e5f55dd6d439",
+      "live_canonical_buildings": 220,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow2019",
+      "overlap": 220,
+      "source_buildings": 220,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "cdd09c05-b510-41c8-ac9e-9a769835e2fa",
+      "live_canonical_buildings": 504,
+      "live_coverage": 0.996032,
+      "map_key": "hk_moscow2021",
+      "overlap": 502,
+      "source_buildings": 502,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "4eee5ff7-1e27-4b87-88c6-d76f1f14f224",
+      "live_canonical_buildings": 286,
+      "live_coverage": 0.996503,
+      "map_key": "hk_moscow2120",
+      "overlap": 285,
+      "source_buildings": 285,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "d42bd660-d317-4044-be0c-b62aaec28775",
+      "live_canonical_buildings": 427,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow2121",
+      "overlap": 427,
+      "source_buildings": 427,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "849b224b-5426-4c35-8824-671c5796babb",
+      "live_canonical_buildings": 241,
+      "live_coverage": 0.954357,
+      "map_key": "hk_moscow2221",
+      "overlap": 230,
+      "source_buildings": 230,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "3c7f0e51-621f-449f-a6c2-6c0b0b8e6839",
+      "live_canonical_buildings": 170,
+      "live_coverage": 1.0,
+      "map_key": "hk_moscow2827",
+      "overlap": 170,
+      "source_buildings": 170,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "645322fd-a524-4d49-af9a-4611a156e440",
+      "live_canonical_buildings": 104,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork0001",
+      "overlap": 104,
+      "source_buildings": 104,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "a221e256-54f4-439d-a92e-9c6c64b4ec72",
+      "live_canonical_buildings": 349,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork0002",
+      "overlap": 349,
+      "source_buildings": 349,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "de259f8f-9515-475e-94e8-b9adcb8ef940",
+      "live_canonical_buildings": 239,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork0426",
+      "overlap": 239,
+      "source_buildings": 239,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "c6445d3c-8413-406c-b53e-adbea4dd88cc",
+      "live_canonical_buildings": 216,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork0438",
+      "overlap": 216,
+      "source_buildings": 216,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "1ed001ce-0996-4872-867e-ac019123297e",
+      "live_canonical_buildings": 169,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork1108",
+      "overlap": 169,
+      "source_buildings": 169,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "14625896-9b5e-4596-b06d-4491dec39c06",
+      "live_canonical_buildings": 627,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork1437",
+      "overlap": 627,
+      "source_buildings": 627,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "73218a2b-5c84-464b-9576-b330a07598b4",
+      "live_canonical_buildings": 165,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork1706",
+      "overlap": 165,
+      "source_buildings": 165,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "85b16e64-aa3c-437e-a698-dea4604efebe",
+      "live_canonical_buildings": 1916,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork2315",
+      "overlap": 1916,
+      "source_buildings": 1916,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "500672a6-d99f-44ad-abac-06bd7765cb87",
+      "live_canonical_buildings": 434,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork2325",
+      "overlap": 434,
+      "source_buildings": 434,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "9dbc3337-5450-4f38-a661-bc0ea4a1552b",
+      "live_canonical_buildings": 2574,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork2332",
+      "overlap": 2574,
+      "source_buildings": 2574,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "f159f774-e27a-4f71-9645-df05b3d34ce8",
+      "live_canonical_buildings": 2649,
+      "live_coverage": 0.998867,
+      "map_key": "hk_newyork2333",
+      "overlap": 2646,
+      "source_buildings": 2646,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "deaa84a5-af53-427b-a5a3-3b22ac130065",
+      "live_canonical_buildings": 856,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork2508",
+      "overlap": 856,
+      "source_buildings": 856,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7e87da1c-f11b-4de2-8190-cb0a84a46e9b",
+      "live_canonical_buildings": 755,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork2520",
+      "overlap": 755,
+      "source_buildings": 755,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "27e4355e-0b1f-4b16-b0a7-21aba4087dac",
+      "live_canonical_buildings": 1383,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork2528",
+      "overlap": 1383,
+      "source_buildings": 1383,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "067cb6cb-6932-43f6-ab8e-c35c27d0b807",
+      "live_canonical_buildings": 154,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork2819",
+      "overlap": 154,
+      "source_buildings": 154,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "68f69ac5-74a0-4f22-b56c-b3617f72c725",
+      "live_canonical_buildings": 1339,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork3030",
+      "overlap": 1339,
+      "source_buildings": 1339,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "aa59c660-6824-444c-92a6-36b4afa8457d",
+      "live_canonical_buildings": 629,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork3110",
+      "overlap": 629,
+      "source_buildings": 629,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "b94ea2a3-a4da-4b69-8ac3-13e5cc88a5f2",
+      "live_canonical_buildings": 972,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork3111",
+      "overlap": 972,
+      "source_buildings": 972,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "f2ac6a44-27a0-4954-a7a5-522435c6acef",
+      "live_canonical_buildings": 2535,
+      "live_coverage": 0.997633,
+      "map_key": "hk_newyork3226",
+      "overlap": 2529,
+      "source_buildings": 2529,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7bc95c84-0ace-4ebc-82cf-746d3ebb9205",
+      "live_canonical_buildings": 841,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork3307",
+      "overlap": 841,
+      "source_buildings": 841,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "07fc14f6-878e-4c5f-993b-67dfe2f0440f",
+      "live_canonical_buildings": 282,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork3314",
+      "overlap": 282,
+      "source_buildings": 282,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "ed33d8c9-a814-4fdc-827a-496432d2ca7a",
+      "live_canonical_buildings": 914,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork3504",
+      "overlap": 914,
+      "source_buildings": 914,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "f6015a29-1a47-402e-ab57-ee341390fb4c",
+      "live_canonical_buildings": 1054,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork3507",
+      "overlap": 1054,
+      "source_buildings": 1054,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "b9e8ad66-1222-456a-91ce-a47a7df62137",
+      "live_canonical_buildings": 2380,
+      "live_coverage": 0.99958,
+      "map_key": "hk_newyork3528",
+      "overlap": 2379,
+      "source_buildings": 2379,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "c7f9cd65-c03f-4e04-a4cf-1f09b6646da7",
+      "live_canonical_buildings": 1504,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork3707",
+      "overlap": 1504,
+      "source_buildings": 1504,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "2ce592c9-aeb8-4ece-be23-77d538a699cc",
+      "live_canonical_buildings": 690,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork3830",
+      "overlap": 690,
+      "source_buildings": 690,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "65f69e15-b3b4-405c-a00d-839a190f6025",
+      "live_canonical_buildings": 1117,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork4016",
+      "overlap": 1117,
+      "source_buildings": 1117,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "6618d3a0-91c9-44ff-8029-eba045469962",
+      "live_canonical_buildings": 1101,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork4026",
+      "overlap": 1101,
+      "source_buildings": 1101,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "25f3ff88-45ff-427c-a33b-c7f065f10838",
+      "live_canonical_buildings": 372,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork4617",
+      "overlap": 372,
+      "source_buildings": 372,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "51bb9f60-9d96-45bd-8730-c102eac86237",
+      "live_canonical_buildings": 111,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork4639",
+      "overlap": 111,
+      "source_buildings": 111,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "41c07d67-ad0c-486a-abfe-c829367a3da1",
+      "live_canonical_buildings": 987,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork4727",
+      "overlap": 987,
+      "source_buildings": 987,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "4fd66467-4a03-4d0b-9411-fe045f7a97a6",
+      "live_canonical_buildings": 587,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork4825",
+      "overlap": 587,
+      "source_buildings": 587,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "612c22ee-4bab-4163-9c03-5e8a8b056a0b",
+      "live_canonical_buildings": 679,
+      "live_coverage": 1.0,
+      "map_key": "hk_newyork4933",
+      "overlap": 679,
+      "source_buildings": 679,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "67cf4251-c1ba-4ee5-9c83-7281c57c263f",
+      "live_canonical_buildings": 374,
+      "live_coverage": 1.0,
+      "map_key": "hk_paris1402",
+      "overlap": 374,
+      "source_buildings": 374,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "baa6b180-4276-40a3-a42a-9b7318f81108",
+      "live_canonical_buildings": 802,
+      "live_coverage": 1.0,
+      "map_key": "hk_paris2115",
+      "overlap": 802,
+      "source_buildings": 802,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "981b11ba-3e19-4621-8724-b07605287a7b",
+      "live_canonical_buildings": 413,
+      "live_coverage": 1.0,
+      "map_key": "hk_paris3718",
+      "overlap": 413,
+      "source_buildings": 413,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "2da7e60c-08cc-405a-a5fd-7752b7a9a019",
+      "live_canonical_buildings": 635,
+      "live_coverage": 1.0,
+      "map_key": "hk_paris4949",
+      "overlap": 635,
+      "source_buildings": 635,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "241f9996-7efc-491b-8211-1412143d1c71",
+      "live_canonical_buildings": 500,
+      "live_coverage": 1.0,
+      "map_key": "hk_riodejaneiro0217",
+      "overlap": 500,
+      "source_buildings": 500,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "ff1cf5d9-b9a8-4cca-ac52-e563baf892d8",
+      "live_canonical_buildings": 2529,
+      "live_coverage": 0.999605,
+      "map_key": "hk_riodejaneiro1435",
+      "overlap": 2528,
+      "source_buildings": 2528,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "73543631-5b59-4a01-802c-a7ea8edec039",
+      "live_canonical_buildings": 448,
+      "live_coverage": 1.0,
+      "map_key": "hk_riodejaneiro1730",
+      "overlap": 448,
+      "source_buildings": 448,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "92d1bb59-895e-45e5-b125-3ac84c22132d",
+      "live_canonical_buildings": 1459,
+      "live_coverage": 1.0,
+      "map_key": "hk_riodejaneiro5437",
+      "overlap": 1459,
+      "source_buildings": 1459,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "09e52a7f-da65-4102-9508-40424593ab7b",
+      "live_canonical_buildings": 185,
+      "live_coverage": 1.0,
+      "map_key": "hk_saintpetersburg0001",
+      "overlap": 185,
+      "source_buildings": 185,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "fbd2e69c-09fd-44b8-b71f-182c01652d9c",
+      "live_canonical_buildings": 315,
+      "live_coverage": 1.0,
+      "map_key": "hk_saintpetersburg0003",
+      "overlap": 315,
+      "source_buildings": 315,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "36c4b694-5176-447e-91cc-77befca92ef9",
+      "live_canonical_buildings": 397,
+      "live_coverage": 1.0,
+      "map_key": "hk_saintpetersburg1819",
+      "overlap": 397,
+      "source_buildings": 397,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "1ed6dfc1-36ad-4bb4-b023-7a3732384a32",
+      "live_canonical_buildings": 273,
+      "live_coverage": 1.0,
+      "map_key": "hk_saintpetersburg2020",
+      "overlap": 273,
+      "source_buildings": 273,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "dcd9939d-4b44-445a-8861-79ffb6c3525e",
+      "live_canonical_buildings": 160,
+      "live_coverage": 1.0,
+      "map_key": "hk_saintpetersburg2218",
+      "overlap": 160,
+      "source_buildings": 160,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "e6c4eb6a-a205-41b1-8fa9-bbbaba932ebb",
+      "live_canonical_buildings": 480,
+      "live_coverage": 1.0,
+      "map_key": "hk_saintpetersburg2320",
+      "overlap": 480,
+      "source_buildings": 480,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7826c8a9-1d2f-41f7-975e-e53df9fe0a32",
+      "live_canonical_buildings": 126,
+      "live_coverage": 1.0,
+      "map_key": "hk_saintpetersburg2517",
+      "overlap": 126,
+      "source_buildings": 126,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "b98490db-fb99-4611-9306-5197cf9e579d",
+      "live_canonical_buildings": 109,
+      "live_coverage": 1.0,
+      "map_key": "hk_saintpetersburg2607",
+      "overlap": 109,
+      "source_buildings": 109,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "14adffdb-1697-4ec8-ab62-17fc7c88b7cc",
+      "live_canonical_buildings": 606,
+      "live_coverage": 1.0,
+      "map_key": "hk_singapore3416",
+      "overlap": 606,
+      "source_buildings": 606,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "fd4007d7-6ce9-44a5-a14b-05e2b21e5c3e",
+      "live_canonical_buildings": 168,
+      "live_coverage": 1.0,
+      "map_key": "hk_singapore3611",
+      "overlap": 168,
+      "source_buildings": 168,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "8ac32d51-a58f-4742-b8fd-ad078ac7d994",
+      "live_canonical_buildings": 213,
+      "live_coverage": 1.0,
+      "map_key": "hk_singapore4014",
+      "overlap": 213,
+      "source_buildings": 213,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "5fb25ef9-b04b-4b64-876c-07eae561c174",
+      "live_canonical_buildings": 517,
+      "live_coverage": 1.0,
+      "map_key": "hk_singapore4111",
+      "overlap": 517,
+      "source_buildings": 517,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "f8f19a18-f03e-41ba-acc4-47a2a365aa79",
+      "live_canonical_buildings": 190,
+      "live_coverage": 1.0,
+      "map_key": "hk_sydney0412",
+      "overlap": 190,
+      "source_buildings": 190,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "be117c02-5e3d-41d3-bda0-cd80300655af",
+      "live_canonical_buildings": 1019,
+      "live_coverage": 1.0,
+      "map_key": "hk_sydney0526",
+      "overlap": 1019,
+      "source_buildings": 1019,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "a7b1c80a-b305-4de7-84c4-3ddb8e683bf2",
+      "live_canonical_buildings": 284,
+      "live_coverage": 1.0,
+      "map_key": "hk_sydney0527",
+      "overlap": 284,
+      "source_buildings": 284,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7d0f367c-345c-4366-90d5-3db2191824c5",
+      "live_canonical_buildings": 134,
+      "live_coverage": 1.0,
+      "map_key": "hk_sydney0627",
+      "overlap": 134,
+      "source_buildings": 134,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "846b1e59-c58d-45d9-a3d2-c617bcb7a451",
+      "live_canonical_buildings": 161,
+      "live_coverage": 0.987578,
+      "map_key": "hk_sydney1133",
+      "overlap": 159,
+      "source_buildings": 159,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "4301f4ae-7471-4ca8-ad14-5f96fc9530df",
+      "live_canonical_buildings": 561,
+      "live_coverage": 0.987522,
+      "map_key": "hk_sydney1415",
+      "overlap": 554,
+      "source_buildings": 554,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "4d9bf6d6-3a9c-4810-a229-5d842b91e801",
+      "live_canonical_buildings": 203,
+      "live_coverage": 0.965517,
+      "map_key": "hk_sydney1520",
+      "overlap": 196,
+      "source_buildings": 196,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "3114d813-7fa4-4909-ae82-68295356ebc9",
+      "live_canonical_buildings": 138,
+      "live_coverage": 1.0,
+      "map_key": "hk_sydney2105",
+      "overlap": 138,
+      "source_buildings": 138,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "65fc2f6d-7c93-4c72-a969-6547b231fea9",
+      "live_canonical_buildings": 754,
+      "live_coverage": 1.0,
+      "map_key": "hk_sydney2107",
+      "overlap": 754,
+      "source_buildings": 754,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "c93375d8-6d60-4b15-b464-cf6541722c89",
+      "live_canonical_buildings": 1639,
+      "live_coverage": 1.0,
+      "map_key": "hk_tokyo2210",
+      "overlap": 1639,
+      "source_buildings": 1639,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "c7e3febc-6fe0-4d6f-a2ee-481247d4dcda",
+      "live_canonical_buildings": 739,
+      "live_coverage": 1.0,
+      "map_key": "hk_tokyo2314",
+      "overlap": 739,
+      "source_buildings": 739,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "c7505962-18ba-4af4-b2e7-78367924ec25",
+      "live_canonical_buildings": 944,
+      "live_coverage": 1.0,
+      "map_key": "hk_tokyo2512",
+      "overlap": 944,
+      "source_buildings": 944,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "1665b284-323c-420b-82fa-db2b27a865a3",
+      "live_canonical_buildings": 1077,
+      "live_coverage": 1.0,
+      "map_key": "hk_tokyo2714",
+      "overlap": 1077,
+      "source_buildings": 1077,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "41782fd0-ec93-4002-a0cd-f19137aa1a20",
+      "live_canonical_buildings": 574,
+      "live_coverage": 1.0,
+      "map_key": "hk_tokyo3919",
+      "overlap": 574,
+      "source_buildings": 574,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "88210c83-d054-485b-b7fe-e97cedfa5ad1",
+      "live_canonical_buildings": 337,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington0019",
+      "overlap": 337,
+      "source_buildings": 337,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "b7354397-6df3-44cd-a00f-80b307e6e072",
+      "live_canonical_buildings": 616,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington0310",
+      "overlap": 616,
+      "source_buildings": 616,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "62b9c66d-81c1-4f15-b8d6-6a0d53fe7b0c",
+      "live_canonical_buildings": 473,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington0402",
+      "overlap": 473,
+      "source_buildings": 473,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "c27f3ce2-9c0f-4bcb-8908-1ddaf453838e",
+      "live_canonical_buildings": 482,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington0727",
+      "overlap": 482,
+      "source_buildings": 482,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "95cf7ca3-a3e3-4be1-9f76-c08d3b79e881",
+      "live_canonical_buildings": 100,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington1418",
+      "overlap": 100,
+      "source_buildings": 100,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "7950ba41-220b-4e64-86d2-7a369ec70b17",
+      "live_canonical_buildings": 309,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington1511",
+      "overlap": 309,
+      "source_buildings": 309,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "55544954-2720-4fe3-a837-a8ea149903e5",
+      "live_canonical_buildings": 264,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington1710",
+      "overlap": 264,
+      "source_buildings": 264,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "154aa2e4-7cfa-4a77-aee3-653e40c52c14",
+      "live_canonical_buildings": 579,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington1819",
+      "overlap": 579,
+      "source_buildings": 579,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "9d6e9957-7b3b-4b77-b7fc-c537567560bc",
+      "live_canonical_buildings": 498,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington2207",
+      "overlap": 498,
+      "source_buildings": 498,
+      "source_coverage": 1.0
+    },
+    {
+      "already_linked": true,
+      "area_id": "97c54b55-641f-43ff-87ae-6d19eb9c0659",
+      "live_canonical_buildings": 345,
+      "live_coverage": 1.0,
+      "map_key": "hk_washington2518",
+      "overlap": 345,
+      "source_buildings": 345,
+      "source_coverage": 1.0
+    }
+  ],
+  "new_original": [
+    {
+      "map_key": "hk_auckland1515",
+      "source_buildings": 579,
+      "target_area_id": "6ddb2d6f-7dcf-4e1b-81aa-1685cff88803"
+    },
+    {
+      "map_key": "hk_berlin1717",
+      "source_buildings": 689,
+      "target_area_id": "e0b4bd6b-a3cb-4938-b098-1acb1ccbbff4"
+    },
+    {
+      "map_key": "hk_berlin1718",
+      "source_buildings": 598,
+      "target_area_id": "8562176f-4ef0-47cf-9865-0ec75d28c0f3"
+    },
+    {
+      "map_key": "hk_berlin1818",
+      "source_buildings": 640,
+      "target_area_id": "0c9eab48-2d54-4883-8e1b-0836cb2c8520"
+    },
+    {
+      "map_key": "hk_berlin2412",
+      "source_buildings": 553,
+      "target_area_id": "c0008d01-89b9-4476-8959-5eb13f127a0b"
+    },
+    {
+      "map_key": "hk_berlin2513",
+      "source_buildings": 510,
+      "target_area_id": "8da59791-4c63-4153-9c83-16b0440b6fba"
+    },
+    {
+      "map_key": "hk_berlin2514",
+      "source_buildings": 831,
+      "target_area_id": "bb513dfb-24e7-4f16-9f9c-4cd2b4e3fe99"
+    },
+    {
+      "map_key": "hk_berlin2620",
+      "source_buildings": 818,
+      "target_area_id": "4f4a7107-2704-4ca4-9c34-1901e92d1e90"
+    },
+    {
+      "map_key": "hk_dubai4229",
+      "source_buildings": 339,
+      "target_area_id": "b6977834-bfed-4519-bfb2-5f9c87fc1f4c"
+    },
+    {
+      "map_key": "hk_dubai4329",
+      "source_buildings": 688,
+      "target_area_id": "40273907-c157-48c3-b5a6-8385dee8aff4"
+    },
+    {
+      "map_key": "hk_dubai4433",
+      "source_buildings": 884,
+      "target_area_id": "35c80ab3-3173-48e5-9356-ad7a0400f8d2"
+    },
+    {
+      "map_key": "hk_dubai5216",
+      "source_buildings": 587,
+      "target_area_id": "9d5ce193-1ca2-4b80-9403-07abbd1f4b5d"
+    },
+    {
+      "map_key": "hk_dubai5315",
+      "source_buildings": 590,
+      "target_area_id": "2593c04d-f3d1-4477-899c-e3ea7c89059c"
+    },
+    {
+      "map_key": "hk_dubai5316",
+      "source_buildings": 523,
+      "target_area_id": "a21e02e6-7273-4627-9093-90e9ac53588e"
+    },
+    {
+      "map_key": "hk_dubai5414",
+      "source_buildings": 531,
+      "target_area_id": "ee25687a-495b-45d6-a540-119e96942290"
+    },
+    {
+      "map_key": "hk_dubai6210",
+      "source_buildings": 642,
+      "target_area_id": "031a4440-6c08-4e6f-b4ba-209fa8d58f74"
+    },
+    {
+      "map_key": "hk_dubai6212",
+      "source_buildings": 441,
+      "target_area_id": "fdcdea06-8cd6-468e-937a-3ed249bae21a"
+    },
+    {
+      "map_key": "hk_dubai6308",
+      "source_buildings": 478,
+      "target_area_id": "fbe4f037-df7b-425f-8d25-e902da6b792b"
+    },
+    {
+      "map_key": "hk_dubai6409",
+      "source_buildings": 810,
+      "target_area_id": "9a2a6b3f-a935-45a2-a8c1-93c127670871"
+    },
+    {
+      "map_key": "hk_dubai6808",
+      "source_buildings": 869,
+      "target_area_id": "e7907b87-1b18-4f2b-81ad-4c927118694f"
+    },
+    {
+      "map_key": "hk_dubai7003",
+      "source_buildings": 949,
+      "target_area_id": "906c807d-1306-48ff-adf1-3037045d75d3"
+    },
+    {
+      "map_key": "hk_lagos2256",
+      "source_buildings": 100,
+      "target_area_id": "ce5c6284-67ea-4b10-bdf8-6497a1d54bbc"
+    },
+    {
+      "map_key": "hk_lagos2750",
+      "source_buildings": 758,
+      "target_area_id": "8b14b348-0cf8-413f-82d6-8e8aa66d90a1"
+    },
+    {
+      "map_key": "hk_lagos3141",
+      "source_buildings": 674,
+      "target_area_id": "2071a3a8-2543-44cc-83b8-0e94c475c8be"
+    },
+    {
+      "map_key": "hk_lagos3228",
+      "source_buildings": 712,
+      "target_area_id": "0eb39a03-c3b2-4cab-ad01-49b67b9ed9e0"
+    },
+    {
+      "map_key": "hk_lagos4815",
+      "source_buildings": 235,
+      "target_area_id": "4fa16b33-f928-4c22-9974-21f9ee10eb60"
+    },
+    {
+      "map_key": "hk_lagos4822",
+      "source_buildings": 605,
+      "target_area_id": "40a6a980-b5ef-4ae3-b1cd-4007588ffcfe"
+    },
+    {
+      "map_key": "hk_london3025",
+      "source_buildings": 1510,
+      "target_area_id": "12e6f3ce-9b68-4c61-86db-44662dbb0064"
+    },
+    {
+      "map_key": "hk_london3124",
+      "source_buildings": 1186,
+      "target_area_id": "0a7573ac-8deb-424f-8939-c7434a31283b"
+    },
+    {
+      "map_key": "hk_london3125",
+      "source_buildings": 972,
+      "target_area_id": "0f0c1217-7401-46d6-ad11-2f1668234ad1"
+    },
+    {
+      "map_key": "hk_london3324",
+      "source_buildings": 648,
+      "target_area_id": "7f0b22e3-18d5-4ecd-a914-e9dcb18801ad"
+    },
+    {
+      "map_key": "hk_london3423",
+      "source_buildings": 945,
+      "target_area_id": "92023e2b-baef-4e8f-8838-b9d6f98660e0"
+    },
+    {
+      "map_key": "hk_london3424",
+      "source_buildings": 579,
+      "target_area_id": "5af04afd-bdab-40d3-b283-d4a98aac848c"
+    },
+    {
+      "map_key": "hk_losangeles1839",
+      "source_buildings": 536,
+      "target_area_id": "8fe5bc49-04f3-4a1c-9a6d-5ecbe4bc9236"
+    },
+    {
+      "map_key": "hk_losangeles3031",
+      "source_buildings": 1022,
+      "target_area_id": "898a4ce2-3ebc-4797-8ba7-7651a15742fe"
+    },
+    {
+      "map_key": "hk_losangeles3524",
+      "source_buildings": 103,
+      "target_area_id": "9bc14c89-38ed-4e87-8dd6-ef9c4aeb24cd"
+    },
+    {
+      "map_key": "hk_losangeles3638",
+      "source_buildings": 1247,
+      "target_area_id": "8cdc3165-c7c7-484f-8f74-6d0add7e1e59"
+    },
+    {
+      "map_key": "hk_losangeles3734",
+      "source_buildings": 375,
+      "target_area_id": "39c0a369-9b47-49d5-8470-cce86b827a5f"
+    },
+    {
+      "map_key": "hk_losangeles4037",
+      "source_buildings": 453,
+      "target_area_id": "7aec1fff-1603-4e30-928f-d1195e0190d4"
+    },
+    {
+      "map_key": "hk_losangeles4136",
+      "source_buildings": 461,
+      "target_area_id": "87728349-7188-4fd3-93db-edbaadaa122b"
+    },
+    {
+      "map_key": "hk_losangeles4137",
+      "source_buildings": 604,
+      "target_area_id": "0af366c8-006d-4e70-ad41-de0631ee829a"
+    },
+    {
+      "map_key": "hk_minsk1306",
+      "source_buildings": 264,
+      "target_area_id": "d20f2e38-5593-4451-94b9-6d2d337f34c3"
+    },
+    {
+      "map_key": "hk_moscow1918",
+      "source_buildings": 439,
+      "target_area_id": "3fddb622-111f-488f-a70e-b31b563ce145"
+    },
+    {
+      "map_key": "hk_moscow2118",
+      "source_buildings": 500,
+      "target_area_id": "23d4c221-b89a-459a-af5e-dceaa8fda578"
+    },
+    {
+      "map_key": "hk_moscow2218",
+      "source_buildings": 494,
+      "target_area_id": "a58cca24-528a-4a8e-ab7d-aade55aaad69"
+    },
+    {
+      "map_key": "hk_newyork0332",
+      "source_buildings": 118,
+      "target_area_id": "e54c5820-d79f-4f47-b19f-49a0775ca30b"
+    },
+    {
+      "map_key": "hk_newyork1608",
+      "source_buildings": 205,
+      "target_area_id": "788379db-eeee-4f08-9b85-d9b05070cafd"
+    },
+    {
+      "map_key": "hk_newyork2421",
+      "source_buildings": 1252,
+      "target_area_id": "8e45b719-d07a-48d8-8808-c39ab2588403"
+    },
+    {
+      "map_key": "hk_newyork2422",
+      "source_buildings": 1648,
+      "target_area_id": "8a82f8b2-f2cc-4d62-a707-2b22c8e931d7"
+    },
+    {
+      "map_key": "hk_newyork2440",
+      "source_buildings": 399,
+      "target_area_id": "2faf617c-35d0-4cbc-a7b6-98bc0eebdc4d"
+    },
+    {
+      "map_key": "hk_newyork2518",
+      "source_buildings": 401,
+      "target_area_id": "e66a6a1d-24ec-48d4-8b36-44cf8643f03d"
+    },
+    {
+      "map_key": "hk_newyork2521",
+      "source_buildings": 995,
+      "target_area_id": "5bd75ffb-bf25-4f0b-a56d-81be89ac76f3"
+    },
+    {
+      "map_key": "hk_newyork2522",
+      "source_buildings": 1065,
+      "target_area_id": "411dde71-adc6-47a2-979a-476b8c818f6e"
+    },
+    {
+      "map_key": "hk_newyork2620",
+      "source_buildings": 663,
+      "target_area_id": "914199bc-0946-419d-ba8d-a43fedfa9742"
+    },
+    {
+      "map_key": "hk_newyork3208",
+      "source_buildings": 885,
+      "target_area_id": "0869b1b1-51d6-4c58-829f-dd0777d2f692"
+    },
+    {
+      "map_key": "hk_newyork3210",
+      "source_buildings": 640,
+      "target_area_id": "7e6b1875-f390-4b25-93ab-74ee473b9615"
+    },
+    {
+      "map_key": "hk_newyork3832",
+      "source_buildings": 164,
+      "target_area_id": "274095c4-1a42-490e-a495-008091844d23"
+    },
+    {
+      "map_key": "hk_paris2822",
+      "source_buildings": 927,
+      "target_area_id": "8877f108-79d9-4742-821a-dcb180f8f384"
+    },
+    {
+      "map_key": "hk_paris3022",
+      "source_buildings": 1071,
+      "target_area_id": "ec0ffc0e-41b2-437e-b9b7-e5605ce53c9b"
+    },
+    {
+      "map_key": "hk_paris3122",
+      "source_buildings": 1683,
+      "target_area_id": "6856318b-28c1-4090-904d-e4e0ebf03287"
+    },
+    {
+      "map_key": "hk_paris3222",
+      "source_buildings": 1240,
+      "target_area_id": "10510846-4330-49c7-8d4e-e4d5e3c4d215"
+    },
+    {
+      "map_key": "hk_paris3223",
+      "source_buildings": 1523,
+      "target_area_id": "cf17aca2-b6a3-4c35-a62e-c15cf0d9b988"
+    },
+    {
+      "map_key": "hk_paris3322",
+      "source_buildings": 1426,
+      "target_area_id": "0ec685ad-7b75-47f1-a1d7-fecb24174f9e"
+    },
+    {
+      "map_key": "hk_paris3323",
+      "source_buildings": 1261,
+      "target_area_id": "6dd774e4-c042-4d94-b6e6-57d6273c5254"
+    },
+    {
+      "map_key": "hk_paris3324",
+      "source_buildings": 1333,
+      "target_area_id": "d19eb338-3a37-4177-afef-344628aed571"
+    },
+    {
+      "map_key": "hk_riodejaneiro3430",
+      "source_buildings": 1342,
+      "target_area_id": "9b97ee80-1026-4a3c-a9c6-ef4a9ed40f2f"
+    },
+    {
+      "map_key": "hk_riodejaneiro3530",
+      "source_buildings": 769,
+      "target_area_id": "eba83f40-dc9f-4278-ba1d-8048c64f40a0"
+    },
+    {
+      "map_key": "hk_riodejaneiro4326",
+      "source_buildings": 101,
+      "target_area_id": "fc27729c-7b46-4e70-9dde-d4f75fb49cff"
+    },
+    {
+      "map_key": "hk_riodejaneiro5441",
+      "source_buildings": 1160,
+      "target_area_id": "f4135d17-0348-4a86-8811-c38f531ef618"
+    },
+    {
+      "map_key": "hk_saintpetersburg1917",
+      "source_buildings": 484,
+      "target_area_id": "090d4543-e438-4998-afbf-978028187f83"
+    },
+    {
+      "map_key": "hk_saintpetersburg1921",
+      "source_buildings": 353,
+      "target_area_id": "0c2194e3-2fe1-445e-9094-4526e32ee5bd"
+    },
+    {
+      "map_key": "hk_saintpetersburg2121",
+      "source_buildings": 399,
+      "target_area_id": "e4aef74e-40da-498f-afa2-3188125c0041"
+    },
+    {
+      "map_key": "hk_saintpetersburg2219",
+      "source_buildings": 451,
+      "target_area_id": "bc5a6599-3ddb-4dfd-855e-38c3ceda3165"
+    },
+    {
+      "map_key": "hk_saintpetersburg2220",
+      "source_buildings": 434,
+      "target_area_id": "b33978d5-feaa-46a7-a664-acf7623d77ab"
+    },
+    {
+      "map_key": "hk_singapore3818",
+      "source_buildings": 1100,
+      "target_area_id": "e2a49d73-0931-4161-9257-b9c475f695ae"
+    }
+  ],
+  "summary": {
+    "conflicts": 0,
+    "duplicate_exact_targets": 0,
+    "exact_already_linked": 160,
+    "exact_existing": 160,
+    "exact_not_linked": 0,
+    "hidden_duplicates_vs_u1_baseline": 135,
+    "live_area_links": 160,
+    "live_buildings": 167690,
+    "live_canonical_areas": 310,
+    "live_catalog_maps": 235,
+    "live_coverage_max": 1.0,
+    "live_coverage_min": 0.954357,
+    "new_original": 75,
+    "overlap_max": 2646,
+    "overlap_min": 100,
+    "projected_combined": 160,
+    "projected_script_only": 150,
+    "projected_unified_rows": 385,
+    "projected_website_only": 75,
+    "source_building_ids": 152593,
+    "source_coverage_max": 1.0,
+    "source_coverage_min": 1.0,
+    "source_maps": 235,
+    "zero_keys_equal_original75": true
+  }
+}

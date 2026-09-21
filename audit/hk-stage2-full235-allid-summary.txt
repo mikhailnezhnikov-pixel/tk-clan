@@ -1,0 +1,8 @@
+{"conflicts": 0, "duplicate_exact_targets": 0, "exact_already_linked": 160, "exact_existing": 160, "exact_not_linked": 0, "hidden_duplicates_vs_u1_baseline": 135, "live_area_links": 160, "live_buildings": 167690, "live_canonical_areas": 310, "live_catalog_maps": 235, "live_coverage_max": 1.0, "live_coverage_min": 0.954357, "new_original": 75, "overlap_max": 2646, "overlap_min": 100, "projected_combined": 160, "projected_script_only": 150, "projected_unified_rows": 385, "projected_website_only": 75, "source_building_ids": 152593, "source_coverage_max": 1.0, "source_coverage_min": 1.0, "source_maps": 235, "zero_keys_equal_original75": true}
+FULL235_ALL_ID_DRYRUN=PASS
+production_db_writes=NO
+
+source_archive_gz_sha256=a4b84c5239168182702090efe0b7241b54295942d63e5f020539092694e0a3e1
+source_archive_json_sha256=42d447618899316582ad749f31c75525af53af780ae2507deec803d25c96881f
+allid_binary_sha256=1ddcadbb50e5a88555a6772538e56476575a771edc22fb85200299c8cbc28f48
+production_db_writes=NO
