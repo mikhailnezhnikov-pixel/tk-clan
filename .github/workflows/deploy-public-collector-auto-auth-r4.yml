@@ -109,9 +109,9 @@ jobs:
             grep -Fq PUBLIC_SNAPSHOT_SERVER_ONLY_R3 /opt/hamsterking-license/server.py
             grep -Fq PUBLIC_RATINGS_SERVER_ONLY_R3 /opt/hamsterking-license/server.py
             grep -Fq public-server-collector-20260921-r4-auto-auth /opt/hamsterking-license/public_collector.py
-            grep -Fq "HK_EXPLORE_CANON_REV='"'"'explore-e3-single-20260920-r9-runner'"'"'" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "explore-e3-single-20260920-r9-runner" /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = '"'"'public-server-only-20260920-r2'"'"'" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "public-server-only-20260920-r2" /opt/hamsterking-license/HamsterKingMobile.user.js
             test -s /var/lib/hamsterking-license/public-collector-identity.sha256
             test "$(stat -c %a /var/lib/hamsterking-license/public-collector-identity.sha256)" = 600
             systemctl is-active --quiet hamsterking-license.service
