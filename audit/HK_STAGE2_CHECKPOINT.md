@@ -18,11 +18,11 @@ Each module:
 - stage: 2
 - status: IN_PROGRESS
 - userscript: 1.17.19
-- current module: Buildings / Здания — final live action gate
-- current module file: audit/hk-stage2-06-buildings.md
-- current module status: NATIVE_SYNC_R1_LIVE_USER_CHECK_PENDING
+- current module: Explore / Исследование — E3 single-building live validation
+- current module file: audit/hk-stage2-07-explore.md
+- current module status: E3_R9_SINGLE_BUILDING_LIVE_TEST_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
-- next after Buildings LIVE PASS: Explore / Исследование — E3 single-building user validation
+- Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: NOT STARTED
 - parallel FULL235: separate track; do not mix into Stage 2 module gate
 
@@ -1605,4 +1605,19 @@ Next:
 3. open one candidate;
 4. let native sync/fallback complete;
 5. tap that building and confirm the stale “Исследовать это здание?” ownership prompt is gone.
+
+### Buildings 2.06 — LIVE PASS / Explore E3 resumed (2026-09-21)
+
+User confirmed the final Buildings native-sync check after userscript `1.17.19`:
+- server state persisted;
+- the game map recognized the claimed building after refresh;
+- the stale ownership prompt was gone.
+
+Therefore:
+**Buildings / Здания 2.06 = LIVE PASS**
+
+Stage 2 now resumes at:
+**Explore / Исследование — E3 r9 single-building live validation**
+
+E4 multi-building remains blocked until the E3 single-building path receives user PASS.
 
