@@ -1,10 +1,12 @@
 name: Verify War Battle V2
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'wars/index.html'
       - 'assets/war/battle-engine-v2.js'
+      - '.github/workflows/verify-war-battle-v2.yml'
 
 permissions:
   contents: read
