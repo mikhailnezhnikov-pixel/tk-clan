@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.6
+// @version      1.17.7
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
-// @release-note Надёжный захват штатного /auth/create для автоматического server collector auth; Maps и Explore без изменений.
+// @release-note AUTH_PASSIVE_SAFETY_R1: userscript больше не вызывает /auth/create автоматически; только пассивно использует штатную авторизацию игры.
 // @match        https://app.hamsterking.games/*
 // @run-at       document-start
 // @grant        none
@@ -11,9 +11,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.6';
+  const BUILD_VERSION = '1.17.7';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r8-native-auth-observer';
+  const HK_CORE_REVISION = 'core-20260921-r9-auth-passive-safety';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -1121,23 +1121,15 @@
   }
 
   async function ensureGameAuthorization(force = false, reason = 'runtime') {
+    // AUTH_PASSIVE_SAFETY_R1
+    // Never create or refresh a game session from the userscript. The native
+    // game owns /auth/create. We only consume a bearer already issued by it.
     restoreGameApiBaseFromPerformance();
     if (!apiBase) apiBase = GAME_API_FALLBACK;
     refreshStoredGameAuthorization();
-    let token = currentGameBearer();
-    const expiresAt = jwtExpiration(token);
-    if (!force && token && expiresAt > Date.now() + GAME_AUTH_REFRESH_EARLY_MS) {
-      setHealth('auth', true, 'токен активен');
-      return true;
-    }
-    if (token && !force && expiresAt > Date.now() + 5000) {
-      const valid = await checkGameBearer(token);
-      if (valid) { setHealth('auth', true, 'токен проверен'); return true; }
-    }
-    const fresh = await createFreshGameAuthorization(reason, token);
-    token = fresh || currentGameBearer();
+    const token = currentGameBearer();
     const ok = !!token && jwtExpiration(token) > Date.now() + 5000;
-    setHealth('auth', ok, ok ? 'авторизация активна' : 'нужен повторный вход');
+    setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
     return ok;
   }
 
@@ -11976,7 +11968,14 @@
     startInterface();
     setTimeout(() => bootstrapLateGameConnection(), 100);
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
-    setInterval(() => { ensureGameAuthorization(false, 'background').catch(error => recordDiagnostic('auth-background-error',{error:error?.message || error})); }, 30000);
+    setInterval(() => {
+      // AUTH_PASSIVE_SAFETY_R1: observe only; never call /auth/create here.
+      refreshStoredGameAuthorization();
+      const token=currentGameBearer();
+      const ok=!!token && jwtExpiration(token)>Date.now()+5000;
+      setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
+      if (ok && licenseState.publicCollectorAuthSync) maybeSyncPublicCollectorAuthorization(token).catch(() => {});
+    }, 30000);
     setInterval(captureActiveEventCode, 1500);
     setTimeout(() => hkGameBridge.discover(false), 1500);
     setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
