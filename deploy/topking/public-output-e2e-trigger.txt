@@ -1,1 +1,1 @@
-2026-09-21 public E2E after userscript 1.17.21 Explore E4 queue
+2026-09-21 public E2E after userscript 1.17.22 Explore production UI
