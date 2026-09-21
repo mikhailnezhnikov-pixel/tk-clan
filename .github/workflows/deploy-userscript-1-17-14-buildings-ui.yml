@@ -37,8 +37,8 @@ jobs:
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.18" /tmp/HamsterKingMobile.user.js
-          grep -Fq "core-20260921-r20-buildings-owned-postcondition" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.17" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r19-buildings-limit-runner" /tmp/HamsterKingMobile.user.js
           cmp -s /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           echo "LIVE_BASELINE_INPUT=PASS"
 
@@ -48,8 +48,8 @@ jobs:
           python3 -m py_compile deploy/topking/patch_buildings_owned_postcondition_1_17_18.py
           python3 deploy/topking/patch_buildings_owned_postcondition_1_17_18.py
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.17" /tmp/HamsterKingMobile.user.js
-          grep -Fq "core-20260921-r19-buildings-limit-runner" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.18" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r20-buildings-owned-postcondition" /tmp/HamsterKingMobile.user.js
           grep -Fq "buildings-open-limit-20260921-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "buildings-runner-ui-20260921-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "buildings-active-semantics-20260921-r1" /tmp/HamsterKingMobile.user.js
