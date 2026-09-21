@@ -1,0 +1,2 @@
+deploy=clan-shop-identity-v6
+stamp=2026-09-21
