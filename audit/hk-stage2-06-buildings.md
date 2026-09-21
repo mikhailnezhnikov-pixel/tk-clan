@@ -59,3 +59,36 @@ Required live user check before Stage 2.06 LIVE PASS:
 3. open at least one eligible building;
 4. if crystal threshold matches, verify favorite action;
 5. refresh/rerun and confirm the opened building disappears from candidates and appears in active Buildings.
+
+## Technical revalidation on userscript 1.17.12 — 2026-09-21
+
+Read-only live verification run: `35563675405` — **PASS**.
+
+Verified after the later Maps/auth changes:
+- live userscript = public `panel.js` = repository baseline: PASS;
+- userscript version `1.17.12`: PASS;
+- `buildings-canon-core-20260920-r1` marker: PASS;
+- plan filters and candidate calculation: PASS;
+- already-active building exclusion: PASS;
+- building open path remains behind `hkMutationGate`: PASS;
+- favorite threshold uses actual post-open crystal metrics: PASS;
+- authoritative rereads before open, after open, on completion and on error: PASS;
+- Pause/Stop runner wiring: PASS;
+- Buildings UI plan/run wiring: PASS;
+- protected Maps shared runtime + concurrency 5: PASS;
+- protected Explore E3 r9 marker: PASS.
+
+No building was opened and no player state was mutated by this verification.
+
+Current status:
+**TECHNICAL_REVALIDATION_PASS_USER_ACTION_PENDING**
+
+Only remaining gate before Stage 2.06 LIVE PASS:
+1. open Buildings and calculate candidates;
+2. verify the candidate list/filters;
+3. open one eligible building through the confirmed UI;
+4. if its actual crystal-room count reaches the configured threshold, verify favorite behavior;
+5. rerun the plan and confirm the opened building is no longer offered and is present in active Buildings.
+
+Do not advance Explore to E4 until this live action/state/rerun gate and Explore E3 single-building gate are confirmed.
+
