@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.8
+// @version      1.17.9
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
-// @release-note PRELOGIN_ZERO_GAME_API_R1: до успешного native login userscript не делает ни одного Game API запроса; Maps и Explore без изменений.
+// @release-note TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: пассивный захват штатного auth bootstrap для server collector; userscript не создаёт auth-запросы.
 // @match        https://app.hamsterking.games/*
 // @run-at       document-start
 // @grant        none
@@ -11,9 +11,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.8';
+  const BUILD_VERSION = '1.17.9';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r10-prelogin-zero-api';
+  const HK_CORE_REVISION = 'core-20260921-r11-technical-passive-auth-bridge';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -397,6 +397,7 @@
   let publicCollectorAuthSyncPromise = null;
   let publicCollectorAuthLastFingerprint = '';
   let observedNativeGameAuthParams = null; // PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1
+  let observedNativeGameToken = ''; // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1
   let licenseState = {checked:false, allowed:false, playerId:'', reason:'Проверка лицензии…', update:null, publicCollectorAuthSync:false};
   let licenseCheckPromise = null;
   let lastLicenseCheck = 0;
@@ -931,52 +932,84 @@
     return true;
   }
 
-  function authParamsFromUrl(url, source = 'network') {
+  function authParamsFromUrl(url, source = 'network-url') {
     try {
       const parsed = new URL(String(url || ''), location.href);
       if (parsed.pathname !== '/auth/create') return null;
-      const authType = clean(parsed.searchParams.get('auth_type'));
-      const authData = clean(parsed.searchParams.get('auth_data'));
+      const authType = clean(parsed.searchParams.get('auth_type') || parsed.searchParams.get('authType'));
+      const authData = clean(parsed.searchParams.get('auth_data') || parsed.searchParams.get('authData'));
       const platform = clean(parsed.searchParams.get('platform'));
       if (!authType || !authData || !platform) return null;
       return {authType, authData, platform, source};
     } catch (_) { return null; }
   }
 
-  function captureNativeGameAuthParams(url) {
-    const params = authParamsFromUrl(url, 'network');
+  function authParamsFromBody(body, source = 'network-body') {
+    if (body == null) return null;
+    let value = body;
+    try {
+      if (typeof FormData !== 'undefined' && body instanceof FormData) {
+        value = Object.fromEntries(body.entries());
+      } else if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) {
+        value = Object.fromEntries(body.entries());
+      } else if (typeof body === 'string') {
+        try { value = JSON.parse(body); }
+        catch (_) { value = Object.fromEntries(new URLSearchParams(body).entries()); }
+      }
+    } catch (_) { return null; }
+    if (!value || typeof value !== 'object') return null;
+    const authType = clean(value.auth_type ?? value.authType);
+    const authData = clean(value.auth_data ?? value.authData);
+    const platform = clean(value.platform);
+    if (!authType || !authData || !platform) return null;
+    return {authType, authData, platform, source};
+  }
+
+  function captureNativeGameAuthParams(url, body = null, source = 'network') {
+    let path = '';
+    try { path = new URL(String(url || ''), location.href).pathname; } catch (_) {}
+    if (path !== '/auth/create') return false;
+    const params = authParamsFromUrl(url, `${source}-url`) || authParamsFromBody(body, `${source}-body`);
     if (!params) return false;
     observedNativeGameAuthParams = params;
     return true;
   }
 
-  function readNativeGameAuthParams() {
-    try {
-      const webApp = window.Telegram?.WebApp;
-      const initData = String(webApp?.initData || '');
-      if (webApp && webApp.platform && webApp.platform !== 'unknown' && initData) {
-        return {authType:'MiniApp', authData:initData.replaceAll('&','%26'), platform:'TG', source:'telegram'};
-      }
-    } catch (_) {}
+  function captureNativeGameAuthToken(documentValue) {
+    const token = clean(documentValue?.token);
+    if (!token || jwtExpiration(token) <= Date.now() + 5000) return false;
+    observedNativeGameToken = token;
+    return true;
+  }
 
+  function readNativeGameAuthParams() {
     if (observedNativeGameAuthParams?.authType && observedNativeGameAuthParams?.authData && observedNativeGameAuthParams?.platform) {
       return {...observedNativeGameAuthParams};
     }
 
     try {
+      const webApp = window.Telegram?.WebApp;
+      const initData = String(webApp?.initData || '');
+      if (webApp && webApp.platform && webApp.platform !== 'unknown' && initData) {
+        return {authType:'MiniApp', authData:initData.replaceAll('&','%26'), platform:'TG', source:'telegram-passive'};
+      }
+    } catch (_) {}
+
+    try {
       const stored = JSON.parse(localStorage.getItem('auth-data') || 'null');
       const authType = clean(stored?.params?.auth_type);
       const authData = clean(stored?.params?.auth_data);
+      const platform = clean(stored?.params?.platform || 'WEB');
       const remembered = clean(localStorage.getItem('remember-me'));
       if (authType && authData && remembered === authType) {
-        return {authType, authData, platform:'WEB', source:'browser'};
+        return {authType, authData, platform, source:'browser-storage-passive'};
       }
     } catch (_) {}
 
     try {
       const entries = performance.getEntriesByType('resource').slice().reverse();
       for (const entry of entries) {
-        const params = authParamsFromUrl(entry?.name, 'performance');
+        const params = authParamsFromUrl(entry?.name, 'performance-passive');
         if (!params) continue;
         observedNativeGameAuthParams = params;
         return {...params};
@@ -986,7 +1019,7 @@
     return null;
   }
 
-  async function maybeSyncPublicCollectorAuthorization(token = currentGameBearer()) {
+  async function maybeSyncPublicCollectorAuthorization(token = currentGameBearer() || observedNativeGameToken) {
     token = clean(token);
     if (!licenseState.allowed || !licenseState.publicCollectorAuthSync || !licenseState.token || !token) return false;
     const expiresAt = jwtExpiration(token);
@@ -1040,84 +1073,19 @@
   }
 
   async function refreshGoogleAuthData(params) {
-    if (String(params?.authType || '') !== 'Google') return params;
-    const expiration = jwtExpiration(params.authData);
-    if (expiration > Date.now() + GAME_AUTH_REFRESH_EARLY_MS) return params;
-    const previous = String(params.authData || '');
-    const prompt = window.google?.accounts?.id?.prompt;
-    if (typeof prompt !== 'function') return null;
-    try { prompt.call(window.google.accounts.id); } catch (_) { return null; }
-    const deadline = Date.now() + 6500;
-    while (Date.now() < deadline) {
-      await sleep(250);
-      const next = readNativeGameAuthParams();
-      if (next?.authType !== 'Google' || !next.authData || next.authData === previous) continue;
-      if (jwtExpiration(next.authData) > Date.now() + 5000) return next;
-    }
-    return null;
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: never prompt or refresh Google auth.
+    return params || null;
   }
 
   async function checkGameBearer(token) {
-    if (!token) return false;
-    const request = nativeNetworkFetch || window.fetch.bind(window);
-    const base = apiBase || GAME_API_FALLBACK;
-    try {
-      const {response}=await gameFetchText(request,`${base}/auth/check`,{method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${token}`,Accept:'application/json, text/plain, */*'}},12000);
-      recordDiagnostic('auth-check',{status:response.status, ok:response.ok, fingerprint:diagnosticFingerprint(token)});
-      return response.ok;
-    } catch (error) {
-      recordDiagnostic('auth-check-network-error',{error:error?.message || error});
-      return false;
-    }
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: local expiry check only; no /auth/check.
+    return !!token && jwtExpiration(token) > Date.now() + 5000;
   }
 
   async function createFreshGameAuthorization(reason = 'refresh', expectedToken = '') {
-    if (authCreatePromise) return authCreatePromise;
-    authCreatePromise = (async () => {
-      let params = readNativeGameAuthParams();
-      if (!params) { recordDiagnostic('auth-create-unavailable',{reason}); return ''; }
-      if (params.authType === 'Google') {
-        params = await refreshGoogleAuthData(params);
-        if (!params) { recordDiagnostic('auth-google-refresh-unavailable',{reason}); return ''; }
-      }
-      const base = apiBase || GAME_API_FALLBACK;
-      const url = new URL(`${base}/auth/create`);
-      url.searchParams.set('auth_type', params.authType);
-      url.searchParams.set('auth_data', params.authData);
-      url.searchParams.set('platform', params.platform);
-      recordDiagnostic('auth-create-start',{reason, authType:params.authType, platform:params.platform, source:params.source});
-      const request = nativeNetworkFetch || window.fetch.bind(window);
-      try {
-        const {response,text}=await gameFetchText(request,url,{method:'POST',cache:'no-store',headers:{Accept:'application/json, text/plain, */*'}},15000);
-        let data=null;try{data=JSON.parse(text);}catch(_){}
-        const token = clean(data?.token);
-        if (!response.ok || !token) { recordDiagnostic('auth-create-failed',{reason,status:response.status}); return ''; }
-        if (expectedToken && !sameGameJwt(expectedToken, token)) {
-          recordDiagnostic('auth-identity-mismatch',{reason, expectedPlayerId:gameBearerPlayerId(expectedToken), receivedPlayerId:gameBearerPlayerId(token)});
-          setHealth('auth', false, 'сменился игровой аккаунт');
-          return '';
-        }
-        const knownPlayerId = playerIdentity(playerDocument?.player || {});
-        const receivedPlayerId = gameBearerPlayerId(token);
-        if (knownPlayerId && receivedPlayerId && knownPlayerId !== receivedPlayerId) {
-          recordDiagnostic('auth-player-mismatch',{reason, expectedPlayerId:knownPlayerId, receivedPlayerId});
-          setHealth('auth', false, 'аккаунт не совпадает');
-          return '';
-        }
-        try { sessionStorage.setItem('token', token); } catch (_) {}
-        apiBase = base;
-        apiHeaders = {...apiHeaders, Authorization:`Bearer ${token}`, Accept:'application/json, text/plain, */*', 'Content-Type':'application/json'};
-        authUpdatedAt = Date.now();
-        setHealth('auth', true, 'токен обновлён');
-        recordDiagnostic('auth-create-success',{reason, fingerprint:diagnosticFingerprint(token), playerId:gameBearerPlayerId(token), expiresAt:jwtExpiration(token)});
-        setTimeout(() => { maybeSyncPublicCollectorAuthorization(token).catch(() => {}); }, 0);
-        return token;
-      } catch (error) {
-        recordDiagnostic('auth-create-network-error',{reason,error:error?.message || error});
-        return '';
-      }
-    })();
-    try { return await authCreatePromise; } finally { authCreatePromise = null; }
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: native game exclusively owns /auth/create.
+    recordDiagnostic('auth-create-blocked-passive-only',{reason});
+    return '';
   }
 
   async function ensureGameAuthorization(force = false, reason = 'runtime') {
@@ -2588,10 +2556,16 @@
     window.fetch = async function(input, init) {
       const url = typeof input === 'string' ? input : input?.url;
       const requestHeaders = {...headersToObject(input?.headers), ...headersToObject(init?.headers)};
-      captureNativeGameAuthParams(url);
+      captureNativeGameAuthParams(url, init?.body, 'fetch');
+      if (!observedNativeGameAuthParams && typeof Request !== 'undefined' && input instanceof Request) {
+        try { input.clone().text().then(body => captureNativeGameAuthParams(url, body, 'fetch-request')).catch(() => {}); } catch (_) {}
+      }
       captureAuthorization(url, requestHeaders);
       const response = await nativeFetch(input, init);
       const path = url ? new URL(url, location.href).pathname : '';
+      if (path === '/auth/create' && response.ok) {
+        response.clone().json().then(body => captureNativeGameAuthToken(body)).catch(() => {});
+      }
       if (hkNativeLoginRuntimeStarted && response.ok && isGameApiRequest(url)) hkGameBridge.noteMutation(path, init?.method || input?.method || 'GET');
       if(response.ok && isGameApiRequest(url) && path!=='/player/me') response.clone().json().then(body=>acceptSharedGameResponse(url,body)).catch(()=>{});
       if (path === '/player/me' && response.ok) {
@@ -2615,7 +2589,7 @@
     const send = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.open = function(method, url, ...rest) {
       this.__hkUrl = url; this.__hkMethod = method; this.__hkHeaders = {};
-      captureNativeGameAuthParams(url);
+      captureNativeGameAuthParams(url, null, 'xhr-open');
       return open.call(this, method, url, ...rest);
     };
     XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
@@ -2623,13 +2597,17 @@
       return setHeader.call(this, name, value);
     };
     XMLHttpRequest.prototype.send = function(...args) {
-      if (this.__hkUrl) captureAuthorization(this.__hkUrl, this.__hkHeaders);
+      if (this.__hkUrl) {
+        captureNativeGameAuthParams(this.__hkUrl, args[0], 'xhr-send');
+        captureAuthorization(this.__hkUrl, this.__hkHeaders);
+      }
       if (this.__hkUrl && isGameApiRequest(this.__hkUrl)) {
         this.addEventListener('load', () => {
           if (this.status >= 200 && this.status < 300) {
             try {
               const path = new URL(this.__hkUrl, location.href).pathname;
               const body = JSON.parse(this.responseText);
+              if (path === '/auth/create') captureNativeGameAuthToken(body);
               if (hkNativeLoginRuntimeStarted) hkGameBridge.noteMutation(path, this.__hkMethod || 'GET');
               if(path!=='/player/me')acceptSharedGameResponse(this.__hkUrl,body);
                if (path === '/player/me') {
