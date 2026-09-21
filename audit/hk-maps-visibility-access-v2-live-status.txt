@@ -1,0 +1,7 @@
+MAPS_VISIBILITY_ACCESS_V2_LIVE=PASS
+server_sha256=12f4ea6ee5032bac565015578fd9c174daa235bc138c803eebabfc5bdd9d7556
+catalogue_visible_to_all_members=PASS
+private_map_data_gate=PASS
+single_map_grant=PASS
+userscript_changed=NO
+production_counts={"access_rules": 0, "area_links": 235, "areas": 385, "buildings": 222153, "catalog": 235}
