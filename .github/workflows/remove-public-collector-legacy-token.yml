@@ -1,0 +1,74 @@
+name: Remove Legacy Public Collector Static Token
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-remove-legacy-token-trigger.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-topking-collector-env
+  cancel-in-progress: false
+
+jobs:
+  scrub:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refresh current main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Read fresh live env hash and self-heal marker
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            grep -Fq PUBLIC_COLLECTOR_BOOTSTRAP_SELF_HEAL_R1 /opt/hamsterking-license/public_collector.py
+            test -s /var/lib/hamsterking-license/public-collector-token
+            test -s /var/lib/hamsterking-license/public-collector-auth.json
+            sha256sum /etc/hamsterking-public-collector.env | awk "{print \$1}"
+          ' > /tmp/env-source.sha
+          test "$(wc -l < /tmp/env-source.sha)" = 1
+
+      - name: Race-safe scrub and live war verification
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/scrub_public_collector_legacy_env_token.py \
+            root@89.125.1.71:/tmp/scrub_public_collector_legacy_env_token.py
+          expected="$(cat /tmp/env-source.sha)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "python3 /tmp/scrub_public_collector_legacy_env_token.py '$expected'"
+
+      - name: Verify public output remains healthy
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --retry-delay 1 https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war >/dev/null
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            ! grep -q "^HK_PUBLIC_COLLECTOR_GAME_TOKEN=" /etc/hamsterking-public-collector.env
+            test "$(stat -c %a /etc/hamsterking-public-collector.env)" = 600
+            echo legacy_static_token_removed_live=PASS
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/env-source.sha
