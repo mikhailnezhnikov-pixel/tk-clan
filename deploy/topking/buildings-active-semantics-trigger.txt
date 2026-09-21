@@ -1,1 +1,1 @@
-2026-09-21 inspect slot_index active building semantics
+2026-09-21 inspect relation17767436 state after one-building live attempt
