@@ -111,6 +111,15 @@ try:
             mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
             allowed=bool(mod.public_collector_auth_sync_allowed(str(matched["player_id"])))
             print("technical_auth_sync_allowed="+("yes" if allowed else "no"))
+            try:
+                device_id=str(device["device_id"] if device else "")
+                status,response=mod.license_check(str(matched["player_id"]), device_id, str(device["script_version"] if device else "1.17.11"), "")
+                print("technical_license_check_status="+str(status))
+                print("technical_license_check_allowed="+("yes" if bool(response.get("allowed")) else "no"))
+                print("technical_license_check_auth_sync="+("yes" if bool(response.get("public_collector_auth_sync")) else "no"))
+                print("technical_license_check_token_present="+("yes" if bool(str(response.get("token") or "").strip()) else "no"))
+            except Exception:
+                print("technical_license_check_allowed=unavailable")
         except Exception:
             print("technical_auth_sync_allowed=unavailable")
     db.close()
