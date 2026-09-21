@@ -43,6 +43,32 @@ if present(AUTH_PATH):
 
 print("refresh_backoff_present="+("yes" if os.path.exists(REFRESH_PATH) else "no"))
 
+# Safe check: does the pinned technical identity correspond to a licensed
+# player that has checked in recently? Never print the player ID.
+try:
+    import hashlib, sqlite3
+    expected=open(IDENTITY_PATH,encoding="ascii").read().strip() if present(IDENTITY_PATH) else ""
+    db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
+    db.row_factory=sqlite3.Row
+    matched=None
+    for row in db.execute("SELECT player_id,active,expires_at FROM licenses"):
+        digest=hashlib.sha256(str(row["player_id"]).encode()).hexdigest()
+        if expected and digest==expected:
+            matched=row
+            break
+    print("technical_license_present="+("yes" if matched else "no"))
+    if matched:
+        print("technical_license_active="+("yes" if int(matched["active"] or 0)==1 else "no"))
+        device=db.execute(
+            "SELECT last_seen,script_version FROM devices WHERE player_id=? ORDER BY last_seen DESC LIMIT 1",
+            (matched["player_id"],)
+        ).fetchone()
+        print("technical_last_seen="+str(int(device["last_seen"] or 0) if device else 0))
+        print("technical_script_version="+str(device["script_version"] if device else ""))
+    db.close()
+except Exception as exc:
+    print("technical_license_check=unavailable")
+
 for unit,label in (
     ("hamsterking-public-war.service","war_journal"),
     ("hamsterking-public-collector.service","ratings_journal"),
