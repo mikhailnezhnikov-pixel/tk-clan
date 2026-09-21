@@ -1,8 +1,8 @@
-USERSCRIPT_1_17_24_NATIVE_GAME_PRIORITY=PASS
+USERSCRIPT_1_17_24_NATIVE_PLAY_PERFORMANCE=PASS
 version=1.17.24
 core=core-20260921-r27-businesses-runner-canon
 puzzle_solver=puzzle-solver-v3-embedded-20260921-r1
-native_game_priority=PASS
+native_play_performance=PASS
 background_scan_500ms=PASS
 initial_scan_300ms=PASS
 lights_out_3x3=PASS

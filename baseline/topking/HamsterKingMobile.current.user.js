@@ -2,6 +2,7 @@
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
 // @version      1.17.24
+// @release-note Убраны фоновые лаги: тяжёлый DOM-скан Ям больше не выполняется каждую секунду, а Бизнесы не перерисовываются после каждого нативного действия игры.
 // @release-note Исправлена совместимость с обычной игрой: HK больше не запускает дополнительное обновление player state после нативных действий пользователя.
 // @release-note Встроен фоновый HK Puzzle Solver v3: автоматически показывает порядок нажатий для Lights Out 3×3 и Battle.
 // @release-note Перестановка бизнесов: на desktop «достать» слева, «вставить» справа; T4–T6 полностью защищены от снятия.
@@ -198,9 +199,18 @@
   }
   function setHealth(name, ok, detail = '') {
     if (!healthState[name]) return;
-    healthState[name] = {ok:!!ok, detail:clean(detail || (ok ? 'OK' : 'ошибка'))};
+    const next={ok:!!ok, detail:clean(detail || (ok ? 'OK' : 'ошибка'))};
+    const current=healthState[name];
+    if(current?.ok===next.ok && current?.detail===next.detail) return;
+    healthState[name]=next;
     renderHealth();
   }
+
+  const HK_NATIVE_PLAY_PERF_REV='native-play-performance-20260921-r1';
+  function hkPanelOpen(){return !!panel?.classList?.contains('open');}
+  function hkActiveModule(){return root?.querySelector?.('.hk-page.active')?.dataset?.content || '';}
+  function hkBusinessUiVisible(){return hkPanelOpen() && hkActiveModule()==='business';}
+  function hkPitUiVisible(){return hkPanelOpen() && hkActiveModule()==='pit';}
   function renderHealth() {
     if (!root) return;
     for (const name of ['game','auth','license','server']) {
@@ -1206,7 +1216,7 @@
     if (partial) hkStateStore.merge(documentValue, 'player/me-partial');
     else hkStateStore.replace(playerDocument, 'player/me');
     playerDocument = hkStateStore.snapshot || playerDocument;
-    refreshBusinessData();
+    if(hkBusinessUiVisible()) refreshBusinessData();
     const player = playerDocument.player || {};
     log(`Подключено${player.nickname ? `: ${player.nickname}` : ''}`);
     // Checking access is required to unlock the panel. This does not scan
@@ -2871,7 +2881,10 @@
     let path='';try{path=new URL(String(url||''),location.href).pathname;}catch(_){}
     if(path==='/player/me')return;
     const before=hkStateStore.revision,merged=hkStateStore.merge(documentValue,`game-ui:${path||'response'}`);
-    if(hkStateStore.revision!==before&&merged){playerDocument=merged;try{refreshBusinessData();}catch(_){}}
+    if(hkStateStore.revision!==before&&merged){
+      playerDocument=merged;
+      if(hkBusinessUiVisible())try{refreshBusinessData();}catch(_){}
+    }
   }
 
   const HK_NATIVE_GAME_PRIORITY_REV = 'native-game-priority-no-bridge-race-20260921-r1';
@@ -12402,11 +12415,18 @@
     if (playerDocument) refreshBusinessData();
     applyLanguage();
     setInterval(() => {
-      updatePitStatus();
-      const c=root.querySelector('#hk-connect'); if(c)c.textContent=apiHeaders.Authorization?tr('connectedSlots',{n:layout.length}):tr('waiting');
+      // The old global 1-second tick called pitState() on every screen.
+      // pitState() reads document.body.innerText and scans all buttons/links,
+      // which caused a visible rhythmic hitch even while simply playing.
+      if(pitRunning || hkPitUiVisible()) updatePitStatus();
+      const c=root.querySelector('#hk-connect');
+      if(c){
+        const next=apiHeaders.Authorization?tr('connectedSlots',{n:layout.length}):tr('waiting');
+        if(c.textContent!==next)c.textContent=next;
+      }
       const token=currentGameBearer(); const exp=jwtExpiration(token);
       setHealth('auth', !!token && exp > Date.now()+5000, token ? (exp > Date.now()+5000 ? 'авторизация активна' : 'токен истёк') : 'нет токена');
-    }, 1000);
+    }, 5000);
     setInterval(updateWatermark, 30000);
     hkStartupStage = 'READY';
     disarmStartupErrorTrap();
