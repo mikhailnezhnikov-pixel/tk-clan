@@ -3,7 +3,8 @@
 // @namespace    hamsterking.local
 // @version      1.17.12
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
-// @release-note AUTH_BRIDGE_XHR_TRANSPORT_R1: технический probe/heartbeat используют отдельный XHR к license-серверу; Game API не затрагивается.
+// @release-note Исправлена проверка авторизации после входа в игру.
+// @release-note Улучшена стабильность запуска скрипта после авторизации.
 // @match        https://app.hamsterking.games/*
 // @run-at       document-start
 // @grant        none
@@ -1301,7 +1302,7 @@
       const latest=escapeHtml(update.latest_version || '?');
       updateBox.style.display='block';
       updateBox.className=`hk-update${update.required ? ' required' : ''}`;
-      updateBox.innerHTML=`<b>${either('Доступно обновление','Update available')} ${latest}</b>${update.notes ? `<small>${escapeHtml(update.notes).replace(/\n/g,'<br>')}</small>` : ''}${update.sha256 ? `<small>SHA-256: ${escapeHtml(String(update.sha256).slice(0,16))}…</small>` : ''}<button id="hk-install-update" class="hk-primary">${either('Установить обновление','Install update')}</button>`;
+      updateBox.innerHTML=`<b>${either('Доступно обновление','Update available')} ${latest}</b>${update.notes ? `<small>${escapeHtml(update.notes).replace(/\n/g,'<br>')}</small>` : ''}<button id="hk-install-update" class="hk-primary">${either('Установить обновление','Install update')}</button>`;
       updateBox.querySelector('#hk-install-update').onclick=()=>{
         const notes=clean(update.notes || '');
         const heading=either(`Изменения версии ${latest}:`,`Changes in version ${latest}:`);
