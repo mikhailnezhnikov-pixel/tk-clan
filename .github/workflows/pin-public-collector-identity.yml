@@ -1,0 +1,75 @@
+name: Pin Public Collector Identity
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-identity-trigger.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Pin technical player identity without logging it
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            set -a
+            source /etc/hamsterking-public-collector.env
+            set +a
+            python3 - <<"PY"
+          import hashlib, json, os, urllib.request
+          token=os.environ.get("HK_PUBLIC_COLLECTOR_GAME_TOKEN","").strip()
+          if token.lower().startswith("bearer "): token=token[7:]
+          if not token: raise SystemExit("collector token missing")
+          base=os.environ.get("HK_PUBLIC_COLLECTOR_GAME_API","https://hk-game-api.hwgame.cloud").rstrip("/")
+          req=urllib.request.Request(
+              base+"/player/me",
+              data=b"{}",
+              headers={
+                  "Authorization":"Bearer "+token,
+                  "Accept":"application/json",
+                  "Content-Type":"application/json",
+                  "User-Agent":"TopKing-Identity-Pin/1",
+              },
+              method="POST",
+          )
+          with urllib.request.urlopen(req,timeout=20) as r:
+              doc=json.loads(r.read(5_000_000).decode("utf-8-sig"))
+          player=doc.get("player") if isinstance(doc,dict) and isinstance(doc.get("player"),dict) else doc
+          ident=""
+          if isinstance(player,dict):
+              for key in ("id","player_id","playerId","uuid"):
+                  value=player.get(key)
+                  if value not in (None,""):
+                      ident=str(value).strip()
+                      break
+          if not ident:
+              raise SystemExit("technical player identity unavailable")
+          digest=hashlib.sha256(ident.encode()).hexdigest()
+          path="/var/lib/hamsterking-license/public-collector-identity.sha256"
+          tmp=path+".tmp"
+          with open(tmp,"w",encoding="ascii") as f:
+              f.write(digest+"\n")
+          os.chmod(tmp,0o600)
+          os.replace(tmp,path)
+          print("collector_identity_pinned=yes")
+          PY
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
