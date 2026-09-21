@@ -3,8 +3,8 @@
   const HOST='app.hamsterking.games';
   const CORE_URL='https://hk-license.89.125.1.71.sslip.io/panel.js';
   const LOCK_KEY='__HK_BOOKMARKLET_RUNTIME__';
-  const LOADER_REV='loader-20260921-r12';
-  const EXPECTED_CORE_REV='core-20260921-r15-late-login-handoff';
+  const LOADER_REV='loader-20260921-r13';
+  const EXPECTED_CORE_REV='core-20260921-r16-buildings-ui';
   const TIMEOUTS=[3500,6000,12000,20000];
   const RETRY_DELAYS=[700,1800,4000];
   const runtime=window[LOCK_KEY]||{active:false,promise:null,events:[],startedAt:'',revision:LOADER_REV};
