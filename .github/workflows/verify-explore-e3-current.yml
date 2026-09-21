@@ -149,7 +149,7 @@ jobs:
           print("explore_e3_linger_15s=PASS")
           print("explore_e4_absent=PASS")
           print("protected_buildings_maps_auth=PASS")
-          print("userscript_1_17_19=PASS")
+          print("userscript_1_17_20=PASS")
           print("EXPLORE_E3_R9_CURRENT_REVALIDATION=PASS")
           PY
 
