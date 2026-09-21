@@ -1,0 +1,54 @@
+name: Check Buildings Limit Runner R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/buildings-limit-runner-check-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and verify candidate
+        run: |
+          set -euo pipefail
+          cp baseline/topking/HamsterKingMobile.current.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.16" /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile deploy/topking/patch_buildings_limit_runner_1_17_17.py
+          python3 deploy/topking/patch_buildings_limit_runner_1_17_17.py
+          node --check /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.17.17" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r19-buildings-limit-runner" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-open-limit-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-runner-ui-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "id=\"hk-building-open-limit\"" /tmp/HamsterKingMobile.user.js
+          grep -Fq "Открыть до " /tmp/HamsterKingMobile.user.js
+          grep -Fq "Открыть зданий:" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-run" /tmp/HamsterKingMobile.user.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text()
+          assert "openLimit:[1,10,15,20].includes(parsedLimit)||parsedLimit===0?parsedLimit:1" in s
+          assert "const candidates=limit===0?capacityCandidates:capacityCandidates.slice(0,Math.max(1,limit||1));" in s
+          assert "const selectedRunCount=plan?Math.min(plan.candidates.length,freeCap,settings.openLimit===0?Number.MAX_SAFE_INTEGER:settings.openLimit):0;" in s
+          assert "box.classList.toggle('buildings-run',buildingsRun)" in s
+          assert ".hk-runner.buildings-run .hk-runner-actions button{flex:0 0 auto;width:auto" in s
+          print("default_open_limit_1=PASS")
+          print("open_limit_choices_1_10_15_20_all=PASS")
+          print("runner_buildings_canon=PASS")
+          print("BUILDINGS_LIMIT_RUNNER_R1_PREDEPLOY=PASS")
+          PY
+
+          grep -Fq "buildings-active-semantics-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "maps-shared-runtime-20260921-r7-safe5" /tmp/HamsterKingMobile.user.js
+          grep -Fq "explore-e3-single-20260920-r9-runner" /tmp/HamsterKingMobile.user.js
+          grep -Fq "AUTH_PASSIVE_SAFETY_R1" /tmp/HamsterKingMobile.user.js
