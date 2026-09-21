@@ -112,6 +112,8 @@ def main() -> int:
         "HK_PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS": str(REFRESH_STATUS_PATH),
     })
     seed_token_file()
+    identity_parent = IDENTITY_PATH.parent.stat()
+    os.chown(IDENTITY_PATH, identity_parent.st_uid, identity_parent.st_gid)
     os.chmod(IDENTITY_PATH, 0o600)
 
     subprocess.check_call(["systemctl", "restart", "hamsterking-license.service"])
