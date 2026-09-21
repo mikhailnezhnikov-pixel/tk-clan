@@ -1,1 +1,1 @@
-2026-09-21 verify live license response auth-sync flag
+2026-09-21 verify live userscript 1.17.11 before user update
