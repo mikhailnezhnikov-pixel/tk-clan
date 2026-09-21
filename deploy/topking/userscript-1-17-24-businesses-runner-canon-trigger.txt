@@ -1,0 +1,3 @@
+trigger=businesses-runner-canon-r1
+version=1.17.24
+timestamp=2026-09-21
