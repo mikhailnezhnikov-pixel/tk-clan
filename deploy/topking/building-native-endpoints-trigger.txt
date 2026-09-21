@@ -1,1 +1,1 @@
-2026-09-21 expose native building claim tier-selection method context
+2026-09-21 inspect native player-buildings map construction
