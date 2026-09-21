@@ -25,7 +25,9 @@ jobs:
       - name: Inspect live payload
         run: |
           set -euo pipefail
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 "python3 -c 'import importlib.util,json; p="/opt/hamsterking-license/server.py"; spec=importlib.util.spec_from_file_location("srv",p); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); print("MARKER", "CLAN_SHOP_IDENTITY_RESOLUTION_V6" in open(p,encoding="utf-8").read()); print(json.dumps(m.clan_shop_history_payload(),ensure_ascii=False))'"
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new deploy/topking/inspect_clan_shop_identity_live.py root@89.125.1.71:/tmp/inspect_clan_shop_identity_live.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/inspect_clan_shop_identity_live.py'
+
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking"
