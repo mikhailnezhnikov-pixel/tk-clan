@@ -1,0 +1,9 @@
+USERSCRIPT_1_17_17_BUILDINGS_LIMIT_RUNNER_R1=PASS
+version=1.17.17
+core=core-20260921-r19-buildings-limit-runner
+open_limit=1,10,15,20,all
+default_open_limit=1
+buildings_runner_ui=CANON
+active_semantics=PASS
+maps_safe5=PASS
+explore_e3_r9=PASS
