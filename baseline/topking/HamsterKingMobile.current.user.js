@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.12
+// @version      1.17.13
+// @release-note Исправлено подключение HK, если игра уже успела авторизоваться до запуска панели.
 // @release-note Исправлена проверка авторизации после входа в игру.
 // @release-note Улучшена стабильность запуска скрипта после авторизации.
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
@@ -12,9 +13,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.12';
+  const BUILD_VERSION = '1.17.13';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r14-auth-bridge-xhr';
+  const HK_CORE_REVISION = 'core-20260921-r15-late-login-handoff';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -68,7 +69,7 @@
       bootstrapButton.style.cssText = 'position:fixed;right:16px;bottom:90px;z-index:2147483647;border:0;border-radius:50%;width:58px;height:58px;background:#ff9f1c;color:#16110a;font:bold 20px Arial;box-shadow:0 8px 24px #0008';
       bootstrapButton.onclick = () => alert(bootstrapProblem+'\nrev='+HK_CORE_REVISION+'\nstage='+hkStartupStage);
     }
-    bootstrapButton.textContent = problem ? 'HK!' : 'HK6';
+    bootstrapButton.textContent = problem ? 'HK!' : 'HK…';
     const host = document.documentElement || document.head;
     if (host && !bootstrapButton.isConnected) host.appendChild(bootstrapButton);
   }
@@ -93,7 +94,9 @@
     hkStartupStage === 'BOOT' ||
     hkStartupStage === 'WAIT_BODY' ||
     hkStartupStage === 'BODY' ||
-    hkStartupStage === 'RENDER'
+    hkStartupStage === 'RENDER' ||
+    hkStartupStage === 'WAIT_NATIVE_LOGIN' ||
+    hkStartupStage === 'LATE_HANDOFF'
   );
 
   const hkStartupErrorHandler = event => {
@@ -11919,18 +11922,86 @@
   const HK_NATIVE_LOGIN_GATE_REV = 'login-gate-hotfix-20260920-r2';
   const HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3';
   const HK_LAUNCHER_HANDOFF_REV = 'launcher-handoff-20260920-r4';
+  const HK_LATE_LOGIN_HANDOFF_REV = 'late-login-handoff-20260921-r1';
   let hkNativeLoginRuntimeStarted = false;
+  let hkLateLoginHandoffAttempts = 0;
+  let hkLateLoginHandoffBusy = false;
+  let hkLateLoginHandoffNextAt = 0;
+  const hkLateLoginHandoffStartedAt = Date.now();
 
   function hkNativeGameLoginReady() {
     // PRELOGIN_ZERO_GAME_API_R1
-    // Fail closed. The gate opens only after the native game itself has made
-    // an authenticated /player/me that our passive network observer captured.
+    // Normal path: the native game itself made an authenticated /player/me and
+    // our passive observer captured both the response and its bearer.
     return !!(playerDocument && apiHeaders.Authorization);
   }
 
-  function startAfterNativeGameLogin() {
+  function hkPriorNativePlayerMeEvidence() {
+    try {
+      const allowedOrigins = new Set([new URL(GAME_API_FALLBACK).origin]);
+      if (apiBase) allowedOrigins.add(new URL(apiBase).origin);
+      for (const entry of performance.getEntriesByType('resource').slice().reverse()) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.pathname === '/player/me' && allowedOrigins.has(url.origin)) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  async function hkTryLateLoginHandoff() {
+    if (hkNativeGameLoginReady() || hkLateLoginHandoffBusy) return hkNativeGameLoginReady();
+    if (Date.now() < hkLateLoginHandoffNextAt || hkLateLoginHandoffAttempts >= 6) return false;
+
+    restoreGameApiBaseFromPerformance();
+    refreshStoredGameAuthorization();
+    const token = currentGameBearer();
+    const tokenReady = !!token && jwtExpiration(token) > Date.now() + 5000;
+    const nativePlayerMeSeen = hkPriorNativePlayerMeEvidence();
+    const nativeAuthParams = readNativeGameAuthParams();
+    const storageFallbackReady =
+      Date.now() - hkLateLoginHandoffStartedAt >= 2500 &&
+      !!nativeAuthParams?.authType &&
+      !!nativeAuthParams?.authData &&
+      tokenReady;
+
+    // We never create a game session here. Late handoff is allowed only after
+    // evidence that the native game has already authenticated, then performs
+    // one read-only /player/me to recover state missed by a late bookmarklet.
+    if (!tokenReady || (!nativePlayerMeSeen && !storageFallbackReady)) return false;
+
+    hkLateLoginHandoffBusy = true;
+    hkLateLoginHandoffAttempts += 1;
+    hkLateLoginHandoffNextAt = Date.now() + 1500;
+    hkStartupStage = 'LATE_HANDOFF';
+    recordDiagnostic('late-login-handoff-attempt', {
+      revision:HK_LATE_LOGIN_HANDOFF_REV,
+      attempt:hkLateLoginHandoffAttempts,
+      nativePlayerMeSeen,
+      authSource:nativeAuthParams?.source || '',
+      tokenFingerprint:diagnosticFingerprint(token),
+    });
+    try {
+      const ok = await bootstrapLateGameConnection();
+      recordDiagnostic('late-login-handoff-result', {ok, attempt:hkLateLoginHandoffAttempts});
+      return !!ok && hkNativeGameLoginReady();
+    } finally {
+      hkLateLoginHandoffBusy = false;
+      if (!hkNativeGameLoginReady()) hkStartupStage = 'WAIT_NATIVE_LOGIN';
+    }
+  }
+
+  async function startAfterNativeGameLogin() {
     if (hkNativeLoginRuntimeStarted) return;
     if (!hkNativeGameLoginReady()) {
+      hkStartupStage = 'WAIT_NATIVE_LOGIN';
+      try {
+        if (await hkTryLateLoginHandoff()) {
+          setTimeout(startAfterNativeGameLogin, 0);
+          return;
+        }
+      } catch (error) {
+        recordDiagnostic('late-login-handoff-error',{error:error?.message || error});
+      }
       setTimeout(startAfterNativeGameLogin, 500);
       return;
     }

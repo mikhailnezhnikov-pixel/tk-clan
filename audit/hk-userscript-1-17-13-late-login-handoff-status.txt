@@ -1,0 +1,6 @@
+USERSCRIPT_1_17_13_LATE_LOGIN_HANDOFF=PASS
+version=1.17.13
+core=core-20260921-r15-late-login-handoff
+passive_auth_create=PASS
+maps_safe5=PASS
+explore_e3_r9=PASS
