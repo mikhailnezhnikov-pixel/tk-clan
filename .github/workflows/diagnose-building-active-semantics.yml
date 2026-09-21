@@ -106,6 +106,27 @@ jobs:
               print("slot_index_unique="+str(len(set(slot_vals))))
           active_scalar=player.get("player_active_building")
           print("player_active_building_scalar="+str(active_scalar))
+          active_rows=[r for r in rows if isinstance(r,dict) and r.get("next_tier_level") is not None]
+          favorites=[r for r in rows if isinstance(r,dict) and r.get("is_favorite") is True]
+          active_favorites=[r for r in active_rows if r.get("is_favorite") is True]
+          tier0=[r for r in rows if isinstance(r,dict) and r.get("tier")==0]
+          active_tier0=[r for r in active_rows if r.get("tier")==0]
+          favorite_tier0=[r for r in favorites if r.get("tier")==0]
+          active_favorite_tier0=[r for r in active_favorites if r.get("tier")==0]
+          print("post_action_owned_rows="+str(len(rows)))
+          print("post_action_active_rows="+str(len(active_rows)))
+          print("post_action_favorites="+str(len(favorites)))
+          print("post_action_active_favorites="+str(len(active_favorites)))
+          print("post_action_tier0="+str(len(tier0)))
+          print("post_action_active_tier0="+str(len(active_tier0)))
+          print("post_action_favorite_tier0="+str(len(favorite_tier0)))
+          print("post_action_active_favorite_tier0="+str(len(active_favorite_tier0)))
+          if active_favorite_tier0:
+              vals=active_favorite_tier0
+              levels=sorted(set(r.get("level") for r in vals))
+              nexts=sorted(set(r.get("next_tier_level") for r in vals if r.get("next_tier_level") is not None))
+              print("post_action_active_favorite_tier0_levels="+",".join(map(str,levels[:20])))
+              print("post_action_active_favorite_tier0_next_levels="+",".join(map(str,nexts[:20])))
 
           target_id="relation17767436"
           target=next((r for r in rows if isinstance(r,dict) and str(r.get("id") or r.get("building_id") or "")==target_id),None)
