@@ -1,1 +1,1 @@
-2026-09-21 final runtime verify after bootstrap self-heal and legacy token removal\n
+2026-09-21 verify final runtime after diagnostic auth-probe removal
