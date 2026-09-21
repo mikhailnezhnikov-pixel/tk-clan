@@ -371,6 +371,41 @@
       position:absolute;inset:0;z-index:5;overflow:hidden;border-radius:inherit
     }
     .battle-canvas canvas{display:block;width:100%!important;height:100%!important}
+    .battle-art-layer{position:absolute;inset:0;z-index:9;overflow:hidden;pointer-events:none}
+    .battle-art{
+      position:absolute;bottom:-2%;width:min(38%,430px);height:auto;object-fit:contain;
+      transform-origin:50% 78%;will-change:transform,filter,opacity;
+      filter:drop-shadow(0 22px 24px rgba(0,0,0,.65));
+      -webkit-mask-image:radial-gradient(ellipse 75% 82% at 50% 54%,#000 58%,rgba(0,0,0,.95) 72%,transparent 98%);
+      mask-image:radial-gradient(ellipse 75% 82% at 50% 54%,#000 58%,rgba(0,0,0,.95) 72%,transparent 98%)
+    }
+    .battle-art-ours{left:7%;animation:battleArtOur 3.2s cubic-bezier(.4,0,.2,1) infinite}
+    .battle-art-enemy{right:6%;transform:scaleX(-1);animation:battleArtEnemy 3.2s cubic-bezier(.4,0,.2,1) infinite}
+    .battle-art-impact{
+      position:absolute;left:50%;top:52%;width:26px;height:26px;border-radius:50%;
+      transform:translate(-50%,-50%);opacity:0;
+      background:#fff;
+      box-shadow:0 0 18px #fff,0 0 46px rgba(232,182,84,.95),0 0 90px var(--war-accent);
+      animation:battleArtImpact 3.2s ease-out infinite
+    }
+    .battle-stage[data-opponent-kind="bot"] .battle-art-enemy{width:min(42%,470px);right:3%}
+    @keyframes battleArtOur{
+      0%,30%,100%{transform:translate3d(0,0,0) rotate(-1deg) scale(1)}
+      42%{transform:translate3d(16px,-5px,0) rotate(1deg) scale(1.015)}
+      54%{transform:translate3d(74px,-4px,0) rotate(4deg) scale(1.035)}
+      65%{transform:translate3d(22px,1px,0) rotate(-1deg) scale(1.01)}
+    }
+    @keyframes battleArtEnemy{
+      0%,34%,100%{transform:translate3d(0,0,0) scaleX(-1) rotate(-1deg)}
+      46%{transform:translate3d(-15px,-4px,0) scaleX(-1) rotate(1deg) scale(1.015)}
+      58%{transform:translate3d(-70px,-3px,0) scaleX(-1) rotate(4deg) scale(1.03)}
+      68%{transform:translate3d(-20px,1px,0) scaleX(-1) rotate(-1deg) scale(1.01)}
+    }
+    @keyframes battleArtImpact{
+      0%,52%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
+      58%{opacity:1;transform:translate(-50%,-50%) scale(1.7)}
+      67%,100%{opacity:0;transform:translate(-50%,-50%) scale(5)}
+    }
     .battle-v2-overlay{
       position:absolute;inset:0;z-index:12;pointer-events:none;
       display:grid;grid-template-columns:minmax(0,1fr) 210px minmax(0,1fr);
@@ -428,6 +463,9 @@
       .battle-v2-center{padding:7px 6px;border-radius:11px}
       .battle-v2-center b{width:34px;height:34px;margin-top:-25px;font-size:12px}
       .battle-v2-center strong{font-size:8px}.battle-v2-center span{font-size:7px}
+      .battle-art{width:min(46%,290px);bottom:1%}
+      .battle-art-ours{left:-1%}.battle-art-enemy{right:-2%}
+      .battle-stage[data-opponent-kind="bot"] .battle-art-enemy{width:min(49%,310px);right:-4%}
       .battle-side{bottom:18px;width:39%}
       .battle-side-ours{left:1%}.battle-side-enemy{right:1%}
       .battle-unit{width:118px;height:142px}
@@ -446,7 +484,7 @@
       .battle-side-role{font-size:8px;padding:4px 7px}
     }
     @media(prefers-reduced-motion:reduce){
-      .war-health-fill:after,.battle-smoke,.battle-heat,.spark,.battle-stage img,.battle-unit,.battle-unit-aura,.battle-unit-weapon,.battle-clash-ring,.battle-projectile,.battle-impact{animation:none!important}
+      .war-health-fill:after,.battle-smoke,.battle-heat,.spark,.battle-stage img,.battle-unit,.battle-unit-aura,.battle-unit-weapon,.battle-clash-ring,.battle-projectile,.battle-impact,.battle-art,.battle-art-impact{animation:none!important}
     }
   </style>
 </head>
@@ -507,6 +545,12 @@
         <div class="battle-heat"></div>
 
         <div id="battle-canvas" class="battle-canvas" aria-hidden="true"></div>
+
+        <div class="battle-art-layer" aria-hidden="true">
+          <img id="battle-art-ours" class="battle-art battle-art-ours" src="../assets/war/units/topking-action.webp" alt="">
+          <img id="battle-art-enemy" class="battle-art battle-art-enemy" src="../assets/war/units/raider-action.webp" alt="">
+          <div class="battle-art-impact"></div>
+        </div>
 
         <div class="battle-v2-overlay">
           <div class="battle-v2-side battle-v2-side-ours">
@@ -659,6 +703,15 @@ function renderBattleScene(war,info){
   document.getElementById('battle-enemy-name').textContent=enemy;
   document.getElementById('battle-enemy-role').textContent=kind==='bot'?'БОТ / БОСС':'ПРОТИВНИК';
   document.getElementById('battle-enemy-style').textContent=kind==='bot'?'Автоматический противник':'Клан противника';
+
+  const enemyArt=document.getElementById('battle-art-enemy');
+  if(enemyArt){
+    const isRaider=normalizeOpponent(enemy)==='шпана с окраины'||info.theme==='raiders';
+    enemyArt.src=kind==='bot'
+      ?'../assets/war/units/boss-action.webp'
+      :(isRaider?'../assets/war/units/raider-action.webp':'../assets/war/units/raider-action.webp');
+    enemyArt.alt='';
+  }
 
   const opponentHpMax=Number(war?.opponent_hp_max);
   const ourHpMax=Number(war?.our_hp_max);
