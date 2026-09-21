@@ -1,0 +1,140 @@
+name: Verify TopKing Buildings Canon R1 Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/buildings-r1-live-verify-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-topking-buildings-r1-live
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch live and public userscript
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.js
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?buildings-live-verify=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/live.js
+          node --check /tmp/public.js
+          cmp -s /tmp/live.js /tmp/public.js
+          cmp -s /tmp/live.js baseline/topking/HamsterKingMobile.current.user.js
+          echo live_public_baseline_equality=PASS
+
+      - name: Verify Buildings r1 action contract without mutations
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          s=Path('/tmp/live.js').read_text(encoding='utf-8')
+
+          required=[
+              "// @version      1.17.12",
+              "const BUILD_VERSION = '1.17.12';",
+              "const HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1';",
+              "async function buildingCanonBuildPlan(refreshPlayer=true)",
+              "async function buildingCanonOpen(buildingId)",
+              "async function buildingCanonFavorite(buildingId)",
+              "async function runBuildingsCanonical()",
+              "hkMutationGate.run('/player/building'",
+              "/player/building/favorite/add?building_id=",
+              "hkAuthoritativePlayerRead('buildings:plan')",
+              "hkAuthoritativePlayerRead('buildings:before-open')",
+              "hkAuthoritativePlayerRead('buildings:after-open')",
+              "hkAuthoritativePlayerRead('buildings:complete')",
+              "hkAuthoritativePlayerRead('buildings:error-reread')",
+              "id=\"hk-building-plan\"",
+              "id=\"hk-building-run\"",
+              "maps-shared-runtime-20260921-r7-safe5",
+              "const HK_MAP_READ_CONCURRENCY = 5;",
+              "explore-e3-single-20260920-r9-runner",
+              "AUTH_PASSIVE_SAFETY_R1",
+          ]
+          missing=[x for x in required if x not in s]
+          if missing:
+              raise SystemExit("missing required markers: "+repr(missing))
+
+          def block(start,end):
+              a=s.index(start)
+              b=s.index(end,a)
+              return s[a:b]
+
+          plan=block("async function buildingCanonBuildPlan(refreshPlayer=true)","function buildingCanonActualMetrics")
+          assert "active.has(buildingId)" in plan
+          assert "settings.buildingType==='investment'" in plan
+          assert "settings.buildingType==='normal'" in plan
+          assert "crystals<settings.minCrystals" in plan
+          assert "mapServerJson('/detail'" in plan
+
+          opener=block("async function buildingCanonOpen(buildingId)","async function buildingCanonFavorite")
+          assert "hkMutationGate.run('/player/building'" in opener
+          assert "apiJsonCore(path,'POST'" in opener
+
+          runner=block("async function runBuildingsCanonical()","function accountBuildingRows")
+          order=[
+              "buildingCanonBuildPlan(true)",
+              "confirm(either(",
+              "hkAuthoritativePlayerRead('buildings:before-open')",
+              "buildingCanonOpen(candidate.buildingId)",
+              "buildingCanonActualMetrics(result,candidate)",
+              "buildingCanonFavorite(candidate.buildingId)",
+              "hkAuthoritativePlayerRead('buildings:after-open')",
+              "hkAuthoritativePlayerRead('buildings:complete')",
+              "buildingCanonBuildPlan(false)",
+          ]
+          positions=[runner.find(x) for x in order]
+          if any(x < 0 for x in positions) or positions != sorted(positions):
+              raise SystemExit("Buildings runner ordering regression: "+repr(positions))
+          assert "metrics.crystals>=buildingCanonPlan.settings.favoriteFrom" in runner
+          assert "liveCapacity.free!==null&&liveCapacity.free<=0" in runner
+          assert "hkRunner.signal?.aborted" in runner
+          assert "hkRunner.waitIfPaused()" in runner
+
+          ui=block("function renderBuildings()","async function refreshBuildings")
+          assert "data-building-read=" in ui
+          assert "#hk-building-plan" in ui
+          assert "#hk-building-run" in ui
+          assert "buildingCanonPreparePlan(true)" in ui
+          assert "runBuildingsCanonical()" in ui
+
+          assert "PUBLIC_COLLECTOR_AUTH_PROBE_URL" not in s
+          assert "/api/v1/public-collector/auth-probe" not in s
+
+          print("buildings_marker=PASS")
+          print("buildings_plan_filters=PASS")
+          print("buildings_active_exclusion=PASS")
+          print("buildings_mutation_gate=PASS")
+          print("buildings_favorite_threshold=PASS")
+          print("buildings_authoritative_rereads=PASS")
+          print("buildings_pause_stop=PASS")
+          print("buildings_ui_wiring=PASS")
+          print("protected_maps_explore=PASS")
+          print("userscript_1_17_12=PASS")
+          print("BUILDINGS_CANON_R1_TECHNICAL_REVALIDATION=PASS")
+          PY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.js /tmp/public.js
