@@ -1,1 +1,1 @@
-2026-09-21 rerun building active semantics diagnostic after quoting fix
+2026-09-21 inspect slot_index active building semantics
