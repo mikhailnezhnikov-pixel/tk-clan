@@ -1,3 +1,4 @@
-war http_error 401 ctype application/json; charset=utf-8 bytes 104 sha16 e015e9b99e1fe626 retry_after 
-clan_leaderboard http_error 401 ctype application/json; charset=utf-8 bytes 104 sha16 6f665cdb09e19efb retry_after 
-player_me http_error 401 ctype application/json; charset=utf-8 bytes 104 sha16 60e3fa2a7d1a2b79 retry_after 
+token_claims {"exp":1789952446}
+war status 200 ctype application/json; charset=utf-8 bytes_read 468 sha16 11ecc822ed585753
+clan_leaderboard status 200 ctype application/json; charset=utf-8 bytes_read 1024 sha16 5db64086a0be5bd9
+player_me transport_error NameError
