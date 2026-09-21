@@ -1125,3 +1125,19 @@ Current status:
 
 Next gate is the real one-building action test. Do not enable E4 before user PASS.
 
+## E3 r9 — USER LIVE PASS / speed refinement requested (2026-09-21)
+
+User confirmed the one-building E3 action path works correctly and the staged runner tracks execution as expected.
+
+Therefore the functional E3 single-building gate is:
+**LIVE PASS**
+
+User requested only a modest speed increase. This is treated as a timing refinement, not a functional E3 rework.
+
+Constraints for the refinement:
+- do not remove authoritative rereads;
+- do not change mutation serialization;
+- do not enable network retry for mutations;
+- do not change battle/remort/Instant MAX logic;
+- do not enable E4 in the same change.
+
