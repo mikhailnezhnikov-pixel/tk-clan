@@ -239,3 +239,53 @@ Remaining live gate:
 
 Do not advance Explore to E4 until this action/state/rerun gate and Explore E3 single-building gate are confirmed.
 
+## Buildings open-limit + runner UI r1 — userscript 1.17.17 (2026-09-21)
+
+User live feedback identified two usability/safety gaps:
+- the global runner block visually did not follow the current Buildings UI canon;
+- there was no explicit cap on how many eligible buildings a run could open.
+
+Delivered in userscript `1.17.17`:
+- core: `core-20260921-r19-buildings-limit-runner`;
+- marker: `buildings-open-limit-20260921-r1`;
+- marker: `buildings-runner-ui-20260921-r1`;
+- new **Open limit** selector: `1 / 10 / 15 / 20 / All available`;
+- default limit is **1** for safe manual/live validation;
+- selected limit is persisted in Buildings settings;
+- execution list is clipped by both free active slots and the selected limit;
+- confirmation now states the exact run size versus total candidates;
+- plan now shows **To open / К запуску** separately from total candidates;
+- run button reflects the limit, e.g. `Открыть до 10`;
+- Buildings runner has its own compact canonical styling;
+- runner state shows progress like `Выполняется · 3/10`;
+- runner action buttons are compact on desktop and responsive on mobile.
+
+Safety:
+- Buildings active-slot semantics r1 preserved;
+- opening/favorite mutation path preserved;
+- default run cannot accidentally open the full candidate set;
+- Maps shared runtime + concurrency 5 preserved;
+- Explore E3 r9 preserved;
+- passive auth safety preserved.
+
+Verification:
+- predeploy run `35569077513`: PASS;
+- deploy/public round-trip run `35569168241`: PASS;
+- loader core-r19 verification run `35569276675`: PASS;
+- Buildings live verification run `35569279946`: PASS;
+- `buildings_open_limit=PASS`;
+- `buildings_runner_canon=PASS`;
+- public E2E run `35569283445`: PASS.
+
+Current status:
+**LIMIT_RUNNER_R1_LIVE_CANDIDATE_USER_ACTION_CHECK_PENDING**
+
+Next live gate:
+1. reload game/HK;
+2. open Buildings;
+3. confirm Open limit defaults to 1 and offers 1/10/15/20/All available;
+4. calculate candidates and confirm `К запуску` matches the selected limit/free slots;
+5. run with limit 1;
+6. verify canonical runner appearance and one-building execution;
+7. recalculate and confirm the opened building is no longer offered.
+
