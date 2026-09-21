@@ -4,9 +4,16 @@ on:
   push:
     paths:
       - 'deploy/topking/public-output-e2e-trigger.txt'
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: verify-public-wars-ratings-e2e
+  cancel-in-progress: true
 
 jobs:
   verify:
