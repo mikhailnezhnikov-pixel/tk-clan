@@ -87,6 +87,14 @@ try:
         ).fetchone()
         print("technical_last_seen="+str(int(device["last_seen"] or 0) if device else 0))
         print("technical_script_version="+str(device["script_version"] if device else ""))
+        try:
+            import importlib.util
+            spec=importlib.util.spec_from_file_location("hk_license_runtime","/opt/hamsterking-license/server.py")
+            mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+            allowed=bool(mod.public_collector_auth_sync_allowed(str(matched["player_id"])))
+            print("technical_auth_sync_allowed="+("yes" if allowed else "no"))
+        except Exception:
+            print("technical_auth_sync_allowed=unavailable")
     db.close()
 except Exception as exc:
     print("technical_license_check=unavailable")
