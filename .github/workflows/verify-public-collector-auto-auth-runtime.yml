@@ -1,0 +1,63 @@
+name: Verify Public Collector Auto Auth Runtime
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-auto-auth-runtime-trigger.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Read safe runtime state
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 - <<"PY"
+          import base64, json, os, time
+          token_path="/var/lib/hamsterking-license/public-collector-token"
+          auth_path="/var/lib/hamsterking-license/public-collector-auth.json"
+          identity_path="/var/lib/hamsterking-license/public-collector-identity.sha256"
+          refresh_path="/var/lib/hamsterking-license/public-collector-auth-refresh.json"
+          print("identity_present=" + ("yes" if os.path.getsize(identity_path)>0 else "no") if os.path.exists(identity_path) else "identity_present=no")
+          print("token_present=" + ("yes" if os.path.exists(token_path) and os.path.getsize(token_path)>0 else "no"))
+          if os.path.exists(token_path) and os.path.getsize(token_path)>0:
+              token=open(token_path,encoding="utf-8").read().strip()
+              try:
+                  part=token.split(".")[1]; part += "="*(-len(part)%4)
+                  claims=json.loads(base64.urlsafe_b64decode(part.encode()).decode())
+                  exp=int(claims.get("exp") or 0)
+              except Exception:
+                  exp=0
+              print("token_exp="+str(exp))
+              print("token_seconds_left="+str(exp-int(time.time()) if exp else 0))
+          print("bootstrap_present=" + ("yes" if os.path.exists(auth_path) and os.path.getsize(auth_path)>0 else "no"))
+          if os.path.exists(auth_path) and os.path.getsize(auth_path)>0:
+              try: doc=json.load(open(auth_path,encoding="utf-8"))
+              except Exception: doc={}
+              print("bootstrap_auth_type="+str(doc.get("auth_type","")))
+              print("bootstrap_platform="+str(doc.get("platform","")))
+              print("bootstrap_updated_at="+str(doc.get("updated_at",0)))
+          print("refresh_backoff_present=" + ("yes" if os.path.exists(refresh_path) else "no"))
+          PY
+          echo '=== latest war collector ==='
+          journalctl -u hamsterking-public-war.service -n 8 --no-pager | grep -E 'public-collector|Starting|Finished' || true
+          echo '=== latest ratings collector ==='
+          journalctl -u hamsterking-public-collector.service -n 8 --no-pager | grep -E 'public-collector|Starting|Finished' || true
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
