@@ -1,0 +1,69 @@
+name: Check Explore E3 Speed R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/explore-e3-speed-check-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and verify candidate
+        run: |
+          set -euo pipefail
+          cp baseline/topking/HamsterKingMobile.current.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.19" /tmp/HamsterKingMobile.user.js
+
+          python3 -m py_compile deploy/topking/patch_explore_e3_speed_1_17_20.py
+          python3 deploy/topking/patch_explore_e3_speed_1_17_20.py
+          node --check /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.17.20" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r22-explore-speed-tune" /tmp/HamsterKingMobile.user.js
+          grep -Fq "explore-e3-speed-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "Задержки выполнения" /tmp/HamsterKingMobile.user.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text()
+
+          assert "actionDelayMinMs=legacyDefaultSpeed?700" in s
+          assert "actionDelayMaxMs=legacyDefaultSpeed?2000" in s
+          assert "battleDelayMs=legacyDefaultSpeed?700" in s
+          assert "x.speedProfileRev=HK_EXPLORE_SPEED_REV;" in s
+          assert "betweenBuildingsDelayMinMs:clamp(x.betweenBuildingsDelayMinMs,0,120000,2000)" in s
+          assert "betweenBuildingsDelayMaxMs:clamp(x.betweenBuildingsDelayMaxMs,0,120000,7000)" in s
+
+          # Action mechanics and safety remain in place.
+          for marker in [
+              "async function exploreE3ProcessOne(initial,settings)",
+              "async function runExploreE3Single()",
+              "exploreE3Reconcile(buildingId,reason)",
+              "/player/building/fast_completion",
+              "/player/battle/fast",
+              "/player/building/remort?building_id=",
+              "/player/building/fast_remort",
+              "const HK_MAP_READ_CONCURRENCY = 5;",
+              "maps-shared-runtime-20260921-r7-safe5",
+              "const HK_BUILDINGS_NATIVE_SYNC_REV = 'buildings-native-sync-20260921-r1';",
+              "AUTH_PASSIVE_SAFETY_R1",
+          ]:
+              assert marker in s
+
+          for forbidden in ["runExploreE4","EXPLORE_E4","explore-e4","Запустить очередь E4"]:
+              assert forbidden not in s
+
+          print("legacy_default_migration_1000_3000_1000_to_700_2000_700=PASS")
+          print("between_buildings_delay_unchanged=PASS")
+          print("explore_e3_action_logic_preserved=PASS")
+          print("explore_e4_absent=PASS")
+          print("EXPLORE_E3_SPEED_R1_PREDEPLOY=PASS")
+          PY
