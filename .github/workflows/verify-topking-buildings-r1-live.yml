@@ -125,7 +125,7 @@ jobs:
           assert "hkRunner.signal?.aborted" in runner
           assert "hkRunner.waitIfPaused()" in runner
           assert "if(!source.length)" in runner
-          assert "Подходящих неактивных зданий нет." in runner
+          assert "Подходящих неоткрытых зданий нет." in runner
           assert "Подходящие здания есть, но свободных активных слотов нет." in runner
           assert "const capacityCandidates=capacity.free===null?source:source.slice(0,capacity.free);" in runner
           assert "const limit=Number(buildingCanonPlan.settings?.openLimit);" in runner
@@ -177,7 +177,7 @@ jobs:
           print("buildings_claim_postcondition=PASS")
           print("buildings_favorite_postcondition=PASS")
           print("protected_maps_explore=PASS")
-          print("userscript_1_17_17=PASS")
+          print("userscript_1_17_18=PASS")
           print("BUILDINGS_CANON_R1_TECHNICAL_REVALIDATION=PASS")
           PY
 
