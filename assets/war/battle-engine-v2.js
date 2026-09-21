@@ -499,6 +499,10 @@
       world=new PIXI.Container();world.label='Battle world';
       atmosphere=createAtmosphere();atmosphere.label='Atmosphere';
       fightersLayer=new PIXI.Container();fightersLayer.label='Fighters';
+      // V3 art characters are rendered by the HTML art layer; keep the procedural
+      // Pixi fighters only as hidden timing rigs so their GSAP timeline continues
+      // to drive impact particles/camera shake without double-drawing characters.
+      fightersLayer.visible=false;
       effectsLayer=new PIXI.Container();effectsLayer.label='Impact effects';
       hudLayer=new PIXI.Container();hudLayer.label='Canvas HUD';
       world.addChild(atmosphere,fightersLayer,effectsLayer,hudLayer);
@@ -565,5 +569,5 @@
     app=null;ready=false;initPromise=null;
   }
 
-  window.TopKingBattleV2={init,update,destroy,version:'2.0.0'};
+  window.TopKingBattleV2={init,update,destroy,version:'3.0.0-art'};
 })();
