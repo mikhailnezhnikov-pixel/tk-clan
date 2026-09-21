@@ -19,10 +19,17 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import re, urllib.request, urllib.parse
+          import re, urllib.request, urllib.parse, json
 
           base='https://app.hamsterking.games/'
-          html=urllib.request.urlopen(base,timeout=20).read().decode('utf-8','ignore')
+          version_url='https://cdn-prod-route-service.hwgame.cloud/version'
+          route=json.loads(urllib.request.urlopen(version_url,timeout=20).read().decode('utf-8','ignore'))
+          build=route.get('client_build')
+          page='app.html' if build is None else f'app_{int(build)}.html'
+          page_url=urllib.parse.urljoin(base,page)
+          print('client_build='+str(build))
+          print('page='+page)
+          html=urllib.request.urlopen(page_url,timeout=20).read().decode('utf-8','ignore')
           candidates=[]
           candidates += re.findall(r'<script[^>]+src=["\']([^"\']+)["\']',html,re.I)
           candidates += re.findall(r'<link[^>]+href=["\']([^"\']+\.js(?:\?[^"\']*)?)["\']',html,re.I)
