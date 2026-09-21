@@ -246,6 +246,57 @@ try:
 except Exception:
     print("nginx_runtime_wiring=unavailable")
 
+# Inspect only non-secret runtime routing/path settings.
+try:
+    identity_env=""
+    if main_pid and main_pid!="0":
+        raw=open(f"/proc/{int(main_pid)}/environ","rb").read(2_000_000)
+        for item in raw.split(b"\\x00"):
+            if item.startswith(b"HK_PUBLIC_COLLECTOR_IDENTITY_FILE="):
+                identity_env=item.split(b"=",1)[1].decode("utf-8","replace")
+                break
+    print("license_service_identity_env_present="+("yes" if identity_env else "no"))
+    print("license_service_identity_env_default="+("yes" if (not identity_env or identity_env==IDENTITY_PATH) else "no"))
+except Exception:
+    print("license_service_identity_env_check=unavailable")
+
+try:
+    nginx_files=[]
+    for base in ("/etc/nginx/nginx.conf","/etc/nginx/sites-enabled","/etc/nginx/conf.d"):
+        if os.path.isfile(base):
+            nginx_files.append(base)
+        elif os.path.isdir(base):
+            for name in sorted(os.listdir(base)):
+                path=os.path.join(base,name)
+                if os.path.isfile(path):
+                    nginx_files.append(path)
+    proxy_targets=[]
+    license_config_files=0
+    for path in nginx_files:
+        try:
+            text_value=open(path,encoding="utf-8",errors="replace").read()
+        except OSError:
+            continue
+        if "hk-license.89.125.1.71.sslip.io" in text_value:
+            license_config_files += 1
+        import re
+        for target in re.findall(r"\\bproxy_pass\\s+(https?://[^;\\s]+)",text_value):
+            if target not in proxy_targets:
+                proxy_targets.append(target)
+    print("nginx_file_proxy_targets="+json.dumps(proxy_targets,ensure_ascii=False))
+    print("nginx_license_config_files="+str(license_config_files))
+except Exception:
+    print("nginx_file_wiring=unavailable")
+
+try:
+    out=subprocess.check_output(["ss","-ltnp"],text=True,stderr=subprocess.STDOUT,timeout=10)
+    pid_marker=f"pid={main_pid}," if main_pid and main_pid!="0" else ""
+    service_lines=[line.strip() for line in out.splitlines() if pid_marker and pid_marker in line]
+    # Only expose local listen addresses/ports for the license service.
+    print("license_service_listeners="+json.dumps(service_lines,ensure_ascii=False))
+except Exception:
+    print("license_service_listeners=unavailable")
+
 for unit,label in (
     ("hamsterking-public-war.service","war_journal"),
     ("hamsterking-public-collector.service","ratings_journal"),
