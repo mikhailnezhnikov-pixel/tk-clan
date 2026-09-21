@@ -1,1 +1,1 @@
-2026-09-21 emergency deploy 1.17.8 zero prelogin Game API retry
+2026-09-21 deploy userscript 1.17.9 technical passive auth bridge
