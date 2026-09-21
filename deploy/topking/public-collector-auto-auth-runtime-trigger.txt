@@ -1,1 +1,1 @@
-2026-09-21 inspect live 1.17.7 auth call graph after 429
+2026-09-21 verify live 1.17.8 zero prelogin Game API
