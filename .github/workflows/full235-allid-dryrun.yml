@@ -36,6 +36,12 @@ jobs:
           gzip -dc /tmp/full235-allids.bin.gz > /tmp/full235-allids.bin
           test "$(sha256sum /tmp/full235-allids.bin | cut -d' ' -f1)" = "1ddcadbb50e5a88555a6772538e56476575a771edc22fb85200299c8cbc28f48"
           echo "ALLID_PAYLOAD_VERIFY=PASS"
+          cat audit-tools/full235-attrs2.part.00 audit-tools/full235-attrs2.part.01 audit-tools/full235-attrs2.part.02 audit-tools/full235-attrs2.part.03 audit-tools/full235-attrs2.tail.00 audit-tools/full235-attrs2.tail.01 audit-tools/full235-attrs2.tail.02a audit-tools/full235-attrs2.tail.02b audit-tools/full235-attrs2.tail.03a audit-tools/full235-attrs2.tail.03b audit-tools/full235-attrs2.tail.04a audit-tools/full235-attrs2.tail.04b | base64 -d > /tmp/full235-attrs2.bin.xz
+          test "$(sha256sum /tmp/full235-attrs2.bin.xz | cut -d' ' -f1)" = "5c1c71cfe4bc620f13524324ecf275ca927575c2d96e2b59cfdb98e21e3eeb9d"
+          xz -dc /tmp/full235-attrs2.bin.xz > /tmp/full235-attrs2.bin
+          test "$(sha256sum /tmp/full235-attrs2.bin | cut -d' ' -f1)" = "728d33fbc57105109cd67f3b46de61d27bc2c4c597b9b88012952c0ad3cf0dbf"
+          test "$(stat -c%s /tmp/full235-attrs2.bin)" = "306001"
+          echo "FULL235_ATTR_PAYLOAD_VERIFY=PASS"
 
       - name: Match every source building ID against live canonical DB read-only
         run: |
