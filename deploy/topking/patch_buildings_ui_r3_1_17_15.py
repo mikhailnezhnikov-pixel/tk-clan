@@ -82,6 +82,11 @@ if old_tail not in s:
     raise SystemExit("active buildings section tail not found")
 s = s.replace(old_tail, new_tail, 1)
 
+read_handler = "    box.querySelectorAll('[data-building-read]').forEach(button=>button.addEventListener('click',()=>void readBuildingStudy(button.dataset.buildingRead)));\n"
+if read_handler not in s:
+    raise SystemExit("active building read handler not found")
+s = s.replace(read_handler, "", 1)
+
 # No active-building read buttons should remain in renderBuildings.
 render = s[s.index("  function renderBuildings() {"):s.index("\n\n  async function refreshBuildings", s.index("  function renderBuildings() {"))]
 for forbidden in ["data-building-read", "Активные здания", "Active buildings", "const rows=accountBuildingRows()", "const content=rows.length"]:
