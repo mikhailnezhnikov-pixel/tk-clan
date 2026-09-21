@@ -1,4 +1,4 @@
-name: Deploy Clan Shop Identity V7
+name: Deploy Clan Shop Identity V8
 
 on:
   push:
@@ -28,16 +28,16 @@ jobs:
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
-          python3 deploy/topking/patch_clan_shop_identity_resolution_v7.py /tmp/server.py
+          python3 deploy/topking/patch_clan_shop_linked_player_id_v8.py /tmp/server.py
           python3 -m py_compile /tmp/server.py
-          grep -Fq "CLAN_SHOP_IDENTITY_RESOLUTION_V7" /tmp/server.py
+          grep -Fq "CLAN_SHOP_LINKED_PLAYER_ID_V8" /tmp/server.py
           grep -Fq "Не распределено по игрокам" /tmp/server.py
 
       - name: Deploy server
         run: |
           set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.clan-shop-v7.py
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -e; stamp=$(date +%Y%m%d-%H%M%S); cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.clan-shop-v7.$stamp; install -m 0644 /tmp/server.clan-shop-v7.py /opt/hamsterking-license/server.py; python3 -m py_compile /opt/hamsterking-license/server.py; systemctl restart hamsterking-license.service; systemctl is-active --quiet hamsterking-license.service'
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.clan-shop-v8.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -e; stamp=$(date +%Y%m%d-%H%M%S); cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.clan-shop-v8.$stamp; install -m 0644 /tmp/server.clan-shop-v8.py /opt/hamsterking-license/server.py; python3 -m py_compile /opt/hamsterking-license/server.py; systemctl restart hamsterking-license.service; systemctl is-active --quiet hamsterking-license.service'
 
       - name: Verify service
         run: |
@@ -45,7 +45,7 @@ jobs:
           sleep 2
           curl -fsS --retry 4 --retry-delay 1 https://hk-license.89.125.1.71.sslip.io/health -o /tmp/health.json
           python3 -c "import json; d=json.load(open('/tmp/health.json')); assert d.get('ok') is True"
-          echo "CLAN_SHOP_IDENTITY_V7=PASS"
+          echo "CLAN_SHOP_IDENTITY_V8=PASS"
 
       - name: Cleanup
         if: always()
