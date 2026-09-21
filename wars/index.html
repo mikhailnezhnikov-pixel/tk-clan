@@ -379,32 +379,36 @@
       -webkit-mask-image:radial-gradient(ellipse 75% 82% at 50% 54%,#000 58%,rgba(0,0,0,.95) 72%,transparent 98%);
       mask-image:radial-gradient(ellipse 75% 82% at 50% 54%,#000 58%,rgba(0,0,0,.95) 72%,transparent 98%)
     }
-    .battle-art-ours{left:7%;animation:battleArtOur 3.2s cubic-bezier(.4,0,.2,1) infinite}
-    .battle-art-enemy{right:6%;transform:scaleX(-1);animation:battleArtEnemy 3.2s cubic-bezier(.4,0,.2,1) infinite}
+    .battle-art-ours{left:7%;animation:none}
+    .battle-art-enemy{right:6%;transform:scaleX(-1);animation:none}
     .battle-art-impact{
-      position:absolute;left:50%;top:52%;width:26px;height:26px;border-radius:50%;
-      transform:translate(-50%,-50%);opacity:0;
+      position:absolute;left:50%;top:47%;width:34px;height:34px;border-radius:50%;
+      transform:translate(-50%,-50%) scale(.2);opacity:0;z-index:13;
       background:#fff;
-      box-shadow:0 0 18px #fff,0 0 46px rgba(232,182,84,.95),0 0 90px var(--war-accent);
-      animation:battleArtImpact 3.2s ease-out infinite
+      box-shadow:0 0 24px #fff,0 0 62px rgba(232,182,84,.98),0 0 120px var(--war-accent)
     }
     .battle-stage[data-opponent-kind="bot"] .battle-art-enemy{width:min(42%,470px);right:3%}
-    @keyframes battleArtOur{
-      0%,30%,100%{transform:translate3d(0,0,0) rotate(-1deg) scale(1)}
-      42%{transform:translate3d(16px,-5px,0) rotate(1deg) scale(1.015)}
-      54%{transform:translate3d(74px,-4px,0) rotate(4deg) scale(1.035)}
-      65%{transform:translate3d(22px,1px,0) rotate(-1deg) scale(1.01)}
+    .battle-slash{
+      position:absolute;left:50%;top:43%;width:210px;height:18px;z-index:14;opacity:0;
+      border-radius:999px;transform:translate(-50%,-50%) rotate(-18deg) scaleX(.15);
+      transform-origin:50% 50%;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.95) 30%,#fff 50%,rgba(232,182,84,.95) 70%,transparent);
+      filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px rgba(232,182,84,.85));
+      pointer-events:none
     }
-    @keyframes battleArtEnemy{
-      0%,34%,100%{transform:translate3d(0,0,0) scaleX(-1) rotate(-1deg)}
-      46%{transform:translate3d(-15px,-4px,0) scaleX(-1) rotate(1deg) scale(1.015)}
-      58%{transform:translate3d(-70px,-3px,0) scaleX(-1) rotate(4deg) scale(1.03)}
-      68%{transform:translate3d(-20px,1px,0) scaleX(-1) rotate(-1deg) scale(1.01)}
+    .battle-shot{
+      position:absolute;left:74%;top:45%;width:24px;height:24px;z-index:14;opacity:0;border-radius:50%;
+      background:#fff;box-shadow:0 0 12px #fff,0 0 30px var(--war-accent),0 0 58px var(--war-accent);
+      pointer-events:none
     }
-    @keyframes battleArtImpact{
-      0%,52%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
-      58%{opacity:1;transform:translate(-50%,-50%) scale(1.7)}
-      67%,100%{opacity:0;transform:translate(-50%,-50%) scale(5)}
+    .battle-hit-flash{
+      position:absolute;inset:0;z-index:13;opacity:0;pointer-events:none;
+      background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.55),rgba(255,85,50,.18) 26%,transparent 58%)
+    }
+    .battle-hit-label{
+      position:absolute;left:50%;top:28%;z-index:15;opacity:0;transform:translate(-50%,-50%) scale(.65);
+      color:#fff;font-size:clamp(22px,3vw,42px);font-weight:1000;letter-spacing:.08em;
+      text-shadow:0 0 12px #fff,0 0 28px var(--war-accent);pointer-events:none
     }
     .battle-v2-overlay{
       position:absolute;inset:0;z-index:12;pointer-events:none;
@@ -549,7 +553,11 @@
         <div class="battle-art-layer" aria-hidden="true">
           <img id="battle-art-ours" class="battle-art battle-art-ours" src="../assets/war/units/topking/idle.webp?v=20260921-3" alt="">
           <img id="battle-art-enemy" class="battle-art battle-art-enemy" src="../assets/war/units/raider/idle.webp?v=20260921-3" alt="">
-          <div class="battle-art-impact"></div>
+          <div id="battle-art-impact" class="battle-art-impact"></div>
+          <div id="battle-slash" class="battle-slash"></div>
+          <div id="battle-shot" class="battle-shot"></div>
+          <div id="battle-hit-flash" class="battle-hit-flash"></div>
+          <div id="battle-hit-label" class="battle-hit-label">УДАР!</div>
         </div>
 
         <div class="battle-v2-overlay">
@@ -640,7 +648,7 @@ window.TK_PAGE_TRANSLATIONS={
 <script src="../assets/site-i18n.js?v=20260920-10"></script>
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.21.0/dist/pixi.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
-<script src="../assets/war/battle-engine-v2.js?v=20260921-4"></script>
+<script src="../assets/war/battle-engine-v2.js?v=20260921-5"></script>
 <script>
 const API='https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war';
 let currentWar=null;
