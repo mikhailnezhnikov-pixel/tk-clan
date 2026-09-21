@@ -1,0 +1,9 @@
+FULL235_LINK160=PASS
+backup=/var/lib/hamsterking-license/licenses.db.bak.full235-link160.20260921-011325
+existing_before=26
+idempotent_rerun=PASS
+map_areas_unchanged=True
+map_buildings_unchanged=True
+new_links=134
+safe_maps=160
+total_links_after=160
