@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
-import base64
+import hashlib
+import importlib.util
 import json
 import os
+import re
+import sqlite3
 import subprocess
+import tempfile
 import time
 
-TOKEN_PATH="/var/lib/hamsterking-license/public-collector-token"
-AUTH_PATH="/var/lib/hamsterking-license/public-collector-auth.json"
-IDENTITY_PATH="/var/lib/hamsterking-license/public-collector-identity.sha256"
-REFRESH_PATH="/var/lib/hamsterking-license/public-collector-auth-refresh.json"
-PROBE_PATH="/var/lib/hamsterking-license/public-collector-auth-probe.json"
+DB="/var/lib/hamsterking-license/licenses.db"
+IDENTITY="/var/lib/hamsterking-license/public-collector-identity.sha256"
+TOKEN="/var/lib/hamsterking-license/public-collector-token"
+BOOTSTRAP="/var/lib/hamsterking-license/public-collector-auth.json"
+PROBE="/var/lib/hamsterking-license/public-collector-auth-probe.json"
+SERVER="/opt/hamsterking-license/server.py"
+USERSCRIPT="/opt/hamsterking-license/HamsterKingMobile.user.js"
+
+def yes(v): return "yes" if bool(v) else "no"
 
 def present(path):
     try:
@@ -17,476 +25,149 @@ def present(path):
     except OSError:
         return False
 
-print("identity_present="+("yes" if present(IDENTITY_PATH) else "no"))
-print("token_present="+("yes" if present(TOKEN_PATH) else "no"))
-if present(TOKEN_PATH):
-    token=open(TOKEN_PATH,encoding="utf-8").read().strip()
-    exp=0
-    try:
-        part=token.split(".")[1]
-        part += "="*(-len(part)%4)
-        claims=json.loads(base64.urlsafe_b64decode(part.encode()).decode())
-        exp=int(claims.get("exp") or 0)
-    except Exception:
-        pass
-    print("token_exp="+str(exp))
-    print("token_seconds_left="+str(exp-int(time.time()) if exp else 0))
-
-bootstrap_updated_at=0
-print("bootstrap_present="+("yes" if present(AUTH_PATH) else "no"))
-if present(AUTH_PATH):
-    try:
-        doc=json.load(open(AUTH_PATH,encoding="utf-8"))
-    except Exception:
-        doc={}
-    print("bootstrap_auth_type="+str(doc.get("auth_type","")))
-    print("bootstrap_platform="+str(doc.get("platform","")))
-    bootstrap_updated_at=int(doc.get("updated_at") or 0)
-    print("bootstrap_updated_at="+str(bootstrap_updated_at))
-
-print("refresh_backoff_present="+("yes" if os.path.exists(REFRESH_PATH) else "no"))
-
-auth_probe_updated_at=0
-print("auth_probe_present="+("yes" if present(PROBE_PATH) else "no"))
-if present(PROBE_PATH):
-    try:
-        probe=json.load(open(PROBE_PATH,encoding="utf-8"))
-    except Exception:
-        probe={}
-    auth_probe_updated_at=int(probe.get("updated_at") or 0)
-    print("auth_probe_updated_at="+str(auth_probe_updated_at))
-    print("auth_probe_local_storage_keys="+json.dumps(probe.get("local_storage_keys",[]),ensure_ascii=False))
-    print("auth_probe_session_storage_keys="+json.dumps(probe.get("session_storage_keys",[]),ensure_ascii=False))
-    print("auth_probe_cookie_names="+json.dumps(probe.get("cookie_names",[]),ensure_ascii=False))
-    print("auth_probe_indexed_db_names="+json.dumps(probe.get("indexed_db_names",[]),ensure_ascii=False))
-    print("auth_probe_json_shapes="+json.dumps(probe.get("json_shapes",{}),ensure_ascii=False,sort_keys=True))
-    print("auth_probe_telegram_webapp_present="+("yes" if probe.get("telegram_webapp_present") else "no"))
-    print("auth_probe_telegram_init_data_present="+("yes" if probe.get("telegram_init_data_present") else "no"))
-    print("auth_probe_observed_auth_create="+("yes" if probe.get("observed_auth_create") else "no"))
-    print("auth_probe_current_bearer_present="+("yes" if probe.get("current_bearer_present") else "no"))
-
-# Safe static check of the live userscript auth behavior.
 try:
-    live_path="/opt/hamsterking-license/HamsterKingMobile.user.js"
-    src=open(live_path,encoding="utf-8").read()
-    version=""
-    for line in src.splitlines()[:30]:
-        if line.startswith("// @version"):
-            version=line.split()[-1]
-            break
-    print("live_userscript_version="+version)
-    print("auth_passive_marker="+("yes" if "AUTH_PASSIVE_SAFETY_R1" in src else "no"))
-    print("native_auth_observer_marker="+("yes" if "PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1" in src else "no"))
-    print("createFresh_call_count="+str(src.count("createFreshGameAuthorization(")))
-    ensure_i=src.find("async function ensureGameAuthorization")
-    ensure_block=src[ensure_i:ensure_i+1800] if ensure_i>=0 else ""
-    print("ensure_calls_createFresh="+("yes" if "createFreshGameAuthorization(" in ensure_block else "no"))
-    start_i=src.find("function startAfterNativeGameLogin()")
-    start_block=src[start_i:start_i+2600] if start_i>=0 else ""
-    print("startup_calls_bootstrapLate="+("yes" if "bootstrapLateGameConnection()" in start_block else "no"))
-except Exception:
-    print("live_userscript_static_check=unavailable")
+    expected=open(IDENTITY,encoding="ascii").read(256).strip()
+except OSError:
+    expected=""
 
-# Safe check: does the pinned technical identity correspond to a licensed
-# player that has checked in recently? Never print the player ID.
-try:
-    import hashlib, sqlite3
-    expected=open(IDENTITY_PATH,encoding="ascii").read().strip() if present(IDENTITY_PATH) else ""
-    db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
-    db.row_factory=sqlite3.Row
-    matched=None
-    for row in db.execute("SELECT player_id,active,expires_at FROM licenses"):
-        digest=hashlib.sha256(str(row["player_id"]).encode()).hexdigest()
-        if expected and digest==expected:
-            matched=row
-            break
-    print("technical_license_present="+("yes" if matched else "no"))
-    if matched:
-        print("technical_license_active="+("yes" if int(matched["active"] or 0)==1 else "no"))
-        device=db.execute(
-            "SELECT device_id,last_seen,script_version FROM devices WHERE player_id=? ORDER BY last_seen DESC LIMIT 1",
-            (matched["player_id"],)
-        ).fetchone()
-        print("technical_last_seen="+str(int(device["last_seen"] or 0) if device else 0))
-        print("technical_script_version="+str(device["script_version"] if device else ""))
-        try:
-            import importlib.util
-            spec=importlib.util.spec_from_file_location("hk_license_runtime","/opt/hamsterking-license/server.py")
-            mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
-            allowed=bool(mod.public_collector_auth_sync_allowed(str(matched["player_id"])))
-            print("technical_auth_sync_allowed="+("yes" if allowed else "no"))
-            try:
-                device_id=str(device["device_id"] if device else "")
-                status,response=mod.license_check(str(matched["player_id"]), device_id, str(device["script_version"] if device else "1.17.11"), "")
-                print("technical_license_check_status="+str(status))
-                print("technical_license_check_allowed="+("yes" if bool(response.get("allowed")) else "no"))
-                print("technical_license_check_auth_sync="+("yes" if bool(response.get("public_collector_auth_sync")) else "no"))
-                print("technical_license_check_token_present="+("yes" if bool(str(response.get("token") or "").strip()) else "no"))
-                # Verify the response from the actually running HTTP service, not
-                # only the freshly imported server.py source. Never print identity,
-                # device ID, token, response body, or auth data.
-                try:
-                    import urllib.request, urllib.error
-                    payload=json.dumps({
-                        "player_id":str(matched["player_id"]),
-                        "device_id":device_id,
-                        "script_version":str(device["script_version"] if device else "1.17.12"),
-                    },separators=(",",":")).encode("utf-8")
-                    req=urllib.request.Request(
-                        "https://hk-license.89.125.1.71.sslip.io/api/v1/check",
-                        data=payload,
-                        headers={
-                            "Content-Type":"application/json",
-                            "Origin":"https://app.hamsterking.games",
-                            "User-Agent":"TopKing-Safe-Runtime-Check/1",
-                        },
-                        method="POST",
-                    )
-                    with urllib.request.urlopen(req,timeout=15) as http_response:
-                        live_status=int(http_response.status)
-                        live_body=json.loads(http_response.read(200000).decode("utf-8"))
-                    print("technical_live_http_check_status="+str(live_status))
-                    print("technical_live_http_check_allowed="+("yes" if bool(live_body.get("allowed")) else "no"))
-                    print("technical_live_http_check_auth_sync="+("yes" if bool(live_body.get("public_collector_auth_sync")) else "no"))
-                    print("technical_live_http_check_token_present="+("yes" if bool(str(live_body.get("token") or "").strip()) else "no"))
-                except Exception:
-                    print("technical_live_http_check_status=unavailable")
-            except Exception:
-                print("technical_license_check_allowed=unavailable")
-        except Exception:
-            print("technical_auth_sync_allowed=unavailable")
-    db.close()
-except Exception as exc:
-    print("technical_license_check=unavailable")
+print("runtime_check_revision=PUBLIC_COLLECTOR_FINAL_AUTH_RUNTIME_R1")
+print("identity_present="+yes(expected))
+print("token_present="+yes(present(TOKEN)))
+print("bootstrap_present="+yes(present(BOOTSTRAP)))
+print("probe_file_absent="+yes(not os.path.exists(PROBE)))
+if not expected or not present(TOKEN) or not present(BOOTSTRAP) or os.path.exists(PROBE):
+    raise SystemExit(2)
 
-# Safe reverse-proxy check: only report whether auth-sync was requested and
-# the latest HTTP status/time; never print IP, token, query/body, or User-Agent.
-sync_events=[]
-for log_path in ("/var/log/nginx/access.log", "/var/log/nginx/access.log.1"):
-    try:
-        lines=open(log_path,encoding="utf-8",errors="replace").read().splitlines()[-5000:]
-    except OSError:
+# Read service HK_* settings without displaying values.
+show=subprocess.check_output(
+    ["systemctl","show","hamsterking-license.service","--property=MainPID","--no-pager"],
+    text=True,stderr=subprocess.STDOUT,timeout=10,
+)
+main_pid=next((line.split("=",1)[1].strip() for line in show.splitlines() if line.startswith("MainPID=")),"")
+if not main_pid or main_pid=="0":
+    raise SystemExit(3)
+raw_env=open(f"/proc/{int(main_pid)}/environ","rb").read(2_000_000)
+for item in raw_env.split(b"\x00"):
+    if not item.startswith(b"HK_") or b"=" not in item:
         continue
-    for line in lines:
-        if "/api/v1/public-collector/auth-sync" not in line:
-            continue
-        import re
-        tm=re.search(r"\[([^\]]+)\]", line)
-        st=re.search(r'"\s+(\d{3})\s+', line)
-        sync_events.append((tm.group(1) if tm else "", st.group(1) if st else ""))
-print("auth_sync_request_seen="+("yes" if sync_events else "no"))
-probe_events=[]
-for log_path in ("/var/log/nginx/access.log", "/var/log/nginx/access.log.1"):
-    try:
-        lines=open(log_path,encoding="utf-8",errors="replace").read().splitlines()[-5000:]
-    except OSError:
-        continue
-    for line in lines:
-        if "/api/v1/public-collector/auth-probe" not in line:
-            continue
-        import re
-        tm=re.search(r"\[([^\]]+)\]", line)
-        st=re.search(r'"\s+(\d{3})\s+', line)
-        probe_events.append((tm.group(1) if tm else "", st.group(1) if st else ""))
-print("auth_probe_request_seen="+("yes" if probe_events else "no"))
-if probe_events:
-    print("auth_probe_latest_time="+probe_events[-1][0])
-    print("auth_probe_latest_status="+probe_events[-1][1])
-try:
-    server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
-    print("auth_probe_server_marker="+("yes" if "PUBLIC_COLLECTOR_AUTH_PROBE_R1" in server_src else "no"))
-    print("auth_probe_server_route="+("yes" if "/api/v1/public-collector/auth-probe" in server_src else "no"))
-except Exception:
-    print("auth_probe_server_marker=unavailable")
-if sync_events:
-    print("auth_sync_latest_time="+sync_events[-1][0])
-    print("auth_sync_latest_status="+sync_events[-1][1])
+    key,value=item.split(b"=",1)
+    os.environ[key.decode("utf-8","replace")]=value.decode("utf-8","replace")
 
-# The public HTTPS endpoint can be terminated upstream from this host, so
-# local nginx access logs may legitimately contain no request line. Record
-# endpoint effects separately from proxy-log visibility.
+# Resolve technical account only by identity digest; never print the account ID.
+db=sqlite3.connect(DB)
+db.row_factory=sqlite3.Row
 now=int(time.time())
-probe_effect=bool(auth_probe_updated_at and auth_probe_updated_at <= now)
-sync_effect=bool(bootstrap_updated_at and bootstrap_updated_at <= now)
-print("auth_probe_effect_seen="+("yes" if probe_effect else "no"))
-print("auth_sync_effect_seen="+("yes" if sync_effect else "no"))
-if auth_probe_updated_at:
-    print("auth_probe_age_seconds="+str(max(0,now-auth_probe_updated_at)))
-if bootstrap_updated_at:
-    print("auth_sync_age_seconds="+str(max(0,now-bootstrap_updated_at)))
+rows=db.execute("""
+SELECT l.player_id,d.device_id
+FROM licenses l
+JOIN devices d ON d.player_id=l.player_id
+WHERE l.active=1 AND (l.expires_at IS NULL OR l.expires_at>?)
+ORDER BY d.last_seen DESC
+LIMIT 500
+""",(now,)).fetchall()
+db.close()
+technical=next(
+    (row for row in rows if hashlib.sha256(str(row["player_id"]).encode()).hexdigest()==expected),
+    None,
+)
+print("technical_candidate_present="+yes(technical))
+if technical is None:
+    raise SystemExit(4)
 
-# Safe server release-gate inspection.
-try:
-    server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
-    min_line=next((line.strip() for line in server_src.splitlines() if line.startswith("MIN_SCRIPT_VERSION =")), "")
-    print("server_min_version_line="+min_line)
-    li=server_src.find("def license_check(")
-    block=server_src[li:li+7000] if li>=0 else ""
-    print("license_check_present="+("yes" if li>=0 else "no"))
-    print("license_check_uses_min_version="+("yes" if "MIN_SCRIPT_VERSION" in block else "no"))
-    print("license_check_returns_update_required="+("yes" if "update_required" in block else "no"))
-    print("license_check_returns_auth_sync_flag="+("yes" if "public_collector_auth_sync" in block else "no"))
-except Exception:
-    print("server_release_gate_check=unavailable")
+spec=importlib.util.spec_from_file_location("hk_final_runtime",SERVER)
+mod=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
 
-# Safe runtime wiring check: confirm which process systemd runs and which
-# local upstream nginx targets. Never print environment variables or request data.
-try:
-    show=subprocess.check_output(
-        ["systemctl","show","hamsterking-license.service","--property=MainPID","--property=ExecStart","--no-pager"],
-        text=True,stderr=subprocess.STDOUT,timeout=10,
-    )
-    main_pid=""
-    for line in show.splitlines():
-        if line.startswith("MainPID="):
-            main_pid=line.split("=",1)[1].strip()
-    print("license_service_main_pid_present="+("yes" if main_pid and main_pid!="0" else "no"))
-    print("license_service_execstart_live_server="+("yes" if "/opt/hamsterking-license/server.py" in show else "no"))
-    if main_pid and main_pid!="0":
-        try:
-            cmd=open(f"/proc/{int(main_pid)}/cmdline","rb").read(8192).replace(b"\\x00",b" ").decode("utf-8","replace")
-        except Exception:
-            cmd=""
-        print("license_service_cmdline_live_server="+("yes" if "/opt/hamsterking-license/server.py" in cmd else "no"))
-except Exception:
-    print("license_service_wiring=unavailable")
-
-try:
-    nginx_text=subprocess.check_output(["nginx","-T"],text=True,stderr=subprocess.STDOUT,timeout=10)
-    import re
-    proxy_targets=[]
-    for target in re.findall(r"\\bproxy_pass\\s+(https?://[^;\\s]+)",nginx_text):
-        if target not in proxy_targets:
-            proxy_targets.append(target)
-    print("nginx_proxy_targets="+json.dumps(proxy_targets,ensure_ascii=False))
-    print("nginx_config_mentions_license_host="+("yes" if "hk-license.89.125.1.71.sslip.io" in nginx_text else "no"))
-except Exception:
-    print("nginx_runtime_wiring=unavailable")
-
-# Inspect only non-secret runtime routing/path settings.
-try:
-    identity_env=""
-    if main_pid and main_pid!="0":
-        raw=open(f"/proc/{int(main_pid)}/environ","rb").read(2_000_000)
-        for item in raw.split(b"\\x00"):
-            if item.startswith(b"HK_PUBLIC_COLLECTOR_IDENTITY_FILE="):
-                identity_env=item.split(b"=",1)[1].decode("utf-8","replace")
-                break
-    print("license_service_identity_env_present="+("yes" if identity_env else "no"))
-    print("license_service_identity_env_default="+("yes" if (not identity_env or identity_env==IDENTITY_PATH) else "no"))
-except Exception:
-    print("license_service_identity_env_check=unavailable")
-
-try:
-    nginx_files=[]
-    for base in ("/etc/nginx/nginx.conf","/etc/nginx/sites-enabled","/etc/nginx/conf.d"):
-        if os.path.isfile(base):
-            nginx_files.append(base)
-        elif os.path.isdir(base):
-            for name in sorted(os.listdir(base)):
-                path=os.path.join(base,name)
-                if os.path.isfile(path):
-                    nginx_files.append(path)
-    proxy_targets=[]
-    license_config_files=0
-    for path in nginx_files:
-        try:
-            text_value=open(path,encoding="utf-8",errors="replace").read()
-        except OSError:
-            continue
-        if "hk-license.89.125.1.71.sslip.io" in text_value:
-            license_config_files += 1
-        import re
-        for target in re.findall(r"\\bproxy_pass\\s+(https?://[^;\\s]+)",text_value):
-            if target not in proxy_targets:
-                proxy_targets.append(target)
-    print("nginx_file_proxy_targets="+json.dumps(proxy_targets,ensure_ascii=False))
-    print("nginx_license_config_files="+str(license_config_files))
-except Exception:
-    print("nginx_file_wiring=unavailable")
-
-try:
-    out=subprocess.check_output(["ss","-ltnp"],text=True,stderr=subprocess.STDOUT,timeout=10)
-    pid_marker=f"pid={main_pid}," if main_pid and main_pid!="0" else ""
-    service_lines=[line.strip() for line in out.splitlines() if pid_marker and pid_marker in line]
-    # Only expose local listen addresses/ports for the license service.
-    print("license_service_listeners="+json.dumps(service_lines,ensure_ascii=False))
-except Exception:
-    print("license_service_listeners=unavailable")
-
-try:
-    import re, urllib.request
-    local_port=""
-    for line in service_lines if "service_lines" in globals() else []:
-        match=re.search(r"127\.0\.0\.1:(\d+)",line)
-        if match:
-            local_port=match.group(1)
-            break
-    if local_port and matched is not None and device is not None:
-        payload=json.dumps({
-            "player_id":str(matched["player_id"]),
-            "device_id":str(device["device_id"]),
-            "script_version":str(device["script_version"] or "1.17.12"),
-        },separators=(",",":")).encode("utf-8")
-        req=urllib.request.Request(
-            f"http://127.0.0.1:{local_port}/api/v1/check",
-            data=payload,
-            headers={
-                "Content-Type":"application/json",
-                "Origin":"https://app.hamsterking.games",
-                "Host":"hk-license.89.125.1.71.sslip.io",
-                "User-Agent":"TopKing-Safe-Local-Backend-Check/1",
-            },
-            method="POST",
-        )
-        with urllib.request.urlopen(req,timeout=15) as response:
-            local_status=int(response.status)
-            local_body=json.loads(response.read(200000).decode("utf-8"))
-        print("technical_local_backend_check_status="+str(local_status))
-        print("technical_local_backend_check_allowed="+("yes" if bool(local_body.get("allowed")) else "no"))
-        print("technical_local_backend_check_auth_sync="+("yes" if bool(local_body.get("public_collector_auth_sync")) else "no"))
-        print("technical_local_backend_check_token_present="+("yes" if bool(str(local_body.get("token") or "").strip()) else "no"))
-    else:
-        print("technical_local_backend_check_status=unavailable")
-except Exception as exc:
+# Use a database backup so this eligibility check cannot mutate the real device state.
+with tempfile.TemporaryDirectory(prefix="hk-final-auth-") as td:
+    temp_db=os.path.join(td,"licenses.db")
+    source=sqlite3.connect(DB)
+    target=sqlite3.connect(temp_db)
+    source.backup(target)
+    target.close()
+    source.close()
+    original_db=mod.DB_PATH
+    mod.DB_PATH=temp_db
     try:
-        import urllib.error
-        code=getattr(exc,"code",None)
-        print("technical_local_backend_check_status="+(str(code) if code is not None else "error"))
-        print("technical_local_backend_check_error_type="+type(exc).__name__)
-    except Exception:
-        print("technical_local_backend_check_status=unavailable")
-
-try:
-    out=subprocess.check_output(["ss","-ltnp"],text=True,stderr=subprocess.STDOUT,timeout=10)
-    edge_lines=[line.strip() for line in out.splitlines() if re.search(r":(?:443|80)\\s",line)]
-    python_loopback=[line.strip() for line in out.splitlines() if "127.0.0.1:" in line and "python" in line.lower()]
-    print("edge_listener_lines="+json.dumps(edge_lines,ensure_ascii=False))
-    print("python_loopback_listeners="+json.dumps(python_loopback,ensure_ascii=False))
-    nginx_pids=[]
-    for entry in os.listdir("/proc"):
-        if not entry.isdigit():
-            continue
-        try:
-            comm=open(f"/proc/{entry}/comm",encoding="utf-8",errors="replace").read().strip().lower()
-        except OSError:
-            continue
-        if comm=="nginx":
-            nginx_pids.append(int(entry))
-    print("nginx_process_count="+str(len(nginx_pids)))
-    proxy_targets_proc=[]
-    license_files_proc=0
-    for pid in nginx_pids[:8]:
-        root=f"/proc/{pid}/root"
-        base=os.path.join(root,"etc/nginx")
-        if not os.path.isdir(base):
-            continue
-        for dirpath,_,filenames in os.walk(base):
-            for name in filenames:
-                path=os.path.join(dirpath,name)
-                try:
-                    value=open(path,encoding="utf-8",errors="replace").read()
-                except OSError:
-                    continue
-                if "hk-license.89.125.1.71.sslip.io" in value:
-                    license_files_proc += 1
-                for target in re.findall(r"\\bproxy_pass\\s+(https?://[^;\\s]+)",value):
-                    if target not in proxy_targets_proc:
-                        proxy_targets_proc.append(target)
-    print("nginx_proc_proxy_targets="+json.dumps(proxy_targets_proc,ensure_ascii=False))
-    print("nginx_proc_license_config_files="+str(license_files_proc))
-except Exception:
-    print("edge_runtime_inspection=unavailable")
-
-try:
-    import stat
-    if main_pid and main_pid!="0":
-        proc_stat=os.stat(f"/proc/{int(main_pid)}")
-        status_text=open(f"/proc/{int(main_pid)}/status",encoding="utf-8",errors="replace").read()
-        uid_line=next((line for line in status_text.splitlines() if line.startswith("Uid:")), "")
-        service_uid=int(uid_line.split()[1]) if uid_line else -1
-    else:
-        service_uid=-1
-    identity_stat=os.stat(IDENTITY_PATH)
-    print("license_service_uid="+str(service_uid))
-    print("identity_file_uid="+str(identity_stat.st_uid))
-    print("identity_file_gid="+str(identity_stat.st_gid))
-    print("identity_file_mode="+oct(stat.S_IMODE(identity_stat.st_mode)))
-    print("identity_file_owned_by_service="+("yes" if service_uid>=0 and identity_stat.st_uid==service_uid else "no"))
-    print("identity_file_service_readable_by_owner="+("yes" if identity_stat.st_uid==service_uid and bool(stat.S_IMODE(identity_stat.st_mode)&stat.S_IRUSR) else "no"))
-except Exception:
-    print("identity_file_permission_check=unavailable")
-
-try:
-    status_text=open(f"/proc/{int(main_pid)}/status",encoding="utf-8",errors="replace").read() if main_pid and main_pid!="0" else ""
-    gid_line=next((line for line in status_text.splitlines() if line.startswith("Gid:")), "")
-    service_gid=int(gid_line.split()[1]) if gid_line else -1
-    print("license_service_gid="+str(service_gid))
-    data_dir=os.path.dirname(IDENTITY_PATH)
-    data_stat=os.stat(data_dir)
-    import stat
-    print("collector_data_dir_uid="+str(data_stat.st_uid))
-    print("collector_data_dir_gid="+str(data_stat.st_gid))
-    print("collector_data_dir_mode="+oct(stat.S_IMODE(data_stat.st_mode)))
-    for path,label in ((TOKEN_PATH,"collector_token"),(AUTH_PATH,"collector_bootstrap")):
-        if os.path.exists(path):
-            st=os.stat(path)
-            print(label+"_uid="+str(st.st_uid))
-            print(label+"_gid="+str(st.st_gid))
-            print(label+"_mode="+oct(stat.S_IMODE(st.st_mode)))
-        else:
-            print(label+"_present=no")
-    for unit,label in (("hamsterking-public-war.service","war_service"),("hamsterking-public-collector.service","ratings_service")):
-        try:
-            value=subprocess.check_output(["systemctl","show",unit,"--property=MainPID","--no-pager"],text=True,stderr=subprocess.STDOUT,timeout=10)
-            pid=value.strip().split("=",1)[1] if "=" in value else ""
-            if pid and pid!="0":
-                stxt=open(f"/proc/{int(pid)}/status",encoding="utf-8",errors="replace").read()
-                uline=next((line for line in stxt.splitlines() if line.startswith("Uid:")), "")
-                gline=next((line for line in stxt.splitlines() if line.startswith("Gid:")), "")
-                print(label+"_uid="+str(int(uline.split()[1]) if uline else -1))
-                print(label+"_gid="+str(int(gline.split()[1]) if gline else -1))
-            else:
-                print(label+"_running=no")
-        except Exception:
-            print(label+"_runtime=unavailable")
-except Exception:
-    print("collector_file_permission_check=unavailable")
-
-try:
-    live_server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
-    print("live_server_license_check_defs="+str(live_server_src.count("def license_check(")))
-    print("live_server_check_route_occurrences="+str(live_server_src.count('path == "/api/v1/check"')))
-    print("live_server_auth_sync_key_occurrences="+str(live_server_src.count("public_collector_auth_sync")))
-except Exception:
-    print("live_server_structure_check=unavailable")
-
-try:
-    env_path="/etc/hamsterking-public-collector.env"
-    env_keys=set()
-    for raw in open(env_path,encoding="utf-8",errors="replace"):
-        line=raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        env_keys.add(line.split("=",1)[0].strip())
-    print("collector_env_static_game_token_key_present="+("yes" if "HK_PUBLIC_COLLECTOR_GAME_TOKEN" in env_keys else "no"))
-    print("collector_env_token_file_key_present="+("yes" if "HK_PUBLIC_COLLECTOR_TOKEN_FILE" in env_keys else "no"))
-    print("collector_env_bootstrap_key_present="+("yes" if "HK_PUBLIC_COLLECTOR_AUTH_BOOTSTRAP" in env_keys else "no"))
-except Exception:
-    print("collector_env_key_check=unavailable")
-
-for unit,label in (
-    ("hamsterking-public-war.service","war_journal"),
-    ("hamsterking-public-collector.service","ratings_journal"),
-):
-    print("=== "+label+" ===")
-    try:
-        out=subprocess.check_output(
-            ["journalctl","-u",unit,"-n","12","--no-pager"],
-            text=True,stderr=subprocess.STDOUT,timeout=10,
+        status,doc=mod.license_check(
+            str(technical["player_id"]),
+            str(technical["device_id"]),
+            "1.17.12",
+            "127.0.0.1",
         )
+    finally:
+        mod.DB_PATH=original_db
+
+technical_allowed=(int(status)==200 and isinstance(doc,dict) and bool(doc.get("allowed")))
+technical_auth_sync=(technical_allowed and bool(doc.get("public_collector_auth_sync")))
+print("technical_check_status="+str(status))
+print("technical_allowed="+yes(technical_allowed))
+print("technical_auth_sync="+yes(technical_auth_sync))
+print("technical_real_license_db_untouched=yes")
+if not technical_auth_sync:
+    raise SystemExit(5)
+
+server_src=open(SERVER,encoding="utf-8").read()
+user_src=open(USERSCRIPT,encoding="utf-8").read()
+server_probe_absent=all(marker not in server_src for marker in (
+    'path == "/api/v1/public-collector/auth-probe"',
+    "def accept_public_collector_auth_probe(",
+    "PUBLIC_COLLECTOR_AUTH_PROBE_PATH =",
+))
+server_sync_i=server_src.find('path == "/api/v1/public-collector/auth-sync"')
+server_sync_block=server_src[server_sync_i:server_sync_i+2600] if server_sync_i>=0 else ""
+server_guard=server_sync_block.find("public_collector_auth_sync_allowed(player_id)")
+server_read=server_sync_block.find("self.read_json(")
+server_sync_guard=(server_sync_i>=0 and server_guard>=0 and server_read>=0 and server_guard<server_read)
+client_probe_absent=all(marker not in user_src for marker in (
+    "const PUBLIC_COLLECTOR_AUTH_PROBE_URL",
+    "async function sendPublicCollectorAuthProbe",
+    "async function buildPublicCollectorAuthProbe",
+    "function safeStorageProbeArea",
+))
+client_sync_i=user_src.find("async function maybeSyncPublicCollectorAuthorization")
+client_sync_block=user_src[client_sync_i:client_sync_i+2400] if client_sync_i>=0 else ""
+client_sync_guard=(client_sync_i>=0 and "!licenseState.publicCollectorAuthSync" in client_sync_block)
+no_auth_create_regression=(
+    "PRELOGIN_ZERO_GAME_API_R1" in user_src
+    and "AUTH_PASSIVE_SAFETY_R1" in user_src
+)
+print("server_probe_runtime_absent="+yes(server_probe_absent))
+print("server_sync_identity_guard="+yes(server_sync_guard))
+print("client_probe_runtime_absent="+yes(client_probe_absent))
+print("client_sync_technical_guard="+yes(client_sync_guard))
+print("client_passive_auth_safety="+yes(no_auth_create_regression))
+if not all((server_probe_absent,server_sync_guard,client_probe_absent,client_sync_guard,no_auth_create_regression)):
+    raise SystemExit(6)
+
+# Search recent service logs for actual secret values, never print those values.
+chunks=[]
+for unit in ("hamsterking-license.service","hamsterking-public-war.service","hamsterking-public-collector.service"):
+    try:
+        chunks.append(subprocess.check_output(
+            ["journalctl","-u",unit,"--since","24 hours ago","--no-pager"],
+            text=True,stderr=subprocess.DEVNULL,timeout=20,
+        ))
     except Exception:
-        out=""
-    for line in out.splitlines():
-        if "[public-collector]" in line or "Starting " in line or "Finished " in line:
-            print(line)
+        chunks.append("")
+journal="\n".join(chunks)
+try:
+    token_value=open(TOKEN,encoding="utf-8").read().strip()
+except OSError:
+    token_value=""
+try:
+    bootstrap=json.load(open(BOOTSTRAP,encoding="utf-8"))
+    auth_data_value=str(bootstrap.get("auth_data") or "")
+except Exception:
+    auth_data_value=""
+token_logged=bool(token_value and token_value in journal)
+auth_data_logged=bool(auth_data_value and auth_data_value in journal)
+bearer_logged=bool(re.search(r"Bearer\s+eyJ[A-Za-z0-9._~-]{20,}",journal,re.I))
+print("token_value_logged="+("YES" if token_logged else "NO"))
+print("auth_data_logged="+("YES" if auth_data_logged else "NO"))
+print("bearer_value_logged="+("YES" if bearer_logged else "NO"))
+if token_logged or auth_data_logged or bearer_logged:
+    raise SystemExit(7)
+
+print("PUBLIC_COLLECTOR_TECHNICAL_AUTH_SYNC=PASS")
+print("PUBLIC_COLLECTOR_LOG_SECRET_AUDIT=PASS")
