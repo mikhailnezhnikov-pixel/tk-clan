@@ -1258,6 +1258,100 @@ Live Personal Cabinet unified UI: PASS after GitHub Pages deployment completed.
 Stop here until the next explicit user instruction.
 
 
+### Full235 archive import V2 — resolver ready (2026-09-21)
+
+Purpose: replace the conservative 25/210 bridge with a complete, building-ID-driven import of the original 235-map HK Maps archive.
+
+Verified source archive characteristics:
+- format: `HK Maps Full Export`, version 3;
+- maps: **235/235**;
+- export errors: **0**;
+- full game buildings: **152,593**;
+- building IDs are unique across archive maps;
+- source contains exact building IDs and room/investment knowledge.
+
+Building-ID fingerprint dry-run:
+- evidence: `audit/hk-stage2-full235-fingerprint-dryrun.json`;
+- summary: `audit/hk-stage2-full235-fingerprint-summary.txt`;
+- **160** maps match one existing canonical area by exact building IDs;
+- **75** maps have zero overlap with current canonical buildings;
+- existing website links that were present all agreed with the building-ID resolver.
+
+Safe 160 live linking:
+- run `35550161783`: PASS;
+- evidence: `audit/hk-stage2-full235-link160-live-status.txt`;
+- safe maps linked: **160**;
+- new links from that operation: **134**;
+- map areas/buildings unchanged;
+- idempotent rerun: PASS.
+
+Original UUID recovery for the 75 no-overlap maps:
+- mapping: `deploy/maps/full235-nooverlap-area-ids.json`;
+- all **75** original area UUIDs recovered;
+- read-only validation run `35550447698`: PASS;
+- at latest V2 safety check:
+  - existing areas among these UUIDs: **0**;
+  - aliases: **0**;
+  - links: **0**;
+  - conflicts: **0**.
+
+Full235 importer V1:
+- manager-only importer is live in Personal Cabinet;
+- server supports staged dry-run and apply;
+- archive is decompressed in the browser;
+- only compact building knowledge is sent to the server;
+- apply requires explicit `IMPORT_235` confirmation;
+- DB backup occurs before apply;
+- `game_live > hk_maps_import`;
+- staged private building rows are purged after successful apply;
+- archive has **not** been applied yet.
+
+V2 improvement:
+- marker: `HK_FULL235_ORIGINAL75_V2`;
+- patch: `deploy/topking/patch_server_full235_original75_v2.py`;
+- the 75 no-overlap maps now resolve to their **real original UUIDs**, not synthetic `hkfull…` IDs;
+- V2 blocks apply if an original UUID appears with conflicting non-overlapping canonical buildings;
+- safe statuses include `new_original` and `matched_original_id_empty`.
+
+V2 regression:
+- run `35551797290`, job `106187778861`: PASS;
+- matched existing 160: PASS;
+- create 75 using original UUIDs: PASS;
+- re-import creates 0 new areas: PASS;
+- production writes during regression: **NO**.
+
+V2 live deploy:
+- run `35551905146`, job `106188066312`: PASS;
+- current V2 server SHA: `19839098c3db0246d87b72931381320378e46d0ed6d09b6cf2db2110530448db`;
+- live status: `audit/hk-stage2-full235-original75-v2-live-status.txt`;
+- archive applied: **NO**;
+- production data changed by V2 deploy: **NO**;
+- live state at deploy:
+  - `hk_maps_catalog=235`;
+  - `hk_map_points=235`;
+  - `hk_map_area_links=160`;
+  - `hk_map_point_links=2016`;
+  - `map_areas=310`;
+  - `map_buildings=167690`;
+- 75 original UUIDs remain free/conflict-free.
+
+Next gate:
+1. In Personal Cabinet → Maps, select local `hk_maps_235_full.json.gz`.
+2. Run **Проверить 235 карт** only.
+3. Expected safe dry-run target:
+   - 235 maps received;
+   - 152,593 unique source buildings;
+   - existing/linked ≈160;
+   - `new_original=75`;
+   - no ambiguous/conflict statuses;
+   - original UUIDs 75/75;
+   - `ready_to_apply=true`.
+4. Do **not** press Apply until the dry-run result is reviewed.
+5. If dry-run PASS, apply once, verify all 235 are combined, source priority, DB counts and idempotency.
+
+**Current state: resolver V2 PASS; waiting only for local archive dry-run.**
+
+
 ### Execution rule for W1–W8
 
 Work in short sessions.
