@@ -152,7 +152,7 @@ jobs:
           print("explore_e4_sequential_stop_safety=PASS")
           print("explore_runner_e3_e4=PASS")
           print("protected_buildings_maps_auth=PASS")
-          print("userscript_1_17_21=PASS")
+          print("userscript_1_17_22=PASS")
           print("EXPLORE_PRODUCTION_UI_CURRENT_REVALIDATION=PASS")
           PY
 
