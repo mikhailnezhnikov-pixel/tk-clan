@@ -1,2 +1,2 @@
-inspect=live-clan-shop-linked-members-r4
+inspect=live-clan-shop-linked-player-id-v8-verify
 stamp=2026-09-21
