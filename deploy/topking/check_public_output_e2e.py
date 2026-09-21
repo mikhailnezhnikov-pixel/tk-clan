@@ -317,6 +317,27 @@ refresh_perm_ok=True
 if os.path.exists(refresh_path):
     refresh_perm_ok=(service_uid>=0 and mode_owner_ok(refresh_path,0o600,{0,service_uid}))
 
+env_keys=set()
+try:
+    for raw in open(env_path,encoding="utf-8",errors="replace"):
+        line=raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        env_keys.add(line.split("=",1)[0].strip())
+except OSError:
+    pass
+legacy_static_token_absent=("HK_PUBLIC_COLLECTOR_GAME_TOKEN" not in env_keys)
+token_file_env_present=("HK_PUBLIC_COLLECTOR_TOKEN_FILE" in env_keys)
+bootstrap_env_present=("HK_PUBLIC_COLLECTOR_AUTH_BOOTSTRAP" in env_keys)
+collector_src=open("/opt/hamsterking-license/public_collector.py",encoding="utf-8").read()
+collector_self_heal_live=("PUBLIC_COLLECTOR_BOOTSTRAP_SELF_HEAL_R1" in collector_src and "r5-bootstrap-self-heal" in collector_src)
+token_lifecycle_hardening_ok=all((
+    legacy_static_token_absent,
+    token_file_env_present,
+    bootstrap_env_present,
+    collector_self_heal_live,
+))
+
 print("collector_data_dir_private="+yes(dir_ok))
 print("collector_identity_private="+yes(identity_perm_ok))
 print("collector_token_private="+yes(token_perm_ok))
@@ -324,6 +345,10 @@ print("collector_bootstrap_private="+yes(bootstrap_perm_ok))
 print("collector_probe_private="+yes(probe_perm_ok))
 print("collector_env_private="+yes(env_perm_ok))
 print("collector_refresh_status_private="+yes(refresh_perm_ok))
+print("collector_legacy_static_token_absent="+yes(legacy_static_token_absent))
+print("collector_token_file_env_present="+yes(token_file_env_present))
+print("collector_bootstrap_env_present="+yes(bootstrap_env_present))
+print("collector_self_heal_live="+yes(collector_self_heal_live))
 credential_permissions_ok=all((dir_ok,identity_perm_ok,token_perm_ok,bootstrap_perm_ok,probe_perm_ok,env_perm_ok,refresh_perm_ok))
 
 war_ok=(
@@ -351,8 +376,9 @@ print("collector_timers_e2e="+("PASS" if timers_ok else "FAIL"))
 print("collector_isolation_static="+("PASS" if collector_isolation_static_ok else "FAIL"))
 print("userscript_safety_invariants="+("PASS" if userscript_safety_invariants_ok else "FAIL"))
 print("collector_credential_permissions="+("PASS" if credential_permissions_ok else "FAIL"))
+print("collector_token_lifecycle_hardening="+("PASS" if token_lifecycle_hardening_ok else "FAIL"))
 
-if not (war_ok and ratings_all_ok and site_ok and timers_ok and collector_isolation_static_ok and userscript_safety_invariants_ok and credential_permissions_ok):
+if not (war_ok and ratings_all_ok and site_ok and timers_ok and collector_isolation_static_ok and userscript_safety_invariants_ok and credential_permissions_ok and token_lifecycle_hardening_ok):
     raise SystemExit(2)
 
 print("PUBLIC_OUTPUT_E2E=PASS")
