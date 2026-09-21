@@ -331,8 +331,55 @@ try:
         print("technical_local_backend_check_token_present="+("yes" if bool(str(local_body.get("token") or "").strip()) else "no"))
     else:
         print("technical_local_backend_check_status=unavailable")
+except Exception as exc:
+    try:
+        import urllib.error
+        code=getattr(exc,"code",None)
+        print("technical_local_backend_check_status="+(str(code) if code is not None else "error"))
+        print("technical_local_backend_check_error_type="+type(exc).__name__)
+    except Exception:
+        print("technical_local_backend_check_status=unavailable")
+
+try:
+    out=subprocess.check_output(["ss","-ltnp"],text=True,stderr=subprocess.STDOUT,timeout=10)
+    edge_lines=[line.strip() for line in out.splitlines() if re.search(r":(?:443|80)\\s",line)]
+    python_loopback=[line.strip() for line in out.splitlines() if "127.0.0.1:" in line and "python" in line.lower()]
+    print("edge_listener_lines="+json.dumps(edge_lines,ensure_ascii=False))
+    print("python_loopback_listeners="+json.dumps(python_loopback,ensure_ascii=False))
+    nginx_pids=[]
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            comm=open(f"/proc/{entry}/comm",encoding="utf-8",errors="replace").read().strip().lower()
+        except OSError:
+            continue
+        if comm=="nginx":
+            nginx_pids.append(int(entry))
+    print("nginx_process_count="+str(len(nginx_pids)))
+    proxy_targets_proc=[]
+    license_files_proc=0
+    for pid in nginx_pids[:8]:
+        root=f"/proc/{pid}/root"
+        base=os.path.join(root,"etc/nginx")
+        if not os.path.isdir(base):
+            continue
+        for dirpath,_,filenames in os.walk(base):
+            for name in filenames:
+                path=os.path.join(dirpath,name)
+                try:
+                    value=open(path,encoding="utf-8",errors="replace").read()
+                except OSError:
+                    continue
+                if "hk-license.89.125.1.71.sslip.io" in value:
+                    license_files_proc += 1
+                for target in re.findall(r"\\bproxy_pass\\s+(https?://[^;\\s]+)",value):
+                    if target not in proxy_targets_proc:
+                        proxy_targets_proc.append(target)
+    print("nginx_proc_proxy_targets="+json.dumps(proxy_targets_proc,ensure_ascii=False))
+    print("nginx_proc_license_config_files="+str(license_files_proc))
 except Exception:
-    print("technical_local_backend_check_status=unavailable")
+    print("edge_runtime_inspection=unavailable")
 
 try:
     live_server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
