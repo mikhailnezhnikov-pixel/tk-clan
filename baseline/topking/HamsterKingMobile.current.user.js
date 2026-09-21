@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.7
+// @version      1.17.8
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
-// @release-note AUTH_PASSIVE_SAFETY_R1: userscript больше не вызывает /auth/create автоматически; только пассивно использует штатную авторизацию игры.
+// @release-note PRELOGIN_ZERO_GAME_API_R1: до успешного native login userscript не делает ни одного Game API запроса; Maps и Explore без изменений.
 // @match        https://app.hamsterking.games/*
 // @run-at       document-start
 // @grant        none
@@ -11,9 +11,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.7';
+  const BUILD_VERSION = '1.17.8';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r9-auth-passive-safety';
+  const HK_CORE_REVISION = 'core-20260921-r10-prelogin-zero-api';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -1323,7 +1323,7 @@
       }
       licenseCheckPromise = null; updateLicenseUI();
       if (licenseState.allowed) setTimeout(() => {
-        synchronizeSettings(); flushPitObservations(); loadSharedPitPowers(); refreshSharedClanSkills(); maybeAutoScanClanSkills();
+        synchronizeSettings(); flushPitObservations(); loadSharedPitPowers(); refreshSharedClanSkills();
         if (licenseState.publicCollectorAuthSync) {
           maybeSyncPublicCollectorAuthorization().catch(() => {});
           setTimeout(() => { maybeSyncPublicCollectorAuthorization().catch(() => {}); }, 1500);
@@ -2592,7 +2592,7 @@
       captureAuthorization(url, requestHeaders);
       const response = await nativeFetch(input, init);
       const path = url ? new URL(url, location.href).pathname : '';
-      if (response.ok && isGameApiRequest(url)) hkGameBridge.noteMutation(path, init?.method || input?.method || 'GET');
+      if (hkNativeLoginRuntimeStarted && response.ok && isGameApiRequest(url)) hkGameBridge.noteMutation(path, init?.method || input?.method || 'GET');
       if(response.ok && isGameApiRequest(url) && path!=='/player/me') response.clone().json().then(body=>acceptSharedGameResponse(url,body)).catch(()=>{});
       if (path === '/player/me' && response.ok) {
         let partial = false;
@@ -2630,7 +2630,7 @@
             try {
               const path = new URL(this.__hkUrl, location.href).pathname;
               const body = JSON.parse(this.responseText);
-              hkGameBridge.noteMutation(path, this.__hkMethod || 'GET');
+              if (hkNativeLoginRuntimeStarted) hkGameBridge.noteMutation(path, this.__hkMethod || 'GET');
               if(path!=='/player/me')acceptSharedGameResponse(this.__hkUrl,body);
                if (path === '/player/me') {
                  let partial = false;
@@ -11914,46 +11914,10 @@
   let hkNativeLoginRuntimeStarted = false;
 
   function hkNativeGameLoginReady() {
-    if (playerDocument && apiHeaders.Authorization) return true;
-    try {
-      for (const storage of [sessionStorage, localStorage]) {
-        const token = String(storage.getItem('token') || '').trim();
-        if (token && jwtExpiration(token) > Date.now() + 5000 && gameBearerPlayerId(token)) return true;
-      }
-    } catch (_) {}
-    try {
-      const licenseOrigin = new URL(LICENSE_URL).origin;
-      for (const entry of performance.getEntriesByType('resource').slice().reverse()) {
-        const url = new URL(String(entry?.name || ''), location.href);
-        if (url.origin === licenseOrigin) continue;
-        if (url.pathname === '/player/me') return true;
-      }
-    } catch (_) {}
-
-    // The current game city is rendered with Leaflet/OpenStreetMap.  A visible
-    // native map is a strong signal that the player is already inside the game,
-    // even when the game no longer exposes its bearer token under the old
-    // localStorage key expected by the original gate.
-    try {
-      const nativeMap = document.querySelector('.leaflet-container, .leaflet-map-pane, .leaflet-control-container');
-      if (nativeMap && (nativeMap.offsetWidth || nativeMap.offsetHeight || nativeMap.getClientRects().length)) return true;
-      const osm = document.querySelector('a[href*="openstreetmap.org"]');
-      if (osm && (osm.offsetWidth || osm.offsetHeight || osm.getClientRects().length)) return true;
-    } catch (_) {}
-
-    // Also accept observed authenticated game traffic.  The API has changed
-    // route/storage details over time, so do not depend on /player/me alone.
-    try {
-      const licenseOrigin = new URL(LICENSE_URL).origin;
-      for (const entry of performance.getEntriesByType('resource').slice().reverse()) {
-        const url = new URL(String(entry?.name || ''), location.href);
-        if (url.origin === licenseOrigin) continue;
-        if (!/(^|\.)hwgame\.cloud$/i.test(url.hostname)) continue;
-        if (/\/(player|city|shop|clan|alliance|war|wars|building|business|fair|game_area)(?:\/|$)/i.test(url.pathname)) return true;
-      }
-    } catch (_) {}
-
-    return false;
+    // PRELOGIN_ZERO_GAME_API_R1
+    // Fail closed. The gate opens only after the native game itself has made
+    // an authenticated /player/me that our passive network observer captured.
+    return !!(playerDocument && apiHeaders.Authorization);
   }
 
   function startAfterNativeGameLogin() {
@@ -11963,13 +11927,11 @@
       return;
     }
     hkNativeLoginRuntimeStarted = true;
-    if (!root?.isConnected || !root.querySelector('#hk-fab')) showBootstrap();
-    startNetworkCapture();
     startInterface();
-    setTimeout(() => bootstrapLateGameConnection(), 100);
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
     setInterval(() => {
-      // AUTH_PASSIVE_SAFETY_R1: observe only; never call /auth/create here.
+      // PRELOGIN_ZERO_GAME_API_R1: observe only; never create/refresh the
+      // native session and never bootstrap /player/me ourselves.
       refreshStoredGameAuthorization();
       const token=currentGameBearer();
       const ok=!!token && jwtExpiration(token)>Date.now()+5000;
@@ -11980,7 +11942,7 @@
     setTimeout(() => hkGameBridge.discover(false), 1500);
     setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
     setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
-    recordDiagnostic('native-login-gate-open',{revision:'login-gate-20260920-r1'});
+    recordDiagnostic('native-login-gate-open',{revision:'prelogin-zero-game-api-r1'});
   }
 
   runtime.destroy = () => {
@@ -11991,12 +11953,12 @@
     panel = null;
   };
 
-  startInterface();
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startInterface, {once:true});
-  }
+  // PRELOGIN_ZERO_GAME_API_R1: install only passive interception before login.
+  // No UI, bootstrap or Game API calls are started until native /player/me was
+  // observed successfully.
+  startNetworkCapture();
   startAfterNativeGameLogin();
   setInterval(() => {
-    if (runtime.active) runtime.ensure?.();
+    if (hkNativeLoginRuntimeStarted && runtime.active) runtime.ensure?.();
   }, 1000);
 })();
