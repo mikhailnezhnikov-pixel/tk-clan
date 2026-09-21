@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.17
+- userscript: 1.17.18
 - current module: Buildings / Здания — final live action gate
 - current module file: audit/hk-stage2-06-buildings.md
-- current module status: LIMIT_RUNNER_R1_LIVE_CANDIDATE_USER_ACTION_CHECK_PENDING
+- current module status: OWNED_POSTCONDITION_R1_LIVE_USER_ACTION_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - next after Buildings LIVE PASS: Explore / Исследование — E3 single-building user validation
 - Explore E4 multi-building: NOT STARTED
@@ -1540,4 +1540,40 @@ Next user check:
 4. calculate candidates;
 5. open exactly one building;
 6. recalculate and confirm it disappears from candidates.
+
+### Buildings owned/postcondition r1 — PASS technical / user action pending (2026-09-21)
+
+User live action showed that the runner could say a building was opened while the account did not actually gain a new building, and favorite state was not being verified.
+
+Root cause:
+- the plan excluded only currently-active buildings;
+- already-owned but inactive/max-tier buildings could be offered again;
+- a successful HTTP response was treated as successful state mutation without checking `/player/me`.
+
+Delivered in userscript `1.17.18`:
+- candidates exclude all already-owned buildings;
+- claim success requires authoritative postcondition confirmation;
+- favorite success requires authoritative postcondition confirmation;
+- false positive “opened” / “added to favorite” messages are no longer accepted;
+- Favorites usage/max is visible in the plan;
+- limit 1/10/15/20/all and canonical runner remain unchanged.
+
+Verification:
+- predeploy `35571939466`: PASS;
+- deploy `35572226472`: PASS;
+- loader core-r20 `35572447994`: PASS;
+- Buildings verifier `35572452357`: PASS;
+- public E2E `35572333927`: PASS;
+- Maps/Explore/auth protected invariants: PASS.
+
+Current Stage 2 gate:
+**Buildings 2.06 — OWNED_POSTCONDITION_R1_LIVE_USER_ACTION_CHECK_PENDING**.
+
+Next user check:
+1. reload game/HK;
+2. calculate candidates;
+3. leave limit at 1;
+4. open one candidate;
+5. verify server-confirmed opening and, where eligible, confirmed favorite;
+6. recalculate and verify the opened building is no longer offered.
 
