@@ -1,1 +1,1 @@
-2026-09-21 inspect relation17767436 state after one-building live attempt
+2026-09-21 inspect post-claim active/favorite aggregate state
