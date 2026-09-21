@@ -78,6 +78,25 @@ def seed_token_file() -> None:
     os.chmod(tmp, 0o600)
     os.replace(tmp, TOKEN_PATH)
 
+# PUBLIC_COLLECTOR_LEGACY_ENV_TOKEN_REMOVAL_R1
+def remove_legacy_static_token(path: Path) -> None:
+    if not path.exists():
+        return
+    lines = path.read_text(encoding="utf-8").splitlines()
+    kept = [
+        line for line in lines
+        if not (line.strip() and not line.lstrip().startswith("#")
+                and line.split("=", 1)[0].strip() == "HK_PUBLIC_COLLECTOR_GAME_TOKEN"
+                and "=" in line)
+    ]
+    if kept == lines:
+        os.chmod(path, 0o600)
+        return
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text("\n".join(kept) + "\n", encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, path)
+
 def main() -> int:
     if len(sys.argv) != 3:
         raise SystemExit("usage: installer.py SERVER_SOURCE_SHA USERSCRIPT_SOURCE_SHA")
@@ -112,6 +131,7 @@ def main() -> int:
         "HK_PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS": str(REFRESH_STATUS_PATH),
     })
     seed_token_file()
+    remove_legacy_static_token(ENV_PATH)
     identity_parent = IDENTITY_PATH.parent.stat()
     os.chown(IDENTITY_PATH, identity_parent.st_uid, identity_parent.st_gid)
     os.chmod(IDENTITY_PATH, 0o600)
