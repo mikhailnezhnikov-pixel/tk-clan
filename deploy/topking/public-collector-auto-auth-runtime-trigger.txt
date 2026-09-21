@@ -1,0 +1,1 @@
+2026-09-21 verify auto-auth runtime before first technical heartbeat
