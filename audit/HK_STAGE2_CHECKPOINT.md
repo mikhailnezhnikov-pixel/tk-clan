@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.22
-- current module: Businesses / Бизнесы — canonical source preflight
+- userscript: 1.17.23
+- current module: Businesses / Бизнесы — catalog r1 live visual/read-only check
 - current module file: audit/hk-stage2-08-businesses.md
-- current module status: CANONICAL_TRANSFER_GAP_CONFIRMED
+- current module status: CATALOG_R1_LIVE_CANDIDATE_USER_UI_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: LIVE PASS
@@ -1741,4 +1741,29 @@ Initial Businesses source preflight:
 
 Current Businesses status:
 **CANONICAL_TRANSFER_GAP_CONFIRMED**
+
+### Businesses catalog r1 — live candidate (2026-09-21)
+
+First Businesses donor-transfer slice is live in userscript `1.17.23`.
+
+Scope:
+- read-only catalog;
+- search + bonus filters;
+- owned/active/limit information;
+- target quantity + missing calculation;
+- upgrade-capacity summary;
+- known recipe routes.
+
+No catalog mutation actions are enabled yet.
+
+Verification:
+- source preflight `35580260242`: PASS;
+- predeploy `35580823075`: PASS;
+- deploy `35580937013`: PASS;
+- loader core-r25 `35581115286`: PASS;
+- Businesses current-live `35581126441`: PASS;
+- public E2E `35581138549`: PASS.
+
+Current Stage 2 gate:
+**Businesses 2.08 — CATALOG_R1_LIVE_CANDIDATE_USER_UI_CHECK_PENDING**.
 
