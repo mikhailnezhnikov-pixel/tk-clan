@@ -1,1 +1,1 @@
-2026-09-21 verify Buildings limit/runner on userscript 1.17.17
+2026-09-21 verify Buildings owned/postconditions on userscript 1.17.18
