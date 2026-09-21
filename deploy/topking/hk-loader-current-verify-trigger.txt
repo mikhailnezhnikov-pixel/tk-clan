@@ -1,1 +1,1 @@
-2026-09-21 recheck public HK loader core r18 after Pages deploy
+2026-09-21 verify public HK loader core r19 after userscript 1.17.17
