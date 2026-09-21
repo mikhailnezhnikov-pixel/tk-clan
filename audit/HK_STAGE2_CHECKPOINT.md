@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.13
+- userscript: 1.17.14
 - current module: Buildings / Здания — final live action gate
 - current module file: audit/hk-stage2-06-buildings.md
-- current module status: TECHNICAL_REVALIDATION_PASS_USER_ACTION_PENDING
+- current module status: UI_R2_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - next after Buildings LIVE PASS: Explore / Исследование — E3 single-building user validation
 - Explore E4 multi-building: NOT STARTED
@@ -1413,4 +1413,29 @@ Verification:
 
 Stage 2 remains at:
 **Buildings 2.06 — TECHNICAL_REVALIDATION_PASS_USER_ACTION_PENDING**.
+
+### Buildings UI r2 — live candidate (2026-09-21)
+
+User screenshot confirmed the Buildings page was functionally present but visually broken:
+- per-row Read button expanded to full width;
+- UUID text collapsed into a one-character-wide column;
+- active-building list became excessively tall.
+
+Delivered in userscript `1.17.14`:
+- compact Buildings-only layout;
+- stable one-line UUID display;
+- compact per-row Read button;
+- structured settings / plan / active-building sections;
+- responsive mobile layout;
+- action logic unchanged.
+
+Verification:
+- predeploy `35565025652`: PASS;
+- live deploy `35565072034`: PASS;
+- Buildings verification `35565201926`: PASS;
+- public E2E `35565212100`: PASS;
+- Maps/Explore/auth protected invariants: PASS.
+
+Current Stage 2 gate:
+**Buildings 2.06 — UI_R2_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING**.
 
