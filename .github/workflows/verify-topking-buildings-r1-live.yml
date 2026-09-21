@@ -192,7 +192,7 @@ jobs:
           print("buildings_native_store_sync=PASS")
           print("buildings_reload_fallback=PASS")
           print("protected_maps_explore=PASS")
-          print("userscript_1_17_18=PASS")
+          print("userscript_1_17_19=PASS")
           print("BUILDINGS_CANON_R1_TECHNICAL_REVALIDATION=PASS")
           PY
 
