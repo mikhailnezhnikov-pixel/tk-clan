@@ -20,6 +20,11 @@
       idle:'../assets/war/units/raider/idle.webp?v=20260921-2',
       attack:'../assets/war/units/raider/attack.webp?v=20260921-2',
       hit:'../assets/war/units/raider/hit.webp?v=20260921-2'
+    },
+    bot:{
+      idle:'../assets/war/units/bot/idle.webp?v=20260921-3',
+      attack:'../assets/war/units/bot/attack.webp?v=20260921-3',
+      hit:'../assets/war/units/bot/hit.webp?v=20260921-3'
     }
   };
 
@@ -489,7 +494,7 @@
     if(!fightersLayer||!currentWar)return;
     const kind=kindOf(currentWar);
     const style=enemyStyle(currentWar.opponent,currentInfo,kind);
-    enemyArtKey=kind==='bot'?'raider':'raider';
+    enemyArtKey=kind==='bot'?'bot':'raider';
     const sig=kind+'|'+normalize(currentWar.opponent)+'|'+style.key+'|'+style.primary+'|'+style.secondary;
     if(sig===enemySignature&&enemyFighter)return;
     enemySignature=sig;
@@ -622,5 +627,5 @@
     app=null;ready=false;initPromise=null;
   }
 
-  window.TopKingBattleV2={init,update,destroy,version:'3.1.0-art-states'};
+  window.TopKingBattleV2={init,update,destroy,version:'3.2.0-bot-states'};
 })();
