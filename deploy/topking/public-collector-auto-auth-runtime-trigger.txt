@@ -1,1 +1,1 @@
-2026-09-21 check license service uid and identity permissions safely
+2026-09-21 inspect collector file ownership and service uids safely
