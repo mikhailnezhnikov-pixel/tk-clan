@@ -49,15 +49,14 @@ jobs:
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/userscript-source.sha
-          grep -Fq '// @version      1.17.6' /tmp/HamsterKingMobile.user.js
-          grep -Fq "const BUILD_VERSION = '1.17.6';" /tmp/HamsterKingMobile.user.js
+          grep -Fq '// @version      1.17.5' /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.5';" /tmp/HamsterKingMobile.user.js
           grep -Fq 'PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1' /tmp/HamsterKingMobile.user.js
-          grep -Fq 'PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1' /tmp/HamsterKingMobile.user.js
           grep -Fq 'explore-e3-single-20260920-r9-runner' /tmp/HamsterKingMobile.user.js
           grep -Fq 'const HK_MAP_READ_CONCURRENCY = 5;' /tmp/HamsterKingMobile.user.js
           grep -Fq 'public-server-only-20260920-r2' /tmp/HamsterKingMobile.user.js
 
-      - name: Build 1.17.5 candidate
+      - name: Build 1.17.6 candidate
         run: |
           set -euo pipefail
           python3 deploy/topking/patch_userscript_auth_observer_1_17_6.py /tmp/HamsterKingMobile.user.js
