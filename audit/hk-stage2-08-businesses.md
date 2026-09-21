@@ -192,3 +192,25 @@ Current Stage 2.08 gate:
 **CATALOG_R1_LIVE_CANDIDATE_USER_UI_CHECK_PENDING · REARRANGE_UI_GUARD_R1_LIVE_CANDIDATE_USER_VISUAL_CHECK_PENDING**
 
 Do not enable catalog-driven mutations until the read-only catalog/planner live UI is confirmed.
+
+
+## Businesses runner visual canon r1 — hotfix (2026-09-21)
+
+User screenshot showed the shared Runner falling back to the generic full-width action layout during **Перестановка бизнесов**.
+
+Hotfix on userscript `1.17.24`:
+- core: `core-20260921-r27-businesses-runner-canon`;
+- marker: `businesses-runner-canon-20260921-r1`;
+- Businesses rearrangement Runner now uses the same established compact visual canon as Buildings;
+- title/status/progress keep the shared Runner semantics;
+- desktop Pause/Stop actions are compact and right-aligned instead of stretching across the panel;
+- mobile keeps the canonical two-action responsive layout;
+- business logic, T4–T6 protection, catalog and optimizer are unchanged.
+
+Verification:
+- deploy/public round-trip `35596167960`: PASS;
+- loader core-r27 `35596327521`: PASS;
+- Businesses current-live `35596331997`: PASS;
+- public E2E `35596336047`: PASS.
+
+Stage 2.08 remains open for the user's next UI comments.
