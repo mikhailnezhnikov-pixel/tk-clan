@@ -1,1 +1,1 @@
-2026-09-21 rerun normal-player collector isolation with supported client version\n
+2026-09-21 verify normal-player collector isolation using temporary DB and live signing key\n
