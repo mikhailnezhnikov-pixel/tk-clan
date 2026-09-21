@@ -48,7 +48,7 @@ jobs:
           for marker in [
               "// @version      1.17.24",
               "const BUILD_VERSION = '1.17.24';",
-              "const HK_CORE_REVISION = 'core-20260921-r26-businesses-rearrange-guard';",
+              "const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';",
               "const HK_BUSINESSES_CANON_REV='businesses-catalog-readonly-20260921-r1';",
               "function businessCatalogOwnedCount(",
               "function businessCatalogCapacity(",
@@ -60,6 +60,7 @@ jobs:
               'data-business-tab="catalog"',
               'id="hk-business-catalog"',
               "const HK_BUSINESSES_REARRANGE_REV='businesses-rearrange-desktop-safe-t123-20260921-r1';",
+              "const HK_BUSINESSES_RUNNER_UI_REV='businesses-runner-canon-20260921-r1';",
               "function businessRemovalAllowed(",
               "function assertBusinessRemovalPlanAllowed(",
               "removeAll:'Достать: T1–T3'",
