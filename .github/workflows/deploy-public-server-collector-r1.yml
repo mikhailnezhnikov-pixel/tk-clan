@@ -1,4 +1,4 @@
-name: Deploy Isolated Public Collector R1
+name: Sync Public Collector Secret and Deploy
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile deploy/topking/public_collector.py
-          grep -Fq "OnCalendar=*-*-* 00/3:15:00" deploy/topking/hamsterking-public-collector.timer
+          grep -Fq "OnCalendar=*-*-* 16:00:00 Europe/Moscow" deploy/topking/hamsterking-public-collector.timer
           grep -Fq "EnvironmentFile=-/etc/hamsterking-public-collector.env" deploy/topking/hamsterking-public-collector.service
 
       - name: Prepare SSH
@@ -50,7 +50,7 @@ jobs:
               printf 'HK_PUBLIC_COLLECTOR_GAME_API=https://hk-game-api.hwgame.cloud\n'
               printf 'HK_PUBLIC_COLLECTOR_DB=/var/lib/hamsterking-license/licenses.db\n'
               printf 'HK_PUBLIC_COLLECTOR_STATUS=/var/lib/hamsterking-license/public-collector-status.json\n'
-              printf 'HK_PUBLIC_COLLECTOR_REQUEST_GAP=0.35\n'
+              printf 'HK_PUBLIC_COLLECTOR_REQUEST_GAP=1.5\n'
             } > /tmp/hamsterking-public-collector.env
             echo "configured=yes" > /tmp/collector-token-state
           else
@@ -80,7 +80,7 @@ jobs:
                 'HK_PUBLIC_COLLECTOR_GAME_API=https://hk-game-api.hwgame.cloud' \
                 'HK_PUBLIC_COLLECTOR_DB=/var/lib/hamsterking-license/licenses.db' \
                 'HK_PUBLIC_COLLECTOR_STATUS=/var/lib/hamsterking-license/public-collector-status.json' \
-                'HK_PUBLIC_COLLECTOR_REQUEST_GAP=0.35' \
+                'HK_PUBLIC_COLLECTOR_REQUEST_GAP=1.5' \
                 > /etc/hamsterking-public-collector.env
             fi
             python3 -m py_compile /opt/hamsterking-license/public_collector.py
@@ -153,7 +153,7 @@ jobs:
             echo "public_byte_equality=PASS"
             echo "syntax=PASS"
             echo "player_client_public_collection=DISABLED"
-            echo "collector_timer=3h"
+            echo "collector_timer=daily_16_Europe_Moscow"
             echo "$(cat /tmp/collector-token-state)"
             cat /tmp/collector-runtime.txt
             echo "explore_r9_preserved=PASS"
