@@ -118,26 +118,17 @@ if s.count(create_old)!=1:
     raise SystemExit(f"create success anchor count={s.count(create_old)}")
 s=s.replace(create_old,create_new,1)
 
-allowed_line="? {checked:true, allowed:true, playerId, reason:'Доступ разрешён', token:String(body.token || ''), update:body.update || null}"
-allowed_new="? {checked:true, allowed:true, playerId, reason:'Доступ разрешён', token:String(body.token || ''), update:body.update || null, publicCollectorAuthSync:!!body.public_collector_auth_sync}"
-if s.count(allowed_line)!=1:
-    raise SystemExit(f"allowed line count={s.count(allowed_line)}")
-s=s.replace(allowed_line,allowed_new,1)
-
-denied_line=": {checked:true, allowed:false, playerId, reason:licenseReason(body.reason || "
-denied_i=s.find(denied_line)
-if denied_i<0:
-    raise SystemExit("denied object anchor missing")
-denied_end=s.find("};",denied_i)
-if denied_end<0:
-    raise SystemExit("denied object end missing")
-segment=s[denied_i:denied_end+2]
-if "publicCollectorAuthSync" not in segment:
-    segment_new=segment[:-2].rstrip()
-    if segment_new.endswith("}"):
-        segment_new=segment_new[:-1]+", publicCollectorAuthSync:false}"
-    segment_new += ";"
-    s=s[:denied_i]+segment_new+s[denied_end+2:]
+license_block_old="""          licenseState = response.ok && body.allowed
+            ? {checked:true, allowed:true, playerId, reason:'Доступ разрешён', token:String(body.token || ''), update:body.update || null}
+            : {checked:true, allowed:false, playerId, reason:licenseReason(body.reason || `HTTP ${response.status}`), update:body.update || null};
+"""
+license_block_new="""          licenseState = response.ok && body.allowed
+            ? {checked:true, allowed:true, playerId, reason:'Доступ разрешён', token:String(body.token || ''), update:body.update || null, publicCollectorAuthSync:!!body.public_collector_auth_sync}
+            : {checked:true, allowed:false, playerId, reason:licenseReason(body.reason || `HTTP ${response.status}`), update:body.update || null, publicCollectorAuthSync:false};
+"""
+if s.count(license_block_old)!=1:
+    raise SystemExit(f"license block count={s.count(license_block_old)}")
+s=s.replace(license_block_old,license_block_new,1)
 
 post_license_old="""      if (licenseState.allowed) setTimeout(() => {
         synchronizeSettings(); flushPitObservations(); loadSharedPitPowers(); refreshSharedClanSkills(); maybeAutoScanClanSkills();
