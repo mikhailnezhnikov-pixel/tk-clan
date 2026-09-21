@@ -2,7 +2,7 @@
 
 ## Status
 
-**CATALOG_R1_LIVE_CANDIDATE_USER_UI_CHECK_PENDING**
+**CATALOG_R1_LIVE_CANDIDATE_USER_UI_CHECK_PENDING · REARRANGE_UI_GUARD_R1_LIVE_CANDIDATE_USER_VISUAL_CHECK_PENDING**
 
 ## Current production baseline
 
@@ -139,3 +139,56 @@ User live gate:
 6. verify target quantity, owned/missing, capacity and known recipe route display;
 7. no state-changing catalog action should be present.
 
+
+
+## Businesses rearrangement desktop + T1–T3 guard r1 — userscript 1.17.24 (2026-09-21)
+
+User live feedback on the existing rearrangement screen required two focused corrections without replacing the current working module or inventing a new flow:
+
+1. desktop must show the existing **remove / Достать** side on the left and **insert / Вставить** side on the right;
+2. currently installed **T4, T5 and T6 must never be user-removable**.
+
+The pinned Kokkaras donor remains the source of truth. This is a focused compatibility/safety patch on the current rearrangement layer; the donor catalog/planner r1 stays read-only.
+
+Delivered:
+- marker: `businesses-rearrange-desktop-safe-t123-20260921-r1`;
+- userscript: `1.17.24`;
+- core: `core-20260921-r26-businesses-rearrange-guard`;
+- desktop remove controls/list = left column;
+- desktop insert controls/list = right column;
+- mobile remains stacked;
+- manual remove selector exposes only T1–T3 plus empty slots;
+- optimizer removal tiers expose only T1–T3;
+- stale presets selecting T4–T6 are sanitized;
+- original-layout restore is blocked if it would remove a currently installed T4–T6;
+- final plan has a runtime guard, so stale/in-memory plans cannot remove T4–T6;
+- transaction rollback remains available only as a safety path for reverting a business inserted by the same failed rearrangement run.
+
+Preserved:
+- catalog r1 read-only contract;
+- manual rearrangement semantics apart from the explicit T4–T6 protection;
+- optimizer insertion tiers;
+- bonus analyzer;
+- manager/free-speed-up handling;
+- authoritative postconditions;
+- rollback safety;
+- Buildings 2.06 LIVE PASS;
+- Explore 2.07 LIVE PASS;
+- Maps safe5.
+
+Verification:
+- deploy/public round-trip run `35590711750`: PASS;
+- live Businesses verifier run `35590863403`: PASS;
+- loader core-r26 retry run `35590914106`: PASS;
+- public E2E run `35590987942`: PASS;
+- `desktop_remove_left_insert_right=PASS`;
+- `manual_remove_t4_t6=BLOCKED`;
+- `optimizer_remove_t4_t6=BLOCKED`;
+- `preset_stale_remove_t4_t6=SANITIZED`;
+- `restore_remove_t4_t6=BLOCKED`;
+- `plan_runtime_guard=PASS`.
+
+Current Stage 2.08 gate:
+**CATALOG_R1_LIVE_CANDIDATE_USER_UI_CHECK_PENDING · REARRANGE_UI_GUARD_R1_LIVE_CANDIDATE_USER_VISUAL_CHECK_PENDING**
+
+Do not enable catalog-driven mutations until the read-only catalog/planner live UI is confirmed.
