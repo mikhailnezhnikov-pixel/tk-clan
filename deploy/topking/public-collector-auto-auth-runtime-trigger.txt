@@ -1,1 +1,1 @@
-2026-09-21 inspect safe technical license response flags after 1.17.11
+2026-09-21 rerun safe technical license response flags after checker fix
