@@ -111,3 +111,49 @@ Current status remains:
 
 Only the real one-building user action/state/rerun confirmation remains before Stage 2.06 LIVE PASS.
 
+## Buildings UI r2 — userscript 1.17.14 (2026-09-21)
+
+User screenshot exposed a presentation regression in the Buildings page:
+- generic `.hk-secondary{width:100%}` made the per-building `Считать` button consume almost the whole row;
+- the building UUID column collapsed to a few pixels and wrapped one character per line;
+- active-building rows became extremely tall and visually unusable.
+
+UI-only fix:
+- userscript `1.17.14`;
+- core `core-20260921-r16-buildings-ui`;
+- marker `buildings-ui-20260921-r2`;
+- dedicated Buildings header instead of generic Clan grid;
+- compact 3-field settings grid;
+- two-column action row;
+- separate Opening plan block with candidate/active/mapped counters;
+- compact candidate rows;
+- separate Active buildings section;
+- building IDs stay on one line with ellipsis + full value in tooltip;
+- per-building `Считать` is a compact right-side button;
+- responsive mobile rules added.
+
+Safety:
+- `runBuildingsCanonical()` action block remained byte-identical during the patch;
+- no Buildings mutation logic changed;
+- Maps shared runtime + concurrency 5 preserved;
+- Explore E3 r9 preserved;
+- passive auth safety preserved.
+
+Verification:
+- predeploy run `35565025652`: PASS;
+- deploy/public round-trip run `35565072034`: PASS;
+- loader aligned to core r16; public loader verification: PASS;
+- Buildings live technical revalidation run `35565201926`: PASS;
+- public E2E run `35565212100`: PASS.
+
+Current status:
+**UI_R2_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING**
+
+Next:
+1. reload game and HK;
+2. open City → Buildings;
+3. visually confirm layout;
+4. calculate candidates;
+5. perform one controlled eligible-building open;
+6. rerun plan and confirm opened building is removed from candidates and appears among active buildings.
+
