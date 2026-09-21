@@ -1,1 +1,1 @@
-2026-09-20T23:55+09:00 isolated public collector final verification v2
+2026-09-21 sync freshly updated collector token and rebuild public cache
