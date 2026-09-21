@@ -1248,18 +1248,21 @@
       ['Уже связаны',counts.matched_link||0],
       ['Совпали по building_id',counts.matched_building||0],
       ['Пустой canonical по координатам',counts.matched_empty_coordinate||0],
-      ['Новые районы',counts.new||0],
+      ['Исходный UUID уже есть пустым',counts.matched_original_id_empty||0],
+      ['Новые районы с исходным UUID',counts.new_original||0],
+      ['Новые районы без исходного UUID',counts.new||0],
       ['Только координаты — нужна проверка',counts.coordinate_only||0],
       ['Слабое совпадение',counts.weak_overlap||0],
       ['Неоднозначные building_id',counts.ambiguous_building_overlap||0],
+      ['Конфликт исходного UUID',counts.conflict_original_id_no_overlap||0],
       ['Конфликт существующей связи', (counts.conflict_link_buildings||0)+(counts.conflict_link_no_overlap||0)]
     ];
-    const problems=(report?.maps||[]).filter(x=>!['matched_link','matched_building','matched_empty_coordinate','new'].includes(x.status));
+    const problems=(report?.maps||[]).filter(x=>!['matched_link','matched_building','matched_empty_coordinate','matched_original_id_empty','new_original','new'].includes(x.status));
     box.innerHTML=
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">'+
       entries.map(([label,value])=>'<div style="padding:9px 10px;border:1px solid rgba(255,255,255,.1);border-radius:10px"><small>'+safe(label)+'</small><b style="display:block;font-size:20px">'+formatNumber(value)+'</b></div>').join('')+
       '</div>'+
-      '<p style="margin:10px 0 0"><b>'+formatNumber(report?.maps_received||0)+'/235 карт</b> · '+formatNumber(report?.archive_total_buildings||0)+' зданий · уникальных ID '+formatNumber(report?.unique_archive_building_ids||0)+'</p>'+
+      '<p style="margin:10px 0 0"><b>'+formatNumber(report?.maps_received||0)+'/235 карт</b> · '+formatNumber(report?.archive_total_buildings||0)+' зданий · уникальных ID '+formatNumber(report?.unique_archive_building_ids||0)+(report?.original_area_id_catalog!=null?' · исходных UUID '+formatNumber(report.original_area_id_maps_seen||0)+'/'+formatNumber(report.original_area_id_catalog||0):'')+'</p>'+
       (report?.ready_to_apply
         ? '<p style="color:#78e7a4;margin:7px 0 0"><b>Dry-run PASS.</b> Все 235 карт можно импортировать без неоднозначных склеек.</p>'
         : '<p style="color:#ffb36b;margin:7px 0 0"><b>Импорт пока заблокирован.</b> Проблемных карт: '+formatNumber(problems.length)+'.</p>')+

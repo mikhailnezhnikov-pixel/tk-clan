@@ -1,0 +1,158 @@
+name: Check full235 original75 V2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/full235-original75-v2-trigger.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          K: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$K" > ~/.ssh/k
+          chmod 600 ~/.ssh/k
+
+      - name: Build candidate from live
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          echo "source_sha=$(sha256sum /tmp/server.py | cut -d' ' -f1)"
+          grep -Fq HK_FULL235_IMPORT_V1 /tmp/server.py
+          python3 deploy/topking/patch_server_full235_original75_v2.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq HK_FULL235_ORIGINAL75_V2 /tmp/server.py
+          sha256sum /tmp/server.py | tee /tmp/candidate.sha
+
+      - name: Temporary DB regression
+        run: |
+          python3 - <<'PY'
+          import importlib.util,os,tempfile
+          spec=importlib.util.spec_from_file_location('s','/tmp/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          assert len(s.FULL235_ORIGINAL_AREA_IDS_75)==75
+
+          fd,path=tempfile.mkstemp(prefix='full235-v2-',suffix='.db');os.close(fd)
+          mgr={'telegram_id':'mgr','maps_manage':1,'maps_access':1}
+          try:
+              s.DB_PATH=path;s.init_db();s.ensure_full235_import_schema();now=s.utc_now()
+              original=list(sorted(s.FULL235_ORIGINAL_AREA_IDS_75.items()))
+              fake=[(f'hk_fake{i:03d}',f'fake-area-{i:03d}') for i in range(160)]
+
+              with s.db_session() as db:
+                  # 75 archive maps whose canonical areas do not exist yet.
+                  for n,(key,area_id) in enumerate(original):
+                      city=f'OrigCity{n}';grid=f'{10+n//100:02d}:{10+n%100:02d}'
+                      db.execute("INSERT INTO hk_maps_catalog(map_key,city,grid,open_url,published,updated_at) VALUES(?,?,?,?,?,?)",
+                                 (key,city,grid,'',0,now))
+                  # 160 already-linked canonical maps.
+                  for n,(key,area_id) in enumerate(fake):
+                      city=f'FakeCity{n}';grid=f'{30+n//100:02d}:{20+n%100:02d}'
+                      bid=f'wayF{n:03d}'
+                      db.execute("INSERT INTO hk_maps_catalog(map_key,city,grid,open_url,published,updated_at) VALUES(?,?,?,?,?,?)",
+                                 (key,city,grid,'',0,now))
+                      db.execute("INSERT INTO map_areas(area_id,city_id,city_name,x,y,last_player_id,last_seen) VALUES(?,?,?,?,?,?,?)",
+                                 (area_id,f'city-{n}',city,20+n%100,30+n//100,'p',now))
+                      db.execute("INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen) VALUES(?,?,?,?)",
+                                 (area_id,area_id,now,now))
+                      db.execute("""INSERT INTO map_buildings(
+                        area_id,building_id,opened,room_count,has_events,is_invest,tier,faction,building_type,
+                        last_player_id,last_seen,knowledge_source,knowledge_observed_at)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        (area_id,bid,1,5,1,0,None,'','','p',now,'game_live',now))
+                      db.execute("INSERT INTO hk_map_area_links(map_key,canonical_area_id,match_method,linked_at) VALUES(?,?,?,?)",
+                                 (key,area_id,'exact_area_id',now))
+
+              start=s.full235_import_start(mgr,{
+                  'format':'HK Maps Full Export','version':3,'maps_found':235,'maps_exported':235,
+                  'errors_count':0,'exported_at':'2026-09-19T10:34:26.478Z','archive_sha256':'c'*64
+              })
+              batch=start['batch_id'];docs=[]
+              for n,(key,area_id) in enumerate(original):
+                  city=f'OrigCity{n}';grid=f'{10+n//100:02d}:{10+n%100:02d}'
+                  docs.append({'key':key,'city':city,'grid':grid,
+                               'buildings':[[f'wayO{n:03d}a',1,False,'',''],[f'wayO{n:03d}b',2,True,'',''],[f'wayO{n:03d}c',None,False,'','']]})
+              for n,(key,area_id) in enumerate(fake):
+                  city=f'FakeCity{n}';grid=f'{30+n//100:02d}:{20+n%100:02d}'
+                  docs.append({'key':key,'city':city,'grid':grid,
+                               'buildings':[[f'wayF{n:03d}',1,False,'',''],[f'wayFX{n:03d}',2,False,'',''],[f'wayFY{n:03d}',None,False,'','']]})
+              for i in range(0,len(docs),10):
+                  s.full235_import_chunk(mgr,{'batch_id':batch,'maps':docs[i:i+10]})
+
+              report=s.full235_import_resolve(mgr,{'batch_id':batch})
+              assert report['ready_to_apply'] is True,report['status_counts']
+              assert report['original_area_id_catalog']==75,report
+              assert report['original_area_id_maps_seen']==75,report
+              assert report['status_counts'].get('matched_link')==160,report['status_counts']
+              assert report['status_counts'].get('new_original')==75,report['status_counts']
+              for item in report['maps']:
+                  if item['map_key'] in s.FULL235_ORIGINAL_AREA_IDS_75:
+                      assert item['target_area_id']==s.FULL235_ORIGINAL_AREA_IDS_75[item['map_key']],item
+                      assert item['method']=='full_archive_original_area_id',item
+
+              result=s.full235_import_apply(mgr,{'batch_id':batch,'confirm':'IMPORT_235'})
+              assert result['maps_imported']==235,result
+              assert result['created_canonical_areas']==75,result
+              with s.db_session() as db:
+                  for key,area_id in original:
+                      assert db.execute("SELECT 1 FROM map_areas WHERE area_id=?",(area_id,)).fetchone(),(key,area_id)
+                      link=db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",(key,)).fetchone()
+                      assert link and link[0]==area_id,(key,link,area_id)
+                  assert db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0]==235
+
+              # Repeat same archive: zero new areas.
+              start2=s.full235_import_start(mgr,{
+                  'format':'HK Maps Full Export','version':3,'maps_found':235,'maps_exported':235,
+                  'errors_count':0,'exported_at':'2026-09-19T10:34:26.478Z','archive_sha256':'c'*64
+              })
+              batch2=start2['batch_id']
+              for i in range(0,len(docs),10):
+                  s.full235_import_chunk(mgr,{'batch_id':batch2,'maps':docs[i:i+10]})
+              report2=s.full235_import_resolve(mgr,{'batch_id':batch2})
+              assert report2['ready_to_apply'] is True,report2['status_counts']
+              result2=s.full235_import_apply(mgr,{'batch_id':batch2,'confirm':'IMPORT_235'})
+              assert result2['created_canonical_areas']==0,result2
+
+              print('FULL235_V2_ORIGINAL75=PASS')
+              print('FULL235_V2_MATCHED160=PASS')
+              print('FULL235_V2_CREATE75=PASS')
+              print('FULL235_V2_REIMPORT=PASS')
+          finally:
+              try:os.remove(path)
+              except OSError:pass
+          PY
+
+      - name: Read-only live UUID75 safety check
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new deploy/maps/full235-nooverlap-area-ids.json root@89.125.1.71:/tmp/full235-ids75.json
+          cat > /tmp/check-live75.py <<'PY'
+          import json,sqlite3
+          ids=json.load(open('/tmp/full235-ids75.json'))
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          out={'areas':0,'aliases':0,'links':0,'conflicts':[]}
+          for key,area_id in ids.items():
+              a=db.execute("SELECT area_id FROM map_areas WHERE area_id=?",(area_id,)).fetchone()
+              al=db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",(area_id,)).fetchone()
+              lk=db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",(key,)).fetchone()
+              out['areas']+=int(bool(a));out['aliases']+=int(bool(al));out['links']+=int(bool(lk))
+              if lk and lk['canonical_area_id']!=area_id:
+                  out['conflicts'].append([key,lk['canonical_area_id'],area_id])
+          print(out)
+          assert not out['conflicts'],out
+          db.close()
+          PY
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new /tmp/check-live75.py root@89.125.1.71:/tmp/check-live75.py
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/check-live75.py'
+          echo "production_writes=NO"
