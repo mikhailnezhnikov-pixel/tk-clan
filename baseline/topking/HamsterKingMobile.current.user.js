@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.20
+// @version      1.17.21
+// @release-note Добавлена безопасная очередь исследования E4 с лимитом 1 / 5 / 10 / 15 / 20 / все выбранные.
 // @release-note Исследование E3 слегка ускорено: стандартные паузы между действиями и боями уменьшены без снятия проверок состояния.
 // @release-note После открытия зданий HK теперь проверяет native-store игры и синхронизирует карту; при необходимости выполняется одна безопасная перезагрузка.
 // @release-note Исправлено открытие зданий: кандидаты теперь исключают все уже полученные здания, а успех проверяется по /player/me.
@@ -22,9 +23,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.20';
+  const BUILD_VERSION = '1.17.21';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r22-explore-speed-tune';
+  const HK_CORE_REVISION = 'core-20260921-r23-explore-e4-queue';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -590,7 +591,7 @@
       resume() { if(state.status!=='paused')return false; state.status='running'; settlePaused(); recordDiagnostic('runner-resume',{title:state.title}); emit(); return true; },
       async waitIfPaused() { while(state.status==='paused') await new Promise(resolve=>pauseResolvers.push(resolve)); if(abortController?.signal.aborted) throw new DOMException('Aborted','AbortError'); },
       stop(reason='user') { if(!this.running||!state.stoppable)return false; state.status='stopping'; abortController?.abort(reason); settlePaused(); recordDiagnostic('runner-stop',{title:state.title,reason}); emit(); return true; },
-      finish(step='') { if(step)state.step=String(step); state.status='done'; if(state.total)state.done=state.total; recordDiagnostic('runner-finish',{title:state.title}); emit(); const keep=String(state.title||'')===either('Исследование · E3','Explore · E3')?15000:1800; setTimeout(()=>{if(state.status==='done'){state.status='idle';emit();}},keep); },
+      finish(step='') { if(step)state.step=String(step); state.status='done'; if(state.total)state.done=state.total; recordDiagnostic('runner-finish',{title:state.title}); emit(); const exploreTitle=[either('Исследование · E3','Explore · E3'),either('Исследование · E4','Explore · E4')].includes(String(state.title||'')); const keep=exploreTitle?15000:1800; setTimeout(()=>{if(state.status==='done'){state.status='idle';emit();}},keep); },
       fail(error) { state.status='error'; state.error=String(error?.message||error||either('Ошибка','Error')); recordDiagnostic('runner-error',{title:state.title,error:state.error}); emit(); },
       reset() { abortController=null; settlePaused(); Object.assign(state,{status:'idle',title:'',step:'',done:0,total:0,startedAt:0,error:'',pausable:true,stoppable:true,history:[]}); emit(); }
     };
@@ -2021,6 +2022,7 @@
 
   const HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner';
   const HK_EXPLORE_SPEED_REV='explore-e3-speed-20260921-r1';
+  const HK_EXPLORE_E4_REV='explore-e4-queue-20260921-r1';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -2071,6 +2073,7 @@
       betweenBuildingsDelayMinMs:clamp(x.betweenBuildingsDelayMinMs,0,120000,2000),
       betweenBuildingsDelayMaxMs:clamp(x.betweenBuildingsDelayMaxMs,0,120000,7000),buyMissingMaterials:x.buyMissingMaterials===true,
       speedProfileRev:HK_EXPLORE_SPEED_REV,
+      runLimit:[1,5,10,15,20].includes(Number(x.runLimit))||Number(x.runLimit)===0?Number(x.runLimit):1,
       exploreTargetTier:targetActionsAllowed,exploreTargetBattles:targetActionsAllowed&&x.exploreTargetBattles===true
     };
   }
@@ -2083,6 +2086,7 @@
     if(x.actionDelayMaxMs<x.actionDelayMinMs)x.actionDelayMaxMs=x.actionDelayMinMs;
     if(x.betweenBuildingsDelayMaxMs<x.betweenBuildingsDelayMinMs)x.betweenBuildingsDelayMaxMs=x.betweenBuildingsDelayMinMs;
     x.speedProfileRev=HK_EXPLORE_SPEED_REV;
+    x.runLimit=[1,5,10,15,20].includes(Number(x.runLimit))||Number(x.runLimit)===0?Number(x.runLimit):1;
     x.exploreTargetTier=targetActionsAllowed;if(!x.exploreTargetTier)x.exploreTargetBattles=false;
     save({exploreCanonSettings:x});return x;
   }
@@ -2096,7 +2100,9 @@
       level:String(b.querySelector('#hk-ex-pr-level')?.value||'min'),nextTierLevel:String(b.querySelector('#hk-ex-pr-next')?.value||'max'),
       totalEvents:String(b.querySelector('#hk-ex-pr-events')?.value||'any'),actionDelayMinMs:ms('#hk-ex-action-min'),actionDelayMaxMs:ms('#hk-ex-action-max'),
       battleDelayMs:ms('#hk-ex-battle'),betweenBuildingsDelayMinMs:ms('#hk-ex-between-min'),betweenBuildingsDelayMaxMs:ms('#hk-ex-between-max'),
-      buyMissingMaterials:!!b.querySelector('#hk-ex-buy')?.checked,exploreTargetTier:!!b.querySelector('#hk-ex-target-tier')?.checked,
+      buyMissingMaterials:!!b.querySelector('#hk-ex-buy')?.checked,
+      runLimit:String(b.querySelector('#hk-ex-run-limit')?.value||'1')==='all'?0:Number(b.querySelector('#hk-ex-run-limit')?.value||1),
+      exploreTargetTier:!!b.querySelector('#hk-ex-target-tier')?.checked,
       exploreTargetBattles:!!b.querySelector('#hk-ex-target-battles')?.checked
     });
   }
@@ -2230,9 +2236,9 @@
     const row={stageKey,stageStatus,text,type,at:Date.now()},index=rows.findIndex(x=>String(x?.stageKey||'')===stageKey);
     if(index>=0)rows[index]=row;else rows.push(row);state.history=rows.slice(-12);renderRunnerState();return row;
   }
-  function exploreE3InitStages(candidate,total){
+  function exploreE3InitStages(candidate,total,index=1){
     const target=exploreTierLabel(exploreSettings().targetTier);
-    exploreE3Stage('prepare',either('Чтение состояния здания','Read building state'),'running',either('тест 1 из ','test 1 of ')+total);
+    exploreE3Stage('prepare',either('Чтение состояния здания','Read building state'),'running',either('здание ','building ')+index+'/'+total);
     exploreE3Stage('events',either('Исследование событий','Explore events'),'pending');
     exploreE3Stage('battles',either('Бои','Battles'),'pending');
     exploreE3Stage('tier',either('Переход по тирам','Tier progression'),'pending',either('цель ','target ')+target);
@@ -2258,6 +2264,11 @@
   async function exploreE3Delay(settings,type){
     const ms=type==='battle'?Math.max(0,Number(settings?.battleDelayMs||0)):exploreE3Random(settings?.actionDelayMinMs,settings?.actionDelayMaxMs);
     if(ms>0)await sleep(ms);await hkRunner.waitIfPaused();
+  }
+  async function exploreE4BetweenDelay(settings){
+    const ms=exploreE3Random(settings?.betweenBuildingsDelayMinMs,settings?.betweenBuildingsDelayMaxMs);
+    if(ms>0)await sleep(ms);
+    await hkRunner.waitIfPaused();
   }
   function exploreE3PlayerFactions(st=exploreState()){
     const rows=st?.playerFactions||st?.player_factions||[],out={};
@@ -2383,17 +2394,97 @@
     finally{exploreBusy=false;renderExplore();}
   }
 
+  async function runExploreE4Queue(){
+    if(!requireLicense()||exploreBusy||hkRunner.running)return;
+    const settings=exploreReadSettings();
+    exploreBusy=true;exploreE3ShopLots=null;renderExplore();
+    try{
+      explorePlan=await exploreBuildPlan();
+      const source=Array.isArray(explorePlan?.selected)?explorePlan.selected:[];
+      if(!source.length){log(either('Нет зданий для очереди E4','No buildings for the E4 queue'),'warn');return;}
+      const limit=Number(settings.runLimit);
+      const queue=limit===0?source:source.slice(0,Math.max(1,limit||1));
+      const ok=confirm(either(
+        'E4: обработать '+queue.length+' из '+source.length+' выбранных зданий последовательно?',
+        'E4: process '+queue.length+' of '+source.length+' selected buildings sequentially?'
+      ));
+      if(!ok)return;
+
+      hkRunner.start({title:either('Исследование · E4','Explore · E4'),total:queue.length,step:either('Подготовка очереди','Preparing queue'),pausable:true,stoppable:true});
+      let completed=0,skipped=0,failed='';
+      for(let i=0;i<queue.length;i++){
+        await hkRunner.waitIfPaused();
+        const candidate=queue[i];
+        hkRunner.setStep(either('Здание ','Building ')+(i+1)+'/'+queue.length,i,queue.length);
+        hkRunner.state.history=[];
+        exploreE3InitStages(candidate,queue.length,i+1);
+
+        const result=await exploreE3ProcessOne(candidate,settings);
+        exploreE3Stage('verify',either('Финальная проверка','Final verification'),'running');
+        await exploreE3Reconcile(String(candidate.id||''),'explore:e4-final-'+(i+1));
+
+        if(result.status==='completed'){
+          completed++;
+          exploreE3Stage('verify',either('Финальная проверка','Final verification'),'done',either('состояние подтверждено','state confirmed'));
+          hkRunner.advance(either('Здание ','Building ')+(i+1)+'/'+queue.length+' · '+either('готово','done'));
+        }else if(result.status==='skipped'){
+          skipped++;
+          const msg=result.reason||either('пропущено','skipped');
+          exploreE3CloseRunning('skipped',msg);
+          exploreE3Stage('verify',either('Финальная проверка','Final verification'),'skipped',msg);
+          hkRunner.advance(either('Здание ','Building ')+(i+1)+'/'+queue.length+' · '+either('пропущено','skipped'));
+          log(either('E4: здание пропущено: ','E4: building skipped: ')+msg,'warn');
+        }else{
+          failed=result.reason||result.status||either('Неизвестная ошибка','Unknown error');
+          const st=result.status==='resources_exhausted'?'skipped':'error';
+          exploreE3CloseRunning(st,failed);
+          exploreE3Stage('verify',either('Финальная проверка','Final verification'),st,failed);
+          break;
+        }
+
+        if(i<queue.length-1)await exploreE4BetweenDelay(settings);
+      }
+
+      exploreMeta=await exploreLoadMeta(true,exploreState());
+      explorePlan=null;
+
+      if(failed){
+        hkRunner.fail(new Error(failed));
+        log(either('E4 остановлен: ','E4 stopped: ')+failed,'warn');
+      }else{
+        hkRunner.finish(either('E4 завершён','E4 completed')+' · '+completed+' '+either('готово','done')+(skipped?' · '+skipped+' '+either('пропущено','skipped'):''));
+        log(either('E4: очередь завершена','E4: queue completed')+' · '+completed+'/'+queue.length,'ok');
+      }
+    }catch(e){
+      if(e?.name==='AbortError'){
+        exploreE3CloseRunning('skipped',either('остановлено пользователем','stopped by user'));
+        exploreE3Stage('verify',either('Финальная проверка','Final verification'),'skipped',either('остановлено','stopped'));
+        hkRunner.fail(new Error(either('Остановлено пользователем','Stopped by user')));
+        log(either('E4 остановлен пользователем','E4 stopped by user'),'warn');
+      }else{
+        exploreE3CloseRunning('error',e?.message||String(e));
+        exploreE3Stage('verify',either('Финальная проверка','Final verification'),'error',e?.message||String(e));
+        hkRunner.fail(e);
+        log(either('Ошибка E4: ','E4 error: ')+(e?.message||e),'bad');
+      }
+    }finally{
+      exploreBusy=false;
+      renderExplore();
+    }
+  }
+
   function explorePrOptions(v){return [['min',either('Минимум сначала','Minimum first')],['max',either('Максимум сначала','Maximum first')],['any',either('Любой порядок','Any order')]].map(r=>'<option value="'+r[0]+'" '+(v===r[0]?'selected':'')+'>'+r[1]+'</option>').join('');}
   function exploreDistrictOptions(v){return ['<option value="all">'+either('Все районы','All districts')+'</option>'].concat((exploreMeta?.districts||[]).map(r=>'<option value="'+escapeHtml(r.areaId)+'" '+(String(v)===String(r.areaId)?'selected':'')+'>'+escapeHtml(r.label)+'</option>')).join('');}
 
   function renderExplore(){
     const box=root?.querySelector('#hk-explore-content');if(!box)return;const s=exploreSettings(),p=explorePlan,st=exploreState(),ready=!!st?.player&&(Array.isArray(st?.buildings)||Array.isArray(st?.player?.buildings)),active=ready?exploreActive(st):[],c=p?.consigliere||(ready?exploreConsigliere(st):null);
+    const queueCount=p?Math.min(p.selected.length,s.runLimit===0?Number.MAX_SAFE_INTEGER:s.runLimit):0;
     const auto=p?.autoMaxTier??(ready?exploreAutoTier(c):-1),level=p?.playerLevel??(ready?Number(st?.player?.level||0):null),modes=p?.tierModes||(ready?exploreTierModes(level):{}),counts=p?.tierCounts||exploreCounts(active),targetOk=s.targetTier>=1&&s.targetTier<=6;
     const maxStart=targetOk&&s.exploreTargetTier?s.targetTier:Math.min(s.targetTier,7)-1;
     const tiers=EXPLORE_TIERS.map(t=>'<label class="hk-ex-check"><input type="checkbox" data-ex-tier="'+t.value+'" '+(s.startTiers.includes(t.value)?'checked':'')+' '+(t.value>maxStart?'disabled':'')+'><span>'+t.label+'</span><small class="hk-muted"><span data-ex-count="'+t.value+'">'+(counts[t.value]?.all||0)+'</span> / <span data-ex-battles="'+t.value+'">'+(counts[t.value]?.battles||0)+'</span></small></label>').join('');
     const targets=EXPLORE_TIERS.filter(t=>t.value>=1).map(t=>'<option value="'+t.value+'" '+(s.targetTier===t.value?'selected':'')+'>'+t.label+'</option>').join('')+'<option value="8" '+(s.targetTier===8?'selected':'')+'>'+either('Мгновенно MAX','Instant MAX')+'</option>';
     const modeLine=EXPLORE_TIERS.map(t=>'<span><b>'+t.label+'</b> '+(!ready?'—':modes[t.value]==='fast'?either('быстро','fast'):modes[t.value]==='auto'?either('авто','auto'):either('вручную','manual'))+'</span>').join('');
-    const planHtml=p?'<div class="hk-cardbox"><b>'+either('План','Plan')+'</b><p><strong>'+either('Будет обработано зданий: ','Buildings to process: ')+p.selected.length+'</strong></p><p class="hk-muted">'+either('После фильтров','After filters')+': '+p.filteredCount+' · '+either('кандидатов','candidates')+': '+p.candidates.length+'</p>'+
+    const planHtml=p?'<div class="hk-cardbox"><b>'+either('План','Plan')+'</b><p><strong>'+either('Выбрано планом: ','Selected by plan: ')+p.selected.length+' · '+either('К запуску E4: ','E4 queue: ')+queueCount+'</strong></p><p class="hk-muted">'+either('После фильтров','After filters')+': '+p.filteredCount+' · '+either('кандидатов','candidates')+': '+p.candidates.length+'</p>'+
       (p.targetScan.checked?'<p class="hk-muted">'+either('Проверено на целевом тире','Checked at target tier')+': '+p.targetScan.checked+' · '+either('готовых пропущено','finished skipped')+': '+p.targetScan.skipped+(p.targetScan.errors?' · '+either('ошибок','errors')+': '+p.targetScan.errors:'')+'</p>':'')+
       (s.totalEvents!=='any'&&!p.totalEventsKnown?'<p class="hk-muted">⚠ '+either('Приоритет «Всего событий» не применён: точные данные есть не у всех кандидатов.','Total-events priority was not applied: exact data is unavailable for some candidates.')+'</p>':'')+
       (p.meta?.unmapped?'<p class="hk-muted">⚠ '+either('Без района','Without district')+': '+p.meta.unmapped+'</p>':'')+(p.meta?.unknownType?'<p class="hk-muted">⚠ '+either('Тип неизвестен','Unknown type')+': '+p.meta.unknownType+'</p>':'')+'</div>':
@@ -2401,7 +2492,7 @@
 
     box.innerHTML='<style>'+
       '#hk-explore-content .hk-ex-main{display:grid;gap:12px}'+
-      '#hk-explore-content .hk-ex-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;margin-top:10px}'+
+      '#hk-explore-content .hk-ex-filter-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:10px;margin-top:10px}'+
       '#hk-explore-content .hk-ex-field{display:grid;gap:5px;min-width:0}'+
       '#hk-explore-content .hk-ex-field>span{font-size:12px;font-weight:700}'+
       '#hk-explore-content .hk-ex-field select,#hk-explore-content .hk-ex-field input{width:100%;box-sizing:border-box;min-width:0}'+
@@ -2432,6 +2523,7 @@
             '<label class="hk-ex-field"><span>'+either('Тип здания','Building type')+'</span><select id="hk-ex-type"><option value="all" '+(s.buildingType==='all'?'selected':'')+'>'+either('Все','All')+'</option><option value="normal" '+(s.buildingType==='normal'?'selected':'')+'>'+either('Обычные','Normal')+'</option><option value="investment" '+(s.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные','Investment')+'</option></select></label>'+
             '<label class="hk-ex-field"><span>'+either('Целевой тир','Target tier')+'</span><select id="hk-ex-target">'+targets+'</select></label>'+
             '<label class="hk-ex-field"><span>'+either('Максимум зданий','Maximum buildings')+'</span><input id="hk-ex-max" type="number" min="1" max="5000" value="'+s.maxBuildings+'"></label>'+
+            '<label class="hk-ex-field"><span>'+either('Лимит запуска E4','E4 run limit')+'</span><select id="hk-ex-run-limit"><option value="1" '+(s.runLimit===1?'selected':'')+'>1</option><option value="5" '+(s.runLimit===5?'selected':'')+'>5</option><option value="10" '+(s.runLimit===10?'selected':'')+'>10</option><option value="15" '+(s.runLimit===15?'selected':'')+'>15</option><option value="20" '+(s.runLimit===20?'selected':'')+'>20</option><option value="all" '+(s.runLimit===0?'selected':'')+'>'+either('Все выбранные','All selected')+'</option></select></label>'+
           '</div>'+
           '<p class="hk-muted" style="margin:11px 0 0">'+either('Стартовые тиры · всего / бои завершены','Starting tiers · total / battles done')+'</p>'+
           '<div class="hk-ex-tier-list">'+tiers+'</div>'+
@@ -2457,7 +2549,7 @@
             '<label class="hk-ex-row"><span>'+either('Между зданиями, макс. сек','Between buildings max, sec')+'</span><input id="hk-ex-between-max" type="number" min="0" step="0.1" value="'+s.betweenBuildingsDelayMaxMs/1000+'"></label>'+
           '</div></div>'+
         '</div>'+
-        '<div class="hk-ex-actions"><button id="hk-ex-plan" class="hk-primary" '+(exploreBusy?'disabled':'')+'>'+(exploreBusy?either('Считаю…','Calculating…'):either('Рассчитать план','Calculate plan'))+'</button><button id="hk-ex-run-one" class="hk-secondary" '+(exploreBusy||!p?.selected?.length?'disabled':'')+'>'+either('Запустить тест E3 · 1 здание','Run E3 test · 1 building')+'</button><span id="hk-ex-dirty" class="hk-muted hk-ex-dirty"></span></div>'+
+        '<div class="hk-ex-actions"><button id="hk-ex-plan" class="hk-primary" '+(exploreBusy?'disabled':'')+'>'+(exploreBusy?either('Считаю…','Calculating…'):either('Рассчитать план','Calculate plan'))+'</button><button id="hk-ex-run-one" class="hk-secondary" '+(exploreBusy||!p?.selected?.length?'disabled':'')+'>'+either('Тест E3 · 1 здание','E3 test · 1 building')+'</button><button id="hk-ex-run-queue" class="hk-primary" '+(exploreBusy||!p?.selected?.length?'disabled':'')+'>'+(s.runLimit===0?either('Запустить E4 · все выбранные','Run E4 · all selected'):either('Запустить E4 · до '+s.runLimit,'Run E4 · up to '+s.runLimit))+'</button><span id="hk-ex-dirty" class="hk-muted hk-ex-dirty"></span></div>'+
         '<div id="hk-ex-plan-result">'+planHtml+'</div>'+
       '</div>';
 
@@ -2493,6 +2585,7 @@
     box.querySelector('#hk-ex-refresh')?.addEventListener('click',()=>void refreshExplore(true));
     box.querySelector('#hk-ex-plan')?.addEventListener('click',()=>{exploreReadSettings();explorePlan=null;void explorePreparePlan();});
     box.querySelector('#hk-ex-run-one')?.addEventListener('click',()=>void runExploreE3Single());
+    box.querySelector('#hk-ex-run-queue')?.addEventListener('click',()=>void runExploreE4Queue());
     box.querySelector('#hk-ex-target')?.addEventListener('change',syncDependencies);
     box.querySelector('#hk-ex-target-tier')?.addEventListener('change',syncDependencies);
     box.querySelectorAll('select,input').forEach(n=>{
@@ -11579,7 +11672,7 @@
     if (!root) return;
     const box=root.querySelector('#hk-runner'); if(!box)return;
     const state=hkRunner.state;
-    const visibleState=state.status!=='idle',title=String(state.title||''),exploreRun=visibleState&&title===either('Исследование · E3','Explore · E3'),buildingsRun=visibleState&&title===either('Здания','Buildings'); box.classList.toggle('show',visibleState);
+    const visibleState=state.status!=='idle',title=String(state.title||''),exploreRun=visibleState&&[either('Исследование · E3','Explore · E3'),either('Исследование · E4','Explore · E4')].includes(title),buildingsRun=visibleState&&title===either('Здания','Buildings'); box.classList.toggle('show',visibleState);
     box.classList.toggle('pit-run',visibleState&&title===either('Ямы','Pits'));
     box.classList.toggle('explore-run',exploreRun);
     box.classList.toggle('buildings-run',buildingsRun);
@@ -11588,7 +11681,7 @@
     const percent=state.total?Math.max(0,Math.min(100,(state.done/state.total)*100)):(state.status==='done'?100:0);
     root.querySelector('#hk-runner-title').textContent=state.title||either('Выполнение','Execution');
     const stateLabel=labels[state.status]||state.status;
-    root.querySelector('#hk-runner-state').textContent=buildingsRun&&state.total?`${stateLabel} · ${state.done}/${state.total}`:stateLabel;
+    root.querySelector('#hk-runner-state').textContent=(buildingsRun||exploreRun)&&state.total?`${stateLabel} · ${state.done}/${state.total}`:stateLabel;
     root.querySelector('#hk-runner-step').textContent=state.error||state.step||(state.total?`${state.done} / ${state.total}`:'');
     root.querySelector('#hk-runner-fill').style.width=`${percent}%`;
     const history=root.querySelector('#hk-runner-history');
