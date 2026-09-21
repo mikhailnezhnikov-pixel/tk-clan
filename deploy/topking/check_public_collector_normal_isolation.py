@@ -46,7 +46,7 @@ for row in rows:
     candidate=row
     break
 
-print("isolation_test_revision=PUBLIC_COLLECTOR_NORMAL_PLAYER_ISOLATION_R2")
+print("isolation_test_revision=PUBLIC_COLLECTOR_NORMAL_PLAYER_ISOLATION_R3")
 print("normal_candidate_present="+yes(candidate))
 if candidate is None:
     raise SystemExit(2)
@@ -129,29 +129,32 @@ def post(path,body,token=""):
 
 probe_status,probe_doc=post("/api/v1/public-collector/auth-probe",{},license_token)
 sync_status,sync_doc=post("/api/v1/public-collector/auth-sync",{},license_token)
+probe_removed=(probe_status in (404,405))
+sync_denied=(sync_status==403 and isinstance(sync_doc,dict) and sync_doc.get("error")=="collector_identity_not_allowed")
 print("normal_probe_status="+str(probe_status))
-print("normal_probe_identity_denied="+yes(probe_status==403 and isinstance(probe_doc,dict) and probe_doc.get("error")=="collector_identity_not_allowed"))
+print("normal_probe_route_removed="+yes(probe_removed))
 print("normal_sync_status="+str(sync_status))
-print("normal_sync_identity_denied="+yes(sync_status==403 and isinstance(sync_doc,dict) and sync_doc.get("error")=="collector_identity_not_allowed"))
+print("normal_sync_identity_denied="+yes(sync_denied))
 
-if probe_status!=403 or sync_status!=403:
+if not probe_removed or not sync_denied:
     raise SystemExit(4)
-if probe_doc.get("error")!="collector_identity_not_allowed" or sync_doc.get("error")!="collector_identity_not_allowed":
-    raise SystemExit(5)
 
-# Static live-source regression guard: both routes must check the identity
-# before reading their request bodies.
+# Static live-source regression guard: the diagnostic probe must be gone,
+# while auth-sync must keep its identity guard before reading the body.
 src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
-for route in ("/api/v1/public-collector/auth-probe","/api/v1/public-collector/auth-sync"):
-    i=src.find('path == "'+route+'"')
-    if i<0:
-        raise SystemExit(6)
-    block=src[i:i+2400]
-    guard=block.find("public_collector_auth_sync_allowed(player_id)")
-    read=block.find("self.read_json(")
-    ok=(guard>=0 and read>=0 and guard<read)
-    print(("probe" if route.endswith("auth-probe") else "sync")+"_identity_guard_before_body="+yes(ok))
-    if not ok:
-        raise SystemExit(7)
+probe_absent=all(marker not in src for marker in (
+    '/api/v1/public-collector/auth-probe',
+    'accept_public_collector_auth_probe',
+    'PUBLIC_COLLECTOR_AUTH_PROBE',
+))
+sync_i=src.find('path == "/api/v1/public-collector/auth-sync"')
+sync_block=src[sync_i:sync_i+2400] if sync_i>=0 else ""
+guard=sync_block.find("public_collector_auth_sync_allowed(player_id)")
+read=sync_block.find("self.read_json(")
+sync_guard_ok=(sync_i>=0 and guard>=0 and read>=0 and guard<read)
+print("probe_route_static_absent="+yes(probe_absent))
+print("sync_identity_guard_before_body="+yes(sync_guard_ok))
+if not probe_absent or not sync_guard_ok:
+    raise SystemExit(7)
 
 print("PUBLIC_COLLECTOR_NORMAL_PLAYER_ISOLATION=PASS")
