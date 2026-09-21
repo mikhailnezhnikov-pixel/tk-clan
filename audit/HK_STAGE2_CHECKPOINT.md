@@ -1817,3 +1817,28 @@ Verification:
 - public E2E `35596336047`: PASS.
 
 Stage 2.08 remains open for further user UI comments.
+
+
+### Businesses completion hotfix r1 — live (2026-09-21)
+
+User live evidence exposed a slow finalization tail after a large business rearrangement.
+
+Cause:
+- after all visible insert/activate actions, the script performed a separate `/player/me` final verification for every inserted slot;
+- on large plans this left Runner near 100% in **Выполняется** for a long time.
+
+Fixed in userscript `1.17.24`:
+- core `core-20260921-r28-businesses-finalize`;
+- one authoritative final snapshot validates all inserted businesses;
+- targeted rereads only for unresolved slots;
+- progress reaches the final step immediately after all mutation rows are processed;
+- explicit **Проверяю результат** stage;
+- confirmed success shows **Перестановка завершена**;
+- done state remains visible for 6 seconds.
+
+Verification:
+- deploy/public round-trip `35596770570`: PASS;
+- Businesses live verifier `35596934604`: PASS;
+- public E2E `35596856911`: PASS.
+
+Stage 2.08 remains open for user live recheck and further comments.
