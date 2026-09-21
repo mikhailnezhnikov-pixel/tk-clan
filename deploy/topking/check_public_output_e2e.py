@@ -241,6 +241,60 @@ print("client_auth_bridge_xhr="+yes(client_xhr))
 print("client_auth_create_passive="+yes(client_passive))
 collector_isolation_static_ok=(server_guard_ok and client_probe_guard and client_sync_guard and client_xhr and client_passive)
 
+# Live credential filesystem permissions. The token may be last written either
+# by the root collector or by the unprivileged license service; both owners are
+# valid, but all credential files must remain private.
+import stat
+service_show=subprocess.check_output(
+    ["systemctl","show","hamsterking-license.service","--property=MainPID","--no-pager"],
+    text=True,stderr=subprocess.STDOUT,timeout=10,
+)
+service_pid=next((line.split("=",1)[1].strip() for line in service_show.splitlines() if line.startswith("MainPID=")),"")
+service_uid=-1
+if service_pid and service_pid!="0":
+    status_text=open(f"/proc/{int(service_pid)}/status",encoding="utf-8",errors="replace").read()
+    uid_line=next((line for line in status_text.splitlines() if line.startswith("Uid:")),"")
+    service_uid=int(uid_line.split()[1]) if uid_line else -1
+
+data_dir="/var/lib/hamsterking-license"
+identity_path=data_dir+"/public-collector-identity.sha256"
+token_path=data_dir+"/public-collector-token"
+bootstrap_path=data_dir+"/public-collector-auth.json"
+probe_path=data_dir+"/public-collector-auth-probe.json"
+refresh_path=data_dir+"/public-collector-auth-refresh.json"
+env_path="/etc/hamsterking-public-collector.env"
+
+def mode_owner_ok(path,mode,owners):
+    try:
+        st=os.stat(path)
+        return stat.S_IMODE(st.st_mode)==mode and st.st_uid in owners
+    except OSError:
+        return False
+
+dir_ok=False
+try:
+    st=os.stat(data_dir)
+    dir_ok=(service_uid>=0 and st.st_uid==service_uid and stat.S_IMODE(st.st_mode)==0o750)
+except OSError:
+    pass
+identity_perm_ok=(service_uid>=0 and mode_owner_ok(identity_path,0o600,{service_uid}))
+bootstrap_perm_ok=(service_uid>=0 and mode_owner_ok(bootstrap_path,0o600,{service_uid}))
+probe_perm_ok=(service_uid>=0 and mode_owner_ok(probe_path,0o600,{service_uid}))
+token_perm_ok=(service_uid>=0 and mode_owner_ok(token_path,0o600,{0,service_uid}))
+env_perm_ok=mode_owner_ok(env_path,0o600,{0})
+refresh_perm_ok=True
+if os.path.exists(refresh_path):
+    refresh_perm_ok=(service_uid>=0 and mode_owner_ok(refresh_path,0o600,{0,service_uid}))
+
+print("collector_data_dir_private="+yes(dir_ok))
+print("collector_identity_private="+yes(identity_perm_ok))
+print("collector_token_private="+yes(token_perm_ok))
+print("collector_bootstrap_private="+yes(bootstrap_perm_ok))
+print("collector_probe_private="+yes(probe_perm_ok))
+print("collector_env_private="+yes(env_perm_ok))
+print("collector_refresh_status_private="+yes(refresh_perm_ok))
+credential_permissions_ok=all((dir_ok,identity_perm_ok,token_perm_ok,bootstrap_perm_ok,probe_perm_ok,env_perm_ok,refresh_perm_ok))
+
 war_ok=(
     war_status==200
     and bool(war_doc.get("ok"))
@@ -264,8 +318,9 @@ print("ratings_e2e="+("PASS" if ratings_all_ok else "FAIL"))
 print("site_binding_e2e="+("PASS" if site_ok else "FAIL"))
 print("collector_timers_e2e="+("PASS" if timers_ok else "FAIL"))
 print("collector_isolation_static="+("PASS" if collector_isolation_static_ok else "FAIL"))
+print("collector_credential_permissions="+("PASS" if credential_permissions_ok else "FAIL"))
 
-if not (war_ok and ratings_all_ok and site_ok and timers_ok and collector_isolation_static_ok):
+if not (war_ok and ratings_all_ok and site_ok and timers_ok and collector_isolation_static_ok and credential_permissions_ok):
     raise SystemExit(2)
 
 print("PUBLIC_OUTPUT_E2E=PASS")
