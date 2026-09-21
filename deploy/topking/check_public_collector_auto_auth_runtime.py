@@ -69,6 +69,26 @@ try:
 except Exception as exc:
     print("technical_license_check=unavailable")
 
+# Safe reverse-proxy check: only report whether auth-sync was requested and
+# the latest HTTP status/time; never print IP, token, query/body, or User-Agent.
+sync_events=[]
+for log_path in ("/var/log/nginx/access.log", "/var/log/nginx/access.log.1"):
+    try:
+        lines=open(log_path,encoding="utf-8",errors="replace").read().splitlines()[-5000:]
+    except OSError:
+        continue
+    for line in lines:
+        if "/api/v1/public-collector/auth-sync" not in line:
+            continue
+        import re
+        tm=re.search(r"\[([^\]]+)\]", line)
+        st=re.search(r'"\s+(\d{3})\s+', line)
+        sync_events.append((tm.group(1) if tm else "", st.group(1) if st else ""))
+print("auth_sync_request_seen="+("yes" if sync_events else "no"))
+if sync_events:
+    print("auth_sync_latest_time="+sync_events[-1][0])
+    print("auth_sync_latest_status="+sync_events[-1][1])
+
 for unit,label in (
     ("hamsterking-public-war.service","war_journal"),
     ("hamsterking-public-collector.service","ratings_journal"),
