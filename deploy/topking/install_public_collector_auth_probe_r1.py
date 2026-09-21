@@ -5,6 +5,7 @@ from pathlib import Path
 LIVE=Path("/opt/hamsterking-license/server.py")
 CAND=Path("/tmp/server.auth-probe-r1.py")
 IDENTITY=Path("/var/lib/hamsterking-license/public-collector-identity.sha256")
+PROBE=Path("/var/lib/hamsterking-license/public-collector-auth-probe.json")
 
 def sha256(path):
     h=hashlib.sha256()
@@ -33,8 +34,13 @@ if IDENTITY.exists():
     parent_stat=IDENTITY.parent.stat()
     os.chown(IDENTITY,parent_stat.st_uid,parent_stat.st_gid)
     os.chmod(IDENTITY,0o600)
+try:
+    PROBE.unlink()
+except FileNotFoundError:
+    pass
 subprocess.check_call(["systemctl","restart","hamsterking-license.service"])
 subprocess.check_call(["systemctl","is-active","--quiet","hamsterking-license.service"])
 print("public_collector_auth_probe_install=PASS")
 print("identity_owner_repaired="+("PASS" if IDENTITY.exists() else "MISSING"))
+print("retired_probe_file_absent="+("PASS" if not PROBE.exists() else "FAIL"))
 print("live_sha="+sha256(LIVE))
