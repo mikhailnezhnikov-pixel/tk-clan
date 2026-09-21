@@ -1,1 +1,1 @@
-2026-09-21 deploy userscript 1.17.10 technical auth storage probe retry
+2026-09-21 verify and sync already-live userscript 1.17.10
