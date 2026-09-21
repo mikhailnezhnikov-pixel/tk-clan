@@ -24,6 +24,10 @@ PUBLIC_COLLECTOR_AUTH_BOOTSTRAP_PATH = os.environ.get(
     "HK_PUBLIC_COLLECTOR_AUTH_BOOTSTRAP",
     "/var/lib/hamsterking-license/public-collector-auth.json",
 )
+PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS_PATH = os.environ.get(
+    "HK_PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS",
+    "/var/lib/hamsterking-license/public-collector-auth-refresh.json",
+)
 PUBLIC_COLLECTOR_GAME_API = os.environ.get(
     "HK_PUBLIC_COLLECTOR_GAME_API",
     "https://hk-game-api.hwgame.cloud",
@@ -131,6 +135,10 @@ def accept_public_collector_auth(player_id: str, document: object) -> dict:
             PUBLIC_COLLECTOR_AUTH_BOOTSTRAP_PATH,
             json.dumps(bootstrap, ensure_ascii=False, separators=(",", ":")) + "\n",
         )
+        try:
+            os.unlink(PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS_PATH)
+        except OSError:
+            pass
     return {"ok": True, "accepted": True, "updated_at": utc_now()}
 
 
