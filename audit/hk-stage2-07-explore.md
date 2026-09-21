@@ -1177,3 +1177,54 @@ Functional E3 status remains:
 Current refinement status:
 **SPEED_R1_LIVE_USER_FEEL_CHECK_PENDING**
 
+## E4 queue r1 — userscript 1.17.21 (2026-09-21)
+
+User accepted the E3 flow and asked to continue. The speed refinement from 1.17.20 is therefore treated as accepted and E3 remains LIVE PASS.
+
+Delivered:
+- userscript `1.17.21`;
+- core `core-20260921-r23-explore-e4-queue`;
+- marker `explore-e4-queue-20260921-r1`;
+- E4 processes buildings sequentially using the already-validated `exploreE3ProcessOne()` core;
+- explicit E4 run limit: `1 / 5 / 10 / 15 / 20 / All selected`;
+- safe default run limit: **1**;
+- overall runner progress is shown as `N/M`;
+- the same five E3 stage rows are reused for the current building;
+- Pause and Stop remain available;
+- between-building delay uses the existing configured delay;
+- ordinary skipped buildings can be recorded and the queue can continue;
+- resource exhaustion or functional failure stops the queue immediately;
+- every building receives authoritative reconciliation before moving on;
+- E3 one-building test remains available as a fallback.
+
+Safety:
+- no new building action mechanics were introduced;
+- E4 is only a bounded sequential orchestrator over the E3 core;
+- shared mutation gate/no-blind-retry behavior preserved;
+- E3 speed profile 0.7–2.0 / 0.7 s preserved;
+- Buildings native sync preserved;
+- Maps safe5/concurrency 5 preserved;
+- passive auth safety preserved.
+
+Verification:
+- predeploy `35577683410`: PASS;
+- deploy/public round-trip `35577789532`: PASS;
+- loader core-r23 `35577988627`: PASS;
+- live Explore E3/E4 verification `35577999810`: PASS;
+- `explore_e4_reuses_e3_core=PASS`;
+- `explore_e4_queue_limits=PASS`;
+- `explore_e4_sequential_stop_safety=PASS`;
+- public E2E `35578012994`: PASS.
+
+Current status:
+**E4_QUEUE_R1_TECHNICAL_PASS_USER_MULTI_BUILDING_CHECK_PENDING**
+
+Recommended live gate:
+1. reload game/HK;
+2. open Explore and calculate a plan;
+3. set E4 run limit to **5**;
+4. confirm the plan shows the expected E4 queue count;
+5. launch E4;
+6. verify sequential 1/5 → 5/5 processing, stage tracking, Pause/Stop, and no duplicate/parallel actions;
+7. after completion, recalculate the plan and verify processed buildings no longer require the completed work.
+
