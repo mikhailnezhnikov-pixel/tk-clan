@@ -42,7 +42,8 @@ def _public_collector_identity_digest(player_id: str) -> str:
 
 def public_collector_auth_sync_allowed(player_id: str) -> bool:
     try:
-        expected = Path(PUBLIC_COLLECTOR_IDENTITY_PATH).read_text(encoding="ascii").strip()
+        with open(PUBLIC_COLLECTOR_IDENTITY_PATH, "r", encoding="ascii") as source:
+            expected = source.read(256).strip()
     except OSError:
         return False
     actual = _public_collector_identity_digest(player_id)
@@ -50,12 +51,14 @@ def public_collector_auth_sync_allowed(player_id: str) -> bool:
 
 
 def _public_collector_write_private(target: str, text: str) -> None:
-    target_path = Path(target)
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target_path.with_name(target_path.name + ".tmp")
-    tmp.write_text(text, encoding="utf-8")
+    directory = os.path.dirname(target)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    tmp = target + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as output:
+        output.write(text)
     os.chmod(tmp, 0o600)
-    os.replace(tmp, target_path)
+    os.replace(tmp, target)
 
 
 def _public_collector_game_player(token: str) -> str:
