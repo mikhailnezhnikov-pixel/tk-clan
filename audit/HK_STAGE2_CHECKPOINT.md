@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.15
+- userscript: 1.17.16
 - current module: Buildings / Здания — final live action gate
 - current module file: audit/hk-stage2-06-buildings.md
-- current module status: UI_R3_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING
+- current module status: ACTIVE_SEMANTICS_R1_LIVE_CANDIDATE_USER_ACTION_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - next after Buildings LIVE PASS: Explore / Исследование — E3 single-building user validation
 - Explore E4 multi-building: NOT STARTED
@@ -1462,4 +1462,49 @@ Verification:
 
 Current Stage 2 gate:
 **Buildings 2.06 — UI_R3_LIVE_CANDIDATE_USER_VISUAL_AND_ACTION_CHECK_PENDING**.
+
+### Buildings active-slot semantics r1 — PASS technical / user action pending (2026-09-21)
+
+User live check exposed contradictory Buildings behavior:
+- plan: 92 candidates;
+- displayed active count: 2175/698;
+- run: “no eligible unopened buildings”.
+
+Read-only live schema diagnostics established the cause:
+- `buildings` includes **2175 known records**;
+- game reports **467 active buildings**;
+- max active buildings: **698**;
+- exactly **467** rows carry the current active-row signal `next_tier_level`;
+- old code incorrectly counted all known records as active and calculated zero free slots.
+
+Delivered in userscript `1.17.16`:
+- core `core-20260921-r18-buildings-active-fix`;
+- marker `buildings-active-semantics-20260921-r1`;
+- active count now uses `player_active_building`;
+- active ID filtering is cross-checked against the authoritative count;
+- free capacity now derives from real active/max values;
+- “no candidates” and “no free active slots” are distinct outcomes.
+
+Verification:
+- schema diagnostic `35567254035`: PASS;
+- refined active-row diagnostic `35567342973`: PASS;
+- predeploy fixture `35567569494`: PASS — 2175 known / 467 active / 698 max / 231 free;
+- deploy `35567837973`: PASS;
+- loader core-r18 `35567970830`: PASS;
+- Buildings verifier `35567975463`: PASS;
+- final public E2E retry `35568104811`: PASS;
+- Maps/Explore/auth protected invariants: PASS.
+
+Current Stage 2 gate:
+**Buildings 2.06 — ACTIVE_SEMANTICS_R1_LIVE_CANDIDATE_USER_ACTION_CHECK_PENDING**.
+
+Next user check:
+1. reload game/HK;
+2. calculate Buildings candidates;
+3. verify the active/max count is no longer the all-known-record count;
+4. run Open eligible;
+5. perform one controlled open and recalculate;
+6. confirm the opened building is no longer offered.
+
+Do not advance Explore E4 before Buildings live action PASS and Explore E3 single-building PASS.
 
