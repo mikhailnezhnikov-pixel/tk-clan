@@ -1,2 +1,2 @@
-trigger=clan-shop-linked-player-id-v8
-stamp=2026-09-21
+trigger=clan-shop-weekly-delta-v9
+stamp=2026-09-22
