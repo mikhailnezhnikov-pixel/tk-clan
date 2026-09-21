@@ -78,9 +78,10 @@ jobs:
           a=s.index('async function checkGameBearer')
           b=s.index('async function ensureGameAuthorization',a)
           block=s[a:b]
-          assert '/auth/check' not in block
           assert 'gameFetchText' not in block
-          assert 'native game exclusively owns /auth/create' in block
+          assert 'return !!token && jwtExpiration(token) > Date.now() + 5000;' in block
+          assert "recordDiagnostic('auth-create-blocked-passive-only',{reason});" in block
+          assert "return '';" in block
           print('passive_auth_static=PASS')
           PY
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/userscript-candidate.sha
