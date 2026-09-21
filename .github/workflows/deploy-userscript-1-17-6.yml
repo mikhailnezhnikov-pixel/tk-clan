@@ -61,7 +61,7 @@ jobs:
       - name: Build 1.17.10 candidate
         run: |
           set -euo pipefail
-          python3 deploy/topking/patch_userscript_technical_passive_auth_1_17_9.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_userscript_auth_storage_probe_1_17_10.py /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
           grep -Fq '// @version      1.17.10' /tmp/HamsterKingMobile.user.js
           grep -Fq "const BUILD_VERSION = '1.17.10';" /tmp/HamsterKingMobile.user.js
