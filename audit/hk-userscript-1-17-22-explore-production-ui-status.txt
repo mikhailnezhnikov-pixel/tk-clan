@@ -1,0 +1,10 @@
+USERSCRIPT_1_17_22_EXPLORE_PRODUCTION_UI_R1=PASS
+version=1.17.22
+core=core-20260921-r24-explore-production-ui
+single_limit=maxBuildings
+test_button_removed=PASS
+redundant_run_limit_removed=PASS
+queue_core=PRESERVED
+e3_live_pass=PRESERVED
+buildings_native_sync=PASS
+maps_safe5=PASS
