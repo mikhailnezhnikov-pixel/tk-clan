@@ -1,0 +1,115 @@
+name: Diagnose Building Active Semantics
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/buildings-active-semantics-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect player building schema read-only
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 - <<'"'"'PY'"'"'
+          import json, urllib.request, collections
+
+          token_path="/var/lib/hamsterking-license/public-collector-token"
+          token=open(token_path,"r",encoding="utf-8").read().strip()
+          if token.lower().startswith("bearer "): token=token[7:].strip()
+          req=urllib.request.Request(
+              "https://hk-game-api.hwgame.cloud/player/me",
+              data=b"{}",
+              headers={
+                  "Authorization":"Bearer "+token,
+                  "Accept":"application/json",
+                  "Content-Type":"application/json",
+                  "User-Agent":"TopKing-Buildings-Schema-Diagnostic/1",
+              },
+              method="POST",
+          )
+          with urllib.request.urlopen(req,timeout=20) as r:
+              doc=json.loads(r.read().decode("utf-8-sig"))
+
+          player=doc.get("player") if isinstance(doc.get("player"),dict) else {}
+          top_rows=doc.get("buildings") if isinstance(doc.get("buildings"),list) else []
+          player_rows=player.get("buildings") if isinstance(player.get("buildings"),list) else []
+          rows=top_rows if top_rows else player_rows
+
+          print("BUILDING_SCHEMA_DIAGNOSTIC_R1")
+          print("top_buildings_count="+str(len(top_rows)))
+          print("player_buildings_count="+str(len(player_rows)))
+          print("selected_rows_source="+("top" if top_rows else "player"))
+          print("selected_rows_count="+str(len(rows)))
+
+          player_build_keys=sorted(k for k in player if "build" in str(k).lower() or "favorite" in str(k).lower())
+          print("player_build_related_keys="+",".join(player_build_keys))
+          for k in player_build_keys:
+              v=player.get(k)
+              if isinstance(v,(int,float,bool,str)) and "id" not in k.lower():
+                  print(f"player_scalar_{k}={v}")
+
+          key_counts=collections.Counter()
+          for row in rows[:5000]:
+              if isinstance(row,dict):
+                  key_counts.update(row.keys())
+          print("row_keys="+",".join(sorted(key_counts)))
+
+          fields=[
+              "active","is_active","opened","is_open","is_opened","enabled","is_enabled",
+              "chosen_tier","tier","level","building_level","state","status",
+              "is_favorite","favorite","slots","slot_count","businesses","business_building",
+              "area_id","gamearea_id"
+          ]
+          for field in fields:
+              vals=[r.get(field) for r in rows if isinstance(r,dict) and field in r]
+              if not vals: continue
+              types=collections.Counter(type(v).__name__ for v in vals)
+              print(f"field_{field}_present={len(vals)}")
+              print(f"field_{field}_types="+",".join(f"{k}:{v}" for k,v in sorted(types.items())))
+              if all(isinstance(v,bool) for v in vals):
+                  print(f"field_{field}_true={sum(vals)}")
+                  print(f"field_{field}_false={len(vals)-sum(vals)}")
+              elif all(isinstance(v,(int,float)) and not isinstance(v,bool) for v in vals):
+                  nums=[float(v) for v in vals]
+                  print(f"field_{field}_zero={sum(v==0 for v in nums)}")
+                  print(f"field_{field}_positive={sum(v>0 for v in nums)}")
+                  print(f"field_{field}_min={min(nums) if nums else ''}")
+                  print(f"field_{field}_max={max(nums) if nums else ''}")
+              elif all(isinstance(v,str) for v in vals):
+                  c=collections.Counter(vals)
+                  safe=[(k,v) for k,v in c.most_common(20) if len(k)<=40 and "id" not in field.lower()]
+                  print(f"field_{field}_values="+",".join(f"{k}:{v}" for k,v in safe))
+
+          # Shape-only counts for nested collections, no IDs or values.
+          for name in ["slots","businesses","business_building"]:
+              counts=[]
+              for row in rows:
+                  if not isinstance(row,dict): continue
+                  v=row.get(name)
+                  if isinstance(v,list): counts.append(len(v))
+              if counts:
+                  print(f"nested_{name}_rows={len(counts)}")
+                  print(f"nested_{name}_nonempty={sum(x>0 for x in counts)}")
+                  print(f"nested_{name}_total={sum(counts)}")
+
+          print("BUILDING_SCHEMA_DIAGNOSTIC=PASS")
+          PY'
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
