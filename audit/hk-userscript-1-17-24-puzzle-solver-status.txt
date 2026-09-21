@@ -1,0 +1,13 @@
+USERSCRIPT_1_17_24_PUZZLE_SOLVER_EMBED=PASS
+version=1.17.24
+core=core-20260921-r27-businesses-runner-canon
+puzzle_solver=puzzle-solver-v3-embedded-20260921-r1
+background_scan_500ms=PASS
+initial_scan_300ms=PASS
+lights_out_3x3=PASS
+battle_solver=PASS
+auto_clicks=NONE
+runtime_destroy_cleanup=PASS
+business_finalize=PRESERVED
+t4_t6_guard=PRESERVED
+catalog_read_only=PRESERVED
