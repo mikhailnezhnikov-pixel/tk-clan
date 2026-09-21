@@ -1,1 +1,1 @@
-2026-09-21 inspect native building claim tier/from_slot semantics
+2026-09-21 inspect native building request helper and claim call
