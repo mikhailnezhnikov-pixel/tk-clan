@@ -133,9 +133,9 @@ if not probe_removed or not sync_reached_after_identity:
 
 src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
 probe_absent=all(marker not in src for marker in (
-    "/api/v1/public-collector/auth-probe",
-    "accept_public_collector_auth_probe",
-    "PUBLIC_COLLECTOR_AUTH_PROBE",
+    'path == "/api/v1/public-collector/auth-probe"',
+    "def accept_public_collector_auth_probe(",
+    "PUBLIC_COLLECTOR_AUTH_PROBE_PATH =",
 ))
 sync_i=src.find('path == "/api/v1/public-collector/auth-sync"')
 sync_block=src[sync_i:sync_i+2600] if sync_i>=0 else ""
