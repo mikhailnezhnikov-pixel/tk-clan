@@ -1764,6 +1764,26 @@
     return fmt(start)+'–'+fmt(end);
   }
 
+  function clanShopHistoryIdentity(row){
+    const pid=String(row?.player_id||'').trim();
+    const rawName=String(row?.nickname||'').trim();
+    const key=String(row?.player_key||'');
+    const unattributed=Boolean(row?.is_unattributed)||key.startsWith('unattributed:')||key.startsWith('unknown:')||rawName==='Не определён игрок';
+    if(unattributed)return {nickname:'Не распределено по игрокам',unattributed:true};
+
+    const candidates=[
+      ...(Array.isArray(clanShopData?.participants)?clanShopData.participants:[]),
+      ...(Array.isArray(clanPlayers)?clanPlayers:[])
+    ];
+    const matched=pid?candidates.find(item=>{
+      const itemId=String(item?.player_id??item?.playerId??item?.id??'').trim();
+      return itemId&&itemId===pid;
+    }):null;
+    const matchedName=String(matched?.nickname??matched?.name??matched?.player_name??'').trim();
+    const numericOnly=/^\d+$/.test(rawName);
+    return {nickname:matchedName&&(!rawName||numericOnly)?matchedName:(rawName||matchedName||pid||'—'),unattributed:false};
+  }
+
   function renderClanShopHistory(){
     document.querySelectorAll('[data-clanshop-period]').forEach(button=>{
       button.classList.toggle('active',button.dataset.clanshopPeriod===clanShopHistoryPeriod);
@@ -1773,16 +1793,20 @@
     const rows=clanShopHistoryRows();
     const grouped=new Map();
     rows.forEach(row=>{
+      const identity=clanShopHistoryIdentity(row);
       const key=String(row.player_key||row.player_id||row.nickname||'');
       if(!grouped.has(key))grouped.set(key,{
         player_key:key,
-        nickname:String(row.nickname||'—'),
+        nickname:identity.nickname,
         player_id:String(row.player_id||''),
+        is_unattributed:identity.unattributed,
         idol_orbs:0,
         splus_businesses:0,
         weeks:[]
       });
       const item=grouped.get(key);
+      if(!item.nickname||/^\d+$/.test(item.nickname))item.nickname=identity.nickname;
+      item.is_unattributed=item.is_unattributed||identity.unattributed;
       item.idol_orbs+=Number(row.idol_orbs||0);
       item.splus_businesses+=Number(row.splus_businesses||0);
       item.weeks.push(row);
@@ -1795,14 +1819,14 @@
     const businessTotal=players.reduce((sum,row)=>sum+row.splus_businesses,0);
     $('clanshop-history-idols').textContent=idolTotal;
     $('clanshop-history-businesses').textContent=businessTotal;
-    $('clanshop-history-players').textContent=players.length;
+    $('clanshop-history-players').textContent=players.filter(row=>!row.is_unattributed).length;
 
     const html=[];
     players.forEach(row=>{
       const total=row.idol_orbs+row.splus_businesses;
-      html.push('<tr class="clanshop-history-player" data-clanshop-history-player="'+safe(row.player_key)+'">'+
+      html.push('<tr class="clanshop-history-player'+(row.is_unattributed?' is-unattributed':'')+'" data-clanshop-history-player="'+safe(row.player_key)+'">'+
         '<td><div class="clanshop-player"><div class="clanshop-player-head"><strong>'+safe(row.nickname)+'</strong>'+
-        '<span class="clanshop-actual-badge'+(total>0?' has-actual':'')+'">Факт: <b>'+total+'</b> '+clanShopLotWord(total)+'</span></div></div></td>'+
+        '<span class="clanshop-actual-badge'+(total>0?' has-actual':'')+'">'+(row.is_unattributed?'Не распределено: ':'Факт: ')+'<b>'+total+'</b> '+clanShopLotWord(total)+'</span></div></div></td>'+
         '<td>'+row.idol_orbs+'</td><td>'+row.splus_businesses+'</td><td><b>'+total+'</b></td></tr>');
       if(clanShopHistoryOpenPlayer===row.player_key){
         const weeks=[...row.weeks].sort((a,b)=>String(b.week_start).localeCompare(String(a.week_start)));
