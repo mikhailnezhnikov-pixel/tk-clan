@@ -1141,3 +1141,39 @@ Constraints for the refinement:
 - do not change battle/remort/Instant MAX logic;
 - do not enable E4 in the same change.
 
+## E3 speed r1 — userscript 1.17.20 (2026-09-21)
+
+User confirmed the E3 one-building flow and staged runner are functionally correct, then requested a modest speed increase.
+
+Delivered:
+- userscript `1.17.20`;
+- core `core-20260921-r22-explore-speed-tune`;
+- marker `explore-e3-speed-20260921-r1`;
+- default action delay changed from **1.0–3.0 s** to **0.7–2.0 s**;
+- default battle delay changed from **1.0 s** to **0.7 s**;
+- between-building delay remains **2–7 s** and is irrelevant to the one-building E3 gate;
+- legacy standard `1/3/1` settings migrate once to the new `0.7/2.0/0.7` profile;
+- custom user delay values are preserved;
+- UI label changed from “Future run delays” to “Execution delays”.
+
+Safety unchanged:
+- authoritative rereads remain;
+- shared mutation gate remains;
+- mutation network retry remains disabled;
+- fast completion / battles / remort / Instant MAX logic unchanged;
+- E4 remains absent;
+- Buildings native sync, Maps safe5 and passive auth protections preserved.
+
+Verification:
+- predeploy `35576826016`: PASS;
+- deploy/public round-trip `35576921480`: PASS;
+- current E3 verification `35577054251`: PASS;
+- loader core-r22 recheck `35577128071`: PASS;
+- public E2E `35577067567`: PASS.
+
+Functional E3 status remains:
+**LIVE PASS**
+
+Current refinement status:
+**SPEED_R1_LIVE_USER_FEEL_CHECK_PENDING**
+
