@@ -20,8 +20,8 @@ jobs:
           set -euo pipefail
           curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 15 --max-time 30 \
             "https://tk-clan.ru/hk/loader.js?verify=$(date +%s)" -o /tmp/loader.js
-          grep -Fq "const LOADER_REV='loader-20260921-r10';" /tmp/loader.js
-          grep -Fq "const EXPECTED_CORE_REV='core-20260921-r14-auth-bridge-xhr';" /tmp/loader.js
+          grep -Fq "const LOADER_REV='loader-20260921-r12';" /tmp/loader.js
+          grep -Fq "const EXPECTED_CORE_REV='core-20260921-r15-late-login-handoff';" /tmp/loader.js
           ! grep -Fq "const EXPECTED_CORE_REV='core-20260920-r6';" /tmp/loader.js
           ! grep -Fq " · r6" /tmp/loader.js
           echo "PUBLIC_HK_LOADER_CURRENT_CORE=PASS"
