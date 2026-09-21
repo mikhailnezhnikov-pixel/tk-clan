@@ -3,7 +3,7 @@ name: Dry-run 235 full-map fingerprints
 on:
   push:
     paths:
-      - 'deploy/maps/hk_maps_235_fingerprints.b64'
+      - 'deploy/maps/fp6.part.*'
       - 'deploy/topking/full235-fingerprint-trigger.txt'
   workflow_dispatch:
 
@@ -31,14 +31,15 @@ jobs:
       - name: Decode fingerprints
         run: |
           set -euo pipefail
-          base64 -d deploy/maps/hk_maps_235_fingerprints.b64 > /tmp/fp.json.gz
+          cat deploy/maps/fp6.part.00 deploy/maps/fp6.part.01 deploy/maps/fp6.part.02 | base64 -d > /tmp/fp.json.gz
           gzip -dc /tmp/fp.json.gz > /tmp/fp.json
           python3 - <<'PY'
           import json,hashlib
           d=json.load(open('/tmp/fp.json'))
           assert len(d)==235,len(d)
           assert len({x['map_key'] for x in d})==235
-          assert all(len(x['sample_ids'])==min(32,x['building_count']) for x in d)
+          assert all(len(x['sample_ids'])==min(6,x['building_count']) for x in d)
+          assert hashlib.sha256(raw).hexdigest()=='8c1aee427e7678ca8b64ef46682f77cd80f407f8d048ae64cf3968db253ab8fb'
           raw=open('/tmp/fp.json','rb').read()
           print('maps=',len(d))
           print('sha256=',hashlib.sha256(raw).hexdigest())
@@ -107,10 +108,10 @@ jobs:
               ))
               # Fingerprint decision is intentionally conservative.
               if sample_hit_ids==len(fp['sample_ids']) and top_hits==sample_hit_ids and second_hits==0:
-                  category='exact32'
-              elif sample_hit_ids>=12 and purity==1.0 and second_hits==0 and city_match:
+                  category='exact6'
+              elif sample_hit_ids>=3 and purity==1.0 and second_hits==0 and city_match:
                   category='strong_unique'
-              elif sample_hit_ids>=4 and purity>=0.90 and city_match:
+              elif sample_hit_ids>=2 and purity>=0.80 and city_match:
                   category='probable_review'
               elif sample_hit_ids==0:
                   category='no_overlap'
@@ -133,7 +134,7 @@ jobs:
                   'existing_link_agrees':bool(existing and top_area and existing['canonical_area_id']==top_area),
               })
 
-          safe=[r for r in rows if r['category'] in ('exact32','strong_unique')]
+          safe=[r for r in rows if r['category'] in ('exact6','strong_unique')]
           report={
               'maps':len(rows),
               'categories':dict(cats),
@@ -170,7 +171,7 @@ jobs:
           r=json.load(open('/tmp/full235-match-report.json'))
           assert r['maps']==235
           assert len(r['existing_links_disagree'])==0,r['existing_links_disagree']
-          safe=[x for x in r['rows'] if x['category'] in ('exact32','strong_unique')]
+          safe=[x for x in r['rows'] if x['category'] in ('exact6','strong_unique')]
           assert all(x['top_area_id'] for x in safe)
           print('FULL235_FINGERPRINT_DRYRUN=PASS')
           print('categories=',r['categories'])
@@ -181,7 +182,7 @@ jobs:
           cp /tmp/full235-summary.txt audit/hk-stage2-full235-fingerprint-summary.txt
           {
             echo
-            echo "fingerprint_source_sha256=9a0e77f563c47fb6a6cd96cfa661007be665625854f04266c56a0c514c1859f0"
+            echo "fingerprint_source_sha256=8c1aee427e7678ca8b64ef46682f77cd80f407f8d048ae64cf3968db253ab8fb"
             echo "fingerprint_maps=235"
             echo "production_writes=NO"
           } >> audit/hk-stage2-full235-fingerprint-summary.txt
