@@ -1,0 +1,48 @@
+name: Verify Public Collector Refresh Failure Safety
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public_collector.py'
+      - 'deploy/topking/check_public_collector_refresh_failure.py'
+      - 'deploy/topking/public-collector-refresh-failure-trigger.txt'
+  schedule:
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-public-collector-refresh-failure
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Test refresh failure safety on temporary files
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/check_public_collector_refresh_failure.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/check_public_collector_refresh_failure.py \
+            root@89.125.1.71:/tmp/check_public_collector_refresh_failure.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/check_public_collector_refresh_failure.py'
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
