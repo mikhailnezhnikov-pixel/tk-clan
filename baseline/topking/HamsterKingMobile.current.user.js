@@ -137,6 +137,8 @@
   const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';
   const CLAN_SHOP_FACT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1';
   const PUBLIC_SNAPSHOT_API = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-snapshot';
+  const PUBLIC_COLLECTOR_AUTH_HEARTBEAT_REV = 'public-collector-auth-heartbeat-20260921-r1'; // PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1
+  const PUBLIC_COLLECTOR_AUTH_SYNC_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-collector/auth-sync';
   const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2';
   const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
   const PUBLIC_SNAPSHOT_INTERVAL_MS = 3 * 60 * 60 * 1000;
@@ -392,7 +394,9 @@
   let nativeNetworkFetch = null;
   let authUpdatedAt = 0;
   let authCreatePromise = null;
-  let licenseState = {checked:false, allowed:false, playerId:'', reason:'Проверка лицензии…', update:null};
+  let publicCollectorAuthSyncPromise = null;
+  let publicCollectorAuthLastFingerprint = '';
+  let licenseState = {checked:false, allowed:false, playerId:'', reason:'Проверка лицензии…', update:null, publicCollectorAuthSync:false};
   let licenseCheckPromise = null;
   let lastLicenseCheck = 0;
   let publicSnapshotPromise = null;
@@ -848,9 +852,13 @@
     if (resolvedUrl.origin === new URL(LICENSE_URL).origin) return false;
     const auth = Object.entries(headers || {}).find(([key]) => key.toLowerCase() === 'authorization');
     if (!auth?.[1]) return false;
+    const previousAuthorization = String(apiHeaders.Authorization || '');
     apiBase = resolvedUrl.origin;
     apiHeaders = {Authorization: auth[1], Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json'};
     authUpdatedAt = Date.now();
+    if (previousAuthorization !== String(apiHeaders.Authorization || '') && licenseState?.publicCollectorAuthSync) {
+      setTimeout(() => { maybeSyncPublicCollectorAuthorization().catch(() => {}); }, 0);
+    }
     return true;
   }
 
@@ -940,6 +948,59 @@
     } catch (_) { return null; }
   }
 
+  async function maybeSyncPublicCollectorAuthorization(token = currentGameBearer()) {
+    token = clean(token);
+    if (!licenseState.allowed || !licenseState.publicCollectorAuthSync || !licenseState.token || !token) return false;
+    const expiresAt = jwtExpiration(token);
+    if (expiresAt && expiresAt <= Date.now() + 5000) return false;
+    const fingerprint = diagnosticFingerprint(token);
+    if (fingerprint && fingerprint === publicCollectorAuthLastFingerprint) return true;
+    if (publicCollectorAuthSyncPromise) return publicCollectorAuthSyncPromise;
+    publicCollectorAuthSyncPromise = (async () => {
+      const params = readNativeGameAuthParams();
+      if (!params?.authType || !params?.authData || !params?.platform) {
+        recordDiagnostic('collector-auth-sync-skipped',{reason:'bootstrap-unavailable'});
+        return false;
+      }
+      const request = nativeNetworkFetch || window.fetch.bind(window);
+      try {
+        const result = await gameFetchText(
+          request,
+          PUBLIC_COLLECTOR_AUTH_SYNC_URL,
+          {
+            method:'POST',
+            cache:'no-store',
+            headers:{
+              'Content-Type':'application/json',
+              Authorization:'Bearer '+licenseState.token
+            },
+            body:JSON.stringify({
+              game_token:token,
+              auth_type:params.authType,
+              auth_data:params.authData,
+              platform:params.platform
+            })
+          },
+          15000
+        );
+        const response=result.response, text=result.text;
+        let documentValue=null; try { documentValue=JSON.parse(text); } catch (_) {}
+        if (!response.ok || !documentValue?.accepted) {
+          recordDiagnostic('collector-auth-sync-failed',{status:response.status});
+          return false;
+        }
+        publicCollectorAuthLastFingerprint=fingerprint;
+        recordDiagnostic('collector-auth-sync-ok',{expiresAt:expiresAt||null,authType:params.authType,platform:params.platform});
+        return true;
+      } catch (error) {
+        recordDiagnostic('collector-auth-sync-network-error',{error:error?.message || error});
+        return false;
+      }
+    })();
+    try { return await publicCollectorAuthSyncPromise; }
+    finally { publicCollectorAuthSyncPromise=null; }
+  }
+
   async function refreshGoogleAuthData(params) {
     if (String(params?.authType || '') !== 'Google') return params;
     const expiration = jwtExpiration(params.authData);
@@ -1011,6 +1072,7 @@
         authUpdatedAt = Date.now();
         setHealth('auth', true, 'токен обновлён');
         recordDiagnostic('auth-create-success',{reason, fingerprint:diagnosticFingerprint(token), playerId:gameBearerPlayerId(token), expiresAt:jwtExpiration(token)});
+        setTimeout(() => { maybeSyncPublicCollectorAuthorization(token).catch(() => {}); }, 0);
         return token;
       } catch (error) {
         recordDiagnostic('auth-create-network-error',{reason,error:error?.message || error});
@@ -1211,8 +1273,8 @@
           }
           const body = response.body || {};
           licenseState = response.ok && body.allowed
-            ? {checked:true, allowed:true, playerId, reason:'Доступ разрешён', token:String(body.token || ''), update:body.update || null}
-            : {checked:true, allowed:false, playerId, reason:licenseReason(body.reason || `HTTP ${response.status}`), update:body.update || null};
+            ? {checked:true, allowed:true, playerId, reason:'Доступ разрешён', token:String(body.token || ''), update:body.update || null, publicCollectorAuthSync:!!body.public_collector_auth_sync}
+            : {checked:true, allowed:false, playerId, reason:licenseReason(body.reason || `HTTP ${response.status}`), update:body.update || null, publicCollectorAuthSync:false};
           lastLicenseCheck = Date.now();
           setHealth('server', response.ok, response.ok ? 'сервер отвечает' : `HTTP ${response.status}`);
           setHealth('license', licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : licenseState.reason);
@@ -1232,6 +1294,7 @@
       licenseCheckPromise = null; updateLicenseUI();
       if (licenseState.allowed) setTimeout(() => {
         synchronizeSettings(); flushPitObservations(); loadSharedPitPowers(); refreshSharedClanSkills(); maybeAutoScanClanSkills();
+        if (licenseState.publicCollectorAuthSync) maybeSyncPublicCollectorAuthorization().catch(() => {});
       }, 0);
       return licenseState.allowed;
     })();
