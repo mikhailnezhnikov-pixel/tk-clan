@@ -1,4 +1,4 @@
-name: Deploy Userscript 1.17.24 Embedded Puzzle Solver
+name: Deploy Userscript 1.17.24 Puzzle Solver Regex Hotfix
 
 on:
   push:
@@ -40,24 +40,21 @@ jobs:
           grep -Fq "// @version      1.17.24" /tmp/HamsterKingMobile.user.js
           grep -Fq "core-20260921-r27-businesses-runner-canon" /tmp/HamsterKingMobile.user.js
           grep -Fq "businesses-finalize-single-snapshot-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "puzzle-solver-v3-embedded-20260921-r1" /tmp/HamsterKingMobile.user.js
           cmp -s /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           echo "LIVE_BASELINE_INPUT=PASS"
 
-      - name: Apply embedded Puzzle Solver patch
+      - name: Apply Puzzle Solver regex hotfix
         run: |
           set -euo pipefail
-          python3 -m py_compile deploy/topking/patch_puzzle_solver_embed_1_17_24.py
-          python3 deploy/topking/patch_puzzle_solver_embed_1_17_24.py
+          python3 -m py_compile deploy/topking/patch_puzzle_solver_regex_hotfix_1_17_24.py
+          python3 deploy/topking/patch_puzzle_solver_regex_hotfix_1_17_24.py
           node --check /tmp/HamsterKingMobile.user.js
           grep -Fq "puzzle-solver-v3-embedded-20260921-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "runtime.puzzleSolver = hkPuzzleSolver;" /tmp/HamsterKingMobile.user.js
-          grep -Fq "hkPuzzleSolver.start();" /tmp/HamsterKingMobile.user.js
-          grep -Fq "hkPuzzleSolver.stop();" /tmp/HamsterKingMobile.user.js
-          grep -Fq "setInterval(checkPuzzle,500)" /tmp/HamsterKingMobile.user.js
-          grep -Fq "setTimeout(checkPuzzle,300)" /tmp/HamsterKingMobile.user.js
-          grep -Fq "mf_fairlot_lights_out_sl" /tmp/HamsterKingMobile.user.js
-          grep -Fq "mf_treasurelot_enemy_type_" /tmp/HamsterKingMobile.user.js
-          echo "PUZZLE_SOLVER_EMBED_CANDIDATE=PASS"
+          grep -Fq "mf_fairlot_lights_out_sl(\\d+)_(true|false)" /tmp/HamsterKingMobile.user.js
+          grep -Fq "mf_treasurelot_sword_\\d+_(\\d+)" /tmp/HamsterKingMobile.user.js
+          grep -Fq "enemy_type_(01|02|03)_(\\d+)_sl(\\d+)" /tmp/HamsterKingMobile.user.js
+          echo "PUZZLE_SOLVER_REGEX_HOTFIX_CANDIDATE=PASS"
 
       - name: Static regression verification
         run: |
@@ -74,6 +71,14 @@ jobs:
             'lights_selector':'mf_fairlot_lights_out_sl' in s,
             'battle_sword':'mf_treasurelot_sword_' in s,
             'battle_enemy':'mf_treasurelot_enemy_type_' in s,
+            'lights_regex':'/mf_fairlot_lights_out_sl(\\d+)_(true|false)/' in s,
+            'battle_sword_regex':'/mf_treasurelot_sword_\\d+_(\\d+)/' in s,
+            'battle_enemy_regex':'/enemy_type_(01|02|03)_(\\d+)_sl(\\d+)/' in s,
+            'broken_regexes_gone':all(x not in s for x in [
+              '/mf_fairlot_lights_out_sl(d+)_(true|false)/',
+              '/mf_treasurelot_sword_d+_(d+)/',
+              '/enemy_type_(01|02|03)_(d+)_sl(d+)/'
+            ]),
             'lights_search':'for (let mask=1;mask<512;mask++)' in s,
             'battle_memo':'const memo = new Map();' in s,
             'scan_500ms':'setInterval(checkPuzzle,500)' in s,
@@ -115,17 +120,21 @@ jobs:
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
           grep -Fq "puzzle-solver-v3-embedded-20260921-r1" /tmp/public.js
           grep -Fq "core-20260921-r27-businesses-runner-canon" /tmp/public.js
-          echo "PUBLIC_PUZZLE_SOLVER_EMBED=PASS"
+          grep -Fq "mf_fairlot_lights_out_sl(\\d+)_(true|false)" /tmp/public.js
+          grep -Fq "mf_treasurelot_sword_\\d+_(\\d+)" /tmp/public.js
+          grep -Fq "enemy_type_(01|02|03)_(\\d+)_sl(\\d+)" /tmp/public.js
+          echo "PUBLIC_PUZZLE_SOLVER_REGEX_HOTFIX=PASS"
 
       - name: Sync verified baseline
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           {
-            echo "USERSCRIPT_1_17_24_PUZZLE_SOLVER_EMBED=PASS"
+            echo "USERSCRIPT_1_17_24_PUZZLE_SOLVER_REGEX_HOTFIX=PASS"
             echo "version=1.17.24"
             echo "core=core-20260921-r27-businesses-runner-canon"
             echo "puzzle_solver=puzzle-solver-v3-embedded-20260921-r1"
+            echo "regex_hotfix=PASS"
             echo "background_scan_500ms=PASS"
             echo "initial_scan_300ms=PASS"
             echo "lights_out_3x3=PASS"
@@ -140,7 +149,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-24-puzzle-solver-status.txt
           if ! git diff --cached --quiet; then
-            git commit -m "feature: embed background HK Puzzle Solver v3"
+            git commit -m "hotfix: repair embedded Puzzle Solver regexes"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
