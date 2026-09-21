@@ -1,1 +1,1 @@
-2026-09-21 verify and sync already-live userscript 1.17.10
+2026-09-21 deploy userscript 1.17.11 auth bridge early isolated via compatible workflow
