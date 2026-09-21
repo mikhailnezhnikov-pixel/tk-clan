@@ -1228,3 +1228,44 @@ Recommended live gate:
 6. verify sequential 1/5 → 5/5 processing, stage tracking, Pause/Stop, and no duplicate/parallel actions;
 7. after completion, recalculate the plan and verify processed buildings no longer require the completed work.
 
+## Explore production UI r1 — userscript 1.17.22 (2026-09-21)
+
+User confirmed the E4 multi-building queue works correctly in live use. Functional Explore queue status is therefore:
+**LIVE PASS**
+
+User feedback identified two UI leftovers:
+- the E3 test button should not remain in the normal production interface;
+- the separate E4 run-limit control duplicated the existing **Maximum buildings / Максимум зданий** setting.
+
+Delivered in userscript `1.17.22`:
+- core `core-20260921-r24-explore-production-ui`;
+- marker `explore-production-ui-20260921-r1`;
+- removed the visible E3 test button;
+- removed the separate E4 run-limit selector;
+- **Maximum buildings / Максимум зданий** is now the single queue-size limit;
+- normal actions are now only **Calculate plan / Рассчитать план** and **Run / Запустить**;
+- E3/E4 development labels were removed from normal production-facing controls/messages;
+- queue mechanics remain sequential and continue to reuse the validated E3 core;
+- existing pause/stop, reconciliation, resource-stop and between-building-delay behavior is unchanged.
+
+Verification:
+- predeploy `35579236728`: PASS;
+- deploy/public round-trip `35579341358`: PASS;
+- loader core-r24 `35579489161`: PASS;
+- Explore production UI verifier `35579499230`: PASS;
+- `explore_single_max_buildings_limit=PASS`;
+- `explore_test_controls_removed=PASS`;
+- public E2E `35579510611`: PASS;
+- Buildings/Maps/auth protected invariants: PASS.
+
+Current status:
+**PRODUCTION_UI_R1_TECHNICAL_PASS_USER_VISUAL_CHECK_PENDING**
+
+Final visual gate:
+1. reload game/HK;
+2. open Explore;
+3. confirm there is no E3 test button;
+4. confirm there is no separate E4 run-limit field;
+5. confirm **Maximum buildings** alone controls how many buildings will be processed;
+6. confirm only the normal **Calculate plan** and **Run** actions remain.
+
