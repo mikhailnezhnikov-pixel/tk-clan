@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.9
+// @version      1.17.10
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
-// @release-note TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: пассивный захват штатного auth bootstrap для server collector; userscript не создаёт auth-запросы.
+// @release-note TECHNICAL_AUTH_STORAGE_PROBE_R1: безопасная диагностика места хранения штатного bootstrap только для технического аккаунта.
 // @match        https://app.hamsterking.games/*
 // @run-at       document-start
 // @grant        none
@@ -11,9 +11,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.9';
+  const BUILD_VERSION = '1.17.10';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r11-technical-passive-auth-bridge';
+  const HK_CORE_REVISION = 'core-20260921-r12-technical-auth-storage-probe';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -139,6 +139,7 @@
   const PUBLIC_SNAPSHOT_API = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-snapshot';
   const PUBLIC_COLLECTOR_AUTH_HEARTBEAT_REV = 'public-collector-auth-heartbeat-20260921-r1'; // PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1
   const PUBLIC_COLLECTOR_AUTH_SYNC_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-collector/auth-sync';
+  const PUBLIC_COLLECTOR_AUTH_PROBE_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-collector/auth-probe'; // TECHNICAL_AUTH_STORAGE_PROBE_R1
   const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2';
   const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
   const PUBLIC_SNAPSHOT_INTERVAL_MS = 3 * 60 * 60 * 1000;
@@ -396,6 +397,7 @@
   let authCreatePromise = null;
   let publicCollectorAuthSyncPromise = null;
   let publicCollectorAuthLastFingerprint = '';
+  let publicCollectorAuthProbeSent = false;
   let observedNativeGameAuthParams = null; // PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1
   let observedNativeGameToken = ''; // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1
   let licenseState = {checked:false, allowed:false, playerId:'', reason:'Проверка лицензии…', update:null, publicCollectorAuthSync:false};
@@ -1019,6 +1021,118 @@
     return null;
   }
 
+  function safeStorageProbeArea(storage) {
+    const keys = [], jsonShapes = {};
+    if (!storage) return {keys,jsonShapes};
+    try {
+      const count = Math.min(Number(storage.length || 0), 64);
+      for (let index = 0; index < count; index += 1) {
+        const key = clean(storage.key(index));
+        if (!key || keys.includes(key)) continue;
+        keys.push(key);
+        let raw = '';
+        try { raw = String(storage.getItem(key) ?? ''); } catch (_) { continue; }
+        if (!raw || raw.length > 100000) continue;
+        try {
+          const value = JSON.parse(raw);
+          if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+          const fields = Object.keys(value).slice(0,24);
+          for (const nested of ['params','data','auth','session','user']) {
+            const child=value[nested];
+            if (!child || typeof child !== 'object' || Array.isArray(child)) continue;
+            for (const field of Object.keys(child).slice(0,12)) {
+              const name=nested+'.'+field;
+              if (!fields.includes(name) && fields.length<24) fields.push(name);
+            }
+          }
+          jsonShapes[key]=fields;
+        } catch (_) {}
+      }
+    } catch (_) {}
+    return {keys,jsonShapes};
+  }
+
+  async function buildPublicCollectorAuthProbe() {
+    const local=safeStorageProbeArea(window.localStorage);
+    const session=safeStorageProbeArea(window.sessionStorage);
+    const jsonShapes={...local.jsonShapes};
+    for (const [key,fields] of Object.entries(session.jsonShapes)) {
+      jsonShapes['session:'+key]=fields;
+    }
+    const cookieNames=[];
+    try {
+      for (const part of String(document.cookie || '').split(';')) {
+        const name=clean(part.split('=',1)[0]);
+        if (name && !cookieNames.includes(name) && cookieNames.length<64) cookieNames.push(name);
+      }
+    } catch (_) {}
+    const indexedDbNames=[];
+    try {
+      if (indexedDB?.databases) {
+        const rows=await indexedDB.databases();
+        for (const row of rows || []) {
+          const name=clean(row?.name);
+          if (name && !indexedDbNames.includes(name) && indexedDbNames.length<64) indexedDbNames.push(name);
+        }
+      }
+    } catch (_) {}
+    let telegramWebAppPresent=false, telegramInitDataPresent=false;
+    try {
+      telegramWebAppPresent=!!window.Telegram?.WebApp;
+      telegramInitDataPresent=!!String(window.Telegram?.WebApp?.initData || '');
+    } catch (_) {}
+    return {
+      local_storage_keys:local.keys,
+      session_storage_keys:session.keys,
+      cookie_names:cookieNames,
+      indexed_db_names:indexedDbNames,
+      json_shapes:jsonShapes,
+      telegram_webapp_present:telegramWebAppPresent,
+      telegram_init_data_present:telegramInitDataPresent,
+      observed_auth_create:!!observedNativeGameAuthParams,
+      current_bearer_present:!!currentGameBearer()
+    };
+  }
+
+  async function sendPublicCollectorAuthProbe() {
+    if (publicCollectorAuthProbeSent) return true;
+    if (!licenseState.allowed || !licenseState.publicCollectorAuthSync || !licenseState.token) return false;
+    publicCollectorAuthProbeSent=true;
+    try {
+      const probe=await buildPublicCollectorAuthProbe();
+      const request=nativeNetworkFetch || window.fetch.bind(window);
+      const result=await gameFetchText(
+        request,
+        PUBLIC_COLLECTOR_AUTH_PROBE_URL,
+        {
+          method:'POST',
+          cache:'no-store',
+          headers:{'Content-Type':'application/json',Authorization:'Bearer '+licenseState.token},
+          body:JSON.stringify(probe)
+        },
+        12000
+      );
+      let body=null; try { body=JSON.parse(result.text); } catch (_) {}
+      if (!result.response.ok || !body?.accepted) {
+        recordDiagnostic('collector-auth-probe-failed',{status:result.response.status});
+        publicCollectorAuthProbeSent=false;
+        return false;
+      }
+      recordDiagnostic('collector-auth-probe-ok',{
+        localKeys:probe.local_storage_keys.length,
+        sessionKeys:probe.session_storage_keys.length,
+        indexedDbNames:probe.indexed_db_names.length,
+        observedAuthCreate:probe.observed_auth_create,
+        bearer:probe.current_bearer_present
+      });
+      return true;
+    } catch (error) {
+      publicCollectorAuthProbeSent=false;
+      recordDiagnostic('collector-auth-probe-network-error',{error:error?.message || error});
+      return false;
+    }
+  }
+
   async function maybeSyncPublicCollectorAuthorization(token = currentGameBearer() || observedNativeGameToken) {
     token = clean(token);
     if (!licenseState.allowed || !licenseState.publicCollectorAuthSync || !licenseState.token || !token) return false;
@@ -1293,6 +1407,7 @@
       if (licenseState.allowed) setTimeout(() => {
         synchronizeSettings(); flushPitObservations(); loadSharedPitPowers(); refreshSharedClanSkills();
         if (licenseState.publicCollectorAuthSync) {
+          sendPublicCollectorAuthProbe().catch(() => {});
           maybeSyncPublicCollectorAuthorization().catch(() => {});
           setTimeout(() => { maybeSyncPublicCollectorAuthorization().catch(() => {}); }, 1500);
         }
