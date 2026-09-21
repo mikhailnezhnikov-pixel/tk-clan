@@ -13,12 +13,17 @@ pairs=[
 ("  const BUILD_VERSION = '1.17.11';","  const BUILD_VERSION = '1.17.12';"),
 ("  const HK_CORE_REVISION = 'core-20260921-r13-auth-bridge-early-isolated';","  const HK_CORE_REVISION = 'core-20260921-r14-auth-bridge-xhr';"),
 ("// @release-note AUTH_BRIDGE_EARLY_ISOLATED_R1: технический auth probe/heartbeat запускаются сразу после лицензии и независимо от остальных модулей.",
- "// @release-note AUTH_BRIDGE_XHR_TRANSPORT_R1: технический probe/heartbeat используют отдельный XHR к license-серверу; Game API не затрагивается.")
+ "// @release-note Исправлена проверка авторизации после входа в игру.\n// @release-note Улучшена стабильность запуска скрипта после авторизации.")
 ]
 for old,new in pairs:
     if s.count(old)!=1:
         raise SystemExit(f"anchor count={s.count(old)} for {old!r}")
     s=s.replace(old,new,1)
+
+# Public update banner shows only user-facing changes; integrity metadata stays server-side.
+sha_ui="""${update.sha256 ? `<small>SHA-256: ${escapeHtml(String(update.sha256).slice(0,16))}…</small>` : ''}"""
+if sha_ui in s:
+    s=s.replace(sha_ui,"",1)
 
 anchor="  async function sendPublicCollectorAuthProbe() {\n"
 if s.count(anchor)!=1:
