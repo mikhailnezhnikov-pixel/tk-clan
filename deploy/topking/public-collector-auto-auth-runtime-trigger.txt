@@ -1,1 +1,1 @@
-2026-09-21 rerun fixed local backend license comparison
+2026-09-21 check license service uid and identity permissions safely
