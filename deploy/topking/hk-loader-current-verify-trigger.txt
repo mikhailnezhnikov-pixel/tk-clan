@@ -1,1 +1,1 @@
-2026-09-21 verify public HK loader core r24 after userscript 1.17.22
+2026-09-21 verify public HK loader core r25 after userscript 1.17.23
