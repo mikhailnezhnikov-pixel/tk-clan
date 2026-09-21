@@ -151,7 +151,7 @@ jobs:
           print("buildings_active_semantics=PASS")
           print("buildings_capacity_reported_active=PASS")
           print("protected_maps_explore=PASS")
-          print("userscript_1_17_15=PASS")
+          print("userscript_1_17_16=PASS")
           print("BUILDINGS_CANON_R1_TECHNICAL_REVALIDATION=PASS")
           PY
 
