@@ -1,2 +1,3 @@
 run full235 all-building-ID dry-run repaired-chunks rerun-2
 verify attrs transport 20260921-1316
+production apply armed A1 20260921-1320
