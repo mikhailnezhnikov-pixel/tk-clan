@@ -334,3 +334,51 @@ Next live gate:
 6. recalculate and verify the newly-owned building disappears from candidates;
 7. if its crystal count meets Favorite-from and favorite slots are available, verify the Favorites counter increases.
 
+## Buildings native-store sync r1 — userscript 1.17.19 (2026-09-21)
+
+User live test established that server-side state mutation was already correct:
+- owned buildings: 2176;
+- active buildings: 468;
+- favorites: 3;
+- the new row is tier 0 / level 0 and server-confirmed;
+- however the game map still showed “Исследовать это здание?”, proving the native client store had not caught up with the server state yet.
+
+Delivered in userscript `1.17.19`:
+- core `core-20260921-r21-buildings-native-sync`;
+- marker `buildings-native-sync-20260921-r1`;
+- Buildings waits for native game-state synchronization before declaring the runner finished;
+- the existing `hkGameBridge` now exposes a read-only building-state check against the native player store;
+- after server-confirmed opening, native store must also know the building as owned;
+- after server-confirmed favorite, native store must also expose favorite state;
+- if bridge synchronization cannot prove the new state, HK performs one automatic page reload after the batch;
+- no repeated claim is issued during the sync fallback.
+
+Safety:
+- owned/postcondition semantics from 1.17.18 preserved;
+- open limit 1/10/15/20/all preserved;
+- Maps safe5 preserved;
+- Explore E3 preserved;
+- passive auth safety preserved.
+
+Verification:
+- post-action read-only diagnostic `35574950160`: PASS;
+- predeploy native-sync check `35575240613`: PASS;
+- deploy/public round-trip `35575353091`: PASS;
+- loader core-r21 verification `35575475749`: PASS;
+- Buildings live verification `35575485583`: PASS;
+- `buildings_native_store_sync=PASS`;
+- `buildings_reload_fallback=PASS`;
+- public E2E `35575493955`: PASS.
+
+Current status:
+**NATIVE_SYNC_R1_LIVE_USER_CHECK_PENDING**
+
+Next live gate:
+1. reload game/HK once so 1.17.19 is active;
+2. keep Open limit at 1;
+3. calculate candidates;
+4. open one candidate;
+5. observe whether the game UI updates directly after native sync, or reloads once via fallback;
+6. after completion, tap the same building — it must no longer show the initial “Исследовать это здание?” ownership prompt;
+7. verify favorite state remains visible and candidate disappears from the plan.
+
