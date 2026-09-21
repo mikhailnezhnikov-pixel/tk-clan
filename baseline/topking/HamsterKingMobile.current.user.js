@@ -2,6 +2,7 @@
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
 // @version      1.17.24
+// @release-note Clan Shop теперь пассивно отправляет фактические счётчики игрока при уже выполненных игрой /player/me и /shop/view, без дополнительных запросов к игре.
 // @release-note Убраны фоновые лаги: тяжёлый DOM-скан Ям больше не выполняется каждую секунду, а Бизнесы не перерисовываются после каждого нативного действия игры.
 // @release-note Исправлена совместимость с обычной игрой: HK больше не запускает дополнительное обновление player state после нативных действий пользователя.
 // @release-note Встроен фоновый HK Puzzle Solver v3: автоматически показывает порядок нажатий для Lights Out 3×3 и Battle.
@@ -444,6 +445,8 @@
   let settingsSyncPromise = null;
   let fairDocument = null;
   let shopViewDocument = null;
+  let clanShopFactSyncTimer = null;
+  let clanShopFactLastFingerprint = '';
   let itemCatalogDocument = null;
   let businessCatalogDocument = null;
   let bonusCatalogDocument = null;
@@ -1222,6 +1225,7 @@
     // Checking access is required to unlock the panel. This does not scan
     // districts or submit any map data; those actions remain manual.
     checkLicense(player);
+    scheduleClanShopActualFactsSync();
     // Never scan or upload map areas automatically. The player must explicitly
     // press "Считать карты аккаунта" in the Maps tab for that operation.
   }
@@ -1366,6 +1370,7 @@
       }
 
       if (licenseState.allowed) setTimeout(() => {
+        scheduleClanShopActualFactsSync();
         const startupTasks = [
           ['settings', synchronizeSettings],
           ['pit-observations', flushPitObservations],
@@ -1397,6 +1402,7 @@
     if (!documentValue || typeof documentValue !== 'object' || !Array.isArray(documentValue.shop_lots)) return;
     shopViewDocument = documentValue;
     captureAuthorization(url, headers);
+    scheduleClanShopActualFactsSync();
   }
 
   function acceptStaticDocument(url, headers, documentValue) {
@@ -7225,8 +7231,9 @@
     return '';
   }
 
-  async function reportClanShopActualFacts() {
-    const rows = shopRows.flatMap(row => {
+  const HK_CLAN_SHOP_PASSIVE_FACTS_REV='clan-shop-passive-facts-20260922-r1';
+  function clanShopFactRows(sourceRows = shopRows) {
+    return (Array.isArray(sourceRows) ? sourceRows : []).flatMap(row => {
       const itemType = clanShopActualFactType(row);
       if (!itemType) return [];
       return [{
@@ -7238,13 +7245,34 @@
         shared_maximum:Math.max(0, Number(row.sharedMaximum || 0)),
         player_purchased:Math.max(0, Number(row.bought || 0))
       }];
-    });
+    }).sort((a,b)=>a.lot_id.localeCompare(b.lot_id));
+  }
+
+  async function reportClanShopActualFacts(sourceRows = shopRows, force = false) {
+    const rows = clanShopFactRows(sourceRows);
     if (!rows.length || !licenseState.allowed) return;
+    const fingerprint=JSON.stringify(rows.map(row=>[
+      row.lot_id,row.item_type,row.shared_purchased,row.shared_maximum,row.player_purchased
+    ]));
+    if(!force && fingerprint===clanShopFactLastFingerprint) return;
     try {
       await licensedServerJson(CLAN_SHOP_FACT_API_BASE, '/clan-shop-facts/submit', {rows}, false, 'clan-shop-facts');
+      clanShopFactLastFingerprint=fingerprint;
+      recordDiagnostic('clan-shop-passive-facts',{rows:rows.length});
     } catch (error) {
       console.warn('[HK] Clan Shop actual facts sync failed', error);
     }
+  }
+
+  function scheduleClanShopActualFactsSync() {
+    if (!shopViewDocument || !playerDocument) return;
+    if (clanShopFactSyncTimer) clearTimeout(clanShopFactSyncTimer);
+    clanShopFactSyncTimer=setTimeout(() => {
+      clanShopFactSyncTimer=null;
+      if(!licenseState.allowed || !shopViewDocument || !playerDocument) return;
+      const passiveRows=normalizeRegularShop(shopViewDocument,playerDocument);
+      void reportClanShopActualFacts(passiveRows,false);
+    },900);
   }
 
   async function loadShop() {
