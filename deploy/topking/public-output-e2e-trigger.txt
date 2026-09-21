@@ -1,1 +1,1 @@
-2026-09-21 public E2E after Businesses finalize loader compatibility pin
+2026-09-21 public E2E after embedded Puzzle Solver v3
