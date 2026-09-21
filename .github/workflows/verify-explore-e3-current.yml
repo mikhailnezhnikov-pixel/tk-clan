@@ -83,10 +83,12 @@ jobs:
           assert "hkRunner.start({title:either('Исследование · E3','Explore · E3'),total:1" in run
           assert "const result=await exploreE3ProcessOne(candidate,settings)" in run
 
-          # Mutation safety: no blind mutation retry, always authoritative reconcile.
-          assert "hkMutationGate.run(path" in mut
+          # Mutation safety: E3 uses the shared apiJson mutation gate.
+          assert "data=await apiJson(path,'POST',body)" in mut
           assert "exploreE3Reconcile(buildingId,reason)" in mut
-          assert "retry:false" in mut or "apiJsonCore(path,'POST'" in mut
+          api=block("async function apiJson(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3)","async function hkAuthoritativePlayerRead")
+          assert "hkMutationGate.run(" in api
+          assert "() => apiJsonCore(path, method, body, retryAuthorization, 0)" in api
 
           # Canonical E3 paths.
           for marker in [
