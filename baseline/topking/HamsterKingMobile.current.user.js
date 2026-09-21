@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.5
+// @version      1.17.6
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
-// @release-note Автоматическое обновление авторизации серверного public collector для технического аккаунта; Maps и Explore без изменений.
+// @release-note Надёжный захват штатного /auth/create для автоматического server collector auth; Maps и Explore без изменений.
 // @match        https://app.hamsterking.games/*
 // @run-at       document-start
 // @grant        none
@@ -11,9 +11,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.5';
+  const BUILD_VERSION = '1.17.6';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r7-auth-heartbeat';
+  const HK_CORE_REVISION = 'core-20260921-r8-native-auth-observer';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -396,6 +396,7 @@
   let authCreatePromise = null;
   let publicCollectorAuthSyncPromise = null;
   let publicCollectorAuthLastFingerprint = '';
+  let observedNativeGameAuthParams = null; // PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1
   let licenseState = {checked:false, allowed:false, playerId:'', reason:'Проверка лицензии…', update:null, publicCollectorAuthSync:false};
   let licenseCheckPromise = null;
   let lastLicenseCheck = 0;
@@ -930,6 +931,25 @@
     return true;
   }
 
+  function authParamsFromUrl(url, source = 'network') {
+    try {
+      const parsed = new URL(String(url || ''), location.href);
+      if (parsed.pathname !== '/auth/create') return null;
+      const authType = clean(parsed.searchParams.get('auth_type'));
+      const authData = clean(parsed.searchParams.get('auth_data'));
+      const platform = clean(parsed.searchParams.get('platform'));
+      if (!authType || !authData || !platform) return null;
+      return {authType, authData, platform, source};
+    } catch (_) { return null; }
+  }
+
+  function captureNativeGameAuthParams(url) {
+    const params = authParamsFromUrl(url, 'network');
+    if (!params) return false;
+    observedNativeGameAuthParams = params;
+    return true;
+  }
+
   function readNativeGameAuthParams() {
     try {
       const webApp = window.Telegram?.WebApp;
@@ -938,14 +958,32 @@
         return {authType:'MiniApp', authData:initData.replaceAll('&','%26'), platform:'TG', source:'telegram'};
       }
     } catch (_) {}
+
+    if (observedNativeGameAuthParams?.authType && observedNativeGameAuthParams?.authData && observedNativeGameAuthParams?.platform) {
+      return {...observedNativeGameAuthParams};
+    }
+
     try {
       const stored = JSON.parse(localStorage.getItem('auth-data') || 'null');
       const authType = clean(stored?.params?.auth_type);
       const authData = clean(stored?.params?.auth_data);
       const remembered = clean(localStorage.getItem('remember-me'));
-      if (!authType || !authData || remembered !== authType) return null;
-      return {authType, authData, platform:'WEB', source:'browser'};
-    } catch (_) { return null; }
+      if (authType && authData && remembered === authType) {
+        return {authType, authData, platform:'WEB', source:'browser'};
+      }
+    } catch (_) {}
+
+    try {
+      const entries = performance.getEntriesByType('resource').slice().reverse();
+      for (const entry of entries) {
+        const params = authParamsFromUrl(entry?.name, 'performance');
+        if (!params) continue;
+        observedNativeGameAuthParams = params;
+        return {...params};
+      }
+    } catch (_) {}
+
+    return null;
   }
 
   async function maybeSyncPublicCollectorAuthorization(token = currentGameBearer()) {
@@ -1294,7 +1332,10 @@
       licenseCheckPromise = null; updateLicenseUI();
       if (licenseState.allowed) setTimeout(() => {
         synchronizeSettings(); flushPitObservations(); loadSharedPitPowers(); refreshSharedClanSkills(); maybeAutoScanClanSkills();
-        if (licenseState.publicCollectorAuthSync) maybeSyncPublicCollectorAuthorization().catch(() => {});
+        if (licenseState.publicCollectorAuthSync) {
+          maybeSyncPublicCollectorAuthorization().catch(() => {});
+          setTimeout(() => { maybeSyncPublicCollectorAuthorization().catch(() => {}); }, 1500);
+        }
       }, 0);
       return licenseState.allowed;
     })();
@@ -2555,6 +2596,7 @@
     window.fetch = async function(input, init) {
       const url = typeof input === 'string' ? input : input?.url;
       const requestHeaders = {...headersToObject(input?.headers), ...headersToObject(init?.headers)};
+      captureNativeGameAuthParams(url);
       captureAuthorization(url, requestHeaders);
       const response = await nativeFetch(input, init);
       const path = url ? new URL(url, location.href).pathname : '';
@@ -2581,6 +2623,7 @@
     const send = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.open = function(method, url, ...rest) {
       this.__hkUrl = url; this.__hkMethod = method; this.__hkHeaders = {};
+      captureNativeGameAuthParams(url);
       return open.call(this, method, url, ...rest);
     };
     XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
