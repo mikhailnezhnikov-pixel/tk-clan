@@ -1007,6 +1007,11 @@
 </footer>
 
 <script>
+  const TK_CABINET_REV='cabinet-20260921-r7-clanshop-identity';
+  if(!new URLSearchParams(location.search).has('v')){
+    const url=new URL(location.href);url.searchParams.set('v','20260921-r7');location.replace(url.toString());
+  }
+
   const API='https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet';
   const TOKEN_KEY='tk_clan_cabinet_session';
   const $=id=>document.getElementById(id);
