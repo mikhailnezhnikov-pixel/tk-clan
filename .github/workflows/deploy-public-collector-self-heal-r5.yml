@@ -1,0 +1,90 @@
+name: Deploy Public Collector Bootstrap Self Heal R5
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-self-heal-r5-trigger.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-topking-collector
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refresh current main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch and patch fresh live collector
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/public_collector.py /tmp/public_collector.py
+          sha256sum /tmp/public_collector.py | awk '{print $1}' > /tmp/collector-source.sha
+          python3 deploy/topking/patch_public_collector_self_heal_r5.py /tmp/public_collector.py
+          python3 -m py_compile /tmp/public_collector.py
+          grep -Fq PUBLIC_COLLECTOR_BOOTSTRAP_SELF_HEAL_R1 /tmp/public_collector.py
+          grep -Fq public-server-collector-20260921-r5-bootstrap-self-heal /tmp/public_collector.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/public_collector.py root@89.125.1.71:/tmp/public_collector.self-heal-r5.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/check_public_collector_self_heal.py root@89.125.1.71:/tmp/check_public_collector_self_heal.py
+
+      - name: Race-safe install
+        run: |
+          set -euo pipefail
+          source_sha="$(cat /tmp/collector-source.sha)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "
+            set -euo pipefail
+            current=\$(sha256sum /opt/hamsterking-license/public_collector.py | awk '{print \$1}')
+            test \"\$current\" = \"$source_sha\" || { echo LIVE_COLLECTOR_CHANGED_BEFORE_SELF_HEAL_INSTALL; exit 42; }
+            stamp=\$(date +%Y%m%d-%H%M%S)
+            cp -a /opt/hamsterking-license/public_collector.py /opt/hamsterking-license/public_collector.py.bak.self-heal-r5.\$stamp
+            install -m 0755 /tmp/public_collector.self-heal-r5.py /opt/hamsterking-license/public_collector.py
+            python3 -m py_compile /opt/hamsterking-license/public_collector.py
+            echo collector_self_heal_install=PASS
+          "
+
+      - name: Verify missing-token self-heal without Game API
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/check_public_collector_self_heal.py'
+
+      - name: Verify live war collector still works
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            systemctl start hamsterking-public-war.service
+            result=$(systemctl show hamsterking-public-war.service -p Result --value)
+            status=$(systemctl show hamsterking-public-war.service -p ExecMainStatus --value)
+            test "$result" = success
+            test "$status" = 0
+            echo live_war_after_self_heal=PASS
+          '
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/public_collector.py /tmp/collector-source.sha
