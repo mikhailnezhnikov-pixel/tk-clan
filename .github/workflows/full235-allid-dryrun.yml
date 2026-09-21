@@ -217,6 +217,23 @@ jobs:
           ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/full235-allid-match.py' | tee /tmp/full235-allid-summary.txt
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/tmp/full235-allid-report.json /tmp/full235-allid-report.json
 
+      - name: Production FULL235 apply
+        run: |
+          set -euo pipefail
+          grep -Fxq 'FULL235_APPLY_ONCE_20260921_A1' audit-tools/full235-apply-arm.txt
+          python3 -m py_compile audit-tools/full235_apply_from_compact.py
+          before_sha="$(ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'sha256sum /opt/hamsterking-license/server.py' | cut -d' ' -f1)"
+          echo "FULL235_SERVER_SHA_BEFORE=$before_sha"
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/full235-allids.bin.gz root@89.125.1.71:/tmp/full235-allids.bin.gz
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/full235-attrs2.bin.xz root@89.125.1.71:/tmp/full235-attrs2.bin.xz
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new audit-tools/full235_apply_from_compact.py root@89.125.1.71:/tmp/full235_apply_from_compact.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/full235_apply_from_compact.py' | tee /tmp/full235-apply-result.txt
+          grep -Eq 'FULL235_PRODUCTION_APPLY=PASS|FULL235_ALREADY_APPLIED_SAFE=PASS' /tmp/full235-apply-result.txt
+          after_sha="$(ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'sha256sum /opt/hamsterking-license/server.py' | cut -d' ' -f1)"
+          echo "FULL235_SERVER_SHA_AFTER=$after_sha" | tee -a /tmp/full235-apply-result.txt
+          test "$before_sha" = "$after_sha"
+          echo "FULL235_SERVER_CODE_UNCHANGED=PASS" | tee -a /tmp/full235-apply-result.txt
+
       - name: Record audit result on audit branch
         run: |
           set -euo pipefail
@@ -231,13 +248,23 @@ jobs:
           } >> audit/hk-stage2-full235-allid-summary.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f /tmp/full235-apply-result.txt ]; then
+            cp /tmp/full235-apply-result.txt audit/hk-stage2-full235-production-apply.txt
+          fi
           git add audit/hk-stage2-full235-allid-dryrun.json audit/hk-stage2-full235-allid-summary.txt
-          git commit -m "audit: full235 all-building-ID dry-run PASS"
-          git pull --rebase origin audit-full235-stage-20260921
-          git push origin HEAD:audit-full235-stage-20260921
+          if [ -f audit/hk-stage2-full235-production-apply.txt ]; then
+            git add audit/hk-stage2-full235-production-apply.txt
+          fi
+          if git diff --cached --quiet; then
+            echo "AUDIT_COMMIT_NO_CHANGES=PASS"
+          else
+            git commit -m "audit: full235 production apply verification"
+            git pull --rebase origin audit-full235-stage-20260921
+            git push origin HEAD:audit-full235-stage-20260921
+          fi
 
       - name: Cleanup
         if: always()
         run: |
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/full235-allids.bin.gz /tmp/full235-original75.json /tmp/full235-allid-match.py /tmp/full235-allid-report.json' || true
-          rm -f ~/.ssh/topking /tmp/full235-allids.bin /tmp/full235-allids.bin.gz /tmp/full235-allid-report.json /tmp/full235-allid-summary.txt
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/full235-allids.bin.gz /tmp/full235-attrs2.bin.xz /tmp/full235_apply_from_compact.py /tmp/full235-original75.json /tmp/full235-allid-match.py /tmp/full235-allid-report.json' || true
+          rm -f ~/.ssh/topking /tmp/full235-allids.bin /tmp/full235-allids.bin.gz /tmp/full235-attrs2.bin /tmp/full235-attrs2.bin.xz /tmp/full235-allid-report.json /tmp/full235-allid-summary.txt /tmp/full235-apply-result.txt
