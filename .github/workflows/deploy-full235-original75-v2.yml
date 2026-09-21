@@ -1,0 +1,140 @@
+name: Deploy full235 original75 V2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/full235-original75-v2-live-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+
+      - name: Prepare SSH
+        env:
+          K: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$K" > ~/.ssh/k
+          chmod 600 ~/.ssh/k
+
+      - name: Build exact candidate from live
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          source_sha="$(sha256sum /tmp/server.py | cut -d' ' -f1)"
+          echo "source_sha=$source_sha"
+          test "$source_sha" = "b439738dba58b1f2f69873c4ab4abc270d13fca4628aed59ac877ee1572622f8"
+          python3 deploy/topking/patch_server_full235_original75_v2.py
+          python3 -m py_compile /tmp/server.py
+          candidate_sha="$(sha256sum /tmp/server.py | cut -d' ' -f1)"
+          echo "candidate_sha=$candidate_sha"
+          test "$candidate_sha" = "19839098c3db0246d87b72931381320378e46d0ed6d09b6cf2db2110530448db"
+          grep -Fq HK_FULL235_ORIGINAL75_V2 /tmp/server.py
+
+      - name: Production read-only precheck
+        run: |
+          cat > /tmp/full235-v2-pre.py <<'PY'
+          import json,sqlite3
+          ids=json.load(open('/tmp/full235-ids75.json'))
+          db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          out={
+            'catalog':db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0],
+            'points':db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0],
+            'area_links':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
+            'point_links':db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0],
+            'areas':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
+            'buildings':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0],
+            'uuid75_areas':0,'uuid75_aliases':0,'uuid75_conflicts':[]
+          }
+          for key,area_id in ids.items():
+            out['uuid75_areas']+=int(bool(db.execute("SELECT 1 FROM map_areas WHERE area_id=?",(area_id,)).fetchone()))
+            out['uuid75_aliases']+=int(bool(db.execute("SELECT 1 FROM map_area_aliases WHERE source_area_id=?",(area_id,)).fetchone()))
+            link=db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",(key,)).fetchone()
+            if link and link['canonical_area_id']!=area_id:
+              out['uuid75_conflicts'].append([key,link['canonical_area_id'],area_id])
+          assert out['catalog']==235,out
+          assert out['points']==235,out
+          assert not out['uuid75_conflicts'],out
+          print(json.dumps(out,sort_keys=True))
+          db.close()
+          PY
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new deploy/maps/full235-nooverlap-area-ids.json root@89.125.1.71:/tmp/full235-ids75.json
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new /tmp/full235-v2-pre.py root@89.125.1.71:/tmp/full235-v2-pre.py
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/full235-v2-pre.py' | tee /tmp/before.json
+
+      - name: Backup and deploy resolver only
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/k -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.full235v2.py
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            set -euo pipefail
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.full235v2.$stamp"
+            install -m 0644 /tmp/server.full235v2.py /opt/hamsterking-license/server.py
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          '
+          live_sha="$(ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'sha256sum /opt/hamsterking-license/server.py' | cut -d' ' -f1)"
+          test "$live_sha" = "19839098c3db0246d87b72931381320378e46d0ed6d09b6cf2db2110530448db"
+
+      - name: Verify production unchanged
+        run: |
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/full235-v2-pre.py' | tee /tmp/after.json
+          python3 - <<'PY'
+          import json
+          before=json.load(open('/tmp/before.json'));after=json.load(open('/tmp/after.json'))
+          for key in ('catalog','points','area_links','point_links','areas','buildings','uuid75_areas','uuid75_aliases'):
+              assert before[key]==after[key],(key,before[key],after[key])
+          assert not after['uuid75_conflicts'],after
+          print('FULL235_V2_PRODUCTION_DATA_UNCHANGED=PASS')
+          PY
+
+      - name: Verify Personal Cabinet V2 UI
+        run: |
+          set -euo pipefail
+          ok=0
+          for i in $(seq 1 12); do
+            curl -fsSL "https://tk-clan.ru/cabinet/?full235v2=$(date +%s)-$i" -o /tmp/cabinet.html || true
+            if grep -Fq "Новые районы с исходным UUID" /tmp/cabinet.html                && grep -Fq "matched_original_id_empty" /tmp/cabinet.html                && grep -Fq "new_original" /tmp/cabinet.html; then
+              ok=1; break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
+          echo FULL235_V2_CABINET_UI=PASS
+
+      - name: Record status
+        run: |
+          set -euo pipefail
+          before="$(cat /tmp/before.json)"
+          after="$(cat /tmp/after.json)"
+          {
+            echo "FULL235_ORIGINAL75_V2_LIVE=PASS"
+            echo "server_sha256=19839098c3db0246d87b72931381320378e46d0ed6d09b6cf2db2110530448db"
+            echo "original_uuid_catalog=75"
+            echo "archive_applied=NO"
+            echo "production_data_changed=NO"
+            echo "build_regression=PASS"
+            echo "cabinet_v2_ui=PASS"
+            echo "before=$before"
+            echo "after=$after"
+          } > audit/hk-stage2-full235-original75-v2-live-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-stage2-full235-original75-v2-live-status.txt
+          git commit -m "audit: deploy full235 original75 V2"
+          git push origin HEAD:${GITHUB_REF_NAME}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          ssh -i ~/.ssh/k -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/server.full235v2.py /tmp/full235-v2-pre.py /tmp/full235-ids75.json' || true
+          rm -f ~/.ssh/k /tmp/server.py /tmp/before.json /tmp/after.json /tmp/cabinet.html
