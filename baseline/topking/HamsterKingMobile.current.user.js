@@ -28,7 +28,7 @@
   'use strict';
   const BUILD_VERSION = '1.17.24';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
-  const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
+  const HK_CORE_REVISION = 'core-20260921-r28-businesses-finalize';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -601,7 +601,7 @@
       resume() { if(state.status!=='paused')return false; state.status='running'; settlePaused(); recordDiagnostic('runner-resume',{title:state.title}); emit(); return true; },
       async waitIfPaused() { while(state.status==='paused') await new Promise(resolve=>pauseResolvers.push(resolve)); if(abortController?.signal.aborted) throw new DOMException('Aborted','AbortError'); },
       stop(reason='user') { if(!this.running||!state.stoppable)return false; state.status='stopping'; abortController?.abort(reason); settlePaused(); recordDiagnostic('runner-stop',{title:state.title,reason}); emit(); return true; },
-      finish(step='') { if(step)state.step=String(step); state.status='done'; if(state.total)state.done=state.total; recordDiagnostic('runner-finish',{title:state.title}); emit(); const exploreTitle=[either('Исследование · E3','Explore · E3'),either('Исследование','Explore')].includes(String(state.title||'')); const keep=exploreTitle?15000:1800; setTimeout(()=>{if(state.status==='done'){state.status='idle';emit();}},keep); },
+      finish(step='') { if(step)state.step=String(step); state.status='done'; if(state.total)state.done=state.total; recordDiagnostic('runner-finish',{title:state.title}); emit(); const title=String(state.title||''),exploreTitle=[either('Исследование · E3','Explore · E3'),either('Исследование','Explore')].includes(title),businessesTitle=title===either('Перестановка бизнесов','Business rearrangement'); const keep=exploreTitle?15000:businessesTitle?6000:1800; setTimeout(()=>{if(state.status==='done'){state.status='idle';emit();}},keep); },
       fail(error) { state.status='error'; state.error=String(error?.message||error||either('Ошибка','Error')); recordDiagnostic('runner-error',{title:state.title,error:state.error}); emit(); },
       reset() { abortController=null; settlePaused(); Object.assign(state,{status:'idle',title:'',step:'',done:0,total:0,startedAt:0,error:'',pausable:true,stoppable:true,history:[]}); emit(); }
     };
@@ -2037,6 +2037,7 @@
   const HK_BUSINESSES_CANON_REV='businesses-catalog-readonly-20260921-r1';
   const HK_BUSINESSES_REARRANGE_REV='businesses-rearrange-desktop-safe-t123-20260921-r1';
   const HK_BUSINESSES_RUNNER_UI_REV='businesses-runner-canon-20260921-r1';
+  const HK_BUSINESSES_FINALIZE_REV='businesses-finalize-single-snapshot-20260921-r1';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -10515,38 +10516,57 @@
         log(`Снимаю T${tier(row.businessId)}…`);
         await businessAction('remove', row); removed.push(row);
       }
+      let processedInsertRows = 0;
       for (const [row, id] of plan) {
         if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
         await hkRunner.waitIfPaused();
-        hkRunner.setStep(either('Вставляю бизнесы','Inserting businesses'), inserted.length, Math.max(1,plan.length));
-        if (!id) { log(`${either('Оставляю пустым','Leaving empty')}: ${buildingSlotLabel(row)}`); continue; }
+        hkRunner.setStep(either('Вставляю бизнесы','Inserting businesses'), processedInsertRows, Math.max(1,plan.length));
+        if (!id) {
+          log(`${either('Оставляю пустым','Leaving empty')}: ${buildingSlotLabel(row)}`);
+          processedInsertRows += 1;
+          hkRunner.setStep(either('Вставляю бизнесы','Inserting businesses'), processedInsertRows, Math.max(1,plan.length));
+          continue;
+        }
         log(`Вставляю T${tier(id)}…`);
         const response = await businessAction('insert', row, id); inserted.push([row,id]);
         const state = findSlot(response, row.buildingId, row.slot);
         if (!state) throw new Error('После вставки сервер не вернул новый бизнес');
         if (state.businessId !== id) throw new Error(either('Сервер вернул другой бизнес после вставки', 'The server returned a different business after insertion'));
         await finishPendingBusiness(state, `T${tier(id)}`, true);
+        processedInsertRows += 1;
+        hkRunner.setStep(either('Вставляю бизнесы','Inserting businesses'), processedInsertRows, Math.max(1,plan.length));
       }
-      // Do not announce completion until every inserted business, including the
-      // last one, is confirmed ACTIVE by /player/me.
-      for (const [row, id] of inserted) {
+
+      // All mutation rows have been processed. Use one authoritative snapshot
+      // for the normal final check instead of rereading /player/me once per slot.
+      // Only slots that are genuinely unresolved get a targeted recovery read.
+      hkRunner.setStep(either('Проверяю результат','Verifying result'), Math.max(1,plan.length), Math.max(1,plan.length));
+      playerDocument = await hkAuthoritativePlayerRead('business-final-check');
+
+      let unresolved = inserted.filter(([row, id]) =>
+        !businessSlotIsActive(findSlot(playerDocument, row.buildingId, row.slot), id));
+
+      for (const [row, id] of unresolved) {
         if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
         await hkRunner.waitIfPaused();
-        let state = await readBusinessSlot(row.buildingId, row.slot,
-          value => businessSlotIsActive(value, id), 6);
-        if (!businessSlotIsActive(state, id)) {
-          if (!state || state.businessId !== id) throw new Error(either(
-            `Последний контроль: в слоте отсутствует вставленный T${tier(id)}`,
-            `Final check: inserted T${tier(id)} is missing from its slot`));
-          await finishPendingBusiness(state, `T${tier(id)}`, true);
-          state = await readBusinessSlot(row.buildingId, row.slot,
-            value => businessSlotIsActive(value, id), 6);
-        }
+        let state = findSlot(playerDocument, row.buildingId, row.slot);
+        if (!state || state.businessId !== id) throw new Error(either(
+          `Последний контроль: в слоте отсутствует вставленный T${tier(id)}`,
+          `Final check: inserted T${tier(id)} is missing from its slot`));
+        await finishPendingBusiness(state, `T${tier(id)}`, true);
+        state = await readBusinessSlot(row.buildingId, row.slot,
+          value => businessSlotIsActive(value, id), 3);
         if (!businessSlotIsActive(state, id)) throw new Error(either(
           `Последний контроль: T${tier(id)} не активирован`,
           `Final check: T${tier(id)} is not active`));
       }
-      playerDocument = await hkAuthoritativePlayerRead('business-complete');
+
+      unresolved = inserted.filter(([row, id]) =>
+        !businessSlotIsActive(findSlot(playerDocument, row.buildingId, row.slot), id));
+      if (unresolved.length) throw new Error(either(
+        `Последний контроль не подтверждён для ${unresolved.length} бизнесов`,
+        `Final verification was not confirmed for ${unresolved.length} businesses`));
+
       refreshBusinessData();
       hkRunner.finish(either('Перестановка завершена','Rearrangement completed'));
       selectedSlots.clear(); selectedStock.clear(); preparedBusinessPlan = null; preparedBusinessPlanSource = '';

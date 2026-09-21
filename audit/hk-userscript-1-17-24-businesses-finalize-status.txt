@@ -1,0 +1,13 @@
+USERSCRIPT_1_17_24_BUSINESSES_FINALIZE=PASS
+version=1.17.24
+core=core-20260921-r28-businesses-finalize
+final_check_single_snapshot=PASS
+legacy_per_slot_final_loop=REMOVED
+progress_after_last_insert=100_PERCENT
+completion_message_visibility=6_SECONDS
+t4_t6_removal_guard=PRESERVED
+runner_canon=PRESERVED
+catalog_read_only=PRESERVED
+explore_live_pass=PRESERVED
+buildings_live_pass=PRESERVED
+maps_safe5=PRESERVED
