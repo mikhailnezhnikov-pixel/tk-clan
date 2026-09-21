@@ -51,13 +51,15 @@ jobs:
           s=Path('/tmp/live.js').read_text(encoding='utf-8')
 
           required=[
-              "// @version      1.17.17",
-              "const BUILD_VERSION = '1.17.17';",
+              "// @version      1.17.18",
+              "const BUILD_VERSION = '1.17.18';",
               "const HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1';",
               "const HK_BUILDINGS_UI_REV = 'buildings-ui-20260921-r3';",
               "const HK_BUILDINGS_ACTIVE_REV = 'buildings-active-semantics-20260921-r1';",
               "const HK_BUILDINGS_LIMIT_REV = 'buildings-open-limit-20260921-r1';",
               "const HK_BUILDINGS_RUNNER_UI_REV = 'buildings-runner-ui-20260921-r1';",
+              "const HK_BUILDINGS_OWNED_REV = 'buildings-owned-semantics-20260921-r1';",
+              "const HK_BUILDINGS_POSTCONDITION_REV = 'buildings-postcondition-20260921-r1';",
               "async function buildingCanonBuildPlan(refreshPlayer=true)",
               "async function buildingCanonOpen(buildingId)",
               "async function buildingCanonFavorite(buildingId)",
@@ -93,7 +95,7 @@ jobs:
           assert "free:max===null?null:Math.max(0,max-active)" in active_helpers
 
           plan=block("async function buildingCanonBuildPlan(refreshPlayer=true)","function buildingCanonActualMetrics")
-          assert "active.has(buildingId)" in plan
+          assert "ownedBuildingIds.has(buildingId)" in plan
           assert "settings.buildingType==='investment'" in plan
           assert "settings.buildingType==='normal'" in plan
           assert "crystals<settings.minCrystals" in plan
@@ -129,6 +131,12 @@ jobs:
           assert "const limit=Number(buildingCanonPlan.settings?.openLimit);" in runner
           assert "const candidates=limit===0?capacityCandidates:capacityCandidates.slice(0,Math.max(1,limit||1));" in runner
           assert "Открыть зданий:" in runner
+          assert "buildingCanonOwnedIds(playerDocument).has(candidate.buildingId)" in runner
+          assert "hkAuthoritativePlayerRead('buildings:after-claim')" in runner
+          assert "server did not confirm building claim" in runner
+          assert "hkAuthoritativePlayerRead('buildings:after-favorite')" in runner
+          assert "buildingCanonIsFavorite(candidate.buildingId,playerDocument)" in runner
+          assert "favorite confirmed" in runner
 
           ui=block("function renderBuildings()","async function refreshBuildings")
           assert "data-building-read=" not in ui
@@ -165,6 +173,9 @@ jobs:
           print("buildings_capacity_reported_active=PASS")
           print("buildings_open_limit=PASS")
           print("buildings_runner_canon=PASS")
+          print("buildings_owned_semantics=PASS")
+          print("buildings_claim_postcondition=PASS")
+          print("buildings_favorite_postcondition=PASS")
           print("protected_maps_explore=PASS")
           print("userscript_1_17_17=PASS")
           print("BUILDINGS_CANON_R1_TECHNICAL_REVALIDATION=PASS")
