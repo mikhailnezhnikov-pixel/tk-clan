@@ -133,6 +133,29 @@ for log_path in ("/var/log/nginx/access.log", "/var/log/nginx/access.log.1"):
         st=re.search(r'"\s+(\d{3})\s+', line)
         sync_events.append((tm.group(1) if tm else "", st.group(1) if st else ""))
 print("auth_sync_request_seen="+("yes" if sync_events else "no"))
+probe_events=[]
+for log_path in ("/var/log/nginx/access.log", "/var/log/nginx/access.log.1"):
+    try:
+        lines=open(log_path,encoding="utf-8",errors="replace").read().splitlines()[-5000:]
+    except OSError:
+        continue
+    for line in lines:
+        if "/api/v1/public-collector/auth-probe" not in line:
+            continue
+        import re
+        tm=re.search(r"\[([^\]]+)\]", line)
+        st=re.search(r'"\s+(\d{3})\s+', line)
+        probe_events.append((tm.group(1) if tm else "", st.group(1) if st else ""))
+print("auth_probe_request_seen="+("yes" if probe_events else "no"))
+if probe_events:
+    print("auth_probe_latest_time="+probe_events[-1][0])
+    print("auth_probe_latest_status="+probe_events[-1][1])
+try:
+    server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
+    print("auth_probe_server_marker="+("yes" if "PUBLIC_COLLECTOR_AUTH_PROBE_R1" in server_src else "no"))
+    print("auth_probe_server_route="+("yes" if "/api/v1/public-collector/auth-probe" in server_src else "no"))
+except Exception:
+    print("auth_probe_server_marker=unavailable")
 if sync_events:
     print("auth_sync_latest_time="+sync_events[-1][0])
     print("auth_sync_latest_status="+sync_events[-1][1])
