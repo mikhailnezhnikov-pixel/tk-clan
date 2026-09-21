@@ -1,0 +1,1 @@
+2026-09-21 inspect native building mutation endpoints read-only
