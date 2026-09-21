@@ -1,2 +1,2 @@
-inspect=live-clan-shop-current-week-detail-r5
+inspect=live-clan-shop-weekly-delta-v9-verify
 stamp=2026-09-22
