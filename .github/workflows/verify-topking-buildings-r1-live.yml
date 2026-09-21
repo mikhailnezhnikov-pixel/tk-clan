@@ -114,7 +114,11 @@ jobs:
           assert "hkRunner.waitIfPaused()" in runner
 
           ui=block("function renderBuildings()","async function refreshBuildings")
-          assert "data-building-read=" in ui
+          assert "data-building-read=" not in ui
+          assert "Активные здания" not in ui
+          assert "Active buildings" not in ui
+          assert "either('Активные','Active')" in ui
+          assert "activeValue" in ui
           assert "#hk-building-plan" in ui
           assert "#hk-building-run" in ui
           assert "buildingCanonPreparePlan(true)" in ui
@@ -131,6 +135,8 @@ jobs:
           print("buildings_authoritative_rereads=PASS")
           print("buildings_pause_stop=PASS")
           print("buildings_ui_wiring=PASS")
+          print("buildings_active_list_hidden=PASS")
+          print("buildings_active_count_kept=PASS")
           print("protected_maps_explore=PASS")
           print("userscript_1_17_15=PASS")
           print("BUILDINGS_CANON_R1_TECHNICAL_REVALIDATION=PASS")
