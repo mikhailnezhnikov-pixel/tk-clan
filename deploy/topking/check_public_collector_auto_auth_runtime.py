@@ -43,6 +43,28 @@ if present(AUTH_PATH):
 
 print("refresh_backoff_present="+("yes" if os.path.exists(REFRESH_PATH) else "no"))
 
+# Safe static check of the live userscript auth behavior.
+try:
+    live_path="/opt/hamsterking-license/HamsterKingMobile.user.js"
+    src=open(live_path,encoding="utf-8").read()
+    version=""
+    for line in src.splitlines()[:30]:
+        if line.startswith("// @version"):
+            version=line.split()[-1]
+            break
+    print("live_userscript_version="+version)
+    print("auth_passive_marker="+("yes" if "AUTH_PASSIVE_SAFETY_R1" in src else "no"))
+    print("native_auth_observer_marker="+("yes" if "PUBLIC_COLLECTOR_NATIVE_AUTH_OBSERVER_R1" in src else "no"))
+    print("createFresh_call_count="+str(src.count("createFreshGameAuthorization(")))
+    ensure_i=src.find("async function ensureGameAuthorization")
+    ensure_block=src[ensure_i:ensure_i+1800] if ensure_i>=0 else ""
+    print("ensure_calls_createFresh="+("yes" if "createFreshGameAuthorization(" in ensure_block else "no"))
+    start_i=src.find("function startAfterNativeGameLogin()")
+    start_block=src[start_i:start_i+2600] if start_i>=0 else ""
+    print("startup_calls_bootstrapLate="+("yes" if "bootstrapLateGameConnection()" in start_block else "no"))
+except Exception:
+    print("live_userscript_static_check=unavailable")
+
 # Safe check: does the pinned technical identity correspond to a licensed
 # player that has checked in recently? Never print the player ID.
 try:
