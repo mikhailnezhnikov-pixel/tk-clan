@@ -1,1 +1,1 @@
-2026-09-21 log game bundle URLs for building endpoint diagnostic
+2026-09-21 inspect native building mutations via current client CDN
