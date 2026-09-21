@@ -33,6 +33,7 @@ jobs:
               url=urllib.parse.urljoin(base,src)
               if url not in urls: urls.append(url)
           print('html_size='+str(len(html)))
+          print('html_preview='+re.sub(r'\s+',' ',html)[:5000])
           print('asset_candidates='+str(len(candidates)))
           print('bundle_count='+str(len(urls)))
           if not urls:
