@@ -1,0 +1,33 @@
+{
+  "exists": true,
+  "first_key": "hk_auckland0115",
+  "has_private_data": true,
+  "has_private_loader": true,
+  "hk_moscow1226_keys": [
+    "key",
+    "ok",
+    "points",
+    "title"
+  ],
+  "hk_moscow1226_len_points": 117,
+  "hk_newyork2332_keys": [
+    "key",
+    "ok",
+    "points",
+    "title"
+  ],
+  "hk_newyork2332_len_points": 2574,
+  "loader_maps": 235,
+  "raw_head_hex": "484b4d5033eb000e686b5f6e6577796f726b323333320e4e455720594f524b2032333a33320e0a00",
+  "raw_head_text": "HKMP3�\u0000\u000ehk_newyork2332\u000eNEW YORK 23:32\u000e\n\u0000\u0000���\u0007���\u0003\u0001�\t\u0000\u0002�\u0006\u0004\u0000�\u0002\u0000\u0000�\t\u0000\u0001�\u0001\u0002\u0000�\u0003\u0000\u0000�\u000f\u0002\u0000�\b\u0000\u0000�\u0002\u0000\u0003�\b\u0002\u0000�\u0002\u0000\u0000�\u0004\u0000\u0000�\u0003\u0000\u0000�\f\u0002\u0000�\u0002\u0002\u0000�\u0002\u0000\u0001�\b\u0000\u0000�\u000e",
+  "sample_keys": [
+    "key",
+    "points",
+    "title"
+  ],
+  "sample_list_len_points": 472,
+  "sample_type": "dict",
+  "sha256": "d7ba7f2341cdacf2d382b4b065ff99374e16b216d688558cc9ec04b244f50b69",
+  "size": 244947,
+  "uncompressed_size": 390681
+}
