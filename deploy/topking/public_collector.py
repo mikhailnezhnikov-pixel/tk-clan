@@ -117,7 +117,7 @@ def _clear_auth_refresh_failure():
 
 def refresh_game_token(force=False):
     global TOKEN
-    if not force and _auth_refresh_backed_off():
+    if _auth_refresh_backed_off():
         return False
     try:
         bootstrap=json.loads(_read_text(AUTH_BOOTSTRAP_FILE,100_000) or "{}")
