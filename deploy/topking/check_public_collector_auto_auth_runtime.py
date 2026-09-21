@@ -32,6 +32,7 @@ if present(TOKEN_PATH):
     print("token_exp="+str(exp))
     print("token_seconds_left="+str(exp-int(time.time()) if exp else 0))
 
+bootstrap_updated_at=0
 print("bootstrap_present="+("yes" if present(AUTH_PATH) else "no"))
 if present(AUTH_PATH):
     try:
@@ -40,17 +41,20 @@ if present(AUTH_PATH):
         doc={}
     print("bootstrap_auth_type="+str(doc.get("auth_type","")))
     print("bootstrap_platform="+str(doc.get("platform","")))
-    print("bootstrap_updated_at="+str(doc.get("updated_at",0)))
+    bootstrap_updated_at=int(doc.get("updated_at") or 0)
+    print("bootstrap_updated_at="+str(bootstrap_updated_at))
 
 print("refresh_backoff_present="+("yes" if os.path.exists(REFRESH_PATH) else "no"))
 
+auth_probe_updated_at=0
 print("auth_probe_present="+("yes" if present(PROBE_PATH) else "no"))
 if present(PROBE_PATH):
     try:
         probe=json.load(open(PROBE_PATH,encoding="utf-8"))
     except Exception:
         probe={}
-    print("auth_probe_updated_at="+str(probe.get("updated_at",0)))
+    auth_probe_updated_at=int(probe.get("updated_at") or 0)
+    print("auth_probe_updated_at="+str(auth_probe_updated_at))
     print("auth_probe_local_storage_keys="+json.dumps(probe.get("local_storage_keys",[]),ensure_ascii=False))
     print("auth_probe_session_storage_keys="+json.dumps(probe.get("session_storage_keys",[]),ensure_ascii=False))
     print("auth_probe_cookie_names="+json.dumps(probe.get("cookie_names",[]),ensure_ascii=False))
@@ -197,6 +201,19 @@ except Exception:
 if sync_events:
     print("auth_sync_latest_time="+sync_events[-1][0])
     print("auth_sync_latest_status="+sync_events[-1][1])
+
+# The public HTTPS endpoint can be terminated upstream from this host, so
+# local nginx access logs may legitimately contain no request line. Record
+# endpoint effects separately from proxy-log visibility.
+now=int(time.time())
+probe_effect=bool(auth_probe_updated_at and auth_probe_updated_at <= now)
+sync_effect=bool(bootstrap_updated_at and bootstrap_updated_at <= now)
+print("auth_probe_effect_seen="+("yes" if probe_effect else "no"))
+print("auth_sync_effect_seen="+("yes" if sync_effect else "no"))
+if auth_probe_updated_at:
+    print("auth_probe_age_seconds="+str(max(0,now-auth_probe_updated_at)))
+if bootstrap_updated_at:
+    print("auth_sync_age_seconds="+str(max(0,now-bootstrap_updated_at)))
 
 # Safe server release-gate inspection.
 try:
