@@ -1,1 +1,1 @@
-2026-09-21 verify Businesses catalog current live on userscript 1.17.23
+2026-09-21 verify Businesses catalog + rearrange guard current live on userscript 1.17.24\n
