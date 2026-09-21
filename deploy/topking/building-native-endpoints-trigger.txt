@@ -1,1 +1,1 @@
-2026-09-21 inspect public game shell asset hints for building endpoints
+2026-09-21 inspect native building endpoints from current client_build page
