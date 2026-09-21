@@ -17,7 +17,7 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.12
+- userscript: 1.17.13
 - current module: Buildings / Здания — final live action gate
 - current module file: audit/hk-stage2-06-buildings.md
 - current module status: TECHNICAL_REVALIDATION_PASS_USER_ACTION_PENDING
@@ -1384,6 +1384,32 @@ Verification:
 - GitHub Pages deploy run `35564240938`: PASS;
 - public loader verification run `35564300896`: PASS;
 - old expected core r6 absent from public loader: PASS.
+
+Stage 2 remains at:
+**Buildings 2.06 — TECHNICAL_REVALIDATION_PASS_USER_ACTION_PENDING**.
+
+### Late native login handoff — PASS (2026-09-21)
+
+Live screenshot exposed a second launcher/startup blocker after the loader-core mismatch was fixed:
+- current core loaded successfully but remained at `stage=BOOT`;
+- root cause: bookmarklet/loader can start after the native game already completed its first authenticated `/player/me`;
+- passive observer therefore missed that already-completed request and the UI gate could wait forever.
+
+Fix in userscript `1.17.13`:
+- core `core-20260921-r15-late-login-handoff`;
+- normal passive path is unchanged;
+- when HK starts late, it first requires evidence that native game auth already exists;
+- then it may perform one read-only `/player/me` to recover missed player state;
+- userscript still never owns or calls `/auth/create`;
+- startup stage now reports `WAIT_NATIVE_LOGIN` / `LATE_HANDOFF` instead of remaining misleadingly at `BOOT`.
+
+Verification:
+- userscript deploy run `35564549471`: PASS;
+- public loader core-r15 verification run `35564622707`: PASS;
+- Buildings revalidation run `35564647224`: PASS;
+- public E2E run `35564651904`: PASS;
+- Maps/Explore protected invariants: PASS;
+- passive auth-create safety: PASS.
 
 Stage 2 remains at:
 **Buildings 2.06 — TECHNICAL_REVALIDATION_PASS_USER_ACTION_PENDING**.
