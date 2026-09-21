@@ -106,6 +106,15 @@ jobs:
               print("slot_index_unique="+str(len(set(slot_vals))))
           active_scalar=player.get("player_active_building")
           print("player_active_building_scalar="+str(active_scalar))
+
+          target_id="relation17767436"
+          target=next((r for r in rows if isinstance(r,dict) and str(r.get("id") or r.get("building_id") or "")==target_id),None)
+          print("target_present="+("yes" if target else "no"))
+          if target:
+              for key in ["tier","chosen_tier","level","next_tier_level","is_favorite","favorite","slot_index","has_events","active_passive_income"]:
+                  if key in target:
+                      print(f"target_{key}={target.get(key)}")
+              print("target_active_signal="+("yes" if target.get("next_tier_level") is not None else "no"))
           if isinstance(active_scalar,(int,float)):
               print("slot_nonnegative_matches_active="+("yes" if sum(v>=0 for v in slot_vals)==int(active_scalar) else "no"))
               print("slot_positive_matches_active="+("yes" if sum(v>0 for v in slot_vals)==int(active_scalar) else "no"))
