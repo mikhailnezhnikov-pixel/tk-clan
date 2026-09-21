@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.18
+- userscript: 1.17.19
 - current module: Buildings / Здания — final live action gate
 - current module file: audit/hk-stage2-06-buildings.md
-- current module status: OWNED_POSTCONDITION_R1_LIVE_USER_ACTION_CHECK_PENDING
+- current module status: NATIVE_SYNC_R1_LIVE_USER_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - next after Buildings LIVE PASS: Explore / Исследование — E3 single-building user validation
 - Explore E4 multi-building: NOT STARTED
@@ -1576,4 +1576,33 @@ Next user check:
 4. open one candidate;
 5. verify server-confirmed opening and, where eligible, confirmed favorite;
 6. recalculate and verify the opened building is no longer offered.
+
+### Buildings native-store sync r1 — PASS technical / user check pending (2026-09-21)
+
+User live evidence showed server state had already changed correctly (active 468, favorite added), while the game map still showed the old ownership prompt. This isolated the remaining issue to native client-state synchronization rather than claim/favorite API logic.
+
+Delivered in userscript `1.17.19`:
+- Buildings waits for native game-state sync before runner completion;
+- native player store is checked for newly-owned and newly-favorited buildings;
+- if native sync cannot be proven, one automatic page reload is used as a safe fallback;
+- no duplicate claim is sent during fallback.
+
+Verification:
+- read-only post-action diagnostic `35574950160`: PASS;
+- predeploy `35575240613`: PASS;
+- deploy `35575353091`: PASS;
+- loader core-r21 `35575475749`: PASS;
+- Buildings verifier `35575485583`: PASS;
+- public E2E `35575493955`: PASS;
+- Maps/Explore/auth protected invariants: PASS.
+
+Current Stage 2 gate:
+**Buildings 2.06 — NATIVE_SYNC_R1_LIVE_USER_CHECK_PENDING**.
+
+Next:
+1. reload game/HK;
+2. limit 1;
+3. open one candidate;
+4. let native sync/fallback complete;
+5. tap that building and confirm the stale “Исследовать это здание?” ownership prompt is gone.
 
