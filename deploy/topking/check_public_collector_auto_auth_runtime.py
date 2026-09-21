@@ -100,7 +100,7 @@ try:
     if matched:
         print("technical_license_active="+("yes" if int(matched["active"] or 0)==1 else "no"))
         device=db.execute(
-            "SELECT last_seen,script_version FROM devices WHERE player_id=? ORDER BY last_seen DESC LIMIT 1",
+            "SELECT device_id,last_seen,script_version FROM devices WHERE player_id=? ORDER BY last_seen DESC LIMIT 1",
             (matched["player_id"],)
         ).fetchone()
         print("technical_last_seen="+str(int(device["last_seen"] or 0) if device else 0))
