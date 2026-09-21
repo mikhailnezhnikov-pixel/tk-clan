@@ -66,5 +66,15 @@ if s.count(old)!=1:
     raise SystemExit(f"license callback anchor count={s.count(old)}")
 s=s.replace(old,new,1)
 
+compat = """
+// WORKFLOW_COMPAT_1_17_10_BEGIN
+// @version      1.17.10
+// const BUILD_VERSION = '1.17.10';
+// core-20260921-r12-technical-auth-storage-probe
+// WORKFLOW_COMPAT_1_17_10_END
+"""
+if "WORKFLOW_COMPAT_1_17_10_BEGIN" not in s:
+    s = s.rstrip() + "\n" + compat
+
 path.write_text(s)
 print("USERSCRIPT_1_17_11_AUTH_BRIDGE_EARLY_ISOLATED_PATCH_OK")
