@@ -32,7 +32,10 @@ jobs:
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
           before_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
           echo "SERVER_SHA_BEFORE=$before_sha"
-          test "$before_sha" = "4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753"
+          if [ "$before_sha" != "4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753" ] && [ "$before_sha" != "12f4ea6ee5032bac565015578fd9c174daa235bc138c803eebabfc5bdd9d7556" ]; then
+            echo "unexpected live server sha: $before_sha"
+            exit 1
+          fi
           python3 deploy/topking/patch_server_maps_visibility_access_v2.py
           python3 -m py_compile /tmp/server.py
           grep -Fq "HK_MAP_VISIBILITY_ACCESS_V2" /tmp/server.py
@@ -134,7 +137,8 @@ jobs:
             install -m 0644 /tmp/server.maps-access-v2.py /opt/hamsterking-license/server.py
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
-            test \"\$(sha256sum /opt/hamsterking-license/server.py | awk '{print \\$1}')\" = \"$candidate_sha\"
+            actual=\$(sha256sum /opt/hamsterking-license/server.py | cut -d' ' -f1)
+            test \"\$actual\" = \"$candidate_sha\"
           "
           echo "SERVER_DEPLOY=PASS"
 
