@@ -12599,7 +12599,7 @@
       const elements = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')];
       elements.forEach(element => {
         const id = element.getAttribute('data-lot-id') || '';
-        const match = id.match(/mf_fairlot_lights_out_sl(d+)_(true|false)/);
+        const match = id.match(/mf_fairlot_lights_out_sl(\d+)_(true|false)/);
         if (!match) return;
         const slot = Number(match[1]);
         const isOn = match[2] === 'true';
@@ -12672,7 +12672,7 @@
       const sword = document.querySelector('[data-lot-id^="mf_treasurelot_sword_"]');
       if (!sword) return null;
       const id = sword.getAttribute('data-lot-id') || '';
-      const match = id.match(/mf_treasurelot_sword_d+_(d+)/);
+      const match = id.match(/mf_treasurelot_sword_\d+_(\d+)/);
       return match ? Number(match[1]) : null;
     }
 
@@ -12681,7 +12681,7 @@
       const enemies = [...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_type_"]')];
       enemies.forEach(element => {
         const id = element.getAttribute('data-lot-id') || '';
-        const match = id.match(/enemy_type_(01|02|03)_(d+)_sl(d+)/);
+        const match = id.match(/enemy_type_(01|02|03)_(\d+)_sl(\d+)/);
         if (!match) return;
         const type = match[1];
         const hp = Number(match[2]);
