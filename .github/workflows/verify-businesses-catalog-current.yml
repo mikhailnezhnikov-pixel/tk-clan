@@ -46,9 +46,9 @@ jobs:
           s=Path('/tmp/live.js').read_text(encoding='utf-8')
 
           for marker in [
-              "// @version      1.17.23",
-              "const BUILD_VERSION = '1.17.23';",
-              "const HK_CORE_REVISION = 'core-20260921-r25-businesses-catalog';",
+              "// @version      1.17.24",
+              "const BUILD_VERSION = '1.17.24';",
+              "const HK_CORE_REVISION = 'core-20260921-r26-businesses-rearrange-guard';",
               "const HK_BUSINESSES_CANON_REV='businesses-catalog-readonly-20260921-r1';",
               "function businessCatalogOwnedCount(",
               "function businessCatalogCapacity(",
@@ -59,6 +59,12 @@ jobs:
               "async function refreshBusinessCatalog(",
               'data-business-tab="catalog"',
               'id="hk-business-catalog"',
+              "const HK_BUSINESSES_REARRANGE_REV='businesses-rearrange-desktop-safe-t123-20260921-r1';",
+              "function businessRemovalAllowed(",
+              "function assertBusinessRemovalPlanAllowed(",
+              "removeAll:'Достать: T1–T3'",
+              "removeTierBox.innerHTML = tierChoices('remove',preferences.removeTiers,[1,2,3]);",
+              "hk-business-rearrange-controls",
           ]:
               assert marker in s
 
@@ -66,7 +72,7 @@ jobs:
           for bad in ['/player/business/insert','/shop/buy','/player/business/recipe/craft','/fair/reroll']:
               assert bad not in catalog
 
-          # Current rearrangement remains unchanged and mutation-protected.
+          # Rearrangement remains mutation-protected and now forbids user-driven removal of T4-T6.
           api=s[s.index("async function apiJson(path"):s.index("async function hkAuthoritativePlayerRead")]
           rearrange=s[s.index("async function executeBusinessPlan()"):s.index("function prepareOriginalBusinessRestore")]
           assert "hkMutationGate.run(" in api
@@ -74,6 +80,12 @@ jobs:
           assert "hkAuthoritativePlayerRead('business-complete')" in rearrange
           assert "businessSlotIsActive" in rearrange
           assert "readBusinessSlot" in rearrange
+          assert "if (prepared) return assertBusinessRemovalPlanAllowed(prepared);" in s
+          assert "assertBusinessRemovalPlanAllowed(remaining.map(row => [row, '']));" in s
+          assert "filter === 0 ? (!row.businessId || businessRemovalAllowed(row.businessId))" in s
+          assert "const protectedPairs = pairs.filter(([row]) => row.businessId && !businessRemovalAllowed(row.businessId));" in s
+          assert ".hk-business-rearrange-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)" in s
+          assert "@media(max-width:760px){.hk-business-rearrange-controls,#hk-business-lists{grid-template-columns:1fr}}" in s
 
           # Protected modules.
           for marker in [
@@ -89,9 +101,11 @@ jobs:
           print("business_catalog_search_filters=PASS")
           print("business_catalog_owned_missing_capacity=PASS")
           print("business_catalog_recipe_routes=PASS")
-          print("business_existing_rearrangement_preserved=PASS")
+          print("business_rearrangement_mutation_safety=PASS")
+          print("business_desktop_remove_left_insert_right=PASS")
+          print("business_remove_t4_t6_blocked=PASS")
           print("protected_explore_buildings_maps_auth=PASS")
-          print("userscript_1_17_23=PASS")
+          print("userscript_1_17_24=PASS")
           print("BUSINESSES_CATALOG_CURRENT_LIVE=PASS")
           PY
 
