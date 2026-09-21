@@ -1,1 +1,1 @@
-2026-09-21 inspect safe technical auth metadata
+2026-09-21 sanitized player auth method probe only
