@@ -4,3 +4,4 @@ production apply armed A1 20260921-1320
 attrs2 decoder probe only 20260921-continue
 attrs2 row packing probe 20260921
 attrs2 generator plane probe 20260921
+guarded production apply A1 decoder-proven
