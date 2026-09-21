@@ -1,1 +1,1 @@
-2026-09-21 recheck public HK loader core r20 after Pages deploy completed
+2026-09-21 recheck public HK loader core r20 after Pages completion
