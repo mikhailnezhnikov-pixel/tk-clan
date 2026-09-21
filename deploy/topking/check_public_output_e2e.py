@@ -13,6 +13,21 @@ KINDS=("influence","power","clans","alliance_power","alliance_influence","allian
 def yes(v):
     return "yes" if bool(v) else "no"
 
+SENSITIVE_PUBLIC_KEYS={"token","game_token","auth_data","authorization","device_id","source_player_id","license_token"}
+
+def sensitive_keys(value):
+    found=set()
+    if isinstance(value,dict):
+        for key,child in value.items():
+            name=str(key or "").strip().lower()
+            if name in SENSITIVE_PUBLIC_KEYS:
+                found.add(name)
+            found.update(sensitive_keys(child))
+    elif isinstance(value,list):
+        for child in value:
+            found.update(sensitive_keys(child))
+    return found
+
 def get_json(url):
     req=urllib.request.Request(
         url,
@@ -81,7 +96,9 @@ except Exception:
 war_payload_shape_ok=(war_opponent_ok and war_hp_ok) if api_war_active else (not war_payload)
 print("api_war_opponent_present="+yes(war_opponent_ok))
 print("api_war_hp_shape_ok="+yes(war_hp_ok))
+war_sensitive=sensitive_keys(war_doc)
 print("api_war_payload_shape_ok="+yes(war_payload_shape_ok))
+print("api_war_sensitive_keys_absent="+yes(not war_sensitive))
 
 ratings_all_ok=True
 for kind in KINDS:
@@ -115,6 +132,7 @@ for kind in KINDS:
         if rank_value<1 or not str(item.get("name") or "").strip() or value_number<0:
             row_shape_ok=False
             break
+    sensitive=sensitive_keys(doc)
     kind_ok=(
         status==200
         and bool(doc.get("ok"))
@@ -124,6 +142,7 @@ for kind in KINDS:
         and api_updated>0
         and sorted_unique
         and row_shape_ok
+        and not sensitive
         and cors==SITE
     )
     ratings_all_ok=ratings_all_ok and kind_ok
@@ -133,6 +152,7 @@ for kind in KINDS:
     print("rating_"+kind+"_matches_db="+yes(len(rows)==db_count and api_updated==db_updated and db_count>0))
     print("rating_"+kind+"_ranks_sorted_unique="+yes(sorted_unique))
     print("rating_"+kind+"_row_shape_ok="+yes(row_shape_ok))
+    print("rating_"+kind+"_sensitive_keys_absent="+yes(not sensitive))
     print("rating_"+kind+"_cors_site="+yes(cors==SITE))
     print("rating_"+kind+"_stale="+yes(doc.get("stale") if isinstance(doc,dict) else True))
     print("rating_"+kind+"_age_seconds="+str(max(0,now-api_updated) if api_updated else 0))
@@ -190,12 +210,44 @@ print("ratings_timer_enabled="+yes(ratings_timer_enabled))
 print("ratings_timer_schedule_daily="+yes(ratings_timer_schedule))
 print("ratings_timer_next_present="+yes(ratings_timer_next))
 
+# Security regression guards for the collector auth bridge. These are static
+# checks against the live server/userscript and do not touch player state.
+server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
+server_guard_ok=True
+for route,label in (
+    ("/api/v1/public-collector/auth-probe","probe"),
+    ("/api/v1/public-collector/auth-sync","sync"),
+):
+    i=server_src.find('path == "'+route+'"')
+    block=server_src[i:i+2600] if i>=0 else ""
+    guard=block.find("public_collector_auth_sync_allowed(player_id)")
+    read=block.find("self.read_json(")
+    ok=(i>=0 and guard>=0 and read>=0 and guard<read)
+    print("server_"+label+"_identity_guard_before_body="+yes(ok))
+    server_guard_ok=server_guard_ok and ok
+
+userscript_src=open("/opt/hamsterking-license/HamsterKingMobile.user.js",encoding="utf-8").read()
+probe_i=userscript_src.find("async function sendPublicCollectorAuthProbe()")
+probe_block=userscript_src[probe_i:probe_i+1800] if probe_i>=0 else ""
+sync_i=userscript_src.find("async function maybeSyncPublicCollectorAuthorization")
+sync_block=userscript_src[sync_i:sync_i+2200] if sync_i>=0 else ""
+client_probe_guard=("!licenseState.publicCollectorAuthSync" in probe_block)
+client_sync_guard=("!licenseState.publicCollectorAuthSync" in sync_block)
+client_xhr=("AUTH_BRIDGE_XHR_TRANSPORT_R1" in userscript_src and "function publicCollectorServerPost" in userscript_src)
+client_passive=("AUTH_PASSIVE_SAFETY_R1" in userscript_src and "auth-create-blocked-passive-only" in userscript_src)
+print("client_probe_technical_guard="+yes(client_probe_guard))
+print("client_sync_technical_guard="+yes(client_sync_guard))
+print("client_auth_bridge_xhr="+yes(client_xhr))
+print("client_auth_create_passive="+yes(client_passive))
+collector_isolation_static_ok=(server_guard_ok and client_probe_guard and client_sync_guard and client_xhr and client_passive)
+
 war_ok=(
     war_status==200
     and bool(war_doc.get("ok"))
     and war_db_state_ok
     and war_cors==SITE
     and war_payload_shape_ok
+    and not war_sensitive
 )
 site_ok=(
     wars_status==200
@@ -211,8 +263,9 @@ print("war_e2e="+("PASS" if war_ok else "FAIL"))
 print("ratings_e2e="+("PASS" if ratings_all_ok else "FAIL"))
 print("site_binding_e2e="+("PASS" if site_ok else "FAIL"))
 print("collector_timers_e2e="+("PASS" if timers_ok else "FAIL"))
+print("collector_isolation_static="+("PASS" if collector_isolation_static_ok else "FAIL"))
 
-if not (war_ok and ratings_all_ok and site_ok and timers_ok):
+if not (war_ok and ratings_all_ok and site_ok and timers_ok and collector_isolation_static_ok):
     raise SystemExit(2)
 
 print("PUBLIC_OUTPUT_E2E=PASS")
