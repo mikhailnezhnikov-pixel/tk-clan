@@ -23,12 +23,28 @@ jobs:
 
           base='https://app.hamsterking.games/'
           html=urllib.request.urlopen(base,timeout=20).read().decode('utf-8','ignore')
-          srcs=re.findall(r'<script[^>]+src=["\']([^"\']+)["\']',html,re.I)
+          candidates=[]
+          candidates += re.findall(r'<script[^>]+src=["\']([^"\']+)["\']',html,re.I)
+          candidates += re.findall(r'<link[^>]+href=["\']([^"\']+\.js(?:\?[^"\']*)?)["\']',html,re.I)
+          candidates += re.findall(r'["\']([^"\']+\.js(?:\?[^"\']*)?)["\']',html,re.I)
+          candidates += re.findall(r'([^\s"\']+/assets/[^\s"\']+\.js)',html,re.I)
           urls=[]
-          for src in srcs:
+          for src in candidates:
               url=urllib.parse.urljoin(base,src)
               if url not in urls: urls.append(url)
+          print('html_size='+str(len(html)))
+          print('asset_candidates='+str(len(candidates)))
           print('bundle_count='+str(len(urls)))
+          if not urls:
+              for extra in ['manifest.json','asset-manifest.json','vite-manifest.json','service-worker.js','sw.js']:
+                  try:
+                      body=urllib.request.urlopen(urllib.parse.urljoin(base,extra),timeout=10).read().decode('utf-8','ignore')
+                  except Exception:
+                      continue
+                  for src in re.findall(r'["\']([^"\']+\.js(?:\?[^"\']*)?)["\']',body,re.I):
+                      url=urllib.parse.urljoin(base,src)
+                      if url not in urls: urls.append(url)
+              print('bundle_count_after_manifests='+str(len(urls)))
 
           needles=[
               '/player/building',
