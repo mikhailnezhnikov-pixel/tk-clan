@@ -9,6 +9,7 @@ TOKEN_PATH="/var/lib/hamsterking-license/public-collector-token"
 AUTH_PATH="/var/lib/hamsterking-license/public-collector-auth.json"
 IDENTITY_PATH="/var/lib/hamsterking-license/public-collector-identity.sha256"
 REFRESH_PATH="/var/lib/hamsterking-license/public-collector-auth-refresh.json"
+PROBE_PATH="/var/lib/hamsterking-license/public-collector-auth-probe.json"
 
 def present(path):
     try:
@@ -42,6 +43,23 @@ if present(AUTH_PATH):
     print("bootstrap_updated_at="+str(doc.get("updated_at",0)))
 
 print("refresh_backoff_present="+("yes" if os.path.exists(REFRESH_PATH) else "no"))
+
+print("auth_probe_present="+("yes" if present(PROBE_PATH) else "no"))
+if present(PROBE_PATH):
+    try:
+        probe=json.load(open(PROBE_PATH,encoding="utf-8"))
+    except Exception:
+        probe={}
+    print("auth_probe_updated_at="+str(probe.get("updated_at",0)))
+    print("auth_probe_local_storage_keys="+json.dumps(probe.get("local_storage_keys",[]),ensure_ascii=False))
+    print("auth_probe_session_storage_keys="+json.dumps(probe.get("session_storage_keys",[]),ensure_ascii=False))
+    print("auth_probe_cookie_names="+json.dumps(probe.get("cookie_names",[]),ensure_ascii=False))
+    print("auth_probe_indexed_db_names="+json.dumps(probe.get("indexed_db_names",[]),ensure_ascii=False))
+    print("auth_probe_json_shapes="+json.dumps(probe.get("json_shapes",{}),ensure_ascii=False,sort_keys=True))
+    print("auth_probe_telegram_webapp_present="+("yes" if probe.get("telegram_webapp_present") else "no"))
+    print("auth_probe_telegram_init_data_present="+("yes" if probe.get("telegram_init_data_present") else "no"))
+    print("auth_probe_observed_auth_create="+("yes" if probe.get("observed_auth_create") else "no"))
+    print("auth_probe_current_bearer_present="+("yes" if probe.get("current_bearer_present") else "no"))
 
 # Safe static check of the live userscript auth behavior.
 try:
