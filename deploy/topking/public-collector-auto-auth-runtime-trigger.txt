@@ -1,1 +1,1 @@
-2026-09-21 inspect edge upstream and local backend error safely
+2026-09-21 rerun fixed local backend license comparison
