@@ -1,4 +1,4 @@
-name: Deploy unified maps runtime U1
+name: Deploy maps visibility access V2
 
 on:
   push:
@@ -26,161 +26,153 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/topking
           chmod 600 ~/.ssh/topking
 
-      - name: Build exact verified candidates
+      - name: Build server candidate from exact live
         run: |
           set -euo pipefail
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
-          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          test "$(sha256sum /tmp/server.py|awk '{print $1}')" = "b5189981acade420e1aaa533dec8b745c0e16969bf1def0c5008aa297f2a2812"
-          test "$(sha256sum /tmp/HamsterKingMobile.user.js|awk '{print $1}')" = "bddc55fc46bd4fe8da70c37799a35b74f3924015b071a3e692c532f0f7e6d766"
-          python3 deploy/topking/patch_server_unified_maps_runtime_u1.py
-          python3 deploy/topking/patch_userscript_unified_maps_runtime_u1.py
+          before_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
+          echo "SERVER_SHA_BEFORE=$before_sha"
+          test "$before_sha" = "4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753"
+          python3 deploy/topking/patch_server_maps_visibility_access_v2.py
           python3 -m py_compile /tmp/server.py
-          node --check /tmp/HamsterKingMobile.user.js
-          test "$(sha256sum /tmp/server.py|awk '{print $1}')" = "f8b10a30a42d7dbb19ea11ee746eaccd89704a70ddb577631bf72c6ecca26df3"
-          test "$(sha256sum /tmp/HamsterKingMobile.user.js|awk '{print $1}')" = "46c6b95688a589e7d4b02a10403c9bd32c5012a8e92b6e0e768364aad54d55b5"
+          grep -Fq "HK_MAP_VISIBILITY_ACCESS_V2" /tmp/server.py
+          candidate_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
+          echo "$candidate_sha" > /tmp/server-candidate.sha
+          echo "SERVER_SHA_CANDIDATE=$candidate_sha"
+
+      - name: Verify access behavior on temporary DB
+        run: |
+          cat > /tmp/maps-access-v2-test.py <<'PY'
+          import importlib.util, os, tempfile, time
+          spec=importlib.util.spec_from_file_location('s','/tmp/server.py')
+          s=importlib.util.module_from_spec(spec); spec.loader.exec_module(s)
+          fd,path=tempfile.mkstemp(prefix='maps-access-v2-',suffix='.db'); os.close(fd)
+          try:
+              s.DB_PATH=path
+              s.init_db()
+              now=int(time.time())
+              with s.db_session() as db:
+                  db.execute("""INSERT INTO clan_members(
+                      telegram_id,note,first_name,username,linked_player_id,active,maps_access,maps_manage,created_at,updated_at
+                  ) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                  ('11111','manager','Manager','',None,1,1,1,now,now))
+                  db.execute("""INSERT INTO clan_members(
+                      telegram_id,note,first_name,username,linked_player_id,active,maps_access,maps_manage,created_at,updated_at
+                  ) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                  ('22222','viewer','Viewer','',None,1,0,0,now,now))
+
+              row={'key':'hk_access0101','city':'AccessCity','grid':'01:01','invest':0,'buildings':1,'unknown':0,
+                   'crystals':[1,0,0,0,0,0],'eventBuildings':0,'totalEvents':0,'progress':100,'score':1,
+                   'reward':{'max':0,'normal':0,'investment':0},'open_url':'/maps/view/?key=hk_access0101'}
+              s.import_hk_maps_index([row])
+              s.import_hk_map_points([['hk_access0101',[3000000,4000000,0]]])
+
+              manager={'telegram_id':'11111','maps_manage':1,'maps_access':1}
+              viewer={'telegram_id':'22222','maps_manage':0,'maps_access':0}
+
+              locked=s.cabinet_maps(viewer)
+              assert len(locked['maps'])==1,locked
+              item=locked['maps'][0]
+              assert item['access_state']=='locked' and item['access_allowed'] is False,item
+              assert locked['members']==[],locked
+              try:
+                  s.hk_map_data('hk_access0101',member=viewer)
+                  raise AssertionError('private data opened without permission')
+              except PermissionError:
+                  pass
+
+              s.set_member_map_scope(manager,'22222','map','hk_access0101',True)
+              granted=s.cabinet_maps(viewer)
+              item2=granted['maps'][0]
+              assert item2['access_state']=='granted' and item2['access_allowed'] is True,item2
+              data=s.hk_map_data('hk_access0101',member=viewer)
+              assert data.get('ok') is True,data
+
+              print('MAPS_VISIBLE_WITHOUT_ACCESS=PASS')
+              print('MAP_PRIVATE_DATA_LOCKED=PASS')
+              print('MAP_SINGLE_GRANT_UNLOCKS=PASS')
+              print('MAP_MANAGER_MEMBER_LIST_NOT_LEAKED=PASS')
+          finally:
+              try: os.remove(path)
+              except OSError: pass
+          PY
+          python3 /tmp/maps-access-v2-test.py
 
       - name: Read-only production precheck
         run: |
-          cat > /tmp/u1-precheck.py <<'PY'
+          cat > /tmp/maps-v2-prod-check.py <<'PY'
           import json,sqlite3
           db=sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          def table(name):
+              return bool(db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",(name,)).fetchone())
           out={
             'catalog':db.execute("SELECT COUNT(*) FROM hk_maps_catalog").fetchone()[0],
-            'points':db.execute("SELECT COUNT(*) FROM hk_map_points").fetchone()[0],
             'area_links':db.execute("SELECT COUNT(*) FROM hk_map_area_links").fetchone()[0],
-            'point_links':db.execute("SELECT COUNT(*) FROM hk_map_point_links").fetchone()[0],
             'areas':db.execute("SELECT COUNT(*) FROM map_areas").fetchone()[0],
             'buildings':db.execute("SELECT COUNT(*) FROM map_buildings").fetchone()[0],
+            'access_rules':db.execute("SELECT COUNT(*) FROM hk_map_access_rules").fetchone()[0] if table('hk_map_access_rules') else 0,
           }
-          assert out['catalog']==235,out
-          assert out['points']==235,out
-          assert out['area_links']>=25,out
-          assert out['point_links']>=2007,out
           print(json.dumps(out,sort_keys=True))
+          assert out['catalog']==235,out
+          assert out['area_links']==235,out
+          assert out['areas']==385,out
+          assert out['buildings']==222153,out
           db.close()
           PY
-          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/u1-precheck.py root@89.125.1.71:/tmp/u1-precheck.py
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/u1-precheck.py' | tee /tmp/u1-before.json
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/maps-v2-prod-check.py root@89.125.1.71:/tmp/maps-v2-prod-check.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/maps-v2-prod-check.py' | tee /tmp/maps-v2-before.json
 
-      - name: Backup and deploy server plus userscript
+      - name: Backup and deploy server only
         run: |
           set -euo pipefail
-          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.u1.py
-          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.u1.user.js
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.maps-access-v2.py
+          candidate_sha="$(cat /tmp/server-candidate.sha)"
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 "
             set -euo pipefail
-            stamp="$(date +%Y%m%d-%H%M%S)"
-            cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.unified-u1.$stamp"
-            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.unified-u1.$stamp"
-            install -m 0644 /tmp/server.u1.py /opt/hamsterking-license/server.py
-            install -m 0644 /tmp/HamsterKingMobile.u1.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            stamp=\$(date +%Y%m%d-%H%M%S)
+            cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.maps-access-v2.\$stamp
+            install -m 0644 /tmp/server.maps-access-v2.py /opt/hamsterking-license/server.py
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
-            test "$(sha256sum /opt/hamsterking-license/server.py|awk "{print \\$1}")" = "f8b10a30a42d7dbb19ea11ee746eaccd89704a70ddb577631bf72c6ecca26df3"
-            test "$(sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js|awk "{print \\$1}")" = "46c6b95688a589e7d4b02a10403c9bd32c5012a8e92b6e0e768364aad54d55b5"
-          '
+            test \"\$(sha256sum /opt/hamsterking-license/server.py | awk '{print \\$1}')\" = \"$candidate_sha\"
+          "
+          echo "SERVER_DEPLOY=PASS"
 
-      - name: Verify deployed integration on temporary DB
-        run: |
-          cat > /tmp/u1-live-test.py <<'PY'
-          import importlib.util,os,tempfile
-          spec=importlib.util.spec_from_file_location('s','/opt/hamsterking-license/server.py')
-          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-          assert hasattr(s,'hydrate_hk_website_map_for_area')
-          fd,path=tempfile.mkstemp(prefix='u1-live-',suffix='.db');os.close(fd)
-          def poly(cx,cy,d=.0003):
-              return {'type':'Polygon','coordinates':[[[cx-d,cy-d],[cx+d,cy-d],[cx+d,cy+d],[cx-d,cy+d],[cx-d,cy-d]]]}
-          try:
-              s.DB_PATH=path;s.init_db()
-              manager={'telegram_id':'mgr','maps_manage':1,'maps_access':1}
-              row={'key':'hk_u1legacy0403','city':'Legacy','grid':'04:03','invest':0,'buildings':1,'unknown':0,
-                   'crystals':[0,0,0,1,0,0],'eventBuildings':1,'totalEvents':1,'progress':100,'score':3,'reward':{}}
-              s.import_hk_maps_index([row]);s.import_hk_map_points([['hk_u1legacy0403',[3000000,4000000,3]]])
-              payload={'area_id':'u1-area','city_id':'u1-city','city_name':'Legacy','coord_revision':'column-row-v1','x':3,'y':4,
-                       'invest_count':0,'expected_buildings':1,
-                       'buildings':[{'building_id':'way9001','opened':False,'room_count':None,'has_events':False,'is_invest':False,'tier':None,'faction':'','building_type':''}],
-                       '_website_hydrate':True,
-                       '_website_geometry':{'type':'FeatureCollection','features':[{'type':'Feature','id':'way9001','geometry':poly(30,40),'properties':{'building_id':'way9001'}}]}}
-              result=s.submit_map_area('player-live',payload)
-              h=result.get('website_hydration') or {}
-              assert h.get('status')=='hydrated' and h.get('map_key')=='hk_u1legacy0403',h
-              d=s.map_detail('u1-area');b=d['buildings'][0]
-              assert b['room_count']==3 and b['knowledge_source']=='hk_maps_import',b
-              cab=s.cabinet_maps(manager)
-              rows=[x for x in cab['maps'] if x.get('canonical_area_id')=='u1-area']
-              assert len(rows)==1 and rows[0]['source_kind']=='combined',rows
-              live={**payload,'buildings':[{'building_id':'way9001','opened':True,'room_count':5,'has_events':True,'is_invest':False,'tier':1,'faction':'','building_type':''}]}
-              s.submit_map_area('player-live',live)
-              d2=s.map_detail('u1-area');b2=d2['buildings'][0]
-              assert b2['room_count']==5 and b2['knowledge_source']=='game_live',b2
-              print('U1_LIVE_LEGACY_HYDRATE=PASS')
-              print('U1_LIVE_UNIFIED_CABINET=PASS')
-              print('U1_LIVE_GAME_PRIORITY=PASS')
-          finally:
-              try:os.remove(path)
-              except OSError:pass
-          PY
-          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/u1-live-test.py root@89.125.1.71:/tmp/u1-live-test.py
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/u1-live-test.py'
-
-      - name: Verify public userscript and production DB
+      - name: Post-deploy verification
         run: |
           set -euo pipefail
-          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?u1=$(date +%s)" -o /tmp/public.js
-          node --check /tmp/public.js
-          test "$(sha256sum /tmp/public.js|awk '{print $1}')" = "46c6b95688a589e7d4b02a10403c9bd32c5012a8e92b6e0e768364aad54d55b5"
-          grep -Fq "maps-shared-runtime-20260921-r7-safe5" /tmp/public.js
-          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5" /tmp/public.js
-          grep -Fq "if(!areaId||(selected&&!selected.has(areaId)))continue;" /tmp/public.js
-          grep -Fq "const pending=mapSharedKnowledgeEnabled()?unique.filter" /tmp/public.js
-          grep -Fq "id=\"hk-map-shared-knowledge\"" /tmp/public.js
-          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/u1-precheck.py root@89.125.1.71:/tmp/u1-postcheck.py
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/u1-postcheck.py' | tee /tmp/u1-after.json
+          candidate_sha="$(cat /tmp/server-candidate.sha)"
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.live.py
+          python3 -m py_compile /tmp/server.live.py
+          test "$(sha256sum /tmp/server.live.py | awk '{print $1}')" = "$candidate_sha"
+          grep -Fq "HK_MAP_VISIBILITY_ACCESS_V2" /tmp/server.live.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/maps-v2-prod-check.py' | tee /tmp/maps-v2-after.json
+          diff -u /tmp/maps-v2-before.json /tmp/maps-v2-after.json
+          echo "PRODUCTION_MAP_COUNTS_UNCHANGED=PASS"
+          echo "MAPS_VISIBILITY_ACCESS_V2_LIVE=PASS"
 
-      - name: Verify Personal Cabinet deployed UI
+      - name: Record status
         run: |
           set -euo pipefail
-          ok=0
-          for i in 1 2 3 4 5; do
-            curl -fsSL "https://tk-clan.ru/cabinet/?u1=$(date +%s)-$i" -o /tmp/cabinet-live.html || true
-            if grep -Fq "sourceKind=String(map.source_kind" /tmp/cabinet-live.html && grep -Fq "Только скрипт" /tmp/cabinet-live.html; then ok=1; break; fi
-            sleep 5
-          done
-          test "$ok" = 1
-          echo U1_CABINET_UI=PASS
-
-      - name: Sync deployed userscript baseline and record status
-        run: |
-          set -euo pipefail
-          cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
-          before="$(cat /tmp/u1-before.json)"
-          after="$(cat /tmp/u1-after.json)"
+          candidate_sha="$(cat /tmp/server-candidate.sha)"
           {
-            echo "UNIFIED_MAPS_RUNTIME_U1_LIVE=PASS"
-            echo "server_sha256=f8b10a30a42d7dbb19ea11ee746eaccd89704a70ddb577631bf72c6ecca26df3"
-            echo "client_sha256=46c6b95688a589e7d4b02a10403c9bd32c5012a8e92b6e0e768364aad54d55b5"
-            echo "unified_personal_cabinet=PASS"
-            echo "legacy_website_auto_hydration=PASS"
-            echo "shared_preload_default_on=PASS"
-            echo "known_active_buildings_skip_direct_read=PASS"
-            echo "safe_active_intersection=PASS"
-            echo "read_concurrency=5"
-            echo "game_live_priority=PASS"
-            echo "bulk_force_link_210=NO"
-            echo "production_test_rows=0"
-            echo "before=$before"
-            echo "after=$after"
-          } > audit/hk-stage2-unified-maps-u1-live-status.txt
+            echo "MAPS_VISIBILITY_ACCESS_V2_LIVE=PASS"
+            echo "server_sha256=$candidate_sha"
+            echo "catalogue_visible_to_all_members=PASS"
+            echo "private_map_data_gate=PASS"
+            echo "single_map_grant=PASS"
+            echo "userscript_changed=NO"
+            echo "production_counts=$(cat /tmp/maps-v2-after.json)"
+          } > audit/hk-maps-visibility-access-v2-live-status.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-stage2-unified-maps-u1-live-status.txt
-          git commit -m "baseline: sync unified maps runtime U1"
+          git add audit/hk-maps-visibility-access-v2-live-status.txt
+          git commit -m "audit: maps visibility access V2 live"
           git pull --rebase origin main
           git push origin HEAD:main
 
       - name: Cleanup
         if: always()
         run: |
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/server.u1.py /tmp/HamsterKingMobile.u1.user.js /tmp/u1-precheck.py /tmp/u1-postcheck.py /tmp/u1-live-test.py' || true
-          rm -f ~/.ssh/topking /tmp/server.py /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/cabinet-live.html /tmp/u1-before.json /tmp/u1-after.json
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/server.maps-access-v2.py /tmp/maps-v2-prod-check.py' || true
+          rm -f ~/.ssh/topking /tmp/server.py /tmp/server.live.py /tmp/server-candidate.sha /tmp/maps-access-v2-test.py /tmp/maps-v2-before.json /tmp/maps-v2-after.json
