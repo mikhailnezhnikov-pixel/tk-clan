@@ -4,6 +4,7 @@ import sys
 path = Path(sys.argv[1])
 s = path.read_text(encoding="utf-8")
 MARKER = "CLAN_SHOP_IDENTITY_RESOLUTION_V7"
+
 if MARKER in s:
     print("CLAN_SHOP_IDENTITY_RESOLUTION_V7_ALREADY_PRESENT")
     raise SystemExit(0)
@@ -11,7 +12,7 @@ if MARKER in s:
 if "CLAN_SHOP_IDENTITY_RESOLUTION_V6" not in s:
     raise SystemExit("V6 identity function not found")
 
-needle = """    latest_nickname_by_player_id = {}
+needle = '''    latest_nickname_by_player_id = {}
     with db_session() as db:
         try:
             nickname_rows = db.execute("""
@@ -35,9 +36,9 @@ needle = """    latest_nickname_by_player_id = {}
             pass
 
         lots = db.execute("""SELECT week_start,lot_id,item_type,lot_name,reward_id,
-"""
+'''
 
-replacement = """    # CLAN_SHOP_IDENTITY_RESOLUTION_V7
+replacement = '''    # CLAN_SHOP_IDENTITY_RESOLUTION_V7
     latest_nickname_by_player_id = {}
     full_snapshot_nickname_by_player_id = {}
     with db_session() as db:
@@ -62,8 +63,6 @@ replacement = """    # CLAN_SHOP_IDENTITY_RESOLUTION_V7
         except sqlite3.Error:
             pass
 
-        # Full clan snapshots contain authoritative player_id + nickname pairs
-        # even for members who have never submitted an individual skill row.
         try:
             snapshot_rows = db.execute("""
                 SELECT snapshot_json,captured_at
@@ -91,24 +90,26 @@ replacement = """    # CLAN_SHOP_IDENTITY_RESOLUTION_V7
             pass
 
         lots = db.execute("""SELECT week_start,lot_id,item_type,lot_name,reward_id,
-"""
+'''
 
 if s.count(needle) != 1:
     raise SystemExit(f"V6 name map block: expected 1 match, got {s.count(needle)}")
 s = s.replace(needle, replacement, 1)
 
-old_name = """            nickname = (
+old_name = '''            nickname = (
                 str(participant.get("nickname") or "").strip()
                 if participant else latest_nickname_by_player_id.get(pid, "")
             ) or pid
-"""
-new_name = """            nickname = (
+'''
+
+new_name = '''            nickname = (
                 str(participant.get("nickname") or "").strip()
                 if participant else ""
             ) or full_snapshot_nickname_by_player_id.get(pid, "") \
               or latest_nickname_by_player_id.get(pid, "") \
               or pid
-"""
+'''
+
 if s.count(old_name) != 1:
     raise SystemExit(f"V6 nickname selection: expected 1 match, got {s.count(old_name)}")
 s = s.replace(old_name, new_name, 1)
