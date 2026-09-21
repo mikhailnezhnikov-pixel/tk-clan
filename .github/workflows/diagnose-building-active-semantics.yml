@@ -89,8 +89,8 @@ jobs:
                   nums=[float(v) for v in vals]
                   print(f"field_{field}_zero={sum(v==0 for v in nums)}")
                   print(f"field_{field}_positive={sum(v>0 for v in nums)}")
-                  print(f"field_{field}_min={min(nums) if nums else ''}")
-                  print(f"field_{field}_max={max(nums) if nums else ''}")
+                  print(f"field_{field}_min={min(nums)}")
+                  print(f"field_{field}_max={max(nums)}")
               elif all(isinstance(v,str) for v in vals):
                   c=collections.Counter(vals)
                   safe=[(k,v) for k,v in c.most_common(20) if len(k)<=40 and "id" not in field.lower()]
