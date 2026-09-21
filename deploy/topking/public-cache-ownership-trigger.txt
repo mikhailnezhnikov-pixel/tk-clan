@@ -1,1 +1,1 @@
-2026-09-21 09:25 GMT+9 verify server-only public ratings endpoint
+2026-09-21 verify cache after refreshed collector token sync
