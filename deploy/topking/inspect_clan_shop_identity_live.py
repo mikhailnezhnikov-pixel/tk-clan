@@ -60,3 +60,21 @@ if purchase_ids:
             "active":int(row["active"] or 0),
         }
 print("LINKED_MEMBERS",json.dumps(linked,ensure_ascii=False))
+
+
+try:
+    current_week=max((str(r.get("week_start") or "") for r in payload.get("items",[]) if r.get("week_start")),default="")
+    print("CURRENT_WEEK",current_week)
+    if current_week:
+        lots=[dict(r) for r in db.execute("""SELECT week_start,lot_id,item_type,lot_name,reward_id,shared_purchased,shared_maximum,updated_at
+                                            FROM clan_shop_actual_lots
+                                            WHERE week_start=?
+                                            ORDER BY item_type,lot_id""",(current_week,))]
+        players=[dict(r) for r in db.execute("""SELECT week_start,lot_id,item_type,player_id,quantity,updated_at
+                                               FROM clan_shop_actual_players
+                                               WHERE week_start=?
+                                               ORDER BY item_type,lot_id,player_id""",(current_week,))]
+        print("CURRENT_WEEK_LOTS",json.dumps(lots,ensure_ascii=False))
+        print("CURRENT_WEEK_PLAYERS",json.dumps(players,ensure_ascii=False))
+except Exception as e:
+    print("CURRENT_WEEK_DETAIL_ERROR",repr(e))
