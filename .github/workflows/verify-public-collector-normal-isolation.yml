@@ -1,0 +1,40 @@
+name: Verify Public Collector Normal Player Isolation
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-collector-normal-isolation-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Verify normal player is denied collector bridge
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/check_public_collector_normal_isolation.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/check_public_collector_normal_isolation.py \
+            root@89.125.1.71:/tmp/check_public_collector_normal_isolation.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/check_public_collector_normal_isolation.py'
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
