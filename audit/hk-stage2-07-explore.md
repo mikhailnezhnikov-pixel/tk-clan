@@ -1269,3 +1269,19 @@ Final visual gate:
 5. confirm **Maximum buildings** alone controls how many buildings will be processed;
 6. confirm only the normal **Calculate plan** and **Run** actions remain.
 
+## Stage 2.07 — LIVE PASS (2026-09-21)
+
+User confirmed the cleaned production Explore UI after userscript `1.17.22`.
+
+Final result:
+- one-building E3 flow: LIVE PASS;
+- speed refinement: accepted;
+- multi-building sequential queue: LIVE PASS;
+- production UI cleanup: confirmed;
+- `Maximum buildings` is the sole visible queue-size control;
+- no test-only controls remain in normal UI.
+
+**Explore / Исследование 2.07 = LIVE PASS**
+
+Stage 2 proceeds to Businesses / Бизнесы 2.08.
+
