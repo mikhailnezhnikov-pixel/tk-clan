@@ -84,8 +84,8 @@ s = s.replace("def map_index() -> list[dict]:\n", insert, 1)
 for check in (
     "HK_MAP_VISIBILITY_ACCESS_V2",
     "_cabinet_maps_access_filtered_u1 = cabinet_maps",
-    '"catalogue_visible_to_all_members": True',
-    '"private_map_access_enforced": True',
+    'result["catalogue_visible_to_all_members"] = True',
+    'result["private_map_access_enforced"] = True',
     '"access_state"'
 ):
     req(check, "missing visibility access v2 marker: " + check)
