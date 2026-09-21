@@ -1,1 +1,1 @@
-2026-09-21 final public E2E after auth-probe removal and self-heal reverify
+2026-09-21 final public E2E after userscript 1.17.13 late-login handoff
