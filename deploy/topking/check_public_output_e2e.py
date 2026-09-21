@@ -116,6 +116,47 @@ print("site_ratings_public_api_marker="+yes("/api/v1/public/ratings?kind=" in ra
 print("site_ratings_alliance_controls="+yes("alliance_power" in ratings_html and "alliance_influence" in ratings_html and "alliance_defense" in ratings_html))
 print("site_ratings_refresh_marker="+yes("setInterval(load,300000)" in ratings_html.replace(" ","")))
 
+# Operational schedule checks. Only unit state and schedule expressions are
+# exposed; no environment or credentials are read.
+import subprocess
+def unit_text(name):
+    return subprocess.check_output(
+        ["systemctl","cat",name,"--no-pager"],
+        text=True,stderr=subprocess.STDOUT,timeout=10,
+    )
+def unit_state(name,verb):
+    result=subprocess.run(
+        ["systemctl",verb,name],
+        stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,timeout=10,
+    )
+    return result.returncode==0
+def unit_show(name):
+    return subprocess.check_output(
+        ["systemctl","show",name,"--property=LastTriggerUSec","--property=NextElapseUSecRealtime","--no-pager"],
+        text=True,stderr=subprocess.STDOUT,timeout=10,
+    )
+
+war_timer=unit_text("hamsterking-public-war.timer")
+ratings_timer=unit_text("hamsterking-public-collector.timer")
+war_timer_schedule=("OnCalendar=*-*-* *:03/10:00" in war_timer and "RandomizedDelaySec=30" in war_timer)
+ratings_timer_schedule=("OnCalendar=*-*-* 16:00:00 Europe/Moscow" in ratings_timer and "RandomizedDelaySec=0" in ratings_timer)
+war_timer_active=unit_state("hamsterking-public-war.timer","is-active")
+war_timer_enabled=unit_state("hamsterking-public-war.timer","is-enabled")
+ratings_timer_active=unit_state("hamsterking-public-collector.timer","is-active")
+ratings_timer_enabled=unit_state("hamsterking-public-collector.timer","is-enabled")
+war_timer_show=unit_show("hamsterking-public-war.timer")
+ratings_timer_show=unit_show("hamsterking-public-collector.timer")
+war_timer_next=bool([line for line in war_timer_show.splitlines() if line.startswith("NextElapseUSecRealtime=") and line.split("=",1)[1].strip()])
+ratings_timer_next=bool([line for line in ratings_timer_show.splitlines() if line.startswith("NextElapseUSecRealtime=") and line.split("=",1)[1].strip()])
+print("war_timer_active="+yes(war_timer_active))
+print("war_timer_enabled="+yes(war_timer_enabled))
+print("war_timer_schedule_10m="+yes(war_timer_schedule))
+print("war_timer_next_present="+yes(war_timer_next))
+print("ratings_timer_active="+yes(ratings_timer_active))
+print("ratings_timer_enabled="+yes(ratings_timer_enabled))
+print("ratings_timer_schedule_daily="+yes(ratings_timer_schedule))
+print("ratings_timer_next_present="+yes(ratings_timer_next))
+
 war_ok=(
     war_status==200
     and bool(war_doc.get("ok"))
@@ -129,11 +170,16 @@ site_ok=(
     and "/api/v1/public/clan-war" in wars_html
     and "/api/v1/public/ratings?kind=" in ratings_html
 )
+timers_ok=(
+    war_timer_active and war_timer_enabled and war_timer_schedule and war_timer_next
+    and ratings_timer_active and ratings_timer_enabled and ratings_timer_schedule and ratings_timer_next
+)
 print("war_e2e="+("PASS" if war_ok else "FAIL"))
 print("ratings_e2e="+("PASS" if ratings_all_ok else "FAIL"))
 print("site_binding_e2e="+("PASS" if site_ok else "FAIL"))
+print("collector_timers_e2e="+("PASS" if timers_ok else "FAIL"))
 
-if not (war_ok and ratings_all_ok and site_ok):
+if not (war_ok and ratings_all_ok and site_ok and timers_ok):
     raise SystemExit(2)
 
 print("PUBLIC_OUTPUT_E2E=PASS")
