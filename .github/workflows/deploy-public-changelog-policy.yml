@@ -1,0 +1,88 @@
+name: Deploy Public Changelog Policy
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/public-changelog-policy-trigger.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-topking-public-changelog-policy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate tooling
+        run: |
+          set -euo pipefail
+          python3 -m py_compile             deploy/topking/patch_public_changelog_policy.py             deploy/topking/install_public_changelog_policy.py
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch current live files
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/userscript-source.sha
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-source.sha
+          grep -Fq '// @version      1.17.12' /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.12';" /tmp/HamsterKingMobile.user.js
+
+      - name: Build candidates
+        run: |
+          set -euo pipefail
+          cp /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.public-changelog.user.js
+          cp /tmp/server.py /tmp/server.public-changelog.py
+          python3 deploy/topking/patch_public_changelog_policy.py             /tmp/HamsterKingMobile.public-changelog.user.js             /tmp/server.public-changelog.py
+          node --check /tmp/HamsterKingMobile.public-changelog.user.js
+          python3 -m py_compile /tmp/server.public-changelog.py
+          grep -Fq '// @release-note Исправлена проверка авторизации после входа в игру.' /tmp/HamsterKingMobile.public-changelog.user.js
+          grep -Fq '// @release-note Улучшена стабильность запуска скрипта после авторизации.' /tmp/HamsterKingMobile.public-changelog.user.js
+          ! grep -Fq 'SHA-256:' /tmp/HamsterKingMobile.public-changelog.user.js
+          grep -Fq '"sha256": ""' /tmp/server.public-changelog.py
+
+      - name: Upload candidates
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             /tmp/HamsterKingMobile.public-changelog.user.js root@89.125.1.71:/tmp/HamsterKingMobile.public-changelog.user.js
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             /tmp/server.public-changelog.py root@89.125.1.71:/tmp/server.public-changelog.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             deploy/topking/install_public_changelog_policy.py root@89.125.1.71:/tmp/install_public_changelog_policy.py
+
+      - name: Install and restart
+        run: |
+          set -euo pipefail
+          user_sha="$(cat /tmp/userscript-source.sha)"
+          server_sha="$(cat /tmp/server-source.sha)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71 "python3 /tmp/install_public_changelog_policy.py '$user_sha' '$server_sha'"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71 '
+              set -euo pipefail
+              systemctl restart hamsterking-license.service
+              systemctl is-active --quiet hamsterking-license.service
+              node --check /opt/hamsterking-license/HamsterKingMobile.user.js
+              python3 -m py_compile /opt/hamsterking-license/server.py
+              grep -Fq "// @release-note Исправлена проверка авторизации после входа в игру." /opt/hamsterking-license/HamsterKingMobile.user.js
+              grep -Fq "// @release-note Улучшена стабильность запуска скрипта после авторизации." /opt/hamsterking-license/HamsterKingMobile.user.js
+              ! grep -Fq "SHA-256:" /opt/hamsterking-license/HamsterKingMobile.user.js
+              grep -Fq '"'"'"sha256": ""'"'"' /opt/hamsterking-license/server.py
+              echo PUBLIC_CHANGELOG_POLICY_LIVE=PASS
+            '
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$HOME/.ssh/topking"             /tmp/HamsterKingMobile.user.js             /tmp/HamsterKingMobile.public-changelog.user.js             /tmp/server.py             /tmp/server.public-changelog.py             /tmp/userscript-source.sha             /tmp/server-source.sha
