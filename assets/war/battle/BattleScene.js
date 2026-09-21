@@ -2,14 +2,14 @@
   'use strict';
   const CORE=()=>w.TopKingBattleCore||{};
   class BattleScene{
-    constructor({PIXI,gsap,canvas,host}){this.PIXI=PIXI;this.gsap=gsap;this.canvas=canvas;this.host=host;this.app=null;this.world=null;this.overlay=null;this.ours=null;this.enemy=null;this.effects=null;this.animator=null;this.kind='clan';this.accent=0xef4940;this.ready=false;this.resizeHandler=()=>this.layout()}
+    constructor({PIXI,gsap,canvas,host}){this.PIXI=PIXI;this.gsap=gsap;this.canvasHost=canvas;this.host=host;this.app=null;this.world=null;this.overlay=null;this.ours=null;this.enemy=null;this.effects=null;this.animator=null;this.kind='clan';this.accent=0xef4940;this.ready=false;this.resizeHandler=()=>this.layout()}
     async init(onContact){
-      const {PIXI}=this;this.app=new PIXI.Application();await this.app.init({canvas:this.canvas,resizeTo:this.host,backgroundAlpha:0,antialias:true,autoDensity:true,resolution:Math.min(devicePixelRatio||1,2)});
+      const {PIXI}=this;this.app=new PIXI.Application();await this.app.init({resizeTo:this.host,backgroundAlpha:0,antialias:true,autoDensity:true,resolution:Math.min(devicePixelRatio||1,2)});if(this.canvasHost)this.canvasHost.replaceChildren(this.app.canvas);
       this.world=new PIXI.Container();this.overlay=new PIXI.Container();this.app.stage.addChild(this.world,this.overlay);this.buildArena();
       const textures=await this.loadTextures();this.ours=new (CORE().Fighter)({PIXI,textures:textures.topking,side:'left',height:330,name:'Top King'});this.enemy=new (CORE().Fighter)({PIXI,textures:textures.raider,side:'right',height:330,name:'Opponent'});this.textureSets=textures;this.world.addChild(this.ours.container,this.enemy.container);
-      this.effects=new (CORE().EffectsManager)({PIXI,gsap:this.gsap,world:this.world,overlay:this.overlay});this.animator=new (CORE().BattleAnimator)({gsap:this.gsap,scene:this,effects:this.effects,onContact});this.ready=true;this.host.classList.add('battle-stage-v4');this.layout();window.addEventListener('resize',this.resizeHandler,{passive:true});
+      this.effects=new (CORE().EffectsManager)({PIXI,gsap:this.gsap,world:this.world,overlay:this.overlay});this.animator=new (CORE().BattleAnimator)({gsap:this.gsap,scene:this,effects:this.effects,onContact});this.ready=true;this.host.classList.add('battle-stage-v4','battle-stage-v4-ready');this.layout();window.addEventListener('resize',this.resizeHandler,{passive:true});
     }
-    async loadSet(base){const out={};for(const state of ['idle','attack','hit']){try{out[state]=await this.PIXI.Assets.load(base+'/'+state+'.webp?v=20260921-3')}catch(e){console.warn('[BattleScene] asset failed',base,state,e)}}return out}
+    async loadSet(base){const states=['idle','attack','hit'];const loaded=await Promise.all(states.map(async state=>{try{return [state,await this.PIXI.Assets.load(base+'/'+state+'.webp?v=20260921-3')]}catch(e){console.warn('[BattleScene] asset failed',base,state,e);return [state,null]}}));return Object.fromEntries(loaded.filter(([,texture])=>texture))}
     async loadTextures(){const [topking,raider,bot]=await Promise.all([this.loadSet('../assets/war/units/topking'),this.loadSet('../assets/war/units/raider'),this.loadSet('../assets/war/units/bot')]);return {topking,raider,bot}}
     buildArena(){
       const {PIXI}=this;const floor=new PIXI.Graphics().ellipse(0,0,300,54).fill({color:0x0d1218,alpha:.68});floor.label='Arena floor';this.floor=floor;this.world.addChild(floor);this.particles=new PIXI.Container();this.world.addChild(this.particles);
