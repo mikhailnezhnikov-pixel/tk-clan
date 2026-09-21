@@ -3,8 +3,8 @@
   const HOST='app.hamsterking.games';
   const CORE_URL='https://hk-license.89.125.1.71.sslip.io/panel.js';
   const LOCK_KEY='__HK_BOOKMARKLET_RUNTIME__';
-  const LOADER_REV='loader-20260920-r9';
-  const EXPECTED_CORE_REV='core-20260920-r6';
+  const LOADER_REV='loader-20260921-r10';
+  const EXPECTED_CORE_REV='core-20260921-r14-auth-bridge-xhr';
   const TIMEOUTS=[3500,6000,12000,20000];
   const RETRY_DELAYS=[700,1800,4000];
   const runtime=window[LOCK_KEY]||{active:false,promise:null,events:[],startedAt:'',revision:LOADER_REV};
@@ -72,7 +72,7 @@
         window.__HK_LOADER_CORE_REVISION__=EXPECTED_CORE_REV;
         record('load-success',{attempt:i+1,durationMs:Math.round(performance.now()-started),version:core.version||'',revision:core.revision||''});
         try{core.ensure?.()}catch{}
-        setBadge(`HK · запущен · ${core.version||''} · r6`,'ok');
+        setBadge(`HK · запущен · ${core.version||''}`,'ok');
         setTimeout(()=>badge().remove(),2200);
         return;
       }catch(error){
