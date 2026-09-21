@@ -1366,3 +1366,25 @@ After each stage:
 4. do not continue to the next stage automatically unless explicitly requested.
 
 No bulk migration, schema mutation, or live deploy is allowed during W1.
+
+### HK loader core-alignment hotfix — PASS (2026-09-21)
+
+User live test before Buildings action exposed a launcher blocker:
+- public `hk/loader.js` still expected `core-20260920-r6`;
+- production userscript `1.17.12` uses `core-20260921-r14-auth-bridge-xhr`;
+- the loader therefore rejected the current core after loading it.
+
+Fix:
+- loader revision: `loader-20260921-r10`;
+- expected core aligned to `core-20260921-r14-auth-bridge-xhr`;
+- stale hardcoded `r6` success label removed;
+- userscript/game modules unchanged.
+
+Verification:
+- GitHub Pages deploy run `35564240938`: PASS;
+- public loader verification run `35564300896`: PASS;
+- old expected core r6 absent from public loader: PASS.
+
+Stage 2 remains at:
+**Buildings 2.06 — TECHNICAL_REVALIDATION_PASS_USER_ACTION_PENDING**.
+
