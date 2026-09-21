@@ -297,6 +297,51 @@ try:
 except Exception:
     print("license_service_listeners=unavailable")
 
+try:
+    import re, urllib.request
+    local_port=""
+    for line in service_lines if "service_lines" in globals() else []:
+        match=re.search(r"127\\.0\\.0\\.1:(\\d+)",line)
+        if match:
+            local_port=match.group(1)
+            break
+    if local_port and matched is not None and device is not None:
+        payload=json.dumps({
+            "player_id":str(matched["player_id"]),
+            "device_id":str(device["device_id"]),
+            "script_version":str(device["script_version"] or "1.17.12"),
+        },separators=(",",":")).encode("utf-8")
+        req=urllib.request.Request(
+            f"http://127.0.0.1:{local_port}/api/v1/check",
+            data=payload,
+            headers={
+                "Content-Type":"application/json",
+                "Origin":"https://app.hamsterking.games",
+                "Host":"hk-license.89.125.1.71.sslip.io",
+                "User-Agent":"TopKing-Safe-Local-Backend-Check/1",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req,timeout=15) as response:
+            local_status=int(response.status)
+            local_body=json.loads(response.read(200000).decode("utf-8"))
+        print("technical_local_backend_check_status="+str(local_status))
+        print("technical_local_backend_check_allowed="+("yes" if bool(local_body.get("allowed")) else "no"))
+        print("technical_local_backend_check_auth_sync="+("yes" if bool(local_body.get("public_collector_auth_sync")) else "no"))
+        print("technical_local_backend_check_token_present="+("yes" if bool(str(local_body.get("token") or "").strip()) else "no"))
+    else:
+        print("technical_local_backend_check_status=unavailable")
+except Exception:
+    print("technical_local_backend_check_status=unavailable")
+
+try:
+    live_server_src=open("/opt/hamsterking-license/server.py",encoding="utf-8").read()
+    print("live_server_license_check_defs="+str(live_server_src.count("def license_check(")))
+    print("live_server_check_route_occurrences="+str(live_server_src.count('path == "/api/v1/check"')))
+    print("live_server_auth_sync_key_occurrences="+str(live_server_src.count("public_collector_auth_sync")))
+except Exception:
+    print("live_server_structure_check=unavailable")
+
 for unit,label in (
     ("hamsterking-public-war.service","war_journal"),
     ("hamsterking-public-collector.service","ratings_journal"),
