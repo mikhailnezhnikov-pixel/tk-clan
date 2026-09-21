@@ -1,4 +1,4 @@
-server_sha256=b5189981acade420e1aaa533dec8b745c0e16969bf1def0c5008aa297f2a2812
+server_sha256=4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753
 
 ### hk_map_data
 def hk_map_data(map_key: str, member: dict | None = None, public: bool = False) -> dict:
@@ -163,7 +163,8 @@ def submit_map_area(player_id: str, value: object) -> dict:
     knowledge_source = map_knowledge_source(player_id)
     player_id = contributor_id(player_id)
     with db_session() as db:
-        canonical_id = canonical_map_area(db, area)
+        overlap_canonical = _canonical_area_from_exact_buildings(db, area) if knowledge_source == "game_live" else ""
+        canonical_id = overlap_canonical or canonical_map_area(db, area)
         existing = db.execute("SELECT 1 FROM map_areas WHERE area_id=?", (canonical_id,)).fetchone()
         trusted_coords = area.get("coord_revision") == "column-row-v1"
         if existing:
@@ -243,8 +244,119 @@ def submit_map_area(player_id: str, value: object) -> dict:
                        (canonical_id,row["building_id"],int(row["opened"]),row["room_count"],int(row["has_events"]),int(row["is_invest"]),
                         row["tier"],row["faction"],row["building_type"],player_id,now,knowledge_source,now))
         known, total, progress = map_completion(db, canonical_id)
-    return {"ok":True,"area_id":canonical_id,"source_area_id":area["area_id"],"ignored_complete":False,
-            "progress":progress,"buildings":total,"known_buildings":known,"added_buildings":added,"enriched_buildings":enriched}
+    result = {"ok":True,"area_id":canonical_id,"source_area_id":area["area_id"],"ignored_complete":False,
+              "progress":progress,"buildings":total,"known_buildings":known,"added_buildings":added,"enriched_buildings":enriched}
+    if knowledge_source == "game_live" and isinstance(value, dict) and value.get("_website_hydrate"):
+        try:
+            result["website_hydration"] = hydrate_hk_website_map_for_area(
+                canonical_id, area, value.get("_website_geometry")
+            )
+        except Exception as error:
+            result["website_hydration"] = {
+                "ok": False,
+                "status": "hydrate_error",
+                "error": str(error)[:240],
+            }
+    return result
+
+### cabinet_maps
+def cabinet_maps(member: dict) -> dict:
+    """One Personal Cabinet list: website geometry + canonical/script knowledge."""
+    try:
+        website = _cabinet_maps_website_only(member)
+    except PermissionError:
+        website = {"ok": True, "can_manage": bool(member.get("maps_manage")), "maps": [], "members": []}
+
+    website_rows = [dict(row) for row in website.get("maps") or []]
+    canonical_rows = map_index()
+    canonical_by_id = {str(row.get("area_id") or ""): row for row in canonical_rows}
+
+    with db_session() as db:
+        link_rows = db.execute(
+            "SELECT map_key,canonical_area_id FROM hk_map_area_links"
+        ).fetchall()
+        links = {str(row["map_key"]): str(row["canonical_area_id"]) for row in link_rows}
+        cities = set()
+        map_rules = {}
+        if not member.get("maps_manage"):
+            cities, map_rules = _hk_member_rules(db, str(member.get("telegram_id") or ""))
+
+    grouped: dict[str, list[dict]] = {}
+    unlinked: list[dict] = []
+    for row in website_rows:
+        key = str(row.get("key") or "")
+        area_id = links.get(key, "")
+        if area_id and area_id in canonical_by_id:
+            grouped.setdefault(area_id, []).append(row)
+        else:
+            unlinked.append({
+                **row,
+                "website_key": key,
+                "website_keys": [key] if key else [],
+                "area_id": "",
+                "canonical_area_id": "",
+                "source_kind": "website",
+                "source_label": "Сайт",
+                "canonical_grid": "",
+                "shared_known": 0,
+                "aliases": [],
+            })
+
+    result = []
+    used_canonical = set()
+    for area_id, rows in grouped.items():
+        # If several website visualizations ever point at one canonical district,
+        # keep one row and choose the richest website visualization as primary.
+        primary = max(
+            rows,
+            key=lambda row: (
+                int(bool(row.get("open_url"))),
+                float(row.get("progress") or 0),
+                int(row.get("score") or 0),
+            ),
+        )
+        keys = sorted({str(row.get("key") or "") for row in rows if row.get("key")})
+        result.append(_cabinet_unified_canonical_row(canonical_by_id[area_id], primary, keys))
+        used_canonical.add(area_id)
+
+    result.extend(unlinked)
+
+    for row in canonical_rows:
+        area_id = str(row.get("area_id") or "")
+        if not area_id or area_id in used_canonical:
+            continue
+        city = str(row.get("city_name") or row.get("city_id") or "")
+        synthetic_key = f"canonical:{area_id}"
+        if not member.get("maps_manage"):
+            allowed = bool(map_rules.get(synthetic_key, city in cities))
+            if not allowed:
+                continue
+        result.append(_cabinet_unified_canonical_row(row))
+
+    if not result:
+        raise PermissionError("maps access denied")
+
+    source_counts = {"website":0,"script":0,"combined":0}
+    for row in result:
+        kind = str(row.get("source_kind") or "website")
+        source_counts[kind] = source_counts.get(kind,0) + 1
+
+    result.sort(key=lambda row: (
+        -int(row.get("shared_known") or 0),
+        -float(row.get("progress") or 0),
+        str(row.get("city") or ""),
+        str(row.get("grid") or ""),
+    ))
+    return {
+        "ok": True,
+        "can_manage": bool(member.get("maps_manage")),
+        "maps": result,
+        "members": website.get("members") or [],
+        "unified": True,
+        "source_counts": source_counts,
+        "website_maps": len(website_rows),
+        "canonical_maps": len(canonical_rows),
+    }
 
 ### map_index
 def map_index() -> list[dict]:
