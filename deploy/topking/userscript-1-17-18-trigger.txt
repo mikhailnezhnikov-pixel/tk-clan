@@ -1,1 +1,1 @@
-2026-09-21 deploy userscript 1.17.18 Buildings owned/postcondition fix
+2026-09-21 rerun userscript 1.17.18 Buildings owned/postcondition deploy after guard fix
