@@ -1,1 +1,1 @@
-2026-09-21 public E2E after userscript 1.17.20 Explore speed tune
+2026-09-21 public E2E after userscript 1.17.21 Explore E4 queue
