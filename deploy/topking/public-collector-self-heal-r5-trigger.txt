@@ -1,1 +1,1 @@
-2026-09-21 deploy collector missing-token bootstrap self-heal r5\n
+2026-09-21 redeploy and reverify bootstrap self-heal after auth-probe removal
