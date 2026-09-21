@@ -1,1 +1,1 @@
-2026-09-21 inspect native building mutation endpoints read-only
+2026-09-21 rerun native building endpoint diagnostic with broader asset discovery
