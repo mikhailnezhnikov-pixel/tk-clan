@@ -33,7 +33,8 @@ jobs:
           python3 -m py_compile \
             deploy/topking/public_collector.py \
             deploy/topking/patch_public_collector_auth_heartbeat_r1.py \
-            deploy/topking/patch_public_collector_auth_client_r1.py
+            deploy/topking/patch_public_collector_auth_client_r1.py \
+            deploy/topking/install_public_collector_auto_auth_r4.py
           grep -Fq 'REV = "public-server-collector-20260921-r4-auto-auth"' deploy/topking/public_collector.py
 
       - name: Prepare SSH
@@ -45,7 +46,7 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Fetch fresh live server and userscript
+      - name: Fetch fresh live
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
@@ -54,10 +55,10 @@ jobs:
             root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-source.sha
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/userscript-source.sha
-          grep -Fq "PUBLIC_SNAPSHOT_SERVER_ONLY_R3" /tmp/server.py
-          grep -Fq "PUBLIC_RATINGS_SERVER_ONLY_R3" /tmp/server.py
+          grep -Fq 'PUBLIC_SNAPSHOT_SERVER_ONLY_R3' /tmp/server.py
+          grep -Fq 'PUBLIC_RATINGS_SERVER_ONLY_R3' /tmp/server.py
           grep -Fq "HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" /tmp/HamsterKingMobile.user.js
-          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          grep -Fq 'const HK_MAP_READ_CONCURRENCY = 5;' /tmp/HamsterKingMobile.user.js
           grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2'" /tmp/HamsterKingMobile.user.js
 
       - name: Build candidates against fresh live
@@ -67,58 +68,52 @@ jobs:
           python3 deploy/topking/patch_public_collector_auth_client_r1.py /tmp/HamsterKingMobile.user.js
           python3 -m py_compile /tmp/server.py
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "PUBLIC_COLLECTOR_AUTH_HEARTBEAT_R1" /tmp/server.py
-          grep -Fq "PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "PUBLIC_SNAPSHOT_SERVER_ONLY_R3" /tmp/server.py
-          grep -Fq "PUBLIC_RATINGS_SERVER_ONLY_R3" /tmp/server.py
+          grep -Fq 'PUBLIC_COLLECTOR_AUTH_HEARTBEAT_R1' /tmp/server.py
+          grep -Fq 'PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1' /tmp/HamsterKingMobile.user.js
+          grep -Fq 'PUBLIC_SNAPSHOT_SERVER_ONLY_R3' /tmp/server.py
+          grep -Fq 'PUBLIC_RATINGS_SERVER_ONLY_R3' /tmp/server.py
           grep -Fq "HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" /tmp/HamsterKingMobile.user.js
-          grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /tmp/HamsterKingMobile.user.js
+          grep -Fq 'const HK_MAP_READ_CONCURRENCY = 5;' /tmp/HamsterKingMobile.user.js
           grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2'" /tmp/HamsterKingMobile.user.js
           sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-candidate.sha
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/userscript-candidate.sha
 
-      - name: Race-safe install auto auth
+      - name: Upload candidates
         run: |
           set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/server.py root@89.125.1.71:/tmp/server.auto-auth-r4.py
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.auto-auth-r4.user.js
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            deploy/topking/public_collector.py root@89.125.1.71:/tmp/public_collector.r4.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.auto-auth-r4.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.auto-auth-r4.user.js
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new deploy/topking/public_collector.py root@89.125.1.71:/tmp/public_collector.r4.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new deploy/topking/install_public_collector_auto_auth_r4.py root@89.125.1.71:/tmp/install_public_collector_auto_auth_r4.py
+
+      - name: Race-safe install
+        run: |
+          set -euo pipefail
           server_source="$(cat /tmp/server-source.sha)"
           userscript_source="$(cat /tmp/userscript-source.sha)"
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "python3 /tmp/install_public_collector_auto_auth_r4.py '$server_source' '$userscript_source'" \
+            > /tmp/auto-auth-r4-install.txt
+          cat /tmp/auto-auth-r4-install.txt
+          grep -Fq 'auto_auth_install=PASS' /tmp/auto-auth-r4-install.txt
+
+      - name: Verify live markers
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
-            current_server=\$\(sha256sum /opt/hamsterking-license/server.py | awk '{print \\$1}'\)
-            current_userscript=\$\(sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js | awk '{print \\$1}')
-            test \\"\\$current_server\\" = \"$server_source\" || { echo LIVE_SERVER_CHANGED; exit 42; }
-            test \"\\$current_userscript\" = \"$userscript_source\" || { echo LIVE_USERSCRIPT_CHANGED; exit 43; }
-            python3 -m py_compile /tmp/server.auto-auth-r4.py /tmp/public_collector.r4.py
-            node --check /tmp/HamsterKingMobile.auto-auth-r4.user.js
-            stamp=\\$(date +%Y%m%d-%H%M%S%S)
-            cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.public-auto-auth-r4.\\$stamp
-            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js /opt/hamsterking-license/HamsterKingMobile.user.js.bak.public-auto-auth-r4.\\$stamp
-            install -m 0644 /tmp/server.auto-auth-r4.py /opt/hamsterking-license/server.py
-            install -m 0644 /tmp/HamsterKingMobile.auto-auth-r4.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
-            install -m 0755 /tmp/public_collector.r4.py /opt/hamsterking-license/public_collector.py
-            if [ ! -is /var/lib/hamsterking-license/public-collector-token ]; then
-              set -a
-              source /etc/hamsterking-public-collector.env
-              set +a
-              token=\$\{HK_PUBLIC_COLLECTOR_GAME_TOKEN:-}
-              token=\$_token
-              if [ -n \"\\token\" ]; then
-                umask 077
-                printf '%s\n' \"\$token\" > /var/lib/hamsterking-license/public-collector-token
-                chmod 600 /var/lib/hamsterking-license/public-collector-token
-                fi
-            fi
-            grep -q '^HK_PUBLIC_COLLECTOR_TOKEN_FILE='%' /etc/hamsterking-public-collector.env || printf '%s\n' 'HK_PUBLIC_COLLECTOR_TOKEN_FILE=/var/lib/hamsterking-license/public-collector-token' >> /etc/hamsterking-public-collector.env
-            grep -q '^HK_PUBLIC_COLLECTOR_AUTH_BOOTSTRAP=' /etc/hamsterking-public-collector.env || printf '%s\n' 'HK_PUBLIC_COLLECTOR_AUTH_BOOTSTRAP=/var/lib/hamsterking-license/public-collector-auth.json' >> /etc/hamsterking-public-collector.env
-            grep -q '^HK_PUBLIC_COLLECTOR_IDENTITY_FILE='%' /etc/hamsterking-public-collector.env || printf '%s\n' 'HK_PUBLIC_COLLECTOR_IDENTITY_FILE=/var/lib/hamsterking-license/public-collector-identity.sha256' >> /etc/hamsterking-public-collector.env
-            grep -q '^HK_PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS=' /etc/hamsterking-public-collector.env || printf '%s\n' 'HK_PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS=/var/lib/hamsterking-license/public-collector-auth-refresh.json' >> /etc/hamsterking-public-collector.env
-            chmod 600 /etc/hamsterking-public-collector.env /var/lib/hamsterking-license/public-collector-identity.sha256
+            python3 -m py_compile /opt/hamsterking-license/server.py /opt/hamsterking-license/public_collector.py
+            node --check /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq PUBLIC_COLLECTOR_AUTH_HEARTBEAT_R1 /opt/hamsterking-license/server.py
+            grep -Fq PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1 /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq PUBLIC_SNAPSHOT_SERVER_ONLY_R3 /opt/hamsterking-license/server.py
+            grep -Fq PUBLIC_RATINGS_SERVER_ONLY_R3 /opt/hamsterking-license/server.py
+            grep -Fq public-server-collector-20260921-r4-auto-auth /opt/hamsterking-license/public_collector.py
+            grep -Fq "HK_EXPLORE_CANON_REV='"'"'explore-e3-single-20260920-r9-runner'"'"'" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "const HK_MAP_READ_CONCURRENCY = 5;" /opt/hamsterking-license/HamsterKingMobile.user.js
+            grep -Fq "HK_PUBLIC_SNAPSHOT_CLIENT_REV = '"'"'public-server-only-20260920-r2'"'"'" /opt/hamsterking-license/HamsterKingMobile.user.js
+            test -s /var/lib/hamsterking-license/public-collector-identity.sha256
+            test "$(stat -c %a /var/lib/hamsterking-license/public-collector-identity.sha256)" = 600
             systemctl is-active --quiet hamsterking-license.service
             systemctl is-active --quiet hamsterking-public-war.timer
             systemctl is-active --quiet hamsterking-public-collector.timer
@@ -129,28 +124,36 @@ jobs:
           ' > /tmp/auto-auth-r4-status.txt
           cat /tmp/auto-auth-r4-status.txt
 
-      - name: Sync live userscript baseline and audit
+      - name: Sync baseline and audit
         run: |
           set -euo pipefail
-          git fetch origin main
-          git reset --hard origin/main
-          cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+          cp /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.auto-auth-r4.final.user.js
           {
-            echo "PUBLIC_COLLECTOR_AUTO_AUTH_R4_LIVE=PASS"
-            cat /tmp/auth-r4-status.txt
+            echo 'PUBLIC_COLLECTOR_AUTO_AUTH_R4_LIVE=PASS'
+            cat /tmp/auto-auth-r4-status.txt
+            cat /tmp/auto-auth-r4-install.txt
             echo "server_source_sha=$(cat /tmp/server-source.sha)"
             echo "server_candidate_sha=$(cat /tmp/server-candidate.sha)"
             echo "userscript_source_sha=$(cat /tmp/userscript-source.sha)"
             echo "userscript_candidate_sha=$(cat /tmp/userscript-candidate.sha)"
-            echo "token_value_logged=NO"
-            echo "auth_data_logged=NO"
-          } > audit/hk-public-collector-auto-auth-r4.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-public-collector-auto-auth-r4.txt
-          git commit -m "feat: deploy technical collector auth heartbeat" || true
-          git push origin HEAD:main
+            echo 'token_value_logged=NO'
+            echo 'auth_data_logged=NO'
+          } > /tmp/hk-public-collector-auto-auth-r4.txt
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/HamsterKingMobile.auto-auth-r4.final.user.js baseline/topking/HamsterKingMobile.current.user.js
+            cp /tmp/hk-public-collector-auto-auth-r4.txt audit/hk-public-collector-auto-auth-r4.txt
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-public-collector-auto-auth-r4.txt
+            git commit -m 'feat: deploy technical collector auth heartbeat' || true
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/HamsterKingMobile.user.js /tmp/server-source.sha /tmp/userscript-source.sha /tmp/server-candidate.sha /tmp/userscript-candidate.sha /tmp/auto-auth-r4-status.txt
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.auto-auth-r4.final.user.js /tmp/server-source.sha /tmp/userscript-source.sha /tmp/server-candidate.sha /tmp/userscript-candidate.sha /tmp/auto-auth-r4-install.txt /tmp/auto-auth-r4-status.txt /tmp/hk-public-collector-auto-auth-r4.txt
