@@ -1,1 +1,1 @@
-run full235 all-building-ID dry-run
+run full235 all-building-ID dry-run transport-fixed
