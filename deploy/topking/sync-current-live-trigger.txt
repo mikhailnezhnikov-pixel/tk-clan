@@ -1,2 +1,1 @@
-2026-09-20 sync Bosses area target r2 live after marker fix
-sha256=0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7
+2026-09-21 sync safe live userscript 1.17.8 baseline
