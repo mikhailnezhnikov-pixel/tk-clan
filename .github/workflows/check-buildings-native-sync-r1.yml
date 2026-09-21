@@ -1,0 +1,58 @@
+name: Check Buildings Native Sync R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/buildings-native-sync-check-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and verify candidate
+        run: |
+          set -euo pipefail
+          cp baseline/topking/HamsterKingMobile.current.user.js /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.18" /tmp/HamsterKingMobile.user.js
+          python3 -m py_compile deploy/topking/patch_buildings_native_sync_1_17_19.py
+          python3 deploy/topking/patch_buildings_native_sync_1_17_19.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.19" /tmp/HamsterKingMobile.user.js
+          grep -Fq "core-20260921-r21-buildings-native-sync" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-native-sync-20260921-r1" /tmp/HamsterKingMobile.user.js
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text()
+          bridge=s[s.index('const hkGameBridge = (() => {'):s.index('runtime.stateStore = hkStateStore')]
+          runner=s[s.index('async function runBuildingsCanonical()'):s.index('function accountBuildingRows')]
+          assert 'const buildingState = buildingId =>' in bridge
+          assert 'player?.buildings?.$' in bridge
+          assert 'row.favoriteSlot!==undefined&&row.favoriteSlot!==null' in bridge
+          assert 'return {discover,flush,schedule,noteMutation,summary,buildingState' in bridge
+          assert 'const openedIds=[],favoriteIds=[];' in runner
+          assert 'opened+=1;openedIds.push(candidate.buildingId);' in runner
+          assert 'favorites+=1;favoriteIds.push(candidate.buildingId);' in runner
+          assert "hkRunner.setStep(either('Синхронизация игры','Syncing game')" in runner
+          assert 'const bridgeOk=await hkGameBridge.flush(true);' in runner
+          assert 'hkGameBridge.buildingState(id)' in runner
+          assert 'if(!nativeConfirmed)' in runner
+          assert 'setTimeout(()=>location.reload(),900);' in runner
+          assert runner.index("const bridgeOk=await hkGameBridge.flush(true);") < runner.index("hkRunner.finish(either('Открытие зданий завершено'")
+          print('native_store_owned_check=PASS')
+          print('native_store_favorite_check=PASS')
+          print('native_sync_before_finish=PASS')
+          print('reload_fallback_once=PASS')
+          print('BUILDINGS_NATIVE_SYNC_R1_PREDEPLOY=PASS')
+          PY
+          grep -Fq "buildings-owned-semantics-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "buildings-postcondition-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "maps-shared-runtime-20260921-r7-safe5" /tmp/HamsterKingMobile.user.js
+          grep -Fq "explore-e3-single-20260920-r9-runner" /tmp/HamsterKingMobile.user.js
+          grep -Fq "AUTH_PASSIVE_SAFETY_R1" /tmp/HamsterKingMobile.user.js
