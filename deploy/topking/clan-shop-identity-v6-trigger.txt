@@ -1,2 +1,2 @@
-trigger=clan-shop-identity-v7-retry2
+trigger=clan-shop-linked-player-id-v8
 stamp=2026-09-21
