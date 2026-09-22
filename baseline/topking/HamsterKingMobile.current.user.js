@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.34
+// @version      1.17.35
 // @release-note После 429 автообновления модулей не повторяются до конца cooldown; Game API переходит на адаптивный медленный темп и не создаёт новый burst после восстановления.
 // @release-note Пока HK Runner выполняет автоматизацию, серверный public collector ставится на lease-паузу и не использует игровой токен; после завершения lease снимается автоматически.
 // @release-note В окне «Перестановка бизнесов» прогресс снова вертикальный: полоса идёт слева сверху вниз, горизонтальная линия для Businesses отключена.
@@ -9,6 +9,7 @@
 // @release-note Перестановка бизнесов возвращена к закреплённому канону Kokkaras: один слот целиком (remove → insert → speedUp → activate), один state-aware retry, rollback только текущей пары, 500 мс между парами.
 // @release-note Перестановка бизнесов: бизнес-мутации ждут до 60 секунд; после тайм-аута состояние сверяется с /player/me.
 // @release-note Перестановка бизнесов: восстановлены видимые названия, сквозной канонический прогресс и безопасная сверка состояния после тайм-аутов без слепого отката.
+// @release-note Авто-рутины перенесены внутрь «Сегодня»: отдельная вкладка убрана, сохранённый выбор и fail-closed логика сохранены; старый navModule=routines автоматически мигрирует на daily.
 // @release-note Auto Routines теперь fail-closed: следующий этап запускается только после реального Runner=done; error/stop/cancel/no-op останавливают цепочку. Collector lease удерживается непрерывно на всю рутину.
 // @release-note Clan Shop дополнительно считывает видимые строки журнала покупок с экрана игры, если API-ответ не содержит удобной структуры истории.
 // @release-note Исправлен разбор истории Clan Shop: дата и время из отдельных колонок, user_id/user_name и дополнительные поля ответа игры.
@@ -42,7 +43,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.34';
+  const BUILD_VERSION = '1.17.35';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -861,6 +862,7 @@
   const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   const HK_AUTO_ROUTINES_REV = 'auto-routines-20260920-r1';
   const HK_AUTO_ROUTINES_SAFE_REV = 'auto-routines-safe-orchestrator-20260922-r2';
+  const HK_AUTO_ROUTINES_TODAY_REV = 'auto-routines-in-today-20260922-r3';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -12857,7 +12859,7 @@
       {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
       {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{page:'bosses',ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
       {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
-      {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'},{page:'routines',ru:'Авто-рутины',en:'Auto routines'}]},
+      {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
       {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{page:'fair-regular',ru:'Обычная ярмарка',en:'Regular Fair'}]},
       {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
@@ -12881,6 +12883,7 @@
       <div id="hk-runner" class="hk-runner"><div class="hk-runner-head"><b id="hk-runner-title"></b><span id="hk-runner-state" class="hk-runner-state"></span></div><div id="hk-runner-step" class="hk-runner-step"></div><div class="hk-runner-track"><div id="hk-runner-fill" class="hk-runner-fill"></div></div><div id="hk-runner-history" class="hk-runner-history" style="display:none"></div><div class="hk-runner-actions"><button id="hk-runner-pause" class="hk-secondary"></button><button id="hk-runner-stop" class="hk-danger"></button></div></div>
       <div class="hk-page active" data-content="daily">
         <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
+        <div id="hk-routines-content" class="hk-cardbox" style="margin-top:12px"></div>
       </div>
       <div class="hk-page" data-content="resources">
         <div id="hk-resource-content" class="hk-cardbox"></div>
@@ -12888,9 +12891,6 @@
       <div class="hk-page" data-content="bosses"><div id="hk-boss-content" class="hk-cardbox"><h3>${either('Боссы','Bosses')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать состояние босса.','Open this tab to read boss state.')}</p></div></div>
           <div class="hk-page" data-content="pit">
         <div id="hk-pits-content" class="hk-cardbox"><h3>${either('Ямы','Pits')}</h3><p class="hk-muted">${either('Загрузка live-данных трёх Ям…','Loading live data for all three Pits…')}</p></div>
-      </div>
-      <div class="hk-page" data-content="routines">
-        <div id="hk-routines-content" class="hk-cardbox"></div>
       </div>
       <div class="hk-page" data-content="business">
         <div class="hk-cardbox"><div class="hk-toolbar"><button id="hk-refresh-game" data-i18n="refreshGame">${tr('refreshGame')}</button><span id="hk-connect">${tr('waiting')}</span></div>
@@ -13074,7 +13074,7 @@
       if(persist) save({navGroup:group.id,navModule:navPage});
       if (finalPage === 'maps') renderMapIndex();
       if (finalPage === 'business') { renderBusinessLists(); renderBusinessOptimizerFilters(); renderBusinessCatalog(); }
-      if (finalPage === 'daily') renderDailyTasks();
+      if (finalPage === 'daily') { renderDailyTasks(); renderAutoRoutines(); }
       if (finalPage === 'resources') renderResources();
       if (finalPage === 'buildings') renderBuildings();
       if (finalPage === 'explore') renderExplore();
@@ -13093,16 +13093,17 @@
       }
       if (finalPage === 'shop') renderShop();
       if (finalPage === 'recipes') renderRecipes();
-      if (finalPage === 'routines') renderAutoRoutines();
       if (finalPage.startsWith('growth')) { renderGrowth(); growthAutoOpen(finalPage); }
-      else if (finalPage !== 'routines') void refreshModuleLive(finalPage);
+      else void refreshModuleLive(finalPage);
     };
     root.querySelectorAll('.hk-tab').forEach(tab=>tab.onclick=()=>{
       const group=NAV_GROUPS.find(row=>row.id===tab.dataset.group)||NAV_GROUPS[0];
       const preferred=group.modules.find(module=>module.page && !module.planned)?.page || 'daily';
       activateModule(preferred,true);
     });
-    const remembered=clean(load().navModule||'daily');
+    const rememberedRaw=clean(load().navModule||'daily');
+    const remembered=rememberedRaw==='routines'?'daily':rememberedRaw;
+    if(rememberedRaw==='routines')save({navGroup:'today',navModule:'daily'});
     activateModule(remembered === 'fair-regular' || root.querySelector(`[data-content="${remembered}"]`) ? remembered : 'daily',false);
     const activateBusinessPane = (paneName, persist = true) => {
       const pane = ['optimizer','catalog'].includes(paneName) ? paneName : 'regular';

@@ -17,7 +17,7 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.34
+- userscript: 1.17.35
 - current module: Auto Routines / Авто-рутины — Stage 2.10 verification
 - current module file: audit/hk-stage2-10-auto-routines.md
 - current module status: SOURCE_PREFLIGHT_PASS · STATIC_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING

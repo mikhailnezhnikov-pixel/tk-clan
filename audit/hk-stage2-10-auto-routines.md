@@ -129,3 +129,12 @@ After technical live PASS:
    - expected: current Runner stops and next stage never starts.
 
 A destructive multi-stage browser run is not required for Stage 2.10.
+
+## UI consolidation 1.17.35
+
+- User feedback: standalone Auto Routines overlaps Today and appears as a list of empty checkboxes.
+- Standalone navigation/page removed.
+- Existing Auto Routines block moved under Today.
+- Saved routine selections and fail-closed orchestration are preserved.
+- Legacy saved navModule=routines migrates to daily.
+- Technical live deployment: PASS; browser check remains pending.
