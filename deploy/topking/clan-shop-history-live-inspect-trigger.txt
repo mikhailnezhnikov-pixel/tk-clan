@@ -1,2 +1,2 @@
-inspect=clan-shop-live-history-source-r7
+inspect=clan-shop-v11-live-payload
 stamp=2026-09-22
