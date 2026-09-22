@@ -1,2 +1,2 @@
-inspect=clan-shop-v14-participants
-stamp=2026-09-22T14:02+09:00
+inspect=clan-shop-v15-participants
+stamp=2026-09-22T14:12+09:00
