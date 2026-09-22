@@ -1,2 +1,2 @@
-trigger=clan-shop-purchase-events-v16
-stamp=2026-09-22T20:01+09:00
+trigger=clan-shop-unresolved-history-v17
+stamp=2026-09-22T22:31+09:00
