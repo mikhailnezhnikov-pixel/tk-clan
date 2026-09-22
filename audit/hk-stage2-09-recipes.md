@@ -2,7 +2,7 @@
 
 ## Status
 
-**SOURCE_PREFLIGHT_PASS · STATIC_CURRENT_PASS · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING**
+**LIVE PASS**
 
 ## Current production baseline
 
@@ -144,3 +144,9 @@ After technical live PASS:
 8. confirm Pause/Stop controls appear while a mutable recipe task is running.
 
 No automatic destructive CI action is permitted for this gate.
+
+## User live confirmation
+
+- User confirmed the custom Recipes implementation works correctly in the real game.
+- Stage 2.09 is closed as **LIVE PASS**.
+- The later 429 screen was diagnosed as shared Game API cooldown behaviour, not a Recipes logic failure; it is addressed globally in userscript 1.17.31.
