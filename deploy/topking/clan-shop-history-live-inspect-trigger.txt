@@ -1,2 +1,2 @@
-inspect=clan-shop-license-registry-r6
+inspect=clan-shop-live-history-source-r7
 stamp=2026-09-22
