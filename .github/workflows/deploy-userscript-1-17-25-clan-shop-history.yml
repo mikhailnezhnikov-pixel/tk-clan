@@ -3,7 +3,7 @@ name: Deploy Userscript 1.17.26 Clan Shop History Parser
 on:
   push:
     paths:
-      - 'deploy/topking/userscript-1-17-25-clan-shop-history-trigger.txt'
+      - 'deploy/topking/userscript-1-17-26-clan-shop-history-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -35,7 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.26" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.25" /tmp/HamsterKingMobile.user.js
           python3 deploy/topking/patch_clan_shop_purchase_history_parser_1_17_26.py
           node --check /tmp/HamsterKingMobile.user.js
           grep -Fq "// @version      1.17.26" /tmp/HamsterKingMobile.user.js
@@ -72,10 +72,10 @@ jobs:
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
-          printf "%s\n" "USERSCRIPT_1_17_26_CLAN_SHOP_HISTORY_PARSER=PASS" "version=1.17.26" > audit/hk-userscript-1-17-25-clan-shop-history-status.txt
+          printf "%s\n" "USERSCRIPT_1_17_26_CLAN_SHOP_HISTORY_PARSER=PASS" "version=1.17.26" > audit/hk-userscript-1-17-26-clan-shop-history-parser-status.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-25-clan-shop-history-status.txt
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-26-clan-shop-history-parser-status.txt
           if ! git diff --cached --quiet; then
             git commit -m "fix: parse Clan Shop history in userscript 1.17.26"
             git pull --rebase origin main
