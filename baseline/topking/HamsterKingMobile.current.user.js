@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.32
+// @version      1.17.33
 // @release-note После 429 автообновления модулей не повторяются до конца cooldown; Game API переходит на адаптивный медленный темп и не создаёт новый burst после восстановления.
 // @release-note Пока HK Runner выполняет автоматизацию, серверный public collector ставится на lease-паузу и не использует игровой токен; после завершения lease снимается автоматически.
 // @release-note В окне «Перестановка бизнесов» прогресс снова вертикальный: полоса идёт слева сверху вниз, горизонтальная линия для Businesses отключена.
@@ -9,6 +9,7 @@
 // @release-note Перестановка бизнесов возвращена к закреплённому канону Kokkaras: один слот целиком (remove → insert → speedUp → activate), один state-aware retry, rollback только текущей пары, 500 мс между парами.
 // @release-note Перестановка бизнесов: бизнес-мутации ждут до 60 секунд; после тайм-аута состояние сверяется с /player/me.
 // @release-note Перестановка бизнесов: восстановлены видимые названия, сквозной канонический прогресс и безопасная сверка состояния после тайм-аутов без слепого отката.
+// @release-note Clan Shop дополнительно считывает видимые строки журнала покупок с экрана игры, если API-ответ не содержит удобной структуры истории.
 // @release-note Исправлен разбор истории Clan Shop: дата и время из отдельных колонок, user_id/user_name и дополнительные поля ответа игры.
 // @release-note Clan Shop теперь считывает фактическую историю общих покупок: кто именно купил шар идолов или S+ бизнес, по точному player_id.
 // @release-note Clan Shop фиксирует игрока по его личному /player/me: шары и S+ записываются по player_id даже если сам магазин не открывался.
@@ -40,7 +41,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.32';
+  const BUILD_VERSION = '1.17.33';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -3160,6 +3161,166 @@
     }
   }
 
+  const HK_CLAN_SHOP_DOM_HISTORY_CAPTURE_REV='clan-shop-dom-history-capture-20260922-r3';
+  let clanShopDomHistoryTimer=null;
+  let clanShopDomHistoryFingerprint='';
+
+  function clanShopDomPlayerId(row) {
+    if(!row)return '';
+    const nodes=[row,...row.querySelectorAll?.('*')||[]].slice(0,180);
+    for(const node of nodes){
+      for(const attr of [...(node?.attributes||[])]){
+        const name=String(attr.name||'').toLowerCase();
+        if(!/(player|user|member).*(id)|(^|-)id$/.test(name))continue;
+        const value=String(attr.value||'').trim();
+        const match=value.match(/(?:^|\D)(\d{5,20})(?:\D|$)/);
+        if(match)return match[1];
+      }
+      const href=String(node?.getAttribute?.('href')||'');
+      const match=href.match(/(?:player_id|playerId|user_id|userId|member_id|memberId)[=/:](\d{5,20})/i);
+      if(match)return match[1];
+    }
+    return '';
+  }
+
+  function clanShopDomLotTypeAndName(text) {
+    const value=String(text||'').replace(/\s+/g,' ').trim();
+    const idol=value.match(/(?:Хомячий\s+Шар\s+Идолов(?:\s*x\s*\d+)?|Hamster\s+Idol\s+Ball(?:\s*x\s*\d+)?)/i);
+    if(idol)return {item_type:'idol_orbs',lot_name:idol[0]};
+    const business=value.match(/(?:Случайный\s+S\s*\+\s*Бизнес|Random\s+S\s*\+\s*Business)/i);
+    if(business)return {item_type:'splus_businesses',lot_name:business[0]};
+    return null;
+  }
+
+  function clanShopDomHistoryRows() {
+    const body=document.body;
+    if(!body)return [];
+    const pageText=String(body.textContent||'');
+    if(!/(Показывать\s+только\s+лоты\s+с\s+лимитом|Название\s+лота|Clan\s+Shop|lot\s+name)/i.test(pageText))return [];
+    if(!/(Хомячий\s+Шар\s+Идолов|Случайный\s+S\s*\+\s*Бизнес|Hamster\s+Idol\s+Ball|Random\s+S\s*\+\s*Business)/i.test(pageText))return [];
+
+    const itemNodes=[...body.querySelectorAll('*')].filter(node=>{
+      if(!node||node.children?.length>12)return false;
+      const text=String(node.textContent||'');
+      return /(Хомячий\s+Шар\s+Идолов|Случайный\s+S\s*\+\s*Бизнес|Hamster\s+Idol\s+Ball|Random\s+S\s*\+\s*Business)/i.test(text);
+    }).slice(0,500);
+
+    const candidates=[];
+    const seen=new Set();
+    for(const leaf of itemNodes){
+      let node=leaf,best=null;
+      for(let depth=0;node&&node!==body&&depth<9;depth+=1,node=node.parentElement){
+        const text=String(node.innerText||node.textContent||'').replace(/\s+/g,' ').trim();
+        if(text.length>700)break;
+        if(/\b\d{1,2}[.\/-]\d{1,2}(?:[.\/-]\d{2,4})?\b/.test(text)&&/\b\d{1,2}:\d{2}(?::\d{2})?\b/.test(text)){
+          best=node;
+          break;
+        }
+      }
+      if(best&&!seen.has(best)){seen.add(best);candidates.push(best);}
+    }
+
+    const signatures=new Map();
+    const result=[];
+    for(const row of candidates){
+      const raw=String(row.innerText||row.textContent||'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').trim();
+      const oneLine=raw.replace(/\s*\n\s*/g,' ').replace(/\s+/g,' ').trim();
+      const lot=clanShopDomLotTypeAndName(oneLine);
+      if(!lot)continue;
+      const dateMatch=oneLine.match(/\b(\d{1,2}[.\/-]\d{1,2}(?:[.\/-]\d{2,4})?)\b/);
+      const timeMatch=oneLine.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
+      if(!dateMatch||!timeMatch)continue;
+      const purchasedAt=clanShopHistoryTimestamp({date:dateMatch[1],time:timeMatch[1]});
+      if(!purchasedAt)continue;
+
+      const lotPos=oneLine.toLowerCase().indexOf(lot.lot_name.toLowerCase());
+      const timeEnd=(timeMatch.index||0)+timeMatch[0].length;
+      let nickname=lotPos>timeEnd?oneLine.slice(timeEnd,lotPos).trim():'';
+      nickname=nickname
+        .replace(/^(?:Пользователь|User)\s*/i,'')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      if(!nickname){
+        const parts=raw.split(/\n+/).map(value=>value.replace(/\s+/g,' ').trim()).filter(Boolean);
+        const lotIndex=parts.findIndex(value=>clanShopDomLotTypeAndName(value));
+        const timeIndex=parts.findIndex(value=>/^\d{1,2}:\d{2}(?::\d{2})?$/.test(value));
+        if(lotIndex>timeIndex&&timeIndex>=0){
+          nickname=parts.slice(timeIndex+1,lotIndex).join(' ').trim();
+        }
+      }
+      if(!nickname||/^(?:Дата|Время|Пользователь|Название\s+лота|Date|Time|User|Lot\s+name)$/i.test(nickname))continue;
+
+      const playerId=clanShopDomPlayerId(row);
+      const signature=[
+        dateMatch[1],timeMatch[1],nickname,lot.item_type,lot.lot_name
+      ].join('|');
+      const occurrence=(signatures.get(signature)||0)+1;
+      signatures.set(signature,occurrence);
+      const explicitId=[...row.attributes||[]]
+        .map(attr=>String(attr.value||''))
+        .find(value=>/(?:history|transaction|purchase|event)[-_:]?[A-Za-z0-9_-]{4,}/i.test(value))||'';
+      const stable=explicitId||signature+'|'+occurrence;
+
+      result.push({
+        event_key:'dom:'+clanShopHistoryHash(stable),
+        purchased_at:purchasedAt,
+        buyer_player_id:playerId,
+        buyer_nickname:nickname,
+        lot_id:'',
+        item_type:lot.item_type,
+        lot_name:lot.lot_name,
+        source_path:'dom:clan-shop-history'
+      });
+    }
+    return result.slice(0,500);
+  }
+
+  async function scanClanShopDomHistory() {
+    if(!licenseState.allowed)return;
+    const rows=clanShopDomHistoryRows();
+    if(!rows.length)return;
+    const fingerprint=JSON.stringify(rows.map(row=>[row.event_key,row.buyer_player_id,row.item_type,row.purchased_at]));
+    if(fingerprint===clanShopDomHistoryFingerprint)return;
+    try{
+      const result=await licensedServerJson(CLAN_SHOP_FACT_API_BASE,'/clan-shop-events/submit',{rows},false,'clan-shop-dom-history');
+      clanShopDomHistoryFingerprint=fingerprint;
+      recordDiagnostic('clan-shop-dom-history',{
+        rows:rows.length,
+        accepted:Number(result?.accepted||0),
+        unresolved:Number(result?.unresolved||0)
+      });
+    }catch(error){
+      console.warn('[HK] Clan Shop DOM history sync failed',error);
+    }
+  }
+
+  function scheduleClanShopDomHistoryScan(delay=900) {
+    if(clanShopDomHistoryTimer)clearTimeout(clanShopDomHistoryTimer);
+    clanShopDomHistoryTimer=setTimeout(()=>{
+      clanShopDomHistoryTimer=null;
+      void scanClanShopDomHistory();
+    },delay);
+  }
+
+  function installClanShopDomHistoryCapture() {
+    if(window.__HK_CLAN_SHOP_DOM_HISTORY_CAPTURE__)return;
+    window.__HK_CLAN_SHOP_DOM_HISTORY_CAPTURE__=true;
+    const observer=new MutationObserver(()=>scheduleClanShopDomHistoryScan(900));
+    const start=()=>{
+      if(document.body){
+        observer.observe(document.body,{childList:true,subtree:true});
+        scheduleClanShopDomHistoryScan(1200);
+        setInterval(()=>{
+          if(document.visibilityState==='visible')scheduleClanShopDomHistoryScan(250);
+        },5000);
+      }else{
+        setTimeout(start,300);
+      }
+    };
+    start();
+  }
+
   function installNetworkCapture() {
     if (networkCaptureInstalled) return;
     if (typeof window.fetch !== 'function' || !window.XMLHttpRequest) throw new Error('Игровая сеть ещё не готова');
@@ -3241,6 +3402,7 @@
       return send.apply(this, args);
     };
     networkCaptureInstalled = true;
+    installClanShopDomHistoryCapture();
   }
 
   function pitState() {
