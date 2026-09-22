@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.23
-- current module: Businesses / Бизнесы — catalog r1 live visual/read-only check
-- current module file: audit/hk-stage2-08-businesses.md
-- current module status: CATALOG_R1_LIVE_CANDIDATE_USER_UI_CHECK_PENDING
+- userscript: 1.17.30
+- current module: Recipes / Рецепты — Stage 2.09 live verification
+- current module file: audit/hk-stage2-09-recipes.md
+- current module status: SOURCE_PREFLIGHT_PASS · STATIC_CURRENT_PASS · TECHNICAL_LIVE_VERIFY_PENDING · USER_BROWSER_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: LIVE PASS
@@ -85,6 +85,14 @@ Each module:
 - 2.05 Resources / Ресурсы — LIVE PASS
   - revision: `bureau-resources-live-20260920-r1`
   - no new patch required
+- 2.06 Buildings / Здания — LIVE PASS
+- 2.07 Explore / Исследование — LIVE PASS
+- 2.08 Businesses / Бизнесы — FUNCTIONAL CHECKPOINT 1.17.30
+  - Kokkaras rearrangement canon restored;
+  - 429 Game API guard PASS;
+  - collector activity lease PASS;
+  - vertical Businesses Runner PASS;
+  - catalog remains read-only;
 
 
 ## Pits donor source block
