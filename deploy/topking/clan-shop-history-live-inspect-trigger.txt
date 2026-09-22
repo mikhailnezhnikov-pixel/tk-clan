@@ -1,2 +1,2 @@
-inspect=clan-shop-v13-live-payload
-stamp=2026-09-22T13:37+09:00
+inspect=clan-shop-v14-live-payload
+stamp=2026-09-22T13:56+09:00
