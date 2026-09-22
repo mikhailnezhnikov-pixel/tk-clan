@@ -130,3 +130,21 @@ try:
     print("HISTORY_SOURCE_END")
 except Exception as e:
     print("HISTORY_SOURCE_ERROR",repr(e))
+
+
+try:
+    rows=[dict(r) for r in db.execute("""SELECT week_start,item_type,buyer_player_id,buyer_nickname,
+                                               COUNT(*) AS purchases,MAX(purchased_at) AS last_purchase,
+                                               MAX(captured_at) AS last_capture
+                                        FROM clan_shop_purchase_events
+                                        GROUP BY week_start,item_type,buyer_player_id,buyer_nickname
+                                        ORDER BY week_start DESC,last_purchase DESC""")]
+    print("PURCHASE_EVENTS_SUMMARY",json.dumps(rows,ensure_ascii=False))
+    recent=[dict(r) for r in db.execute("""SELECT event_key,purchased_at,week_start,buyer_player_id,buyer_nickname,
+                                                  lot_id,item_type,lot_name,source_path,captured_by,captured_at
+                                           FROM clan_shop_purchase_events
+                                           ORDER BY captured_at DESC,purchased_at DESC
+                                           LIMIT 80""")]
+    print("PURCHASE_EVENTS_RECENT",json.dumps(recent,ensure_ascii=False))
+except Exception as e:
+    print("PURCHASE_EVENTS_ERROR",repr(e))
