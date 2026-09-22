@@ -23,7 +23,7 @@ jobs:
           set -euo pipefail
           for f in assets/war/battle/*.js; do node --check "$f"; done
           grep -Fq 'TopKingBattleV4' assets/war/battle/battle-runtime-v4.js
-          grep -Fq "version:'4.0.6-distinct-fighter-states'" assets/war/battle/battle-runtime-v4.js
+          grep -Fq "version:'4.0.7-single-init'" assets/war/battle/battle-runtime-v4.js
           grep -Fq 'class BattleScene' assets/war/battle/BattleScene.js
           grep -Fq 'class Fighter' assets/war/battle/Fighter.js
           grep -Fq 'class BattleAnimator' assets/war/battle/BattleAnimator.js
@@ -38,6 +38,8 @@ jobs:
           grep -Fq 'battle-stage-v4-ready .battle-v2-loading{opacity:0' wars/index.html
           grep -Fq 'canvasHost.replaceChildren(this.app.canvas)' assets/war/battle/BattleScene.js
           grep -Fq 'PIXI.Texture.from(image)' assets/war/battle/BattleScene.js
+          grep -Fq 'if(state.initializing)return state.initializing' assets/war/battle/battle-runtime-v4.js
+          grep -Fq "explicit.includes('npc')" assets/war/battle/battle-runtime-v4.js
           grep -Fq "this.loadFighterSet('../assets/war/units/topking'" assets/war/battle/BattleScene.js
           grep -Fq "this.loadFighterSet('../assets/war/units/raider'" assets/war/battle/BattleScene.js
           grep -Fq "this.loadSet('../assets/war/units/bot','webp'" assets/war/battle/BattleScene.js
