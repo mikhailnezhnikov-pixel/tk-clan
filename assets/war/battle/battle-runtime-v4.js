@@ -20,6 +20,6 @@
     if(result.events.length)state.queue.enqueueMany(result.events);return true;
   }
   function destroy(){state.queue?.clear();state.scene?.destroy();state.adapter?.reset();state.scene=null;state.ready=false}
-  w.TopKingBattleV4={version:'4.0.5-bot-fighters',init,update,destroy};
+  w.TopKingBattleV4={version:'4.0.6-distinct-fighter-states',init,update,destroy};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>init().catch(console.error),{once:true});else init().catch(console.error);
 })(window);
