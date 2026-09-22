@@ -1,3 +1,3 @@
-trigger=clan-shop-passive-facts-r1
+trigger=clan-shop-player-facts-r2
 version=1.17.24
 timestamp=2026-09-22
