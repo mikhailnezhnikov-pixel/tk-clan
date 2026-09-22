@@ -108,3 +108,14 @@ try:
     print("CURRENT_PLAYER_LINKS",json.dumps(links,ensure_ascii=False))
 except Exception as e:
     print("CURRENT_PLAYER_LINKS_ERROR",repr(e))
+
+
+try:
+    selected_ids={"1083594259","1656402180","5112494832","552583086","5225915725","5262908393","275051195"}
+    participants=[
+        row for row in server.clan_shop_participants()
+        if str(row.get("player_id") or "") in selected_ids
+    ]
+    print("PARTICIPANTS_SELECTED",json.dumps(participants,ensure_ascii=False))
+except Exception as e:
+    print("PARTICIPANTS_SELECTED_ERROR",repr(e))
