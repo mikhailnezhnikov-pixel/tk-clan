@@ -6,7 +6,7 @@
     async init(onContact){
       const {PIXI}=this;this.app=new PIXI.Application();await this.app.init({resizeTo:this.host,backgroundAlpha:0,antialias:true,autoDensity:true,resolution:Math.min(devicePixelRatio||1,2)});if(this.canvasHost)this.canvasHost.replaceChildren(this.app.canvas);
       this.world=new PIXI.Container();this.overlay=new PIXI.Container();this.app.stage.addChild(this.world,this.overlay);this.buildArena();
-      const textures=await this.loadTextures();this.ours=new (CORE().Fighter)({PIXI,textures:textures.topking,side:'left',height:330,name:'Top King'});this.enemy=new (CORE().Fighter)({PIXI,textures:textures.raider,side:'right',height:330,name:'Opponent'});this.textureSets=textures;this.world.addChild(this.ours.container,this.enemy.container);
+      const textures=await this.loadTextures();this.ours=new (CORE().Fighter)({PIXI,gsap:this.gsap,textures:textures.topking,side:'left',height:330,name:'Top King'});this.enemy=new (CORE().Fighter)({PIXI,gsap:this.gsap,textures:textures.raider,side:'right',height:330,name:'Opponent'});this.textureSets=textures;this.world.addChild(this.ours.container,this.enemy.container);
       this.effects=new (CORE().EffectsManager)({PIXI,gsap:this.gsap,world:this.world,overlay:this.overlay});this.animator=new (CORE().BattleAnimator)({gsap:this.gsap,scene:this,effects:this.effects,onContact});this.ready=true;this.host.classList.add('battle-stage-v4','battle-stage-v4-ready');this.layout();window.addEventListener('resize',this.resizeHandler,{passive:true});
     }
     async loadTexture(url){
