@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.35
+// @version      1.17.36
+// @release-note Clan Shop и статистика клана теперь сохраняют настоящий числовой player_id участника; внутренний opaque member.id больше не подменяет игровой ID.
 // @release-note После 429 автообновления модулей не повторяются до конца cooldown; Game API переходит на адаптивный медленный темп и не создаёт новый burst после восстановления.
 // @release-note Пока HK Runner выполняет автоматизацию, серверный public collector ставится на lease-паузу и не использует игровой токен; после завершения lease снимается автоматически.
 // @release-note В окне «Перестановка бизнесов» прогресс снова вертикальный: полоса идёт слева сверху вниз, горизонтальная линия для Businesses отключена.
@@ -43,7 +44,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.35';
+  const BUILD_VERSION = '1.17.36';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -11548,7 +11549,7 @@
     const membersSource = Array.isArray(membersDocument?.clan_members) ? membersDocument.clan_members : [];
     const directPlayers = membersSource.map(member => {
       const nickname = clean(member.nickname || member.player_name || member.id || either('Неизвестный игрок','Unknown player'));
-      const memberId = clean(member.id ?? member.player_id ?? member.member_id ?? '');
+      const memberId = clean(member.player_id ?? member.member_id ?? member.id ?? ''); // clan-snapshot-numeric-player-id-20260923-r1
       const stats = (memberId && statsPlayersById.get(memberId)) || statsPlayersByNickname.get(nickname);
       const history = historyPlayers.get(nickname);
       const levels = {...(stats?.levels || history?.levels || {})};
