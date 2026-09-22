@@ -1,2 +1,2 @@
-inspect=clan-shop-duplicate-participants
-stamp=2026-09-23T00:12+09:00
+inspect=clan-shop-roster-raw-fields
+stamp=2026-09-23T00:15+09:00
