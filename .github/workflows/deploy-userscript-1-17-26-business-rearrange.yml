@@ -1,9 +1,9 @@
-name: Deploy Userscript 1.17.34 Safe Auto Routines
+name: Deploy Userscript 1.17.35 Auto Routines in Today
 
 on:
   push:
     paths:
-      - 'deploy/topking/userscript-1-17-34-auto-routines-safe-trigger.txt'
+      - 'deploy/topking/userscript-1-17-35-auto-routines-today-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -36,49 +36,42 @@ jobs:
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.33" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.34" /tmp/HamsterKingMobile.user.js
+          grep -Fq "auto-routines-safe-orchestrator-20260922-r2" /tmp/HamsterKingMobile.user.js
           grep -Fq "clan-shop-dom-history-capture-20260922-r3" /tmp/HamsterKingMobile.user.js
           grep -Fq "game-api-rate-guard-20260922-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "public-collector-activity-lease-20260922-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "businesses-kokkaras-donor-20260922-r1" /tmp/HamsterKingMobile.user.js
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/source.sha
-          python3 deploy/topking/patch_auto_routines_safe_1_17_34.py
+          python3 deploy/topking/patch_auto_routines_into_today_1_17_35.py
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.34" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.35" /tmp/HamsterKingMobile.user.js
+          grep -Fq "auto-routines-in-today-20260922-r3" /tmp/HamsterKingMobile.user.js
           grep -Fq "auto-routines-safe-orchestrator-20260922-r2" /tmp/HamsterKingMobile.user.js
-          grep -Fq "after.startedAt!==before.startedAt" /tmp/HamsterKingMobile.user.js
-          grep -Fq "if(result.status!=='done')" /tmp/HamsterKingMobile.user.js
-          grep -Fq "runnerActive||autoRoutineLeaseHold" /tmp/HamsterKingMobile.user.js
-          grep -Fq "hkRunner.running||autoRoutineLeaseHold" /tmp/HamsterKingMobile.user.js
-          grep -Fq "clan-shop-dom-history-capture-20260922-r3" /tmp/HamsterKingMobile.user.js
-          grep -Fq "module-live-cooldown-20260922-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq '<div id="hk-routines-content" class="hk-cardbox" style="margin-top:12px"></div>' /tmp/HamsterKingMobile.user.js
           python3 - <<'PY'
           from pathlib import Path
           s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
-          a=s.index('let autoRoutineRunning = false;')
-          b=s.index('function applyLanguage()',a)
-          block=s[a:b]
-          assert "completed+=1;\n        await sleep(250);" not in block
-          assert "if(result.status!=='done')" in block
-          assert "after.startedAt!==before.startedAt" in block
-          assert "autoRoutineAcquireCollectorLease" in block
-          assert "autoRoutineReleaseCollectorLease" in block
-          print('AUTO_ROUTINES_STATIC_PATCH=PASS')
+          assert "{page:'routines',ru:'Авто-рутины',en:'Auto routines'}" not in s
+          assert 'data-content="routines"' not in s
+          assert s.count('id="hk-routines-content"') == 1
+          assert "if (finalPage === 'daily') { renderDailyTasks(); renderAutoRoutines(); }" in s
+          assert "rememberedRaw==='routines'?'daily':rememberedRaw" in s
+          print('AUTO_ROUTINES_TODAY_STATIC=PASS')
           PY
 
       - name: Race-safe deploy userscript
         run: |
           set -euo pipefail
           source_sha="$(cat /tmp/source.sha)"
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.34.user.js
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.35.user.js
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "SOURCE_SHA='$source_sha' bash -s" <<'REMOTE'
           set -euo pipefail
           test "$(sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js | awk '{print $1}')" = "$SOURCE_SHA"
-          node --check /tmp/HamsterKingMobile.1.17.34.user.js
+          node --check /tmp/HamsterKingMobile.1.17.35.user.js
           stamp="$(date +%Y%m%d-%H%M%S)"
-          cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.34.$stamp"
-          install -m 0644 /tmp/HamsterKingMobile.1.17.34.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
-          printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.34\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+          cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.35.$stamp"
+          install -m 0644 /tmp/HamsterKingMobile.1.17.35.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+          printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.35\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
           systemctl daemon-reload
           systemctl restart hamsterking-license.service
           systemctl is-active --quiet hamsterking-license.service
@@ -87,55 +80,48 @@ jobs:
       - name: Verify public exact match
         run: |
           set -euo pipefail
-          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?auto-routines-safe=$(date +%s)" -o /tmp/public.js
+          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?auto-routines-today=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
-          grep -Fq "// @version      1.17.34" /tmp/public.js
+          grep -Fq "// @version      1.17.35" /tmp/public.js
+          grep -Fq "auto-routines-in-today-20260922-r3" /tmp/public.js
           grep -Fq "auto-routines-safe-orchestrator-20260922-r2" /tmp/public.js
-          grep -Fq "clan-shop-dom-history-capture-20260922-r3" /tmp/public.js
-          echo "PUBLIC_1_17_34_AUTO_ROUTINES_SAFE=PASS"
+          echo "PUBLIC_1_17_35_AUTO_ROUTINES_TODAY=PASS"
 
-      - name: Sync baseline and Stage 2.10 audit
+      - name: Sync baseline and audit
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           printf "%s\n" \
-            "USERSCRIPT_1_17_34_AUTO_ROUTINES_SAFE=PASS" \
-            "version=1.17.34" \
-            "base=1.17.33" \
-            "stage_success_requires_new_runner=PASS" \
-            "stage_success_requires_runner_done=PASS" \
-            "runner_error_stops_chain=PASS" \
-            "cancel_or_noop_stops_chain=PASS" \
-            "stop_blocks_next_stage=PASS" \
-            "auto_routine_collector_lease_continuous=PASS" \
-            "collector_heartbeat_between_stages=PASS" \
-            "clan_shop_dom_history_1_17_33=PRESERVED" \
+            "USERSCRIPT_1_17_35_AUTO_ROUTINES_TODAY=PASS" \
+            "version=1.17.35" \
+            "base=1.17.34" \
+            "standalone_routines_tab=REMOVED" \
+            "routines_embedded_in_today=PASS" \
+            "saved_routine_selection=PRESERVED" \
+            "legacy_nav_routines_migrates_to_daily=PASS" \
+            "safe_auto_routines_1_17_34=PRESERVED" \
+            "collector_lease=PRESERVED" \
             "adaptive_429_guard=PRESERVED" \
-            "kokkaras_business_canon=PRESERVED" \
+            "clan_shop_1_17_33=PRESERVED" \
             "ci_game_mutations=NONE" \
             "user_browser_check=PENDING" \
-            > audit/hk-userscript-1-17-34-auto-routines-safe-status.txt
+            > audit/hk-userscript-1-17-35-auto-routines-today-status.txt
           python3 - <<'PY'
           from pathlib import Path
           p=Path('audit/hk-stage2-10-auto-routines.md')
           s=p.read_text(encoding='utf-8')
-          s=s.replace(
-              '**SOURCE_PREFLIGHT_PASS · STATIC_BUG_CONFIRMED · PATCH_PREPARED · LIVE_DEPLOY_PENDING**',
-              '**SOURCE_PREFLIGHT_PASS · STATIC_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING**'
-          )
+          s += '\n## UI consolidation 1.17.35\n\n- User feedback: standalone Auto Routines overlaps Today and appears as a list of empty checkboxes.\n- Standalone navigation/page removed.\n- Existing Auto Routines block moved under Today.\n- Saved routine selections and fail-closed orchestration are preserved.\n- Legacy saved navModule=routines migrates to daily.\n- Technical live deployment: PASS; browser check remains pending.\n'
           p.write_text(s,encoding='utf-8')
           p=Path('audit/HK_STAGE2_CHECKPOINT.md')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace('- userscript: 1.17.31','- userscript: 1.17.34')
-          s=s.replace('- current module status: SOURCE_PREFLIGHT_PENDING','- current module status: SOURCE_PREFLIGHT_PASS · STATIC_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING')
+          s=p.read_text(encoding='utf-8').replace('- userscript: 1.17.34','- userscript: 1.17.35')
           p.write_text(s,encoding='utf-8')
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-34-auto-routines-safe-status.txt audit/hk-stage2-10-auto-routines.md audit/HK_STAGE2_CHECKPOINT.md
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-35-auto-routines-today-status.txt audit/hk-stage2-10-auto-routines.md audit/HK_STAGE2_CHECKPOINT.md
           if ! git diff --cached --quiet; then
-            git commit -m "fix: harden Auto Routines orchestration in userscript 1.17.34"
+            git commit -m "fix: move Auto Routines into Today in userscript 1.17.35"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
