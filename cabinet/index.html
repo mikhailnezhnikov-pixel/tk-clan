@@ -265,6 +265,8 @@
     .clanshop-actual-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border:1px solid rgba(255,255,255,.10);border-radius:999px;color:#8f98a5;background:rgba(255,255,255,.035);font-size:10px;font-weight:850;white-space:nowrap}
     .clanshop-actual-badge.has-actual{border-color:rgba(117,216,156,.30);color:#a8e9bf;background:rgba(65,177,103,.08)}
     .clanshop-actual-badge b{color:inherit;font-size:11px}
+    .clanshop-access-badge{display:inline-flex;align-items:center;padding:3px 7px;border:1px solid rgba(117,216,156,.30);border-radius:999px;color:#a8e9bf;background:rgba(65,177,103,.08);font-size:10px;font-weight:900;white-space:nowrap}
+    .clanshop-access-badge.no-access{border-color:rgba(255,255,255,.10);color:#8f98a5;background:rgba(255,255,255,.035)}
     .clanshop-player small{display:block;margin-top:2px;color:var(--muted)}
     .clanshop-player .clanshop-inline-history{margin-top:5px;color:#aeb7c3;font-size:11px;line-height:1.35}
     .clanshop-player .clanshop-inline-history b{display:inline;color:#ffe0a0;font-size:11px}
@@ -1639,14 +1641,38 @@
     return 'лотов';
   }
 
+  function clanShopCurrentWeekStart(){
+    const fromWindow=String(clanShopData?.window?.week_start||'').trim();
+    if(fromWindow)return fromWindow;
+    return clanShopLatestActualWeek();
+  }
+
+  function clanShopPreviousWeekStart(){
+    const current=clanShopCurrentWeekStart();
+    if(!current)return '';
+    const date=new Date(current+'T00:00:00Z');
+    if(Number.isNaN(date.getTime()))return '';
+    date.setUTCDate(date.getUTCDate()-7);
+    return date.toISOString().slice(0,10);
+  }
+
   function clanShopPlayerHtml(row){
-    const totals=clanShopPlayerActualTotals(row);
-    const factClass=totals.total>0?' has-actual':'';
-    const weekLabel=totals.week_start?clanShopWeekLabel(totals.week_start):'текущая неделя';
+    const currentWeek=clanShopCurrentWeekStart();
+    const previousWeek=clanShopPreviousWeekStart();
+    const current=clanShopPlayerActualTotals(row,currentWeek);
+    const previous=clanShopPlayerActualTotals(row,previousWeek);
+    const factClass=current.total>0?' has-actual':'';
+    const accessKnown=typeof row?.cabinet_access==='boolean';
+    const accessBadge=accessKnown
+      ? '<span class="clanshop-access-badge'+(row.cabinet_access?'':' no-access')+'">'+(row.cabinet_access?'ЛК':'без ЛК')+'</span>'
+      : '';
+    const previousLabel=previousWeek?clanShopWeekLabel(previousWeek):'прошлая неделя';
+    const currentLabel=currentWeek?clanShopWeekLabel(currentWeek):'текущая неделя';
     return '<div class="clanshop-player">'+
-      '<div class="clanshop-player-head"><strong>'+safe(row.nickname||'—')+'</strong>'+
-      '<span class="clanshop-actual-badge'+factClass+'">Факт: <b>'+totals.total+'</b> '+clanShopLotWord(totals.total)+'</span></div>'+
-      '<small class="clanshop-inline-history">'+safe(weekLabel)+': Бизнесы S+ <b>'+totals.splus_businesses+'</b> · Шары <b>'+totals.idol_orbs+'</b></small></div>';
+      '<div class="clanshop-player-head"><strong>'+safe(row.nickname||'—')+'</strong>'+accessBadge+
+      '<span class="clanshop-actual-badge'+factClass+'">Сейчас: <b>'+current.total+'</b> '+clanShopLotWord(current.total)+'</span></div>'+
+      '<small class="clanshop-inline-history">Прошлая неделя ('+safe(previousLabel)+'): S+ <b>'+previous.splus_businesses+'</b> · Шары <b>'+previous.idol_orbs+'</b>'+
+      ' · Текущая ('+safe(currentLabel)+'): S+ <b>'+current.splus_businesses+'</b> · Шары <b>'+current.idol_orbs+'</b></small></div>';
   }
 
   function renderClanShop(){
@@ -1787,7 +1813,10 @@
     }):null;
     const matchedName=String(matched?.nickname??matched?.name??matched?.player_name??'').trim();
     const numericOnly=/^\d+$/.test(rawName);
-    return {nickname:matchedName&&(!rawName||numericOnly)?matchedName:(rawName||matchedName||pid||'—'),unattributed:false};
+    const cabinetAccess=typeof row?.cabinet_access==='boolean'
+      ? Boolean(row.cabinet_access)
+      : (typeof matched?.cabinet_access==='boolean'?Boolean(matched.cabinet_access):null);
+    return {nickname:matchedName&&(!rawName||numericOnly)?matchedName:(rawName||matchedName||pid||'—'),unattributed:false,cabinetAccess};
   }
 
   function clanShopHistoryCoverageTotals(){
@@ -1829,6 +1858,7 @@
         nickname:identity.nickname,
         player_id:String(row.player_id||''),
         is_unattributed:identity.unattributed,
+        cabinet_access:identity.cabinetAccess,
         idol_orbs:0,
         splus_businesses:0,
         weeks:[]
@@ -1836,6 +1866,7 @@
       const item=grouped.get(key);
       if(!item.nickname||/^\d+$/.test(item.nickname))item.nickname=identity.nickname;
       item.is_unattributed=item.is_unattributed||identity.unattributed;
+      if(item.cabinet_access===null&&identity.cabinetAccess!==null)item.cabinet_access=identity.cabinetAccess;
       item.idol_orbs+=Number(row.idol_orbs||0);
       item.splus_businesses+=Number(row.splus_businesses||0);
       item.weeks.push(row);
@@ -1856,6 +1887,7 @@
       const total=row.idol_orbs+row.splus_businesses;
       html.push('<tr class="clanshop-history-player'+(row.is_unattributed?' is-unattributed':'')+'" data-clanshop-history-player="'+safe(row.player_key)+'">'+
         '<td><div class="clanshop-player"><div class="clanshop-player-head"><strong>'+safe(row.nickname)+'</strong>'+
+        (typeof row.cabinet_access==='boolean'?'<span class="clanshop-access-badge'+(row.cabinet_access?'':' no-access')+'">'+(row.cabinet_access?'ЛК':'без ЛК')+'</span>':'')+
         '<span class="clanshop-actual-badge'+(total>0?' has-actual':'')+'">'+(row.is_unattributed?'Не распределено: ':'Факт: ')+'<b>'+total+'</b> '+clanShopLotWord(total)+'</span></div></div></td>'+
         '<td>'+row.idol_orbs+'</td><td>'+row.splus_businesses+'</td><td><b>'+total+'</b></td></tr>');
       if(clanShopHistoryOpenPlayer===row.player_key){
