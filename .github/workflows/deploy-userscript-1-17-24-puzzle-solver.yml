@@ -1,4 +1,4 @@
-name: Deploy Userscript 1.17.24 Clan Shop Passive Facts
+name: Deploy Userscript 1.17.24 Clan Shop Player Facts
 
 on:
   push:
@@ -44,16 +44,16 @@ jobs:
           cmp -s /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           echo "LIVE_BASELINE_INPUT=PASS"
 
-      - name: Apply Clan Shop passive facts patch
+      - name: Apply Clan Shop player facts patch
         run: |
           set -euo pipefail
-          python3 -m py_compile deploy/topking/patch_clan_shop_passive_facts_1_17_24.py
-          python3 deploy/topking/patch_clan_shop_passive_facts_1_17_24.py
+          python3 -m py_compile deploy/topking/patch_clan_shop_player_me_facts_1_17_24.py
+          python3 deploy/topking/patch_clan_shop_player_me_facts_1_17_24.py
           node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "clan-shop-player-me-facts-20260922-r2" /tmp/HamsterKingMobile.user.js
           grep -Fq "clan-shop-passive-facts-20260922-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "native-play-performance-20260921-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "puzzle-solver-v3-embedded-20260921-r1" /tmp/HamsterKingMobile.user.js
-          echo "CLAN_SHOP_PASSIVE_FACTS_CANDIDATE=PASS"
+          echo "CLAN_SHOP_PLAYER_FACTS_CANDIDATE=PASS"
 
       - name: Static regression verification
         run: |
@@ -61,17 +61,20 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
-          block=s[s.index("const HK_CLAN_SHOP_PASSIVE_FACTS_REV"):s.index("async function loadShop()",s.index("const HK_CLAN_SHOP_PASSIVE_FACTS_REV"))]
+          start=s.index("const HK_CLAN_SHOP_PLAYER_ME_FACTS_REV")
+          end=s.index("async function loadShop()",start)
+          block=s[start:end]
           checks={
             'version_preserved':"// @version      1.17.24" in s,
+            'player_fact_marker':"clan-shop-player-me-facts-20260922-r2" in s,
             'passive_marker':"clan-shop-passive-facts-20260922-r1" in s,
+            'canonical_targets':"mf_clan_shoplot_lvl20_bonus_hballs" in block and "mf_clan_shoplot_random_business_r3_lvl_15" in block,
+            'player_me_only_source':"function clanShopPlayerFactRows(" in block,
+            'shop_not_required':"if (!playerDocument) return;" in block,
             'native_perf_preserved':"native-play-performance-20260921-r1" in s,
             'native_lock_preserved':"native-game-priority-no-bridge-race-20260921-r1" in s,
             'puzzle_preserved':"puzzle-solver-v3-embedded-20260921-r1" in s,
             'business_finalize_preserved':"businesses-finalize-single-snapshot-20260921-r1" in s,
-            'shop_view_hook':"scheduleClanShopActualFactsSync();" in s,
-            'fingerprint_dedupe':"fingerprint===clanShopFactLastFingerprint" in s,
-            'debounce_900ms':"},900);" in s,
             'no_game_player_request':"apiJson('/player/me'" not in block,
             'no_game_shop_request':"apiJson('/shop/view'" not in block,
           }
@@ -84,13 +87,13 @@ jobs:
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
-            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.24.clan-shop-passive-facts.user.js
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.24.clan-shop-player-facts.user.js
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             stamp="$(date +%Y%m%d-%H%M%S)"
-            node --check /tmp/HamsterKingMobile.1.17.24.clan-shop-passive-facts.user.js
+            node --check /tmp/HamsterKingMobile.1.17.24.clan-shop-player-facts.user.js
             cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.24.puzzle-solver.$stamp"
-            install -m 0644 /tmp/HamsterKingMobile.1.17.24.clan-shop-passive-facts.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            install -m 0644 /tmp/HamsterKingMobile.1.17.24.clan-shop-player-facts.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
           '
@@ -99,7 +102,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 30 \
-            "https://hk-license.89.125.1.71.sslip.io/panel.js?clan-shop-passive-facts=$(date +%s)" -o /tmp/public.js
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?clan-shop-player-facts=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
           grep -Fq "puzzle-solver-v3-embedded-20260921-r1" /tmp/public.js
@@ -107,19 +110,20 @@ jobs:
           grep -Fq "mf_fairlot_lights_out_sl(\\d+)_(true|false)" /tmp/public.js
           grep -Fq "mf_treasurelot_sword_\\d+_(\\d+)" /tmp/public.js
           grep -Fq "enemy_type_(01|02|03)_(\\d+)_sl(\\d+)" /tmp/public.js
-          echo "PUBLIC_CLAN_SHOP_PASSIVE_FACTS=PASS"
+          echo "PUBLIC_CLAN_SHOP_PLAYER_FACTS=PASS"
 
       - name: Sync verified baseline
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           {
-            echo "USERSCRIPT_1_17_24_CLAN_SHOP_PASSIVE_FACTS=PASS"
+            echo "USERSCRIPT_1_17_24_CLAN_SHOP_PLAYER_FACTS=PASS"
             echo "version=1.17.24"
             echo "core=core-20260921-r27-businesses-runner-canon"
             echo "puzzle_solver=puzzle-solver-v3-embedded-20260921-r1"
             echo "native_play_performance=PRESERVED"
-            echo "clan_shop_passive_facts=PASS"
+            echo "clan_shop_passive_facts=PRESERVED"
+            echo "clan_shop_player_facts=PASS"
             echo "background_scan_500ms=PASS"
             echo "initial_scan_300ms=PASS"
             echo "lights_out_3x3=PASS"
@@ -134,11 +138,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-24-puzzle-solver-status.txt
           if ! git diff --cached --quiet; then
-            git commit -m "fix: passively sync Clan Shop player facts"
+            git commit -m "fix: record Clan Shop players from player/me"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.24.clan-shop-passive-facts.user.js /tmp/public.js
+        run: rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/HamsterKingMobile.1.17.24.clan-shop-player-facts.user.js /tmp/public.js
