@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.26
+// @version      1.17.27
+// @release-note Перестановка бизнесов: бизнес-мутации ждут до 60 секунд; после тайм-аута remove не повторяется, а Game logic error оставляет запрещённый слот на месте и продолжает остальные перестановки.
 // @release-note Перестановка бизнесов: восстановлены видимые названия, сквозной канонический прогресс и безопасная сверка состояния после тайм-аутов без слепого отката.
 // @release-note Clan Shop теперь считывает фактическую историю общих покупок: кто именно купил шар идолов или S+ бизнес, по точному player_id.
 // @release-note Clan Shop фиксирует игрока по его личному /player/me: шары и S+ записываются по player_id даже если сам магазин не открывался.
@@ -33,7 +34,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.26';
+  const BUILD_VERSION = '1.17.27';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -2060,6 +2061,7 @@
   const HK_BUSINESSES_RUNNER_UI_REV='businesses-runner-canon-20260921-r1';
   const HK_BUSINESSES_FINALIZE_REV='businesses-finalize-single-snapshot-20260921-r1';
   const HK_BUSINESSES_RECOVERY_REV='businesses-rearrange-recovery-20260922-r1';
+  const HK_BUSINESSES_TIMEOUT_SAFE_REV='businesses-rearrange-timeout-safe-20260922-r1';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -5422,7 +5424,7 @@
     }finally{if(timer)clearTimeout(timer);try{detach?.();}catch(_){}}
   }
 
-  async function apiJsonCore(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3) {
+  async function apiJsonCore(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3, timeoutMs = 18000) {
     const maxRetries = retryNetwork === true ? GAME_REQUEST_RETRY_DELAYS_MS.length : retryNetwork === false ? 0 : Math.max(0, Math.trunc(Number(retryNetwork) || 0));
     let authRetryLeft = retryAuthorization ? 1 : 0;
     let attempt = 0, lockAttempt = 0;
@@ -5433,7 +5435,7 @@
       const started = performance.now();
       let response,text;
       try {
-        ({response,text}=await gameFetchText(request,`${apiBase}${path}`,{method,headers:{...apiHeaders},body:body == null ? undefined : JSON.stringify(body)},18000));
+        ({response,text}=await gameFetchText(request,`${apiBase}${path}`,{method,headers:{...apiHeaders},body:body == null ? undefined : JSON.stringify(body)},timeoutMs));
       } catch (error) {
         if(error?.name==='AbortError'||hkRunner.signal?.aborted)throw error;
         recordDiagnostic('game-request-network-error',{path,method,attempt:attempt+1,error:error?.message || error});
@@ -5592,13 +5594,13 @@
   const HK_MUTATION_GATE_ORDER_REV = 'mutation-gate-order-20260920-r1';
   runtime.mutationGate = hkMutationGate;
 
-  async function apiJson(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3) {
+  async function apiJson(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3, timeoutMs = 18000) {
     if (!hkIsMutationRequest(path, method)) {
-      return apiJsonCore(path, method, body, retryAuthorization, retryNetwork);
+      return apiJsonCore(path, method, body, retryAuthorization, retryNetwork, timeoutMs);
     }
     return hkMutationGate.run(
       path,
-      () => apiJsonCore(path, method, body, retryAuthorization, 0)
+      () => apiJsonCore(path, method, body, retryAuthorization, 0, timeoutMs)
     );
   }
 
@@ -10635,13 +10637,16 @@
     document.querySelector('#hk-business-run')?.addEventListener('click', executeBusinessPlan);
   }
 
+  const BUSINESS_MUTATION_TIMEOUT_MS=60000;
+  const BUSINESS_RECONCILE_ATTEMPTS=8;
+  const BUSINESS_RECONCILE_DELAY_MS=2500;
+
   async function businessAction(action, row, businessId = null, timer = null) {
     const payload = {business_building_id: row.buildingId, slot_index: Number(row.slot)};
     if (action === 'insert') { payload.business_id = businessId; payload.count = 1; }
     if (action === 'speedUp') payload.timer = Number(timer);
-    return apiJson(`/player/business/${action}`,'POST',payload,true,3);
+    return apiJson('/player/business/'+action,'POST',payload,true,0,BUSINESS_MUTATION_TIMEOUT_MS);
   }
-
   function findSlot(documentValue, buildingId, slot) {
     return normalizeLayout(documentValue).find(row => row.buildingId === buildingId && row.slot === Number(slot));
   }
@@ -10742,11 +10747,42 @@
     return error?.name==='HKNetworkTimeout'||/тайм-аут|timed out|timeout|failed to fetch|load failed|networkerror|network request failed|fetch failed/.test(text);
   }
 
+  function businessGameLogicError(error) {
+    const text=String(error?.message||error?.apiData?.description||error?.apiData?.message||'').toLowerCase();
+    return /game logic error|ошибка игровой логики/.test(text);
+  }
+
+  function businessUnknownMutationError(action,name,row,state) {
+    const error=new Error(either(
+      'Состояние операции «'+action+'» для «'+name+'» не подтверждено. Автооткат отключён, чтобы не конфликтовать с поздним ответом игры',
+      'The '+action+' operation for '+name+' is still uncertain. Automatic rollback is disabled to avoid conflicting with a late game response'
+    ));
+    error.name='HKBusinessMutationUncertain';
+    error.uncertainMutation=true;
+    error.businessAction=action;
+    error.businessId=String(row?.businessId||'');
+    error.buildingId=String(row?.buildingId||'');
+    error.slot=Number(row?.slot);
+    error.slotState=state||null;
+    return error;
+  }
+
   async function businessSlotSnapshot(row, reason) {
     playerDocument=await hkAuthoritativePlayerRead(reason);
     return findSlot(playerDocument,row.buildingId,row.slot);
   }
 
+  async function businessWaitForSlot(row,predicate,reasonBase,attempts=BUSINESS_RECONCILE_ATTEMPTS) {
+    let state=null;
+    const count=Math.max(1,Number(attempts)||1);
+    for(let attempt=0;attempt<count;attempt++){
+      if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+      state=await businessSlotSnapshot(row,reasonBase+'-'+(attempt+1));
+      if(predicate(state))return {state,matched:true,attempt:attempt+1};
+      if(attempt<count-1)await gameRetryDelay(BUSINESS_RECONCILE_DELAY_MS);
+    }
+    return {state,matched:false,attempt:count};
+  }
   function businessSlotConflict(state, expectedBusinessId, actionLabel) {
     const current=String(state?.businessId||'');
     if(!current||current===String(expectedBusinessId||''))return null;
@@ -10762,44 +10798,31 @@
     try{
       return await businessAction('remove',row);
     }catch(error){
+      recordDiagnostic('business-remove-error',{buildingId:row.buildingId,slot:row.slot,businessId:expected,name,errorName:error?.name||'',message:String(error?.message||error||''),status:Number(error?.httpStatus||0),apiData:error?.apiData||null});
+      if(businessGameLogicError(error)){
+        const state=await businessSlotSnapshot(row,'business-remove-game-logic-check');
+        if(!state?.businessId){
+          hkRunner.note(either('Игра вернула Game logic error, но слот уже пуст — снятие подтверждено','Game logic error returned, but the slot is already empty — removal confirmed'),'ok');
+          return {__hk_reconciled:true};
+        }
+        const conflict=businessSlotConflict(state,expected,either('Снятие','Removal'));
+        if(conflict)throw conflict;
+        hkRunner.note(either('Игра запретила снятие «'+name+'» — оставляю этот слот без изменений','The game rejected removal of '+name+' — leaving this slot unchanged'),'warn');
+        return {__hk_skipped:true,reason:'game_logic',state};
+      }
       if(!businessMutationUncertain(error))throw error;
-      hkRunner.note(either('Тайм-аут снятия «'+name+'»: сверяю фактический слот','Remove timeout for “'+name+'”: checking the actual slot'),'warn');
-      recordDiagnostic('business-remove-timeout-reconcile',{buildingId:row.buildingId,slot:row.slot,businessId:expected});
-      let state=await businessSlotSnapshot(row,'business-remove-timeout-check-1');
+      hkRunner.note(either('Тайм-аут снятия «'+name+'»: remove не повторяю, жду подтверждение игры','Remove timeout for '+name+': not retrying remove; waiting for game confirmation'),'warn');
+      const result=await businessWaitForSlot(row,state=>!state?.businessId||String(state?.businessId||'')!==expected,'business-remove-timeout-reconcile');
+      const state=result.state;
       if(!state?.businessId){
         hkRunner.note(either('Снятие подтверждено по состоянию игры','Removal confirmed from game state'),'ok');
         return {__hk_reconciled:true};
       }
       const conflict=businessSlotConflict(state,expected,either('Снятие','Removal'));
       if(conflict)throw conflict;
-      await gameRetryDelay(900);
-      state=await businessSlotSnapshot(row,'business-remove-timeout-check-2');
-      if(!state?.businessId){
-        hkRunner.note(either('Снятие подтверждено после ожидания','Removal confirmed after waiting'),'ok');
-        return {__hk_reconciled:true};
-      }
-      const secondConflict=businessSlotConflict(state,expected,either('Снятие','Removal'));
-      if(secondConflict)throw secondConflict;
-      hkRunner.note(either('Слот дважды подтверждён без изменений — повторяю снятие один раз','Slot was confirmed unchanged twice — retrying removal once'),'info');
-      try{
-        return await businessAction('remove',state);
-      }catch(retryError){
-        if(!businessMutationUncertain(retryError))throw retryError;
-        state=await businessSlotSnapshot(row,'business-remove-timeout-retry-check');
-        if(!state?.businessId){
-          hkRunner.note(either('Повторное снятие подтверждено по состоянию игры','Retried removal confirmed from game state'),'ok');
-          return {__hk_reconciled:true};
-        }
-        const retryConflict=businessSlotConflict(state,expected,either('Снятие','Removal'));
-        if(retryConflict)throw retryConflict;
-        throw new Error(either(
-          'Не удалось подтвердить снятие «'+name+'» после тайм-аута. Слот остался без изменений',
-          'Could not confirm removal of “'+name+'” after timeout. The slot remained unchanged'
-        ));
-      }
+      throw businessUnknownMutationError(either('снятие','remove'),name,row,state);
     }
   }
-
   async function businessInsertConfirmed(row, businessId, label='') {
     const expected=String(businessId||'');
     const name=label||businessDisplayName(expected);
@@ -10815,48 +10838,21 @@
       if(state?.businessId===expected)return state;
       state=await verify('business-insert-response-check');
       if(state?.businessId===expected)return state;
-      throw new Error(either(
-        'После вставки игра не подтвердила «'+name+'»',
-        'The game did not confirm “'+name+'” after insertion'
-      ));
+      throw new Error(either('После вставки игра не подтвердила «'+name+'»','The game did not confirm '+name+' after insertion'));
     }catch(error){
+      recordDiagnostic('business-insert-error',{buildingId:row.buildingId,slot:row.slot,businessId:expected,name,errorName:error?.name||'',message:String(error?.message||error||''),status:Number(error?.httpStatus||0),apiData:error?.apiData||null});
       if(!businessMutationUncertain(error))throw error;
-      hkRunner.note(either('Тайм-аут вставки «'+name+'»: сверяю фактический слот','Insert timeout for “'+name+'”: checking the actual slot'),'warn');
-      recordDiagnostic('business-insert-timeout-reconcile',{buildingId:row.buildingId,slot:row.slot,businessId:expected});
-      let state=await verify('business-insert-timeout-check-1');
+      hkRunner.note(either('Тайм-аут вставки «'+name+'»: insert не повторяю, жду подтверждение игры','Insert timeout for '+name+': not retrying insert; waiting for game confirmation'),'warn');
+      const result=await businessWaitForSlot(row,state=>String(state?.businessId||'')===expected||!!state?.businessId,'business-insert-timeout-reconcile');
+      const state=result.state;
       if(state?.businessId===expected){
         hkRunner.note(either('Вставка подтверждена по состоянию игры','Insertion confirmed from game state'),'ok');
         return state;
       }
-      await gameRetryDelay(900);
-      state=await verify('business-insert-timeout-check-2');
-      if(state?.businessId===expected){
-        hkRunner.note(either('Вставка подтверждена после ожидания','Insertion confirmed after waiting'),'ok');
-        return state;
-      }
-      hkRunner.note(either('Слот дважды подтверждён пустым — повторяю вставку один раз','Slot was confirmed empty twice — retrying insertion once'),'info');
-      try{
-        const response=await businessAction('insert',row,expected);
-        state=findSlot(response,row.buildingId,row.slot);
-        if(state?.businessId===expected)return state;
-        state=await verify('business-insert-timeout-retry-response');
-        if(state?.businessId===expected)return state;
-        throw new Error(either('Повторная вставка не подтверждена','Retried insertion was not confirmed'));
-      }catch(retryError){
-        if(!businessMutationUncertain(retryError))throw retryError;
-        state=await verify('business-insert-timeout-retry-check');
-        if(state?.businessId===expected){
-          hkRunner.note(either('Повторная вставка подтверждена по состоянию игры','Retried insertion confirmed from game state'),'ok');
-          return state;
-        }
-        throw new Error(either(
-          'Не удалось подтвердить вставку «'+name+'» после тайм-аута. Слот остался пустым',
-          'Could not confirm insertion of “'+name+'” after timeout. The slot remained empty'
-        ));
-      }
+      if(state?.businessId)throw businessSlotConflict(state,expected,either('Вставка','Insertion'));
+      throw businessUnknownMutationError(either('вставка','insert'),name,row,state);
     }
   }
-
   async function rollbackBusinessPlan(plan, inserted, removed) {
     const targetByKey=new Map((plan||[]).map(pair=>[pair[0]?.key,String(pair[1]||'')]));
     playerDocument=await hkAuthoritativePlayerRead('business-rollback-start');
@@ -10908,6 +10904,7 @@
     hkRunner.start({title:either('Перестановка бизнесов','Business rearrangement'),total:initialTotalWork,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
     businessBusy = true;
     const removed = [], inserted = [];
+    const skippedRows=new Map();
     let workDone=0,totalWork=initialTotalWork;
     try {
       log(either('Проверяю игровую сессию…', 'Checking game session…'));
@@ -10940,7 +10937,14 @@
         const removeName=businessDisplayName(row.businessId);
         hkRunner.setStep(either('Снимаю: ','Removing: ')+removeName+' · T'+(tier(row.businessId)??'—'),workDone,totalWork);
         log(either('Снимаю ','Removing ')+removeName+' · T'+(tier(row.businessId)??'—')+'…');
-        await businessRemoveConfirmed(row,row.businessId,removeName);
+        const removeResult=await businessRemoveConfirmed(row,row.businessId,removeName);
+        if(removeResult?.__hk_skipped){
+          const pair=plan.find(value=>value[0]?.key===row.key);
+          skippedRows.set(row.key,{row,id:String(pair?.[1]||''),reason:removeResult.reason||'game_logic'});
+          workDone+=2;
+          hkRunner.setStep(either('Пропущен: ','Skipped: ')+removeName,workDone,totalWork);
+          continue;
+        }
         removed.push(row);
         workDone+=1;
         hkRunner.setStep(either('Снят: ','Removed: ')+removeName,workDone,totalWork);
@@ -10948,6 +10952,7 @@
       for (const [row, id] of plan) {
         if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
         await hkRunner.waitIfPaused();
+        if(skippedRows.has(row.key))continue;
         if (!id) {
           hkRunner.setStep(either('Оставляю слот пустым: ','Leaving slot empty: ')+buildingSlotLabel(row),workDone,totalWork);
           log(either('Оставляю пустым: ','Leaving empty: ')+buildingSlotLabel(row));
@@ -10999,15 +11004,19 @@
       hkRunner.finish(either('Перестановка завершена','Rearrangement completed'));
       selectedSlots.clear(); selectedStock.clear(); preparedBusinessPlan = null; preparedBusinessPlanSource = '';
       log('Перестановка завершена', 'ok');
-      showVisualNotice(either('Перестановка бизнесов завершена', 'Business rearrangement completed'), either(
-        `Все переставленные бизнесы активированы: ${inserted.length}`,
-        `All rearranged businesses are active: ${inserted.length}`));
+      const skippedCount=skippedRows.size;
+      if(skippedCount)log(either('Пропущено бизнесов, которые игра не разрешила снять: '+skippedCount,'Businesses skipped because the game rejected removal: '+skippedCount),'warn');
+      showVisualNotice(either('Перестановка бизнесов завершена','Business rearrangement completed'),either('Активировано: '+inserted.length+(skippedCount?' · оставлено на месте: '+skippedCount:''),'Activated: '+inserted.length+(skippedCount?' · left unchanged: '+skippedCount:'')));
     } catch (error) {
       if (error?.name === 'AbortError') {
         hkRunner.reset();
         log(either('Перестановка остановлена. Текущую схему нужно перечитать.','Rearrangement stopped. Current layout must be reread.'),'warn');
       } else {
       hkRunner.fail(error);
+      if(error?.uncertainMutation||error?.name==='HKBusinessMutationUncertain'){
+        log(either('Неопределённое состояние операции: '+error.message+'. Автооткат не запускаю','Uncertain mutation state: '+error.message+'. Automatic rollback will not run'),'bad');
+        alert(either('Игра слишком долго не подтверждает последнюю операцию. Автоматический откат отключён, чтобы не конфликтовать с поздним ответом сервера. Обновите игру и проверьте текущую схему.','The game did not confirm the last operation in time. Automatic rollback is disabled to avoid a conflict with a late server response. Refresh the game and check the current layout.'));
+      } else {
       const changed = removed.length > 0 || inserted.length > 0;
       if (!changed) {
         log(`${either('Ошибка', 'Error')}: ${error.message}. ${either('Изменения не выполнялись', 'No changes were made')}`, 'bad');
@@ -11023,6 +11032,7 @@
           log(`Откат не завершён: ${rollback.message}`, 'bad');
           alert(either('Не удалось полностью вернуть исходную схему. Проверьте здания в игре.', 'Could not fully restore the original layout. Check the buildings in the game.'));
         }
+      }
       }
       }
     } finally {
