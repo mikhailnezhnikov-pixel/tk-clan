@@ -1,0 +1,13 @@
+USERSCRIPT_1_17_28_KOKKARAS_BUSINESSES_CANON=PASS
+version=1.17.28
+base=1.17.27
+donor=Kokkaras-5.3.22-ui-icons-pit-dim
+pair_atomic_sequence=remove-insert-speedUp-activate
+insert_count_field=REMOVED
+state_aware_retry=ONCE
+rollback_scope=CURRENT_PAIR_ONLY
+between_pairs_ms=500
+progress_scope=PAIRS
+business_runner_canon=PRESERVED
+t4_t6_guard=PRESERVED
+clan_shop_1_17_25=PRESERVED
