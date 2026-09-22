@@ -62,7 +62,7 @@
     sync(war,info){if(!this.ready)return;this.setTheme(info);this.setOpponentKind(this.opponentKind(war));this.layout()}
     layout(){if(!this.ready)return;const W=this.host.clientWidth||900,H=this.host.clientHeight||420,y=Math.max(300,H*.78);this.ours.height=Math.min(350,H*.72);this.enemy.height=this.ours.height;this.ours.applyTexture(this.ours.state);this.enemy.applyTexture(this.enemy.state);this.ours.setBase(Math.max(190,W*.27),y);this.enemy.setBase(Math.min(W-190,W*.73),y);this.floor.position.set(W*.5,y+8);this.floor.scale.set(Math.max(.85,W/950),1)}
     async play(event){if(this.ready&&this.animator)await this.animator.play(event)}
-    destroy(){window.removeEventListener('resize',this.resizeHandler);this.effects?.clear();this.app?.destroy(false,{children:true});this.ready=false}
+    destroy(){window.removeEventListener('resize',this.resizeHandler);this.animator?.destroy();this.effects?.clear();this.app?.destroy(false,{children:true});this.ready=false}
   }
   w.TopKingBattleCore=w.TopKingBattleCore||{};
   w.TopKingBattleCore.BattleScene=BattleScene;
