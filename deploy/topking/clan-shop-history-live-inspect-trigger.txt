@@ -1,2 +1,2 @@
-inspect=clan-shop-v16-purchase-events-after-relogin
-stamp=2026-09-22T20:51+09:00
+inspect=clan-shop-v16-purchase-events-after-history-open
+stamp=2026-09-22T22:24+09:00
