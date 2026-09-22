@@ -89,23 +89,15 @@ old = '''        participant=by_player_id.get(pid)
         ) or (
             str(linked.get("display_name") or "").strip() if linked else ""
         ) or (
-            str(participant.get("nickname") or "").strip() if participant else ""
-        ) or full_snapshot_nickname_by_player_id.get(pid,"") \
-          or latest_nickname_by_player_id.get(pid,"") \
-          or pid
 '''
 new = '''        participant=by_player_id.get(pid)
         linked=linked_identities.get(pid)
         nickname=(
             str(linked.get("display_name") or "").strip() if linked else ""
         ) or (
-            str(participant.get("nickname") or "").strip() if participant else ""
-        ) or full_snapshot_nickname_by_player_id.get(pid,"") \
-          or latest_nickname_by_player_id.get(pid,"") \
-          or pid
 '''
 if old not in s:
-    raise SystemExit("history V11 nickname block missing")
+    raise SystemExit("history V11 nickname prefix missing")
 s = s.replace(old, new, 1)
 
 old = '''            "identity_source":"license_player_id" if licensed and licensed.get("display_name") else (
