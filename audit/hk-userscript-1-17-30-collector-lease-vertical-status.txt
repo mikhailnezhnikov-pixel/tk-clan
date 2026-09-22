@@ -1,0 +1,14 @@
+USERSCRIPT_1_17_30_COLLECTOR_LEASE_VERTICAL=PASS
+version=1.17.30
+base=1.17.29
+collector_activity_endpoint=PASS
+collector_paused_during_transition_lease=PASS
+collector_checks_lease_before_game_api=PASS
+runner_activity_lease_ttl_seconds=90
+runner_activity_heartbeat_seconds=20
+transition_pause_seconds=1800
+business_progress_orientation=VERTICAL
+horizontal_business_progress=DISABLED
+game_api_rate_guard=PRESERVED
+kokkaras_business_canon=PRESERVED
+clan_shop_1_17_25=PRESERVED
