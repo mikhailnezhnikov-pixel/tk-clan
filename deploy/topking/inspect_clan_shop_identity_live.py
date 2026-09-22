@@ -88,3 +88,23 @@ try:
     print("TWO_WEEK_PLAYER_ROWS",json.dumps(rows,ensure_ascii=False))
 except Exception as e:
     print("TWO_WEEK_PLAYER_ROWS_ERROR",repr(e))
+
+
+try:
+    current_ids=[str(r["player_id"]) for r in db.execute("""SELECT DISTINCT player_id FROM clan_shop_actual_players
+                                                            WHERE week_start='2026-09-21'""")]
+    links={}
+    if current_ids:
+        placeholders=",".join("?" for _ in current_ids)
+        q=f"""SELECT linked_player_id,note,first_name,username,active
+              FROM clan_members WHERE linked_player_id IN ({placeholders})"""
+        for row in db.execute(q,tuple(current_ids)):
+            links[str(row["linked_player_id"] or "")]={
+                "note":str(row["note"] or ""),
+                "first_name":str(row["first_name"] or ""),
+                "username":str(row["username"] or ""),
+                "active":int(row["active"] or 0),
+            }
+    print("CURRENT_PLAYER_LINKS",json.dumps(links,ensure_ascii=False))
+except Exception as e:
+    print("CURRENT_PLAYER_LINKS_ERROR",repr(e))
