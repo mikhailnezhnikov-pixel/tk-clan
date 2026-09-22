@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.33
+// @version      1.17.34
 // @release-note После 429 автообновления модулей не повторяются до конца cooldown; Game API переходит на адаптивный медленный темп и не создаёт новый burst после восстановления.
 // @release-note Пока HK Runner выполняет автоматизацию, серверный public collector ставится на lease-паузу и не использует игровой токен; после завершения lease снимается автоматически.
 // @release-note В окне «Перестановка бизнесов» прогресс снова вертикальный: полоса идёт слева сверху вниз, горизонтальная линия для Businesses отключена.
@@ -9,6 +9,7 @@
 // @release-note Перестановка бизнесов возвращена к закреплённому канону Kokkaras: один слот целиком (remove → insert → speedUp → activate), один state-aware retry, rollback только текущей пары, 500 мс между парами.
 // @release-note Перестановка бизнесов: бизнес-мутации ждут до 60 секунд; после тайм-аута состояние сверяется с /player/me.
 // @release-note Перестановка бизнесов: восстановлены видимые названия, сквозной канонический прогресс и безопасная сверка состояния после тайм-аутов без слепого отката.
+// @release-note Auto Routines теперь fail-closed: следующий этап запускается только после реального Runner=done; error/stop/cancel/no-op останавливают цепочку. Collector lease удерживается непрерывно на всю рутину.
 // @release-note Clan Shop дополнительно считывает видимые строки журнала покупок с экрана игры, если API-ответ не содержит удобной структуры истории.
 // @release-note Исправлен разбор истории Clan Shop: дата и время из отдельных колонок, user_id/user_name и дополнительные поля ответа игры.
 // @release-note Clan Shop теперь считывает фактическую историю общих покупок: кто именно купил шар идолов или S+ бизнес, по точному player_id.
@@ -41,7 +42,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.33';
+  const BUILD_VERSION = '1.17.34';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -175,6 +176,7 @@
   const PUBLIC_COLLECTOR_ACTIVITY_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-collector/activity';
   const PUBLIC_COLLECTOR_ACTIVITY_TTL_SECONDS = 90;
   const PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS = 20 * 1000;
+  let autoRoutineLeaseHold = false;
   const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2';
   const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
   const PUBLIC_SNAPSHOT_INTERVAL_MS = 3 * 60 * 60 * 1000;
@@ -858,6 +860,7 @@
   const HK_STAGE2J_BOSSES_REV = 'bosses-area-target-20260920-r2';
   const HK_REGULAR_FAIR_REV = 'regular-fair-ui-20260920-r1';
   const HK_AUTO_ROUTINES_REV = 'auto-routines-20260920-r1';
+  const HK_AUTO_ROUTINES_SAFE_REV = 'auto-routines-safe-orchestrator-20260922-r2';
   // HK_BUREAU_RESOURCES_LIVE_V1 bureau-resources-live-20260920-r1
   runtime.runner = hkRunner;
   runtime.legacyRunnerStage = HK_STAGE2_RUNNER_REV;
@@ -1201,9 +1204,11 @@
   }
 
   function notePublicCollectorRunnerActivity(state=hkRunner.state) {
-    const active=['running','paused','stopping'].includes(String(state?.status||''));
+    const runnerActive=['running','paused','stopping'].includes(String(state?.status||''));
+    const active=runnerActive||autoRoutineLeaseHold;
     if(active){
-      void syncPublicCollectorActivity(true,String(state?.title||'automation'),false);
+      const reason=autoRoutineLeaseHold ? 'auto-routine' : String(state?.title||'automation');
+      void syncPublicCollectorActivity(true,reason,false);
     }else if(publicCollectorActivityLastActive===true){
       void syncPublicCollectorActivity(false,String(state?.title||'idle'),true);
     }
@@ -12275,6 +12280,7 @@
   let autoRoutineRunning = false;
   let autoRoutineStop = false;
   let autoRoutineCurrent = '';
+  let autoRoutineLastResult = null;
 
   const AUTO_ROUTINE_ACTIONS = [
     {id:'daily',ru:'Сегодня — выбранные действия',en:'Today — selected actions',run:()=>runDailySelected()},
@@ -12319,7 +12325,14 @@
       '</div>'+
       '<p class="hk-muted">'+(autoRoutineRunning
         ? either('Текущий этап: ','Current stage: ')+escapeHtml(current?(language==='en'?current.en:current.ru):either('подготовка','preparing'))
-        : either('Выбрано этапов: ','Selected stages: ')+selectedCount)+'</p>';
+        : either('Выбрано этапов: ','Selected stages: ')+selectedCount)+'</p>'+
+      (autoRoutineLastResult
+        ? '<p class="hk-muted">'+escapeHtml(
+            (autoRoutineLastResult.status==='done'?either('Последний этап ✓ ','Last stage ✓ '):either('Последний результат: ','Last result: '))+
+            String(autoRoutineLastResult.label||'')+
+            (autoRoutineLastResult.message?' · '+String(autoRoutineLastResult.message):'')
+          )+'</p>'
+        : '');
 
     box.querySelectorAll('[data-routine-id]').forEach(input=>input.onchange=()=>{
       const next=autoRoutineSelection();
@@ -12339,43 +12352,170 @@
     renderAutoRoutines();
   }
 
+  function autoRoutineActionLabel(action) {
+    return language==='en' ? String(action?.en||action?.id||'stage') : String(action?.ru||action?.id||'этап');
+  }
+
+  function autoRoutineRunnerSnapshot() {
+    return {
+      status:String(hkRunner.state?.status||'idle'),
+      title:String(hkRunner.state?.title||''),
+      step:String(hkRunner.state?.step||''),
+      error:String(hkRunner.state?.error||''),
+      startedAt:Number(hkRunner.state?.startedAt||0),
+      done:Number(hkRunner.state?.done||0),
+      total:Number(hkRunner.state?.total||0),
+    };
+  }
+
+  function autoRoutineStageError(action,message,status='error') {
+    const label=autoRoutineActionLabel(action);
+    const error=new Error(label+': '+String(message||either('этап не завершён','stage did not complete')));
+    error.name='HKAutoRoutineStageError';
+    error.stageId=String(action?.id||'');
+    error.stageStatus=status;
+    return error;
+  }
+
+  async function autoRoutineRunStage(action) {
+    if(gameApiCooldownRemainingMs()>0){
+      const seconds=Math.max(1,Math.ceil(gameApiCooldownRemainingMs()/1000));
+      throw autoRoutineStageError(action,either(
+        'Game API на cooldown ещё '+seconds+' сек.',
+        'Game API cooldown has '+seconds+' sec. remaining'
+      ),'cooldown');
+    }
+
+    const before=autoRoutineRunnerSnapshot();
+    await action.run();
+
+    if(autoRoutineStop)return {status:'stopped',started:false,snapshot:autoRoutineRunnerSnapshot()};
+
+    while(hkRunner.running&&!autoRoutineStop)await sleep(150);
+    if(autoRoutineStop)return {status:'stopped',started:true,snapshot:autoRoutineRunnerSnapshot()};
+
+    const after=autoRoutineRunnerSnapshot();
+    const started=after.startedAt>0&&after.startedAt!==before.startedAt;
+    if(!started){
+      return {
+        status:'not-started',
+        started:false,
+        snapshot:after,
+        message:either(
+          'этап не запустился: отменено подтверждение, нет выбранных действий или не выполнены условия запуска',
+          'stage did not start: confirmation was cancelled, no actions are selected, or preconditions were not met'
+        )
+      };
+    }
+    if(after.status==='done')return {status:'done',started:true,snapshot:after};
+    if(after.status==='error'){
+      return {status:'error',started:true,snapshot:after,message:after.error||either('ошибка этапа','stage error')};
+    }
+    if(after.status==='idle'){
+      return {status:'stopped',started:true,snapshot:after,message:either('этап был остановлен','stage was stopped')};
+    }
+    return {
+      status:after.status||'unknown',
+      started:true,
+      snapshot:after,
+      message:after.error||after.step||either('неизвестный финальный статус этапа','unknown final stage status')
+    };
+  }
+
+  async function autoRoutineAcquireCollectorLease() {
+    autoRoutineLeaseHold=true;
+    if(!licenseState.publicCollectorAuthSync)return true;
+    const ok=await syncPublicCollectorActivity(true,'auto-routine',true);
+    if(ok)return true;
+    autoRoutineLeaseHold=false;
+    return false;
+  }
+
+  async function autoRoutineReleaseCollectorLease(reason='auto-routine-finished') {
+    autoRoutineLeaseHold=false;
+    if(licenseState.publicCollectorAuthSync)await syncPublicCollectorActivity(false,reason,true);
+  }
+
   async function runAutoRoutine() {
     if(!requireLicense()||autoRoutineRunning)return;
     if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
+    if(gameApiCooldownRemainingMs()>0){
+      const seconds=Math.max(1,Math.ceil(gameApiCooldownRemainingMs()/1000));
+      alert(either(
+        'Game API ещё на cooldown. Подождите '+seconds+' сек. перед запуском авто-рутины.',
+        'Game API is still cooling down. Wait '+seconds+' sec. before starting the auto routine.'
+      ));
+      return;
+    }
+
     const selection=autoRoutineSelection();
     const queue=AUTO_ROUTINE_ACTIONS.filter(row=>selection[row.id]);
     if(!queue.length)return;
     if(!confirm(either(
-      'Запустить авто-рутину из '+queue.length+' этапов?\n\nКаждый этап использует текущие настройки своего раздела. Необратимые операции сохраняют собственные подтверждения и лимиты.',
-      'Run an auto routine with '+queue.length+' stages?\n\nEach stage uses the current settings of its module. Irreversible operations keep their own confirmations and limits.'
+      'Запустить авто-рутину из '+queue.length+' этапов?\n\nСледующий этап начнётся только если предыдущий реально завершился успешно. Ошибка, Stop, отмена подтверждения или незапущенный этап остановят цепочку.',
+      'Run an auto routine with '+queue.length+' stages?\n\nThe next stage starts only after the previous stage actually completes successfully. Error, Stop, cancelled confirmation, or a stage that did not start will stop the sequence.'
     )))return;
 
     autoRoutineRunning=true;
     autoRoutineStop=false;
     autoRoutineCurrent='';
+    autoRoutineLastResult=null;
     renderAutoRoutines();
+
     let completed=0;
+    let leaseAcquired=false;
     try{
+      leaseAcquired=await autoRoutineAcquireCollectorLease();
+      if(!leaseAcquired)throw new Error(either(
+        'Не удалось поставить server collector на паузу. Авто-рутина не запущена.',
+        'Could not pause the server collector. Auto routine was not started.'
+      ));
+
       for(const action of queue){
         if(autoRoutineStop)break;
         if(hkRunner.running)throw new Error(either('Предыдущая задача ещё не завершена','The previous task is still running'));
+
         autoRoutineCurrent=action.id;
         renderAutoRoutines();
-        log(either('Авто-рутина: ','Auto routine: ')+(language==='en'?action.en:action.ru));
-        await action.run();
-        if(autoRoutineStop)break;
-        while(hkRunner.running&&!autoRoutineStop)await sleep(150);
-        if(autoRoutineStop)break;
+        const label=autoRoutineActionLabel(action);
+        log(either('Авто-рутина: ','Auto routine: ')+label);
+
+        const result=await autoRoutineRunStage(action);
+        autoRoutineLastResult={...result,actionId:action.id,label,at:Date.now()};
+        renderAutoRoutines();
+
+        if(result.status==='stopped'){
+          autoRoutineStop=true;
+          log(either('Авто-рутина остановлена на этапе: ','Auto routine stopped at stage: ')+label,'warn');
+          break;
+        }
+        if(result.status!=='done'){
+          throw autoRoutineStageError(action,result.message||result.status,result.status);
+        }
+
         completed+=1;
-        await sleep(250);
+        log(either('Этап подтверждён: ','Stage confirmed: ')+label,'ok');
+        if(completed<queue.length)await sleep(500);
       }
+
       log(autoRoutineStop
         ? either('Авто-рутина остановлена: завершено ','Auto routine stopped: completed ')+completed+'/'+queue.length
         : either('Авто-рутина завершена: ','Auto routine completed: ')+completed+'/'+queue.length,
         autoRoutineStop?'warn':'ok');
     }catch(error){
+      autoRoutineLastResult={
+        status:'error',
+        actionId:autoRoutineCurrent,
+        label:autoRoutineActionLabel(AUTO_ROUTINE_ACTIONS.find(row=>row.id===autoRoutineCurrent)),
+        message:String(error?.message||error),
+        at:Date.now()
+      };
       log(either('Авто-рутина остановлена ошибкой','Auto routine stopped by an error')+': '+(error?.message||error),'bad');
     }finally{
+      if(leaseAcquired||autoRoutineLeaseHold){
+        try{await autoRoutineReleaseCollectorLease(autoRoutineStop?'auto-routine-stopped':'auto-routine-finished');}
+        catch(error){recordDiagnostic('auto-routine-lease-release-error',{error:error?.message||error});}
+      }
       autoRoutineRunning=false;
       autoRoutineStop=false;
       autoRoutineCurrent='';
@@ -13283,7 +13423,7 @@
     setTimeout(() => hkGameBridge.discover(false), 1500);
     setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
     setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
-    setInterval(() => { if (hkRunner.running) void syncPublicCollectorActivity(true,String(hkRunner.state.title||'automation'),true); }, PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS);
+    setInterval(() => { if (hkRunner.running||autoRoutineLeaseHold) void syncPublicCollectorActivity(true,autoRoutineLeaseHold?'auto-routine':String(hkRunner.state.title||'automation'),true); }, PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS);
     recordDiagnostic('native-login-gate-open',{revision:'prelogin-zero-game-api-r1'});
   }
 
