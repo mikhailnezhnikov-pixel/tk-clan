@@ -1,1 +1,1 @@
-build verified transparent PNG fighter assets 2026-09-22 r5 decode-validate
+build verified transparent PNG fighter assets 2026-09-22 r6 verified-subchunks
