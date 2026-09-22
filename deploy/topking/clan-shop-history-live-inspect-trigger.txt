@@ -1,2 +1,2 @@
-inspect=verify-clan-shop-player-attribution-v10
+inspect=current-clan-shop-player-facts-r5
 stamp=2026-09-22
