@@ -1,2 +1,2 @@
-inspect=live-clan-shop-weekly-delta-v9-verify
+inspect=clan-shop-two-week-player-counters
 stamp=2026-09-22
