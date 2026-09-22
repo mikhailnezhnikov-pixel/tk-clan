@@ -1,0 +1,3 @@
+deploy=1.17.31-cooldown-adaptive
+base=1.17.30
+reason=module-refresh-spam-after-429
