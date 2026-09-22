@@ -1,2 +1,2 @@
-inspect=clan-shop-two-week-player-counters
+inspect=current-clan-shop-player-links
 stamp=2026-09-22
