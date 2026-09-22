@@ -1623,6 +1623,7 @@
   }
 
   function clanShopPlayerActualTotals(row,weekStart=clanShopLatestActualWeek()){
+    if(!weekStart)return {idol_orbs:0,splus_businesses:0,total:0,week_start:''};
     const rows=Array.isArray(clanShopHistory)?clanShopHistory:[];
     const playerId=String(row?.player_id||'');
     const playerKey=String(row?.player_key||'');
