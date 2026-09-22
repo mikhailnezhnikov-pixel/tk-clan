@@ -148,3 +148,22 @@ try:
     print("PURCHASE_EVENTS_RECENT",json.dumps(recent,ensure_ascii=False))
 except Exception as e:
     print("PURCHASE_EVENTS_ERROR",repr(e))
+
+
+try:
+    all_participants=server.clan_shop_participants()
+    print("PARTICIPANTS_ALL_SUMMARY",json.dumps({
+        "count":len(all_participants),
+        "unique_player_ids":len({str(r.get("player_id") or "") for r in all_participants if str(r.get("player_id") or "")}),
+        "unique_player_keys":len({str(r.get("player_key") or "") for r in all_participants if str(r.get("player_key") or "")}),
+        "unique_nicknames_casefold":len({str(r.get("nickname") or "").strip().casefold() for r in all_participants if str(r.get("nickname") or "").strip()}),
+    },ensure_ascii=False))
+    print("PARTICIPANTS_ALL",json.dumps(all_participants,ensure_ascii=False))
+    source=open(server_path,encoding="utf-8").read()
+    a=source.index("def clan_shop_participants() -> list[dict]:")
+    b=source.index("\ndef ",a+1)
+    print("PARTICIPANTS_SOURCE_BEGIN")
+    print(source[a:b])
+    print("PARTICIPANTS_SOURCE_END")
+except Exception as e:
+    print("PARTICIPANTS_ALL_ERROR",repr(e))
