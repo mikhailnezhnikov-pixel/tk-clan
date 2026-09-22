@@ -1,4 +1,4 @@
-name: Deploy Clan Shop Cabinet Access V14
+name: Deploy Clan Shop Access Participants V15
 
 on:
   push:
@@ -28,28 +28,26 @@ jobs:
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
-          python3 deploy/topking/patch_clan_shop_cabinet_access_v14.py /tmp/server.py
+          python3 deploy/topking/patch_clan_shop_access_participants_v15.py /tmp/server.py
           python3 -m py_compile /tmp/server.py
-          grep -Fq "CLAN_SHOP_CABINET_ACCESS_V14" /tmp/server.py
+          grep -Fq "CLAN_SHOP_ACCESS_PARTICIPANTS_V15" /tmp/server.py
           python3 - <<'PY'
           from pathlib import Path
           s=Path('/tmp/server.py').read_text(encoding='utf-8')
-          assert 'def clan_shop_cabinet_access_identities()' in s
-          a=s.index('def clan_shop_history_payload() -> dict:')
-          b=s.index('\ndef clan_shop_publication_text',a)
+          a=s.index('def clan_shop_participants() -> list[dict]:')
+          b=s.index('\ndef ',a+1)
           h=s[a:b]
-          assert 'access_identities=clan_shop_cabinet_access_identities()' in h
-          assert '"identity_source":"cabinet_access" if access else' in h
-          assert '"cabinet_access":bool(access)' in h
-          assert 'key=(week,"id:"+pid)' in h
-          print('V14_STATIC_CHECK=PASS')
+          assert 'for player_id, access in access_identities.items()' in h
+          assert '"identity_source":"cabinet_access"' in h
+          assert '"cabinet_access":True' in h
+          print('V15_STATIC_CHECK=PASS')
           PY
 
       - name: Deploy server
         run: |
           set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.clan-shop-v14.py
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -e; stamp=$(date +%Y%m%d-%H%M%S); cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.clan-shop-v14.$stamp; install -m 0644 /tmp/server.clan-shop-v14.py /opt/hamsterking-license/server.py; python3 -m py_compile /opt/hamsterking-license/server.py; systemctl restart hamsterking-license.service; systemctl is-active --quiet hamsterking-license.service'
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.clan-shop-v15.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -e; stamp=$(date +%Y%m%d-%H%M%S); cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.clan-shop-v15.$stamp; install -m 0644 /tmp/server.clan-shop-v15.py /opt/hamsterking-license/server.py; python3 -m py_compile /opt/hamsterking-license/server.py; systemctl restart hamsterking-license.service; systemctl is-active --quiet hamsterking-license.service'
 
       - name: Verify service
         run: |
@@ -57,7 +55,7 @@ jobs:
           sleep 2
           curl -fsS --retry 4 --retry-delay 1 https://hk-license.89.125.1.71.sslip.io/health -o /tmp/health.json
           python3 -c "import json; d=json.load(open('/tmp/health.json')); assert d.get('ok') is True"
-          echo "CLAN_SHOP_CABINET_ACCESS_V14=PASS"
+          echo "CLAN_SHOP_ACCESS_PARTICIPANTS_V15=PASS"
 
       - name: Cleanup
         if: always()
