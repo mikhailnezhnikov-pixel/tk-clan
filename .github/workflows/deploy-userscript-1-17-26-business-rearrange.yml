@@ -1,9 +1,9 @@
-name: Deploy Userscript 1.17.30 Collector Lease Vertical Businesses
+name: Verify Userscript 1.17.30 Collector Lease Vertical Businesses
 
 on:
   push:
     paths:
-      - 'deploy/topking/userscript-1-17-30-collector-lease-vertical-trigger.txt'
+      - 'deploy/topking/verify-userscript-1-17-30-collector-lease-vertical-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -31,118 +31,35 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Validate repo candidates
+      - name: Verify current live installation
         run: |
           set -euo pipefail
-          cp deploy/topking/HamsterKingMobile.1.17.30.activity-vertical.candidate.user.js /tmp/HamsterKingMobile.user.js
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          python3 -m py_compile deploy/topking/public_collector.py deploy/topking/patch_public_collector_activity_lease_r1.py
           grep -Fq "// @version      1.17.30" /tmp/HamsterKingMobile.user.js
           grep -Fq "public-collector-activity-lease-20260922-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "businesses-runner-vertical-20260922-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "game-api-rate-guard-20260922-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "businesses-kokkaras-donor-20260922-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "clan-shop-purchase-history-capture-20260922-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq 'REV = "public-server-collector-20260922-r6-activity-lease"' deploy/topking/public_collector.py
-          grep -Fq 'def _active_automation_lease()' deploy/topking/public_collector.py
-
-      - name: Fetch fresh live and build server candidate
-        run: |
-          set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.user.js
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/public_collector.py /tmp/live.collector.py
-          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-source.sha
-          sha256sum /tmp/live.user.js | awk '{print $1}' > /tmp/userscript-source.sha
-          sha256sum /tmp/live.collector.py | awk '{print $1}' > /tmp/collector-source.sha
-          node --check /tmp/live.user.js
-          python3 -m py_compile /tmp/server.py /tmp/live.collector.py
-          grep -Fq "// @version      1.17.29" /tmp/live.user.js
-          grep -Fq "game-api-rate-guard-20260922-r1" /tmp/live.user.js
-          grep -Fq "PUBLIC_COLLECTOR_AUTH_HEARTBEAT_R1" /tmp/server.py
-          grep -Fq "public-server-collector-20260921-r5-bootstrap-self-heal" /tmp/live.collector.py
-          cmp -s /tmp/live.user.js baseline/topking/HamsterKingMobile.current.user.js
-          python3 deploy/topking/patch_public_collector_activity_lease_r1.py /tmp/server.py
-          python3 -m py_compile /tmp/server.py
-          grep -Fq "PUBLIC_COLLECTOR_ACTIVITY_LEASE_R1" /tmp/server.py
-          grep -Fq 'path == "/api/v1/public-collector/activity"' /tmp/server.py
-          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-candidate.sha
-          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/userscript-candidate.sha
-          sha256sum deploy/topking/public_collector.py | awk '{print $1}' > /tmp/collector-candidate.sha
-
-      - name: Upload candidates
-        run: |
-          set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.activity-lease-r1.py
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.30.user.js
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new deploy/topking/public_collector.py root@89.125.1.71:/tmp/public_collector.r6.py
-
-      - name: Race-safe install and immediate transition lease
-        run: |
-          set -euo pipefail
-          server_source="$(cat /tmp/server-source.sha)"
-          user_source="$(cat /tmp/userscript-source.sha)"
-          collector_source="$(cat /tmp/collector-source.sha)"
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "SERVER_SOURCE='$server_source' USER_SOURCE='$user_source' COLLECTOR_SOURCE='$collector_source' bash -s" <<'REMOTE'
-          set -euo pipefail
-          test "$(sha256sum /opt/hamsterking-license/server.py | awk '{print $1}')" = "$SERVER_SOURCE"
-          test "$(sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js | awk '{print $1}')" = "$USER_SOURCE"
-          test "$(sha256sum /opt/hamsterking-license/public_collector.py | awk '{print $1}')" = "$COLLECTOR_SOURCE"
-          python3 -m py_compile /tmp/server.activity-lease-r1.py /tmp/public_collector.r6.py
-          node --check /tmp/HamsterKingMobile.1.17.30.user.js
-          stamp="$(date +%Y%m%d-%H%M%S)"
-          systemctl stop hamsterking-public-war.service hamsterking-public-collector.service 2>/dev/null || true
-          cp -a /opt/hamsterking-license/server.py "/opt/hamsterking-license/server.py.bak.activity-lease.$stamp"
-          cp -a /opt/hamsterking-license/public_collector.py "/opt/hamsterking-license/public_collector.py.bak.activity-lease.$stamp"
-          cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.30.$stamp"
-          install -m 0644 /tmp/server.activity-lease-r1.py /opt/hamsterking-license/server.py
-          install -m 0755 /tmp/public_collector.r6.py /opt/hamsterking-license/public_collector.py
-          install -m 0644 /tmp/HamsterKingMobile.1.17.30.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
-          python3 - <<'PY'
-          import json,time,os
-          path='/var/lib/hamsterking-license/public-collector-activity.json'
-          tmp=path+'.tmp'
-          now=int(time.time())
-          with open(tmp,'w',encoding='utf-8') as f:
-              json.dump({'active':True,'player_sha256':'','lease_until':now+1800,'updated_at':now,'reason':'deploy-transition-active-run'},f,separators=(',',':'))
-              f.write('\n')
-          os.chmod(tmp,0o600)
-          os.replace(tmp,path)
-          PY
-          systemctl daemon-reload
-          systemctl restart hamsterking-license.service
-          systemctl is-active --quiet hamsterking-license.service
-          systemctl is-active --quiet hamsterking-public-war.timer
-          systemctl is-active --quiet hamsterking-public-collector.timer
-          REMOTE
-
-      - name: Verify live and public exact candidate
-        run: |
-          set -euo pipefail
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             python3 -m py_compile /opt/hamsterking-license/server.py /opt/hamsterking-license/public_collector.py
-            node --check /opt/hamsterking-license/HamsterKingMobile.user.js
             grep -Fq PUBLIC_COLLECTOR_ACTIVITY_LEASE_R1 /opt/hamsterking-license/server.py
             grep -Fq "public-server-collector-20260922-r6-activity-lease" /opt/hamsterking-license/public_collector.py
-            grep -Fq "// @version      1.17.30" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "public-collector-activity-lease-20260922-r1" /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "businesses-runner-vertical-20260922-r1" /opt/hamsterking-license/HamsterKingMobile.user.js
-            python3 - <<'PY'
-          import json,time
-          p='/var/lib/hamsterking-license/public-collector-activity.json'
-          d=json.load(open(p,encoding='utf-8'))
-          assert d.get('active') is True
-          assert int(d.get('lease_until') or 0)>int(time.time())
-          print('transition_lease=PASS')
-          PY
+            python3 -c "import json,time; d=json.load(open('/var/lib/hamsterking-license/public-collector-activity.json',encoding='utf-8')); assert d.get('active') is True; assert int(d.get('lease_until') or 0)>int(time.time()); print('transition_lease=PASS')"
+            out="$(python3 /opt/hamsterking-license/public_collector.py war 2>&1)"
+            printf "%s\n" "$out"
+            printf "%s" "$out" | grep -Fq "paused:"
+            systemctl is-active --quiet hamsterking-license.service
+            systemctl is-active --quiet hamsterking-public-war.timer
+            systemctl is-active --quiet hamsterking-public-collector.timer
           '
-          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?activity-vertical=$(date +%s)" -o /tmp/public.js
+          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?verify-1-17-30=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
-          grep -Fq "// @version      1.17.30" /tmp/public.js
-          grep -Fq "businesses-runner-vertical-20260922-r1" /tmp/public.js
-          echo "PUBLIC_1_17_30_ACTIVITY_VERTICAL=PASS"
+          cmp -s /tmp/HamsterKingMobile.user.js deploy/topking/HamsterKingMobile.1.17.30.activity-vertical.candidate.user.js
+          echo "LIVE_1_17_30_COLLECTOR_LEASE_VERTICAL=PASS"
 
       - name: Sync baseline and audit
         run: |
@@ -153,6 +70,7 @@ jobs:
             "version=1.17.30" \
             "base=1.17.29" \
             "collector_activity_endpoint=PASS" \
+            "collector_paused_during_transition_lease=PASS" \
             "collector_checks_lease_before_game_api=PASS" \
             "runner_activity_lease_ttl_seconds=90" \
             "runner_activity_heartbeat_seconds=20" \
@@ -167,7 +85,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-30-collector-lease-vertical-status.txt
           if ! git diff --cached --quiet; then
-            git commit -m "fix: isolate collector during HK automation and restore vertical Businesses progress"
+            git commit -m "fix: verify collector isolation and vertical Businesses progress in 1.17.30"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
