@@ -50,6 +50,9 @@ jobs:
           test -s assets/war/units/bot/idle.webp
           test -s assets/war/units/bot/attack.webp
           test -s assets/war/units/bot/hit.webp
+          ! cmp -s assets/war/units/topking/attack.webp assets/war/units/topking/hit.webp
+          ! cmp -s assets/war/units/raider/attack.webp assets/war/units/raider/hit.webp
+          ! cmp -s assets/war/units/bot/attack.webp assets/war/units/bot/hit.webp
           grep -Fq 'this.sprite.visible=false' assets/war/battle/Fighter.js
           if grep -Fq 'battle-engine-v2.js?v=' wars/index.html; then
             echo 'Legacy battle engine still wired into wars page' >&2
