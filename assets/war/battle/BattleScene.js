@@ -53,7 +53,13 @@
     }
     setOpponentKind(kind){this.kind=kind==='bot'?'bot':'clan';if(this.enemy&&this.textureSets)this.enemy.setTextures(this.kind==='bot'?this.textureSets.bot:this.textureSets.raider)}
     setTheme(info){const raw=String(info?.accent||'#ef4940').replace('#',''),n=parseInt(raw,16);this.accent=Number.isFinite(n)?n:0xef4940}
-    sync(war,info){if(!this.ready)return;this.setTheme(info);const name=String(war?.opponent||'').toLowerCase();this.setOpponentKind(/bot|бот|boss|босс/.test(name)?'bot':'clan');this.layout()}
+    opponentKind(war){
+      const explicit=String(war?.opponent_type||war?.enemy_type||war?.kind||'').trim().toLowerCase();
+      if(explicit.includes('bot')||explicit.includes('boss')||explicit.includes('npc'))return 'bot';
+      const name=String(war?.opponent||'').trim().toLowerCase();
+      return /(\bбот\b|\bbot\b|\bboss\b|\bnpc\b|рейд|raid|страж|guardian|robot|drone)/i.test(name)?'bot':'clan';
+    }
+    sync(war,info){if(!this.ready)return;this.setTheme(info);this.setOpponentKind(this.opponentKind(war));this.layout()}
     layout(){if(!this.ready)return;const W=this.host.clientWidth||900,H=this.host.clientHeight||420,y=Math.max(300,H*.78);this.ours.height=Math.min(350,H*.72);this.enemy.height=this.ours.height;this.ours.applyTexture(this.ours.state);this.enemy.applyTexture(this.enemy.state);this.ours.setBase(Math.max(190,W*.27),y);this.enemy.setBase(Math.min(W-190,W*.73),y);this.floor.position.set(W*.5,y+8);this.floor.scale.set(Math.max(.85,W/950),1)}
     async play(event){if(this.ready&&this.animator)await this.animator.play(event)}
     destroy(){window.removeEventListener('resize',this.resizeHandler);this.effects?.clear();this.app?.destroy(false,{children:true});this.ready=false}
