@@ -1,2 +1,2 @@
-inspect=clan-shop-identity-schema
-stamp=2026-09-21-r2
+inspect=clan-shop-access-registry-v14
+stamp=2026-09-22T13:45+09:00
