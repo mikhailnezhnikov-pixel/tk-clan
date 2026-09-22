@@ -1,0 +1,13 @@
+USERSCRIPT_1_17_31_COOLDOWN_ADAPTIVE=PASS
+version=1.17.31
+base=1.17.30
+game_api_base_gap_ms=2500
+game_api_post_429_gap_ms=5000
+game_api_post_429_slow_window_ms=900000
+module_auto_refresh_during_cooldown=BLOCKED
+module_rate_error_log_spam=REMOVED
+recipes_cooldown_preflight=PASS
+bureau_cooldown_preflight=PASS
+collector_activity_lease=PRESERVED
+kokkaras_business_canon=PRESERVED
+clan_shop_1_17_25=PRESERVED

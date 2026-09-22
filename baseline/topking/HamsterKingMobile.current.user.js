@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.30
+// @version      1.17.31
+// @release-note После 429 автообновления модулей не повторяются до конца cooldown; Game API переходит на адаптивный медленный темп и не создаёт новый burst после восстановления.
 // @release-note Пока HK Runner выполняет автоматизацию, серверный public collector ставится на lease-паузу и не использует игровой токен; после завершения lease снимается автоматически.
 // @release-note В окне «Перестановка бизнесов» прогресс снова вертикальный: полоса идёт слева сверху вниз, горизонтальная линия для Businesses отключена.
 // @release-note Защита Game API от 429: запросы HK к игре ограничены безопасным темпом, 429 больше не ретраится и включает cooldown без rollback; бизнесы сохраняют канон Kokkaras.
@@ -38,7 +39,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.30';
+  const BUILD_VERSION = '1.17.31';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -180,10 +181,13 @@
   const GAME_AUTH_REFRESH_EARLY_MS = 60 * 1000;
   const GAME_REQUEST_RETRY_DELAYS_MS = [900, 2500, 6000];
   const HK_GAME_API_RATE_GUARD_REV = 'game-api-rate-guard-20260922-r1';
-  const GAME_API_MIN_REQUEST_GAP_MS = 1800;
+  const GAME_API_MIN_REQUEST_GAP_MS = 2500;
+  const GAME_API_429_SLOW_GAP_MS = 5000;
+  const GAME_API_429_SLOW_WINDOW_MS = 15 * 60 * 1000;
   const GAME_API_429_FALLBACK_COOLDOWN_MS = 60 * 1000;
   let gameApiNextRequestAt = 0;
   let gameApiRateLimitUntil = 0;
+  let gameApiSlowUntil = 0;
   let gameApiRateGateTail = Promise.resolve();
   const SERVER_REQUEST_RETRY_DELAYS_MS = [1000, 3000, 7000];
   const DIAGNOSTIC_MAX_EVENTS = 180;
@@ -5487,6 +5491,14 @@
   }
 
 
+  function gameApiCooldownRemainingMs() {
+    return Math.max(0,gameApiRateLimitUntil-Date.now());
+  }
+
+  function gameApiCurrentGapMs() {
+    return Date.now()<gameApiSlowUntil ? GAME_API_429_SLOW_GAP_MS : GAME_API_MIN_REQUEST_GAP_MS;
+  }
+
   function gameApiRetryAfterMs(response) {
     try {
       const raw=String(response?.headers?.get?.('Retry-After')||'').trim();
@@ -5500,6 +5512,7 @@
   function gameApiRateLimitError(path,response) {
     const retryAfter=Math.max(GAME_API_429_FALLBACK_COOLDOWN_MS,gameApiRetryAfterMs(response));
     gameApiRateLimitUntil=Math.max(gameApiRateLimitUntil,Date.now()+retryAfter);
+    gameApiSlowUntil=Math.max(gameApiSlowUntil,Date.now()+GAME_API_429_SLOW_WINDOW_MS);
     const seconds=Math.ceil(retryAfter/1000);
     const error=new Error(either(
       'Лимит запросов игры (429). HK остановил запросы примерно на '+seconds+' сек.',
@@ -5541,8 +5554,9 @@
         error.retryAfterMs=Math.max(0,gameApiRateLimitUntil-Date.now());
         throw error;
       }
-      gameApiNextRequestAt=Date.now()+GAME_API_MIN_REQUEST_GAP_MS;
-      recordDiagnostic('game-rate-gate',{path,method,gapMs:GAME_API_MIN_REQUEST_GAP_MS});
+      const gapMs=gameApiCurrentGapMs();
+      gameApiNextRequestAt=Date.now()+gapMs;
+      recordDiagnostic('game-rate-gate',{path,method,gapMs,slowUntil:gameApiSlowUntil});
     } finally {
       release();
     }
@@ -9699,6 +9713,7 @@
 
   async function loadRecipes() {
     if (!requireLicense()) return;
+    if(gameApiCooldownRemainingMs()>0){recordDiagnostic('recipes-cooldown-skip',{remainingMs:gameApiCooldownRemainingMs()});return;}
     try {
       log(either('Считываю каталог бизнес-планов…', 'Reading the business-plan catalog…'));
       playerDocument = await apiJson('/player/me', 'POST');
@@ -9735,6 +9750,7 @@
 
   async function runRecipes() {
     if (!requireLicense() || recipeRunning || !recipeState()) return;
+    if(gameApiCooldownRemainingMs()>0){log(either('Подождите завершения cooldown Game API перед прокруткой','Wait for the Game API cooldown before rerolling'),'warn');return;}
     const attempts = Math.max(1, Math.min(100, Math.trunc(Number(root.querySelector('#hk-recipe-attempts').value || 1))));
     let state;
     try {
@@ -9889,6 +9905,7 @@
 
   async function loadProjectBureau() {
     if (!requireLicense()) return;
+    if(gameApiCooldownRemainingMs()>0){recordDiagnostic('bureau-cooldown-skip',{remainingMs:gameApiCooldownRemainingMs()});return;}
     try {
       log(either('Считываю бизнесы Проектного бюро…', 'Reading Project Bureau businesses…'));
       await ensureRecipeMetadata();
@@ -9960,6 +9977,7 @@
 
   async function runProjectBureau() {
     if (!requireLicense() || bureauRunning) return;
+    if(gameApiCooldownRemainingMs()>0){log(either('Подождите завершения cooldown Game API перед созданием','Wait for the Game API cooldown before crafting'),'warn');return;}
     const inputs = [...selectedBureauInputs].flatMap(([id,count]) => Array(Math.max(0,Number(count || 0))).fill(id));
     if (inputs.length !== bureauSize) return;
     const attempts = Math.max(1, Math.min(100, Math.trunc(Number(root.querySelector('#hk-bureau-attempts').value || 1))));
@@ -12317,13 +12335,23 @@
   }
 
   const MODULE_LIVE_TTL_MS = 12000;
+  const HK_MODULE_COOLDOWN_REV='module-live-cooldown-20260922-r1';
   const moduleLiveState = new Map();
   function moduleMutationBusy(){return !!(hkRunner.running||pitRunning||businessBusy||fairRunning||shopRunning||recipeRunning||bureauRunning||resourceBusy||mapScanning||dailyRunning||clanSkillScanning||growthBusy);}
   async function refreshModuleLive(page, {force=false} = {}) {
     const key = String(page || '');
     if (!key || key.startsWith('growth')) return null;
     if(moduleMutationBusy()){recordDiagnostic('module-live-read-deferred',{page:key});return null;}
-    const existing = moduleLiveState.get(key) || {at:0,promise:null};
+    const existing = moduleLiveState.get(key) || {at:0,promise:null,blockedUntil:0,rateNoticeAt:0};
+    const cooldownRemaining=gameApiCooldownRemainingMs();
+    const blockedUntil=Math.max(Number(existing.blockedUntil||0),gameApiRateLimitUntil||0);
+    if(cooldownRemaining>0||blockedUntil>Date.now()){
+      const until=Math.max(blockedUntil,Date.now()+cooldownRemaining);
+      existing.blockedUntil=until;
+      moduleLiveState.set(key,existing);
+      recordDiagnostic('module-live-read-rate-blocked',{page:key,remainingMs:Math.max(0,until-Date.now())});
+      return null;
+    }
     if (existing.promise) return existing.promise;
     if (!force && Date.now() - Number(existing.at || 0) < MODULE_LIVE_TTL_MS) return null;
     let liveReadOk=false;
@@ -12375,12 +12403,19 @@
         }
         return null;
       } catch (error) {
-        recordDiagnostic('module-live-read-error',{page:key,error:error?.message||error});
-        log(`${either('Автообновление','Auto refresh')} ${key}: ${error?.message||error}`,'warn');
+        const rateLimited=error?.name==='HKRateLimitError'||Number(error?.httpStatus||0)===429;
+        recordDiagnostic('module-live-read-error',{page:key,error:error?.message||error,rateLimited});
+        if(rateLimited){
+          const row=moduleLiveState.get(key)||{};
+          row.blockedUntil=Math.max(Number(row.blockedUntil||0),Date.now()+Math.max(1000,Number(error?.retryAfterMs||gameApiCooldownRemainingMs()||GAME_API_429_FALLBACK_COOLDOWN_MS)));
+          moduleLiveState.set(key,row);
+        }else{
+          log(`${either('Автообновление','Auto refresh')} ${key}: ${error?.message||error}`,'warn');
+        }
         return null;
       } finally {
         const row = moduleLiveState.get(key) || {};
-        row.at = liveReadOk ? Date.now() : 0; row.promise = null; moduleLiveState.set(key,row);
+        row.at = liveReadOk ? Date.now() : Number(row.at||0); row.promise = null; moduleLiveState.set(key,row);
       }
     })();
     moduleLiveState.set(key,{...existing,promise:task});
