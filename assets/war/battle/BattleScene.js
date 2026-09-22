@@ -28,13 +28,14 @@
       return Object.fromEntries(loaded.filter(([,texture])=>texture));
     }
     async loadTextures(){
-      const [topking,raider]=await Promise.all([
-        this.loadSet('../assets/war/units/topking','png','20260922-1'),
-        this.loadSet('../assets/war/units/raider','png','20260922-1')
+      const [topking,raider,bot]=await Promise.all([
+        this.loadSet('../assets/war/units/topking','png','20260922-2'),
+        this.loadSet('../assets/war/units/raider','png','20260922-2'),
+        this.loadSet('../assets/war/units/bot','webp','20260922-1')
       ]);
-      // Until the dedicated bot PNG set is materialized, reuse the verified
-      // raider textures instead of ever falling back to a broken rectangle.
-      return {topking,raider,bot:raider};
+      // Dedicated bot/boss art already exists in the repository. Keep raider
+      // only as a defensive fallback if one of those legacy bot assets fails.
+      return {topking,raider,bot:Object.keys(bot).length?bot:raider};
     }
     buildArena(){
       const {PIXI}=this;const floor=new PIXI.Graphics().ellipse(0,0,300,54).fill({color:0x0d1218,alpha:.68});floor.label='Arena floor';this.floor=floor;this.world.addChild(floor);this.particles=new PIXI.Container();this.world.addChild(this.particles);
