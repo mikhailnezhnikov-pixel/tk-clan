@@ -1,9 +1,9 @@
-name: Verify Userscript 1.17.30 Collector Lease Vertical Businesses
+name: Deploy Userscript 1.17.31 Adaptive Cooldown Guard
 
 on:
   push:
     paths:
-      - 'deploy/topking/verify2-userscript-1-17-30-collector-lease-vertical-trigger.txt'
+      - 'deploy/topking/userscript-1-17-31-cooldown-adaptive-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -31,61 +31,85 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
 
-      - name: Verify current live installation
+      - name: Validate candidate
         run: |
           set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/HamsterKingMobile.user.js
+          cp deploy/topking/HamsterKingMobile.1.17.31.cooldown-adaptive.candidate.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.30" /tmp/HamsterKingMobile.user.js
-          grep -Fq "public-collector-activity-lease-20260922-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "businesses-runner-vertical-20260922-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.31" /tmp/HamsterKingMobile.user.js
+          grep -Fq "GAME_API_MIN_REQUEST_GAP_MS = 2500" /tmp/HamsterKingMobile.user.js
+          grep -Fq "GAME_API_429_SLOW_GAP_MS = 5000" /tmp/HamsterKingMobile.user.js
+          grep -Fq "module-live-cooldown-20260922-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "module-live-read-rate-blocked" /tmp/HamsterKingMobile.user.js
+          grep -Fq "recipes-cooldown-skip" /tmp/HamsterKingMobile.user.js
+          grep -Fq "bureau-cooldown-skip" /tmp/HamsterKingMobile.user.js
           grep -Fq "game-api-rate-guard-20260922-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "public-collector-activity-lease-20260922-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "businesses-kokkaras-donor-20260922-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "clan-shop-purchase-history-capture-20260922-r1" /tmp/HamsterKingMobile.user.js
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
-            set -euo pipefail
-            python3 -m py_compile /opt/hamsterking-license/server.py /opt/hamsterking-license/public_collector.py
-            grep -Fq PUBLIC_COLLECTOR_ACTIVITY_LEASE_R1 /opt/hamsterking-license/server.py
-            grep -Fq "public-server-collector-20260922-r6-activity-lease" /opt/hamsterking-license/public_collector.py
-            test -s /var/lib/hamsterking-license/public-collector-activity.json
-            out="$(python3 /opt/hamsterking-license/public_collector.py war 2>&1)"
-            printf "%s\n" "$out"
-            printf "%s" "$out" | grep -Fq "paused:"
-            systemctl is-active --quiet hamsterking-license.service
-            systemctl is-active --quiet hamsterking-public-war.timer
-            systemctl is-active --quiet hamsterking-public-collector.timer
-          '
-          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?verify-1-17-30=$(date +%s)" -o /tmp/public.js
+
+      - name: Fetch fresh live
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.user.js
+          node --check /tmp/live.user.js
+          grep -Fq "// @version      1.17.30" /tmp/live.user.js
+          cmp -s /tmp/live.user.js baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum /tmp/live.user.js | awk '{print $1}' > /tmp/source.sha
+
+      - name: Race-safe deploy userscript
+        run: |
+          set -euo pipefail
+          source_sha="$(cat /tmp/source.sha)"
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.31.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "SOURCE_SHA='$source_sha' bash -s" <<'REMOTE'
+          set -euo pipefail
+          test "$(sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js | awk '{print $1}')" = "$SOURCE_SHA"
+          node --check /tmp/HamsterKingMobile.1.17.31.user.js
+          stamp="$(date +%Y%m%d-%H%M%S)"
+          cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.31.$stamp"
+          install -m 0644 /tmp/HamsterKingMobile.1.17.31.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+          printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.31\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+          systemctl daemon-reload
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+          REMOTE
+
+      - name: Verify public exact match
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?cooldown-adaptive=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
-          cmp -s /tmp/HamsterKingMobile.user.js deploy/topking/HamsterKingMobile.1.17.30.activity-vertical.candidate.user.js
-          echo "LIVE_1_17_30_COLLECTOR_LEASE_VERTICAL=PASS"
+          grep -Fq "// @version      1.17.31" /tmp/public.js
+          grep -Fq "module-live-cooldown-20260922-r1" /tmp/public.js
+          grep -Fq "GAME_API_429_SLOW_GAP_MS = 5000" /tmp/public.js
+          echo "PUBLIC_1_17_31_COOLDOWN_ADAPTIVE=PASS"
 
       - name: Sync baseline and audit
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           printf "%s\n" \
-            "USERSCRIPT_1_17_30_COLLECTOR_LEASE_VERTICAL=PASS" \
-            "version=1.17.30" \
-            "base=1.17.29" \
-            "collector_activity_endpoint=PASS" \
-            "collector_paused_during_transition_lease=PASS" \
-            "collector_checks_lease_before_game_api=PASS" \
-            "runner_activity_lease_ttl_seconds=90" \
-            "runner_activity_heartbeat_seconds=20" \
-            "transition_pause_seconds=1800" \
-            "business_progress_orientation=VERTICAL" \
-            "horizontal_business_progress=DISABLED" \
-            "game_api_rate_guard=PRESERVED" \
+            "USERSCRIPT_1_17_31_COOLDOWN_ADAPTIVE=PASS" \
+            "version=1.17.31" \
+            "base=1.17.30" \
+            "game_api_base_gap_ms=2500" \
+            "game_api_post_429_gap_ms=5000" \
+            "game_api_post_429_slow_window_ms=900000" \
+            "module_auto_refresh_during_cooldown=BLOCKED" \
+            "module_rate_error_log_spam=REMOVED" \
+            "recipes_cooldown_preflight=PASS" \
+            "bureau_cooldown_preflight=PASS" \
+            "collector_activity_lease=PRESERVED" \
             "kokkaras_business_canon=PRESERVED" \
             "clan_shop_1_17_25=PRESERVED" \
-            > audit/hk-userscript-1-17-30-collector-lease-vertical-status.txt
+            > audit/hk-userscript-1-17-31-cooldown-adaptive-status.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-30-collector-lease-vertical-status.txt
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-31-cooldown-adaptive-status.txt
           if ! git diff --cached --quiet; then
-            git commit -m "fix: verify collector isolation and vertical Businesses progress in 1.17.30"
+            git commit -m "fix: make Game API cooldown adaptive in 1.17.31"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
