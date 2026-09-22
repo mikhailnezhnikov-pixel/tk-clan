@@ -1,0 +1,65 @@
+name: Build War PNG Assets
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/build-war-png-assets-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Convert fighter WebP to transparent PNG
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          roots = [
+              Path("assets/war/units/topking"),
+              Path("assets/war/units/raider"),
+              Path("assets/war/units/bot"),
+          ]
+          states = ("idle", "attack", "hit")
+          for root in roots:
+              for state in states:
+                  src = root / f"{state}.webp"
+                  dst = root / f"{state}.png"
+                  if not src.exists():
+                      raise SystemExit(f"missing source: {src}")
+                  with Image.open(src) as im:
+                      rgba = im.convert("RGBA")
+                      alpha = rgba.getchannel("A")
+                      lo, hi = alpha.getextrema()
+                      transparent = sum(1 for px in alpha.getdata() if px < 250)
+                      total = rgba.width * rgba.height
+                      if lo >= 250 or transparent < total * 0.03:
+                          raise SystemExit(f"alpha check failed: {src} extrema={(lo,hi)} transparent={transparent}/{total}")
+                      rgba.save(dst, format="PNG", optimize=True)
+                      print(f"PNG_OK {dst} {rgba.width}x{rgba.height} alpha={(lo,hi)} transparent={transparent}/{total}")
+          PY
+
+      - name: Commit generated PNG assets
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/war/units/topking/*.png assets/war/units/raider/*.png assets/war/units/bot/*.png
+          if git diff --cached --quiet; then
+            echo "WAR_PNG_ASSETS_ALREADY_CURRENT=PASS"
+            exit 0
+          fi
+          git commit -m "assets: add transparent PNG war fighters"
+          git push origin HEAD:main
+          echo "WAR_PNG_ASSETS_COMMIT=PASS"
