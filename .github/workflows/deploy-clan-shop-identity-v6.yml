@@ -39,7 +39,7 @@ jobs:
           h=s[a:b]
           assert 'known_player_identities=clan_shop_license_identities()' in h
           assert '"cabinet_linked":bool(linked)' in h
-          assert '"known_player_id" if known_name else "player_id"' in h
+          assert '"known_player_id" if known and known.get("display_name") else "player_id"' in h
           assert '"nickname": "Не распределено по игрокам"' not in h
           assert '"nickname": "Не определён игрок"' not in h
           print('V13_STATIC_CHECK=PASS')
