@@ -20,7 +20,7 @@ Each module:
 - userscript: 1.17.30
 - current module: Recipes / Рецепты — Stage 2.09 live verification
 - current module file: audit/hk-stage2-09-recipes.md
-- current module status: SOURCE_PREFLIGHT_PASS · STATIC_CURRENT_PASS · TECHNICAL_LIVE_VERIFY_PENDING · USER_BROWSER_CHECK_PENDING
+- current module status: SOURCE_PREFLIGHT_PASS · STATIC_CURRENT_PASS · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: LIVE PASS
