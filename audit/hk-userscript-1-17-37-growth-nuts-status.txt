@@ -1,0 +1,14 @@
+USERSCRIPT_1_17_37_GROWTH_NUTS_CANON=PASS
+version=1.17.37
+base=1.17.36
+hamster_budget_currency=cur_nut
+legacy_caps_percent_migration=PASS
+hamster_cost_guard=NUTS_ONLY
+growth_efficiency=NUTS_PER_POWER
+general_pit_token_logic=PRESERVED
+auto_routines_today=PRESERVED
+clan_numeric_player_id_1_17_36=PRESERVED
+adaptive_429_guard=PRESERVED
+collector_activity_lease=PRESERVED
+ci_game_mutations=NONE
+user_browser_check=PENDING
