@@ -69,6 +69,11 @@ jobs:
           except Exception as e:
               print("snapshot_error",repr(e))
           print("SNAPSHOT_NAME_MAP",json.dumps({r["player_id"]:names.get(str(r["player_id"]),"") for r in actual},ensure_ascii=False))
+          wanted=("1083594259","1656402180","5112494832","552583086","5225915725","5262908393","275051195")
+          license_rows=[dict(r) for r in db.execute("SELECT player_id,note,active FROM licenses WHERE player_id IN (?,?,?,?,?,?,?)",wanted)]
+          member_rows=[dict(r) for r in db.execute("SELECT linked_player_id,note,active FROM clan_members WHERE linked_player_id IN (?,?,?,?,?,?,?)",wanted)]
+          print("ACCESS_LICENSES",json.dumps(license_rows,ensure_ascii=False))
+          print("ACCESS_MEMBERS",json.dumps(member_rows,ensure_ascii=False))
           PY'
       - name: Cleanup
         if: always()
