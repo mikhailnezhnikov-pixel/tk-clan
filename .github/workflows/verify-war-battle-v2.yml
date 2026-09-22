@@ -6,6 +6,7 @@ on:
     paths:
       - 'wars/index.html'
       - 'assets/war/battle/**'
+      - 'assets/war/units/**'
       - '.github/workflows/verify-war-battle-v2.yml'
 
 permissions:
@@ -22,7 +23,7 @@ jobs:
           set -euo pipefail
           for f in assets/war/battle/*.js; do node --check "$f"; done
           grep -Fq 'TopKingBattleV4' assets/war/battle/battle-runtime-v4.js
-          grep -Fq "version:'4.0.4-png-fighters'" assets/war/battle/battle-runtime-v4.js
+          grep -Fq "version:'4.0.5-bot-fighters'" assets/war/battle/battle-runtime-v4.js
           grep -Fq 'class BattleScene' assets/war/battle/BattleScene.js
           grep -Fq 'class Fighter' assets/war/battle/Fighter.js
           grep -Fq 'class BattleAnimator' assets/war/battle/BattleAnimator.js
@@ -39,8 +40,12 @@ jobs:
           grep -Fq 'PIXI.Texture.from(image)' assets/war/battle/BattleScene.js
           grep -Fq "this.loadSet('../assets/war/units/topking','png'" assets/war/battle/BattleScene.js
           grep -Fq "this.loadSet('../assets/war/units/raider','png'" assets/war/battle/BattleScene.js
+          grep -Fq "this.loadSet('../assets/war/units/bot','webp'" assets/war/battle/BattleScene.js
           test -s assets/war/units/topking/idle.png
           test -s assets/war/units/raider/idle.png
+          test -s assets/war/units/bot/idle.webp
+          test -s assets/war/units/bot/attack.webp
+          test -s assets/war/units/bot/hit.webp
           grep -Fq 'this.sprite.visible=false' assets/war/battle/Fighter.js
           if grep -Fq 'battle-engine-v2.js?v=' wars/index.html; then
             echo 'Legacy battle engine still wired into wars page' >&2
