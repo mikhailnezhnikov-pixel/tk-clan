@@ -1,3 +1,5 @@
 deploy=1.17.35-auto-routines-today
 base=1.17.34
 stage=2.10-ui
+
+retry=anchors-fixed-1
