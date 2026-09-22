@@ -23,7 +23,7 @@ jobs:
           set -euo pipefail
           for f in assets/war/battle/*.js; do node --check "$f"; done
           grep -Fq 'TopKingBattleV4' assets/war/battle/battle-runtime-v4.js
-          grep -Fq "version:'4.0.7-single-init'" assets/war/battle/battle-runtime-v4.js
+          grep -Fq "version:'4.0.8-character-motion'" assets/war/battle/battle-runtime-v4.js
           grep -Fq 'class BattleScene' assets/war/battle/BattleScene.js
           grep -Fq 'class Fighter' assets/war/battle/Fighter.js
           grep -Fq 'class BattleAnimator' assets/war/battle/BattleAnimator.js
@@ -56,6 +56,14 @@ jobs:
           ! cmp -s assets/war/units/raider/attack.webp assets/war/units/raider/hit.webp
           ! cmp -s assets/war/units/bot/attack.webp assets/war/units/bot/hit.webp
           grep -Fq 'this.sprite.visible=false' assets/war/battle/Fighter.js
+          grep -Fq 'this.pose=new PIXI.Container()' assets/war/battle/Fighter.js
+          grep -Fq 'startIdle(scene.ours,0)' assets/war/battle/BattleAnimator.js
+          grep -Fq "attacker.setState('attack')" assets/war/battle/BattleAnimator.js
+          grep -Fq "defender.setState('hit')" assets/war/battle/BattleAnimator.js
+          if grep -Fq 'this.effects.impact' assets/war/battle/BattleAnimator.js; then
+            echo 'BattleAnimator must move characters only; world FX impact is still wired' >&2
+            exit 1
+          fi
           if grep -Fq 'battle-engine-v2.js?v=' wars/index.html; then
             echo 'Legacy battle engine still wired into wars page' >&2
             exit 1
