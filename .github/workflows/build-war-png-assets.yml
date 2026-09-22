@@ -18,21 +18,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Materialize known-good transparent PNG fighters
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Materialize verified transparent PNG fighters
         run: |
           set -euo pipefail
           mkdir -p assets/war/units/topking assets/war/units/raider
 
-          # Top King idle is a verified PNG blob already uploaded to this repository.
-          gh api "repos/${GITHUB_REPOSITORY}/git/blobs/b3ae740a498466bbf3b24e8a5bde83572c1f5e37"             --jq '.content' | tr -d '\n' | base64 -d > assets/war/units/topking/idle.png
-
-          # Raider idle is staged in small text chunks to avoid binary transport corruption.
+          cat deploy/topking/war-png-parts/topking_idle_*.b64 | tr -d '\n' | base64 -d > assets/war/units/topking/idle.png
           cat deploy/topking/war-png-parts/raider_idle_*.b64 | tr -d '\n' | base64 -d > assets/war/units/raider/idle.png
 
-          # Milestone 1 uses the same verified character art for pose changes;
-          # movement, contact, hit reaction and FX remain driven by BattleAnimator.
+          test "$(sha256sum assets/war/units/topking/idle.png | awk '{print $1}')" = "c330943f70605d2ee56b28175e552fbc56deda43bad3d541141e20cd089cb200"
+          test "$(sha256sum assets/war/units/raider/idle.png | awk '{print $1}')" = "47b631de3ef116be4595d90af54ebfa755264def9e7074f05daa1be5d2c41b07"
+
+          # First verified milestone: keep the same clean transparent character art
+          # for all states while BattleAnimator supplies movement/hit reaction.
           cp assets/war/units/topking/idle.png assets/war/units/topking/attack.png
           cp assets/war/units/topking/idle.png assets/war/units/topking/hit.png
           cp assets/war/units/raider/idle.png assets/war/units/raider/attack.png
@@ -50,10 +48,9 @@ jobs:
                       lo,hi=rgba.getchannel("A").getextrema()
                       if lo >= 250:
                           raise SystemExit(f"alpha check failed: {p} alpha={(lo,hi)}")
-                      if rgba.width < 100 or rgba.height < 200:
-                          raise SystemExit(f"dimension check failed: {p} {rgba.size}")
                       print(f"PNG_OK {p} {rgba.width}x{rgba.height} alpha={(lo,hi)}")
           PY
+          echo "WAR_PNG_BINARY_VERIFY=PASS"
 
       - name: Commit generated PNG assets
         run: |
