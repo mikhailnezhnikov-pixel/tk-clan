@@ -78,3 +78,13 @@ try:
         print("CURRENT_WEEK_PLAYERS",json.dumps(players,ensure_ascii=False))
 except Exception as e:
     print("CURRENT_WEEK_DETAIL_ERROR",repr(e))
+
+
+try:
+    rows=[dict(r) for r in db.execute("""SELECT week_start,lot_id,item_type,player_id,quantity,updated_at
+                                        FROM clan_shop_actual_players
+                                        WHERE week_start IN ('2026-09-14','2026-09-21')
+                                        ORDER BY player_id,item_type,week_start""")]
+    print("TWO_WEEK_PLAYER_ROWS",json.dumps(rows,ensure_ascii=False))
+except Exception as e:
+    print("TWO_WEEK_PLAYER_ROWS_ERROR",repr(e))
