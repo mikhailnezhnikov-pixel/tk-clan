@@ -41,6 +41,6 @@
     if(result.events.length)state.queue.enqueueMany(result.events);return true;
   }
   function destroy(){state.queue?.clear();state.scene?.destroy();state.adapter?.reset();state.scene=null;state.adapter=null;state.queue=null;state.pending=null;state.hpCallback=null;state.ready=false}
-  w.TopKingBattleV4={version:'4.0.8-character-motion',init,update,destroy};
+  w.TopKingBattleV4={version:'4.0.9-live-blend-motion',init,update,destroy};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>init().catch(console.error),{once:true});else init().catch(console.error);
 })(window);
