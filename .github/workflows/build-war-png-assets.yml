@@ -18,36 +18,40 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install WebP decoder
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq webp
+
       - name: Convert fighter WebP to transparent PNG
         run: |
           set -euo pipefail
           python -m pip install --quiet pillow
+          for group in topking raider bot; do
+            for state in idle attack hit; do
+              src="assets/war/units/$group/$state.webp"
+              dst="assets/war/units/$group/$state.png"
+              test -s "$src"
+              dwebp "$src" -o "$dst"
+            done
+          done
           python - <<'PY'
           from pathlib import Path
           from PIL import Image
 
-          roots = [
-              Path("assets/war/units/topking"),
-              Path("assets/war/units/raider"),
-              Path("assets/war/units/bot"),
-          ]
-          states = ("idle", "attack", "hit")
-          for root in roots:
-              for state in states:
-                  src = root / f"{state}.webp"
-                  dst = root / f"{state}.png"
-                  if not src.exists():
-                      raise SystemExit(f"missing source: {src}")
-                  with Image.open(src) as im:
-                      rgba = im.convert("RGBA")
-                      alpha = rgba.getchannel("A")
-                      lo, hi = alpha.getextrema()
-                      transparent = sum(1 for px in alpha.getdata() if px < 250)
-                      total = rgba.width * rgba.height
-                      if lo >= 250 or transparent < total * 0.03:
-                          raise SystemExit(f"alpha check failed: {src} extrema={(lo,hi)} transparent={transparent}/{total}")
-                      rgba.save(dst, format="PNG", optimize=True)
-                      print(f"PNG_OK {dst} {rgba.width}x{rgba.height} alpha={(lo,hi)} transparent={transparent}/{total}")
+          for group in ("topking","raider","bot"):
+              for state in ("idle","attack","hit"):
+                  p=Path("assets/war/units")/group/f"{state}.png"
+                  with Image.open(p) as im:
+                      rgba=im.convert("RGBA")
+                      alpha=rgba.getchannel("A")
+                      lo,hi=alpha.getextrema()
+                      transparent=sum(1 for px in alpha.getdata() if px < 250)
+                      total=rgba.width*rgba.height
+                      if lo >= 250 or transparent < total*0.03:
+                          raise SystemExit(f"alpha check failed: {p} extrema={(lo,hi)} transparent={transparent}/{total}")
+                      rgba.save(p,format="PNG",optimize=True)
+                      print(f"PNG_OK {p} {rgba.width}x{rgba.height} alpha={(lo,hi)} transparent={transparent}/{total}")
           PY
 
       - name: Commit generated PNG assets
@@ -61,5 +65,6 @@ jobs:
             exit 0
           fi
           git commit -m "assets: add transparent PNG war fighters"
+          git pull --rebase origin main
           git push origin HEAD:main
           echo "WAR_PNG_ASSETS_COMMIT=PASS"
