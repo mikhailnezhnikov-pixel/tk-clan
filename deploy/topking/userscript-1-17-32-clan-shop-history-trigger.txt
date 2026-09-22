@@ -1,0 +1,2 @@
+deploy=userscript-1.17.32-clan-shop-history-parser
+stamp=2026-09-22T22:41+09:00
