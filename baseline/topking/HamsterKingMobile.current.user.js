@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.31
+// @version      1.17.32
 // @release-note После 429 автообновления модулей не повторяются до конца cooldown; Game API переходит на адаптивный медленный темп и не создаёт новый burst после восстановления.
 // @release-note Пока HK Runner выполняет автоматизацию, серверный public collector ставится на lease-паузу и не использует игровой токен; после завершения lease снимается автоматически.
 // @release-note В окне «Перестановка бизнесов» прогресс снова вертикальный: полоса идёт слева сверху вниз, горизонтальная линия для Businesses отключена.
@@ -9,6 +9,7 @@
 // @release-note Перестановка бизнесов возвращена к закреплённому канону Kokkaras: один слот целиком (remove → insert → speedUp → activate), один state-aware retry, rollback только текущей пары, 500 мс между парами.
 // @release-note Перестановка бизнесов: бизнес-мутации ждут до 60 секунд; после тайм-аута состояние сверяется с /player/me.
 // @release-note Перестановка бизнесов: восстановлены видимые названия, сквозной канонический прогресс и безопасная сверка состояния после тайм-аутов без слепого отката.
+// @release-note Исправлен разбор истории Clan Shop: дата и время из отдельных колонок, user_id/user_name и дополнительные поля ответа игры.
 // @release-note Clan Shop теперь считывает фактическую историю общих покупок: кто именно купил шар идолов или S+ бизнес, по точному player_id.
 // @release-note Clan Shop фиксирует игрока по его личному /player/me: шары и S+ записываются по player_id даже если сам магазин не открывался.
 // @release-note Clan Shop теперь пассивно отправляет фактические счётчики игрока при уже выполненных игрой /player/me и /shop/view, без дополнительных запросов к игре.
@@ -39,7 +40,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.31';
+  const BUILD_VERSION = '1.17.32';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -2979,7 +2980,7 @@
   function clanShopHistoryObjectText(row) {
     if(!row||typeof row!=='object')return '';
     const nested=[row,row.shop_lot,row.shopLot,row.lot,row.item,row.reward,row.view,row.lot_view,row.lotView].filter(Boolean);
-    const keys=['shop_lot_id','shopLotId','lot_id','lotId','id','name','title','lot_name','lotName','shop_lot_name','shopLotName','reward_id','rewardId'];
+    const keys=['shop_lot_id','shopLotId','lot_id','lotId','id','name','title','label','text','lot_name','lotName','shop_lot_name','shopLotName','reward_id','rewardId'];
     return nested.flatMap(obj=>keys.map(key=>clanShopHistoryTextValue(obj?.[key]))).filter(Boolean).join(' ').toLowerCase();
   }
 
@@ -2993,17 +2994,19 @@
     return '';
   }
 
+  const HK_CLAN_SHOP_PURCHASE_HISTORY_PARSER_REV='clan-shop-purchase-history-parser-20260922-r2';
   function clanShopHistoryTimestamp(row) {
     if(!row||typeof row!=='object')return 0;
     const values=[
-      row.purchased_at,row.purchasedAt,row.created_at,row.createdAt,row.timestamp,row.time,
-      row.purchase_time,row.purchaseTime,row.date,row.datetime,row.date_time,row.dateTime
+      row.purchased_at,row.purchasedAt,row.created_at,row.createdAt,row.timestamp,
+      row.purchase_time,row.purchaseTime,row.datetime,row.date_time,row.dateTime,
+      row.purchase_date_time,row.purchaseDateTime
     ];
     for(const value of values){
       if(value==null||value==='')continue;
       if(typeof value==='number'){
         const ms=value>100000000000?value:value*1000;
-        if(Number.isFinite(ms)&&ms>1000000000000-100000000000)return Math.floor(ms/1000);
+        if(Number.isFinite(ms)&&ms>900000000000)return Math.floor(ms/1000);
       }
       const text=String(value).trim();
       if(/^\d+(?:\.\d+)?$/.test(text)){
@@ -3013,16 +3016,46 @@
       const parsed=Date.parse(text);
       if(Number.isFinite(parsed)&&parsed>0)return Math.floor(parsed/1000);
     }
+
+    const dateText=String(
+      row.date??row.purchase_date??row.purchaseDate??row.created_date??row.createdDate??''
+    ).trim();
+    const timeText=String(
+      row.time??row.purchase_time_text??row.purchaseTimeText??row.created_time??row.createdTime??''
+    ).trim();
+    if(dateText){
+      const match=dateText.match(/^(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{2,4}))?$/);
+      if(match){
+        const day=Number(match[1]),month=Number(match[2]);
+        let year=match[3]?Number(match[3]):new Date().getFullYear();
+        if(year<100)year+=2000;
+        let hour=0,minute=0,second=0;
+        const tm=timeText.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+        if(tm){hour=Number(tm[1]);minute=Number(tm[2]);second=Number(tm[3]||0);}
+        const local=new Date(year,month-1,day,hour,minute,second,0);
+        if(Number.isFinite(local.getTime())&&local.getFullYear()===year&&local.getMonth()===month-1&&local.getDate()===day){
+          return Math.floor(local.getTime()/1000);
+        }
+      }
+    }
     return 0;
   }
 
   function clanShopHistoryBuyer(row) {
     if(!row||typeof row!=='object')return {player_id:'',nickname:''};
-    const nodes=[row,row.player,row.user,row.buyer,row.purchaser,row.member,row.clan_member,row.clanMember].filter(Boolean);
-    const idKeys=['player_id','playerId','buyer_player_id','buyerPlayerId','user_id','userId','purchaser_id','purchaserId'];
-    const nameKeys=['nickname','name','username','player_name','playerName','display_name','displayName'];
+    const objectNodes=[row,row.player,row.buyer,row.purchaser,row.member,row.clan_member,row.clanMember,
+      row.user&&typeof row.user==='object'?row.user:null,
+      row.author&&typeof row.author==='object'?row.author:null].filter(Boolean);
+    const idKeys=[
+      'player_id','playerId','buyer_player_id','buyerPlayerId','user_id','userId',
+      'purchaser_id','purchaserId','member_id','memberId','author_id','authorId'
+    ];
+    const nameKeys=[
+      'nickname','name','username','user_name','userName','player_name','playerName',
+      'display_name','displayName','buyer_name','buyerName','purchaser_name','purchaserName'
+    ];
     let playerId='',nickname='';
-    for(const node of nodes){
+    for(const node of objectNodes){
       if(!playerId){
         for(const key of idKeys){
           const value=String(node?.[key]??'').trim();
@@ -3038,6 +3071,12 @@
           const value=String(node?.[key]??'').trim();
           if(value&&!/^\d+$/.test(value)){nickname=value;break;}
         }
+      }
+    }
+    if(!nickname){
+      for(const key of ['user','author','buyer','purchaser']){
+        const value=row?.[key];
+        if(typeof value==='string'&&value.trim()&&!/^\d+$/.test(value.trim())){nickname=value.trim();break;}
       }
     }
     return {player_id:playerId,nickname};
