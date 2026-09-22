@@ -1,0 +1,3 @@
+deploy=1.17.30-collector-lease-vertical
+base=1.17.29
+requested=2026-09-22
