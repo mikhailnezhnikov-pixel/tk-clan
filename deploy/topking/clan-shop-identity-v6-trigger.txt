@@ -1,2 +1,2 @@
-trigger=clan-shop-weekly-delta-v9
+trigger=clan-shop-player-attribution-v10
 stamp=2026-09-22
