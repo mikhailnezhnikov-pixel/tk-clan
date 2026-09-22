@@ -43,11 +43,11 @@ if nav_old not in s:
 s=s.replace(nav_old,nav_new,1)
 
 daily_old='''      <div class="hk-page active" data-content="daily">
-        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">\${tr('dailyTasks')}</h3><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>\${tr('dailyRun')}</button></div>
+        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
       </div>
 '''
 daily_new='''      <div class="hk-page active" data-content="daily">
-        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">\${tr('dailyTasks')}</h3><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>\${tr('dailyRun')}</button></div>
+        <div class="hk-cardbox"><h3 data-i18n="dailyTasks">${tr('dailyTasks')}</h3><div id="hk-daily-tasks"></div><button id="hk-daily-run" class="hk-primary" data-i18n="dailyRun" disabled>${tr('dailyRun')}</button></div>
         <div id="hk-routines-content" class="hk-cardbox" style="margin-top:12px"></div>
       </div>
 '''
@@ -82,11 +82,11 @@ if old_refresh not in s:
 s=s.replace(old_refresh,new_refresh,1)
 
 remember_old='''    const remembered=clean(load().navModule||'daily');
-    activateModule(remembered === 'fair-regular' || root.querySelector(\`[data-content="\${remembered}"]\`) ? remembered : 'daily',false);'''
+    activateModule(remembered === 'fair-regular' || root.querySelector(`[data-content="${remembered}"]`) ? remembered : 'daily',false);'''
 remember_new='''    const rememberedRaw=clean(load().navModule||'daily');
     const remembered=rememberedRaw==='routines'?'daily':rememberedRaw;
     if(rememberedRaw==='routines')save({navGroup:'today',navModule:'daily'});
-    activateModule(remembered === 'fair-regular' || root.querySelector(\`[data-content="\${remembered}"]\`) ? remembered : 'daily',false);'''
+    activateModule(remembered === 'fair-regular' || root.querySelector(`[data-content="${remembered}"]`) ? remembered : 'daily',false);'''
 if remember_old not in s:
     raise SystemExit("remembered navigation anchor missing")
 s=s.replace(remember_old,remember_new,1)
