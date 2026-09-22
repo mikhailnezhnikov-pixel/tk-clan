@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.25
+// @version      1.17.26
+// @release-note Перестановка бизнесов: восстановлены видимые названия, сквозной канонический прогресс и безопасная сверка состояния после тайм-аутов без слепого отката.
 // @release-note Clan Shop теперь считывает фактическую историю общих покупок: кто именно купил шар идолов или S+ бизнес, по точному player_id.
 // @release-note Clan Shop фиксирует игрока по его личному /player/me: шары и S+ записываются по player_id даже если сам магазин не открывался.
 // @release-note Clan Shop теперь пассивно отправляет фактические счётчики игрока при уже выполненных игрой /player/me и /shop/view, без дополнительных запросов к игре.
@@ -32,7 +33,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.25';
+  const BUILD_VERSION = '1.17.26';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -2058,6 +2059,7 @@
   const HK_BUSINESSES_REARRANGE_REV='businesses-rearrange-desktop-safe-t123-20260921-r1';
   const HK_BUSINESSES_RUNNER_UI_REV='businesses-runner-canon-20260921-r1';
   const HK_BUSINESSES_FINALIZE_REV='businesses-finalize-single-snapshot-20260921-r1';
+  const HK_BUSINESSES_RECOVERY_REV='businesses-rearrange-recovery-20260922-r1';
   runtime.exploreStage=HK_EXPLORE_CANON_REV;
   const EXPLORE_TIERS=Object.freeze([
     {value:0,label:'Tier 1'},{value:1,label:'Tier 2'},{value:2,label:'Tier 3'},{value:3,label:'Tier 4'},
@@ -10122,6 +10124,13 @@
     };
   }
 
+  function businessDisplayName(businessId) {
+    const id=String(businessId||'');
+    if(!id)return either('Пустой слот','Empty slot');
+    const details=businessCardDetails(id);
+    return clean(details?.name)||clean(recipeMetadata(id)?.name)||clean(gameText(id))||id;
+  }
+
   function businessBonusAmount(bonus) {
     const source = String(bonus?.value || '').replace(/\s/g, '').replace(',', '.');
     const match = source.match(/[+-]?\d+(?:\.\d+)?(?:[kкmм])?/i);
@@ -10447,7 +10456,7 @@
     if (!optimizerResult) { box.innerHTML = `<p class="hk-muted">${tr('optimizerNoPlan')}</p>`; return; }
     const row = optimizerResult, workers = row.safety.workers;
     const changes = row.changes.slice(0,10).map(change => `<li><span>${escapeHtml(change.label)}</span><strong class="${change.diff>0?'positive':'negative'}">${change.diff>0?'+':''}${Number(change.diff).toLocaleString(locale())}</strong></li>`).join('') || `<li><span>${either('Изменений бонусов нет','No bonus changes')}</span><strong>—</strong></li>`;
-    const flow = row.pairs.slice(0,6).map(([slot,id]) => `${businessVisual(slot.businessId)}<b>→</b>${businessVisual(id)}`).join('') + (row.pairs.length>6?`<b>+${row.pairs.length-6}</b>`:'');
+    const flow = row.pairs.slice(0,6).map(([slot,id]) => `${businessVisual(slot.businessId)}<b>→</b>${businessPlanVisual(id)}`).join('') + (row.pairs.length>6?`<b>+${row.pairs.length-6}</b>`:'');
     const vipMultiplier = vipPassiveIncomeMultiplier();
     const vipNotice = vipMultiplier > 1 ? `<div class="hk-optimizer-safety">${either('VIP учтён','VIP included')}: ×${vipMultiplier} ${either('для почасового пассивного дохода','for hourly passive income')}</div>` : '';
     box.innerHTML = `<div class="hk-optimizer-summary"><span>${tr('optimizerBefore')}<b>${row.beforeScore.toFixed(2)}</b></span><span>${tr('optimizerAfter')}<b>${row.afterScore.toFixed(2)}</b></span><span>${tr('optimizerChanges',{n:row.pairs.length})}<b>${row.pairs.length}</b></span></div><div class="hk-optimizer-flow">${flow || `<span>${either('Перестановка не требуется','No rearrangement needed')}</span>`}</div><b>${tr('optimizerDifference')}</b><ul>${changes}</ul>${vipNotice}<div class="hk-optimizer-safety ${row.safety.allowed?'':'blocked'}">${escapeHtml(row.safety.reason)} · ${tr('optimizerManagers',{busy:workers.busy,max:workers.max||'?'})}</div><button id="hk-optimizer-apply" class="hk-primary" ${row.safety.allowed&&row.pairs.length?'':'disabled'}>${tr('optimizerApply')}</button>`;
@@ -10565,8 +10574,13 @@
     return tr('buildingSlot', {building, slot:row?.slot ?? '—'});
   }
 
-  function businessVisual(id) {
+  function businessPlanVisual(id) {
     return id ? iconHtml(id) : '<span class="hk-empty-icon compact">＋</span>';
+  }
+
+  function businessPlanVisual(id) {
+    if(!id)return '<span class="hk-plan-business empty"><span class="hk-empty-icon compact">＋</span><small>'+escapeHtml(either('Пусто','Empty'))+'</small></span>';
+    return '<span class="hk-plan-business">'+iconHtml(id)+'<small>'+escapeHtml(businessDisplayName(id))+'</small></span>';
   }
 
   function resolvedPreparedBusinessPlan() {
@@ -10609,7 +10623,7 @@
     let body = `<div class="hk-count">${tr('selectedPlan', {remove:removeCount, insert:insertCount})}</div>`;
     try {
       const plan = makePlan();
-      body += `<div class="hk-plan-row">${plan.slice(0, 4).map(([row,id]) => `${businessVisual(row.businessId)}<b>→</b>${businessVisual(id)}`).join('')}${plan.length > 4 ? `<b>+${plan.length-4}</b>` : ''}</div>`;
+      body += `<div class="hk-plan-row">${plan.slice(0, 4).map(([row,id]) => `${businessPlanVisual(row.businessId)}<b>→</b>${businessPlanVisual(id)}`).join('')}${plan.length > 4 ? `<b>+${plan.length-4}</b>` : ''}</div>`;
       const untouched = Math.max(0, removeCount - plan.length);
       if (untouched) body += `<p class="hk-muted">${escapeHtml(either(
         `${untouched} выбранных бизнесов останутся на своих местах`,
@@ -10722,6 +10736,165 @@
       `No free business managers (${workers.busy}/${workers.max}). Finish the current insertion in the game`));
   }
 
+  function businessMutationUncertain(error) {
+    if(!error||error?.name==='AbortError')return false;
+    const text=String(error?.message||error||'').toLowerCase();
+    return error?.name==='HKNetworkTimeout'||/тайм-аут|timed out|timeout|failed to fetch|load failed|networkerror|network request failed|fetch failed/.test(text);
+  }
+
+  async function businessSlotSnapshot(row, reason) {
+    playerDocument=await hkAuthoritativePlayerRead(reason);
+    return findSlot(playerDocument,row.buildingId,row.slot);
+  }
+
+  function businessSlotConflict(state, expectedBusinessId, actionLabel) {
+    const current=String(state?.businessId||'');
+    if(!current||current===String(expectedBusinessId||''))return null;
+    return new Error(either(
+      actionLabel+': в слоте уже другой бизнес — '+businessDisplayName(current),
+      actionLabel+': another business is already in the slot — '+businessDisplayName(current)
+    ));
+  }
+
+  async function businessRemoveConfirmed(row, expectedBusinessId=row.businessId, label='') {
+    const expected=String(expectedBusinessId||row.businessId||'');
+    const name=label||businessDisplayName(expected);
+    try{
+      return await businessAction('remove',row);
+    }catch(error){
+      if(!businessMutationUncertain(error))throw error;
+      hkRunner.note(either('Тайм-аут снятия «'+name+'»: сверяю фактический слот','Remove timeout for “'+name+'”: checking the actual slot'),'warn');
+      recordDiagnostic('business-remove-timeout-reconcile',{buildingId:row.buildingId,slot:row.slot,businessId:expected});
+      let state=await businessSlotSnapshot(row,'business-remove-timeout-check-1');
+      if(!state?.businessId){
+        hkRunner.note(either('Снятие подтверждено по состоянию игры','Removal confirmed from game state'),'ok');
+        return {__hk_reconciled:true};
+      }
+      const conflict=businessSlotConflict(state,expected,either('Снятие','Removal'));
+      if(conflict)throw conflict;
+      await gameRetryDelay(900);
+      state=await businessSlotSnapshot(row,'business-remove-timeout-check-2');
+      if(!state?.businessId){
+        hkRunner.note(either('Снятие подтверждено после ожидания','Removal confirmed after waiting'),'ok');
+        return {__hk_reconciled:true};
+      }
+      const secondConflict=businessSlotConflict(state,expected,either('Снятие','Removal'));
+      if(secondConflict)throw secondConflict;
+      hkRunner.note(either('Слот дважды подтверждён без изменений — повторяю снятие один раз','Slot was confirmed unchanged twice — retrying removal once'),'info');
+      try{
+        return await businessAction('remove',state);
+      }catch(retryError){
+        if(!businessMutationUncertain(retryError))throw retryError;
+        state=await businessSlotSnapshot(row,'business-remove-timeout-retry-check');
+        if(!state?.businessId){
+          hkRunner.note(either('Повторное снятие подтверждено по состоянию игры','Retried removal confirmed from game state'),'ok');
+          return {__hk_reconciled:true};
+        }
+        const retryConflict=businessSlotConflict(state,expected,either('Снятие','Removal'));
+        if(retryConflict)throw retryConflict;
+        throw new Error(either(
+          'Не удалось подтвердить снятие «'+name+'» после тайм-аута. Слот остался без изменений',
+          'Could not confirm removal of “'+name+'” after timeout. The slot remained unchanged'
+        ));
+      }
+    }
+  }
+
+  async function businessInsertConfirmed(row, businessId, label='') {
+    const expected=String(businessId||'');
+    const name=label||businessDisplayName(expected);
+    const verify=async(reason)=>{
+      const state=await businessSlotSnapshot(row,reason);
+      if(state?.businessId===expected)return state;
+      if(state?.businessId)throw businessSlotConflict(state,expected,either('Вставка','Insertion'));
+      return state;
+    };
+    try{
+      const response=await businessAction('insert',row,expected);
+      let state=findSlot(response,row.buildingId,row.slot);
+      if(state?.businessId===expected)return state;
+      state=await verify('business-insert-response-check');
+      if(state?.businessId===expected)return state;
+      throw new Error(either(
+        'После вставки игра не подтвердила «'+name+'»',
+        'The game did not confirm “'+name+'” after insertion'
+      ));
+    }catch(error){
+      if(!businessMutationUncertain(error))throw error;
+      hkRunner.note(either('Тайм-аут вставки «'+name+'»: сверяю фактический слот','Insert timeout for “'+name+'”: checking the actual slot'),'warn');
+      recordDiagnostic('business-insert-timeout-reconcile',{buildingId:row.buildingId,slot:row.slot,businessId:expected});
+      let state=await verify('business-insert-timeout-check-1');
+      if(state?.businessId===expected){
+        hkRunner.note(either('Вставка подтверждена по состоянию игры','Insertion confirmed from game state'),'ok');
+        return state;
+      }
+      await gameRetryDelay(900);
+      state=await verify('business-insert-timeout-check-2');
+      if(state?.businessId===expected){
+        hkRunner.note(either('Вставка подтверждена после ожидания','Insertion confirmed after waiting'),'ok');
+        return state;
+      }
+      hkRunner.note(either('Слот дважды подтверждён пустым — повторяю вставку один раз','Slot was confirmed empty twice — retrying insertion once'),'info');
+      try{
+        const response=await businessAction('insert',row,expected);
+        state=findSlot(response,row.buildingId,row.slot);
+        if(state?.businessId===expected)return state;
+        state=await verify('business-insert-timeout-retry-response');
+        if(state?.businessId===expected)return state;
+        throw new Error(either('Повторная вставка не подтверждена','Retried insertion was not confirmed'));
+      }catch(retryError){
+        if(!businessMutationUncertain(retryError))throw retryError;
+        state=await verify('business-insert-timeout-retry-check');
+        if(state?.businessId===expected){
+          hkRunner.note(either('Повторная вставка подтверждена по состоянию игры','Retried insertion confirmed from game state'),'ok');
+          return state;
+        }
+        throw new Error(either(
+          'Не удалось подтвердить вставку «'+name+'» после тайм-аута. Слот остался пустым',
+          'Could not confirm insertion of “'+name+'” after timeout. The slot remained empty'
+        ));
+      }
+    }
+  }
+
+  async function rollbackBusinessPlan(plan, inserted, removed) {
+    const targetByKey=new Map((plan||[]).map(pair=>[pair[0]?.key,String(pair[1]||'')]));
+    playerDocument=await hkAuthoritativePlayerRead('business-rollback-start');
+    for(const pair of [...inserted].reverse()){
+      const row=pair[0],id=String(pair[1]||'');
+      let current=findSlot(playerDocument,row.buildingId,row.slot);
+      if(!current?.businessId||current.businessId===row.businessId)continue;
+      if(current.businessId!==id)throw new Error(either(
+        'Откат остановлен: в '+buildingSlotLabel(row)+' обнаружен неожиданный бизнес '+businessDisplayName(current.businessId),
+        'Rollback stopped: an unexpected business '+businessDisplayName(current.businessId)+' was found in '+buildingSlotLabel(row)
+      ));
+      await businessRemoveConfirmed(current,id,businessDisplayName(id));
+      playerDocument=await hkAuthoritativePlayerRead('business-rollback-remove');
+    }
+    for(const row of removed){
+      let current=findSlot(playerDocument,row.buildingId,row.slot);
+      if(current?.businessId===row.businessId){
+        if(!businessSlotIsActive(current,row.businessId))await finishPendingBusiness(current,businessDisplayName(row.businessId),true);
+        continue;
+      }
+      if(current?.businessId){
+        const planned=String(targetByKey.get(row.key)||'');
+        if(!planned||current.businessId!==planned)throw new Error(either(
+          'Откат остановлен: слот '+buildingSlotLabel(row)+' уже изменён вне плана',
+          'Rollback stopped: slot '+buildingSlotLabel(row)+' has already changed outside the plan'
+        ));
+        await businessRemoveConfirmed(current,current.businessId,businessDisplayName(current.businessId));
+        playerDocument=await hkAuthoritativePlayerRead('business-rollback-clear-target');
+        current=findSlot(playerDocument,row.buildingId,row.slot);
+      }
+      if(current?.businessId===row.businessId)continue;
+      if(current?.businessId)throw new Error(either('Не удалось освободить слот для отката','Could not clear the slot for rollback'));
+      const restored=await businessInsertConfirmed(row,row.businessId,businessDisplayName(row.businessId));
+      await finishPendingBusiness(restored,businessDisplayName(row.businessId),true);
+      playerDocument=await hkAuthoritativePlayerRead('business-rollback-restored');
+    }
+  }
+
   async function executeBusinessPlan() {
     if (!requireLicense() || businessBusy) return;
     let plan;
@@ -10730,17 +10903,24 @@
       ? `Rearrange ${plan.length} businesses?\n\nOnly the free 0-cost speed-up will be used after insertion. Crystals are prohibited.`
       : `Переставить ${plan.length} бизнесов?\n\nПосле вставки будет использовано только бесплатное ускорение за 0. Кристаллы запрещены.`)) return;
     if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
-    hkRunner.start({title:either('Перестановка бизнесов','Business rearrangement'),total:Math.max(1,plan.length),step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    const initialRemovalWork=plan.filter(pair=>!!pair[0]?.businessId).length;
+    const initialTotalWork=Math.max(1,initialRemovalWork+plan.length);
+    hkRunner.start({title:either('Перестановка бизнесов','Business rearrangement'),total:initialTotalWork,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
     businessBusy = true;
     const removed = [], inserted = [];
+    let workDone=0,totalWork=initialTotalWork;
     try {
       log(either('Проверяю игровую сессию…', 'Checking game session…'));
       try {
         playerDocument = await apiJson('/player/me', 'POST');
+        await ensureRecipeMetadata();
         await releaseFreeBusinessManagers();
         playerDocument = await apiJson('/player/me', 'POST');
         refreshBusinessData();
         plan = makePlan();
+        totalWork=Math.max(1,plan.filter(pair=>!!pair[0]?.businessId).length+plan.length);
+        workDone=0;
+        hkRunner.setStep(either('Подготовка','Preparing'),workDone,totalWork);
         const safety = optimizerSafety(plan.length);
         if (!safety.allowed) throw new Error(safety.reason);
       } catch (sessionError) {
@@ -10756,36 +10936,39 @@
       for (const [row] of plan) {
         if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
         await hkRunner.waitIfPaused();
-        hkRunner.setStep(either('Снимаю бизнесы','Removing businesses'), removed.length, Math.max(1,plan.length));
-        if (!row.businessId) { log(`Пустой слот: ${buildingSlotLabel(row)}`); continue; }
-        log(`Снимаю T${tier(row.businessId)}…`);
-        await businessAction('remove', row); removed.push(row);
+        if (!row.businessId) { log(either('Пустой слот: ','Empty slot: ')+buildingSlotLabel(row)); continue; }
+        const removeName=businessDisplayName(row.businessId);
+        hkRunner.setStep(either('Снимаю: ','Removing: ')+removeName+' · T'+(tier(row.businessId)??'—'),workDone,totalWork);
+        log(either('Снимаю ','Removing ')+removeName+' · T'+(tier(row.businessId)??'—')+'…');
+        await businessRemoveConfirmed(row,row.businessId,removeName);
+        removed.push(row);
+        workDone+=1;
+        hkRunner.setStep(either('Снят: ','Removed: ')+removeName,workDone,totalWork);
       }
-      let processedInsertRows = 0;
       for (const [row, id] of plan) {
         if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
         await hkRunner.waitIfPaused();
-        hkRunner.setStep(either('Вставляю бизнесы','Inserting businesses'), processedInsertRows, Math.max(1,plan.length));
         if (!id) {
-          log(`${either('Оставляю пустым','Leaving empty')}: ${buildingSlotLabel(row)}`);
-          processedInsertRows += 1;
-          hkRunner.setStep(either('Вставляю бизнесы','Inserting businesses'), processedInsertRows, Math.max(1,plan.length));
+          hkRunner.setStep(either('Оставляю слот пустым: ','Leaving slot empty: ')+buildingSlotLabel(row),workDone,totalWork);
+          log(either('Оставляю пустым: ','Leaving empty: ')+buildingSlotLabel(row));
+          workDone+=1;
+          hkRunner.setStep(either('Пустой слот подтверждён','Empty slot confirmed'),workDone,totalWork);
           continue;
         }
-        log(`Вставляю T${tier(id)}…`);
-        const response = await businessAction('insert', row, id); inserted.push([row,id]);
-        const state = findSlot(response, row.buildingId, row.slot);
-        if (!state) throw new Error('После вставки сервер не вернул новый бизнес');
-        if (state.businessId !== id) throw new Error(either('Сервер вернул другой бизнес после вставки', 'The server returned a different business after insertion'));
-        await finishPendingBusiness(state, `T${tier(id)}`, true);
-        processedInsertRows += 1;
-        hkRunner.setStep(either('Вставляю бизнесы','Inserting businesses'), processedInsertRows, Math.max(1,plan.length));
+        const insertName=businessDisplayName(id);
+        hkRunner.setStep(either('Вставляю: ','Inserting: ')+insertName+' · T'+(tier(id)??'—'),workDone,totalWork);
+        log(either('Вставляю ','Inserting ')+insertName+' · T'+(tier(id)??'—')+'…');
+        const state=await businessInsertConfirmed(row,id,insertName);
+        inserted.push([row,id]);
+        await finishPendingBusiness(state,insertName,true);
+        workDone+=1;
+        hkRunner.setStep(either('Активирован: ','Activated: ')+insertName,workDone,totalWork);
       }
 
       // All mutation rows have been processed. Use one authoritative snapshot
       // for the normal final check instead of rereading /player/me once per slot.
       // Only slots that are genuinely unresolved get a targeted recovery read.
-      hkRunner.setStep(either('Проверяю результат','Verifying result'), Math.max(1,plan.length), Math.max(1,plan.length));
+      hkRunner.setStep(either('Проверяю результат','Verifying result'),workDone,totalWork);
       playerDocument = await hkAuthoritativePlayerRead('business-final-check');
 
       let unresolved = inserted.filter(([row, id]) =>
@@ -10834,13 +11017,7 @@
       } else {
         log(`${either('Ошибка', 'Error')}: ${error.message}. ${either('Пробую вернуть исходную схему', 'Trying to restore the original layout')}`, 'bad');
         try {
-          for (const [row] of inserted.reverse()) await businessAction('remove', row);
-          for (const row of removed) {
-            await businessAction('insert', row, row.businessId);
-            const restored = await readBusinessSlot(row.buildingId, row.slot, value => value.businessId === row.businessId);
-            if (!restored) throw new Error(either('Сервер не вернул восстановленный бизнес', 'The server did not return the restored business'));
-            await finishPendingBusiness(restored, `T${tier(row.businessId)}`);
-          }
+          await rollbackBusinessPlan(plan,inserted,removed);
           log('Исходная схема восстановлена', 'ok');
         } catch (rollback) {
           log(`Откат не завершён: ${rollback.message}`, 'bad');
@@ -12199,7 +12376,7 @@
       .hk-building-empty{padding:12px;border:1px dashed #34445b;border-radius:11px;color:#8fa0b8;text-align:center}.hk-building-more{margin:8px 0 0;color:#8fa0b8;font-size:11px}
       @media(max-width:760px){.hk-building-controls{grid-template-columns:1fr}.hk-building-stats{grid-template-columns:1fr 1fr}.hk-building-actions{grid-template-columns:1fr}.hk-buildings-head{align-items:flex-start}.hk-buildings-head .hk-secondary{min-width:96px}.hk-building-area{max-width:120px}.hk-runner.buildings-run .hk-runner-actions,.hk-runner.businesses-run .hk-runner-actions{display:grid;grid-template-columns:1fr 1fr}.hk-runner.buildings-run .hk-runner-actions button,.hk-runner.businesses-run .hk-runner-actions button{width:100%;min-width:0}}
       @media(max-width:460px){.hk-buildings-head{display:grid;grid-template-columns:1fr auto}.hk-buildings-head small{grid-column:1/3}.hk-building-stats{grid-template-columns:1fr}.hk-building-row,.hk-building-candidate-row{grid-template-columns:minmax(0,1fr) auto}.hk-building-read{min-width:72px;padding:8px 10px!important}.hk-building-area{display:none}}
-      .hk-business-rearrange-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}#hk-business-lists{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}#hk-business-lists>section{min-width:0}@media(max-width:760px){.hk-business-rearrange-controls,#hk-business-lists{grid-template-columns:1fr}}h3{font-size:16px;margin:8px 0}.hk-cards{display:grid;gap:8px}.hk-card{display:flex;align-items:center;gap:10px;background:#151d29;border:1px solid #2a374a;border-radius:14px;padding:9px}.hk-card.selected{border-color:#ffad1f;background:#2a2418}.hk-card.empty{border-style:dashed}.hk-card input{width:22px;height:22px}.hk-card select{margin-left:auto;background:#0b111b;color:white;border:1px solid #455672;border-radius:9px;padding:8px;min-width:58px}.hk-card>.hk-business-info{display:flex;flex:1;min-width:0;flex-direction:column}.hk-card small{color:#a9b5c7;margin-top:3px}.hk-business-name{line-height:1.25;overflow-wrap:anywhere}.hk-business-properties{color:#e3c66e!important;font-size:11px;line-height:1.3;overflow-wrap:anywhere}.hk-icon{width:46px;height:46px;object-fit:contain;flex:0 0 46px}.hk-empty-icon{width:46px;height:46px;border:2px dashed #6381a8;border-radius:50%;display:flex!important;align-items:center;justify-content:center;color:#77baff;font-size:27px;flex:0 0 46px}.hk-empty-icon.compact{width:34px;height:34px;flex-basis:34px;font-size:20px}.hk-plan-row{display:flex;align-items:center;gap:6px;overflow:hidden;margin:10px 0}.hk-plan-row .hk-icon{width:34px;height:34px;flex-basis:34px}.hk-count{font-weight:800}.hk-muted{color:#9aa8bc}.hk-log{max-height:150px;overflow:auto;font:12px ui-monospace,monospace;background:#080d14;border-radius:12px;padding:9px;margin-top:12px}.hk-log>div{padding:3px 0;border-bottom:1px solid #182130}.hk-log-ok{color:#6ee7a8}.hk-log-warn{color:#ffd166}.hk-log-bad{color:#ff8792}.hk-status{font-size:12px;color:#aebbd0;margin-top:8px}
+      .hk-business-rearrange-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}#hk-business-lists{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}#hk-business-lists>section{min-width:0}@media(max-width:760px){.hk-business-rearrange-controls,#hk-business-lists{grid-template-columns:1fr}}h3{font-size:16px;margin:8px 0}.hk-cards{display:grid;gap:8px}.hk-card{display:flex;align-items:center;gap:10px;background:#151d29;border:1px solid #2a374a;border-radius:14px;padding:9px}.hk-card.selected{border-color:#ffad1f;background:#2a2418}.hk-card.empty{border-style:dashed}.hk-card input{width:22px;height:22px}.hk-card select{margin-left:auto;background:#0b111b;color:white;border:1px solid #455672;border-radius:9px;padding:8px;min-width:58px}.hk-card>.hk-business-info{display:flex;flex:1;min-width:0;flex-direction:column}.hk-card small{color:#a9b5c7;margin-top:3px}.hk-business-name{line-height:1.25;overflow-wrap:anywhere}.hk-business-properties{color:#e3c66e!important;font-size:11px;line-height:1.3;overflow-wrap:anywhere}.hk-icon{width:46px;height:46px;object-fit:contain;flex:0 0 46px}.hk-empty-icon{width:46px;height:46px;border:2px dashed #6381a8;border-radius:50%;display:flex!important;align-items:center;justify-content:center;color:#77baff;font-size:27px;flex:0 0 46px}.hk-empty-icon.compact{width:34px;height:34px;flex-basis:34px;font-size:20px}.hk-plan-row{display:flex;align-items:center;gap:6px;overflow:hidden;margin:10px 0}.hk-plan-row .hk-icon{width:34px;height:34px;flex-basis:34px}.hk-plan-business{display:grid;grid-template-columns:34px;justify-items:center;gap:3px;min-width:72px;max-width:112px}.hk-plan-business small{width:100%;color:#d7e0ec;font-size:9px;line-height:1.15;text-align:center;white-space:normal;overflow-wrap:anywhere}.hk-plan-business.empty small{color:#8fa0b8}.hk-plan-business .hk-icon{width:34px;height:34px;flex-basis:34px}.hk-count{font-weight:800}.hk-muted{color:#9aa8bc}.hk-log{max-height:150px;overflow:auto;font:12px ui-monospace,monospace;background:#080d14;border-radius:12px;padding:9px;margin-top:12px}.hk-log>div{padding:3px 0;border-bottom:1px solid #182130}.hk-log-ok{color:#6ee7a8}.hk-log-warn{color:#ffd166}.hk-log-bad{color:#ff8792}.hk-status{font-size:12px;color:#aebbd0;margin-top:8px}
       .hk-optimizer{margin:10px 0;padding:11px;border:1px solid #34445b;border-radius:14px;background:#0d1520}.hk-optimizer h3{margin-top:0}.hk-optimizer-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hk-optimizer-controls label{display:grid;gap:4px;color:#aebbd0;font-size:11px}.hk-optimizer-controls select,.hk-optimizer-controls input{min-width:0;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:9px;padding:9px}.hk-optimizer-filter{display:grid;gap:6px;margin-top:9px;padding:9px;border:1px solid #2d3d54;border-radius:10px;background:#101927}.hk-optimizer-filter>small{color:#8fa0b8}.hk-optimizer-collapsible>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none}.hk-optimizer-collapsible>summary::-webkit-details-marker{display:none}.hk-optimizer-collapsible>summary:before{content:'▸';color:#ffbd3f;font-size:15px}.hk-optimizer-collapsible[open]>summary:before{content:'▾'}.hk-optimizer-collapsible:not([open])>small,.hk-optimizer-collapsible:not([open])>.hk-optimizer-replaceable{display:none}.hk-optimizer-tiers{display:flex;gap:6px;flex-wrap:wrap}.hk-tier-choice{display:flex;align-items:center;gap:4px;padding:6px 9px;border:1px solid #42536d;border-radius:9px;background:#0b111b}.hk-optimizer-replaceable{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;max-height:250px;overflow:auto}.hk-optimizer-business-choice{display:grid;grid-template-columns:22px 42px 1fr;align-items:center;gap:6px;padding:6px;border:1px solid #34445b;border-radius:9px;background:#0b111b}.hk-optimizer-business-choice.locked{border-color:#a64d5b;background:#27151b}.hk-optimizer-business-choice.tier-disabled{border-color:#34445b;background:#0b111b;opacity:.48;cursor:not-allowed}.hk-optimizer-business-choice.tier-disabled input{pointer-events:none}.hk-optimizer-business-choice .hk-icon{width:40px;height:40px}.hk-optimizer-business-choice>span{display:grid;gap:2px;min-width:0}.hk-optimizer-business-choice b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hk-optimizer-business-choice small{color:#9eabc0}.hk-optimizer-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.hk-optimizer-result{display:grid;gap:8px;margin-top:9px}.hk-optimizer-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.hk-optimizer-summary span{padding:8px;border-radius:9px;background:#111c2b;color:#aebbd0;font-size:11px}.hk-optimizer-summary b{display:block;color:#f4f7fb;margin-top:3px}.hk-optimizer-result ul{list-style:none;padding:0;margin:0;display:grid;gap:5px}.hk-optimizer-result li{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:8px;background:#111c2b;font-size:11px}.hk-optimizer-result li strong.positive{color:#6ee7a8}.hk-optimizer-result li strong.negative{color:#ff8792}.hk-optimizer-safety{padding:8px;border-radius:9px;background:#10281f;color:#6ee7a8}.hk-optimizer-safety.blocked{background:#301820;color:#ff8792}.hk-optimizer-flow{display:flex;align-items:center;gap:5px;overflow-x:auto;padding:4px 0}.hk-optimizer-flow .hk-icon{width:34px;height:34px;flex-basis:34px}@media(max-width:620px){.hk-optimizer-controls,.hk-optimizer-actions{grid-template-columns:1fr}.hk-optimizer-summary{grid-template-columns:1fr 1fr}.hk-optimizer-replaceable{grid-template-columns:1fr}}
       .hk-business-catalog-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,.7fr) auto auto;gap:8px;align-items:center;margin:10px 0}.hk-business-catalog-toolbar input,.hk-business-catalog-toolbar select,.hk-business-catalog-plan-stats input{min-width:0;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:9px;padding:9px}.hk-business-catalog-toolbar label{display:flex;gap:6px;align-items:center;color:#aebbd0;font-size:11px}.hk-business-catalog-summary{display:flex;justify-content:space-between;gap:10px;color:#aebbd0;margin:8px 0}.hk-business-catalog-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px}.hk-business-catalog-card{display:grid;grid-template-columns:46px minmax(0,1fr);gap:9px;text-align:left;align-items:center;border:1px solid #2a374a;border-radius:12px;padding:9px;background:#111925;color:#fff}.hk-business-catalog-card.selected{border-color:#ffad1f;background:#2a2418}.hk-business-catalog-copy{display:grid;gap:3px;min-width:0}.hk-business-catalog-copy>b,.hk-business-catalog-copy>small{overflow:hidden;text-overflow:ellipsis}.hk-business-catalog-bonuses{display:flex;gap:4px;flex-wrap:wrap}.hk-business-catalog-bonuses span{font-size:9px;padding:2px 6px;border-radius:999px;background:#202c3d;color:#b9c8dc}.hk-business-catalog-planner{margin:10px 0}.hk-business-catalog-plan-head{display:flex;justify-content:space-between;gap:8px}.hk-business-catalog-plan-head span{color:#ffd166}.hk-business-catalog-plan-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:9px 0}.hk-business-catalog-plan-stats>div,.hk-business-catalog-plan-stats>label{display:grid;gap:4px;padding:8px;border:1px solid #2c3a4d;border-radius:9px;background:#101824}.hk-business-catalog-plan-stats span{font-size:10px;color:#91a2b9}.hk-business-routes{display:grid;gap:7px}.hk-business-route{padding:8px;border:1px solid #2b3a4e;border-radius:10px;background:#0e1722}.hk-business-route>div{display:flex;align-items:center;gap:5px;overflow-x:auto;margin-top:6px}.hk-business-route-part{display:grid;justify-items:center;gap:2px;min-width:70px}.hk-business-route-part .hk-icon{width:34px;height:34px;flex-basis:34px}.hk-business-route-part small{max-width:80px;text-align:center;font-size:9px;color:#9fb0c7}@media(max-width:760px){.hk-business-catalog-toolbar{grid-template-columns:1fr}.hk-business-catalog-plan-stats{grid-template-columns:1fr 1fr}.hk-business-tabs{grid-template-columns:1fr}.hk-business-catalog-grid{grid-template-columns:1fr}}.hk-bonus-analyzer{margin:10px 0;padding:11px;border:1px solid #34445b;border-radius:14px;background:#0d1520}.hk-bonus-analyzer h3,.hk-bonus-analyzer h4{margin:4px 0 8px}.hk-bonus-analysis-list{display:grid;gap:6px}.hk-bonus-analysis-row{background:#111c2b;border:1px solid #2c3b50;border-radius:10px;padding:8px}.hk-bonus-analysis-row summary{display:grid;grid-template-columns:1fr auto;gap:3px 8px;cursor:pointer}.hk-bonus-analysis-row summary small{grid-column:1/3;color:#95a5bc}.hk-bonus-analysis-row>div{display:grid;gap:5px;margin-top:7px}.hk-bonus-source,.hk-limited-businesses>span{display:flex;align-items:center;gap:7px}.hk-bonus-source .hk-icon,.hk-limited-businesses .hk-icon{width:30px;height:30px;flex-basis:30px}.hk-best-business{display:flex;align-items:center;gap:10px;background:#10281f;border:1px solid #286148;border-radius:11px;padding:9px}.hk-best-business span{display:grid;gap:3px}.hk-best-business small{color:#b5c2d4}.hk-limited-businesses{display:flex;gap:8px;overflow-x:auto}.hk-limited-businesses>span{min-width:150px;background:#301820;border-radius:9px;padding:6px;color:#ffb0b7}
       .hk-resource-type-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}.hk-resource-type-tabs button{display:grid;gap:3px;padding:11px 8px;border:1px solid #40516a;border-radius:12px;background:#101a28;color:#d7dfeb}.hk-resource-type-tabs button b{font-size:13px;overflow-wrap:anywhere}.hk-resource-type-tabs button small{color:#96a5ba}.hk-resource-type-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#ffe083;box-shadow:0 0 0 2px #ffad1f2b}.hk-resource-type-tabs button.active small{color:#ffd36a}.hk-resource-head{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(260px,1.4fr) minmax(210px,.48fr);gap:10px;align-items:end}.hk-resource-head h3{margin:0}.hk-resource-head small{display:block;margin-top:4px;color:#96a5ba}.hk-resource-tiers{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;align-self:center}.hk-resource-tiers button{min-width:42px;padding:9px 10px;border:1px solid #40516a;border-radius:50px;background:#101a28;color:#b8c5d8;font-weight:900}.hk-resource-tiers button.active{border-color:#ffad1f;background:#3a2b14;color:#ffe083;box-shadow:0 0 0 2px #ffad1f2b}.hk-resource-repeat{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:10px 12px;border:1px solid #304159;border-radius:10px;background:#101a28}.hk-resource-repeat select{min-width:90px}.hk-resource-maximum{width:100%;margin-top:8px}.hk-resource-buildings{display:grid;gap:10px;margin:12px 0}.hk-resource-building{padding:10px;border:1px solid #304159;border-radius:12px;background:#101a28}.hk-resource-building h4{margin:0 0 8px;color:#f4f7fb}.hk-resource-building h4 small{color:#ffe083}.hk-resource-task{display:grid;grid-template-columns:minmax(150px,1fr) minmax(210px,.9fr) 110px;gap:9px;align-items:center;padding:8px 0;border-top:1px solid #26364b}.hk-resource-task>div{display:grid;gap:3px}.hk-resource-task small{color:#96a5ba}.hk-resource-task.protected{opacity:.6}.hk-resource-task.protected button{border-color:#596578;background:#222c3a;color:#aeb8c8}.hk-resource-task button{padding:10px 6px;border-color:#d99d18;background:#3a2b14;color:#ffe083;font-weight:900}.hk-resource-cost{display:grid;gap:4px;justify-items:end}.hk-resource-balance{display:grid;grid-template-columns:25px auto 8px auto;gap:4px;align-items:center;font-size:10px;color:#aebbd0}.hk-resource-balance .hk-price-icon{width:25px;height:25px}.hk-resource-balance i{display:grid;font-style:normal}.hk-resource-balance em{font-style:normal;color:#748399}.hk-resource-balance b{font-size:12px;color:#f5f7fa}.hk-resource-balance.ok b{color:#72e8ae}.hk-resource-balance.short b{color:#ff8992}.hk-resource-buildings+.hk-primary{width:100%}@media(max-width:820px){.hk-resource-head{grid-template-columns:1fr}.hk-resource-tiers{justify-content:flex-start}}@media(max-width:620px){.hk-resource-type-tabs button{padding:9px 4px}.hk-resource-type-tabs button b{font-size:11px}.hk-resource-type-tabs button small{font-size:10px}.hk-resource-task{grid-template-columns:1fr 110px}.hk-resource-cost{grid-column:1/2;justify-items:start}.hk-resource-task button{grid-column:2;grid-row:1/3}}
