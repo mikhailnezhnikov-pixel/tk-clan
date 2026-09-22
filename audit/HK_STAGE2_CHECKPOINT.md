@@ -18,9 +18,9 @@ Each module:
 - stage: 2
 - status: IN_PROGRESS
 - userscript: 1.17.35
-- current module: Auto Routines / Авто-рутины — Stage 2.10 verification
-- current module file: audit/hk-stage2-10-auto-routines.md
-- current module status: SOURCE_PREFLIGHT_PASS · STATIC_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING
+- current module: Growth / Развитие — Stage 2.11 verification
+- current module file: audit/hk-stage2-11-growth.md
+- current module status: SOURCE_PREFLIGHT_PASS · CANONICAL_CURRENCY_BUG_CONFIRMED
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: LIVE PASS
@@ -97,6 +97,10 @@ Each module:
   - custom HK implementation confirmed working by user;
   - technical live verifier PASS;
   - global 429 cooldown regression fixed in 1.17.31;
+- 2.10 Auto Routines / Авто-рутины — LIVE PASS
+  - fail-closed chain PASS;
+  - continuous collector lease PASS;
+  - embedded into Today in 1.17.35;
 
 
 ## Pits donor source block
