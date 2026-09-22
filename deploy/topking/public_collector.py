@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import base64, json, os, re, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request, fcntl, hashlib, hmac
 
-REV = "public-server-collector-20260921-r5-bootstrap-self-heal"
+REV = "public-server-collector-20260922-r6-activity-lease"
 GAME_API = os.environ.get("HK_PUBLIC_COLLECTOR_GAME_API", "https://hk-game-api.hwgame.cloud").rstrip("/")
 DB_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_DB", "/var/lib/hamsterking-license/licenses.db")
 STATUS_PATH = os.environ.get("HK_PUBLIC_COLLECTOR_STATUS", "/var/lib/hamsterking-license/public-collector-status.json")
@@ -9,6 +9,7 @@ TOKEN_FILE = os.environ.get("HK_PUBLIC_COLLECTOR_TOKEN_FILE", "/var/lib/hamsterk
 AUTH_BOOTSTRAP_FILE = os.environ.get("HK_PUBLIC_COLLECTOR_AUTH_BOOTSTRAP", "/var/lib/hamsterking-license/public-collector-auth.json").strip()
 IDENTITY_FILE = os.environ.get("HK_PUBLIC_COLLECTOR_IDENTITY_FILE", "/var/lib/hamsterking-license/public-collector-identity.sha256").strip()
 AUTH_REFRESH_STATUS_FILE = os.environ.get("HK_PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS", "/var/lib/hamsterking-license/public-collector-auth-refresh.json").strip()
+ACTIVITY_LEASE_FILE = os.environ.get("HK_PUBLIC_COLLECTOR_ACTIVITY_FILE", "/var/lib/hamsterking-license/public-collector-activity.json").strip()
 TOKEN = ""
 REQUEST_GAP = max(1.5, float(os.environ.get("HK_PUBLIC_COLLECTOR_REQUEST_GAP", "1.5")))
 SOURCE = "server-collector"
@@ -30,6 +31,36 @@ def _write_private(path, text):
         f.write(str(text))
     os.chmod(tmp,0o600)
     os.replace(tmp,path)
+
+class CollectorPaused(RuntimeError):
+    pass
+
+def _active_automation_lease():
+    raw=_read_text(ACTIVITY_LEASE_FILE,4096)
+    if not raw:
+        return None
+    try:
+        value=json.loads(raw)
+        until=int(value.get("lease_until") or 0)
+    except Exception:
+        return None
+    now=int(time.time())
+    if until<=now:
+        try:
+            os.unlink(ACTIVITY_LEASE_FILE)
+        except OSError:
+            pass
+        return None
+    return {
+        "lease_until":until,
+        "reason":clean_name(value.get("reason"),120) if "clean_name" in globals() else str(value.get("reason") or "")[:120],
+    }
+
+def _ensure_collector_not_paused():
+    lease=_active_automation_lease()
+    if lease:
+        raise CollectorPaused("active HK automation")
+    return True
 
 def _load_token():
     value=_read_text(TOKEN_FILE,16_384)
@@ -78,6 +109,7 @@ def _request_gap():
 
 def _direct_json(url, method="GET", body=None, token=""):
     global _last_request
+    _ensure_collector_not_paused()
     _request_gap()
     headers={"Accept":"application/json","User-Agent":"TopKing-Public-Collector/2"}
     if token:
@@ -117,6 +149,7 @@ def _clear_auth_refresh_failure():
 
 def refresh_game_token(force=False):
     global TOKEN
+    _ensure_collector_not_paused()
     if _auth_refresh_backed_off():
         return False
     try:
@@ -201,6 +234,7 @@ def finite(*values):
 _last_request=0.0
 def game_json(path, method="GET", body=None, retry_delays=None):
     global _last_request, TOKEN
+    _ensure_collector_not_paused()
     if not ensure_game_token():
         raise RuntimeError("collector token missing")
     url=GAME_API+path
@@ -215,6 +249,7 @@ def game_json(path, method="GET", body=None, retry_delays=None):
     auth_refreshed=False
     attempt=0
     while attempt<len(delays):
+        _ensure_collector_not_paused()
         delay=delays[attempt]
         if delay:
             time.sleep(delay)
@@ -673,6 +708,11 @@ def store_snapshot(war_read,war,ratings):
     finally:
         db.close()
 def main():
+    lease=_active_automation_lease()
+    if lease:
+        write_status(True,"paused_active_automation",lease_until=lease["lease_until"],reason=lease.get("reason",""))
+        log(f"paused: active HK automation until {lease['lease_until']}")
+        return 0
     if not ensure_game_token():
         write_status(True,"disabled_no_token")
         log("disabled: collector token/bootstrap is not configured")
@@ -728,6 +768,11 @@ def main():
             f"war={war_state} "
             f"ratings={','.join(saved) or 'unchanged'}"
         )
+        return 0
+    except CollectorPaused:
+        lease=_active_automation_lease() or {}
+        write_status(True,"paused_active_automation",mode=mode,lease_until=int(lease.get("lease_until") or 0),reason=str(lease.get("reason") or ""),duration_sec=round(time.time()-started,2))
+        log(f"paused during run: mode={mode} active HK automation")
         return 0
     except Exception as exc:
         write_status(False,"error",mode=mode,error=type(exc).__name__,duration_sec=round(time.time()-started,2))
