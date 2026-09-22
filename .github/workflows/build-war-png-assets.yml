@@ -40,17 +40,23 @@ jobs:
           test "$(sha256sum assets/war/units/raider/idle.png | awk '{print $1}')" = "47b631de3ef116be4595d90af54ebfa755264def9e7074f05daa1be5d2c41b07"
           wc -c assets/war/units/topking/idle.png assets/war/units/raider/idle.png
 
-          # First verified milestone: keep the same clean transparent character art
-          # for all states while BattleAnimator supplies movement/hit reaction.
-          cp assets/war/units/topking/idle.png assets/war/units/topking/attack.png
-          cp assets/war/units/topking/idle.png assets/war/units/topking/hit.png
-          cp assets/war/units/raider/idle.png assets/war/units/raider/attack.png
-          cp assets/war/units/raider/idle.png assets/war/units/raider/hit.png
-
           python -m pip install --quiet pillow
           python - <<'PY'
           from pathlib import Path
           from PIL import Image
+
+          # Idle uses the cleaned verified PNG reconstructed from chunks above.
+          # Attack/hit already exist as distinct transparent WebP frames; convert
+          # those into PNG instead of duplicating idle, so Fighter state changes
+          # are visually real.
+          for group in ("topking","raider"):
+              base=Path("assets/war/units")/group
+              for state in ("attack","hit"):
+                  src=base/f"{state}.webp"
+                  dst=base/f"{state}.png"
+                  with Image.open(src) as im:
+                      im.convert("RGBA").save(dst,"PNG",optimize=True)
+
           for group in ("topking","raider"):
               for state in ("idle","attack","hit"):
                   p=Path("assets/war/units")/group/f"{state}.png"
