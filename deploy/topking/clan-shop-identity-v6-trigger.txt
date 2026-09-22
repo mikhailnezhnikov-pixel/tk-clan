@@ -1,2 +1,2 @@
-trigger=clan-shop-access-participants-v15
-stamp=2026-09-22T14:08+09:00
+trigger=clan-shop-purchase-events-v16
+stamp=2026-09-22T20:01+09:00
