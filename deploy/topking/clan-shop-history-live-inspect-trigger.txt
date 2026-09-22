@@ -1,2 +1,2 @@
-inspect=clan-shop-roster-raw-fields
-stamp=2026-09-23T00:15+09:00
+inspect=clan-shop-skill-snapshot-numeric-ids
+stamp=2026-09-23T00:18+09:00
