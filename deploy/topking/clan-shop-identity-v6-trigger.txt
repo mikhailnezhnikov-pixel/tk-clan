@@ -1,2 +1,2 @@
-trigger=clan-shop-license-player-id-v9
+trigger=clan-shop-license-player-id-v11
 stamp=2026-09-22
