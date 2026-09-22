@@ -21,7 +21,7 @@ if "CLAN_SHOP_CABINET_LINKED_ID_V12" not in s:
 # 4. Nickname text is never used as a join key.
 
 history_start = s.index("def clan_shop_history_payload() -> dict:")
-history_end = s.index("\\ndef clan_shop_publication_text", history_start)
+history_end = s.index("\ndef clan_shop_publication_text", history_start)
 history = s[history_start:history_end]
 
 old = '''    linked_identities=clan_shop_linked_identities()
@@ -92,8 +92,8 @@ for forbidden in [
 s = s[:history_start] + history + s[history_end:]
 # Leave a visible server marker outside the function as well.
 s = s.replace(
-    "# CLAN_SHOP_CABINET_LINKED_ID_V12\\ndef clan_shop_linked_identities()",
-    "# CLAN_SHOP_CABINET_LINKED_ID_V12\\n# " + MARKER + "\\ndef clan_shop_linked_identities()",
+    "# CLAN_SHOP_CABINET_LINKED_ID_V12\ndef clan_shop_linked_identities()",
+    "# CLAN_SHOP_CABINET_LINKED_ID_V12\n# " + MARKER + "\ndef clan_shop_linked_identities()",
     1,
 )
 
