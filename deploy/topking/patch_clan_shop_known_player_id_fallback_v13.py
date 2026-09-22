@@ -21,7 +21,7 @@ if "CLAN_SHOP_CABINET_LINKED_ID_V12" not in s:
 # 4. Nickname text is never used as a join key.
 
 history_start = s.index("def clan_shop_history_payload() -> dict:")
-history_end = s.index("\ndef clan_shop_publication_text", history_start)
+history_end = s.index("\\ndef clan_shop_publication_text", history_start)
 history = s[history_start:history_end]
 
 old = '''    linked_identities=clan_shop_linked_identities()
@@ -40,30 +40,25 @@ history = history.replace(old, new, 1)
 old = '''        participant=by_player_id.get(pid)
         linked=linked_identities.get(pid)
         nickname=(
-            str(linked.get("display_name") or "").strip() if linked else ""
-        ) or (
-            str(participant.get("nickname") or "").strip() if participant else ""
-        ) or full_snapshot_nickname_by_player_id.get(pid,"") \
-          or latest_nickname_by_player_id.get(pid,"") \
-          or pid
 '''
 new = '''        participant=by_player_id.get(pid)
         linked=linked_identities.get(pid)
         known=known_player_identities.get(pid)
-        participant_name=str(participant.get("nickname") or "").strip() if participant else ""
-        full_snapshot_name=full_snapshot_nickname_by_player_id.get(pid,"")
-        skill_snapshot_name=latest_nickname_by_player_id.get(pid,"")
-        known_name=str(known.get("display_name") or "").strip() if known else ""
         nickname=(
-            str(linked.get("display_name") or "").strip() if linked else ""
-        ) or participant_name \
-          or full_snapshot_name \
-          or skill_snapshot_name \
-          or known_name \
+'''
+if old not in history:
+    raise SystemExit("history player identity prefix missing")
+history = history.replace(old, new, 1)
+
+old = '''          or latest_nickname_by_player_id.get(pid,"") \\
+          or pid
+'''
+new = '''          or latest_nickname_by_player_id.get(pid,"") \\
+          or (str(known.get("display_name") or "").strip() if known else "") \\
           or pid
 '''
 if old not in history:
-    raise SystemExit("history nickname block missing")
+    raise SystemExit("history fallback tail missing")
 history = history.replace(old, new, 1)
 
 old = '''            "identity_source":"linked_player_id" if linked and linked.get("display_name") else (
@@ -72,9 +67,9 @@ old = '''            "identity_source":"linked_player_id" if linked and linked.g
             ),
 '''
 new = '''            "identity_source":"linked_player_id" if linked and linked.get("display_name") else (
-                "clan_snapshot" if participant_name or full_snapshot_name else (
-                    "skill_snapshot" if skill_snapshot_name else (
-                        "known_player_id" if known_name else "player_id"
+                "clan_snapshot" if participant or pid in full_snapshot_nickname_by_player_id else (
+                    "skill_snapshot" if pid in latest_nickname_by_player_id else (
+                        "known_player_id" if known and known.get("display_name") else "player_id"
                     )
                 )
             ),
@@ -97,8 +92,8 @@ for forbidden in [
 s = s[:history_start] + history + s[history_end:]
 # Leave a visible server marker outside the function as well.
 s = s.replace(
-    "# CLAN_SHOP_CABINET_LINKED_ID_V12\ndef clan_shop_linked_identities()",
-    "# CLAN_SHOP_CABINET_LINKED_ID_V12\n# " + MARKER + "\ndef clan_shop_linked_identities()",
+    "# CLAN_SHOP_CABINET_LINKED_ID_V12\\ndef clan_shop_linked_identities()",
+    "# CLAN_SHOP_CABINET_LINKED_ID_V12\\n# " + MARKER + "\\ndef clan_shop_linked_identities()",
     1,
 )
 
