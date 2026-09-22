@@ -1,4 +1,4 @@
-name: Deploy Clan Shop Player Attribution V11
+name: Deploy Clan Shop Cabinet Identity V12
 
 on:
   push:
@@ -28,17 +28,27 @@ jobs:
         run: |
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
-          python3 deploy/topking/patch_clan_shop_license_player_id_v11.py /tmp/server.py
+          python3 deploy/topking/patch_clan_shop_cabinet_linked_id_v12.py /tmp/server.py
           python3 -m py_compile /tmp/server.py
-          grep -Fq "CLAN_SHOP_LICENSE_PLAYER_ID_V11" /tmp/server.py
-          ! grep -Fq '"nickname": "Не распределено по игрокам"' /tmp/server.py
-          grep -Fq '"coverage":coverage' /tmp/server.py
+          grep -Fq "CLAN_SHOP_CABINET_LINKED_ID_V12" /tmp/server.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/server.py').read_text(encoding='utf-8')
+          a=s.index('def clan_shop_history_payload() -> dict:')
+          b=s.index('\ndef clan_shop_publication_text',a)
+          h=s[a:b]
+          assert 'license_identities=clan_shop_license_identities()' not in h
+          assert '"nickname": "Не распределено по игрокам"' not in h
+          assert '"nickname": "Не определён игрок"' not in h
+          assert '"identity_source":"linked_player_id"' in h
+          print('V12_STATIC_CHECK=PASS')
+          PY
 
       - name: Deploy server
         run: |
           set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.clan-shop-v11.py
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -e; stamp=$(date +%Y%m%d-%H%M%S); cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.clan-shop-v11.$stamp; install -m 0644 /tmp/server.clan-shop-v11.py /opt/hamsterking-license/server.py; python3 -m py_compile /opt/hamsterking-license/server.py; systemctl restart hamsterking-license.service; systemctl is-active --quiet hamsterking-license.service'
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.clan-shop-v12.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -e; stamp=$(date +%Y%m%d-%H%M%S); cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.clan-shop-v12.$stamp; install -m 0644 /tmp/server.clan-shop-v12.py /opt/hamsterking-license/server.py; python3 -m py_compile /opt/hamsterking-license/server.py; systemctl restart hamsterking-license.service; systemctl is-active --quiet hamsterking-license.service'
 
       - name: Verify service
         run: |
@@ -46,7 +56,7 @@ jobs:
           sleep 2
           curl -fsS --retry 4 --retry-delay 1 https://hk-license.89.125.1.71.sslip.io/health -o /tmp/health.json
           python3 -c "import json; d=json.load(open('/tmp/health.json')); assert d.get('ok') is True"
-          echo "CLAN_SHOP_LICENSE_PLAYER_ID_V11=PASS"
+          echo "CLAN_SHOP_CABINET_LINKED_ID_V12=PASS"
 
       - name: Cleanup
         if: always()
