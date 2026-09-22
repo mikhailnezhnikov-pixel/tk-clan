@@ -2,7 +2,7 @@
 
 ## Status
 
-**SOURCE_PREFLIGHT_PASS · STATIC_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING**
+**LIVE PASS**
 
 ## Source decision
 
@@ -138,3 +138,9 @@ A destructive multi-stage browser run is not required for Stage 2.10.
 - Saved routine selections and fail-closed orchestration are preserved.
 - Legacy saved navModule=routines migrates to daily.
 - Technical live deployment: PASS; browser check remains pending.
+
+## User live confirmation
+
+- User confirmed the 1.17.35 Auto Routines placement inside Today is correct.
+- Standalone Auto Routines navigation is no longer needed.
+- Stage 2.10: **LIVE PASS**.
