@@ -1,9 +1,9 @@
-name: Deploy Userscript 1.17.27 Business Timeout Safe
+name: Deploy Userscript 1.17.28 Kokkaras Businesses Canon
 
 on:
   push:
     paths:
-      - 'deploy/topking/userscript-1-17-27-business-timeout-safe-trigger.txt'
+      - 'deploy/topking/userscript-1-17-28-kokkaras-businesses-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -34,27 +34,32 @@ jobs:
       - name: Validate candidate
         run: |
           set -euo pipefail
-          cp deploy/topking/HamsterKingMobile.1.17.27.candidate.user.js /tmp/HamsterKingMobile.user.js
+          cp deploy/topking/HamsterKingMobile.1.17.28.kokkaras-canon.candidate.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.27" /tmp/HamsterKingMobile.user.js
-          grep -Fq "businesses-rearrange-timeout-safe-20260922-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "const BUSINESS_MUTATION_TIMEOUT_MS=60000;" /tmp/HamsterKingMobile.user.js
-          grep -Fq "return {__hk_skipped:true,reason:'game_logic',state};" /tmp/HamsterKingMobile.user.js
-          grep -Fq "clan-shop-purchase-history-capture-20260922-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.28" /tmp/HamsterKingMobile.user.js
+          grep -Fq "businesses-kokkaras-donor-20260922-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "async function businessCanonicalMutation(" /tmp/HamsterKingMobile.user.js
+          grep -Fq "async function insertAndActivateBusinessCanonical(" /tmp/HamsterKingMobile.user.js
+          grep -Fq "async function restoreBusinessPairCanonical(" /tmp/HamsterKingMobile.user.js
+          grep -Fq "if(index<plan.length-1)await gameRetryDelay(500);" /tmp/HamsterKingMobile.user.js
+          grep -Fq "await restoreBusinessPairCanonical(row,row.businessId,id);" /tmp/HamsterKingMobile.user.js
           grep -Fq "businesses-runner-canon-20260921-r1" /tmp/HamsterKingMobile.user.js
-          if grep -Fq "businessAction('remove',state)" /tmp/HamsterKingMobile.user.js; then exit 1; fi
+          grep -Fq "clan-shop-purchase-history-capture-20260922-r1" /tmp/HamsterKingMobile.user.js
+          if grep -Fq "payload.count = 1" /tmp/HamsterKingMobile.user.js; then echo 'non-canonical insert count remains' >&2; exit 1; fi
+          if grep -Fq "rollbackBusinessPlan(plan,inserted,removed)" /tmp/HamsterKingMobile.user.js; then echo 'global batch rollback remains' >&2; exit 1; fi
+          if grep -Fq "skippedRows" /tmp/HamsterKingMobile.user.js; then echo '1.17.27 skip semantics remains' >&2; exit 1; fi
 
       - name: Deploy userscript
         run: |
           set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.27.user.js
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.28.user.js
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             set -euo pipefail
             stamp="$(date +%Y%m%d-%H%M%S)"
-            node --check /tmp/HamsterKingMobile.1.17.27.user.js
-            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.27.$stamp"
-            install -m 0644 /tmp/HamsterKingMobile.1.17.27.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
-            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.27\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+            node --check /tmp/HamsterKingMobile.1.17.28.user.js
+            cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.28.$stamp"
+            install -m 0644 /tmp/HamsterKingMobile.1.17.28.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.28\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
             systemctl daemon-reload
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
@@ -63,24 +68,38 @@ jobs:
       - name: Verify public script
         run: |
           set -euo pipefail
-          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?business-timeout-safe=$(date +%s)" -o /tmp/public.js
+          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?kokkaras-businesses=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
-          grep -Fq "// @version      1.17.27" /tmp/public.js
-          grep -Fq "businesses-rearrange-timeout-safe-20260922-r1" /tmp/public.js
+          grep -Fq "// @version      1.17.28" /tmp/public.js
+          grep -Fq "businesses-kokkaras-donor-20260922-r1" /tmp/public.js
           grep -Fq "clan-shop-purchase-history-capture-20260922-r1" /tmp/public.js
-          echo "PUBLIC_1_17_27_BUSINESS_TIMEOUT_SAFE=PASS"
+          echo "PUBLIC_1_17_28_KOKKARAS_BUSINESSES=PASS"
 
       - name: Sync baseline
         run: |
           set -euo pipefail
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
-          printf "%s\n" "USERSCRIPT_1_17_27_BUSINESS_TIMEOUT_SAFE=PASS" "version=1.17.27" "base=1.17.26" "business_timeout_ms=60000" "blind_remove_retry=REMOVED" "game_logic_skip=PASS" "uncertain_auto_rollback=DISABLED" "business_runner_canon=PRESERVED" "clan_shop_1_17_25=PRESERVED" > audit/hk-userscript-1-17-27-business-timeout-safe-status.txt
+          printf "%s\n" \
+            "USERSCRIPT_1_17_28_KOKKARAS_BUSINESSES_CANON=PASS" \
+            "version=1.17.28" \
+            "base=1.17.27" \
+            "donor=Kokkaras-5.3.22-ui-icons-pit-dim" \
+            "pair_atomic_sequence=remove-insert-speedUp-activate" \
+            "insert_count_field=REMOVED" \
+            "state_aware_retry=ONCE" \
+            "rollback_scope=CURRENT_PAIR_ONLY" \
+            "between_pairs_ms=500" \
+            "progress_scope=PAIRS" \
+            "business_runner_canon=PRESERVED" \
+            "t4_t6_guard=PRESERVED" \
+            "clan_shop_1_17_25=PRESERVED" \
+            > audit/hk-userscript-1-17-28-kokkaras-businesses-status.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-27-business-timeout-safe-status.txt
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-28-kokkaras-businesses-status.txt
           if ! git diff --cached --quiet; then
-            git commit -m "fix: make Businesses timeout handling safe in 1.17.27"
+            git commit -m "fix: align Businesses rearrangement with Kokkaras canon in 1.17.28"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
