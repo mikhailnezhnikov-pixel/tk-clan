@@ -22,11 +22,11 @@ jobs:
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
-      - name: Inspect live Clan Shop history source
+      - name: Inspect live Clan Shop payload
         run: |
           set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new deploy/topking/inspect_clan_shop_history_source.py root@89.125.1.71:/tmp/inspect_clan_shop_history_source.py
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/inspect_clan_shop_history_source.py'
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new deploy/topking/inspect_clan_shop_identity_live.py root@89.125.1.71:/tmp/inspect_clan_shop_identity_live.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/inspect_clan_shop_identity_live.py'
 
       - name: Cleanup
         if: always()
