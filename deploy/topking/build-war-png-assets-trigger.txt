@@ -1,1 +1,1 @@
-build verified transparent PNG fighter assets 2026-09-22 r3
+build verified transparent PNG fighter assets 2026-09-22 r4 chunks
