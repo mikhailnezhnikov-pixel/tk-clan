@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.28
+// @version      1.17.29
+// @release-note Защита Game API от 429: запросы HK к игре ограничены безопасным темпом, 429 больше не ретраится и включает cooldown без rollback; бизнесы сохраняют канон Kokkaras.
 // @release-note Перестановка бизнесов возвращена к закреплённому канону Kokkaras: один слот целиком (remove → insert → speedUp → activate), один state-aware retry, rollback только текущей пары, 500 мс между парами.
 // @release-note Перестановка бизнесов: бизнес-мутации ждут до 60 секунд; после тайм-аута состояние сверяется с /player/me.
 // @release-note Перестановка бизнесов: восстановлены видимые названия, сквозной канонический прогресс и безопасная сверка состояния после тайм-аутов без слепого отката.
@@ -35,7 +36,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.28';
+  const BUILD_VERSION = '1.17.29';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -172,6 +173,12 @@
   const GAME_API_FALLBACK = 'https://hk-game-api.hwgame.cloud';
   const GAME_AUTH_REFRESH_EARLY_MS = 60 * 1000;
   const GAME_REQUEST_RETRY_DELAYS_MS = [900, 2500, 6000];
+  const HK_GAME_API_RATE_GUARD_REV = 'game-api-rate-guard-20260922-r1';
+  const GAME_API_MIN_REQUEST_GAP_MS = 1800;
+  const GAME_API_429_FALLBACK_COOLDOWN_MS = 60 * 1000;
+  let gameApiNextRequestAt = 0;
+  let gameApiRateLimitUntil = 0;
+  let gameApiRateGateTail = Promise.resolve();
   const SERVER_REQUEST_RETRY_DELAYS_MS = [1000, 3000, 7000];
   const DIAGNOSTIC_MAX_EVENTS = 180;
   const SHOP_UNLIMITED_RUN_MAX = 999;
@@ -5426,6 +5433,68 @@
     }finally{if(timer)clearTimeout(timer);try{detach?.();}catch(_){}}
   }
 
+
+  function gameApiRetryAfterMs(response) {
+    try {
+      const raw=String(response?.headers?.get?.('Retry-After')||'').trim();
+      if (!raw) return 0;
+      if (/^\d+(?:\.\d+)?$/.test(raw)) return Math.max(0,Math.round(Number(raw)*1000));
+      const stamp=Date.parse(raw);
+      return Number.isFinite(stamp) ? Math.max(0,stamp-Date.now()) : 0;
+    } catch (_) { return 0; }
+  }
+
+  function gameApiRateLimitError(path,response) {
+    const retryAfter=Math.max(GAME_API_429_FALLBACK_COOLDOWN_MS,gameApiRetryAfterMs(response));
+    gameApiRateLimitUntil=Math.max(gameApiRateLimitUntil,Date.now()+retryAfter);
+    const seconds=Math.ceil(retryAfter/1000);
+    const error=new Error(either(
+      'Лимит запросов игры (429). HK остановил запросы примерно на '+seconds+' сек.',
+      'Game request limit (429). HK stopped Game API requests for about '+seconds+' sec.'
+    ));
+    error.name='HKRateLimitError';
+    error.httpStatus=429;
+    error.apiPath=path;
+    error.retryAfterMs=retryAfter;
+    recordDiagnostic('game-rate-limit',{path,retryAfterMs:retryAfter,until:gameApiRateLimitUntil});
+    setHealth('game',false,'лимит 429');
+    return error;
+  }
+
+  async function acquireGameApiRequestSlot(path,method) {
+    let release;
+    const turn=new Promise(resolve=>{release=resolve;});
+    const previous=gameApiRateGateTail;
+    gameApiRateGateTail=turn;
+    await previous.catch(()=>{});
+    try {
+      const now=Date.now();
+      if (gameApiRateLimitUntil>now) {
+        const error=new Error(either(
+          'Game API на cooldown после 429. Подождите '+Math.ceil((gameApiRateLimitUntil-now)/1000)+' сек.',
+          'Game API is cooling down after 429. Wait '+Math.ceil((gameApiRateLimitUntil-now)/1000)+' sec.'
+        ));
+        error.name='HKRateLimitError';
+        error.httpStatus=429;
+        error.apiPath=path;
+        error.retryAfterMs=gameApiRateLimitUntil-now;
+        throw error;
+      }
+      const wait=Math.max(0,gameApiNextRequestAt-now);
+      if(wait>0)await gameRetryDelay(wait);
+      if(gameApiRateLimitUntil>Date.now()){
+        const error=new Error(either('Game API на cooldown после 429','Game API is cooling down after 429'));
+        error.name='HKRateLimitError'; error.httpStatus=429; error.apiPath=path;
+        error.retryAfterMs=Math.max(0,gameApiRateLimitUntil-Date.now());
+        throw error;
+      }
+      gameApiNextRequestAt=Date.now()+GAME_API_MIN_REQUEST_GAP_MS;
+      recordDiagnostic('game-rate-gate',{path,method,gapMs:GAME_API_MIN_REQUEST_GAP_MS});
+    } finally {
+      release();
+    }
+  }
+
   async function apiJsonCore(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3, timeoutMs = 18000) {
     const maxRetries = retryNetwork === true ? GAME_REQUEST_RETRY_DELAYS_MS.length : retryNetwork === false ? 0 : Math.max(0, Math.trunc(Number(retryNetwork) || 0));
     let authRetryLeft = retryAuthorization ? 1 : 0;
@@ -5433,6 +5502,7 @@
     while (true) {
       const authorized = await ensureGameAuthorization(false, `api:${path}`);
       if (!apiBase || !authorized || !apiHeaders.Authorization) throw new Error('Нет подключения к игре. Обновите страницу.');
+      await acquireGameApiRequestSlot(path,method);
       const request = nativeNetworkFetch || window.fetch.bind(window);
       const started = performance.now();
       let response,text;
@@ -5450,6 +5520,7 @@
       }
       let value; try { value = JSON.parse(text); } catch (_) { value = null; }
       recordDiagnostic('game-request',{path,method,status:response.status,attempt:attempt+1,durationMs:Math.round(performance.now()-started)});
+      if (response.status === 429) throw gameApiRateLimitError(path,response);
       if ((response.status === 401 || response.status === 403) && authRetryLeft > 0) {
         authRetryLeft -= 1;
         const refreshed = await ensureGameAuthorization(true, `http-${response.status}:${path}`);
@@ -5462,7 +5533,7 @@
         recordDiagnostic('game-request-player-locked',{path,method,status:response.status,lockAttempt,delay});
         await gameRetryDelay(delay);continue;
       }
-      const transient = response.status === 408 || response.status === 425 || response.status === 429 || response.status >= 500;
+      const transient = response.status === 408 || response.status === 425 || response.status >= 500;
       if (transient && attempt < maxRetries) {
         const delay = GAME_REQUEST_RETRY_DELAYS_MS[Math.min(attempt, GAME_REQUEST_RETRY_DELAYS_MS.length - 1)] || 6000;
         attempt += 1; await gameRetryDelay(delay); continue;
@@ -10774,6 +10845,7 @@
       return await request();
     }catch(firstError){
       if(firstError?.name==='AbortError')throw firstError;
+      if(firstError?.name==='HKRateLimitError'||Number(firstError?.httpStatus||0)===429)throw firstError;
       recordDiagnostic('business-canon-first-error',{action,buildingId:row.buildingId,slot:row.slot,businessId:expected,name,error:firstError?.message||String(firstError),status:Number(firstError?.httpStatus||0),apiData:firstError?.apiData||null});
       hkRunner.note(either('Ошибка игры: ','Game error: ')+name+' · '+String(firstError?.message||firstError),'warn');
       try{
@@ -10940,6 +11012,7 @@
         }catch(pairError){
           failed++;
           log(either('Ошибка перестановки: ','Rearrangement failed: ')+buildingSlotLabel(row)+' — '+String(pairError?.message||pairError),'bad');
+          if(pairError?.name==='HKRateLimitError'||Number(pairError?.httpStatus||0)===429)throw pairError;
           await restoreBusinessPairCanonical(row,row.businessId,id);
           throw pairError;
         }
@@ -10972,6 +11045,10 @@
         log(either('Перестановка остановлена','Business rearrangement stopped'),'warn');
       }else{
         hkRunner.fail(error);
+        if(error?.name==='HKRateLimitError'||Number(error?.httpStatus||0)===429){
+          const waitSec=Math.max(1,Math.ceil(Number(error?.retryAfterMs||GAME_API_429_FALLBACK_COOLDOWN_MS)/1000));
+          log(either('429: HK больше не отправляет запросы к игре. Подождите около ','429: HK stopped sending Game API requests. Wait about ')+waitSec+either(' сек.',' sec.'),'bad');
+        }
         log(either('Перестановка остановлена: ','Business rearrangement stopped: ')+String(error?.message||error),'bad');
         alert(either('Перестановка остановлена на текущем слоте. Уже завершённые пары сохранены; для текущего слота выполнена попытка возврата исходного бизнеса. Проверьте состояние в игре.',
           'Rearrangement stopped on the current slot. Completed pairs were preserved; the current slot was restored where possible. Check the game state.'));
