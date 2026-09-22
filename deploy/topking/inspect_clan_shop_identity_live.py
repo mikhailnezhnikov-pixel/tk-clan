@@ -167,3 +167,18 @@ try:
     print("PARTICIPANTS_SOURCE_END")
 except Exception as e:
     print("PARTICIPANTS_ALL_ERROR",repr(e))
+
+
+try:
+    full=server.latest_clan_full_snapshot()
+    overall=full.get("overall") if isinstance(full,dict) and isinstance(full.get("overall"),list) else []
+    selected=[]
+    for row in overall:
+        if not isinstance(row,dict):
+            continue
+        nick=str(row.get("nickname") or "")
+        if any(token.casefold() in nick.casefold() for token in ("DarkSide","Nivre","Вредн","Снеж","Ariad","Арианд","Manowar","Rajtoo")):
+            selected.append(row)
+    print("OVERALL_RAW_SELECTED",json.dumps(selected,ensure_ascii=False))
+except Exception as e:
+    print("OVERALL_RAW_SELECTED_ERROR",repr(e))
