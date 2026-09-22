@@ -1,2 +1,2 @@
-inspect=current-clan-shop-player-facts-r5
+inspect=clan-shop-license-registry-r6
 stamp=2026-09-22
