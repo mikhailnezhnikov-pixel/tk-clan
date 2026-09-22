@@ -27,14 +27,23 @@
       }));
       return Object.fromEntries(loaded.filter(([,texture])=>texture));
     }
+    async loadFighterSet(base,rev='20260922-4'){
+      const files={idle:'idle.png',attack:'attack.webp',hit:'hit.webp'};
+      const loaded=await Promise.all(Object.entries(files).map(async ([state,file])=>{
+        const url=base+'/'+file+'?v='+rev;
+        try{return [state,await this.loadTexture(url)]}
+        catch(e){console.warn('[BattleScene] asset failed',url,e);return [state,null]}
+      }));
+      return Object.fromEntries(loaded.filter(([,texture])=>texture));
+    }
     async loadTextures(){
       const [topking,raider,bot]=await Promise.all([
-        this.loadSet('../assets/war/units/topking','png','20260922-2'),
-        this.loadSet('../assets/war/units/raider','png','20260922-2'),
-        this.loadSet('../assets/war/units/bot','webp','20260922-1')
+        this.loadFighterSet('../assets/war/units/topking','20260922-4'),
+        this.loadFighterSet('../assets/war/units/raider','20260922-4'),
+        this.loadSet('../assets/war/units/bot','webp','20260922-2')
       ]);
-      // Dedicated bot/boss art already exists in the repository. Keep raider
-      // only as a defensive fallback if one of those legacy bot assets fails.
+      // Top King and Raider keep the verified transparent PNG for idle, while
+      // attack/hit use the existing distinct transparent WebP frames.
       return {topking,raider,bot:Object.keys(bot).length?bot:raider};
     }
     buildArena(){
