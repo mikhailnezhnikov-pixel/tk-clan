@@ -196,3 +196,15 @@ try:
     print("SKILL_SNAPSHOT_RECENT",json.dumps(recent,ensure_ascii=False))
 except Exception as e:
     print("SKILL_SNAPSHOT_RECENT_ERROR",repr(e))
+
+
+try:
+    tables=[r["name"] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
+    candidates=[]
+    for table in tables:
+        cols=[r[1] for r in db.execute(f"PRAGMA table_info({table})")]
+        if any("player" in c.lower() for c in cols) or any("nick" in c.lower() for c in cols) or "clan" in table.lower():
+            candidates.append({"table":table,"columns":cols})
+    print("PLAYER_TABLE_CANDIDATES",json.dumps(candidates,ensure_ascii=False))
+except Exception as e:
+    print("PLAYER_TABLE_CANDIDATES_ERROR",repr(e))
