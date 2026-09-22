@@ -22,11 +22,11 @@ jobs:
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
-      - name: Inspect current player facts
+      - name: Inspect license registry IDs
         run: |
           set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new deploy/topking/inspect_clan_shop_current_players.py root@89.125.1.71:/tmp/inspect_clan_shop_current_players.py
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/inspect_clan_shop_current_players.py'
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new deploy/topking/inspect_clan_shop_license_ids.py root@89.125.1.71:/tmp/inspect_clan_shop_license_ids.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/inspect_clan_shop_license_ids.py'
 
       - name: Cleanup
         if: always()
