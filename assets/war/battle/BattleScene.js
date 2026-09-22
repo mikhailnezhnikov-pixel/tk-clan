@@ -18,16 +18,24 @@
         image.src=url;
       });
     }
-    async loadSet(base){
+    async loadSet(base,ext='png',rev='20260922-1'){
       const states=['idle','attack','hit'];
       const loaded=await Promise.all(states.map(async state=>{
-        const url=base+'/'+state+'.webp?v=20260921-3';
+        const url=base+'/'+state+'.'+ext+'?v='+rev;
         try{return [state,await this.loadTexture(url)]}
         catch(e){console.warn('[BattleScene] asset failed',url,e);return [state,null]}
       }));
       return Object.fromEntries(loaded.filter(([,texture])=>texture));
     }
-    async loadTextures(){const [topking,raider,bot]=await Promise.all([this.loadSet('../assets/war/units/topking'),this.loadSet('../assets/war/units/raider'),this.loadSet('../assets/war/units/bot')]);return {topking,raider,bot}}
+    async loadTextures(){
+      const [topking,raider]=await Promise.all([
+        this.loadSet('../assets/war/units/topking','png','20260922-1'),
+        this.loadSet('../assets/war/units/raider','png','20260922-1')
+      ]);
+      // Until the dedicated bot PNG set is materialized, reuse the verified
+      // raider textures instead of ever falling back to a broken rectangle.
+      return {topking,raider,bot:raider};
+    }
     buildArena(){
       const {PIXI}=this;const floor=new PIXI.Graphics().ellipse(0,0,300,54).fill({color:0x0d1218,alpha:.68});floor.label='Arena floor';this.floor=floor;this.world.addChild(floor);this.particles=new PIXI.Container();this.world.addChild(this.particles);
       for(let i=0;i<30;i++){const p=new PIXI.Graphics().circle(0,0,1+(i%3)).fill({color:i%4===0?0xe8b654:0xcbd4df,alpha:.28+(i%4)*.08});p._seed=i*17.3;this.particles.addChild(p)}
