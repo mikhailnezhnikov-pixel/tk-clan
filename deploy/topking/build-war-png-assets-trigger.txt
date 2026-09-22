@@ -1,1 +1,1 @@
-build transparent PNG fighter assets 2026-09-22 r1
+build transparent PNG fighter assets 2026-09-22 r2 dwebp
