@@ -119,3 +119,14 @@ try:
     print("PARTICIPANTS_SELECTED",json.dumps(participants,ensure_ascii=False))
 except Exception as e:
     print("PARTICIPANTS_SELECTED_ERROR",repr(e))
+
+
+try:
+    source=open(server_path,encoding="utf-8").read()
+    a=source.index("def clan_shop_history_payload() -> dict:")
+    b=source.index("\ndef clan_shop_publication_text",a)
+    print("HISTORY_SOURCE_BEGIN")
+    print(source[a:b])
+    print("HISTORY_SOURCE_END")
+except Exception as e:
+    print("HISTORY_SOURCE_ERROR",repr(e))
