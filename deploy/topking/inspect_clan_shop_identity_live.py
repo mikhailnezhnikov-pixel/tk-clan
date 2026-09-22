@@ -182,3 +182,17 @@ try:
     print("OVERALL_RAW_SELECTED",json.dumps(selected,ensure_ascii=False))
 except Exception as e:
     print("OVERALL_RAW_SELECTED_ERROR",repr(e))
+
+
+try:
+    cols=[r[1] for r in db.execute("PRAGMA table_info(clan_skill_snapshots)")]
+    print("SKILL_SNAPSHOT_SCHEMA",json.dumps(cols,ensure_ascii=False))
+    recent=[dict(r) for r in db.execute("""SELECT * FROM clan_skill_snapshots ORDER BY scanned_at DESC LIMIT 120""")]
+    print("SKILL_SNAPSHOT_RECENT_SUMMARY",json.dumps({
+        "rows":len(recent),
+        "unique_player_ids":len({str(r.get("player_id") or "") for r in recent if str(r.get("player_id") or "")}),
+        "latest_scanned_at":max((int(r.get("scanned_at") or 0) for r in recent),default=0)
+    },ensure_ascii=False))
+    print("SKILL_SNAPSHOT_RECENT",json.dumps(recent,ensure_ascii=False))
+except Exception as e:
+    print("SKILL_SNAPSHOT_RECENT_ERROR",repr(e))
