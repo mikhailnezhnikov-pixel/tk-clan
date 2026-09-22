@@ -1,2 +1,2 @@
-trigger=clan-shop-known-player-id-v13-retry3
-stamp=2026-09-22T13:30+09:00
+trigger=clan-shop-known-player-id-v13-retry4
+stamp=2026-09-22T13:34+09:00
