@@ -4,101 +4,48 @@ server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
-
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,page_text,captured_at
-                                        FROM treasure_guide_captures ORDER BY id""")]
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,page_text FROM treasure_guide_captures ORDER BY id""")]
 
-skills=[
- "more_money","more_food","fight_hp_up","fight_treasure_goblin",
- "fishing_map_finder","chest_finder","chest_map_finder","map_generator",
- "trader_maps","trader_keys","trader_rep"
-]
-
-# A) Exact S+ mission cards/snippets.
-splus=[]
+# Short modal tails from the Pets section. These are the best source for localized skill/effect text.
+mods=[]
+seen=set()
 for r in rows:
     text=re.sub(r"\s+"," ",str(r.get("page_text") or "")).strip()
-    if not text or "СОДЕРЖИТ" not in text or "S+" not in text: continue
-    for m in re.finditer(r"·\s*S\+",text):
-        sn=text[max(0,m.start()-180):m.end()+900]
-        if re.search(r"корм|монет|шанс|яйц|СОДЕРЖИТ",sn,re.I):
-            splus.append({"id":r["id"],"snippet":sn})
-print("SPLUS_MISSIONS",json.dumps(splus[:50],ensure_ascii=False))
+    if "Питомцы" not in text or "Понятно" not in text or len(text)>7000: continue
+    pos=text.rfind(" HK ")
+    tail=text[pos+4:] if pos>=0 else text
+    if "Понятно" not in tail: continue
+    key=tail[-1800:]
+    if key in seen: continue
+    seen.add(key)
+    mods.append({"id":r["id"],"text":key})
+print("PET_MODAL_TAILS",json.dumps(mods[-80:],ensure_ascii=False))
 
-# B) Skill definition objects from captured API payloads.
-def compact(o):
-    if not isinstance(o,dict): return o
-    out={}
-    for k,v in o.items():
-        if isinstance(v,(str,int,float,bool)) or v is None:
-            out[k]=v
-        elif isinstance(v,list) and len(v)<=20:
-            try:
-                t=json.dumps(v,ensure_ascii=False)
-                if len(t)<=8000: out[k]=v
-            except: pass
-        elif isinstance(v,dict):
-            try:
-                t=json.dumps(v,ensure_ascii=False)
-                if len(t)<=8000: out[k]=v
-            except: pass
-    return out
-
-found={k:[] for k in skills}
+# Exact shop lot objects for pet skills and pet missions from selective /shop/view captures.
+out={}
 for r in rows:
-    p=str(r.get("payload_json") or "")
-    if not p: continue
-    try: obj=json.loads(p)
+    if "#treasure-" not in str(r["path"]): continue
+    try: obj=json.loads(r["payload_json"] or "{}")
     except: continue
-    def walk(v,path="$",depth=0):
-        if depth>14:return
-        if isinstance(v,dict):
-            blob=json.dumps(v,ensure_ascii=False,separators=(",",":"))
-            for sk in skills:
-                if sk in blob and len(found[sk])<25:
-                    c=compact(v)
-                    if c:
-                        found[sk].append({"capture":r["id"],"source":r["path"],"path":path,"obj":c})
-            for k,val in v.items():
-                if isinstance(val,(dict,list)): walk(val,path+"."+str(k),depth+1)
-        elif isinstance(v,list):
-            for i,val in enumerate(v[:2500]):
-                if isinstance(val,(dict,list)): walk(val,path+f"[{i}]",depth+1)
-    walk(obj)
-for sk in skills:
-    # de-dupe by JSON
-    seen=set(); uniq=[]
-    for x in found[sk]:
-        key=json.dumps(x["obj"],ensure_ascii=False,sort_keys=True)
-        if key in seen: continue
-        seen.add(key);uniq.append(x)
-    print("SKILL_OBJ",sk,json.dumps(uniq[:12],ensure_ascii=False)[:35000])
+    for item in obj.get("rows",[]) if isinstance(obj,dict) else []:
+        p=item.get("payload") if isinstance(item,dict) else None
+        if not isinstance(p,dict): continue
+        oid=str(p.get("id") or "")
+        if not re.search(r"pet_skill|pet_mission|pet_.*mission|mission_.*pet",oid,re.I): continue
+        if oid not in out:
+            out[oid]={"id":oid,"cost":p.get("cost"),"lot_view":p.get("lot_view"),"path":item.get("path"),"source":r["path"]}
+print("PET_LOTS",json.dumps(list(out.values()),ensure_ascii=False,separators=(",",":")))
 
-# C) Visible skill text windows.
-for sk,terms in {
- "more_money":["монет","золот"],
- "more_food":["корм","вкусня"],
- "fight_hp_up":["HP","здоров"],
- "fight_treasure_goblin":["гоблин","сокровищ"],
- "fishing_map_finder":["рыбал","карт"],
- "chest_finder":["сундук"],
- "chest_map_finder":["сундук","карт"],
- "map_generator":["карт"],
- "trader_maps":["торгов","карт"],
- "trader_keys":["торгов","ключ"],
- "trader_rep":["торгов","репута"]
-}.items():
-    hits=[]
-    for r in rows:
-        text=re.sub(r"\s+"," ",str(r.get("page_text") or "")).strip()
-        if not text: continue
-        if not all(re.search(t,text,re.I) for t in terms): continue
-        # prioritize short modal-like text
-        if len(text)>12000: continue
-        hits.append({"id":r["id"],"text":text[-2400:]})
-    print("SKILL_DOM",sk,json.dumps(hits[-20:],ensure_ascii=False))
-
-# D) Localization captures, if any.
-loc=[r for r in rows if "localization" in str(r["path"]).lower()]
-print("LOCALIZATION_META",json.dumps([{"id":r["id"],"path":r["path"],"len":len(r.get("payload_json") or "")} for r in loc[-30:]],ensure_ascii=False))
+# Active mission fair state and lot ids.
+mission_states=[]
+for r in rows:
+    if r["path"] not in ("/fair/reroll","/shop/buy"): continue
+    try: obj=json.loads(r["payload_json"] or "{}")
+    except: continue
+    fairs=obj.get("fair")
+    if not isinstance(fairs,list): continue
+    for fair in fairs:
+        if isinstance(fair,dict) and fair.get("id")=="fair_pet_missions":
+            mission_states.append({"capture":r["id"],"state":fair})
+print("PET_MISSION_FAIR",json.dumps(mission_states[-8:],ensure_ascii=False)[:50000])
