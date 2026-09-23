@@ -768,8 +768,9 @@
           <div class="clanshop-tools">
             <input id="clanshop-search" type="search" autocomplete="off" placeholder="Поиск участника">
             <select id="clanshop-sort" class="clanshop-sort" aria-label="Сортировка итогового списка">
-              <option value="purchases_asc">Покупки ↑</option>
-              <option value="purchases_desc">Покупки ↓</option>
+              <option value="total_asc">Всего получено ↑</option>
+              <option value="total_desc">Всего получено ↓</option>
+              <option value="current_asc">Эта неделя ↑</option>
               <option value="name_asc">Имя А–Я</option>
             </select>
             <div id="clanshop-manager-actions" class="clanshop-actions hidden">
@@ -1106,7 +1107,7 @@
   let clanShopHistoryLoaded=false;
   let clanShopHistoryPeriod='week';
   let clanShopHistoryOpenPlayer='';
-  let clanShopSort='purchases_asc';
+  let clanShopSort='total_asc';
   let announcementsData=[];
   let announcementsLoaded=false;
 
@@ -1623,26 +1624,79 @@
     return weeks.length?weeks[weeks.length-1]:'';
   }
 
+  function clanShopNicknameKey(value){
+    return String(value||'')
+      .normalize('NFKC')
+      .replace(/[\u200B-\u200D\uFEFF]/g,'')
+      .trim()
+      .replace(/^\s*(?:\[(?:TK|ТК)\]|(?:TK|ТК))\s*/iu,'')
+      .replace(/\s+/g,' ')
+      .toLocaleLowerCase('ru');
+  }
+
+  function clanShopUniqueDisplayNickname(row){
+    const key=clanShopNicknameKey(row?.nickname);
+    if(!key)return '';
+    const participants=Array.isArray(clanShopData?.participants)?clanShopData.participants:[];
+    const ids=new Set();
+    participants.forEach(item=>{
+      if(clanShopNicknameKey(item?.nickname)!==key)return;
+      const pid=String(item?.player_id||'').trim();
+      const pkey=String(item?.player_key||'').trim();
+      if(pid)ids.add('id:'+pid);
+      else if(pkey)ids.add('key:'+pkey);
+    });
+    return ids.size===1?key:'';
+  }
+
+  function clanShopHistoryMatchesPlayer(row,item){
+    const playerId=String(row?.player_id||'').trim();
+    const playerKey=String(row?.player_key||'').trim();
+    const itemPlayerId=String(item?.player_id||'').trim();
+    const itemPlayerKey=String(item?.player_key||'').trim();
+    if(playerId&&itemPlayerId===playerId)return 'id';
+    if(playerKey&&itemPlayerKey===playerKey)return 'key';
+    if(itemPlayerId)return '';
+    if(String(item?.identity_source||'')!=='purchase_history_nickname')return '';
+    const uniqueNickname=clanShopUniqueDisplayNickname(row);
+    if(!uniqueNickname)return '';
+    return clanShopNicknameKey(item?.nickname)===uniqueNickname?'display_nickname':'';
+  }
+
   function clanShopPlayerActualTotals(row,weekStart=clanShopLatestActualWeek()){
     if(!weekStart)return {idol_orbs:0,splus_businesses:0,total:0,week_start:''};
     const rows=Array.isArray(clanShopHistory)?clanShopHistory:[];
-    const playerId=String(row?.player_id||'');
-    const playerKey=String(row?.player_key||'');
-    const nickname=String(row?.nickname||'').trim().toLowerCase();
-    const totals=rows.reduce((result,item)=>{
-      if(weekStart&&String(item.week_start||'')!==weekStart)return result;
-      const sameId=playerId&&String(item.player_id||'')===playerId;
-      const sameKey=playerKey&&String(item.player_key||'')===playerKey;
-      const sameName=!playerId&&!playerKey&&nickname&&String(item.nickname||'').trim().toLowerCase()===nickname;
-      if(sameId||sameKey||sameName){
-        result.idol_orbs+=Number(item.idol_orbs||0);
-        result.splus_businesses+=Number(item.splus_businesses||0);
-      }
-      return result;
-    },{idol_orbs:0,splus_businesses:0});
+    const exact={idol_orbs:0,splus_businesses:0};
+    const display={idol_orbs:0,splus_businesses:0};
+    rows.forEach(item=>{
+      if(String(item?.week_start||'')!==weekStart)return;
+      const match=clanShopHistoryMatchesPlayer(row,item);
+      if(!match)return;
+      const target=match==='display_nickname'?display:exact;
+      target.idol_orbs+=Number(item?.idol_orbs||0);
+      target.splus_businesses+=Number(item?.splus_businesses||0);
+    });
+    const totals={
+      idol_orbs:Math.max(exact.idol_orbs,display.idol_orbs),
+      splus_businesses:Math.max(exact.splus_businesses,display.splus_businesses),
+      week_start:weekStart
+    };
     totals.total=totals.idol_orbs+totals.splus_businesses;
-    totals.week_start=weekStart;
     return totals;
+  }
+
+  function clanShopPlayerCumulativeTotals(row,beforeWeek=''){
+    const rows=Array.isArray(clanShopHistory)?clanShopHistory:[];
+    const weeks=[...new Set(rows.map(item=>String(item?.week_start||'')).filter(Boolean))]
+      .filter(week=>!beforeWeek||week<beforeWeek)
+      .sort();
+    return weeks.reduce((result,week)=>{
+      const totals=clanShopPlayerActualTotals(row,week);
+      result.idol_orbs+=totals.idol_orbs;
+      result.splus_businesses+=totals.splus_businesses;
+      result.total+=totals.total;
+      return result;
+    },{idol_orbs:0,splus_businesses:0,total:0});
   }
 
   function clanShopLotWord(value){
@@ -1674,7 +1728,13 @@
     const previousWeek=clanShopPreviousWeekStart();
     const current=clanShopPlayerActualTotals(row,currentWeek);
     const previous=clanShopPlayerActualTotals(row,previousWeek);
-    const factClass=current.total>0?' has-actual':'';
+    const beforeCurrent=clanShopPlayerCumulativeTotals(row,currentWeek);
+    const cumulative={
+      idol_orbs:beforeCurrent.idol_orbs+current.idol_orbs,
+      splus_businesses:beforeCurrent.splus_businesses+current.splus_businesses,
+      total:beforeCurrent.total+current.total
+    };
+    const factClass=cumulative.total>0?' has-actual':'';
     const accessKnown=typeof row?.cabinet_access==='boolean';
     const accessBadge=accessKnown
       ? '<span class="clanshop-access-badge'+(row.cabinet_access?'':' no-access')+'">'+(row.cabinet_access?'ЛК':'без ЛК')+'</span>'
@@ -1683,9 +1743,10 @@
     const currentLabel=currentWeek?clanShopWeekLabel(currentWeek):'текущая неделя';
     return '<div class="clanshop-player">'+
       '<div class="clanshop-player-head"><strong>'+safe(row.nickname||'—')+'</strong>'+accessBadge+
-      '<span class="clanshop-actual-badge'+factClass+'">Куплено: <b>'+current.total+'</b> '+clanShopLotWord(current.total)+'</span></div>'+
-      '<small class="clanshop-inline-history"><b>Эта неделя ('+safe(currentLabel)+')</b>: S+ <b>'+current.splus_businesses+'</b> · Шары <b>'+current.idol_orbs+'</b>'+
-      ' · Предыдущая ('+safe(previousLabel)+'): S+ <b>'+previous.splus_businesses+'</b> · Шары <b>'+previous.idol_orbs+'</b></small></div>';
+      '<span class="clanshop-actual-badge'+factClass+'">Всего: <b>'+cumulative.total+'</b> '+clanShopLotWord(cumulative.total)+'</span></div>'+
+      '<small class="clanshop-inline-history"><b>Накопительно</b>: S+ <b>'+cumulative.splus_businesses+'</b> · Шары <b>'+cumulative.idol_orbs+'</b>'+
+      ' · Эта неделя ('+safe(currentLabel)+'): S+ <b>'+current.splus_businesses+'</b> · Шары <b>'+current.idol_orbs+'</b>'+
+      ' · Прошлая ('+safe(previousLabel)+'): S+ <b>'+previous.splus_businesses+'</b> · Шары <b>'+previous.idol_orbs+'</b></small></div>';
   }
 
   function renderClanShop(){
@@ -1721,7 +1782,7 @@
     const totals=data.totals||{};
     if($('clanshop-final-count'))$('clanshop-final-count').textContent='· '+participants.length;
     const query=String($('clanshop-search')?.value||'').trim().toLowerCase();
-    const sortMode=String($('clanshop-sort')?.value||clanShopSort||'purchases_asc');
+    const sortMode=String($('clanshop-sort')?.value||clanShopSort||'total_asc');
     clanShopSort=sortMode;
     const filtered=participants
       .filter(row=>!query||String(row.nickname||'').toLowerCase().includes(query))
@@ -1730,12 +1791,16 @@
           return String(a.nickname||'').localeCompare(String(b.nickname||''),'ru',{numeric:true,sensitivity:'base'});
         }
         const week=clanShopCurrentWeekStart();
-        const aFact=clanShopPlayerActualTotals(a,week);
-        const bFact=clanShopPlayerActualTotals(b,week);
-        const direction=sortMode==='purchases_desc'?-1:1;
-        return (aFact.total-bFact.total)*direction
-          || (aFact.splus_businesses-bFact.splus_businesses)*direction
-          || (aFact.idol_orbs-bFact.idol_orbs)*direction
+        const aCurrent=clanShopPlayerActualTotals(a,week);
+        const bCurrent=clanShopPlayerActualTotals(b,week);
+        const aTotal=clanShopPlayerCumulativeTotals(a);
+        const bTotal=clanShopPlayerCumulativeTotals(b);
+        const valueA=sortMode==='current_asc'?aCurrent.total:aTotal.total;
+        const valueB=sortMode==='current_asc'?bCurrent.total:bTotal.total;
+        const direction=sortMode==='total_desc'?-1:1;
+        return (valueA-valueB)*direction
+          || (aTotal.splus_businesses-bTotal.splus_businesses)*direction
+          || (aTotal.idol_orbs-bTotal.idol_orbs)*direction
           || String(a.nickname||'').localeCompare(String(b.nickname||''),'ru',{numeric:true,sensitivity:'base'});
       });
 
@@ -2012,7 +2077,7 @@
 
   $('clanshop-search')?.addEventListener('input',renderClanShop);
   $('clanshop-sort')?.addEventListener('change',event=>{
-    clanShopSort=String(event.target.value||'purchases_asc');
+    clanShopSort=String(event.target.value||'total_asc');
     renderClanShop();
   });
 
