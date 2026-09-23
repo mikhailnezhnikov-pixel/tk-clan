@@ -1,0 +1,2 @@
+verify=userscript-rollout-after-env-fix
+stamp=2026-09-24T00:10+09:00
