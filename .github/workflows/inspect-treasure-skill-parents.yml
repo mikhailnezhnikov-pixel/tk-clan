@@ -1,0 +1,34 @@
+name: Inspect Treasure Skill Parents
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/inspect_treasure_skill_parents.py'
+      - '.github/workflows/inspect-treasure-skill-parents.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect Treasure skill parents
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new deploy/topking/inspect_treasure_skill_parents.py root@89.125.1.71:/tmp/inspect_treasure_skill_parents.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/inspect_treasure_skill_parents.py'
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
