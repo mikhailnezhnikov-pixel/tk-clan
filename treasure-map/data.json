@@ -5518,5 +5518,77 @@
       },
       "note": "На карточке комнаты отображается 5 Провизии. Внутри каждый из трёх путей также подтверждён по 5 Провизии."
     }
-  ]
+  ],
+  "navigation_items": {
+    "title": "Карты и ключи",
+    "maps": [
+      {
+        "id": "item_event_treasure_map_path",
+        "title": "Карта сокровищ",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+        "effect": "Начинает новое путешествие по карте.",
+        "usage": "1 карта на новое путешествие"
+      },
+      {
+        "id": "item_event_treasure_map_trader",
+        "title": "Карта торговца",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png",
+        "effect": "Специальная карта для перехода к комнате Тайного торговца.",
+        "usage": "Расходуется при использовании"
+      },
+      {
+        "id": "item_event_treasure_map_fight",
+        "title": "Карта сражения",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png",
+        "effect": "Специальная карта для перехода к комнате Сражения.",
+        "usage": "Расходуется при использовании"
+      },
+      {
+        "id": "item_event_treasure_map_fishing",
+        "title": "Карта рыбалки",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fishing_icon.png",
+        "effect": "Специальная карта для перехода к комнате Рыбалки.",
+        "usage": "Расходуется при использовании"
+      }
+    ],
+    "keys": [
+      {
+        "id": "item_treasurehunt_key_common",
+        "title": "Обычный ключ",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_common_icon.png",
+        "opens": "Сундук I",
+        "quantity": 1
+      },
+      {
+        "id": "item_treasurehunt_key_uncommon",
+        "title": "Необычный ключ",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png",
+        "opens": "Сундук II",
+        "quantity": 1
+      },
+      {
+        "id": "item_treasurehunt_key_epic",
+        "title": "Ценный ключ",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png",
+        "opens": "Сундук III",
+        "quantity": 1
+      }
+    ],
+    "exchanges": [
+      {
+        "give": {
+          "title": "Обычный ключ",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_common_icon.png"
+        },
+        "receive": {
+          "title": "Необычный ключ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+        },
+        "note": "Подтверждённый обмен у Тайного торговца."
+      }
+    ],
+    "note": "Карты комнат позволяют целенаправленно попасть в нужную механику. Ключи привязаны к конкретным уровням сундуков."
+  }
 }
