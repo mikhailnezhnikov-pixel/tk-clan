@@ -1,0 +1,145 @@
+name: Fix Server Userscript Minimum Version Source
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/server-min-version-env-fix-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Patch live server minimum-version source
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+
+          python3 deploy/topking/patch_server_min_version_env.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq "ENV_DRIVEN_USERSCRIPT_MIN_R1" /tmp/server.py
+
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.min-version-env.py
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 bash -s <<'REMOTE'
+          set -euo pipefail
+          live=/opt/hamsterking-license/server.py
+          candidate=/tmp/server.min-version-env.py
+          backup=/opt/hamsterking-license/server.py.bak.min-version-env.$(date +%Y%m%d-%H%M%S)
+
+          cp -a "$live" "$backup"
+
+          rollback() {
+            set +e
+            install -m 0644 "$backup" "$live"
+            systemctl restart hamsterking-license.service
+          }
+          trap rollback ERR
+
+          install -m 0644 "$candidate" "$live"
+          python3 -m py_compile "$live"
+          grep -Fq "ENV_DRIVEN_USERSCRIPT_MIN_R1" "$live"
+
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+
+          set -a
+          . /etc/hamsterking-license.env
+          set +a
+          python3 - <<'PY'
+          import importlib.util
+          path="/opt/hamsterking-license/server.py"
+          spec=importlib.util.spec_from_file_location("hk_verify_min",path)
+          mod=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          latest=mod.release_version()
+          assert mod.MIN_SCRIPT_VERSION=="1.17.83",(mod.MIN_SCRIPT_VERSION,latest)
+          assert latest=="1.17.83",latest
+          old=mod.release_manifest("1.17.24","VERIFY_TOKEN")
+          mid=mod.release_manifest("1.17.81","VERIFY_TOKEN")
+          cur=mod.release_manifest("1.17.83","VERIFY_TOKEN")
+          assert old["required"] is True and old["available"] is True,old
+          assert mid["required"] is True and mid["available"] is True,mid
+          assert cur["required"] is False and cur["available"] is False,cur
+          print("SERVER_MIN_VERSION_MANIFEST_VERIFY=PASS")
+          PY
+
+          pid="$(systemctl show hamsterking-license.service -p MainPID --value)"
+          python3 - "$pid" <<'PY'
+          from pathlib import Path
+          import sys
+          pid=sys.argv[1]
+          vals=[]
+          for entry in Path(f"/proc/{pid}/environ").read_bytes().split(b"\0"):
+              if entry.startswith(b"HK_MIN_SCRIPT_VERSION="):
+                  vals.append(entry.split(b"=",1)[1].decode())
+          print("PROCESS_MIN_VALUES",vals)
+          assert vals==["1.17.83"],vals
+          PY
+
+          trap - ERR
+          REMOTE
+
+      - name: Verify health
+        run: |
+          set -euo pipefail
+          sleep 2
+          curl -fsS --retry 5 --retry-delay 1 https://hk-license.89.125.1.71.sslip.io/health -o /tmp/health.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True,d
+          print("HEALTH=PASS")
+          PY
+
+      - name: Persist audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          printf "%s\n" \
+            "SERVER_MIN_VERSION_ENV_SOURCE_FIX=PASS" \
+            "target_version=1.17.83" \
+            "server_source=ENV_DRIVEN" \
+            "environment_file=/etc/hamsterking-license.env" \
+            "effective_min=1.17.83" \
+            "old_clients_required_update=PASS" \
+            "current_client_required_update=NO" \
+            "service_active=PASS" \
+            "health=PASS" \
+            > audit/hk-server-min-version-env-source-fix-status.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-server-min-version-env-source-fix-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "fix: enforce effective userscript minimum version"
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/health.json
