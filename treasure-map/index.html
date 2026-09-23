@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Карта Сокровищ — гайд Top King</title>
+  <meta name="description" content="Гайд по событию Карта Сокровищ в Hamster King: квесты, варианты выбора, награды и лучший вариант прохождения.">
+  <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
+  <style>
+    :root{--bg:#07090d;--panel:#10141b;--panel2:#151a22;--text:#f6f2e7;--muted:#9aa4b2;--gold:#e8b654;--gold2:#ffe0a0;--line:rgba(255,255,255,.09);--good:#8fe0a8}
+    *{box-sizing:border-box}html{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}body{margin:0;background:radial-gradient(circle at 72% 0,rgba(232,182,84,.12),transparent 30%),var(--bg)}
+    a{color:inherit}.shell{width:min(1180px,calc(100% - 32px));margin:auto}
+    header{position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line);background:rgba(7,9,13,.91);backdrop-filter:blur(14px)}
+    .header{min-height:72px;display:flex;align-items:center;gap:18px}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:900}.brand img{width:44px;height:44px}.back{margin-left:auto;color:var(--gold2);text-decoration:none;font-weight:800}
+    .hero{padding:64px 0 32px}.eyebrow{color:var(--gold);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.hero h1{margin:12px 0 14px;font:700 clamp(42px,7vw,72px)/.96 Georgia,serif;letter-spacing:-.05em}.hero p{max-width:760px;margin:0;color:#c3cad3;font-size:17px;line-height:1.65}
+    .status{display:flex;align-items:center;gap:10px;margin-top:22px;padding:12px 14px;border:1px solid rgba(232,182,84,.22);border-radius:14px;background:rgba(232,182,84,.06);color:#d7dde5;font-size:13px}.dot{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 14px rgba(232,182,84,.8)}
+    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0 36px}.summary div{padding:18px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}.summary span{display:block;color:var(--muted);font-size:12px}.summary b{display:block;margin-top:7px;font-size:24px;color:var(--gold2)}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:34px 0 18px}.section-head h2{margin:0;font-size:28px}.section-head p{margin:0;color:var(--muted);font-size:13px}
+    .quests{display:grid;gap:16px;padding-bottom:70px}.quest{display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;padding:18px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,var(--panel2),var(--panel));box-shadow:0 14px 34px rgba(0,0,0,.2)}
+    .quest-media{min-height:150px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#0b0f14}.quest-media img{width:100%;height:100%;object-fit:contain}.quest-placeholder{font-size:48px;opacity:.7}
+    .quest-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.quest h3{margin:0;font-size:21px}.badge{padding:5px 8px;border:1px solid rgba(232,182,84,.3);border-radius:999px;color:var(--gold2);background:rgba(232,182,84,.06);font-size:11px;font-weight:900}
+    .quest-condition{margin:10px 0 0;color:#c7ced7;font-size:14px;line-height:1.55}.choices{display:grid;gap:8px;margin-top:14px}.choice{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025)}.choice.best{border-color:rgba(143,224,168,.34);background:rgba(75,170,103,.07)}.choice-index{color:var(--gold);font-weight:900}.choice-reward{color:var(--muted);font-size:12px}
+    .recommend{margin-top:14px;padding:12px 13px;border-left:3px solid var(--gold);border-radius:8px;background:rgba(232,182,84,.055);color:#d6dce4;font-size:13px;line-height:1.55}.recommend b{color:var(--gold2)}
+    .empty{padding:34px;border:1px dashed rgba(232,182,84,.28);border-radius:20px;text-align:center;color:var(--muted);background:rgba(232,182,84,.035)}.empty strong{display:block;margin-bottom:8px;color:#fff;font-size:18px}
+    footer{padding:28px 0 40px;border-top:1px solid var(--line);color:#7f8996;font-size:12px}
+    @media(max-width:760px){.summary{grid-template-columns:1fr}.quest{grid-template-columns:1fr}.quest-media{min-height:190px}.section-head{align-items:flex-start;flex-direction:column}.choice{grid-template-columns:22px 1fr}.choice-reward{grid-column:2}}
+  </style>
+</head>
+<body>
+<header><div class="shell header"><a class="brand" href="../"><img src="../assets/brand/topking-clan-crest.png" alt=""><span>Top King</span></a><a class="back" href="../">← Главная</a></div></header>
+<main class="shell">
+  <section class="hero">
+    <div class="eyebrow">Новое событие · Hamster King</div>
+    <h1>Карта Сокровищ</h1>
+    <p>Здесь будет собран полный гайд по новому событию: все квесты и варианты выбора, игровые изображения, награды, наше пояснение и рекомендуемый лучший вариант.</p>
+    <div class="status"><span class="dot"></span><span id="status-text">Считываем событие напрямую из уже загруженных игрой данных. Дополнительных игровых действий скрипт не выполняет.</span></div>
+  </section>
+
+  <section class="summary">
+    <div><span>Квестов найдено</span><b id="quest-count">0</b></div>
+    <div><span>Изображений события</span><b id="asset-count">0</b></div>
+    <div><span>Рекомендаций готово</span><b id="recommend-count">0</b></div>
+  </section>
+
+  <div class="section-head"><div><h2>Квесты и выборы</h2><p>Карточки будут заполняться по данным события из игры.</p></div><p>Лучший вариант выделяем после проверки механики и наград.</p></div>
+  <section class="quests" id="quests">
+    <div class="empty"><strong>Сбор данных события включён</strong>Откройте «Карту Сокровищ» в игре на актуальной версии скрипта. После считывания сюда будут добавлены квесты, изображения и варианты выбора.</div>
+  </section>
+</main>
+<footer><div class="shell">Top King · неофициальный гайд для игроков Hamster King</div></footer>
+<script>
+(async()=>{
+  try{
+    const response=await fetch('./data.json?'+Date.now(),{cache:'no-store'});
+    if(!response.ok)return;
+    const data=await response.json();
+    const quests=Array.isArray(data.quests)?data.quests:[];
+    const assets=Array.isArray(data.assets)?data.assets:[];
+    document.getElementById('quest-count').textContent=quests.length;
+    document.getElementById('asset-count').textContent=assets.length;
+    document.getElementById('recommend-count').textContent=quests.filter(q=>q.best_choice||q.recommendation).length;
+    if(data.status_text)document.getElementById('status-text').textContent=data.status_text;
+    if(!quests.length)return;
+    const safe=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    document.getElementById('quests').innerHTML=quests.map((q,index)=>{
+      const image=q.image?'<img src="'+safe(q.image)+'" alt="">':'<span class="quest-placeholder">🗺️</span>';
+      const choices=Array.isArray(q.choices)?q.choices:[];
+      return '<article class="quest"><div class="quest-media">'+image+'</div><div><div class="quest-top"><h3>'+safe(q.title||('Квест '+(index+1)))+'</h3><span class="badge">'+safe(q.stage||('№ '+(index+1)))+'</span></div>'+
+        (q.condition?'<p class="quest-condition">'+safe(q.condition)+'</p>':'')+
+        (choices.length?'<div class="choices">'+choices.map((c,i)=>'<div class="choice '+((q.best_choice===i||c.best)?'best':'')+'"><span class="choice-index">'+(i+1)+'</span><span>'+safe(c.text||c.title||'Вариант')+'</span><span class="choice-reward">'+safe(c.reward||'')+'</span></div>').join('')+'</div>':'')+
+        '<div class="recommend"><b>Лучший вариант:</b> '+safe(q.recommendation||'пока не определён — добавим после проверки механики и наград.')+'</div></div></article>';
+    }).join('');
+  }catch(_){}
+})();
+</script>
+</body></html>
