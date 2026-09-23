@@ -1363,29 +1363,26 @@
     "treasury": {
       "path_1": {
         "cost": {
-          "item": "Провизия",
           "item_id": "item_treasurehunt_energy",
+          "item": "Провизия",
           "quantity": 5
-        },
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_1_icon.png"
+        }
       },
       "path_2": {
         "cost": {
-          "item": "Провизия",
           "item_id": "item_treasurehunt_energy",
+          "item": "Провизия",
           "quantity": 5
-        },
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_2_icon.png"
+        }
       },
       "path_3": {
         "cost": {
-          "item": "Провизия",
           "item_id": "item_treasurehunt_energy",
+          "item": "Провизия",
           "quantity": 5
-        },
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_3_icon.png"
+        }
       },
-      "recommendation": "Все три пути стоят одинаково — по 5 провизии. Возможный результат пути формируется динамически; подтверждённой таблицы вероятностей пока нет, поэтому лучший путь не выбираем."
+      "recommendation": "Все три пути стоят одинаково — 5 Провизии. Без подтверждённых вероятностей результатов нельзя обоснованно назвать один путь выгоднее остальных."
     },
     "premium_shop": [
       {
@@ -2030,26 +2027,35 @@
   ],
   "chest_hunt": {
     "title": "Охота за сундуками",
-    "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
-    "refresh_cost": {
-      "currency": "Крышки",
-      "currency_id": "cur_cap",
-      "quantity": 10
+    "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
+    "room_entry": {
+      "title": "Вход в комнату",
+      "cost": {
+        "title": "Провизия",
+        "quantity": 40,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      "note": "40 Провизии — стоимость входа в комнату на карте."
     },
     "digging": {
       "count": 6,
       "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
-      "note": "Шесть отдельных точек раскопки. После раскопки может появиться обычный сундук type_01 либо пустое место."
+      "cost": {
+        "title": "Провизия",
+        "quantity": 5,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      "note": "Каждая из шести точек раскопки стоит 5 Провизии. После раскопки может появиться обычный сундук либо пустое место."
     },
-    "types": [
+    "chest_types": [
       {
         "id": "mf_treasurelot_chest_type_01",
         "title": "Найденный сундук",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_01_icon.png",
         "cost": {
-          "item": "Провизия",
-          "item_id": "item_treasurehunt_energy",
-          "quantity": 5
+          "title": "Провизия",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
         },
         "contents": [
           {
@@ -2074,18 +2080,18 @@
             "id": "item_pet_mothcat_egg_01",
             "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           }
         ]
       },
       {
         "id": "mf_treasurelot_chest_type_015",
-        "title": "Сундук #1",
+        "title": "Сундук I",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_015_icon.png",
         "cost": {
-          "item": "Обычный ключ",
-          "item_id": "item_treasurehunt_key_common",
-          "quantity": 1
+          "title": "Обычный ключ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_common_icon.png"
         },
         "contents": [
           {
@@ -2110,7 +2116,7 @@
             "id": "item_pet_mothcat_egg_01",
             "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_treasurehunt_pet_skill_change",
@@ -2122,18 +2128,18 @@
             "id": "item_pet_fish_egg_01",
             "name": "Яйцо Рыбы",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           }
         ]
       },
       {
         "id": "mf_treasurelot_chest_type_02",
-        "title": "Сундук #2",
+        "title": "Сундук II",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_02_icon.png",
         "cost": {
-          "item": "Необычный ключ",
-          "item_id": "item_treasurehunt_key_uncommon",
-          "quantity": 1
+          "title": "Необычный ключ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
         },
         "contents": [
           {
@@ -2158,36 +2164,36 @@
             "id": "item_pet_mothcat_egg_01",
             "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_pet_mothcat_egg_05",
             "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_05_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_pet_mothcat_egg_06",
             "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_06_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_pet_fish_egg_01",
             "name": "Яйцо Рыбы",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           }
         ]
       },
       {
         "id": "mf_treasurelot_chest_type_03",
-        "title": "Сундук #3",
+        "title": "Сундук III",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_03_icon.png",
         "cost": {
-          "item": "Эпический ключ",
-          "item_id": "item_treasurehunt_key_epic",
-          "quantity": 1
+          "title": "Ценный ключ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png"
         },
         "contents": [
           {
@@ -2212,100 +2218,48 @@
             "id": "item_pet_mothcat_egg_01",
             "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_pet_mothcat_egg_02",
             "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_02_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_pet_mothcat_egg_03",
             "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_03_upd_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_pet_mothcat_egg_05_r3",
             "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_05_r3_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_pet_fish_egg_02_r3",
             "name": "Яйцо Рыбы",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_02_r3_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_pet_mothcat_egg_04_r4",
-            "name": "Таинственное яйцо Молекота S+",
+            "name": "Яйцо Молекота",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_04_mystery_r4_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           },
           {
             "id": "item_pet_fish_egg_04_r4",
-            "name": "Таинственное яйцо Рыбы S+",
+            "name": "Яйцо Рыбы",
             "quantity": 1,
-            "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_04_r4_icon.png"
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
           }
         ]
       }
     ],
-    "note": "Перечни выше — содержимое, которое сундук может выдать. Вероятности отдельных наград пока не подтверждены, поэтому ожидаемую ценность сундуков не рассчитываем.",
-    "room_entry": {
-      "title": "Вход в комнату",
-      "cost": {
-        "title": "Провизия",
-        "quantity": 40,
-        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
-      },
-      "note": "40 отображается на карточке комнаты на карте. Это стоимость входа в комнату, а не цена открытия отдельного сундука."
-    },
-    "chest_types": [
-      {
-        "id": "mf_treasurelot_chest_type_015",
-        "title": "Сундук I",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_015_icon.png",
-        "status": "confirmed_present",
-        "opening_cost": null
-      },
-      {
-        "id": "mf_treasurelot_chest_type_02",
-        "title": "Сундук II",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_02_icon.png",
-        "status": "confirmed_present",
-        "opening_cost": null
-      },
-      {
-        "id": "mf_treasurelot_chest_type_03",
-        "title": "Сундук III",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_03_icon.png",
-        "status": "confirmed_present",
-        "opening_cost": null
-      }
-    ],
-    "observed_openings": [
-      {
-        "chest_id": "mf_treasurelot_chest_type_01",
-        "title": "Обычный найденный сундук",
-        "note": "Один чисто изолированный фактический результат открытия.",
-        "cost_observed": "В этой транзакции не списались Провизия, ключи или отслеживаемая валюта.",
-        "rewards": [
-          {
-            "title": "Монеты сокровищ",
-            "quantity": 11,
-            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
-          },
-          {
-            "title": "Корм питомца",
-            "quantity": 3,
-            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
-          }
-        ]
-      }
-    ]
+    "note": "Содержимое карточек — список того, что может выпасть; это не означает одновременную выдачу всех позиций."
   },
   "special_items": [
     {
@@ -2389,10 +2343,13 @@
     {
       "id": "way_2",
       "title": "Путь 2",
-      "image": null,
-      "cost": null,
-      "note": "Путь присутствует в сокровищнице отдельным выбором. В shop-lots определения стоимости нет; бесплатным его пока не называем.",
-      "status": "needs_exact_cost"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_2_icon.png",
+      "cost": {
+        "title": "Провизия",
+        "quantity": 5,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      "status": "confirmed"
     },
     {
       "id": "way_3",
