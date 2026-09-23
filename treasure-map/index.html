@@ -82,6 +82,9 @@
   <div class="section-head"><div><h2>Питомцы и поручения</h2><p>Расходы, отдача и особые эффекты питомцев.</p></div></div>
   <section class="facts" id="pets"></section>
 
+  <div class="section-head"><div><h2>Навыки питомцев</h2><p>Подтверждённые эффекты по редкости питомца.</p></div></div>
+  <section class="grid" id="pet-skills"></section>
+
   <div class="section-head"><div><h2>Полезные стоимости</h2><p>Расходы и обмены, которые важно видеть до выбора.</p></div></div>
   <section class="economy-grid" id="verified-economy"></section>
 
@@ -114,6 +117,7 @@
     const achievementSeries=Array.isArray(data.achievement_series)?data.achievement_series:[];
     const verifiedEconomy=data.verified_economy||{};
     const verifiedChests=Array.isArray(data.verified_chests)?data.verified_chests:[];
+    const petSkills=Array.isArray(data.pet_skills_confirmed)?data.pet_skills_confirmed:[];
 
     const iconFor=(id,name='')=>{
       const raw=(String(id||'')+' '+String(name||'')).toLowerCase();
@@ -169,6 +173,13 @@
       ).join('')+'</div>'+(verifiedEconomy.pet_mission_recommendation?'<p>'+safe(verifiedEconomy.pet_mission_recommendation)+'</p>':'')+'</div>');
     }
     document.getElementById('pets').innerHTML=petFacts.join('');
+
+    document.getElementById('pet-skills').innerHTML=petSkills.map(v=>'<article class="mini-card">'+
+      (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+      '<div class="quest-top"><h3>'+safe(v.title)+'</h3><span class="badge">'+safe(v.rank)+'</span></div>'+
+      '<p>'+safe(v.effect)+'</p>'+
+      (v.value?'<div class="tag-list"><span class="tag">'+safe(v.value)+'</span></div>':'')+
+      '</article>').join('');
 
     const economy=[];
     if(verifiedEconomy.event_map){
