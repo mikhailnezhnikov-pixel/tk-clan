@@ -1,0 +1,4 @@
+runtime_smoke_observability=1.17.74
+source=1.17.73
+marker=runtime-smoke-observability-20260923-r1
+stamp=2026-09-23T22:55+09:00
