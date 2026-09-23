@@ -1,0 +1,88 @@
+name: Sync Verified Fair 1.17.55 Baseline
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sync-fair-1-17-55-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify live and public exact candidate
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.55.fair-exact-combo.candidate.user.js
+          test -f "$candidate"
+          node --check "$candidate"
+          candidate_sha="$(sha256sum "$candidate" | awk '{print $1}')"
+          test "$candidate_sha" = "17d2aa8241c0d60eaaf059514b4d9212b391125036a474d8767ce07d34906085"
+
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.user.js
+          cmp -s "$candidate" /tmp/live.user.js
+
+          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?release=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s "$candidate" /tmp/public.js
+
+          grep -Fq "// @version      1.17.55" /tmp/public.js
+          grep -Fq "fair-exact-combo-20260923-r1" /tmp/public.js
+
+      - name: Sync baseline only
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.55.fair-exact-combo.candidate.user.js
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            current_sha="$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')"
+            candidate_sha="$(sha256sum "$candidate" | awk '{print $1}')"
+
+            if [ "$current_sha" = "$candidate_sha" ]; then
+              echo "Baseline already synced."
+              exit 0
+            fi
+
+            test "$current_sha" = "67c790d8b42fa7c50a334fd4c68bd3b32e17459d2014e98af3ba13828a7dc9fc"
+            grep -Fq "// @version      1.17.54" baseline/topking/HamsterKingMobile.current.user.js
+
+            cp "$candidate" baseline/topking/HamsterKingMobile.current.user.js
+            cat > audit/hk-userscript-1-17-55-fair-exact-combo-live-status.txt <<'EOF'
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.54
+target_version=1.17.55
+marker=fair-exact-combo-20260923-r1
+source_sha256=67c790d8b42fa7c50a334fd4c68bd3b32e17459d2014e98af3ba13828a7dc9fc
+candidate_sha256=17d2aa8241c0d60eaaf059514b4d9212b391125036a474d8767ce07d34906085
+public_exact_match=PASS
+server_exact_match=PASS
+server_mutation=NONE
+baseline_sync_only=PASS
+EOF
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-55-fair-exact-combo-live-status.txt
+            git commit -m "fix: sync verified Fair 1.17.55 baseline"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.user.js /tmp/public.js
