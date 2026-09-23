@@ -1,4 +1,9 @@
 TREASURE_EVENT_INSPECT_SNAPSHOT=1
-captured_at_utc=2026-09-23T14:34:21Z
-DOM_ROWS_SCANNED 500
-DOM_WITH_PAYLOAD_COUNT 0
+captured_at_utc=2026-09-23T14:37:01Z
+LIVE_SCRIPT_VERSION // @version      1.17.81
+LIVE_UPDATE_URL // @updateURL    https://hk-license.89.125.1.71.sslip.io/panel.js
+LIVE_DOWNLOAD_URL // @downloadURL  https://hk-license.89.125.1.71.sslip.io/panel.js
+LIVE_BUILD_VERSION 1.17.81
+LIVE_MARKER userscript-update-metadata-20260924-r1 True
+LIVE_MARKER runtime-smoke-coverage-20260923-r1 True
+LIVE_MARKER treasure-guide-bundle-card-dom-20260923-r1 True
