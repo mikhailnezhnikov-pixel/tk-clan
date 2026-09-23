@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.52
+// @version      1.17.53
+// @release-note Карта Сокровищ: приоритетно сохраняются полные lot-объекты сундуков и трёх путей сокровищницы из уже загруженного /shop/view без новых запросов к игре.
 // @release-note Ярмарка: удалён отдельный дубль «Обычная ярмарка». В «Торговле» остаётся одна объединённая Ярмарка, которая показывает обычную и событийную ярмарки и сохраняет настройки 3/6/9 с дополнительными лотами.
 // @release-note Ярмарка: убран второй дублирующий preflight перед запуском. Каталог и состояние игрока теперь обновляются один раз перед стартом вместо двух.
 // @release-note Клановый магазин: на общих лотах отображаются отдельные счётчики «Клан: куплено/лимит» и «Вы: куплено/лимит», без изменения логики покупки.
@@ -60,7 +61,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.52';
+  const BUILD_VERSION = '1.17.53';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -3501,12 +3502,27 @@
     return out;
   }
 
+  const HK_TREASURE_GUIDE_PRIORITY_LOTS_REV='treasure-guide-priority-lots-20260923-r1';
+
+  function treasureGuidePriorityRows(path,body) {
+    if(path!=='/shop/view'||!Array.isArray(body?.shop_lots))return [];
+    const rows=[];
+    const wanted=/^(?:mf_fair_treasury_room_choose_way_[123]|mf_treasurelot_chest_type_(?:01|015|02|03)|mf_treasurelot_chest_digging_spot_sl[4-9])$/;
+    for(let i=0;i<body.shop_lots.length;i++){
+      const lot=body.shop_lots[i];
+      if(!lot||typeof lot!=='object'||!wanted.test(String(lot.id||'')))continue;
+      rows.push({path:'$.shop_lots['+i+']',payload:lot});
+    }
+    return rows;
+  }
+
   function treasureGuideSendSelective(path,body) {
     if(!['/quests','/shop/view','/client_config','/items','/events'].includes(path) &&
        !path.startsWith('/battlepass') &&
        !path.startsWith('/fair/') &&
        !path.startsWith('/localization/'))return;
-    const rows=treasureGuideCompactObject(body);
+    const priorityRows=treasureGuidePriorityRows(path,body);
+    const rows=[...priorityRows,...treasureGuideCompactObject(body)];
     if(!rows.length)return;
     let chunk=[],size=2,index=1;
     const flush=()=>{
