@@ -1,0 +1,4 @@
+deploy=treasure-limited-bundles
+base=1.17.72
+target=1.17.73
+stamp=2026-09-23T22:46+09:00
