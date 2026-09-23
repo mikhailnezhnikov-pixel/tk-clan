@@ -6006,5 +6006,325 @@
       "Точный эффект уровней удочки R3/R4 интерфейс не подписывает, поэтому в гайде показывается только подтверждённая стоимость улучшений.",
       "Вероятности обычных находок не добавляются, пока они не подтверждены данными игры."
     ]
+  },
+  "beginner_event_guide": {
+    "title": "Если открыли событие впервые",
+    "intro": "Не пытайтесь сразу запомнить все комнаты и предметы. Сначала соберите ежедневные ресурсы, затем запустите одну Карту сокровищ и проходите маршрут по стоимости входа.",
+    "steps": [
+      {
+        "n": 1,
+        "title": "Заберите ежедневные задания",
+        "text": "«Карты на каждый день» даёт 3 Карты сокровищ за 3 000 крышек хомяколы. Пять ежедневных квестов готовки дают по 35 Провизии каждый.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+      },
+      {
+        "n": 2,
+        "title": "Подготовьте Провизию",
+        "text": "Провизия тратится на вход в большинство комнат и отдельные действия внутри них. Перед выбором комнаты всегда смотрите её стоимость.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      {
+        "n": 3,
+        "title": "Запустите одну карту",
+        "text": "Новое путешествие требует 1 Карту сокровищ. На маршруте могут встретиться Лес, Шахта, Рыбалка, Торговец, Сундуки, Сражение, Лабиринт и Сокровищница.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+      },
+      {
+        "n": 4,
+        "title": "Проходите комнату по её механике",
+        "text": "У каждой комнаты ниже есть отдельная инструкция. Если это Лабиринт или Сражение — можно использовать закладку-помощник Top King.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png"
+      },
+      {
+        "n": 5,
+        "title": "Завершите путь через Сокровищницу",
+        "text": "Вход в Сокровищницу завершает текущую Карту сокровищ. Все три подтверждённых пути внутри стоят по 5 Провизии.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png"
+      }
+    ],
+    "remember": [
+      "Не называем лучший путь Сокровищницы: подтверждённых вероятностей наград нет.",
+      "Содержимое сундуков — это список возможного дропа, а не одновременная выдача всех позиций.",
+      "Если шанс или эффект не показан игрой, в гайде он не додумывается."
+    ]
+  },
+  "chests_guide": {
+    "title": "Охота за сундуками — как проходить",
+    "intro": "Комната состоит из двух стадий: сначала оплачиваем раскопки, затем решаем, какие найденные сундуки открывать Провизией или ключами.",
+    "entry": {
+      "value": "40 Провизии",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+    },
+    "steps": [
+      {
+        "n": 1,
+        "title": "Войдите в комнату",
+        "text": "Вход в «Охоту за сундуками» стоит 40 Провизии.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
+      },
+      {
+        "n": 2,
+        "title": "Раскапывайте точки",
+        "text": "На поле 6 точек. Каждая раскопка стоит 5 Провизии и может дать сундук либо пустое место.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png"
+      },
+      {
+        "n": 3,
+        "title": "Определите тип сундука",
+        "text": "Обычный найденный сундук открывается за 5 Провизии. Сундуки I, II и III требуют соответствующий ключ.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_015_icon.png"
+      },
+      {
+        "n": 4,
+        "title": "Проверьте ключ",
+        "text": "Сундук I — Обычный ключ; II — Необычный; III — Ценный. Один ключ открывает один сундук своего уровня.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+      },
+      {
+        "n": 5,
+        "title": "Смотрите возможный дроп",
+        "text": "В карточке ниже перечислен весь подтверждённый пул каждой разновидности. Это не означает, что выпадет всё сразу.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_03_icon.png"
+      }
+    ],
+    "pet_skill": {
+      "title": "Чутьё на сундуки",
+      "rank": "S",
+      "effect": "Повышает шанс найти дополнительный сундук, включая Таинственный, во время раскопок.",
+      "value": "Эффект подтверждён",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_chest_finder_r4_icon.png"
+    },
+    "refresh": "Обновление комнаты сундуков подтверждено за 10 Крышек.",
+    "key_exchange": "У Тайного торговца подтверждён обмен 5 Обычных ключей → 1 Необычный."
+  },
+  "trader_guide": {
+    "title": "Тайный торговец — как пользоваться",
+    "intro": "Торговец — это не один фиксированный магазин. Есть три типа набора предложений, а конкретный товар и цена всегда указаны прямо на карточке лота.",
+    "entry": {
+      "value": "5 Провизии",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+    },
+    "steps": [
+      {
+        "n": 1,
+        "title": "Войдите к торговцу",
+        "text": "Обычный вход в комнату стоит 5 Провизии. Отдельная Карта торговца ведёт прямо в эту механику.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+      },
+      {
+        "n": 2,
+        "title": "Определите набор I / II / III",
+        "text": "У трёх типов торговца разные группы предложений: яйца, Провизия, корм, ключи, карты, золото, улучшения и случайные лоты.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/trader/icons/minigame_trader_type_01_rep_5_s_icon.png"
+      },
+      {
+        "n": 3,
+        "title": "Сравнивайте одинаковую валюту",
+        "text": "Выгоду корректно сравнивать только там, где одинаковы и товар, и валюта оплаты. Такие сравнения вынесены в блок «Что выгоднее».",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+      },
+      {
+        "n": 4,
+        "title": "Учитывайте навыки питомца",
+        "text": "«Любимчик торговцев» повышает репутацию, а «Карты на прилавке» может добавить специальные лоты с Картами сокровищ.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_rep_r4_icon.png"
+      },
+      {
+        "n": 5,
+        "title": "Обновляйте только осознанно",
+        "text": "Подтверждённая стоимость обновления списка Тайного торговца — 10 Крышек.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+      }
+    ],
+    "skills": [
+      {
+        "title": "Любимчик торговцев",
+        "grades": [
+          [
+            "S+",
+            "10 → 14 (+4)"
+          ]
+        ],
+        "effect": "Увеличивает репутацию за покупку товаров у торговцев.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_rep_r4_icon.png"
+      },
+      {
+        "title": "Карты на прилавке",
+        "grades": [
+          [
+            "A",
+            "Малый шанс"
+          ],
+          [
+            "S",
+            "Средний шанс"
+          ],
+          [
+            "S+",
+            "Хороший шанс"
+          ]
+        ],
+        "effect": "Добавляет шанс специальных лотов с Картами сокровищ.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_maps_r4_icon.png"
+      }
+    ],
+    "upgrades": [
+      {
+        "title": "Удочка R3",
+        "price": "600 Монет сокровищ",
+        "where": "Торговец I",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/treasure_minigame_rod_r3_icon.png"
+      },
+      {
+        "title": "Удочка R4",
+        "price": "1800 Монет сокровищ",
+        "where": "Торговец I",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/treasure_minigame_rod_r4_icon.png"
+      },
+      {
+        "title": "Меч R3",
+        "price": "600 Монет сокровищ",
+        "where": "Торговец II",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r3_icon.png"
+      },
+      {
+        "title": "Меч R4",
+        "price": "1800 Монет сокровищ",
+        "where": "Торговец II",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png"
+      }
+    ],
+    "note": "Численный бонус уровней R3/R4 в интерфейсе игры не подписан; в гайде фиксируется только подтверждённая стоимость улучшения."
+  },
+  "pets_guide": {
+    "title": "Питомцы и поручения — что делать",
+    "intro": "В событии есть два семейства питомцев — Молекоты и Рыбы. В поручениях питомец расходует корм и приносит Золотые монеты; старшие редкости получают дополнительные награды.",
+    "mission_rows": [
+      {
+        "rank": "B",
+        "food": 2,
+        "gold": 1,
+        "special": ""
+      },
+      {
+        "rank": "A",
+        "food": 5,
+        "gold": 2,
+        "special": ""
+      },
+      {
+        "rank": "S",
+        "food": 12,
+        "gold": 3,
+        "special": "5% шанс яйца на питомца"
+      },
+      {
+        "rank": "S+",
+        "food": 20,
+        "gold": 4,
+        "special": "Специальная награда возможна; точный процент пока не подтверждён"
+      }
+    ],
+    "steps": [
+      {
+        "n": 1,
+        "title": "Выберите питомца",
+        "text": "Питомцы различаются семейством, редкостью и навыками. Навыки ниже объединены по названию: B / A / S / S+ показаны внутри одной карточки.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_pets_icon.png"
+      },
+      {
+        "n": 2,
+        "title": "Проверьте стоимость поручения",
+        "text": "B / A / S / S+ расходуют разное количество корма. Базовая выдача Золотых монет подтверждена отдельно для каждого ранга.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+      },
+      {
+        "n": 3,
+        "title": "Отправьте на поручение",
+        "text": "B и A дают только подтверждённую базовую выдачу. S дополнительно имеет 5% шанс яйца на питомца. Для S+ специальная награда существует, но точный процент пока не подтверждён.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_pet_missions_icon.png"
+      },
+      {
+        "n": 4,
+        "title": "Смотрите навык, а не только ранг",
+        "text": "Навыки влияют на Рыбалку, Торговца, Сундуки, Сражение, карты комнат и количество ресурсов.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+      },
+      {
+        "n": 5,
+        "title": "Обновляйте поручения при необходимости",
+        "text": "Подтверждённая стоимость обновления списка поручений — 10 Крышек.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_pet_missions_icon.png"
+      }
+    ],
+    "economy_note": "Если считать только гарантированные Золотые монеты на 1 корм, B имеет лучший курс. S/S+ могут быть ценнее за счёт специальных наград.",
+    "collection_quests": [
+      "Коллекция Молекотов S+: по одному S+ яйцу пяти видов → таинственное S+ яйцо Молекота.",
+      "Коллекция Рыб S+: по одному S+ яйцу пяти видов → таинственное S+ яйцо Рыбы."
+    ]
+  },
+  "shop_guide": {
+    "title": "Магазин события — как читать",
+    "intro": "Обычные товары и лимитированные наборы разделены. Для обычного магазина показываем подтверждённые предмет, количество и цену; для четырёх наборов — только те количества, которые удалось надёжно считать с карточек.",
+    "ordinary_note": "У обычных карточек подтверждены название предмета, количество и цена. Валюта/иконка оплаты должна читаться по самой игровой карточке; в текстовом гайде не подменяем её догадкой.",
+    "bundle_note": "У четырёх лимитированных наборов подтверждены цена, лимит и количества позиций. Названия отдельных позиций внутри набора не назначаются без прямой DOM/API-привязки.",
+    "priorities": [
+      {
+        "title": "Карты комнат",
+        "text": "Карта торговца, сражения и рыбалки позволяют целенаправленно попасть в соответствующую механику.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+      },
+      {
+        "title": "Провизия",
+        "text": "Основной расходный ресурс путешествия: входы в комнаты, раскопки, сундуки и отдельные действия.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      {
+        "title": "Корм питомца",
+        "text": "Расходуется на поручения питомцев.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+      },
+      {
+        "title": "Ключи",
+        "text": "Привязаны к уровням сундуков I / II / III.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+      },
+      {
+        "title": "Смена навыка",
+        "text": "Отдельный предмет для изменения навыка питомца.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+      },
+      {
+        "title": "Золотая ягода",
+        "text": "Редкий предмет: нужен для линий «Тёмный пакт» и «Светлый пакт» либо может быть открыт как отдельная награда.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png"
+      }
+    ]
+  },
+  "economy_guide": {
+    "title": "Экономика события — подтверждённые ориентиры",
+    "rows": [
+      {
+        "title": "Поручения питомцев",
+        "text": "По чистой конверсии корма в гарантированное золото: B = 0,50; A = 0,40; S = 0,25; S+ = 0,20 монеты на 1 корм. S/S+ дополнительно имеют специальные награды."
+      },
+      {
+        "title": "Провизия за Монеты сокровищ",
+        "text": "Среди подтверждённых обменов 50→28, 60→38 и 70→47 крупный пакет 70→47 имеет лучший курс."
+      },
+      {
+        "title": "Походные припасы",
+        "text": "Комплект за 200 Монет сокровищ даёт 47 Провизии + 1 Смену навыка; по отдельным подтверждённым ценам эти две позиции стоят 370."
+      },
+      {
+        "title": "Карта сокровищ",
+        "text": "При одинаковой валюте встречаются варианты за 300 и 500. Внутри одной валюты 300 дешевле 500."
+      },
+      {
+        "title": "Сокровищница",
+        "text": "Все три подтверждённых пути стоят по 5 Провизии. Без вероятностей наград нельзя обоснованно выбрать «лучший»."
+      }
+    ],
+    "caution": "Случайные лоты не оцениваются по средней выгоде, пока игра не раскрывает вероятности отдельных исходов."
   }
 }
