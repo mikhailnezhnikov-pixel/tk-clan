@@ -20,7 +20,7 @@ Relevant donor behavior:
 - default copy priority is the same 12-pair list already present in HK;
 - preparation order remains contracts → balls → boxes.
 
-## Current baseline
+## Historical baseline at bug discovery
 
 - userscript: `1.17.35`;
 - Growth current implementation uses:
@@ -53,7 +53,7 @@ Impact:
 
 **CANONICAL CURRENCY BUG: CONFIRMED**
 
-## Planned 1.17.36 correction
+## Implemented correction
 
 - `GROWTH_HAMSTER_BUDGET_ID: cur_cap → cur_nut`;
 - `capsPercent → nutsPercent`;
@@ -86,3 +86,15 @@ Preserve:
 6. do not run a destructive plan until the displayed budget and live Nut balance look correct.
 
 Stage 2.12 Hamsters and Stage 2.13 Generals remain separate live-action checks after Growth overview/full-plan parity is restored.
+
+
+## Current live resolution
+
+- canonical Nuts correction actually landed in userscript **1.17.37** after intervening parallel releases;
+- current live/baseline **1.17.39** preserves `GROWTH_HAMSTER_BUDGET_ID = 'cur_nut'`;
+- `capsPercent → nutsPercent` migration is present;
+- Hamster budget/efficiency remains Nuts-based;
+- General budget remains Pit Tokens;
+- Treasure Map 1.17.39 and Maps manual-only hotfix preserve the Growth correction.
+
+Stage 2.11 technical state remains **TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING**.
