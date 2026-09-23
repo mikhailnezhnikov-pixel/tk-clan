@@ -1,4 +1,4 @@
-import importlib.util, json, re
+import importlib.util, json
 
 server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
@@ -10,7 +10,9 @@ targets=[
 "mf_fairlot_minigame_trader_02_pet_food",
 "mf_fairlot_minigame_trader_02_mothcat_egg_01",
 "mf_fairlot_minigame_trader_02_mothcat_egg_02",
+"mf_fairlot_minigame_trader_02_mothcat_egg_05",
 "mf_fairlot_minigame_trader_02_mothcat_egg_06",
+"mf_fairlot_minigame_trader_02_verse_gold4coins_s",
 "mf_fairlot_minigame_trader_02_verse_gold4coins_m",
 "mf_fairlot_minigame_trader_02_verse_gold4coins_l",
 "mf_fairlot_minigame_trader_03_map4coins",
@@ -32,18 +34,14 @@ with server.db_session() as db:
                                         WHERE payload_json<>'' ORDER BY id""")]
 
 for term in targets:
-    hits=[]
+    exact=[]
+    refs=[]
+    needle_exact='"id":"'+term+'"'
+    needle_ref='"shop_lot_id":"'+term+'"'
     for r in rows:
         raw=str(r["payload_json"] or "")
-        start=0
-        while True:
-            i=raw.find(term,start)
-            if i<0: break
-            hits.append({
-              "capture":r["id"],"path":r["path"],"pos":i,
-              "snippet":raw[max(0,i-900):i+3200]
-            })
-            start=i+len(term)
-            if len(hits)>=12: break
-        if len(hits)>=12: break
-    print("RAW_TARGET",term,json.dumps(hits,ensure_ascii=False))
+        if needle_exact in raw:
+            exact.append({"id":r["id"],"path":r["path"],"count":raw.count(needle_exact)})
+        if needle_ref in raw:
+            refs.append({"id":r["id"],"path":r["path"],"count":raw.count(needle_ref)})
+    print("TARGET_CLASS",json.dumps({"term":term,"exact":exact[:20],"refs":refs[:20]},ensure_ascii=False))
