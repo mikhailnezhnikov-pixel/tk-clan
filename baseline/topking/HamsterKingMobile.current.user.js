@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.73
+// @version      1.17.74
+// @release-note Диагностика smoke-test: Rat Hunt, War и Районы теперь пассивно записывают форму ответов и подтверждённое состояние после мутаций без дополнительных запросов к игре.
 // @release-note Карта Сокровищ: четыре ограниченных набора магазина приоритетно сохраняются из уже загруженного /shop/view без дополнительных запросов к игре.
 // @release-note Безопасность боёв: Ямы, Боссы и Районы теперь требуют явное подтверждение перед запуском; Районы дополнительно всегда перечитывают свежий idler/view перед формированием и непосредственно перед стартом плана.
 // @release-note Безопасность Growth: Развитие / Хомяки / Генералы теперь всегда делают fresh /player/me перед необратимым запуском, требуют явное подтверждение по live-балансам и перечитывают authoritative state после завершения.
@@ -80,7 +81,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.73';
+  const BUILD_VERSION = '1.17.74';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -102,6 +103,13 @@
   const HK_MUTATION_BRIDGE_READONLY_REV = 'mutation-bridge-readonly-20260923-r1';
   const HK_GROWTH_FRESH_PREFLIGHT_REV = 'growth-fresh-preflight-20260923-r1';
   const HK_STAGE7_COMBAT_CONFIRM_REV = 'stage7-combat-confirm-20260923-r1';
+  const HK_RUNTIME_SMOKE_OBSERVABILITY_REV = 'runtime-smoke-observability-20260923-r1';
+  function hkSmokeObjectKeys(value){
+    return value&&typeof value==='object'&&!Array.isArray(value)?Object.keys(value).slice(0,24):[];
+  }
+  function hkRuntimeSmokeRecord(type,data={}){
+    try{recordDiagnostic('runtime-smoke-'+type,{revision:HK_RUNTIME_SMOKE_OBSERVABILITY_REV,...data});}catch(_){}
+  }
   const HK_NEIGHBORHOOD_BATTLES_REV = 'neighborhood-battles-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
@@ -7050,6 +7058,16 @@
       playerDocument=hkStateStore.snapshot||playerDocument;
       if(response?.alliance_attack_war&&typeof response.alliance_attack_war==='object')warCombat.activeWar=response.alliance_attack_war;
     }
+    const smokeWar=response?.alliance_attack_war||warCombat.activeWar||null;
+    hkRuntimeSmokeRecord('war-state',{
+      reason,
+      responseKeys:hkSmokeObjectKeys(response),
+      hasWar:!!smokeWar,
+      health:Number(smokeWar?.health??0),
+      initialHealth:Number(smokeWar?.initial_health??0),
+      battleWin:response?.battle_result?.is_win===true?true:response?.battle_result?.is_win===false?false:null,
+      previewRounds:Array.isArray(response?.pvp_preview?.rounds)?response.pvp_preview.rounds.length:0
+    });
     return response;
   }
 
@@ -7170,10 +7188,21 @@
       await loadWarCombat(false);
       const publicResult=await readPublicWar(warCombat.activeBattles);
       warSnapshot=publicResult?.war||null;warLastReadAt=Date.now();
+      hkRuntimeSmokeRecord('war-complete',{
+        hasWar:!!warCombat.activeWar,
+        health:Number(warCombat.activeWar?.health??0),
+        initialHealth:Number(warCombat.activeWar?.initial_health??0),
+        passes:pitCanonResourceQuantity(playerDocument,WAR_FREE_PASS_ID,'currency')
+      });
       renderWars();
       hkRunner.finish(either('План войны завершён','War plan completed'));
       log(either('План войны завершён','War plan completed'),'ok');
     }catch(error){
+      hkRuntimeSmokeRecord('war-error',{
+        name:String(error?.name||''),
+        status:Number(error?.httpStatus||0),
+        message:String(error?.message||error||'').slice(0,500)
+      });
       try{
         playerDocument=await hkAuthoritativePlayerRead('wars:error');
         await loadWarCombat(false);
@@ -7429,6 +7458,19 @@
       }
     }
     ratHuntCombat.state=ratHuntCombatState(playerDocument)||ratHuntCombat.state;
+    const smokeState=ratHuntCombat.state;
+    hkRuntimeSmokeRecord('rat-hunt-state',{
+      reason,
+      responseKeys:hkSmokeObjectKeys(response),
+      hasState:!!smokeState,
+      isFinish:smokeState?.is_finish,
+      level:Number(smokeState?.level??0),
+      maxLevel:Number(smokeState?.max_preset_level??0),
+      health:Number(smokeState?.health??0),
+      massMultiplier:Number(smokeState?.mass_multiplier??0),
+      passCosts:Array.isArray(smokeState?.pass_costs)?smokeState.pass_costs.length:0,
+      respawnCosts:Array.isArray(smokeState?.respawn_costs)?smokeState.respawn_costs.length:0
+    });
     return response;
   }
 
@@ -7628,10 +7670,21 @@
 
       playerDocument=await hkAuthoritativePlayerRead('rat-hunt:complete');
       await loadRatHuntCombat(false);
+      hkRuntimeSmokeRecord('rat-hunt-complete',{
+        hasState:!!ratHuntCombat.state,
+        isFinish:ratHuntCombat.state?.is_finish,
+        level:Number(ratHuntCombat.state?.level??0),
+        health:Number(ratHuntCombat.state?.health??0)
+      });
       hkRunner.finish(either('План Охоты на крыс завершён','Rat Hunt plan completed'));
       log(either('План Охоты на крыс завершён','Rat Hunt plan completed'),'ok');
       renderRatHunt();
     }catch(error){
+      hkRuntimeSmokeRecord('rat-hunt-error',{
+        name:String(error?.name||''),
+        status:Number(error?.httpStatus||0),
+        message:String(error?.message||error||'').slice(0,500)
+      });
       try{playerDocument=await hkAuthoritativePlayerRead('rat-hunt:error');await loadRatHuntCombat(false);}catch(_){}
       if(error?.name==='AbortError'){hkRunner.reset();log(either('Охота на крыс остановлена','Rat Hunt stopped'),'warn');}
       else{hkRunner.fail(error);log(either('Ошибка Охоты на крыс','Rat Hunt error')+': '+(error?.message||error),'bad');}
@@ -7760,12 +7813,28 @@
 
   function neighborhoodApplyIdler(data,reason='neighborhood') {
     const idler=data?.idler || data?.player?.idler || data?.data?.idler || data?.data?.player?.idler;
-    if(!idler||typeof idler!=='object')return false;
+    if(!idler||typeof idler!=='object'){
+      hkRuntimeSmokeRecord('neighborhood-shape-miss',{reason,responseKeys:hkSmokeObjectKeys(data)});
+      return false;
+    }
     neighborhoodIdler=idler;
     try{
       hkStateStore.merge({idler,timestamp:data?.timestamp||data?.data?.timestamp},reason);
       playerDocument=hkStateStore.snapshot||playerDocument;
     }catch(_){}
+    const smokeBuildings=Array.isArray(idler?.buildings)?idler.buildings:[];
+    hkRuntimeSmokeRecord('neighborhood-state',{
+      reason,
+      responseKeys:hkSmokeObjectKeys(data),
+      tapPower:Number(idler?.player_tap_power??0),
+      buildings:smokeBuildings.length,
+      sample:smokeBuildings.slice(0,6).map(row=>({
+        buildingId:String(row?.building_id||'').slice(0,80),
+        level:Number(row?.level??0),
+        maxLevel:Number(row?.max_level??row?.level??0),
+        health:Number(row?.health??0)
+      }))
+    });
     return true;
   }
 
@@ -8084,10 +8153,19 @@
 
       progress();
       neighborhoodLastReadAt=Date.now();
+      hkRuntimeSmokeRecord('neighborhood-complete',{
+        tapPower:Number(neighborhoodIdler?.player_tap_power??0),
+        buildings:Array.isArray(neighborhoodIdler?.buildings)?neighborhoodIdler.buildings.length:0
+      });
       renderNeighborhoodBattles();
       hkRunner.finish(either('Все выбранные районы завершены','All selected Neighborhoods completed'));
       log(either('Районы завершены','Neighborhoods completed'),'ok');
     }catch(error){
+      hkRuntimeSmokeRecord('neighborhood-error',{
+        name:String(error?.name||''),
+        status:Number(error?.httpStatus||0),
+        message:String(error?.message||error||'').slice(0,500)
+      });
       neighborhoodLastReadAt=Date.now();
       renderNeighborhoodBattles();
       if(error?.name==='AbortError'){hkRunner.reset();log(either('Бои в Районах остановлены','Neighborhood Battles stopped'),'warn');}
