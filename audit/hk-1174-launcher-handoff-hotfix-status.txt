@@ -1,7 +1,0 @@
-version=1.17.4
-hotfix=launcher-handoff-20260920-r4
-stale_root_recovery=PASS
-bootstrap_resurrection_guard=PASS
-syntax=ok
-roundtrip=identical
-sha256=07abdbad821733b2c662eb4b271b49fb193c158a5fb078b2b5b2056443d7ab85

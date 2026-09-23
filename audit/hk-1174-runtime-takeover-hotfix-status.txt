@@ -1,8 +1,0 @@
-version=1.17.4
-hotfix=runtime-takeover-20260920-r5
-hardcoded_build_version=PASS
-old_runtime_takeover=PASS
-public_war_alliance_v4=PASS
-syntax=ok
-roundtrip=identical
-sha256=49370ed20b1c8691200ae399cead1ddf5bfecf0471c2d9e8b3ce3a4384a04823

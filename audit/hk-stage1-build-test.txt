@@ -1,8 +1,0 @@
-fixture=passed
-patch=passed
-syntax=ok
-validation=passed
-built_version=1.15.0
---- log tail ---
-STAGE1_PATCH_FIXTURE_TEST_OK
-STAGE1_MUTATION_GATE_TEST_OK

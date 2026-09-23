@@ -1,8 +1,0 @@
-version=1.17.4
-hotfix=launcher-hotfix-20260920-r1
-bootstrap_wait_visible=PASS
-permanent_fab_mount_guard=PASS
-runtime_self_heal=PASS
-syntax=ok
-roundtrip=identical
-sha256=be7659d932ad40681c38b8db73510b09b5a14c9d65d8f7066a2389f1d7fffb66
