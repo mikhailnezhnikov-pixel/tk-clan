@@ -1,2 +1,2 @@
-inspect=clan-shop-v20-after-dom-id-cleanup
-stamp=2026-09-23T11:20+09:00
+inspect=clan-shop-v21-final-forecast-check
+stamp=2026-09-23T11:26+09:00
