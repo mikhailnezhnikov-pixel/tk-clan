@@ -215,7 +215,10 @@
       '<article class="room-card">'+
         '<div class="room-card-media">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'</div>'+
         '<h3>'+safe(v.title)+'</h3>'+
-        (v.entry_cost?'<div class="resource-list">'+resource(v.entry_cost.title,v.entry_cost.quantity,v.entry_cost.image||'')+'</div>':'')+
+        (v.summary?'<p>'+safe(v.summary)+'</p>':'')+
+        (v.entry_cost?'<div class="quest-block"><div class="quest-block-title">Вход</div><div class="resource-list">'+resource(v.entry_cost.title,v.entry_cost.quantity,v.entry_cost.image||'')+'</div></div>':'')+
+        (Array.isArray(v.possible_rewards)&&v.possible_rewards.length?'<div class="quest-block"><div class="quest-block-title">Можно найти</div><div class="resource-list">'+v.possible_rewards.map(x=>resource(x.title,x.quantity,x.image||'')).join('')+'</div></div>':'')+
+        (v.reward_note?'<div class="equipment-note">'+safe(v.reward_note)+'</div>':'')+
         (v.note?'<p>'+safe(v.note)+'</p>':'')+
       '</article>'
     ).join('');
