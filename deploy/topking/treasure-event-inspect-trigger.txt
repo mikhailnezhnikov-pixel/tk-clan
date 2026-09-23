@@ -1,2 +1,2 @@
-inspect=treasure-achievement-lots
-stamp=2026-09-23T20:49+09:00
+inspect=treasure-achievement-title-keys
+stamp=2026-09-23T20:53+09:00
