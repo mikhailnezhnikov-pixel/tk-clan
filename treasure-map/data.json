@@ -5178,75 +5178,84 @@
     }
   ],
   "reward_tracks": {
-    "id": "bp_event_minigame",
     "title": "Линейки наград",
-    "score": {
-      "title": "Очки события",
-      "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
-    },
     "icon": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_bp_icon.png",
+    "score_icon": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png",
     "lines": [
       {
-        "id": "bp_event_minigame_line_free",
+        "id": "free",
         "title": "Бесплатная линия",
-        "type": "free",
-        "unlock": null,
-        "note": "Продвигается теми же Очками события."
+        "kind": "free"
       },
       {
-        "id": "bp_event_minigame_line_paid_01",
-        "title": "Тёмный пакт",
-        "type": "berry",
-        "unlock": {
-          "title": "Золотая ягода",
-          "quantity": 1,
-          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png"
-        },
-        "note": "Для открытия требуется 1 Золотая ягода."
+        "id": "paid_01",
+        "title": "Премиум-линия I",
+        "kind": "paid"
       },
       {
-        "id": "bp_event_minigame_line_paid_02",
-        "title": "Светлый пакт",
-        "type": "berry",
-        "unlock": {
-          "title": "Золотая ягода",
-          "quantity": 1,
-          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png"
-        },
-        "note": "Для открытия требуется 1 Золотая ягода."
+        "id": "paid_02",
+        "title": "Премиум-линия II",
+        "kind": "paid"
       }
     ],
-    "berry_choice": {
-      "title": "Что делать с Золотой ягодой",
-      "note": "Одна ягода открывает одну дополнительную линию. Если открыть саму ягоду и забрать содержимое, она расходуется и уже не может открыть линию.",
-      "open_contents": [
-        {
-          "title": "Ценный ключ",
-          "quantity": 1,
-          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png"
-        },
-        {
-          "title": "Карта сокровищ",
-          "quantity": 3,
-          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
-        },
-        {
-          "title": "Карта рыбалки",
-          "quantity": 3,
-          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fishing_icon.png"
-        },
-        {
-          "title": "Карта сражения",
-          "quantity": 3,
-          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png"
-        },
-        {
-          "title": "Карта торговца",
-          "quantity": 9,
-          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
-        }
-      ]
-    },
-    "note": "Точные награды каждого уровня добавим только после подтверждения полного конфига линий; сейчас они не подменяются предположениями."
+    "levels_note": "Подтверждено как минимум 28 уровней: в сохранённом состоянии все три линии были получены до 28-го уровня включительно.",
+    "claim_note": "Игра забирает награды трёх доступных линий одним действием, поэтому в истории подтверждена суммарная выдача уровня, а не разбивка по отдельным линиям.",
+    "observed_levels": [
+      {
+        "level": 18,
+        "rewards": [
+          {
+            "title": "Необычный ключ",
+            "quantity": 2,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+          },
+          {
+            "title": "Золото",
+            "quantity": 2,
+            "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "rewards": [
+          {
+            "title": "Провизия",
+            "quantity": 70,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+          },
+          {
+            "title": "Смена навыка питомца",
+            "quantity": 2,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+          }
+        ]
+      },
+      {
+        "level": 28,
+        "rewards": [
+          {
+            "title": "Провизия",
+            "quantity": 70,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+          },
+          {
+            "title": "Смена навыка питомца",
+            "quantity": 2,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+          },
+          {
+            "title": "Карта сокровищ",
+            "quantity": 2,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+          },
+          {
+            "title": "Золото",
+            "quantity": 1,
+            "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
+          }
+        ]
+      }
+    ]
   }
 }
