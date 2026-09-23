@@ -18,9 +18,9 @@ Each module:
 - stage: 2
 - status: IN_PROGRESS
 - userscript: 1.17.43
-- current module: Hamsters / Хомяки — Stage 2.12 verification
-- current module file: audit/hk-stage2-12-hamsters.md
-- current module status: SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING
+- current module: Generals / Генералы — Stage 2.13 verification
+- current module file: audit/hk-stage2-13-generals.md
+- current module status: SOURCE_PREFLIGHT_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: LIVE PASS
@@ -101,7 +101,13 @@ Each module:
   - fail-closed chain PASS;
   - continuous collector lease PASS;
   - embedded into Today in 1.17.35;
-
+- 2.11 Growth / Развитие — TECHNICAL LIVE PASS
+  - canonical Nuts budget restored and preserved;
+- 2.12 Hamsters / Хомяки — LIVE PASS
+  - Kokkaras order copies → rarity → levels confirmed;
+  - Nuts spending confirmed;
+  - authenticated live result confirmed Power +37 463;
+  - userscript 1.17.43
 
 ## Pits donor source block
 
