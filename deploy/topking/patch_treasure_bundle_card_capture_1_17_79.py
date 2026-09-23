@@ -20,8 +20,8 @@ for required in [
     if required not in s:
         raise SystemExit("missing marker: "+required)
 
-s=s.replace("// @version      1.17.79","// @version      1.17.79",1)
-s=s.replace("const BUILD_VERSION = '1.17.79';","const BUILD_VERSION = '1.17.79';",1)
+s=s.replace("// @version      1.17.78","// @version      1.17.79",1)
+s=s.replace("const BUILD_VERSION = '1.17.78';","const BUILD_VERSION = '1.17.79';",1)
 
 pos=s.find("// @release-note ")
 if pos>=0:
@@ -182,8 +182,8 @@ if old not in s:
 s=s.replace(old,new,1)
 
 for marker in [
-    "// @version      1.17.79",
-    "const BUILD_VERSION = '1.17.79';",
+    "// @version      1.17.78",
+    "const BUILD_VERSION = '1.17.78';",
     "HK_TREASURE_GUIDE_BUNDLE_CARD_DOM_REV='treasure-guide-bundle-card-dom-20260923-r1'",
     "function treasureGuideBundleCards()",
     "payload_json:bundleJson",
