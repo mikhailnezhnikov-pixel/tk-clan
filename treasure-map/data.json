@@ -228,6 +228,28 @@
           35,
           "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
         ]
+      ],
+      "visual_requirements": [
+        [
+          "Тара",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_box_t1_icon.png"
+        ],
+        [
+          "Еда",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_food_t1_icon.png"
+        ],
+        [
+          "Вода",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_water_t1_icon.png"
+        ]
+      ],
+      "verified_item_ids": [
+        "item_box_t1",
+        "item_food_t1",
+        "item_water_t1"
       ]
     },
     {
@@ -244,6 +266,28 @@
           35,
           "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
         ]
+      ],
+      "visual_requirements": [
+        [
+          "Тара",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_box_t2_icon.png"
+        ],
+        [
+          "Еда",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_food_t2_icon.png"
+        ],
+        [
+          "Вода",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_water_t2_icon.png"
+        ]
+      ],
+      "verified_item_ids": [
+        "item_box_t2",
+        "item_food_t2",
+        "item_water_t2"
       ]
     },
     {
@@ -260,6 +304,28 @@
           35,
           "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
         ]
+      ],
+      "visual_requirements": [
+        [
+          "Тара",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_box_t3_icon.png"
+        ],
+        [
+          "Еда",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_food_t3_icon.png"
+        ],
+        [
+          "Вода",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_water_t3_icon.png"
+        ]
+      ],
+      "verified_item_ids": [
+        "item_box_t3",
+        "item_food_t3",
+        "item_water_t3"
       ]
     },
     {
@@ -276,6 +342,28 @@
           35,
           "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
         ]
+      ],
+      "visual_requirements": [
+        [
+          "Тара",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_box_t4_icon.png"
+        ],
+        [
+          "Еда",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_food_t4_icon.png"
+        ],
+        [
+          "Вода",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_water_t4_icon.png"
+        ]
+      ],
+      "verified_item_ids": [
+        "item_box_t4",
+        "item_food_t4",
+        "item_water_t4"
       ]
     },
     {
@@ -292,6 +380,28 @@
           35,
           "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
         ]
+      ],
+      "visual_requirements": [
+        [
+          "Тара",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_box_t5_icon.png"
+        ],
+        [
+          "Еда",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_food_t5_icon.png"
+        ],
+        [
+          "Вода",
+          50,
+          "https://cdn-prod-art.hwgame.cloud/items/item_water_t5_icon.png"
+        ]
+      ],
+      "verified_item_ids": [
+        "item_box_t5",
+        "item_food_t5",
+        "item_water_t5"
       ]
     }
   ],
@@ -1949,5 +2059,37 @@
         }
       ]
     }
-  ]
+  ],
+  "cooking_quests_verified": {
+    "daily_cooking_1": [
+      "item_box_t1",
+      "item_food_t1",
+      "item_water_t1"
+    ],
+    "daily_cooking_2": [
+      "item_box_t2",
+      "item_food_t2",
+      "item_water_t2"
+    ],
+    "daily_cooking_3": [
+      "item_box_t3",
+      "item_food_t3",
+      "item_water_t3"
+    ],
+    "daily_cooking_4": [
+      "item_box_t4",
+      "item_food_t4",
+      "item_water_t4"
+    ],
+    "daily_cooking_5": [
+      "item_box_t5",
+      "item_food_t5",
+      "item_water_t5"
+    ],
+    "requirement_each": 50,
+    "reward": {
+      "item_id": "item_treasurehunt_energy",
+      "quantity": 35
+    }
+  }
 }
