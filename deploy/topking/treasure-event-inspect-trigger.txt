@@ -1,3 +1,3 @@
-inspect=userscript-min-version-live
-stamp=2026-09-24T01:49+09:00
-snapshot=21
+inspect=userscript-min-version-service-process
+stamp=2026-09-24T01:54+09:00
+snapshot=22
