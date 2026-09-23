@@ -1,2 +1,2 @@
-inspect=treasure-exact-target-definitions-r2
-stamp=2026-09-23T13:30+09:00
+inspect=treasure-direct-lot-definition-matches
+stamp=2026-09-23T13:34+09:00
