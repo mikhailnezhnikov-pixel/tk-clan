@@ -1,2 +1,2 @@
-inspect=treasure-b2-splus-skill-effects
-stamp=2026-09-23T14:18+09:00
+inspect=treasure-exact-pet-skill-objects
+stamp=2026-09-23T14:21+09:00
