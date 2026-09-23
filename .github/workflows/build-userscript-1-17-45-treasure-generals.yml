@@ -68,33 +68,33 @@ jobs:
             cp /tmp/HamsterKingMobile.user.js "$candidate"
 
             cat > deploy/topking/userscript-release.json <<'JSON'
-{
-  "schema": 1,
-  "source_version": "1.17.44",
-  "target_version": "1.17.45",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.45.treasure-generals-live-display.candidate.user.js",
-  "primary_marker": "generals-kokkaras-live-display-20260923-r2",
-  "preserve_markers": [
-    "treasure-guide-pet-skill-selective-20260923-r3",
-    "generals-kokkaras-cost-parity-20260923-r1",
-    "hamsters-kokkaras-auth-state-20260923-r3",
-    "hamsters-kokkaras-live-state-20260923-r2",
-    "hamsters-kokkaras-cost-parity-20260923-r1",
-    "treasure-guide-selective-extract-20260923-r2",
-    "treasure-guide-passive-capture-20260923-r1",
-    "maps-manual-scan-only-20260923-r1",
-    "growth-hamster-nuts-canon-20260923-r1",
-    "clan-snapshot-numeric-player-id-20260923-r1",
-    "auto-routines-in-today-20260922-r3",
-    "game-api-rate-guard-20260922-r1",
-    "public-collector-activity-lease-20260922-r1",
-    "businesses-kokkaras-donor-20260922-r1",
-    "businesses-runner-vertical-20260922-r1"
-  ],
-  "audit_status_path": "audit/hk-userscript-1-17-45-treasure-generals-live-status.txt",
-  "commit_message": "fix: deploy Generals live-state display in userscript 1.17.45"
-}
-JSON
+          {
+            "schema": 1,
+            "source_version": "1.17.44",
+            "target_version": "1.17.45",
+            "candidate_path": "deploy/topking/HamsterKingMobile.1.17.45.treasure-generals-live-display.candidate.user.js",
+            "primary_marker": "generals-kokkaras-live-display-20260923-r2",
+            "preserve_markers": [
+              "treasure-guide-pet-skill-selective-20260923-r3",
+              "generals-kokkaras-cost-parity-20260923-r1",
+              "hamsters-kokkaras-auth-state-20260923-r3",
+              "hamsters-kokkaras-live-state-20260923-r2",
+              "hamsters-kokkaras-cost-parity-20260923-r1",
+              "treasure-guide-selective-extract-20260923-r2",
+              "treasure-guide-passive-capture-20260923-r1",
+              "maps-manual-scan-only-20260923-r1",
+              "growth-hamster-nuts-canon-20260923-r1",
+              "clan-snapshot-numeric-player-id-20260923-r1",
+              "auto-routines-in-today-20260922-r3",
+              "game-api-rate-guard-20260922-r1",
+              "public-collector-activity-lease-20260922-r1",
+              "businesses-kokkaras-donor-20260922-r1",
+              "businesses-runner-vertical-20260922-r1"
+            ],
+            "audit_status_path": "audit/hk-userscript-1-17-45-treasure-generals-live-status.txt",
+            "commit_message": "fix: deploy Generals live-state display in userscript 1.17.45"
+          }
+          JSON
 
             mkdir -p "$(dirname "$audit")"
             {
