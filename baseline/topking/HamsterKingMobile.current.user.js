@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.64
+// @version      1.17.65
+// @release-note Ярмарка: финальная чистка режима 3/6/9 — понятное название режима, мгновенное обновление прогноза при переключении бонусов и корректные причины остановки вместо ложного «завершена» при недостигнутой цели.
 // @release-note Ярмарка: прогноз максимальных расходов теперь включает выбранные нижние бонусы ×5/×10/×30 по порогам 3/6/9; тот же расчёт используется в кошельке и предупреждении по алмазам перед запуском.
 // @release-note Ярмарка: «Всего покупок» уточнено как цель основных покупок. В режиме 3/6/9 цель автоматически приводится к целым тройкам без округления вверх, а бонусные нижние ячейки считаются отдельно и доступны только когда достижимы текущей целью.
 // @release-note Карта Сокровищ: определения трёх линеек наград приоритетно сохраняются из уже загруженных данных события без дополнительных запросов к игре.
@@ -71,7 +72,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.64';
+  const BUILD_VERSION = '1.17.65';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -86,6 +87,7 @@
   const HK_FAIR_BALANCE_REROLLS_REV = 'fair-balance-rerolls-20260923-r1';
   const HK_FAIR_PURCHASE_TARGET_REV = 'fair-purchase-target-20260923-r1';
   const HK_FAIR_BONUS_COST_FORECAST_REV = 'fair-bonus-cost-forecast-20260923-r1';
+  const HK_FAIR_FINAL_CLEANUP_REV = 'fair-final-cleanup-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
   function hkRuntimeVersionTuple(value) {
@@ -364,8 +366,8 @@
       emptySlots:'Пустые слоты', removeTier:'Достать: T{n}', selectAll:'Выбрать все', insertAll:'Вставить: все тиры',
       insertTier:'Вставить: T{n}', loadFair:'Обновить ярмарку', chooseFair:'Выберите ярмарку', readFirst:'Сначала считайте данные',
       searchLot:'Поиск лота', choosePurchases:'Выберите покупки', selectedLots:'Выбрано лотов: {n}', totalPurchases:'Цель основных покупок',
-      maxRerolls:'Макс. прокруток', allowDiamonds:'Разрешить алмазы на прокрутки и покупки', findBuy:'Найти и выкупить',
-      fairWarning:'Лоты за кристаллы отмечены 💎. Перед запуском показывается максимальный расход.', version:'Версия {v}',
+      allowDiamonds:'Разрешить алмазы на прокрутки и покупки', findBuy:'Найти и выкупить',
+      fairWarning:'Лоты за кристаллы отмечены 💎. Максимальный расход учитывает основные покупки, выбранные бонусы и доступные прокрутки.', version:'Версия {v}',
       connectedSlots:'Подключено · слотов {n}', chooseBuildingSlots:'Выбрать слоты в зданиях', insertFromStock:'Вставить со склада',
       emptySlot:'Пустой слот', influence:'Влияние {n}', inStock:'На складе {n}', noBusinesses:'Нет бизнесов этого тира',
       buildingSlot:'Здание {building} · слот {slot}', selectedPlan:'Выбрано: слотов {remove} · вставить {insert}', execute:'Выполнить перестановку',
@@ -374,7 +376,7 @@
       all:'Все', blocked:'заблокировано', noLots:'Лоты не найдены', noFairs:'Нет ярмарок с доступными лотами',
       allowedCells:'Разрешённые слоты', cell:'Ячейка {n}', selectCellsHint:'Выберите, из каких групп слотов разрешён выкуп',
       regularSlots:'Обычные', vipSlots:'VIP', yes:'ДА', no:'НЕТ', noCells:'Для выбранного товара отключены и обычные, и VIP-слоты', fairSavedSettings:'Сохранённые настройки',
-      fairExactLots:'Искать комбинации до', fairBonusLots:'Выкупить бонусные лоты',
+      fairExactLots:'Группы 3/6/9 — максимум за поле', fairBonusLots:'Выкупить бонусные лоты',
       saveSetting:'Сохранить настройку', updateSetting:'Обновить', settingName:'Название настройки:', settingSaved:'Настройка «{name}» сохранена',
       settingLoaded:'Настройка «{name}» загружена', deleteSetting:'Удалить настройку «{name}»?',
       regularShop:'Регулярный магазин', ordinaryShop:'Обычный магазин', clanShop:'Магазин клана', readShop:'Обновить магазин', selectAvailable:'Выбрать доступные', shopReadFirst:'Сначала считайте магазин',
@@ -402,8 +404,8 @@
       removeAll:'Remove: T1–T3', emptySlots:'Empty slots', removeTier:'Remove: T{n}', selectAll:'Select all',
       insertAll:'Insert: all tiers', insertTier:'Insert: T{n}', loadFair:'Refresh fair', chooseFair:'Choose a fair',
       readFirst:'Read the data first', searchLot:'Search lots', choosePurchases:'Choose purchases', selectedLots:'Selected lots: {n}',
-      totalPurchases:'Main-purchase target', maxRerolls:'Max rerolls', allowDiamonds:'Allow diamonds for rerolls and purchases',
-      findBuy:'Find and buy', fairWarning:'Crystal lots are marked 💎. The maximum cost is shown before starting.',
+      totalPurchases:'Main-purchase target', allowDiamonds:'Allow diamonds for rerolls and purchases',
+      findBuy:'Find and buy', fairWarning:'Crystal lots are marked 💎. Maximum spend includes main purchases, selected bonuses, and available rerolls.',
       version:'Version {v}', connectedSlots:'Connected · slots {n}', chooseBuildingSlots:'Choose building slots', insertFromStock:'Insert from stock',
       emptySlot:'Empty slot', influence:'Influence {n}', inStock:'In stock {n}', noBusinesses:'No businesses of this tier',
       buildingSlot:'Building {building} · slot {slot}', selectedPlan:'Selected: slots {remove} · insert {insert}', execute:'Run rearrangement',
@@ -412,7 +414,7 @@
       all:'All', blocked:'blocked', noLots:'No lots found', noFairs:'No fairs with available lots',
       allowedCells:'Allowed slots', cell:'Cell {n}', selectCellsHint:'Choose which slot groups are allowed for purchases',
       regularSlots:'Regular', vipSlots:'VIP', yes:'YES', no:'NO', noCells:'Both regular and VIP slots are disabled for a selected item', fairSavedSettings:'Saved settings', saveSetting:'Save setting',
-      fairExactLots:'Search combinations up to', fairBonusLots:'Buy bonus lots',
+      fairExactLots:'3/6/9 groups — max per board', fairBonusLots:'Buy bonus lots',
       updateSetting:'Update', settingName:'Setting name:', settingSaved:'Setting “{name}” saved', settingLoaded:'Setting “{name}” loaded',
       deleteSetting:'Delete setting “{name}”?', regularShop:'Regular shop', ordinaryShop:'Standard shop', clanShop:'Clan shop', readShop:'Refresh shop', selectAvailable:'Select available',
       shopReadFirst:'Read the shop first', remaining:'Remaining {n}', unlimited:'Unlimited', boughtOut:'Purchased', selectedPurchases:'Selected purchases: {n}',
@@ -7807,6 +7809,7 @@
     box.querySelectorAll('[data-fair-bonus]').forEach(input => input.onchange = () => {
       const quantity = Number(input.dataset.fairBonus);
       if (input.checked) selectedFairBonusLots.add(quantity); else selectedFairBonusLots.delete(quantity);
+      updateFairControls();
     });
   }
 
@@ -7952,12 +7955,12 @@
       ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`)
       : '';
     if (!confirm(language === 'en'
-      ? `Start searching for selected lots?\n\nMain purchases: ${buyLimit}${combo.exactLots ? `\nCombination mode: up to ${combo.exactLots}; groups of three; bonuses are separate` : ''}\nRerolls: by available currency (now: ${initialRerollText})${crystalNotice}`
-      : `Запустить поиск выбранных лотов?\n\nОсновных покупок: ${buyLimit}${combo.exactLots ? `\nРежим комбинаций: до ${combo.exactLots}; покупки тройками; бонусы отдельно` : ''}\nПрокрутки: по доступной валюте (сейчас: ${initialRerollText})${crystalNotice}`)) return;
+      ? `Start searching for selected lots?\n\nMain purchases: ${buyLimit}${combo.exactLots ? `\n3/6/9 groups: max ${combo.exactLots} main purchases per board; smaller complete groups are also allowed; bonuses are separate` : ''}\nRerolls: by available currency (now: ${initialRerollText})${crystalNotice}`
+      : `Запустить поиск выбранных лотов?\n\nОсновных покупок: ${buyLimit}${combo.exactLots ? `\nГруппы 3/6/9: максимум ${combo.exactLots} основных покупок за поле; меньшие полные группы тоже разрешены; бонусы отдельно` : ''}\nПрокрутки: по доступной валюте (сейчас: ${initialRerollText})${crystalNotice}`)) return;
     if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
     hkRunner.start({title:either('Ярмарка','Fair'),total:buyLimit,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
     fairRunning = true; fairStop = false; updateFairControls();
-    let bought = 0, bonusBought = 0, rerolls = 0, authRetries = 0;
+    let bought = 0, bonusBought = 0, rerolls = 0, authRetries = 0, stopReason = '';
     try {
       playerDocument = await apiJson('/player/me', 'POST');
       fairDocument = playerDocument;
@@ -7966,7 +7969,9 @@
         await hkRunner.waitIfPaused();
         hkRunner.setStep(either('Поиск и покупка лотов','Searching and buying lots'), bought, buyLimit);
         if (combo.exactLots && buyLimit - bought < 3) {
-          log(either(`Остаток лимита ${buyLimit - bought}: для комбинации требуется минимум 3 покупки.`, `Remaining limit ${buyLimit - bought}: a combination requires at least 3 purchases.`), 'warn');
+          stopReason = either(`Остановка: осталось ${buyLimit - bought} основных покупок, а для режима 3/6/9 нужна полная группа из трёх.`,
+            `Stopped: ${buyLimit - bought} main purchases remain, but 3/6/9 mode requires a complete group of three.`);
+          log(stopReason, 'warn');
           break;
         }
         state = fairState(selectedFairId);
@@ -8054,8 +8059,9 @@
         if (!safeReroll(state.fair_reroll_cost, allowPremium)) throw new Error('Цена прокрутки изменилась и стала небезопасной');
         const rerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
         if (!rerollPlan.free && rerollPlan.count <= 0) {
-          log(either(`Остановка: валюта прокрутки закончилась или достигнут резерв${rerollPlan.problems.length ? ' · ' + rerollPlan.problems.join('; ') : ''}`,
-            `Stopped: reroll currency is exhausted or reserve reached${rerollPlan.problems.length ? ' · ' + rerollPlan.problems.join('; ') : ''}`), 'warn');
+          stopReason = either(`Остановка: валюта прокрутки закончилась или достигнут резерв${rerollPlan.problems.length ? ' · ' + rerollPlan.problems.join('; ') : ''}`,
+            `Stopped: reroll currency is exhausted or reserve reached${rerollPlan.problems.length ? ' · ' + rerollPlan.problems.join('; ') : ''}`);
+          log(stopReason, 'warn');
           break;
         }
         log(rerollPlan.free
@@ -8080,10 +8086,23 @@
         }
         await gameRetryDelay(550);
       }
+      if (fairStop || hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
       playerDocument = await hkAuthoritativePlayerRead('fair-complete');
       fairDocument = playerDocument;
-      hkRunner.finish(either('Ярмарка завершена','Fair completed'));
-      log(`Ярмарка завершена: выбранных покупок ${bought}, бонусных ${bonusBought}, прокруток ${rerolls}`, 'ok');
+      if (bought >= buyLimit) {
+        hkRunner.finish(either('Цель Ярмарки достигнута','Fair target reached'));
+        log(either(
+          `Цель Ярмарки достигнута: основных покупок ${bought}/${buyLimit}, бонусных ${bonusBought}, прокруток ${rerolls}`,
+          `Fair target reached: main purchases ${bought}/${buyLimit}, bonus purchases ${bonusBought}, rerolls ${rerolls}`
+        ), 'ok');
+      } else {
+        const reason = stopReason || either('Ярмарка остановлена до достижения цели','Fair stopped before reaching the target');
+        hkRunner.finish(reason);
+        log(either(
+          `${reason} Итог: основных покупок ${bought}/${buyLimit}, бонусных ${bonusBought}, прокруток ${rerolls}`,
+          `${reason} Result: main purchases ${bought}/${buyLimit}, bonus purchases ${bonusBought}, rerolls ${rerolls}`
+        ), 'warn');
+      }
     } catch (error) {
       if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Ярмарка остановлена','Fair stopped'),'warn'); }
       else { hkRunner.fail(error); log(`Аварийная остановка ярмарки: ${error.message}`, 'bad'); }
