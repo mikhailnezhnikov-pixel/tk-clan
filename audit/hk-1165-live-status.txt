@@ -1,7 +1,0 @@
-version=1.16.5
-stage2e=stage2e-maps-20260919-r1
-stage2f=stage2f-clan-20260919-r1
-modules=maps-district-research,clan-skills
-syntax=ok
-roundtrip=identical
-sha256=ef61e4dbf7dbee2cec2bdacc3ac96156cdd3bf41ab7c02576c23ac22dcb9b9f0

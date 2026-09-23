@@ -1,6 +1,0 @@
-checked_utc=2026-09-23T15:32:30Z
-status=FAIL
-reason=exact_sha
-detail=048683968bafaf8164340dd2aa7c2fcb622306ad0f048fd2c2f4fdfad1f3bcb3
-input_sha256=048683968bafaf8164340dd2aa7c2fcb622306ad0f048fd2c2f4fdfad1f3bcb3
-patched_sha256=unknown

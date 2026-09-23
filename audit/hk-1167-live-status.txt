@@ -1,7 +1,0 @@
-version=1.16.7
-stage2h=stage2h-wars-20260919-r1
-modules=wars-view,active-battles,defense-wars
-mode=read-only
-syntax=ok
-roundtrip=identical
-sha256=4db2905d5645d0d30bb85e2fce961cd1df5f2d1bf45ef1b5d40068148bf4aa2b

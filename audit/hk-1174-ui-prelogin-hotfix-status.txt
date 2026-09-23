@@ -1,8 +1,0 @@
-version=1.17.4
-hotfix=ui-prelogin-20260920-r3
-launcher=launcher-hotfix-20260920-r1
-login_gate=login-gate-hotfix-20260920-r2
-ui_mount_before_gate=PASS
-syntax=ok
-roundtrip=identical
-sha256=d5a945e4d6951e859371c66b47f003d959404132237feb153a32fd124e101295

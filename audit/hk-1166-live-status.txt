@@ -1,9 +1,0 @@
-version=1.16.6
-stage2g=stage2g-rumors-20260919-r1
-server_stage2g=stage2g-rumors-server-20260919-r1
-modules=rumors-route,today-rumors,rumors-admin
-client_syntax=ok
-backend_syntax=ok
-roundtrip=identical
-client_sha256=9f29e9744e9a46c9e2effe1ca79d165ac532a78646a8e0924c029a17bc63ecef
-server_sha256=095c8408e3fda8f642e325b3743a54c5aa44602245d0e5ccdb66633f672bf0a0
