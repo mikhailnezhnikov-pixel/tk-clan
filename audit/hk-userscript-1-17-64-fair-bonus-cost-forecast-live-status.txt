@@ -1,0 +1,12 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.63
+target_version=1.17.64
+marker=fair-bonus-cost-forecast-20260923-r1
+source_sha256=b465d1a566b1dde115bcf9145a747a7820879fd1a5200531a0d62d1e15f7098b
+candidate_sha256=8ede5e7613cf8d5c058b15c644d662356d16ba897b8a1057044d3e21b4078b87
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
+baseline_sync=MANUAL_AFTER_PUSH_RACE
+workflow_run_id=35861813495
