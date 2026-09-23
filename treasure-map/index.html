@@ -240,19 +240,14 @@
         '<p>'+safe(digging.note||'')+'</p></article>');
     }
     (Array.isArray(chestHunt.chest_types)?chestHunt.chest_types:[]).forEach(v=>{
+      const c=v.cost||{};
       chestCards.push('<article class="mini-card">'+
         (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
         '<h3>'+safe(v.title)+'</h3>'+
-        '<p>'+(v.opening_cost?'Стоимость открытия подтверждена':'Точная стоимость открытия ещё не подтверждена')+'</p>'+
-        '</article>');
-    });
-    (Array.isArray(chestHunt.observed_openings)?chestHunt.observed_openings:[]).forEach(v=>{
-      chestCards.push('<article class="mini-card"><h3>'+safe(v.title)+'</h3>'+
-        '<p>'+safe(v.note||'')+'</p>'+
-        '<div class="quest-block"><div class="quest-block-title">Фактический результат</div><div class="resource-list">'+
-        (Array.isArray(v.rewards)?v.rewards:[]).map(x=>resource(x.title,x.quantity,x.image||'')).join('')+
+        (c.quantity?'<div class="quest-block"><div class="quest-block-title">Стоимость открытия</div><div class="resource-list">'+resource(c.title||'Стоимость',c.quantity,c.image||'')+'</div></div>':'')+
+        '<div class="quest-block"><div class="quest-block-title">Может выпасть</div><div class="resource-list">'+
+          (Array.isArray(v.contents)?v.contents:[]).map(x=>resource(x.name||x.id,x.quantity,x.image||iconFor(x.id,x.name),x.id)).join('')+
         '</div></div>'+
-        (v.cost_observed?'<p>'+safe(v.cost_observed)+'</p>':'')+
         '</article>');
     });
     document.getElementById('chest-hunt').innerHTML=chestCards.join('');
