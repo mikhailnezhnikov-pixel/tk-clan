@@ -4122,7 +4122,7 @@
   "pet_skill_groups": [
     {
       "title": "Боевая кладка",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fight_egg_spawn_r4_icon.png",
       "grades": [
         {
           "rank": "S+",
@@ -4133,7 +4133,7 @@
     },
     {
       "title": "Картограф",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_map_generator_r4_icon.png",
       "grades": [
         {
           "rank": "S+",
@@ -4154,7 +4154,7 @@
     },
     {
       "title": "Карты на прилавке",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_maps_r4_icon.png",
       "grades": [
         {
           "rank": "S+",
@@ -4175,7 +4175,7 @@
     },
     {
       "title": "Ключник",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_keys_r4_icon.png",
       "grades": [
         {
           "rank": "S+",
@@ -4196,7 +4196,7 @@
     },
     {
       "title": "Любимчик торговцев",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_rep_r4_icon.png",
       "grades": [
         {
           "rank": "S+",
@@ -4207,7 +4207,7 @@
     },
     {
       "title": "Любитель блестяшек",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_more_money_r4_icon.png",
       "grades": [
         {
           "rank": "S+",
@@ -4218,7 +4218,7 @@
     },
     {
       "title": "Любитель покушать",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_more_food_r4_icon.png",
       "grades": [
         {
           "rank": "S+",
@@ -4229,7 +4229,7 @@
     },
     {
       "title": "Охотник за сокровищами",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
       "grades": [
         {
           "rank": "S+",
@@ -4240,7 +4240,7 @@
     },
     {
       "title": "Рыбацкое чутьё",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fishing_map_finder_r4_icon.png",
       "grades": [
         {
           "rank": "S+",
@@ -4256,7 +4256,7 @@
     },
     {
       "title": "Чутьё на сундуки",
-      "image": null,
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_chest_finder_r4_icon.png",
       "grades": [
         {
           "rank": "S",
