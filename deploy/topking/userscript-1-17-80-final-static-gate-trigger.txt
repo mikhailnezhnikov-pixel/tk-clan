@@ -1,0 +1,2 @@
+audit=userscript-1.17.80-final-static-gate
+stamp=2026-09-24T00:41+09:00
