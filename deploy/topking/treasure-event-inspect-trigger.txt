@@ -1,2 +1,2 @@
-inspect=treasure-minigame-screen-text
-stamp=2026-09-23T13:09+09:00
+inspect=treasure-pet-mission-modals
+stamp=2026-09-23T13:13+09:00
