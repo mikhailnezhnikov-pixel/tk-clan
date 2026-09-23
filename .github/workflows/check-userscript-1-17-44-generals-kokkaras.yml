@@ -1,0 +1,46 @@
+name: Check Userscript 1.17.44 Generals Kokkaras Cost Parity
+
+on:
+  push:
+    paths:
+      - '.github/workflows/check-userscript-1-17-44-generals-kokkaras.yml'
+      - 'deploy/topking/HamsterKingMobile.1.17.44.generals-kokkaras-cost-parity.candidate.user.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate candidate
+        run: |
+          set -euo pipefail
+          f=deploy/topking/HamsterKingMobile.1.17.44.generals-kokkaras-cost-parity.candidate.user.js
+          node --check "$f"
+          grep -Fq "// @version      1.17.44" "$f"
+          grep -Fq "const BUILD_VERSION = '1.17.44';" "$f"
+          grep -Fq "generals-kokkaras-cost-parity-20260923-r1" "$f"
+          grep -Fq "hamsters-kokkaras-auth-state-20260923-r3" "$f"
+          grep -Fq "treasure-guide-selective-extract-20260923-r2" "$f"
+          grep -Fq "maps-manual-scan-only-20260923-r1" "$f"
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('deploy/topking/HamsterKingMobile.1.17.44.generals-kokkaras-cost-parity.candidate.user.js').read_text(encoding='utf-8')
+          assert "function growthGeneralCostSafe(cost){ return growthSafeCost(cost)&&growthPitCost(cost)>0&&growthNutCost(cost)>0; }" in s
+          assert "growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])" not in s
+          assert "generalsRun=visibleState&&title===either('Генералы','Generals')" in s
+          assert "box.classList.toggle('generals-run',generalsRun)" in s
+          assert ".hk-runner.businesses-run,.hk-runner.hamsters-run,.hk-runner.generals-run" in s
+          assert "if(businessesRun||hamstersRun||generalsRun){runnerFill.style.width='100%'" in s
+          assert "const generalRows=growthArray('player_hamster_generals',state)" in s
+          assert "hamsters-kokkaras-auth-state-20260923-r3" in s
+          assert "treasure-guide-selective-extract-20260923-r2" in s
+          assert s.count('submitOwnedMapAreas(true)') == 1
+          i=s.index('submitOwnedMapAreas(true)')
+          assert '#hk-map-scan' in s[max(0,i-250):i+250]
+          print('USERSCRIPT_1_17_44_GENERALS_KOKKARAS_STATIC=PASS')
+          PY
