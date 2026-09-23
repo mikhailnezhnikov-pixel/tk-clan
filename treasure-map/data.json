@@ -1367,11 +1367,12 @@
           "item_id": "item_treasurehunt_energy",
           "quantity": 5
         },
-        "source_id": "mf_fair_treasury_room_choose_way_1"
+        "source_id": "mf_fair_treasury_room_choose_way_1",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_1_icon.png"
       },
       "path_2": {
         "cost": null,
-        "note": "Путь присутствует в активной сокровищнице, но его карточка стоимости ещё не попала в полный захваченный shop_lots.",
+        "note": "Путь присутствует в активной сокровищнице. Полный shop-lot теперь захватывается приоритетно; цена будет показана после следующего естественного /shop/view.",
         "source_id": "mf_fair_treasury_room_choose_way_2"
       },
       "path_3": {
@@ -1380,9 +1381,10 @@
           "item_id": "item_treasurehunt_energy",
           "quantity": 5
         },
-        "source_id": "mf_fair_treasury_room_choose_way_3"
+        "source_id": "mf_fair_treasury_room_choose_way_3",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_3_icon.png"
       },
-      "recommendation": "Пути 1 и 3 стоят одинаково — по 5 провизии. Лучший путь пока не выбираем: фактическая таблица результатов treasure_search_result ещё не извлечена."
+      "recommendation": "Пути 1 и 3 точно стоят по 5 провизии. Путь 2 и таблица результатов ещё не подтверждены полностью, поэтому лучший путь пока не выбираем."
     },
     "premium_shop": [
       {
@@ -1456,6 +1458,15 @@
       },
       "source_id": "fair_mini_game_trader",
       "note": "Точная fair_reroll_cost из состояния торговца."
+    },
+    "chest_room_refresh": {
+      "title": "Обновление комнаты сундуков",
+      "cost": {
+        "currency": "Крышки",
+        "currency_id": "cur_cap",
+        "quantity": 10
+      },
+      "source_id": "fair_mini_game_chests"
     }
   },
   "verified_chests": [
@@ -2016,14 +2027,71 @@
     }
   ],
   "chest_hunt": {
-    "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
     "title": "Охота за сундуками",
-    "facts": [
-      "Одновременно встречаются три основных уровня сундуков.",
-      "На поле есть шесть отдельных точек раскопки.",
-      "У первого сундука зафиксировано дополнительное состояние/вариант.",
-      "Точные цены открытия и полный дроп каждого уровня будут добавляться только после подтверждения карточек."
-    ]
+    "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
+    "refresh_cost": {
+      "currency": "Крышки",
+      "currency_id": "cur_cap",
+      "quantity": 10
+    },
+    "types": [
+      {
+        "id": "mf_treasurelot_chest_type_015",
+        "title": "Сундук #1",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_015_icon.png",
+        "note": "Первый базовый сундук комнаты."
+      },
+      {
+        "id": "mf_treasurelot_chest_type_02",
+        "title": "Сундук #2",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_02_icon.png",
+        "note": "Второй базовый сундук комнаты."
+      },
+      {
+        "id": "mf_treasurelot_chest_type_03",
+        "title": "Сундук #3",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_03_icon.png",
+        "note": "Третий базовый сундук комнаты."
+      },
+      {
+        "id": "digging_spots",
+        "title": "Раскопки",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "quantity": 6,
+        "note": "Шесть отдельных точек раскопки. После раскопки может появиться дополнительный сундук type_01."
+      }
+    ],
+    "observed": [
+      {
+        "id": "mf_treasurelot_chest_type_01",
+        "title": "Найденный сундук",
+        "result": {
+          "item_id": "item_treasurehunt_cur_coins",
+          "name": "Монеты сокровищ",
+          "quantity": 11
+        },
+        "note": "В одной подтверждённой транзакции открытие найденного type_01 дало +11 Монет сокровищ."
+      }
+    ],
+    "pool_card": {
+      "quantities": [
+        135,
+        40,
+        4,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "note": "Карточка комнаты показывает общий пул «Можно отыскать». Точные соответствия предметов количествам будут добавлены после приоритетного shop-lot захвата."
+    }
   },
   "special_items": [
     {
