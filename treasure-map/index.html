@@ -62,6 +62,12 @@
   <div class="section-head"><div><h2>Питомцы и поручения</h2><p>Эффекты и правила, которые удалось снять прямо с экрана события.</p></div></div>
   <section class="facts" id="pets"></section>
 
+  <div class="section-head"><div><h2>Проверенная экономика</h2><p>Только точные стоимости и награды из игровых карточек.</p></div></div>
+  <section class="facts" id="verified-economy"></section>
+
+  <div class="section-head"><div><h2>Сундуки</h2><p>Содержимое, которое игра показывает как возможное для конкретных сундуков.</p></div></div>
+  <section class="grid" id="verified-chests"></section>
+
   <div class="section-head"><div><h2>Магазин</h2><p>Позиции, которые были видны в событии во время считывания.</p></div></div>
   <section class="shop-grid" id="shop"></section>
 
@@ -87,6 +93,8 @@
     const conditions=Array.isArray(data.achievement_conditions)?data.achievement_conditions:[];
     const minigameDetails=Array.isArray(data.minigame_details)?data.minigame_details:[];
     const achievementSeries=Array.isArray(data.achievement_series)?data.achievement_series:[];
+    const verifiedEconomy=data.verified_economy||{};
+    const verifiedChests=Array.isArray(data.verified_chests)?data.verified_chests:[];
     document.getElementById('quest-count').textContent=quests.length;
     document.getElementById('asset-count').textContent=Number(data?.captured?.assets_found||data?.assets?.length||0);
     document.getElementById('capture-count').textContent=Number(data?.captured?.snapshots||0);
@@ -117,14 +125,51 @@
     (Array.isArray(data?.pets?.known_effects)?data.pets.known_effects:[]).forEach(v=>petFacts.push('<div class="fact"><b>'+safe(v.title)+'</b><p>'+safe(v.text)+'</p></div>'));
     document.getElementById('pets').innerHTML=petFacts.join('');
 
+    const economyParts=[];
+    const treasury=verifiedEconomy?.treasury||{};
+    if(treasury.path_1||treasury.path_2||treasury.path_3){
+      const pathText=[1,2,3].map(n=>{
+        const row=treasury['path_'+n]||{};
+        const cost=row?.cost;
+        return '<span class="req">Путь '+n+': '+(cost?(safe(cost.quantity)+' '+safe(cost.item)):'стоимость ещё не считана')+'</span>';
+      }).join('');
+      economyParts.push('<div class="fact"><b>Сокровищница — выбор пути</b><div class="requirements">'+pathText+'</div>'+
+        (treasury.recommendation?'<p><b>Вывод:</b> '+safe(treasury.recommendation)+'</p>':'')+'</div>');
+    }
+    const petMissionRows=Array.isArray(verifiedEconomy?.pet_missions)?verifiedEconomy.pet_missions:[];
+    if(petMissionRows.length){
+      economyParts.push('<div class="fact"><b>Поручения питомцам — расход и отдача</b><div class="requirements">'+
+        petMissionRows.map(v=>'<span class="req">'+safe(v.rank)+': '+safe(v.food)+' корма → '+safe(v.gold)+' зол. монет'+
+          (v.special_reward?' · '+safe(v.special_reward):'')+'</span>').join('')+
+        '</div>'+(verifiedEconomy.pet_mission_recommendation?'<p><b>По эффективности:</b> '+safe(verifiedEconomy.pet_mission_recommendation)+'</p>':'')+'</div>');
+    }
+    const premiumRows=Array.isArray(verifiedEconomy?.premium_shop)?verifiedEconomy.premium_shop:[];
+    premiumRows.forEach(v=>economyParts.push('<div class="fact"><b>'+safe(v.title||v.source_id)+'</b><p>'+
+      'Получаем: '+safe(v?.receive?.quantity)+' · '+safe(v?.receive?.item_id)+' · Стоимость: '+safe(v?.cost?.quantity)+' '+safe(v?.cost?.currency_id)+
+      '</p>'+(v.note?'<p>'+safe(v.note)+'</p>':'')+'</div>'));
+    document.getElementById('verified-economy').innerHTML=economyParts.join('');
+
+    document.getElementById('verified-chests').innerHTML=verifiedChests.map(v=>'<article class="mini-card"><h3>'+safe(v.title)+'</h3>'+
+      (v.note?'<p>'+safe(v.note)+'</p>':'')+
+      '<div class="requirements">'+(Array.isArray(v.contents)?v.contents:[]).map(x=>'<span class="req">'+safe(x.name||x.id)+' ×'+safe(x.quantity)+'</span>').join('')+'</div>'+
+      '<p style="margin-top:12px">Источник: '+safe(v.source_id||'')+'</p></article>').join('');
+
     document.getElementById('shop').innerHTML=shop.map(v=>'<div class="shop-item"><div><strong>'+safe(v.title)+'</strong><div class="muted">'+safe(v.qty||'')+'</div></div><span class="shop-meta">'+safe(v.price||'')+'</span></div>').join('');
 
     document.getElementById('achievement-examples').innerHTML=examples.map(v=>'<div class="fact"><b>'+safe(v.title)+'</b><p>'+safe(v.condition)+'</p>'+
       (Array.isArray(v.rewards)&&v.rewards.length?'<p>Награды: '+v.rewards.map(safe).join(' · ')+'</p>':'')+'</div>').join('');
 
-    document.getElementById('achievement-series').innerHTML=achievementSeries.map(v=>'<article class="mini-card"><h3>'+safe(v.category)+'</h3>'+
-      '<div class="requirements">'+(Array.isArray(v.thresholds)?v.thresholds:[]).map(n=>'<span class="req">'+safe(n)+'</span>').join('')+'</div>'+
-      '<p style="margin-top:12px">Источник: '+safe(v.source||'')+'</p></article>').join('');
+    document.getElementById('achievement-series').innerHTML=achievementSeries.map(v=>{
+      const milestones=Array.isArray(v.milestones)?v.milestones:[];
+      const legacy=Array.isArray(v.thresholds)?v.thresholds:[];
+      const content=milestones.length
+        ? milestones.map(m=>'<div class="fact" style="margin-top:8px"><b>'+safe(m.value)+'</b>'+
+            (Array.isArray(m.rewards)&&m.rewards.length?'<p>'+m.rewards.map(r=>safe(r[0])+' ×'+safe(r[1])).join(' · ')+'</p>':'<p>Награда ещё не извлечена.</p>')+
+          '</div>').join('')
+        : '<div class="requirements">'+legacy.map(n=>'<span class="req">'+safe(n)+'</span>').join('')+'</div>';
+      return '<article class="mini-card"><h3>'+safe(v.category)+'</h3>'+content+
+        '<p style="margin-top:12px">Источник: '+safe(v.source||'')+'</p></article>';
+    }).join('');
 
     document.getElementById('achievement-conditions').innerHTML=conditions.map(v=>'<span class="chip">'+safe(v)+'</span>').join('');
   }catch(error){
