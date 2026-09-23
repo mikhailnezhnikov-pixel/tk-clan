@@ -1,0 +1,9 @@
+USERSCRIPT_1_17_80_RUNTIME_SMOKE_COVERAGE=PASS
+source_version=1.17.79
+target_version=1.17.80
+mode=PASSIVE_EVIDENCE_COVERAGE
+new_game_requests=NONE
+checkpoints=start,mutation,complete
+auto_runtime_pass=DISABLED
+treasure_bundle_card_capture=PRESERVED
+public_exact_match=PASS

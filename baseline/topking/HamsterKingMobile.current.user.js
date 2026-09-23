@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.79
+// @version      1.17.80
+// @release-note Smoke-test: Rat Hunt / War / Районы показывают покрытие контрольных точек старт → мутация → завершение; это индикатор полноты доказательств, а не автоматический runtime PASS.
 // @release-note Карта Сокровищ: пассивный DOM-захват теперь сохраняет структуру каждой из четырёх ограниченных карточек набора отдельно — текст, порядок узлов и игровые иконки; новых запросов к игре нет.
 // @release-note Smoke-test: каждый Rat Hunt / War / Районы автоматически начинает чистую историю своего модуля; добавлен отдельный экспорт Smoke JSON без игровых запросов.
 // @release-note Smoke-test: статус теперь отражает именно последний запуск, а отдельная кнопка очищает только smoke-историю перед новым прогоном.
@@ -86,7 +87,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.79';
+  const BUILD_VERSION = '1.17.80';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -113,6 +114,7 @@
   const HK_RUNTIME_SMOKE_STATUS_REV = 'runtime-smoke-status-20260923-r1';
   const HK_RUNTIME_SMOKE_FRESH_RUN_REV = 'runtime-smoke-fresh-run-20260923-r1';
   const HK_RUNTIME_SMOKE_AUTOSTART_REV = 'runtime-smoke-autostart-20260923-r1';
+  const HK_RUNTIME_SMOKE_COVERAGE_REV = 'runtime-smoke-coverage-20260923-r1';
   function hkSmokeObjectKeys(value){
     return value&&typeof value==='object'&&!Array.isArray(value)?Object.keys(value).slice(0,24):[];
   }
@@ -319,15 +321,32 @@
     if (diagnostic.events.length > DIAGNOSTIC_MAX_EVENTS) diagnostic.events.splice(0, diagnostic.events.length - DIAGNOSTIC_MAX_EVENTS);
     if(event.type.startsWith('runtime-smoke-'))try{renderRuntimeSmokeStatus();}catch(_){}
   }
+  function runtimeSmokeCoverage(prefix,rows) {
+    const types=rows.map(row=>String(row?.type||''));
+    const started=types.includes('runtime-smoke-'+prefix+'-start');
+    let mutation=false;
+    if(prefix==='rat-hunt'){
+      mutation=rows.some(row=>String(row?.type||'')==='runtime-smoke-rat-hunt-state'&&/^rat-hunt:(?:change-preset|start|battle|respawn|finish)$/.test(String(row?.data?.reason||'')));
+    }else if(prefix==='war'){
+      mutation=rows.some(row=>String(row?.type||'')==='runtime-smoke-war-state'&&String(row?.data?.reason||'')==='war-combat:fight');
+    }else if(prefix==='neighborhood'){
+      mutation=rows.some(row=>String(row?.type||'')==='runtime-smoke-neighborhood-state'&&/^neighborhood:\/idler\/(?:claim|update|level|tap)$/.test(String(row?.data?.reason||'')));
+    }
+    const completed=types.includes('runtime-smoke-'+prefix+'-complete');
+    const checks={start:started,mutation,complete:completed};
+    const missing=Object.entries(checks).filter(([,ok])=>!ok).map(([key])=>key);
+    return {revision:HK_RUNTIME_SMOKE_COVERAGE_REV,...checks,count:Object.values(checks).filter(Boolean).length,total:3,missing};
+  }
   function runtimeSmokeModuleState(prefix) {
     const rows=diagnostic.events.filter(row=>String(row?.type||'').startsWith('runtime-smoke-'+prefix));
-    if(!rows.length)return {state:'idle',label:either('не запускалось','not run'),events:0,lastAt:null};
+    const coverage=runtimeSmokeCoverage(prefix,rows);
+    if(!rows.length)return {state:'idle',label:either('не запускалось','not run'),events:0,lastAt:null,coverage};
     let state='data',label=either('есть данные','has data');
     const last=rows[rows.length-1];
     const type=String(last?.type||'');
     if(type.endsWith('-error')){state='error';label=either('ошибка','error');}
     else if(type.endsWith('-complete')){state='complete';label=either('завершено','completed');}
-    return {state,label,events:rows.length,lastAt:last?.at||null};
+    return {state,label,events:rows.length,lastAt:last?.at||null,coverage};
   }
   function runtimeSmokeRewriteSession() {
     try{
@@ -364,10 +383,10 @@
       [either('Война','War'),summary.war],
       [either('Районы','Neighborhoods'),summary.neighborhoods]
     ];
-    const tone=state=>state==='complete'?'#6ee7a8':state==='error'?'#ff7b7b':state==='data'?'#ffd166':'#9aa8bc';
+    const tone=row=>row?.state==='error'?'#ff7b7b':row?.state==='complete'&&row?.coverage?.count===3?'#6ee7a8':row?.state==='idle'?'#9aa8bc':'#ffd166';
     host.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"><b>'+either('Smoke-test','Smoke test')+'</b><div style="display:flex;align-items:center;gap:7px"><small style="color:#9aa8bc">'+escapeHtml(BUILD_VERSION)+'</small><button id="hk-smoke-export" type="button" class="hk-secondary" style="padding:4px 7px;font-size:11px">JSON</button><button id="hk-smoke-reset" type="button" class="hk-secondary" style="padding:4px 7px;font-size:11px">'+either('Сбросить','Reset')+'</button></div></div>'+
       '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">'+rows.map(([name,row])=>
-        '<div style="padding:7px 8px;border:1px solid #304057;border-radius:9px;background:#101927;min-width:0"><small style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escapeHtml(name)+'</small><b style="display:block;color:'+tone(row.state)+'">'+escapeHtml(row.label)+'</b><small style="color:#7f8da3">'+row.events+' '+either('событ.','events')+'</small></div>'
+        '<div style="padding:7px 8px;border:1px solid #304057;border-radius:9px;background:#101927;min-width:0" title="'+escapeHtml((row?.coverage?.missing||[]).join(', '))+'"><small style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escapeHtml(name)+'</small><b style="display:block;color:'+tone(row)+'">'+escapeHtml(row.label)+'</b><small style="display:block;color:#7f8da3">'+row.events+' '+either('событ.','events')+'</small><small style="display:block;color:'+(row?.coverage?.count===3?'#6ee7a8':'#9aa8bc')+'">'+either('контроль','coverage')+' '+Number(row?.coverage?.count||0)+'/3</small></div>'
       ).join('')+'</div>';
     const exportButton=host.querySelector('#hk-smoke-export');
     if(exportButton)exportButton.onclick=downloadRuntimeSmokeReport;
