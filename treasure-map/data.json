@@ -1526,7 +1526,7 @@
           "quantity": 1
         }
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_big_icon.png"
     },
     {
       "title": "Большой сундук после сражения",
@@ -1564,7 +1564,7 @@
           "quantity": 1
         }
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_big_icon.png"
     }
   ],
   "verified_map": {
