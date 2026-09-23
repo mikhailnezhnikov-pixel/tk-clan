@@ -6,40 +6,21 @@ server.ensure_treasure_guide_capture_schema()
 
 with server.db_session() as db:
     rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json FROM treasure_guide_captures
-                                        WHERE path='/shop/view' AND payload_json<>'' ORDER BY id""")]
+                                        WHERE path LIKE '/client_config#treasure-%'
+                                        ORDER BY id""")]
 
-for r in rows[:6]:
-    raw=str(r["payload_json"] or "")
-    start=raw.find('"shop_lots":[')
-    if start<0: continue
-    lots=[]
-    i=raw.find('[',start)+1
-    while i<len(raw):
-        while i<len(raw) and raw[i] in " \r\n\t,": i+=1
-        if i>=len(raw) or raw[i]!='{': break
-        st=i;depth=0;ins=False;esc=False;j=i
-        while j<len(raw):
-            ch=raw[j]
-            if ins:
-                if esc:esc=False
-                elif ch=='\\':esc=True
-                elif ch=='"':ins=False
-            else:
-                if ch=='"':ins=True
-                elif ch=='{':depth+=1
-                elif ch=='}':
-                    depth-=1
-                    if depth==0:
-                        try:lots.append(json.loads(raw[st:j+1]))
-                        except:pass
-                        i=j+1;break
-            j+=1
-        else:break
-    out=[]
-    for o in lots:
-        oid=str(o.get("id") or "")
-        if re.search(r"forest|mine",oid,re.I):
-            out.append(o)
-    if out:
-        print("ROOM_LOTS",r["id"],json.dumps(out,ensure_ascii=False))
-        break
+out=[]
+for r in rows:
+    try:obj=json.loads(r["payload_json"])
+    except:continue
+    for row in obj.get("rows",[]) if isinstance(obj,dict) else []:
+        if not isinstance(row,dict):continue
+        p=row.get("payload")
+        if not isinstance(p,(dict,list)):continue
+        blob=json.dumps(p,ensure_ascii=False,separators=(",",":"))
+        low=blob.lower()
+        if ("forest" not in low and "mine" not in low):continue
+        if not (('"quantity":11' in blob and '"quantity":28' in blob) or ('"quantity":35' in blob and '"quantity":14' in blob)):
+            continue
+        out.append({"capture":r["id"],"row_path":row.get("path"),"payload":p})
+print("ROOM_CONFIG",json.dumps(out,ensure_ascii=False))
