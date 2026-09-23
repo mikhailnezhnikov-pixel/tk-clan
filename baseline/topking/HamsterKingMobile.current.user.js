@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.75
+// @version      1.17.76
+// @release-note Smoke-test: в шапке панели появился локальный статус Rat Hunt / War / Районов; сводка также попадает в Diagnostics JSON без новых запросов к игре.
 // @release-note Диагностика smoke-test: события Rat Hunt / War / Районов теперь переживают перезагрузку текущей вкладки через sessionStorage; сохраняются только обезличенные runtime-smoke события.
 // @release-note Диагностика smoke-test: Rat Hunt, War и Районы теперь пассивно записывают форму ответов и подтверждённое состояние после мутаций без дополнительных запросов к игре.
 // @release-note Карта Сокровищ: четыре ограниченных набора магазина приоритетно сохраняются из уже загруженного /shop/view без дополнительных запросов к игре.
@@ -82,7 +83,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.75';
+  const BUILD_VERSION = '1.17.76';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -106,6 +107,7 @@
   const HK_STAGE7_COMBAT_CONFIRM_REV = 'stage7-combat-confirm-20260923-r1';
   const HK_RUNTIME_SMOKE_OBSERVABILITY_REV = 'runtime-smoke-observability-20260923-r1';
   const HK_RUNTIME_SMOKE_SESSION_REV = 'runtime-smoke-session-20260923-r1';
+  const HK_RUNTIME_SMOKE_STATUS_REV = 'runtime-smoke-status-20260923-r1';
   function hkSmokeObjectKeys(value){
     return value&&typeof value==='object'&&!Array.isArray(value)?Object.keys(value).slice(0,24):[];
   }
@@ -310,7 +312,43 @@
     diagnostic.events.push(event);
     diagnosticPersistRuntimeSmokeEvent(event);
     if (diagnostic.events.length > DIAGNOSTIC_MAX_EVENTS) diagnostic.events.splice(0, diagnostic.events.length - DIAGNOSTIC_MAX_EVENTS);
+    if(event.type.startsWith('runtime-smoke-'))try{renderRuntimeSmokeStatus();}catch(_){}
   }
+  function runtimeSmokeModuleState(prefix) {
+    const rows=diagnostic.events.filter(row=>String(row?.type||'').startsWith('runtime-smoke-'+prefix));
+    if(!rows.length)return {state:'idle',label:either('не запускалось','not run'),events:0,lastAt:null};
+    let state='data',label=either('есть данные','has data');
+    const terminals=rows.filter(row=>/-complete$|-error$/.test(String(row?.type||'')));
+    const last=terminals[terminals.length-1]||rows[rows.length-1];
+    const type=String(last?.type||'');
+    if(type.endsWith('-error')){state='error';label=either('ошибка','error');}
+    else if(type.endsWith('-complete')){state='complete';label=either('завершено','completed');}
+    return {state,label,events:rows.length,lastAt:last?.at||rows[rows.length-1]?.at||null};
+  }
+  function runtimeSmokeSummary() {
+    return {
+      revision:HK_RUNTIME_SMOKE_STATUS_REV,
+      ratHunt:runtimeSmokeModuleState('rat-hunt'),
+      war:runtimeSmokeModuleState('war'),
+      neighborhoods:runtimeSmokeModuleState('neighborhood')
+    };
+  }
+  function renderRuntimeSmokeStatus() {
+    const host=root?.querySelector?.('#hk-smoke-status');
+    if(!host)return;
+    const summary=runtimeSmokeSummary();
+    const rows=[
+      [either('Rat Hunt','Rat Hunt'),summary.ratHunt],
+      [either('Война','War'),summary.war],
+      [either('Районы','Neighborhoods'),summary.neighborhoods]
+    ];
+    const tone=state=>state==='complete'?'#6ee7a8':state==='error'?'#ff7b7b':state==='data'?'#ffd166':'#9aa8bc';
+    host.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"><b>'+either('Smoke-test','Smoke test')+'</b><small style="color:#9aa8bc">'+escapeHtml(BUILD_VERSION)+'</small></div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">'+rows.map(([name,row])=>
+        '<div style="padding:7px 8px;border:1px solid #304057;border-radius:9px;background:#101927;min-width:0"><small style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escapeHtml(name)+'</small><b style="display:block;color:'+tone(row.state)+'">'+escapeHtml(row.label)+'</b><small style="color:#7f8da3">'+row.events+' '+either('событ.','events')+'</small></div>'
+      ).join('')+'</div>';
+  }
+
   function setHealth(name, ok, detail = '') {
     if (!healthState[name]) return;
     const next={ok:!!ok, detail:clean(detail || (ok ? 'OK' : 'ошибка'))};
@@ -353,7 +391,7 @@
     const currentBearer = String(apiHeaders?.Authorization || '').replace(/^Bearer\s+/i,'');
     const report = {
       schema:'topking-hk-diagnostic-v1', version:VERSION, startedAt:diagnostic.startedAt, exportedAt:new Date().toISOString(),
-      runtimeSmoke:{revision:HK_RUNTIME_SMOKE_SESSION_REV,persisted:true,sessionKeyVersion:1},
+      runtimeSmoke:{revision:HK_RUNTIME_SMOKE_SESSION_REV,persisted:true,sessionKeyVersion:1,summary:runtimeSmokeSummary()},
       environment:diagnosticEnvironment(), health:healthState,
       gameAuth:{present:!!currentBearer, fingerprint:currentBearer ? diagnosticFingerprint(currentBearer) : '', expiresAt:jwtExpiration(currentBearer) || null},
       license:{checked:!!licenseState.checked, allowed:!!licenseState.allowed, playerId:clean(licenseState.playerId || ''), tokenPresent:!!licenseState.token},
@@ -14887,6 +14925,7 @@
         <div class="hk-health-chip" data-health="server"><b>${either('Сервер','Server')}</b><small>${either('ожидание','waiting')}</small></div>
       </div>
       <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">${either('Диагностика','Diagnostics')}</button></div>
+      <div id="hk-smoke-status" style="margin:8px 12px 0;padding:9px;border:1px solid #243449;border-radius:11px;background:#0d1521"></div>
       <div id="hk-update-banner" class="hk-update"></div>
       <div class="hk-tabs">${menuTabs}</div>
       <div id="hk-subnav" class="hk-subnav"></div>
@@ -15162,7 +15201,7 @@
     });
     const growthSettingIds=['#hk-growth-run-prep','#hk-growth-run-generals','#hk-growth-run-hamsters','#hk-growth-contracts','#hk-growth-balls','#hk-growth-boxes','#hk-growth-pit-percent','#hk-growth-general-mode','#hk-growth-general-weight','#hk-growth-nuts-percent','#hk-growth-hamster-weight','#hk-growth-copy-enabled','#hk-growth-exclude-event'];
     for(const selector of growthSettingIds)root.querySelector(selector)?.addEventListener('change',()=>{growthReadSettingsFromUi();renderGrowth();if(selector==='#hk-growth-exclude-event'&&root.querySelector(selector)?.checked)void growthLoadLive({force:false,loadShop:true,loadConfig:true,silent:true});});
-    renderHealth(); renderRunnerState(); renderGrowth();
+    renderHealth(); renderRunnerState(); renderGrowth(); renderRuntimeSmokeStatus();
     runtime.ensure = () => {
       try {
         if (!root?.isConnected || root.dataset.hkRevision !== HK_CORE_REVISION || !root.querySelector('#hk-fab')) {
