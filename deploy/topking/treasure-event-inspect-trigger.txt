@@ -1,2 +1,2 @@
-inspect=treasure-treasury-choice-screens
-stamp=2026-09-23T16:01+09:00
+inspect=treasure-fresh-priority-lots
+stamp=2026-09-23T16:05+09:00
