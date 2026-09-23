@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.48
+// @version      1.17.49
+// @release-note Магазин: быстрые последовательные /shop/buy снова не ждут глобальные 2,5 с между покупками; защита 429, cooldown, mutation-gate и запрет ретраев необратимых покупок сохранены.
 // @release-note Магазин: из ручной вкладки убраны Регулярный магазин и Личные лоты клана, потому что они обслуживаются во вкладке «Сегодня». В ручном магазине остаются Обычный магазин и Общие лоты клана.
 // @release-note Магазин: активная подгруппа теперь едина для отображения, «Выбрать доступные» и финального плана покупки; личные и общие лоты Кланового магазина больше не смешиваются.
 // @release-note Магазин: карточки показывают название товара; выбор, MAX и количества ограничиваются реальным балансом и единым бюджетом; сводка показывает Баланс → Расход → Останется.
@@ -56,12 +57,13 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.48';
+  const BUILD_VERSION = '1.17.49';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
   const HK_SHOP_ACTIVE_VIEW_REV = 'shop-active-view-canon-20260923-r1';
   const HK_SHOP_TODAY_DEDUP_REV = 'shop-today-dedup-20260923-r1';
+  const HK_SHOP_BUY_FAST_PATH_REV = 'shop-buy-fast-path-20260923-r1';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -6018,9 +6020,11 @@
         error.retryAfterMs=Math.max(0,gameApiRateLimitUntil-Date.now());
         throw error;
       }
-      const gapMs=gameApiCurrentGapMs();
+      const normalizedPath=hkNormalizedApiPath(path);
+      const fastShopBuy=normalizedPath==='/shop/buy';
+      const gapMs=fastShopBuy?0:gameApiCurrentGapMs();
       gameApiNextRequestAt=Date.now()+gapMs;
-      recordDiagnostic('game-rate-gate',{path,method,gapMs,slowUntil:gameApiSlowUntil});
+      recordDiagnostic('game-rate-gate',{path,method,gapMs,fastShopBuy,slowUntil:gameApiSlowUntil});
     } finally {
       release();
     }

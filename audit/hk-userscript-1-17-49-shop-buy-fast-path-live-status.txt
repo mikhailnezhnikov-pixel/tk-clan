@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.48
+target_version=1.17.49
+marker=shop-buy-fast-path-20260923-r1
+source_sha256=beaa6b29b140933821a7a7cd39f0d59892e7c620a907ffa13cbdd8fc1ed76548
+candidate_sha256=bc30732eb4cd08f14e977e14cba95e824bfdaa328d5bafb7f7378f77c47a45d6
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
