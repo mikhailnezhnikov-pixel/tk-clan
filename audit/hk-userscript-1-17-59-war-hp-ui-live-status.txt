@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.58
+target_version=1.17.59
+marker=war-hp-ui-20260923-r1
+source_sha256=d406f0f74b6fd287a8168c87a68411c90ac44f5fa1727064da4c68a02947657f
+candidate_sha256=72c0da1cc1b6eb697860be43396bd6d993074eb5683e4316857d1a2b2358d894
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
