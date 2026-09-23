@@ -1,9 +1,0 @@
-FULL235_ORIGINAL75_V2_LIVE=PASS
-server_sha256=19839098c3db0246d87b72931381320378e46d0ed6d09b6cf2db2110530448db
-original_uuid_catalog=75
-archive_applied=NO
-production_data_changed=NO
-build_regression=PASS
-cabinet_v2_ui=PASS
-before={"area_links": 160, "areas": 310, "buildings": 167690, "catalog": 235, "point_links": 2016, "points": 235, "uuid75_aliases": 0, "uuid75_areas": 0, "uuid75_conflicts": []}
-after={"area_links": 160, "areas": 310, "buildings": 167690, "catalog": 235, "point_links": 2016, "points": 235, "uuid75_aliases": 0, "uuid75_areas": 0, "uuid75_conflicts": []}

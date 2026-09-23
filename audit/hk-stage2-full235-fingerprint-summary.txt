@@ -1,5 +1,0 @@
-{"categories": {"exact6": 160, "no_overlap": 75}, "existing_links": 26, "existing_links_agree": 26, "existing_links_disagree": 0, "maps": 235, "safe_existing_candidates": 160}
-
-fingerprint_source_sha256=8c1aee427e7678ca8b64ef46682f77cd80f407f8d048ae64cf3968db253ab8fb
-fingerprint_maps=235
-production_writes=NO
