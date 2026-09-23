@@ -1,2 +1,0 @@
-capture=2026-09-19T15:16:00Z
-purpose=preserved-war-boss-building-explore

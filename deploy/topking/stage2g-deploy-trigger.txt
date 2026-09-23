@@ -1,4 +1,0 @@
-deploy=2026-09-19T15:39:00Z
-version=1.16.6
-module=rumors
-workflow=clean-final
