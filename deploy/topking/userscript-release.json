@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.66",
-  "target_version": "1.17.67",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.67.neighborhood-battles.candidate.user.js",
-  "primary_marker": "neighborhood-battles-20260923-r1",
+  "source_version": "1.17.67",
+  "target_version": "1.17.68",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.68.rat-hunt-combat.candidate.user.js",
+  "primary_marker": "rat-hunt-combat-20260923-r1",
   "preserve_markers": [
+    "neighborhood-battles-20260923-r1",
     "rat-hunt-leaderboards-20260923-r1",
     "fair-final-cleanup-20260923-r1",
     "fair-bonus-cost-forecast-20260923-r1",
@@ -42,6 +43,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-67-neighborhood-battles-live-status.txt",
-  "commit_message": "feat: deploy Neighborhood Battles in userscript 1.17.67"
+  "audit_status_path": "audit/hk-userscript-1-17-68-rat-hunt-combat-live-status.txt",
+  "commit_message": "feat: deploy canonical Rat Hunt combat in userscript 1.17.68"
 }
