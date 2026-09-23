@@ -346,6 +346,7 @@
         '</div>'+
         (Array.isArray(m.visuals)&&m.visuals.length?'<div class="mechanic-visuals">'+m.visuals.map(v=>'<div class="mechanic-visual">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<span>'+safe(v.title)+'</span></div>').join('')+'</div>':'')+
         (m.hint?'<div class="mechanic-hint">'+safe(m.hint)+'</div>':'')+
+        ((m.id==='lights'||m.id==='fight')?'<div class="solver-inline"><div><strong>HK Puzzle Solver</strong><span>Покажет порядок действий цифрами прямо на игровом поле.</span></div><button type="button" class="solver-button" data-solver-install>Установить помощник</button></div>':'')+
       '</article>'
     ).join('');
 
@@ -581,7 +582,18 @@
         (rewardTracks.claim_note?'<div class="reward-track-note">'+safe(rewardTracks.claim_note)+'</div>':'')+
       '</div>':'';
     }
-  }catch(error){}
+
+    const solverModal=document.getElementById('solverInstallModal');
+    const openSolver=()=>{if(!solverModal)return;solverModal.classList.add('is-open');solverModal.setAttribute('aria-hidden','false')};
+    const closeSolver=()=>{if(!solverModal)return;solverModal.classList.remove('is-open');solverModal.setAttribute('aria-hidden','true')};
+    document.addEventListener('click',event=>{
+      if(event.target.closest('[data-solver-install]'))openSolver();
+      if(event.target.closest('[data-solver-close]'))closeSolver();
+      if(event.target===solverModal)closeSolver();
+    });
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')closeSolver()});
+
+  }catch(error){console.error('Treasure guide render failed',error)}
 })();
 </script>
 </body>
