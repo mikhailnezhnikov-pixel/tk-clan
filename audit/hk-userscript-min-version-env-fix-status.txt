@@ -1,0 +1,7 @@
+USERSCRIPT_MIN_VERSION_ENV_FIX=PASS
+target_version=1.17.83
+environment_file=/etc/hamsterking-license.env
+effective_process_min=1.17.83
+obsolete_dropin=REMOVED
+service_active=PASS
+public_exact_match=PASS
