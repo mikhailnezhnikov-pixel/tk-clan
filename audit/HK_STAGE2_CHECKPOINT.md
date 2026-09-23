@@ -20,7 +20,7 @@ Each module:
 - userscript: 1.17.43
 - current module: Generals / Генералы — Stage 2.13 verification
 - current module file: audit/hk-stage2-13-generals.md
-- current module status: SOURCE_PREFLIGHT_PENDING
+- current module status: SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · CANDIDATE_1_17_44_STATIC_CI_PASS · LIVE_DEPLOY_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: LIVE PASS
