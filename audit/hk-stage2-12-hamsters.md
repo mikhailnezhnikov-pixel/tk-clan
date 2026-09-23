@@ -89,3 +89,11 @@ Built from exact live-synced baseline 1.17.39 and preserves:
 - Treasure / Maps / Growth / Clan Shop / Auto Routines / 429 / collector lease / Businesses preserved markers: PASS;
 - Maps manual-only invariant: PASS;
 - gameplay/network mutation from CI: NONE.
+
+
+## Kokkaras live-state correction 1.17.42
+
+- marker: `hamsters-kokkaras-live-state-20260923-r2`;
+- wrapped data/result account arrays are normalized into donor-style live state before Hamsters calculations;
+- Hamsters Runner uses the approved vertical progress layout;
+- runner exposes Hamsters count / level-data count / Nuts / budget for live diagnosis.

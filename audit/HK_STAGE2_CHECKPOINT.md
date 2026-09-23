@@ -1909,3 +1909,9 @@ Current behavior:
 - destructive/gameplay CI mutations: NONE;
 - production deploy: PASS;
 - user browser/live check: PENDING.
+
+
+## Hamsters Kokkaras live-state 1.17.41
+
+- `hamsters-kokkaras-live-state-20260923-r2`: TECHNICAL LIVE PASS; user browser check pending.
+- Hamsters Runner vertical layout restored.
