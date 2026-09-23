@@ -17,7 +17,7 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.37
+- userscript: 1.17.38
 - current module: Growth / Развитие — Stage 2.11 verification
 - current module file: audit/hk-stage2-11-growth.md
 - current module status: SOURCE_PREFLIGHT_PASS · CANONICAL_CURRENCY_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING
@@ -1882,3 +1882,9 @@ Current behavior:
 - targeted recovery only for unresolved slots;
 - progress reaches 100% after mutation rows;
 - successful Runner shows **Перестановка завершена** for 6 seconds.
+
+
+## Maps regression hotfix
+
+- Maps auto-research regression hotfix 1.17.38: TECHNICAL LIVE PASS; user check pending.
+- Opening Maps is read-only; full district scan is manual-only via scan button.

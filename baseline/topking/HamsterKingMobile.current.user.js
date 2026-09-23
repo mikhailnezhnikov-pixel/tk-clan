@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.37
+// @version      1.17.38
+// @release-note Карты: исследование районов больше не запускается автоматически при открытии вкладки или по 24-часовому таймеру; полный проход запускается только явной кнопкой «Считать карты аккаунта».
 // @release-note Growth: бюджет Хомяков восстановлен по канону Kokkaras — cur_nut (Орехи) вместо cur_cap (Крышки); сохранённый процент автоматически мигрирует capsPercent → nutsPercent.
 // @release-note Clan Shop и статистика клана теперь сохраняют настоящий числовой player_id участника; внутренний opaque member.id больше не подменяет игровой ID.
 // @release-note После 429 автообновления модулей не повторяются до конца cooldown; Game API переходит на адаптивный медленный темп и не создаёт новый burst после восстановления.
@@ -45,7 +46,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.37';
+  const BUILD_VERSION = '1.17.38';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -844,6 +845,7 @@
   const HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1';
   const HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1';
   const HK_MAP_SCANNER_REV = 'maps-shared-runtime-20260921-r7-safe5';
+  const HK_MAP_MANUAL_SCAN_REV = 'maps-manual-scan-only-20260923-r1';
   const HK_MAP_SHARED_RUNTIME_REV = 'maps-shared-knowledge-20260921-r1';
   const HK_MAP_READ_CONCURRENCY = 5;
   const HK_MAP_SUBMIT_BATCH = 200;
@@ -9572,7 +9574,6 @@
   async function loadMapIndex(contribute = false) {
     if (!requireLicense()) return;
     try {
-      if (contribute && Date.now()-Number(load().lastMapContribution || 0)>86400000) await submitOwnedMapAreas(true);
       const result = await mapServerJson('/list'); mapRows = Array.isArray(result.maps) ? result.maps : []; mapDetail=null; renderMapIndex();
       log(either(`В индексе районов: ${mapRows.length}`,`Districts in index: ${mapRows.length}`),'ok');
     } catch (error) { log(`${either('Ошибка индекса карт','Map index error')}: ${error.message}`,'bad'); }
@@ -12740,11 +12741,7 @@
         if (key === 'explore') {const value=await refreshExplore(false);liveReadOk=!!value;return value;}
         if (key === 'maps') {
           playerDocument = await apiJson('/player/me','POST');
-          const playerId=playerIdentity(playerDocument?.player||{}),lastByPlayer=Number(load().mapContributionByPlayer?.[playerId]||0);
-          if(playerId&&Date.now()-lastByPlayer>86400000&&!initialMapResearchAttempted.has(playerId)){
-            initialMapResearchAttempted.add(playerId);
-            await submitOwnedMapAreas(true);
-          }else await loadMapIndex(false);
+          await loadMapIndex(false);
           liveReadOk=true;return playerDocument;
         }
         return null;
