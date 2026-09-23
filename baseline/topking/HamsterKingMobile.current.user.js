@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.55
+// @version      1.17.56
+// @release-note Карта Сокровищ: полные лоты Тайного торговца приоритетно сохраняются из уже загруженного /shop/view без дополнительных запросов к игре.
 // @release-note Ярмарка: режим 3/6/9 теперь ждёт полную выбранную комбинацию на текущем поле и не начинает частичный выкуп; бонусные слоты открываются только после полного набора.
 // @release-note Магазин: ресурсные лоты покупаются по фактически доступным крышкам вместо искусственного лимита 999; карточки уплотнены, а названия подгружаются из игровой локализации.
 // @release-note Карта Сокровищ: приоритетно сохраняются полные lot-объекты сундуков и трёх путей сокровищницы из уже загруженного /shop/view без новых запросов к игре.
@@ -63,7 +64,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.55';
+  const BUILD_VERSION = '1.17.56';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -3507,11 +3508,12 @@
   }
 
   const HK_TREASURE_GUIDE_PRIORITY_LOTS_REV='treasure-guide-priority-lots-20260923-r1';
+  const HK_TREASURE_GUIDE_PRIORITY_TRADER_REV='treasure-guide-priority-trader-lots-20260923-r1';
 
   function treasureGuidePriorityRows(path,body) {
     if(path!=='/shop/view'||!Array.isArray(body?.shop_lots))return [];
     const rows=[];
-    const wanted=/^(?:mf_fair_treasury_room_choose_way_[123]|mf_treasurelot_chest_type_(?:01|015|02|03)|mf_treasurelot_chest_digging_spot_sl[4-9])$/;
+    const wanted=/^(?:mf_fair_treasury_room_choose_way_[123]|mf_treasurelot_chest_type_(?:01|015|02|03)|mf_treasurelot_chest_digging_spot_sl[4-9]|mf_fairlot_minigame_trader_(?:01|02|03)_.+|mf_treasurelot_trader_type_(?:01|02|03)_active_rep_5)$/;
     for(let i=0;i<body.shop_lots.length;i++){
       const lot=body.shop_lots[i];
       if(!lot||typeof lot!=='object'||!wanted.test(String(lot.id||'')))continue;
