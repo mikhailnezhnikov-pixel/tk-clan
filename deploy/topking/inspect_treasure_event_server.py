@@ -4,27 +4,52 @@ spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
-terms=[
- "treasure_minigame_rod_r1","treasure_minigame_rod_r2","treasure_minigame_rod_r3","treasure_minigame_rod_r4",
- "treasure_minigame_sword_r1","treasure_minigame_sword_r2","treasure_minigame_sword_r3","treasure_minigame_sword_r4",
- "chainmail","armor"
-]
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,page_text FROM treasure_guide_captures
-                                        WHERE payload_json<>'' OR page_text<>''
-                                        ORDER BY id""")]
+    row=db.execute("""SELECT id,payload_json FROM treasure_guide_captures
+                      WHERE path='/shop/view' AND payload_json<>''
+                      ORDER BY id DESC LIMIT 1""").fetchone()
 
-for term in terms:
-    hits=[]
-    for r in rows:
-        for field in ("payload_json","page_text"):
-            raw=str(r.get(field) or "")
-            pos=raw.lower().find(term.lower())
-            if pos<0: continue
-            hits.append({
-              "id":r["id"],"path":r["path"],"field":field,
-              "snippet":raw[max(0,pos-1000):pos+3200]
-            })
-            if len(hits)>=12: break
-        if len(hits)>=12: break
-    print("EQ",term,json.dumps(hits,ensure_ascii=False))
+raw=str(row["payload_json"] or "")
+start=raw.find('"shop_lots":[')
+lots=[]
+if start>=0:
+    i=raw.find('[',start)+1
+    while i<len(raw):
+        while i<len(raw) and raw[i] in " \r\n\t,": i+=1
+        if i>=len(raw) or raw[i]!='{': break
+        st=i;depth=0;ins=False;esc=False;j=i
+        while j<len(raw):
+            ch=raw[j]
+            if ins:
+                if esc:esc=False
+                elif ch=='\\':esc=True
+                elif ch=='"':ins=False
+            else:
+                if ch=='"':ins=True
+                elif ch=='{':depth+=1
+                elif ch=='}':
+                    depth-=1
+                    if depth==0:
+                        try: lots.append(json.loads(raw[st:j+1]))
+                        except: pass
+                        i=j+1;break
+            j+=1
+        else: break
+
+out=[]
+rx=re.compile(r"(forest|mine|fishing|fight|lights|riddle|treasury|trader|chest)",re.I)
+for o in lots:
+    oid=str(o.get("id") or "")
+    if "achievement" in oid.lower(): continue
+    if not (oid.startswith("mf_treasurelot_") or oid.startswith("mf_fair_")): continue
+    if not rx.search(oid): continue
+    lv=o.get("lot_view") or {}
+    out.append({
+      "id":oid,
+      "cost":o.get("cost"),
+      "content":lv.get("content_view"),
+      "name":lv.get("name"),
+      "desc":lv.get("desc"),
+      "icon":lv.get("icon_card")
+    })
+print("ROOM_LOTS",json.dumps(out,ensure_ascii=False))
