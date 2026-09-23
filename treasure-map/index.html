@@ -56,6 +56,9 @@
   <div class="section-head"><div><h2>Что встречается на карте</h2><p>Типы точек, найденные в структуре карты и игровых ассетах.</p></div></div>
   <section class="grid" id="mechanics"></section>
 
+  <div class="section-head"><div><h2>Механики мини-игр</h2><p>Факты из текущей конфигурации события — без догадок о выгоде.</p></div></div>
+  <section class="grid" id="minigame-details"></section>
+
   <div class="section-head"><div><h2>Питомцы и поручения</h2><p>Эффекты и правила, которые удалось снять прямо с экрана события.</p></div></div>
   <section class="facts" id="pets"></section>
 
@@ -64,6 +67,9 @@
 
   <div class="section-head"><div><h2>Достижения</h2><p>Условия из текущего списка достижений. Названия и точные награды прикрепляем по мере извлечения модальных карточек.</p></div></div>
   <section class="facts" id="achievement-examples"></section>
+  <div class="section-head"><div><h2>Серии достижений</h2><p>Пороговые значения извлечены из ID лотов коллекции достижений.</p></div></div>
+  <section class="grid" id="achievement-series"></section>
+  <div class="section-head"><div><h2>Остальные условия</h2><p>Короткие условия, которые видны в общем списке достижений.</p></div></div>
   <section class="chips" id="achievement-conditions"></section>
 </main>
 <footer><div class="shell">Top King · неофициальный гайд для игроков Hamster King</div></footer>
@@ -79,6 +85,8 @@
     const shop=Array.isArray(data.shop)?data.shop:[];
     const examples=Array.isArray(data.achievement_examples)?data.achievement_examples:[];
     const conditions=Array.isArray(data.achievement_conditions)?data.achievement_conditions:[];
+    const minigameDetails=Array.isArray(data.minigame_details)?data.minigame_details:[];
+    const achievementSeries=Array.isArray(data.achievement_series)?data.achievement_series:[];
     document.getElementById('quest-count').textContent=quests.length;
     document.getElementById('asset-count').textContent=Number(data?.captured?.assets_found||data?.assets?.length||0);
     document.getElementById('capture-count').textContent=Number(data?.captured?.snapshots||0);
@@ -98,6 +106,11 @@
       (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+
       '<h3>'+safe(m.title)+'</h3><p>'+safe(m.note||'')+'</p></article>').join('');
 
+    document.getElementById('minigame-details').innerHTML=minigameDetails.map(m=>'<article class="mini-card">'+
+      (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+
+      '<h3>'+safe(m.title)+'</h3>'+
+      '<div class="requirements">'+(Array.isArray(m.facts)?m.facts:[]).map(v=>'<span class="req">'+safe(v)+'</span>').join('')+'</div></article>').join('');
+
     const petFacts=[];
     if(data?.pets?.overview)petFacts.push('<div class="fact"><b>Питомцы</b><p>'+safe(data.pets.overview)+'</p></div>');
     if(data?.pets?.missions)petFacts.push('<div class="fact"><b>Поручения питомцам</b><p>'+safe(data.pets.missions)+'</p></div>');
@@ -108,6 +121,10 @@
 
     document.getElementById('achievement-examples').innerHTML=examples.map(v=>'<div class="fact"><b>'+safe(v.title)+'</b><p>'+safe(v.condition)+'</p>'+
       (Array.isArray(v.rewards)&&v.rewards.length?'<p>Награды: '+v.rewards.map(safe).join(' · ')+'</p>':'')+'</div>').join('');
+
+    document.getElementById('achievement-series').innerHTML=achievementSeries.map(v=>'<article class="mini-card"><h3>'+safe(v.category)+'</h3>'+
+      '<div class="requirements">'+(Array.isArray(v.thresholds)?v.thresholds:[]).map(n=>'<span class="req">'+safe(n)+'</span>').join('')+'</div>'+
+      '<p style="margin-top:12px">Источник: '+safe(v.source||'')+'</p></article>').join('');
 
     document.getElementById('achievement-conditions').innerHTML=conditions.map(v=>'<span class="chip">'+safe(v)+'</span>').join('');
   }catch(error){
