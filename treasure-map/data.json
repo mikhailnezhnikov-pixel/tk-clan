@@ -1576,5 +1576,73 @@
     "fight": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
     "riddle": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png",
     "treasury": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png"
+  },
+  "pet_skills_discovered": [
+    {
+      "id": "more_money",
+      "max_seen_rank": "r4",
+      "effect_status": "needs_localized_popup"
+    },
+    {
+      "id": "more_food",
+      "max_seen_rank": "r4",
+      "effect_status": "needs_localized_popup"
+    },
+    {
+      "id": "fight_hp_up",
+      "max_seen_rank": "r4",
+      "effect_status": "needs_localized_popup"
+    },
+    {
+      "id": "fight_treasure_goblin",
+      "max_seen_rank": "r4",
+      "effect_status": "needs_localized_popup"
+    },
+    {
+      "id": "fishing_map_finder",
+      "max_seen_rank": "r4",
+      "effect_status": "needs_localized_popup"
+    },
+    {
+      "id": "chest_finder",
+      "effect_status": "counter_confirmed"
+    },
+    {
+      "id": "chest_map_finder",
+      "effect_status": "counter_confirmed"
+    },
+    {
+      "id": "map_generator",
+      "max_seen_rank": "r3",
+      "effect_status": "needs_localized_popup"
+    },
+    {
+      "id": "trader_maps",
+      "effect_status": "counter_confirmed"
+    },
+    {
+      "id": "trader_keys",
+      "max_seen_rank": "r4",
+      "effect_status": "needs_localized_popup"
+    },
+    {
+      "id": "trader_rep",
+      "effect_status": "counter_confirmed"
+    }
+  ],
+  "pet_mission_capture_status": {
+    "rank_mapping_evidence": {
+      "B": "visible modal captured",
+      "A": "visible modal captured",
+      "S": "visible modal captured",
+      "S_plus": "rank r4 missions confirmed in active mission grid, but exact modal economics not yet captured"
+    },
+    "r4_examples": [
+      "mf_pm_fish_04_r4",
+      "mf_pm_fish_02_r4",
+      "mf_pm_fish_01_r4",
+      "mf_pm_mothcat_01_r4",
+      "mf_pm_mothcat_04_r4"
+    ]
   }
 }
