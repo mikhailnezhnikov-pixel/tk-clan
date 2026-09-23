@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.70
+// @version      1.17.71
+// @release-note Безопасность Growth: Развитие / Хомяки / Генералы теперь всегда делают fresh /player/me перед необратимым запуском, требуют явное подтверждение по live-балансам и перечитывают authoritative state после завершения.
 // @release-note Безопасность: Game Bridge больше не считает read-only POST запросы мутациями и не запускает лишний refresh React; особый claim /player/building сохраняет явный mutation signal.
 // @release-note Клан: «Войны» дополнены каноническим боевым runner по закреплённому Kokkaras-донору — free-план, один premium refill, выбор слабейшего противника по эффективной силе с усталостью и alliance_war/fight.
 // @release-note Клан: «Охота на крыс» восстановлена как полноценный Rat Hunt runner по закреплённому Kokkaras-донору — пресеты, free/item/premium планы, лапы восстановления, battle/respawn/finish; месячные рейтинги сохранены отдельным блоком.
@@ -77,7 +78,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.70';
+  const BUILD_VERSION = '1.17.71';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -97,6 +98,7 @@
   const HK_RAT_HUNT_COMBAT_REV = 'rat-hunt-combat-20260923-r1';
   const HK_WAR_COMBAT_REV = 'war-combat-20260923-r1';
   const HK_MUTATION_BRIDGE_READONLY_REV = 'mutation-bridge-readonly-20260923-r1';
+  const HK_GROWTH_FRESH_PREFLIGHT_REV = 'growth-fresh-preflight-20260923-r1';
   const HK_NEIGHBORHOOD_BATTLES_REV = 'neighborhood-battles-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
@@ -13991,34 +13993,138 @@
   }
   async function growthRunPlan(scope='all'){
     if(!requireLicense()||hkRunner.running||growthBusy)return;
-    const settings=growthReadSettingsFromUi();let phases=growthPhaseCount(settings,scope);if(!phases){log(either('В выбранном плане нет активных действий','No active actions in the selected plan'),'warn');return;}
-    hkRunner.start({title:scope==='hamsters'?either('Хомяки','Hamsters'):scope==='generals'?either('Генералы','Generals'):either('Развитие','Growth'),total:phases,step:either('Подготовка актуального состояния','Preparing live state')});growthBusy=true;renderGrowth();
-    let state=null,startPower=0,done=0;
+    const settings=growthReadSettingsFromUi();
+    const phases=growthPhaseCount(settings,scope);
+    if(!phases){log(either('В выбранном плане нет активных действий','No active actions in the selected plan'),'warn');return;}
+
+    const liveScope=scope==='generals'?'generals':scope==='hamsters'?'hamsters':scope==='all'?'all':'account';
+    const runTitle=scope==='hamsters'?either('Хомяки','Hamsters'):scope==='generals'?either('Генералы','Generals'):either('Развитие','Growth');
+    growthBusy=true;
+    renderGrowth();
+
+    let state=null,startPower=0,done=0,runnerStarted=false;
     try{
       growthLastLoadError=null;
-      const liveScope=scope==='generals'?'generals':scope==='hamsters'?'hamsters':scope==='all'?'all':'account';
-      state=await growthLoadLive({force:false,loadShop:true,loadConfig:settings.excludeCurrentEventHamsters,silent:true,scope:liveScope});
-      growthAbortCheck();
+
+      // Stage 7 safety invariant: an irreversible Growth run must never start
+      // from the tab/cache snapshot. Force a complete live account read first.
+      state=await growthLoadLive({force:true,loadShop:true,loadConfig:settings.excludeCurrentEventHamsters,silent:true,scope:liveScope});
       if(!state)throw growthLastLoadError||new Error(either('Не удалось получить актуальное состояние аккаунта','Could not load the current account state'));
-      startPower=growthTotalPower(state);growthHamsterCurrencyAudit(state);
-      const all=scope==='all',runPrep=scope==='prep'||(all&&settings.runPreparation),runGenerals=scope==='generals'||(all&&settings.runGenerals),runHamsters=scope==='hamsters'||(all&&settings.runHamsters);
-      if(runPrep&&settings.buyGeneralContracts){hkRunner.setStep(either('Контракты Генералов','General contracts'),done,phases);state=await growthBuyAllGeneralContractsCore(state);hkRunner.setStep(either('Контракты готовы','Contracts done'),++done,phases);}
-      if(runPrep&&settings.openAllBalls){hkRunner.setStep(either('Открываю шары','Opening balls'),done,phases);state=await growthOpenLootboxFamilyCore(state,'balls');hkRunner.setStep(either('Шары готовы','Balls done'),++done,phases);}
-      if(runPrep&&settings.openAllBoxes){hkRunner.setStep(either('Открываю коробки','Opening boxes'),done,phases);state=await growthOpenLootboxFamilyCore(state,'boxes');hkRunner.setStep(either('Коробки готовы','Boxes done'),++done,phases);}
-      if(runGenerals){growthNormalizeDonorState(state,state,{full:false});const generalRows=growthArray('player_hamster_generals',state),generalReady=generalRows.filter(row=>row?.nextLevelUp).length,startPit=growthResource(GROWTH_GENERAL_BUDGET_ID,state),startNuts=growthResource(GROWTH_HAMSTER_BUDGET_ID,state),pitLimit=Math.floor(startPit*settings.generalPitPercent/100);hkRunner.note(`${either('Генералов','Generals')}: ${generalRows.length} · ${either('с данными уровня','with level data')}: ${generalReady} · ${either('Орехи','Nuts')}: ${startNuts.toLocaleString(locale())} · Pit Tokens: ${startPit.toLocaleString(locale())} · ${either('Pit-бюджет','Pit budget')}: ${pitLimit.toLocaleString(locale())}`,'info');hkRunner.setStep(either('Оптимизация Генералов','Optimizing Generals'),done,phases);state=await growthRunGeneralsCore(state,settings);hkRunner.setStep(either('Генералы готовы','Generals done'),++done,phases);}
+
+      const all=scope==='all';
+      const runPrep=scope==='prep'||(all&&settings.runPreparation);
+      const runGenerals=scope==='generals'||(all&&settings.runGenerals);
+      const runHamsters=scope==='hamsters'||(all&&settings.runHamsters);
+      const liveNuts=Math.max(0,Math.floor(growthResource(GROWTH_HAMSTER_BUDGET_ID,state)));
+      const livePit=Math.max(0,Math.floor(growthResource(GROWTH_GENERAL_BUDGET_ID,state)));
+      const generalLimit=Math.floor(livePit*settings.generalPitPercent/100);
+      const hamsterLimit=Math.floor(liveNuts*settings.nutsPercent/100);
+      const prepActions=[
+        runPrep&&settings.buyGeneralContracts?either('контракты Генералов','General contracts'):'',
+        runPrep&&settings.openAllBalls?either('все шары','all balls'):'',
+        runPrep&&settings.openAllBoxes?either('все коробки','all boxes'):''
+      ].filter(Boolean);
+
+      const lines=[
+        either('Этапов','Stages')+': '+phases,
+        either('Орехи сейчас','Current Nuts')+': '+liveNuts.toLocaleString(locale()),
+        either('Pit Tokens сейчас','Current Pit Tokens')+': '+livePit.toLocaleString(locale())
+      ];
+      if(runGenerals)lines.push(either('Лимит Генералов','General budget')+': '+settings.generalPitPercent+'% = '+generalLimit.toLocaleString(locale())+' Pit Tokens');
+      if(runHamsters)lines.push(either('Лимит Хомяков','Hamster budget')+': '+settings.nutsPercent+'% = '+hamsterLimit.toLocaleString(locale())+' '+either('Орехов','Nuts'));
+      if(prepActions.length)lines.push(either('Подготовка','Preparation')+': '+prepActions.join(', '));
+
+      if(!confirm(either(
+        'Запустить «'+runTitle+'» по только что считанному live-состоянию?\n\n'+lines.join('\n')+'\n\nДействия необратимы. Перед каждой тратой сохраняются проверки ресурсов и лимитов.',
+        'Run “'+runTitle+'” using the freshly read live state?\n\n'+lines.join('\n')+'\n\nActions are irreversible. Resource and budget checks remain active before every spend.'
+      ))){
+        log(either('Запуск Развития отменён пользователем','Growth run cancelled by user'),'warn');
+        return;
+      }
+
+      hkRunner.start({title:runTitle,total:phases,step:either('Подготовка актуального состояния','Preparing live state'),pausable:true,stoppable:true});
+      runnerStarted=true;
+      growthAbortCheck();
+
+      startPower=growthTotalPower(state);
+      growthHamsterCurrencyAudit(state);
+
+      if(runPrep&&settings.buyGeneralContracts){
+        hkRunner.setStep(either('Контракты Генералов','General contracts'),done,phases);
+        state=await growthBuyAllGeneralContractsCore(state);
+        hkRunner.setStep(either('Контракты готовы','Contracts done'),++done,phases);
+      }
+      if(runPrep&&settings.openAllBalls){
+        hkRunner.setStep(either('Открываю шары','Opening balls'),done,phases);
+        state=await growthOpenLootboxFamilyCore(state,'balls');
+        hkRunner.setStep(either('Шары готовы','Balls done'),++done,phases);
+      }
+      if(runPrep&&settings.openAllBoxes){
+        hkRunner.setStep(either('Открываю коробки','Opening boxes'),done,phases);
+        state=await growthOpenLootboxFamilyCore(state,'boxes');
+        hkRunner.setStep(either('Коробки готовы','Boxes done'),++done,phases);
+      }
+
+      if(runGenerals){
+        growthNormalizeDonorState(state,state,{full:false});
+        const generalRows=growthArray('player_hamster_generals',state);
+        const generalReady=generalRows.filter(row=>row?.nextLevelUp).length;
+        const startPit=growthResource(GROWTH_GENERAL_BUDGET_ID,state);
+        const startNuts=growthResource(GROWTH_HAMSTER_BUDGET_ID,state);
+        const pitLimit=Math.floor(startPit*settings.generalPitPercent/100);
+        hkRunner.note(`${either('Генералов','Generals')}: ${generalRows.length} · ${either('с данными уровня','with level data')}: ${generalReady} · ${either('Орехи','Nuts')}: ${startNuts.toLocaleString(locale())} · Pit Tokens: ${startPit.toLocaleString(locale())} · ${either('Pit-бюджет','Pit budget')}: ${pitLimit.toLocaleString(locale())}`,'info');
+        hkRunner.setStep(either('Оптимизация Генералов','Optimizing Generals'),done,phases);
+        state=await growthRunGeneralsCore(state,settings);
+        hkRunner.setStep(either('Генералы готовы','Generals done'),++done,phases);
+      }
+
       if(runHamsters){
         growthNormalizeDonorState(state,state,{full:false});
-        const startNuts=growthResource(GROWTH_HAMSTER_BUDGET_ID,state),limit=Math.floor(startNuts*settings.nutsPercent/100),budget={limit,spent:0};
-        const hamsterRows=growthArray('playerHamsters',state),levelRows=hamsterRows.filter(row=>row?.nextLevelUp).length;
+        const startNuts=growthResource(GROWTH_HAMSTER_BUDGET_ID,state);
+        const limit=Math.floor(startNuts*settings.nutsPercent/100);
+        const budget={limit,spent:0};
+        const hamsterRows=growthArray('playerHamsters',state);
+        const levelRows=hamsterRows.filter(row=>row?.nextLevelUp).length;
         hkRunner.note(`${either('Хомяков','Hamsters')}: ${hamsterRows.length} · ${either('с данными уровня','with level data')}: ${levelRows} · ${either('Орехи','Nuts')}: ${startNuts.toLocaleString(locale())} · ${either('бюджет','budget')}: ${limit.toLocaleString(locale())}`,'info');
-        if(settings.copyPriorityEnabled){hkRunner.setStep(either('Приоритет копий','Copy Priority'),done,phases);state=await growthRunPriorityCopiesCore(state,settings,budget);hkRunner.setStep(either('Копии готовы','Copies done'),++done,phases);}
-        hkRunner.setStep(either('Редкость Хомяков','Hamster rarity'),done,phases);state=await growthRunRarityCore(state,budget);hkRunner.setStep(either('Редкость готова','Rarity done'),++done,phases);
-        hkRunner.setStep(either('Уровни Хомяков','Hamster levels'),done,phases);state=await growthRunLevelsCore(state,budget,settings.mobsterPitWeight);hkRunner.setStep(either('Уровни готовы','Levels done'),++done,phases);log(`${either('Орехов потрачено','Nuts spent')}: ${budget.spent.toLocaleString(locale())}/${limit.toLocaleString(locale())}`,'ok');
+        if(settings.copyPriorityEnabled){
+          hkRunner.setStep(either('Приоритет копий','Copy Priority'),done,phases);
+          state=await growthRunPriorityCopiesCore(state,settings,budget);
+          hkRunner.setStep(either('Копии готовы','Copies done'),++done,phases);
+        }
+        hkRunner.setStep(either('Редкость Хомяков','Hamster rarity'),done,phases);
+        state=await growthRunRarityCore(state,budget);
+        hkRunner.setStep(either('Редкость готова','Rarity done'),++done,phases);
+        hkRunner.setStep(either('Уровни Хомяков','Hamster levels'),done,phases);
+        state=await growthRunLevelsCore(state,budget,settings.mobsterPitWeight);
+        hkRunner.setStep(either('Уровни готовы','Levels done'),++done,phases);
+        log(`${either('Орехов потрачено','Nuts spent')}: ${budget.spent.toLocaleString(locale())}/${limit.toLocaleString(locale())}`,'ok');
         hkRunner.note(`${either('Орехов потрачено','Nuts spent')}: ${budget.spent.toLocaleString(locale())}/${limit.toLocaleString(locale())}`,budget.spent>0?'ok':'warn');
       }
-      growthState=state;playerDocument=state;renderGrowth();const gain=Math.max(0,growthTotalPower(state)-startPower);hkRunner.finish(`${either('Готово','Done')} · Power +${gain.toLocaleString(locale())}`);log(`${either('Развитие завершено','Growth completed')} · Power +${gain.toLocaleString(locale())}`,'ok');
-    }catch(error){if(error?.name==='AbortError'){hkRunner.reset();log(either('Операция остановлена','Operation stopped'),'warn');}else{hkRunner.fail(error);log(`${either('Развитие','Growth')}: ${error?.message||error}`,'bad');}}
-    finally{growthBusy=false;renderGrowth();}
+
+      // Do not declare the run complete from the last partial mutation response.
+      // Re-read the full account so balances, levels and total power are authoritative.
+      const verified=await growthLoadLive({force:true,loadShop:true,loadConfig:settings.excludeCurrentEventHamsters,silent:true,scope:liveScope});
+      if(verified)state=verified;
+      else hkRunner.note(either('Финальное live-состояние не удалось перечитать — показан последний подтверждённый ответ игры','Final live refresh failed — showing the last confirmed game response'),'warn');
+
+      growthState=state;
+      playerDocument=state;
+      renderGrowth();
+      const gain=Math.max(0,growthTotalPower(state)-startPower);
+      hkRunner.finish(`${either('Готово','Done')} · Power +${gain.toLocaleString(locale())}`);
+      log(`${either('Развитие завершено','Growth completed')} · Power +${gain.toLocaleString(locale())}`,'ok');
+    }catch(error){
+      if(error?.name==='AbortError'){
+        if(runnerStarted)hkRunner.reset();
+        log(either('Операция остановлена','Operation stopped'),'warn');
+      }else{
+        if(runnerStarted)hkRunner.fail(error);
+        log(`${either('Развитие','Growth')}: ${error?.message||error}`,'bad');
+      }
+    }finally{
+      growthBusy=false;
+      renderGrowth();
+    }
   }
 
   function growthMovePriority(index,direction){const settings=growthSettings(),rows=growthClonePriority(settings.copyPriority),to=index+(direction==='up'?-1:1);if(index<0||to<0||index>=rows.length||to>=rows.length)return;[rows[index],rows[to]]=[rows[to],rows[index]];saveGrowthSettings({copyPriority:rows});renderGrowth();}
