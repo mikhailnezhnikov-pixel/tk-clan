@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Карта Сокровищ — гайд Top King</title>
   <meta name="description" content="Гайд по событию Карта Сокровищ в Hamster King: квесты, покупки, сундуки, награды, достижения и лучшие варианты прохождения.">
-  <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
   <style>
     :root{--bg:#07090d;--panel:#10141b;--panel2:#151a22;--text:#f6f2e7;--muted:#9aa4b2;--gold:#e8b654;--gold2:#ffe0a0;--line:rgba(255,255,255,.09);--good:#8fe0a8}
     *{box-sizing:border-box}html{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}body{margin:0;background:radial-gradient(circle at 72% 0,rgba(232,182,84,.12),transparent 30%),var(--bg)}
@@ -142,9 +141,11 @@
     }
 
   </style>
+  <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
+  <link rel="apple-touch-icon" href="../assets/brand/topking-clan-crest.png">
 </head>
 <body>
-<header><div class="shell header"><a class="brand" href="../"><img src="../assets/brand/topking-clan-crest.png" alt=""><span>Top King</span></a><a class="back" href="../">← Главная</a></div></header>
+<header><div class="shell header"><a class="brand" href="../" aria-label="Top King"><img class="tk-clan-crest" src="../assets/brand/topking-clan-crest.png" alt="Top King"></a><a class="back" href="../">← Главная</a></div></header>
 <main class="shell">
   <section class="hero">
     <div class="eyebrow">Событие · Hamster King</div>
@@ -790,5 +791,6 @@
   }catch(error){console.error('Treasure guide render failed',error)}
 })();
 </script>
+<script src="../assets/site-nav.js?v=20260920-11"></script>
 </body>
 </html>
