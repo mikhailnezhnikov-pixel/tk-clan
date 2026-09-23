@@ -4852,7 +4852,12 @@
           "title": "Особая находка",
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png"
         }
-      ]
+      ],
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 40,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
     },
     {
       "id": "trader",
@@ -4879,7 +4884,12 @@
           "title": "Торговец III",
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/trader/icons/minigame_trader_type_03_rep_5_s_icon.png"
         }
-      ]
+      ],
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 5,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
     },
     {
       "id": "chests",
@@ -4910,7 +4920,12 @@
           "title": "Раскопка",
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png"
         }
-      ]
+      ],
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 40,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
     },
     {
       "id": "lights",
@@ -4938,7 +4953,12 @@
           "title": "Включена",
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/lights/icons/treasure_minigame_light_true_icon.png"
         }
-      ]
+      ],
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 20,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
     },
     {
       "id": "fight",
@@ -4977,7 +4997,12 @@
           "title": "Враг 4 HP",
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_03_icon.png"
         }
-      ]
+      ],
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 40,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
     },
     {
       "id": "pets",
@@ -5027,7 +5052,12 @@
           "title": "Путь 3",
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_3_icon.png"
         }
-      ]
+      ],
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 5,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
     }
   ],
   "pet_skill_groups": [
@@ -5310,6 +5340,91 @@
         }
       ],
       "note": "Апгрейды продаются у Тайного торговца II. Численный бонус уровней R3/R4 в игровом интерфейсе не подписан, поэтому на странице он не додумывается."
+    }
+  ],
+  "map_rooms": [
+    {
+      "id": "forest",
+      "title": "Солнечный Лес",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/backgrounds/r_map_greed_forest_completed_bg.png",
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 20,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      "note": "На карточке комнаты подтверждён вход за 20 Провизии."
+    },
+    {
+      "id": "mine",
+      "title": "Заброшенная Шахта",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/backgrounds/l_map_greed_mine_bg.png",
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 20,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      "note": "На карточке комнаты подтверждён вход за 20 Провизии."
+    },
+    {
+      "id": "fishing",
+      "title": "Необычный Водоём",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png",
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 40,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
+    },
+    {
+      "id": "trader",
+      "title": "Тайный Торговец",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_trader_icon.png",
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 5,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
+    },
+    {
+      "id": "chests",
+      "title": "Охота за сундуками",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_chest_icon.png",
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 40,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
+    },
+    {
+      "id": "fight",
+      "title": "Сражение",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fight_icon.png",
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 40,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
+    },
+    {
+      "id": "lights",
+      "title": "Лабиринт",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_riddle_icon.png",
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 20,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      }
+    },
+    {
+      "id": "treasury",
+      "title": "Сокровищница",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png",
+      "entry_cost": {
+        "title": "Провизия",
+        "quantity": 5,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      "note": "На карточке комнаты отображается 5 Провизии. Внутри каждый из трёх путей также подтверждён по 5 Провизии."
     }
   ]
 }
