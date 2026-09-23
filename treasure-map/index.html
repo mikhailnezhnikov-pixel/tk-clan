@@ -94,6 +94,17 @@
   
     @media(max-width:980px){.start-route{grid-template-columns:repeat(3,minmax(0,1fr))}.room-cheatsheet{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:520px){.start-here-head{flex-direction:column}.start-route,.room-cheatsheet{grid-template-columns:1fr}.solver-inline{align-items:flex-start;flex-direction:column}.solver-button{width:100%}}
+  
+    .deep-guide{margin-bottom:42px;padding:16px;border:1px solid rgba(232,182,84,.2);border-radius:20px;background:linear-gradient(145deg,rgba(21,26,34,.98),rgba(12,16,22,.98))}
+    .deep-guide-intro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start;margin-bottom:14px}.deep-guide-intro h3{margin:0 0 6px;font-size:21px}.deep-guide-intro p{margin:0;max-width:760px;color:#b8c1cc;font-size:11px;line-height:1.55}.deep-guide-entry{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid rgba(232,182,84,.24);border-radius:12px;background:rgba(232,182,84,.055);color:var(--gold2);font-size:10px;font-weight:900;white-space:nowrap}.deep-guide-entry img{width:30px;height:30px;object-fit:contain}
+    .deep-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.deep-step{padding:11px;border:1px solid rgba(255,255,255,.065);border-radius:14px;background:rgba(255,255,255,.023);min-width:0}.deep-step img{display:block;width:50px;height:50px;object-fit:contain;margin:0 auto 8px}.deep-step-num{width:25px;height:25px;display:grid;place-items:center;margin-bottom:8px;border-radius:50%;background:rgba(232,182,84,.14);border:1px solid rgba(232,182,84,.32);color:var(--gold2);font-size:9px;font-weight:950}.deep-step h4{margin:0 0 5px;font-size:10px;line-height:1.3}.deep-step p{margin:0;color:#9da7b3;font-size:8px;line-height:1.45}
+    .deep-columns{display:grid;grid-template-columns:1.15fr .85fr;gap:10px;margin-top:10px}.deep-panel{padding:12px;border:1px solid rgba(255,255,255,.065);border-radius:14px;background:rgba(255,255,255,.02)}.deep-panel h4{margin:0 0 9px;font-size:12px}.water-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.water-card{display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:11px;background:rgba(255,255,255,.025)}.water-card img{width:38px;height:38px;object-fit:contain;flex:0 0 38px}.water-card b{display:block;font-size:9px}.water-card span{display:block;margin-top:3px;color:#8f99a6;font-size:8px;line-height:1.35}
+    .fishing-skill{display:grid;grid-template-columns:44px minmax(0,1fr);gap:9px;padding:8px;border-radius:11px;background:rgba(255,255,255,.025);margin-top:7px}.fishing-skill:first-of-type{margin-top:0}.fishing-skill>img{width:44px;height:44px;object-fit:contain}.fishing-skill b{display:block;font-size:9px}.fishing-skill p{margin:4px 0;color:#9ea8b4;font-size:8px;line-height:1.35}.grade-pills{display:flex;flex-wrap:wrap;gap:4px}.grade-pill{padding:4px 6px;border-radius:8px;background:rgba(232,182,84,.08);color:var(--gold2);font-size:8px;font-weight:900}
+    .rod-row{display:flex;gap:7px;flex-wrap:wrap}.rod-card{display:flex;align-items:center;gap:7px;flex:1;min-width:130px;padding:8px;border-radius:11px;background:rgba(255,255,255,.025)}.rod-card img{width:42px;height:42px;object-fit:contain}.rod-card b{display:block;color:var(--gold2);font-size:10px}.rod-card span{display:block;margin-top:2px;color:#9ea8b4;font-size:8px}.achievement-mini{padding:8px 0;border-top:1px solid rgba(255,255,255,.055)}.achievement-mini:first-of-type{padding-top:0;border-top:0}.achievement-mini b{display:block;font-size:9px}.achievement-mini span{display:block;margin-top:3px;color:#9ea8b4;font-size:8px;line-height:1.35}.achievement-mini em{display:block;margin-top:4px;color:var(--gold2);font-size:8px;font-style:normal;font-weight:850}
+    .guide-notes{display:grid;gap:5px;margin-top:10px}.guide-note{padding:8px 9px;border-left:2px solid rgba(232,182,84,.55);border-radius:8px;background:rgba(232,182,84,.035);color:#9ea8b4;font-size:8px;line-height:1.4}
+    @media(max-width:980px){.deep-steps{grid-template-columns:repeat(3,minmax(0,1fr))}.deep-columns{grid-template-columns:1fr}}
+    @media(max-width:520px){.deep-guide-intro{grid-template-columns:1fr}.deep-guide-entry{white-space:normal}.deep-steps,.water-grid{grid-template-columns:1fr}}
+
   </style>
 </head>
 <body>
@@ -116,7 +127,7 @@
       <article class="start-step"><span class="start-step-num">5</span><b>Дойдите до Сокровищницы</b><span>Вход в Сокровищницу завершает текущую Карту сокровищ.</span></article>
     </div>
     <nav class="quick-links" aria-label="Быстрый переход по гайду">
-      <a href="#room-cheatsheet">Что делать в комнатах</a><a href="#event-mechanics">Механики</a><a href="#quests">Квесты</a><a href="#pets">Питомцы</a><a href="#trader-variants">Торговец</a><a href="#shop">Магазин</a>
+      <a href="#room-cheatsheet">Что делать в комнатах</a><a href="#fishing-guide">Рыбалка</a><a href="#event-mechanics">Механики</a><a href="#quests">Квесты</a><a href="#pets">Питомцы</a><a href="#trader-variants">Торговец</a><a href="#shop">Магазин</a>
     </nav>
   </section>
 
@@ -130,6 +141,10 @@
 
   <div class="section-head"><div><h2>Квесты</h2><p>Что нужно отдать и что получаем — сразу на карточке.</p></div></div>
   <section class="quests" id="quests"></section>
+
+
+  <div class="section-head" id="fishing-guide"><div><h2>Рыбалка — пошаговый гайд</h2><p>Что делать после входа в Необычный Водоём, как читать клетки и что влияет на находки.</p></div></div>
+  <section class="deep-guide" id="fishing-guide-content"></section>
 
   <div class="section-head"><div><h2>Механики события</h2><p>Как работают основные комнаты и мини-игры: что тратится, что означают клетки и как читать поле.</p></div></div>
   <section class="mechanics-hub" id="event-mechanics"></section>
@@ -239,6 +254,7 @@
       lights:'Нужно привести поле 3×3 к состоянию, где включены все лампы. Помощник Top King может показать порядок нажатий.',
       treasury:'Выберите один из трёх путей. Каждый подтверждённый путь стоит 5 Провизии.'
     };
+    const fishingGuide=data.fishing_guide||{};
     const travelFlow=data.travel_flow||{};
     const travelParameters=data.travel_parameters||{};
     const strategyNotes=Array.isArray(data.strategy_notes)?data.strategy_notes:[];
@@ -267,6 +283,30 @@
         '<span class="resource-copy"><span class="resource-name">'+safe(name||id||'Ресурс')+'</span><span class="resource-qty">×'+safe(qty??'—')+'</span></span></span>';
     };
 
+
+
+    if(document.getElementById('fishing-guide-content')){
+      const fg=fishingGuide||{};
+      const steps=Array.isArray(fg.steps)?fg.steps:[];
+      const water=Array.isArray(fg.water)?fg.water:[];
+      const skills=Array.isArray(fg.pet_skills)?fg.pet_skills:[];
+      const rod=Array.isArray(fg.rod)?fg.rod:[];
+      const ach=Array.isArray(fg.achievements)?fg.achievements:[];
+      const notes=Array.isArray(fg.notes)?fg.notes:[];
+      document.getElementById('fishing-guide-content').innerHTML=
+        '<div class="deep-guide-intro"><div><h3>'+safe(fg.title||'Рыбалка')+'</h3><p>'+safe(fg.intro||'')+'</p></div>'+
+        (fg.entry?'<div class="deep-guide-entry">'+(fg.entry.image?'<img src="'+safe(fg.entry.image)+'" alt="">':'')+'<span>'+safe(fg.entry.value||'')+'</span></div>':'')+'</div>'+
+        '<div class="deep-steps">'+steps.map(v=>'<article class="deep-step"><span class="deep-step-num">'+safe(v.n)+'</span>'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<h4>'+safe(v.title)+'</h4><p>'+safe(v.text)+'</p></article>').join('')+'</div>'+
+        '<div class="deep-columns">'+
+          '<div class="deep-panel"><h4>Типы воды</h4><div class="water-grid">'+water.map(v=>'<div class="water-card">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><span>'+safe(v.text)+'</span></div></div>').join('')+'</div></div>'+
+          '<div class="deep-panel"><h4>Навыки питомцев, влияющие на Рыбалку</h4>'+skills.map(v=>'<div class="fishing-skill">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><p>'+safe(v.effect)+'</p><div class="grade-pills">'+(Array.isArray(v.grades)?v.grades:[]).map(g=>'<span class="grade-pill">'+safe(g[0])+' · '+safe(g[1])+'</span>').join('')+'</div></div></div>').join('')+'</div>'+
+        '</div>'+
+        '<div class="deep-columns">'+
+          '<div class="deep-panel"><h4>Удочка</h4><div class="rod-row">'+rod.map(v=>'<div class="rod-card">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.rank)+'</b><span>'+safe(v.cost)+'</span></div></div>').join('')+'</div></div>'+
+          '<div class="deep-panel"><h4>Подтверждённые достижения Рыбалки</h4>'+ach.map(v=>'<div class="achievement-mini"><b>'+safe(v.title)+'</b><span>'+safe(v.text)+'</span><em>'+safe(v.rewards)+'</em></div>').join('')+'</div>'+
+        '</div>'+
+        (notes.length?'<div class="guide-notes">'+notes.map(v=>'<div class="guide-note">'+safe(v)+'</div>').join('')+'</div>':'');
+    }
 
     if(document.getElementById('room-cheatsheet-grid')){
       const rooms=Array.isArray(travelFlow.room_types)?travelFlow.room_types:[];
