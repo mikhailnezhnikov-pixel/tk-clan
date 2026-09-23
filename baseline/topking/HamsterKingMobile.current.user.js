@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.63
+// @version      1.17.64
+// @release-note Ярмарка: прогноз максимальных расходов теперь включает выбранные нижние бонусы ×5/×10/×30 по порогам 3/6/9; тот же расчёт используется в кошельке и предупреждении по алмазам перед запуском.
 // @release-note Ярмарка: «Всего покупок» уточнено как цель основных покупок. В режиме 3/6/9 цель автоматически приводится к целым тройкам без округления вверх, а бонусные нижние ячейки считаются отдельно и доступны только когда достижимы текущей целью.
 // @release-note Карта Сокровищ: определения трёх линеек наград приоритетно сохраняются из уже загруженных данных события без дополнительных запросов к игре.
 // @release-note Ярмарка: числовой лимит прокруток убран. Поиск теперь крутит ярмарку, пока хватает фактической валюты прокрутки с учётом разрешённых алмазов и бюджетных ограничений.
@@ -70,7 +71,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.63';
+  const BUILD_VERSION = '1.17.64';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -84,6 +85,7 @@
   const HK_FAIR_BONUS_THRESHOLD_STATE_REV = 'fair-bonus-threshold-state-20260923-r1';
   const HK_FAIR_BALANCE_REROLLS_REV = 'fair-balance-rerolls-20260923-r1';
   const HK_FAIR_PURCHASE_TARGET_REV = 'fair-purchase-target-20260923-r1';
+  const HK_FAIR_BONUS_COST_FORECAST_REV = 'fair-bonus-cost-forecast-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
   function hkRuntimeVersionTuple(value) {
@@ -7607,22 +7609,75 @@
     return target;
   }
 
-  function fairProjectedCosts() {
+  function fairBonusThreshold(quantity) {
+    const value = Number(quantity || 0);
+    return value === 5 ? 3 : value === 10 ? 6 : value === 30 ? 9 : 0;
+  }
+
+  function fairBonusMaximumPurchases(quantity, buyLimit) {
+    const threshold = fairBonusThreshold(quantity);
+    const target = Math.max(0, Math.trunc(Number(buyLimit || 0)));
+    if (!threshold || target < threshold) return 0;
+    // A fair board opens one lower bonus at 3, 6 and 9 bought main cells.
+    // After nine main cells the next board can open the same thresholds again.
+    return 1 + Math.floor((target - threshold) / 9);
+  }
+
+  function fairBonusRowsForQuantity(state, quantity) {
+    const wanted = Number(quantity || 0);
+    const rows = fairRowsForState(state);
+    const currentBonusRows = fairSlotOptions(state)
+      .filter(({index}) => index >= 9 && index < 12)
+      .map(({slot}) => fairCatalog.find(row => row.lotId === String(slot?.shop_lot_id || '')))
+      .filter(row => row && Number(row.rewardQuantity || 0) === wanted);
+    const rewardIds = new Set(currentBonusRows.map(row => row.rewardId).filter(Boolean));
+    let candidates = rewardIds.size
+      ? rows.filter(row => Number(row.rewardQuantity || 0) === wanted && rewardIds.has(row.rewardId))
+      : currentBonusRows;
+    // Fallback is deliberately conservative: if the current encrypted slot
+    // does not expose its reward family yet, use every same-quantity row from
+    // this fair and take the highest cost per currency below.
+    if (!candidates.length) candidates = rows.filter(row => Number(row.rewardQuantity || 0) === wanted);
+    return candidates.filter(row => row?.safe);
+  }
+
+  function fairProjectedPurchaseCosts(state = fairState(selectedFairId), buyLimit = fairBuyTargetValue(root?.querySelector('#hk-fair-buy-limit')?.value), exactLots = fairComboSettings().exactLots) {
     const totals = new Map();
-    const state = fairState(selectedFairId);
     const rows = fairRowsForState(state);
     const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
+    const maximumMainLots = new Map();
+    for (const row of selectedRows) for (const part of costParts(row.cost)) {
+      const key = `${part.kind}|${part.id}`;
+      const current = maximumMainLots.get(key);
+      if (!current || part.quantity > current.quantity) maximumMainLots.set(key, {...part});
+    }
+    for (const part of maximumMainLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
+
+    if (exactLots) {
+      const availableBonus = new Set(availableFairBonusLots(exactLots, buyLimit));
+      for (const quantity of [5, 10, 30]) {
+        if (!availableBonus.has(quantity) || !selectedFairBonusLots.has(quantity)) continue;
+        const purchases = fairBonusMaximumPurchases(quantity, buyLimit);
+        if (!purchases) continue;
+        const maximumBonusLots = new Map();
+        for (const row of fairBonusRowsForQuantity(state, quantity)) for (const part of costParts(row.cost)) {
+          const key = `${part.kind}|${part.id}`;
+          const current = maximumBonusLots.get(key);
+          if (!current || part.quantity > current.quantity) maximumBonusLots.set(key, {...part});
+        }
+        for (const part of maximumBonusLots.values()) addProjectedCost(totals, part, purchases);
+      }
+    }
+    return totals;
+  }
+
+  function fairProjectedCosts() {
+    const state = fairState(selectedFairId);
     const buyLimit = fairBuyTargetValue(root?.querySelector('#hk-fair-buy-limit')?.value);
+    const exactLots = fairComboSettings().exactLots;
+    const totals = fairProjectedPurchaseCosts(state, buyLimit, exactLots);
     const allowPremium = Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked);
     const rerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
-    const relevantRows = selectedRows.length ? selectedRows : rows;
-    const maximumLots = new Map();
-    for (const row of relevantRows) for (const part of costParts(row.cost)) {
-      const key = `${part.kind}|${part.id}`;
-      const current = maximumLots.get(key);
-      if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
-    }
-    for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
     if (!rerollPlan.free && rerollPlan.count > 0) {
       for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollPlan.count);
     }
@@ -7891,9 +7946,8 @@
     const initialRerollText = initialRerollPlan.free
       ? either('без расхода валюты','no currency cost')
       : initialRerollPlan.count.toLocaleString(locale());
-    const maximumCrystalLotCost = fairCatalog.filter(row => selectedFairLots.has(row.lotId))
-      .flatMap(row => costParts(row.cost)).filter(part => part.kind === 'currencies' && part.id === 'cur_prem')
-      .reduce((maximum, part) => Math.max(maximum, part.quantity), 0) * buyLimit;
+    const projectedPurchaseCosts = fairProjectedPurchaseCosts(state, buyLimit, combo.exactLots);
+    const maximumCrystalLotCost = Math.max(0, Number(projectedPurchaseCosts.get('currencies|cur_prem')?.quantity || 0));
     const crystalNotice = maximumCrystalLotCost
       ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`)
       : '';
