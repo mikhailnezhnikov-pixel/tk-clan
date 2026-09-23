@@ -97,7 +97,7 @@
       "id": "mothcat_splus_collection",
       "title": "Коллекция молекотов S+",
       "stage": "Однократно",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_r3_icon.png",
       "condition": "Сдать по одному S+ яйцу обычного, тёмного, зловещего, светлого и сияющего вида. Награда — таинственное S+ яйцо молекота. Квест выполняется один раз на аккаунт.",
       "requirements": [
         "[S+] Обычное яйцо Молекота ×1",
@@ -111,27 +111,27 @@
         [
           "Обычное яйцо Молекота S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_r3_icon.png"
         ],
         [
           "Тёмное яйцо Молекота S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_02_r3_icon.png"
         ],
         [
           "Зловещее яйцо Молекота S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_03_upd_r3_icon.png"
         ],
         [
           "Светлое яйцо Молекота S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_05_r3_icon.png"
         ],
         [
           "Сияющее яйцо Молекота S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_06_r3_icon.png"
         ]
       ],
       "visual_rewards": [
@@ -146,7 +146,7 @@
       "id": "fish_splus_collection",
       "title": "Коллекция рыб S+",
       "stage": "Однократно",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_r3_icon.png",
       "condition": "Сдать по одному S+ яйцу обычного, тёмного, зловещего, светлого и сияющего вида. Награда — таинственное S+ яйцо рыбы. Квест выполняется один раз на аккаунт.",
       "requirements": [
         "[S+] Обычное яйцо Рыбы ×1",
@@ -160,27 +160,27 @@
         [
           "Обычное яйцо Рыбы S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_r3_icon.png"
         ],
         [
           "Тёмное яйцо Рыбы S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_02_r3_icon.png"
         ],
         [
           "Зловещее яйцо Рыбы S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_03_r3_icon.png"
         ],
         [
           "Светлое яйцо Рыбы S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_05_r3_icon.png"
         ],
         [
           "Сияющее яйцо Рыбы S+",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_06_r3_icon.png"
         ]
       ],
       "visual_rewards": [
@@ -203,7 +203,7 @@
         [
           "Крышки хомяколы",
           3000,
-          null
+          "https://cdn-prod-art.hwgame.cloud/currencies/cur_cap_icon.png"
         ]
       ],
       "visual_rewards": [
@@ -5440,7 +5440,7 @@
     {
       "id": "forest",
       "title": "Солнечный Лес",
-      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/backgrounds/r_map_greed_forest_completed_bg.png",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_forest_g_icon.png",
       "entry_cost": {
         "title": "Провизия",
         "quantity": 20,
@@ -5475,7 +5475,7 @@
     {
       "id": "mine",
       "title": "Заброшенная Шахта",
-      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/backgrounds/l_map_greed_mine_bg.png",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png",
       "entry_cost": {
         "title": "Провизия",
         "quantity": 20,
@@ -5654,7 +5654,7 @@
       {
         "n": 2,
         "title": "Выбрать маршрут",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
         "text": "На маршруте встречаются Лес, Шахта, Рыбалка, Торговец, Сундуки, Сражение, Лабиринт и Сокровищница."
       },
       {
@@ -5680,13 +5680,13 @@
       {
         "id": "forest",
         "title": "Солнечный Лес",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/backgrounds/r_map_greed_forest_completed_bg.png",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_forest_g_icon.png",
         "role": "Поиск ресурсов"
       },
       {
         "id": "mine",
         "title": "Заброшенная Шахта",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/backgrounds/l_map_greed_mine_bg.png",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png",
         "role": "Поиск ресурсов"
       },
       {
@@ -6033,7 +6033,13 @@
         "n": 4,
         "title": "Проходите комнату по её механике",
         "text": "У каждой комнаты ниже есть отдельная инструкция. Если это Лабиринт или Сражение — можно использовать закладку-помощник Top King.",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png"
+        "images": [
+          "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png",
+          "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_trader_icon.png",
+          "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_chest_icon.png",
+          "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fight_icon.png",
+          "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_riddle_icon.png"
+        ]
       },
       {
         "n": 5,
