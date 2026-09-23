@@ -1,0 +1,30 @@
+name: Validate Userscript 1.17.60 War Unknown Score
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/HamsterKingMobile.1.17.60.war-unknown-score.candidate.user.js'
+      - '.github/workflows/validate-userscript-1-17-60-war.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.60.war-unknown-score.candidate.user.js
+          node --check "$candidate"
+          grep -Fq "// @version      1.17.60" "$candidate"
+          grep -Fq "const BUILD_VERSION = '1.17.60';" "$candidate"
+          grep -Fq "war-hp-ui-20260923-r1" "$candidate"
+          grep -Fq "war-unknown-score-20260923-r1" "$candidate"
+          grep -Fq "our_score:null,opponent_score:null,status:'active'" "$candidate"
+          ! grep -Fq "our_score:0,opponent_score:0,status:'active'" "$candidate"
+          sha256sum "$candidate"
