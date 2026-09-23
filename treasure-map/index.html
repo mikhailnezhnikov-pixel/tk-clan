@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Карта Сокровищ — гайд Top King</title>
-  <meta name="description" content="Гайд по событию Карта Сокровищ в Hamster King: квесты, варианты выбора, награды и лучший вариант прохождения.">
+  <meta name="description" content="Гайд по событию Карта Сокровищ в Hamster King: квесты, покупки, сундуки, награды, достижения и лучшие варианты прохождения.">
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
   <style>
     :root{--bg:#07090d;--panel:#10141b;--panel2:#151a22;--text:#f6f2e7;--muted:#9aa4b2;--gold:#e8b654;--gold2:#ffe0a0;--line:rgba(255,255,255,.09);--good:#8fe0a8}
@@ -12,71 +12,90 @@
     a{color:inherit}.shell{width:min(1180px,calc(100% - 32px));margin:auto}
     header{position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line);background:rgba(7,9,13,.91);backdrop-filter:blur(14px)}
     .header{min-height:72px;display:flex;align-items:center;gap:18px}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:900}.brand img{width:44px;height:44px}.back{margin-left:auto;color:var(--gold2);text-decoration:none;font-weight:800}
-    .hero{padding:64px 0 32px}.eyebrow{color:var(--gold);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.hero h1{margin:12px 0 14px;font:700 clamp(42px,7vw,72px)/.96 Georgia,serif;letter-spacing:-.05em}.hero p{max-width:760px;margin:0;color:#c3cad3;font-size:17px;line-height:1.65}
-    .status{display:flex;align-items:center;gap:10px;margin-top:22px;padding:12px 14px;border:1px solid rgba(232,182,84,.22);border-radius:14px;background:rgba(232,182,84,.06);color:#d7dde5;font-size:13px}.dot{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 14px rgba(232,182,84,.8)}
-    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0 36px}.summary div{padding:18px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}.summary span{display:block;color:var(--muted);font-size:12px}.summary b{display:block;margin-top:7px;font-size:24px;color:var(--gold2)}
-    .section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:34px 0 18px}.section-head h2{margin:0;font-size:28px}.section-head p{margin:0;color:var(--muted);font-size:13px}
-    .quests{display:grid;gap:16px;padding-bottom:70px}.quest{display:grid;grid-template-columns:210px minmax(0,1fr);gap:20px;padding:18px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,var(--panel2),var(--panel));box-shadow:0 14px 34px rgba(0,0,0,.2)}
-    .quest-media{min-height:150px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#0b0f14}.quest-media img{width:100%;height:100%;object-fit:contain}.quest-placeholder{font-size:48px;opacity:.7}
-    .quest-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.quest h3{margin:0;font-size:21px}.badge{padding:5px 8px;border:1px solid rgba(232,182,84,.3);border-radius:999px;color:var(--gold2);background:rgba(232,182,84,.06);font-size:11px;font-weight:900}
-    .quest-condition{margin:10px 0 0;color:#c7ced7;font-size:14px;line-height:1.55}.choices{display:grid;gap:8px;margin-top:14px}.choice{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025)}.choice.best{border-color:rgba(143,224,168,.34);background:rgba(75,170,103,.07)}.choice-index{color:var(--gold);font-weight:900}.choice-reward{color:var(--muted);font-size:12px}
-    .recommend{margin-top:14px;padding:12px 13px;border-left:3px solid var(--gold);border-radius:8px;background:rgba(232,182,84,.055);color:#d6dce4;font-size:13px;line-height:1.55}.recommend b{color:var(--gold2)}
-    .requirements{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.req{padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.025);color:#cfd5dc;font-size:12px}
-    .reward{margin-top:10px;color:var(--gold2);font-weight:900;font-size:13px}
-    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:42px}
-    .mini-card{padding:16px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-height:100%}
-    .mini-card img{width:56px;height:56px;object-fit:contain;display:block;margin-bottom:12px}.mini-card h3{margin:0 0 8px;font-size:17px}.mini-card p{margin:0;color:#b9c1cb;font-size:13px;line-height:1.55}
-    .facts{display:grid;gap:10px;margin-bottom:42px}.fact{padding:14px 16px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}.fact b{color:var(--gold2)}.fact p{margin:7px 0 0;color:#b9c1cb;line-height:1.55;font-size:13px}
-    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:42px}.chip{padding:8px 10px;border:1px solid var(--line);border-radius:999px;background:#0d1118;color:#c8d0da;font-size:12px}
-    .shop-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:42px}.shop-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 15px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.shop-item strong{font-size:13px}.shop-meta{color:var(--gold2);font-weight:900;font-size:12px;white-space:nowrap}
-    .empty{padding:34px;border:1px dashed rgba(232,182,84,.28);border-radius:20px;text-align:center;color:var(--muted);background:rgba(232,182,84,.035)}.empty strong{display:block;margin-bottom:8px;color:#fff;font-size:18px}
+    .hero{padding:54px 0 24px}.eyebrow{color:var(--gold);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.hero h1{margin:12px 0 14px;font:700 clamp(40px,7vw,70px)/.96 Georgia,serif;letter-spacing:-.05em}.hero p{max-width:760px;margin:0;color:#c3cad3;font-size:16px;line-height:1.6}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:34px 0 16px}.section-head h2{margin:0;font-size:27px}.section-head p{margin:5px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+
+    .quests{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}
+    .quest{display:grid;grid-template-columns:82px minmax(0,1fr);gap:13px;padding:13px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel))}
+    .quest-media{width:82px;height:82px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);border-radius:13px;background:#0b0f14}
+    .quest-media img{width:100%;height:100%;object-fit:contain;padding:5px}.quest-placeholder{font-size:34px;opacity:.7}
+    .quest-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.quest h3{margin:0;font-size:16px;line-height:1.2}
+    .badge{padding:4px 7px;border:1px solid rgba(232,182,84,.3);border-radius:999px;color:var(--gold2);background:rgba(232,182,84,.06);font-size:9px;font-weight:900;white-space:nowrap}
+    .quest-condition{margin:7px 0 0;color:#aeb7c3;font-size:11px;line-height:1.42}
+    .quest-block{margin-top:10px}.quest-block-title{margin-bottom:6px;color:#838e9b;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .recommend{grid-column:1/-1;margin-top:2px;padding:9px 10px;border-left:3px solid var(--gold);border-radius:8px;background:rgba(232,182,84,.05);color:#cfd5dc;font-size:11px;line-height:1.45}.recommend b{color:var(--gold2)}
+
+    .resource-list{display:flex;flex-wrap:wrap;gap:6px}
+    .resource{display:flex;align-items:center;gap:7px;min-width:112px;max-width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.025)}
+    .resource img{width:30px;height:30px;object-fit:contain;flex:0 0 30px}.resource-fallback{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:rgba(232,182,84,.12);color:var(--gold2);font-size:11px;font-weight:950}
+    .resource-copy{min-width:0}.resource-name{display:block;overflow:hidden;text-overflow:ellipsis;color:#aeb7c3;font-size:9px;line-height:1.1}.resource-qty{display:block;margin-top:2px;color:var(--gold2);font-size:15px;font-weight:950;font-variant-numeric:tabular-nums}
+    .cost-arrow{color:#66717d;font-size:14px;font-weight:900}
+
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:42px}
+    .mini-card{padding:15px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-height:100%}
+    .mini-card>img{width:58px;height:58px;object-fit:contain;display:block;margin-bottom:10px}.mini-card h3{margin:0 0 7px;font-size:16px}.mini-card p{margin:0;color:#b9c1cb;font-size:12px;line-height:1.5}
+    .tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.tag{padding:6px 8px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.025);color:#cfd5dc;font-size:10px}
+
+    .facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}.fact{padding:14px 15px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}.fact>b{color:var(--gold2);font-size:14px}.fact p{margin:7px 0 0;color:#b9c1cb;line-height:1.5;font-size:12px}
+    .economy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:42px}.economy-card{padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}.economy-card h3{margin:0 0 10px;font-size:14px}
+
+    .loot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}.loot-card{padding:15px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,var(--panel2),var(--panel))}
+    .loot-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}.loot-head img{width:62px;height:62px;object-fit:contain}.loot-head h3{margin:0;font-size:17px}.loot-head p{margin:4px 0 0;color:#929dab;font-size:10px}
+    .loot-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.loot-items .resource{min-width:0;padding:7px}.loot-items .resource-name{white-space:normal}
+
+    .shop-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:42px}.shop-item{position:relative;display:grid;grid-template-columns:58px minmax(0,1fr);gap:11px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,var(--panel2),var(--panel))}
+    .shop-item img{width:58px;height:58px;object-fit:contain}.shop-item h3{margin:0;font-size:13px;line-height:1.25}.shop-qty{margin-top:5px;color:#aab3bf;font-size:11px}.shop-price{display:inline-flex;align-items:center;justify-content:center;margin-top:8px;min-width:58px;padding:5px 9px;border-radius:999px;background:rgba(232,182,84,.12);color:var(--gold2);font-size:14px;font-weight:950}
+
+    .achievement-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:42px}
+    .achievement{aspect-ratio:1/1;display:flex;flex-direction:column;padding:13px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel));overflow:hidden}
+    .achievement-icon{width:55px;height:55px;object-fit:contain;margin-bottom:8px}.achievement h3{margin:0;font-size:13px;line-height:1.2}.achievement-condition{margin:6px 0 0;color:#aeb7c3;font-size:10px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+    .achievement-rewards{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding-top:8px}.achievement-reward{padding:4px 6px;border-radius:8px;background:rgba(232,182,84,.09);color:var(--gold2);font-size:10px;font-weight:900}
+    .achievement-series-card{aspect-ratio:1/1;display:flex;flex-direction:column;padding:13px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel));overflow:auto}.achievement-series-card img{width:52px;height:52px;object-fit:contain}.achievement-series-card h3{margin:6px 0 8px;font-size:13px}
+    .milestone{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px solid rgba(255,255,255,.06);font-size:9px}.milestone:first-of-type{border-top:0}.milestone-value{color:var(--gold2);font-size:12px;font-weight:950}.milestone-rewards{color:#aeb7c3;text-align:right;line-height:1.3}
+
+    .empty{padding:28px;border:1px dashed rgba(232,182,84,.28);border-radius:18px;text-align:center;color:var(--muted);background:rgba(232,182,84,.035)}
     footer{padding:28px 0 40px;border-top:1px solid var(--line);color:#7f8996;font-size:12px}
-    @media(max-width:900px){.grid,.shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.summary,.grid,.shop-grid{grid-template-columns:1fr}.quest{grid-template-columns:1fr}.quest-media{min-height:190px}.section-head{align-items:flex-start;flex-direction:column}.choice{grid-template-columns:22px 1fr}.choice-reward{grid-column:2}}
+
+    @media(max-width:980px){.achievement-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.economy-grid,.shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:760px){.quests,.loot-grid,.facts{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.quest{grid-template-columns:68px minmax(0,1fr)}.quest-media{width:68px;height:68px}.loot-items{grid-template-columns:repeat(2,minmax(0,1fr))}.section-head{align-items:flex-start;flex-direction:column}}
+    @media(max-width:520px){.grid,.economy-grid,.shop-grid{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.achievement,.achievement-series-card{padding:10px}.resource{min-width:98px}}
   </style>
 </head>
 <body>
 <header><div class="shell header"><a class="brand" href="../"><img src="../assets/brand/topking-clan-crest.png" alt=""><span>Top King</span></a><a class="back" href="../">← Главная</a></div></header>
 <main class="shell">
   <section class="hero">
-    <div class="eyebrow">Новое событие · Hamster King</div>
+    <div class="eyebrow">Событие · Hamster King</div>
     <h1>Карта Сокровищ</h1>
-    <p>Здесь будет собран полный гайд по новому событию: все квесты и варианты выбора, игровые изображения, награды, наше пояснение и рекомендуемый лучший вариант.</p>
-    <div class="status"><span class="dot"></span><span id="status-text">Считываем событие напрямую из уже загруженных игрой данных. Дополнительных игровых действий скрипт не выполняет.</span></div>
+    <p>Квесты, покупки, сундуки, питомцы, достижения и механики события — в компактном виде с игровыми иконками и понятными наградами.</p>
   </section>
 
-  <section class="summary">
-    <div><span>Квестов считано</span><b id="quest-count">0</b></div>
-    <div><span>Игровых ассетов найдено</span><b id="asset-count">0</b></div>
-    <div><span>Снимков события</span><b id="capture-count">0</b></div>
-  </section>
-
-  <div class="section-head"><div><h2>Квесты</h2><p>Фактические условия и награды, считанные из игры.</p></div><p>Совет «лучший вариант» добавляем отдельно, после проверки выгоды.</p></div>
+  <div class="section-head"><div><h2>Квесты</h2><p>Что нужно отдать и что получаем — сразу на карточке.</p></div></div>
   <section class="quests" id="quests"></section>
 
-  <div class="section-head"><div><h2>Что встречается на карте</h2><p>Типы точек, найденные в структуре карты и игровых ассетах.</p></div></div>
+  <div class="section-head"><div><h2>Что встречается на карте</h2><p>Основные точки и мини-игры события.</p></div></div>
   <section class="grid" id="mechanics"></section>
 
-  <div class="section-head"><div><h2>Механики мини-игр</h2><p>Факты из текущей конфигурации события — без догадок о выгоде.</p></div></div>
+  <div class="section-head"><div><h2>Как устроены мини-игры</h2><p>Коротко о правилах каждого типа точки.</p></div></div>
   <section class="grid" id="minigame-details"></section>
 
-  <div class="section-head"><div><h2>Питомцы и поручения</h2><p>Эффекты и правила, которые удалось снять прямо с экрана события.</p></div></div>
+  <div class="section-head"><div><h2>Питомцы и поручения</h2><p>Расходы, отдача и особые эффекты питомцев.</p></div></div>
   <section class="facts" id="pets"></section>
 
-  <div class="section-head"><div><h2>Проверенная экономика</h2><p>Только точные стоимости и награды из игровых карточек.</p></div></div>
-  <section class="facts" id="verified-economy"></section>
+  <div class="section-head"><div><h2>Полезные стоимости</h2><p>Расходы и обмены, которые важно видеть до выбора.</p></div></div>
+  <section class="economy-grid" id="verified-economy"></section>
 
-  <div class="section-head"><div><h2>Сундуки</h2><p>Содержимое, которое игра показывает как возможное для конкретных сундуков.</p></div></div>
-  <section class="grid" id="verified-chests"></section>
+  <div class="section-head"><div><h2>Сундуки</h2><p>Возможное содержимое показано иконками.</p></div></div>
+  <section class="loot-grid" id="verified-chests"></section>
 
-  <div class="section-head"><div><h2>Магазин</h2><p>Позиции, которые были видны в событии во время считывания.</p></div></div>
+  <div class="section-head"><div><h2>Магазин</h2><p>Предмет, количество и цена — на одной карточке.</p></div></div>
   <section class="shop-grid" id="shop"></section>
 
-  <div class="section-head"><div><h2>Достижения</h2><p>Условия из текущего списка достижений. Названия и точные награды прикрепляем по мере извлечения модальных карточек.</p></div></div>
-  <section class="facts" id="achievement-examples"></section>
-  <div class="section-head"><div><h2>Серии достижений</h2><p>Пороговые значения извлечены из ID лотов коллекции достижений.</p></div></div>
-  <section class="grid" id="achievement-series"></section>
-  <div class="section-head"><div><h2>Остальные условия</h2><p>Короткие условия, которые видны в общем списке достижений.</p></div></div>
-  <section class="chips" id="achievement-conditions"></section>
+  <div class="section-head"><div><h2>Достижения</h2><p>Условие и награды в компактных карточках.</p></div></div>
+  <section class="achievement-grid" id="achievement-examples"></section>
+
+  <div class="section-head"><div><h2>Серии достижений</h2><p>Пороговые этапы и известные награды.</p></div></div>
+  <section class="achievement-grid" id="achievement-series"></section>
 </main>
 <footer><div class="shell">Top King · неофициальный гайд для игроков Hamster King</div></footer>
 <script>
@@ -86,113 +105,115 @@
     if(!response.ok)return;
     const data=await response.json();
     const safe=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const icons=data.icon_catalog||{};
     const quests=Array.isArray(data.quests)?data.quests:[];
     const mechanics=Array.isArray(data.mechanics)?data.mechanics:[];
     const shop=Array.isArray(data.shop)?data.shop:[];
     const examples=Array.isArray(data.achievement_examples)?data.achievement_examples:[];
-    const conditions=Array.isArray(data.achievement_conditions)?data.achievement_conditions:[];
     const minigameDetails=Array.isArray(data.minigame_details)?data.minigame_details:[];
     const achievementSeries=Array.isArray(data.achievement_series)?data.achievement_series:[];
     const verifiedEconomy=data.verified_economy||{};
     const verifiedChests=Array.isArray(data.verified_chests)?data.verified_chests:[];
-    document.getElementById('quest-count').textContent=quests.length;
-    document.getElementById('asset-count').textContent=Number(data?.captured?.assets_found||data?.assets?.length||0);
-    document.getElementById('capture-count').textContent=Number(data?.captured?.snapshots||0);
-    if(data.status_text)document.getElementById('status-text').textContent=data.status_text;
+
+    const iconFor=(id,name='')=>{
+      const raw=(String(id||'')+' '+String(name||'')).toLowerCase();
+      if(/treasurehunt_energy|провизи/.test(raw))return icons.energy;
+      if(/treasurehunt_cur_coins|монет.*сокров/.test(raw))return icons.coins;
+      if(/key_uncommon|необычн.*ключ/.test(raw))return icons.key_uncommon;
+      if(/key_epic|эпическ.*ключ/.test(raw))return icons.key_epic;
+      if(/key_common|обычн.*ключ/.test(raw))return icons.key_common;
+      if(/pet_food|корм|вкусняш/.test(raw))return icons.pet_food;
+      if(/skill_change|смена навыка/.test(raw))return icons.skill_change;
+      if(/golden_berry|золот.*ягод/.test(raw))return icons.berry;
+      if(/map_trader|карта торгов/.test(raw))return icons.trader_map;
+      if(/map_fight|карта сраж/.test(raw))return icons.fight_map;
+      if(/map_fishing|карта рыбал/.test(raw))return icons.fishing_map;
+      if(/map_path|карта сокровищ/.test(raw))return icons.map;
+      if(/egg|яйц/.test(raw))return icons.egg;
+      return '';
+    };
+    const resource=(name,qty,icon,id='')=>{
+      const img=icon||iconFor(id,name);
+      return '<span class="resource">'+
+        (img?'<img src="'+safe(img)+'" alt="">':'<span class="resource-fallback">'+safe(String(name||'?').slice(0,1).toUpperCase())+'</span>')+
+        '<span class="resource-copy"><span class="resource-name">'+safe(name||id||'Ресурс')+'</span><span class="resource-qty">×'+safe(qty??'—')+'</span></span></span>';
+    };
 
     document.getElementById('quests').innerHTML=quests.map((q,index)=>{
       const image=q.image?'<img src="'+safe(q.image)+'" alt="">':'<span class="quest-placeholder">🗺️</span>';
-      const reqs=Array.isArray(q.requirements)?q.requirements:[];
-      return '<article class="quest"><div class="quest-media">'+image+'</div><div><div class="quest-top"><h3>'+safe(q.title||('Квест '+(index+1)))+'</h3><span class="badge">'+safe(q.stage||('№ '+(index+1)))+'</span></div>'+
-        (q.condition?'<p class="quest-condition">'+safe(q.condition)+'</p>':'')+
-        (reqs.length?'<div class="requirements">'+reqs.map(v=>'<span class="req">'+safe(v)+'</span>').join('')+'</div>':'')+
-        (q.reward?'<div class="reward">Награда: '+safe(q.reward)+'</div>':'')+
-        '<div class="recommend"><b>Лучший вариант:</b> '+safe(q.recommendation||'ещё не утверждён — сначала сравниваем стоимость и ценность награды.')+'</div></div></article>';
-    }).join('')||'<div class="empty"><strong>Квесты пока не считаны</strong>Нужен новый снимок экрана события.</div>';
+      const vr=Array.isArray(q.visual_requirements)?q.visual_requirements:[];
+      const vw=Array.isArray(q.visual_rewards)?q.visual_rewards:[];
+      const reqHtml=vr.length?'<div class="quest-block"><div class="quest-block-title">Нужно</div><div class="resource-list">'+vr.map(v=>resource(v[0],v[1],v[2]||'')).join('')+'</div></div>':'';
+      const rewardHtml=vw.length?'<div class="quest-block"><div class="quest-block-title">Награда</div><div class="resource-list">'+vw.map(v=>resource(v[0],v[1],v[2]||'')).join('')+'</div></div>':
+        (q.reward?'<div class="quest-block"><div class="quest-block-title">Награда</div><div class="resource-list">'+resource(q.reward,'',q.image||'')+'</div></div>':'');
+      const recommendation=q.recommendation?'<div class="recommend"><b>Лучший вариант:</b> '+safe(q.recommendation)+'</div>':'';
+      return '<article class="quest"><div class="quest-media">'+image+'</div><div><div class="quest-top"><h3>'+safe(q.title||('Квест '+(index+1)))+'</h3><span class="badge">'+safe(q.stage||'')+'</span></div>'+
+        (q.condition?'<p class="quest-condition">'+safe(q.condition)+'</p>':'')+reqHtml+rewardHtml+'</div>'+recommendation+'</article>';
+    }).join('')||'<div class="empty">Квесты будут добавляться по мере заполнения гайда.</div>';
 
-    const mapFact=data?.verified_map;
     document.getElementById('mechanics').innerHTML=mechanics.map(m=>'<article class="mini-card">'+
-      (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+
-      '<h3>'+safe(m.title)+'</h3><p>'+safe(m.note||'')+'</p></article>').join('')+
-      (mapFact?'<article class="mini-card"><h3>Состав считанной карты</h3><div class="requirements">'+
-        Object.entries(mapFact.current_types||{}).map(([k,v])=>'<span class="req">'+safe(k)+' ×'+safe(v)+'</span>').join('')+
-        '</div><p style="margin-top:12px">'+safe(mapFact.note||'')+'</p></article>':'');
+      (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+'<h3>'+safe(m.title)+'</h3><p>'+safe(m.note||'')+'</p></article>').join('');
 
     document.getElementById('minigame-details').innerHTML=minigameDetails.map(m=>'<article class="mini-card">'+
-      (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+
-      '<h3>'+safe(m.title)+'</h3>'+
-      '<div class="requirements">'+(Array.isArray(m.facts)?m.facts:[]).map(v=>'<span class="req">'+safe(v)+'</span>').join('')+'</div></article>').join('');
+      (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+'<h3>'+safe(m.title)+'</h3>'+
+      '<div class="tag-list">'+(Array.isArray(m.facts)?m.facts:[]).map(v=>'<span class="tag">'+safe(v)+'</span>').join('')+'</div></article>').join('');
 
     const petFacts=[];
     if(data?.pets?.overview)petFacts.push('<div class="fact"><b>Питомцы</b><p>'+safe(data.pets.overview)+'</p></div>');
     if(data?.pets?.missions)petFacts.push('<div class="fact"><b>Поручения питомцам</b><p>'+safe(data.pets.missions)+'</p></div>');
     (Array.isArray(data?.pets?.known_effects)?data.pets.known_effects:[]).forEach(v=>petFacts.push('<div class="fact"><b>'+safe(v.title)+'</b><p>'+safe(v.text)+'</p></div>'));
-    document.getElementById('pets').innerHTML=petFacts.join('');
-
-    const economyParts=[];
-    const eventMap=verifiedEconomy?.event_map;
-    if(eventMap){
-      economyParts.push('<div class="fact"><b>'+safe(eventMap.title||'Новая карта')+'</b><p>'+
-        'Стоимость: '+safe(eventMap?.cost?.quantity)+' × '+safe(eventMap?.cost?.item||eventMap?.cost?.item_id)+
-        (eventMap.slots?' · Слотов на считанной карте: '+safe(eventMap.slots):'')+
-        '</p>'+(eventMap.note?'<p>'+safe(eventMap.note)+'</p>':'')+'</div>');
-    }
-    for(const key of ['pet_mission_refresh','trader_refresh']){
-      const row=verifiedEconomy?.[key];
-      if(!row)continue;
-      economyParts.push('<div class="fact"><b>'+safe(row.title||key)+'</b><p>Стоимость: '+
-        safe(row?.cost?.quantity)+' × '+safe(row?.cost?.currency||row?.cost?.currency_id||row?.cost?.item||row?.cost?.item_id)+
-        '</p>'+(row.note?'<p>'+safe(row.note)+'</p>':'')+'</div>');
-    }
-    const treasury=verifiedEconomy?.treasury||{};
-    if(treasury.path_1||treasury.path_2||treasury.path_3){
-      const pathText=[1,2,3].map(n=>{
-        const row=treasury['path_'+n]||{};
-        const cost=row?.cost;
-        return '<span class="req">Путь '+n+': '+(cost?(safe(cost.quantity)+' '+safe(cost.item)):'стоимость ещё не считана')+'</span>';
-      }).join('');
-      economyParts.push('<div class="fact"><b>Сокровищница — выбор пути</b><div class="requirements">'+pathText+'</div>'+
-        (treasury.recommendation?'<p><b>Вывод:</b> '+safe(treasury.recommendation)+'</p>':'')+'</div>');
-    }
     const petMissionRows=Array.isArray(verifiedEconomy?.pet_missions)?verifiedEconomy.pet_missions:[];
     if(petMissionRows.length){
-      economyParts.push('<div class="fact"><b>Поручения питомцам — расход и отдача</b><div class="requirements">'+
-        petMissionRows.map(v=>'<span class="req">'+safe(v.rank)+': '+safe(v.food)+' корма → '+safe(v.gold)+' зол. монет'+
-          (v.special_reward?' · '+safe(v.special_reward):'')+'</span>').join('')+
-        '</div>'+(verifiedEconomy.pet_mission_recommendation?'<p><b>По эффективности:</b> '+safe(verifiedEconomy.pet_mission_recommendation)+'</p>':'')+'</div>');
+      petFacts.push('<div class="fact"><b>Расход и отдача</b><div class="resource-list" style="margin-top:10px">'+petMissionRows.map(v=>
+        '<span class="resource"><img src="'+safe(icons.pet_food||'')+'" alt=""><span class="resource-copy"><span class="resource-name">'+safe(v.rank)+'</span><span class="resource-qty">'+safe(v.food)+' → '+safe(v.gold)+'</span></span></span>'
+      ).join('')+'</div>'+(verifiedEconomy.pet_mission_recommendation?'<p>'+safe(verifiedEconomy.pet_mission_recommendation)+'</p>':'')+'</div>');
     }
-    const premiumRows=Array.isArray(verifiedEconomy?.premium_shop)?verifiedEconomy.premium_shop:[];
-    premiumRows.forEach(v=>economyParts.push('<div class="fact"><b>'+safe(v.title||v.source_id)+'</b><p>'+
-      'Получаем: '+safe(v?.receive?.quantity)+' · '+safe(v?.receive?.item_id)+' · Стоимость: '+safe(v?.cost?.quantity)+' '+safe(v?.cost?.currency_id)+
-      '</p>'+(v.note?'<p>'+safe(v.note)+'</p>':'')+'</div>'));
-    document.getElementById('verified-economy').innerHTML=economyParts.join('');
+    document.getElementById('pets').innerHTML=petFacts.join('');
 
-    document.getElementById('verified-chests').innerHTML=verifiedChests.map(v=>'<article class="mini-card"><h3>'+safe(v.title)+'</h3>'+
-      (v.note?'<p>'+safe(v.note)+'</p>':'')+
-      '<div class="requirements">'+(Array.isArray(v.contents)?v.contents:[]).map(x=>'<span class="req">'+safe(x.name||x.id)+' ×'+safe(x.quantity)+'</span>').join('')+'</div>'+
-      '<p style="margin-top:12px">Источник: '+safe(v.source_id||'')+'</p></article>').join('');
+    const economy=[];
+    if(verifiedEconomy.event_map){
+      const v=verifiedEconomy.event_map;
+      economy.push('<article class="economy-card"><h3>'+safe(v.title||'Новая карта')+'</h3><div class="resource-list">'+resource(v.cost?.item||'Карта сокровищ',v.cost?.quantity,iconFor(v.cost?.item_id,v.cost?.item),v.cost?.item_id)+'</div></article>');
+    }
+    for(const key of ['pet_mission_refresh','trader_refresh']){
+      const v=verifiedEconomy[key];if(!v)continue;
+      economy.push('<article class="economy-card"><h3>'+safe(v.title||'Обновление')+'</h3><div class="resource-list">'+resource(v.cost?.currency||v.cost?.item||'Стоимость',v.cost?.quantity,'',v.cost?.currency_id||v.cost?.item_id)+'</div></article>');
+    }
+    const treasury=verifiedEconomy.treasury||{};
+    if(treasury.path_1||treasury.path_2||treasury.path_3){
+      economy.push('<article class="economy-card"><h3>Сокровищница — пути</h3><div class="resource-list">'+[1,2,3].map(n=>{
+        const v=treasury['path_'+n]||{};
+        return v.cost?resource('Путь '+n+' · '+(v.cost.item||'Стоимость'),v.cost.quantity,iconFor(v.cost.item_id,v.cost.item),v.cost.item_id):'<span class="resource"><span class="resource-fallback">'+n+'</span><span class="resource-copy"><span class="resource-name">Путь '+n+'</span><span class="resource-qty">—</span></span></span>';
+      }).join('')+'</div>'+(treasury.recommendation?'<p style="margin:10px 0 0;color:#aeb7c3;font-size:11px">'+safe(treasury.recommendation)+'</p>':'')+'</article>');
+    }
+    (Array.isArray(verifiedEconomy.premium_shop)?verifiedEconomy.premium_shop:[]).forEach(v=>{
+      economy.push('<article class="economy-card"><h3>'+safe(v.title||'Обмен')+'</h3><div class="resource-list">'+
+        resource(v.receive?.item_id||'Получаем',v.receive?.quantity,iconFor(v.receive?.item_id,''),v.receive?.item_id)+
+        '<span class="cost-arrow">←</span>'+resource('Стоимость',v.cost?.quantity,'',v.cost?.currency_id)+'</div></article>');
+    });
+    document.getElementById('verified-economy').innerHTML=economy.join('');
 
-    document.getElementById('shop').innerHTML=shop.map(v=>'<div class="shop-item"><div><strong>'+safe(v.title)+'</strong><div class="muted">'+safe(v.qty||'')+'</div></div><span class="shop-meta">'+safe(v.price||'')+'</span></div>').join('');
+    document.getElementById('verified-chests').innerHTML=verifiedChests.map(v=>'<article class="loot-card">'+
+      '<div class="loot-head">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><h3>'+safe(v.title)+'</h3><p>Возможное содержимое</p></div></div>'+
+      '<div class="loot-items">'+(Array.isArray(v.contents)?v.contents:[]).map(x=>resource(x.name||x.id,x.quantity,iconFor(x.id,x.name),x.id)).join('')+'</div></article>').join('');
 
-    document.getElementById('achievement-examples').innerHTML=examples.map(v=>'<div class="fact"><b>'+safe(v.title)+'</b><p>'+safe(v.condition)+'</p>'+
-      (Array.isArray(v.rewards)&&v.rewards.length?'<p>Награды: '+v.rewards.map(safe).join(' · ')+'</p>':'')+'</div>').join('');
+    document.getElementById('shop').innerHTML=shop.map(v=>'<article class="shop-item">'+
+      (v.image?'<img src="'+safe(v.image)+'" alt="">':'<span class="resource-fallback">?</span>')+
+      '<div><h3>'+safe(v.title)+'</h3><div class="shop-qty">'+safe(v.qty||'')+'</div><div class="shop-price">'+safe(v.price||'—')+'</div></div></article>').join('');
+
+    document.getElementById('achievement-examples').innerHTML=examples.map(v=>'<article class="achievement">'+
+      (v.image?'<img class="achievement-icon" src="'+safe(v.image)+'" alt="">':'')+
+      '<h3>'+safe(v.title)+'</h3><p class="achievement-condition">'+safe(v.condition)+'</p>'+
+      '<div class="achievement-rewards">'+(Array.isArray(v.rewards)?v.rewards:[]).map(x=>'<span class="achievement-reward">'+safe(x)+'</span>').join('')+'</div></article>').join('');
 
     document.getElementById('achievement-series').innerHTML=achievementSeries.map(v=>{
       const milestones=Array.isArray(v.milestones)?v.milestones:[];
-      const legacy=Array.isArray(v.thresholds)?v.thresholds:[];
-      const content=milestones.length
-        ? milestones.map(m=>'<div class="fact" style="margin-top:8px"><b>'+safe(m.value)+'</b>'+
-            (Array.isArray(m.rewards)&&m.rewards.length?'<p>'+m.rewards.map(r=>safe(r[0])+' ×'+safe(r[1])).join(' · ')+'</p>':'<p>Награда ещё не извлечена.</p>')+
-          '</div>').join('')
-        : '<div class="requirements">'+legacy.map(n=>'<span class="req">'+safe(n)+'</span>').join('')+'</div>';
-      return '<article class="mini-card"><h3>'+safe(v.category)+'</h3>'+content+
-        '<p style="margin-top:12px">Источник: '+safe(v.source||'')+'</p></article>';
+      return '<article class="achievement-series-card">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<h3>'+safe(v.category)+'</h3>'+
+        milestones.map(m=>'<div class="milestone"><span class="milestone-value">'+safe(m.value)+'</span><span class="milestone-rewards">'+
+          (Array.isArray(m.rewards)?m.rewards.map(r=>safe(r[0])+' ×'+safe(r[1])).join(' · '):'—')+'</span></div>').join('')+'</article>';
     }).join('');
-
-    document.getElementById('achievement-conditions').innerHTML=conditions.map(v=>'<span class="chip">'+safe(v)+'</span>').join('');
-  }catch(error){
-    console.warn('Treasure guide data load failed',error);
-  }
+  }catch(error){}
 })();
 </script>
-</body></html>
+</body>
+</html>
