@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.49",
-  "target_version": "1.17.50",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.50.shop-shared-limits-ui.candidate.user.js",
-  "primary_marker": "shop-shared-limits-ui-20260923-r1",
+  "source_version": "1.17.50",
+  "target_version": "1.17.51",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.51.fair-single-preflight.candidate.user.js",
+  "primary_marker": "fair-single-preflight-20260923-r1",
   "preserve_markers": [
+    "shop-shared-limits-ui-20260923-r1",
     "shop-buy-fast-path-20260923-r1",
     "shop-today-dedup-20260923-r1",
     "shop-active-view-canon-20260923-r1",
@@ -26,6 +27,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-50-shop-shared-limits-ui-live-status.txt",
-  "commit_message": "ui: deploy Clan shared Shop limits in userscript 1.17.50"
+  "audit_status_path": "audit/hk-userscript-1-17-51-fair-single-preflight-live-status.txt",
+  "commit_message": "fix: deploy Fair single preflight in userscript 1.17.51"
 }
