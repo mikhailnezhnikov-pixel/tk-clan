@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.60
+// @version      1.17.61
+// @release-note Ярмарка: числовой лимит прокруток убран. Поиск теперь крутит ярмарку, пока хватает фактической валюты прокрутки с учётом разрешённых алмазов и бюджетных ограничений.
 // @release-note Войны: если активная война отдаёт HP, но не отдаёт счёт, интерфейс больше не подставляет фиктивные 0:0 — неизвестные очки показываются как «—».
 // @release-note Войны: в карточке активной войны теперь отображаются фактические HP сторон, максимум, процент и полосы здоровья, когда эти значения присутствуют в ответе игры.
 // @release-note Ярмарка: нижние бонусные ячейки 3/6/9 теперь определяются по фактически купленным основным ячейкам текущего поля, поэтому поэтапные покупки 3→6→9 корректно открывают первый, второй и третий бонус.
@@ -67,7 +68,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.60';
+  const BUILD_VERSION = '1.17.61';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -79,6 +80,7 @@
   const HK_FAIR_UNIFIED_NAV_REV = 'fair-unified-nav-20260923-r1';
   const HK_FAIR_TIERED_COMBO_REV = 'fair-tiered-combo-20260923-r1';
   const HK_FAIR_BONUS_THRESHOLD_STATE_REV = 'fair-bonus-threshold-state-20260923-r1';
+  const HK_FAIR_BALANCE_REROLLS_REV = 'fair-balance-rerolls-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
   function hkRuntimeVersionTuple(value) {
@@ -7500,13 +7502,65 @@
     }).join('')}</div>`;
   }
 
+  function fairRerollCapacity(state = fairState(selectedFairId), allowPremium = Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked), documentValue = playerDocument) {
+    const cost = state?.fair_reroll_cost || {};
+    if (!safeReroll(cost, allowPremium)) {
+      return {count:0, free:false, problems:[either('цена прокрутки запрещена текущими настройками','reroll cost is blocked by current settings')]};
+    }
+    const parts = costParts(cost).filter(part => part.quantity > 0);
+    if (!parts.length) return {count:Number.MAX_SAFE_INTEGER, free:true, problems:[]};
+
+    let walletLimit = Number.MAX_SAFE_INTEGER;
+    const problems = [];
+    for (const part of parts) {
+      const balance = walletAmount(part.id, documentValue);
+      if (balance === null) {
+        problems.push(`${paymentLabel(part.id)}: ${either('баланс не определён','balance is unknown')}`);
+        walletLimit = 0;
+        continue;
+      }
+      walletLimit = Math.min(walletLimit, Math.floor(Math.max(0, balance) / part.quantity));
+    }
+    if (!walletLimit || walletLimit === Number.MAX_SAFE_INTEGER) {
+      return {count:Math.max(0, walletLimit === Number.MAX_SAFE_INTEGER ? 0 : walletLimit), free:false, problems};
+    }
+
+    let allowed = walletLimit;
+    if (!isEventFairState(state)) {
+      let low = 0, high = walletLimit;
+      while (low < high) {
+        const middle = Math.ceil((low + high + 1) / 2);
+        const decision = budgetDecision(cost, 'fair', middle, documentValue, {allowPremiumOverride:allowPremium});
+        if (decision.allowed) low = middle;
+        else high = middle - 1;
+      }
+      allowed = low;
+      if (!allowed) {
+        const decision = budgetDecision(cost, 'fair', 1, documentValue, {allowPremiumOverride:allowPremium});
+        problems.push(...decision.problems);
+      }
+    }
+    return {count:Math.max(0, Math.trunc(allowed)), free:false, problems:[...new Set(problems)]};
+  }
+
+  function fairRerollCapacityLabel(state = fairState(selectedFairId), allowPremium = Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)) {
+    if (!state) return either('Прокрутки: ярмарка не выбрана','Rerolls: no fair selected');
+    const plan = fairRerollCapacity(state, allowPremium, playerDocument);
+    if (plan.free) return either('Прокрутки: без расхода валюты','Rerolls: no currency cost');
+    const parts = costParts(state?.fair_reroll_cost).filter(part => part.quantity > 0);
+    const currency = parts.map(part => `${paymentLabel(part.id)} ${part.quantity.toLocaleString(locale())}`).join(' + ');
+    if (plan.count > 0) return either(`Прокрутки: до ${plan.count.toLocaleString(locale())} по текущему балансу · ${currency}`, `Rerolls: up to ${plan.count.toLocaleString(locale())} by current balance · ${currency}`);
+    return either(`Прокрутки недоступны${plan.problems.length ? ': ' + plan.problems.join('; ') : ''}`, `Rerolls unavailable${plan.problems.length ? ': ' + plan.problems.join('; ') : ''}`);
+  }
+
   function fairProjectedCosts() {
     const totals = new Map();
     const state = fairState(selectedFairId);
     const rows = fairRowsForState(state);
     const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
     const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
-    const rerollLimit = Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0));
+    const allowPremium = Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked);
+    const rerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
     const relevantRows = selectedRows.length ? selectedRows : rows;
     const maximumLots = new Map();
     for (const row of relevantRows) for (const part of costParts(row.cost)) {
@@ -7515,7 +7569,9 @@
       if (!current || part.quantity > current.quantity) maximumLots.set(key, {...part});
     }
     for (const part of maximumLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
-    for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollLimit);
+    if (!rerollPlan.free && rerollPlan.count > 0) {
+      for (const part of costParts(state?.fair_reroll_cost)) addProjectedCost(totals, part, rerollPlan.count);
+    }
     return totals;
   }
 
@@ -7611,6 +7667,8 @@
   function updateFairControls() {
     const selected = root?.querySelector('#hk-fair-selected');
     if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
+    const rerollAuto = root?.querySelector('#hk-fair-reroll-auto');
+    if (rerollAuto) rerollAuto.textContent = fairRerollCapacityLabel();
     const start = root?.querySelector('#hk-fair-start');
     const rulesValid = [...selectedFairLots].every(lotId => {
       const rule = selectedFairSlotRules.get(lotId); return Boolean(rule?.regular || rule?.vip);
@@ -7661,7 +7719,6 @@
       currency:selectedFairCurrency,
       exactLots:fairComboSettings().exactLots, bonusLots:[...selectedFairBonusLots],
       buyLimit:Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1)),
-      rerollLimit:Math.max(0, Number(root?.querySelector('#hk-fair-reroll-limit')?.value || 0)),
       premiumReroll:Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)
     };
   }
@@ -7706,7 +7763,6 @@
     }
     selectedFairCurrency = String(preset.currency || '');
     const buy = root?.querySelector('#hk-fair-buy-limit'); if (buy) buy.value = Math.max(1, Number(preset.buyLimit || 1));
-    const reroll = root?.querySelector('#hk-fair-reroll-limit'); if (reroll) reroll.value = Math.max(0, Number(preset.rerollLimit || 0));
     const premium = root?.querySelector('#hk-fair-premium-reroll'); if (premium) premium.checked = Boolean(preset.premiumReroll);
     selectedFairBonusLots = new Set(Array.isArray(preset.bonusLots) ? preset.bonusLots.map(Number).filter(value => [5,10,30].includes(value)) : [5,10,30]);
     renderFair();
@@ -7768,13 +7824,14 @@
       return;
     }
     const buyLimit = Math.max(1, Number(root.querySelector('#hk-fair-buy-limit').value || 1));
-    const rerollLimit = Math.max(0, Number(root.querySelector('#hk-fair-reroll-limit').value || 0));
     const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
     const combo = fairComboSettings();
     let state = fairState(selectedFairId);
     if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
-    const cost = costParts(state?.fair_reroll_cost)[0];
-    const worst = cost ? `${cost.quantity * rerollLimit} ${cost.id}` : '0';
+    const initialRerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
+    const initialRerollText = initialRerollPlan.free
+      ? either('без расхода валюты','no currency cost')
+      : initialRerollPlan.count.toLocaleString(locale());
     const maximumCrystalLotCost = fairCatalog.filter(row => selectedFairLots.has(row.lotId))
       .flatMap(row => costParts(row.cost)).filter(part => part.kind === 'currencies' && part.id === 'cur_prem')
       .reduce((maximum, part) => Math.max(maximum, part.quantity), 0) * buyLimit;
@@ -7782,8 +7839,8 @@
       ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`)
       : '';
     if (!confirm(language === 'en'
-      ? `Start searching for selected lots?\n\nTotal purchases: ${buyLimit}\nMaximum rerolls: ${rerollLimit}\nMaximum reroll cost: ${worst}${crystalNotice}`
-      : `Запустить поиск выбранных лотов?\n\nВсего покупок: ${buyLimit}\nМаксимум прокруток: ${rerollLimit}\nМаксимальная цена прокруток: ${worst}${crystalNotice}`)) return;
+      ? `Start searching for selected lots?\n\nTotal purchases: ${buyLimit}\nRerolls: by available currency (now: ${initialRerollText})${crystalNotice}`
+      : `Запустить поиск выбранных лотов?\n\nВсего покупок: ${buyLimit}\nПрокрутки: по доступной валюте (сейчас: ${initialRerollText})${crystalNotice}`)) return;
     if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
     hkRunner.start({title:either('Ярмарка','Fair'),total:buyLimit,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
     fairRunning = true; fairStop = false; updateFairControls();
@@ -7880,9 +7937,16 @@
           }
         }
         if (purchased) continue;
-        if (rerolls >= rerollLimit) { log(`Достигнут лимит прокруток: ${rerollLimit}`, 'warn'); break; }
         if (!safeReroll(state.fair_reroll_cost, allowPremium)) throw new Error('Цена прокрутки изменилась и стала небезопасной');
-        log(`Лота нет. Прокрутка ${rerolls + 1}/${rerollLimit}…`);
+        const rerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
+        if (!rerollPlan.free && rerollPlan.count <= 0) {
+          log(either(`Остановка: валюта прокрутки закончилась или достигнут резерв${rerollPlan.problems.length ? ' · ' + rerollPlan.problems.join('; ') : ''}`,
+            `Stopped: reroll currency is exhausted or reserve reached${rerollPlan.problems.length ? ' · ' + rerollPlan.problems.join('; ') : ''}`), 'warn');
+          break;
+        }
+        log(rerollPlan.free
+          ? either(`Лота нет. Бесплатная прокрутка ${rerolls + 1}…`, `No matching lot. Free reroll ${rerolls + 1}…`)
+          : either(`Лота нет. Прокрутка ${rerolls + 1} · доступно по балансу: ${rerollPlan.count}`, `No matching lot. Reroll ${rerolls + 1} · affordable now: ${rerollPlan.count}`));
         try {
           if (!isEventFairState(state)) {
             const rerollDecision = budgetDecision(state.fair_reroll_cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
@@ -13368,8 +13432,8 @@
           <div id="hk-fair-slot-rules" style="display:none"></div>
           <div class="hk-fair-controls"><label data-i18n="fairExactLots">${tr('fairExactLots')}</label><select id="hk-fair-exact-lots"><option value="0">${tr('no')}</option><option value="3">3</option><option value="6">6</option><option value="9">9</option></select></div>
           <div id="hk-fair-bonus-lots" class="hk-fair-bonus-lots"></div>
-          <div class="hk-fair-controls"><label data-i18n="totalPurchases">${tr('totalPurchases')}</label><input id="hk-fair-buy-limit" type="number" min="1" max="999" value="1">
-            <label data-i18n="maxRerolls">${tr('maxRerolls')}</label><input id="hk-fair-reroll-limit" type="number" min="0" max="10000" value="50"></div>
+          <div class="hk-fair-controls"><label data-i18n="totalPurchases">${tr('totalPurchases')}</label><input id="hk-fair-buy-limit" type="number" min="1" max="999" value="1"></div>
+          <div id="hk-fair-reroll-auto" class="hk-live">${either('Прокрутки: по доступной валюте','Rerolls: by available currency')}</div>
           <label class="hk-check"><input id="hk-fair-premium-reroll" type="checkbox"><span data-i18n="allowDiamonds">${tr('allowDiamonds')}</span></label>
           <button id="hk-fair-start" class="hk-primary" data-i18n="findBuy" disabled>${tr('findBuy')}</button><button id="hk-fair-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
           <p class="hk-muted" data-i18n="fairWarning">${tr('fairWarning')}</p>
@@ -13651,7 +13715,7 @@
     const exactFairLots = root.querySelector('#hk-fair-exact-lots');
     exactFairLots.oninput = exactFairLots.onchange = () => { renderFairBonusChoices(); updateFairControls(); };
     root.querySelector('#hk-fair-buy-limit').oninput = updateFairControls;
-    root.querySelector('#hk-fair-reroll-limit').oninput = updateFairControls;
+    root.querySelector('#hk-fair-premium-reroll').onchange = updateFairControls;
     root.querySelector('#hk-fair-start').onclick = runFair;
     root.querySelector('#hk-fair-stop').onclick = () => { fairStop = true; hkRunner.stop('fair'); log(either('Останавливаю ярмарку…','Stopping fair…'), 'warn'); };
     renderFairBonusChoices();

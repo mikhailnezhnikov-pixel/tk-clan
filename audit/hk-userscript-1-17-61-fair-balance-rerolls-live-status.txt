@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.60
+target_version=1.17.61
+marker=fair-balance-rerolls-20260923-r1
+source_sha256=ca3df530d40f276b11ec4f0534f01ce266e3c7c4a33c2a7eceb78a95a904afa0
+candidate_sha256=bcc3ff6acb373360fb8d65cbed12b4a9f24d5192e518a54f2ff07224a04805eb
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
