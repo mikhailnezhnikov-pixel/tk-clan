@@ -1,2 +1,2 @@
-inspect=treasure-exact-mechanics-values
-stamp=2026-09-23T13:02+09:00
+inspect=treasure-localization-captures
+stamp=2026-09-23T13:05+09:00
