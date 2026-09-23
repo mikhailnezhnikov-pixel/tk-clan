@@ -1,2 +1,2 @@
-inspect=treasure-mechanic-visual-assets
-stamp=2026-09-23T20:40+09:00
+inspect=treasure-achievement-visuals
+stamp=2026-09-23T20:44+09:00
