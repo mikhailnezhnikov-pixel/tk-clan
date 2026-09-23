@@ -503,7 +503,25 @@
         "×5",
         "×10"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fight_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 60,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Синяя жатва III",
@@ -513,7 +531,25 @@
         "×15",
         "×25"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fight_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 20,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 15,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 25,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Да он только крепче стал!",
@@ -523,7 +559,25 @@
         "×5",
         "×10"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fight_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 60,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Это вышло из-под контроля",
@@ -533,7 +587,25 @@
         "×20",
         "×35"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fight_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 50,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 20,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 35,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Абсолютная единица",
@@ -543,7 +615,25 @@
         "×10",
         "×20"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fight_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 100,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 20,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Чистая работа III",
@@ -553,7 +643,25 @@
         "×20",
         "×30"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fight_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 50,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 20,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 30,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Кто там, в глубине?",
@@ -563,7 +671,25 @@
         "×5",
         "×5"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fishing_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 60,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Корм питомца",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+        }
+      ]
     },
     {
       "title": "Хватка глубин I",
@@ -573,7 +699,25 @@
         "×10",
         "×5"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fishing_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 100,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Корм питомца",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+        }
+      ]
     },
     {
       "title": "Вода успокоилась",
@@ -583,7 +727,25 @@
         "×5",
         "×5"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fishing_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 60,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Корм питомца",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+        }
+      ]
     },
     {
       "title": "Крупная находка",
@@ -593,7 +755,25 @@
         "×15",
         "×25"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_chests_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 140,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 15,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 25,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Нашёл выход",
@@ -603,7 +783,25 @@
         "×5",
         "×10"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_lights_achievement_02_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 60,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Бартерщик",
@@ -613,7 +811,25 @@
         "×5",
         "×10"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_trader_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 60,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Редкая связка",
@@ -623,7 +839,25 @@
         "×5",
         "×10"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_keys_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 60,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Искатель сокровищ II",
@@ -633,7 +867,25 @@
         "×10",
         "×1"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_all_maps_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 100,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Ценный ключ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png"
+        }
+      ]
     },
     {
       "title": "Искатель сокровищ VI",
@@ -644,7 +896,30 @@
         "×1",
         "×5"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_all_maps_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 80,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 31,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Яйцо Молекота R4",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        },
+        {
+          "name": "Смена навыка питомца",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+        }
+      ]
     },
     {
       "title": "Глубже в горы I",
@@ -654,7 +929,25 @@
         "×5",
         "×10"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_mines_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 60,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Глубже в горы III",
@@ -664,7 +957,25 @@
         "×15",
         "×25"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_mines_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 20,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 15,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 25,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Землекоп II",
@@ -674,7 +985,25 @@
         "×10",
         "×20"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_chests_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 100,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 20,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Землекоп III",
@@ -684,7 +1013,25 @@
         "×15",
         "×25"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_chests_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 20,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 15,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 25,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     },
     {
       "title": "Навстречу шторму III",
@@ -694,7 +1041,25 @@
         "×15",
         "×5"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fishing_achievement_01_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 20,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 15,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Корм питомца",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+        }
+      ]
     },
     {
       "title": "Не заблудился",
@@ -704,7 +1069,25 @@
         "×15",
         "×25"
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png"
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png",
+      "achievement_image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_lights_achievement_02_unl_icon.png",
+      "visual_rewards": [
+        {
+          "name": "Очки события",
+          "quantity": 20,
+          "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+        },
+        {
+          "name": "Провизия",
+          "quantity": 15,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "name": "Монеты сокровищ",
+          "quantity": 25,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ]
     }
   ],
   "achievement_conditions": [
@@ -835,6 +1218,23 @@
               "Яйцо молекота R3",
               1
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 60,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Яйцо молекота R3",
+              "quantity": 1,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+            }
           ]
         },
         {
@@ -852,6 +1252,23 @@
               "Эпический ключ",
               1
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 100,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Эпический ключ",
+              "quantity": 1,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png"
+            }
           ]
         },
         {
@@ -869,11 +1286,29 @@
               "Эпический ключ",
               1
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 140,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 15,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Эпический ключ",
+              "quantity": 1,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png"
+            }
           ]
         },
         {
           "value": 100,
-          "rewards": null
+          "rewards": null,
+          "visual_rewards": []
         },
         {
           "value": 250,
@@ -894,6 +1329,28 @@
               "Смена навыка питомца",
               3
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 70,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 25,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Необычный ключ",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_common_icon.png"
+            },
+            {
+              "name": "Смена навыка питомца",
+              "quantity": 3,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+            }
           ]
         },
         {
@@ -915,10 +1372,32 @@
               "Смена навыка питомца",
               5
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 80,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 31,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Яйцо молекота R4",
+              "quantity": 1,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+            },
+            {
+              "name": "Смена навыка питомца",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+            }
           ]
         }
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_all_maps_achievement_01_unl_icon.png"
     },
     {
       "category": "Сражения",
@@ -943,6 +1422,28 @@
               "Карта сражения",
               1
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 60,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            },
+            {
+              "name": "Карта сражения",
+              "quantity": 1,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png"
+            }
           ]
         },
         {
@@ -964,6 +1465,28 @@
               "Карта сражения",
               2
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 100,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 20,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            },
+            {
+              "name": "Карта сражения",
+              "quantity": 2,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png"
+            }
           ]
         },
         {
@@ -985,10 +1508,32 @@
               "Карта сражения",
               3
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 20,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 15,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 25,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            },
+            {
+              "name": "Карта сражения",
+              "quantity": 3,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png"
+            }
           ]
         }
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fight_achievement_01_unl_icon.png"
     },
     {
       "category": "Рыбалка",
@@ -1013,6 +1558,28 @@
               "Карта рыбалки",
               1
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 60,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Корм питомца",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+            },
+            {
+              "name": "Карта рыбалки",
+              "quantity": 1,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fishing_icon.png"
+            }
           ]
         },
         {
@@ -1034,6 +1601,28 @@
               "Карта рыбалки",
               2
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 100,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Корм питомца",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+            },
+            {
+              "name": "Карта рыбалки",
+              "quantity": 2,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fishing_icon.png"
+            }
           ]
         },
         {
@@ -1055,10 +1644,32 @@
               "Карта рыбалки",
               3
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 20,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 15,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Корм питомца",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+            },
+            {
+              "name": "Карта рыбалки",
+              "quantity": 3,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fishing_icon.png"
+            }
           ]
         }
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_fishing_achievement_01_unl_icon.png"
     },
     {
       "category": "Торговец — встречи",
@@ -1083,6 +1694,28 @@
               "Карта торговца",
               1
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 60,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            },
+            {
+              "name": "Карта торговца",
+              "quantity": 1,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+            }
           ]
         },
         {
@@ -1104,6 +1737,28 @@
               "Карта торговца",
               2
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 100,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 20,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            },
+            {
+              "name": "Карта торговца",
+              "quantity": 2,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+            }
           ]
         },
         {
@@ -1121,10 +1776,27 @@
               "Монеты сокровищ",
               25
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 20,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 15,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 25,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            }
           ]
         }
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_trader_achievement_01_unl_icon.png"
     },
     {
       "category": "Торговец — сделки",
@@ -1145,6 +1817,23 @@
               "Монеты сокровищ",
               10
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 60,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            }
           ]
         },
         {
@@ -1162,6 +1851,23 @@
               "Монеты сокровищ",
               20
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 100,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 20,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            }
           ]
         },
         {
@@ -1179,10 +1885,27 @@
               "Монеты сокровищ",
               25
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 20,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 15,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 25,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            }
           ]
         }
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_trader_achievement_02_unl_icon.png"
     },
     {
       "category": "Раскопки / сундуки — серия 1",
@@ -1203,6 +1926,23 @@
               "Монеты сокровищ",
               10
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 60,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            }
           ]
         },
         {
@@ -1220,6 +1960,23 @@
               "Монеты сокровищ",
               20
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 100,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 20,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            }
           ]
         },
         {
@@ -1237,10 +1994,27 @@
               "Монеты сокровищ",
               25
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 20,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 15,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 25,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            }
           ]
         }
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_chests_achievement_01_unl_icon.png"
     },
     {
       "category": "Раскопки / сундуки — серия 2",
@@ -1261,6 +2035,23 @@
               "Монеты сокровищ",
               10
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 60,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 5,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 10,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            }
           ]
         },
         {
@@ -1278,10 +2069,27 @@
               "Монеты сокровищ",
               25
             ]
+          ],
+          "visual_rewards": [
+            {
+              "name": "Очки события",
+              "quantity": 20,
+              "image": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
+            },
+            {
+              "name": "Провизия",
+              "quantity": 15,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+            },
+            {
+              "name": "Монеты сокровищ",
+              "quantity": 25,
+              "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+            }
           ]
         }
       ],
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/icons/minigame_chests_achievement_02_unl_icon.png"
     }
   ],
   "minigame_details": [
@@ -1699,7 +2507,8 @@
     "forest": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_forest_g_icon.png",
     "fight": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
     "riddle": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png",
-    "treasury": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png"
+    "treasury": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png",
+    "event_points": "https://cdn-prod-art.hwgame.cloud/battle_passes/scores/bp_event_minigame_score_icon.png"
   },
   "pet_skills_discovered": [
     {
