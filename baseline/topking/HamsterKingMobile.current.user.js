@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.42
+// @version      1.17.43
+// @release-note Hamsters: запуск теперь использует валидный общий live-state по модели Kokkaras и не блокируется обязательным повторным /player/me; реальная ошибка загрузки показывается в Runner.
 // @release-note Hamsters: live state нормализуется по модели Kokkaras перед расчётом прокачки; Орехи, Хомяки, фракции и инвентарь не теряются внутри data/result. Runner Хомяков снова вертикальный.
 // @release-note Карта Сокровищ: крупные ответы /quests, /shop/view и /client_config теперь дополнительно режутся на компактные treasure-only срезы без новых запросов к игре.
 // @release-note Hamsters: выровнен cost-parity с закреплённым Kokkaras donor — бюджет по-прежнему считается по Орехам, но допустимые дополнительные non-premium/non-hard компоненты стоимости больше не отбрасываются.
@@ -50,7 +51,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.42';
+  const BUILD_VERSION = '1.17.43';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -913,6 +914,7 @@
   const HK_GROWTH_NUTS_CANON_REV = 'growth-hamster-nuts-canon-20260923-r1';
   const HK_HAMSTERS_COST_PARITY_REV = 'hamsters-kokkaras-cost-parity-20260923-r1';
   const HK_HAMSTERS_KOKKARAS_LIVE_STATE_REV = 'hamsters-kokkaras-live-state-20260923-r2';
+  const HK_HAMSTERS_KOKKARAS_AUTH_STATE_REV = 'hamsters-kokkaras-auth-state-20260923-r3';
   const GROWTH_HAMSTER_BUDGET_ID = 'cur_nut';
   const GROWTH_GENERAL_BUDGET_ID = 'item_pit_token';
   const GROWTH_COPY_PRIORITY_DEFAULT = [[19,20],[18,20],[4,5],[11,12],[1,2],[7,8],[3,5],[17,20],[10,12],[2,5],[9,12],[6,8]];
@@ -925,6 +927,7 @@
   let growthShopDocument = null;
   let growthClientConfigDocument = null;
   let growthLastLoadedAt = 0;
+  let growthLastLoadError = null;
 
   function log(message, type = '') {
     message = localizeMessage(message);
@@ -12133,6 +12136,16 @@
     return 0;
   }
   function growthInventoryMap(state=growthState||hkStateStore.snapshot||playerDocument){ const map=new Map(); for(const row of growthArray('items',state)){const id=String(row?.item_id||row?.id||'');if(id)map.set(id,Math.max(0,Math.floor(Number(row?.quantity||0))));} return map; }
+  function growthUsableAccountState(state){
+    if(!state||typeof state!=='object')return false;
+    const hamsters=growthArray('playerHamsters',state);
+    const hasWallet=growthContainers(state).some(value=>Array.isArray(value?.currencies));
+    return hamsters.length>0&&hasWallet;
+  }
+  function growthCachedAccountState(){
+    for(const state of [growthState,hkStateStore.snapshot,playerDocument])if(growthUsableAccountState(state))return state;
+    return null;
+  }
   function growthNutCost(cost){ return costParts(cost).filter(row=>row.kind==='currencies'&&row.id===GROWTH_HAMSTER_BUDGET_ID).reduce((sum,row)=>sum+Math.max(0,row.quantity),0); }
   function growthCostText(cost){
     const parts=costParts(cost).filter(row=>row.id&&row.quantity>0);
@@ -12226,13 +12239,15 @@
 
   async function growthLoadLive({force=false,loadShop=true,loadConfig=false,silent=true}={}){
     if(growthLoadPromise)return growthLoadPromise;
-    if(!force&&growthState&&Date.now()-growthLastLoadedAt<8000)return growthState;
+    const cached=growthCachedAccountState();
+    if(!force&&cached){
+      growthState=cached;playerDocument=cached;growthNormalizeDonorState(growthState,cached,{full:false});growthLastLoadError=null;
+      recordDiagnostic('growth-live-cache-hit',{storeUpdatedAt:Number(hkStateStore.updatedAt||0),lastLoadedAt:growthLastLoadedAt});
+      renderGrowth();return growthState;
+    }
     const task=(async()=>{
       growthMenuLoading=true;renderGrowth();
       try{
-        // /player/me is the only mandatory request. Static/shop/event config are
-        // enrichments: their temporary failure must not make the whole Growth
-        // screen look disconnected or block a safe level-up plan.
         const playerPromise=apiJson('/player/me','POST');
         const staticPromise=growthEnsureStatic().catch(error=>{recordDiagnostic('growth-static-error',{error:error?.message||error});return null;});
         const shopPromise=loadShop?apiJson('/shop/view','GET').catch(error=>{recordDiagnostic('growth-shop-error',{error:error?.message||error});return null;}):Promise.resolve(null);
@@ -12242,18 +12257,22 @@
         const [,shop,cfg]=await Promise.all([staticPromise,shopPromise,configPromise]);
         if(shop)growthShopDocument=shop;
         if(cfg)growthClientConfigDocument=cfg;
-        growthLastLoadedAt=Date.now();
+        growthLastLoadedAt=Date.now();growthLastLoadError=null;
         if(!silent)log(either('Данные развития обновлены автоматически','Growth data refreshed automatically'),'ok');
         renderGrowth();return growthState;
-      }catch(error){log(`${either('Ошибка данных развития','Growth data error')}: ${error?.message||error}`,'bad');return null;}
-      finally{growthMenuLoading=false;growthLoadPromise=null;renderGrowth();}
+      }catch(error){
+        growthLastLoadError=error;
+        recordDiagnostic('growth-live-error',{name:error?.name||'',status:Number(error?.httpStatus||0),path:error?.apiPath||'',error:error?.message||String(error)});
+        log(`${either('Ошибка данных развития','Growth data error')}: ${error?.message||error}`,'bad');
+        return null;
+      }finally{growthMenuLoading=false;growthLoadPromise=null;renderGrowth();}
     })();
     growthLoadPromise=task;return task;
   }
   function growthAutoOpen(page){
     const settings=growthSettings();
     const needsConfig=page==='growth-hamsters'&&settings.excludeCurrentEventHamsters;
-    void growthLoadLive({force:true,loadShop:true,loadConfig:needsConfig,silent:true});
+    void growthLoadLive({force:false,loadShop:true,loadConfig:needsConfig,silent:true});
   }
   async function growthRecoverState(reason='state-mismatch'){
     log(either('Состояние изменилось — автоматически перечитываю аккаунт…','State changed — automatically refreshing the account…'),'warn');
@@ -12514,9 +12533,10 @@
     hkRunner.start({title:scope==='hamsters'?either('Хомяки','Hamsters'):scope==='generals'?either('Генералы','Generals'):either('Развитие','Growth'),total:phases,step:either('Подготовка актуального состояния','Preparing live state')});growthBusy=true;renderGrowth();
     let state=null,startPower=0,done=0;
     try{
-      state=await growthLoadLive({force:true,loadShop:true,loadConfig:settings.excludeCurrentEventHamsters,silent:true});
+      growthLastLoadError=null;
+      state=await growthLoadLive({force:false,loadShop:true,loadConfig:settings.excludeCurrentEventHamsters,silent:true});
       growthAbortCheck();
-      if(!state)throw new Error(either('Не удалось получить актуальное состояние аккаунта','Could not load the current account state'));
+      if(!state)throw growthLastLoadError||new Error(either('Не удалось получить актуальное состояние аккаунта','Could not load the current account state'));
       startPower=growthTotalPower(state);growthHamsterCurrencyAudit(state);
       const all=scope==='all',runPrep=scope==='prep'||(all&&settings.runPreparation),runGenerals=scope==='generals'||(all&&settings.runGenerals),runHamsters=scope==='hamsters'||(all&&settings.runHamsters);
       if(runPrep&&settings.buyGeneralContracts){hkRunner.setStep(either('Контракты Генералов','General contracts'),done,phases);state=await growthBuyAllGeneralContractsCore(state);hkRunner.setStep(either('Контракты готовы','Contracts done'),++done,phases);}

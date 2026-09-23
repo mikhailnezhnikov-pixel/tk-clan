@@ -17,7 +17,7 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.42
+- userscript: 1.17.43
 - current module: Hamsters / Хомяки — Stage 2.12 verification
 - current module file: audit/hk-stage2-12-hamsters.md
 - current module status: SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING
@@ -1926,3 +1926,9 @@ Current behavior:
 - production deploy `35814242259`: PASS;
 - public exact-match: PASS;
 - user browser check: PENDING.
+
+
+## Hamsters Kokkaras live-state 1.17.41
+
+- `hamsters-kokkaras-live-state-20260923-r2`: TECHNICAL LIVE PASS; user browser check pending.
+- Hamsters Runner vertical layout restored.

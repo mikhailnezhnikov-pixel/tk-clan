@@ -1,0 +1,11 @@
+USERSCRIPT_1_17_43_HAMSTERS_KOKKARAS_AUTH_STATE=PASS
+version=1.17.43
+base=1.17.42
+marker=hamsters-kokkaras-auth-state-20260923-r3
+source_sha256=34822200c2b6276897c3b2ebeb07395280c5dc79764a82a533e2a8cb7808b043
+candidate_sha256=b515b45a53e9585fd1c4097e1d4116201eb58aa50931a17f13c46e0ba48398ef
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
+user_browser_check=PENDING
