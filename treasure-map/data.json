@@ -2855,7 +2855,7 @@
         },
         {
           "title": "Случайные лоты",
-          "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_trader_icon.png",
           "note": "варианты за Монеты сокровищ и Провизию"
         },
         {
@@ -5039,7 +5039,7 @@
     {
       "id": "pets",
       "title": "Питомцы и поручения",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_pets_icon.png",
       "summary": "Питомцы расходуют корм в поручениях и дают Золотые монеты; высокие редкости дополнительно открывают специальные награды.",
       "facts": [
         "B: 2 корма → 1 Золотая монета.",
