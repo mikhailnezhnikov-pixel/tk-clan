@@ -46,13 +46,15 @@
       // Preserve the ambient appearance without animating the background.
       for(let i=0;i<30;i++)this.particles.addChild(new PIXI.Graphics().circle(0,0,1+i%3).fill({color:i%4?0xcbd4df:0xe8b654,alpha:.28+i%4*.08}));
     }
-    sync(war){
+    sync(war,info,options={}){
       if(!this.ready)return;
       const type=String(war?.opponent_type||war?.enemy_type||war?.kind||'')+' '+String(war?.opponent||'');
       const explicit=String(war?.opponent_type||war?.enemy_type||war?.kind||'').toLowerCase();
       const kind=/bot|boss|npc/i.test(explicit)?'bot':/clan|human/i.test(explicit)?'clan':/bot|boss|npc|бот|рейд|raid|страж|guardian|robot|drone/i.test(type)?'bot':'clan';
       if(kind!==this.kind){this.animator.cancel();this.kind=kind;this.enemy.setTextures(kind==='bot'?this.textureSets.bot:this.textureSets.raider)}
       this.host.dataset.opponentKind=war?kind:'none';
+      const ratio=(hp,max)=>max>0&&Number.isFinite(hp)?Math.max(0,Math.min(1,hp/max)):1;
+      this.animator.setAtmosphere({active:!!war,ours:ratio(Number(war?.our_hp),Number(war?.our_hp_max)),enemy:ratio(Number(war?.opponent_hp),Number(war?.opponent_hp_max)),deferDefeat:!!options.deferDefeat});
     }
     layout(){
       if(!this.ready)return;
@@ -63,13 +65,13 @@
       const mobile=W<600,h=mobile?Math.min(H*.58,W*.43):Math.min(350,H*.67),y=mobile?Math.min(H-108,H*.73):Math.min(H-104,H*.76);
       this.ours.height=h;this.enemy.height=h;
       this.ours.setBase(W*(mobile?.24:.27),y);this.enemy.setBase(W*(mobile?.76:.73),y);
-      this.ours.resize();this.enemy.resize();this.ours.reset();this.enemy.reset();
+      this.ours.resize();this.enemy.resize();this.ours.reset();this.enemy.reset();this.animator?.settle();
       this.floor.position.set(W*.5,y+8);this.floor.scale.set(W/950,1);
       this.particles.children.forEach((p,i)=>{p.x=((i*813.1)%W);p.y=35+(i*197.7)%Math.max(1,H-130)});
     }
-    reset(){this.animator?.cancel();this.ours?.reset();this.enemy?.reset()}
-    impact(attacker,defender){
-      const flash=new this.PIXI.Graphics().circle(0,0,11).fill({color:0xffefc3,alpha:.78});
+    reset(){this.animator?.setAtmosphere({active:false,ours:1,enemy:1});this.ours?.reset();this.enemy?.reset()}
+    impact(attacker,defender,ambient=false){
+      const flash=new this.PIXI.Graphics().circle(0,0,ambient?6:11).fill({color:0xffefc3,alpha:ambient?.28:.78});
       flash.position.set(defender.base.x-attacker.face*defender.height*.27,defender.base.y-defender.height*.57);
       this.fx.addChild(flash);
       this.gsap.to(flash,{alpha:0,duration:.18,onComplete:()=>{flash.parent?.removeChild(flash);flash.destroy()}});

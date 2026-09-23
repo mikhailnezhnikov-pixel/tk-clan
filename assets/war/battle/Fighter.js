@@ -9,6 +9,7 @@
       this.container=new PIXI.Container();this.pose=new PIXI.Container();this.container.addChild(this.pose);
       this.base={x:0,y:0};this.face=side==='left'?1:-1;
       this.motion={progress:0};this.state='idle';this.time=side==='left'?0:1.1;
+      this.fatigue=0;this.defeated=false;
       this.front=new PIXI.Sprite(PIXI.Texture.EMPTY);this.back=new PIXI.Sprite(PIXI.Texture.EMPTY);
       for(const sprite of [this.front,this.back]){sprite.anchor.set(FOOT_X,FOOT_Y);this.pose.addChild(sprite)}
       this.resize();this.reset();
@@ -36,8 +37,9 @@
       if(this.back.texture!==frames[next])this.back.texture=frames[next];
       this.front.alpha=1;this.back.alpha=mix;
     }
-    tick(seconds,reduced){if(this.state==='idle'&&!reduced)this.time+=seconds;this.renderFrame()}
-    reset(){this.container.position.set(this.base.x,this.base.y);this.container.rotation=0;this.container.alpha=1;this.pose.rotation=0;this.setMotion('idle',0)}
+    tick(seconds,reduced){if(this.state==='idle'&&!reduced)this.time+=seconds*(1-this.fatigue*.35);this.renderFrame()}
+    setHealth(ratio){this.fatigue=Math.max(0,Math.min(1,(1-ratio)*1.2));this.defeated=ratio<=0}
+    reset(){this.container.position.set(this.base.x,this.base.y);this.container.rotation=0;this.container.alpha=1;this.pose.rotation=this.face*this.fatigue*.14;this.setMotion('idle',0)}
     destroy(){this.front.destroy();this.back.destroy()}
   }
   w.TopKingBattleCore=w.TopKingBattleCore||{};w.TopKingBattleCore.Fighter=Fighter;

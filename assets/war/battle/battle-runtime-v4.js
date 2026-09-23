@@ -15,7 +15,7 @@
       try{
         await scene.init(event=>{if(generation!==state.generation)return;state.eventCallback?.(event);const shown=activeHp(event.snapshot||{});if(shown.side===event.defender)emitHp(event.remainingHp,event.maxHp,{animated:true,event})});
         if(generation!==state.generation)return false;
-        state.adapter=new C.WarEventAdapter();state.queue=new C.BattleEventQueue(event=>scene.play(event));state.ready=true;
+        state.adapter=new C.WarEventAdapter();state.queue=new C.BattleEventQueue(event=>scene.play(event),()=>scene.animator.queueDrained());state.ready=true;
         host.classList.remove('battle-v2-failed');
         if(state.pending){const p=state.pending;state.pending=null;update(p.war,p.info,p.options)}
         return true;
@@ -30,12 +30,12 @@
     if(!war){state.queue.clear();state.scene.reset();state.adapter.reset();state.scene.sync(null);emitHp(0,0,{animated:false});return true}
     const result=state.adapter.ingest(war),hp=activeHp(war);
     if(result.initial){state.queue.clear();state.scene.reset()}
-    state.scene.sync(war,info);
+    state.scene.sync(war,info,{deferDefeat:!!(result.events.length||state.queue.running||state.queue.items.length)});
     // An unchanged poll must not leap ahead of a queued contact.
     if(result.initial||(result.forceSync&&!state.queue.running&&!state.queue.items.length))emitHp(hp.hp,hp.max,{animated:false,initial:result.initial});
     if(result.events.length)state.queue.enqueueMany(result.events);return true;
   }
   function destroy(){state.generation++;state.queue?.clear();state.scene?.destroy();state.adapter?.reset();Object.assign(state,{scene:null,adapter:null,queue:null,pending:null,hpCallback:null,eventCallback:null,ready:false,initializing:null})}
-  w.TopKingBattleV4={version:'4.2.0-frame-motion',init,update,destroy};
+  w.TopKingBattleV4={version:'4.3.0-continuous-combat',init,update,destroy};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>init().catch(console.error),{once:true});else init().catch(console.error);
 })(window);

@@ -17,11 +17,15 @@
     report('snapshot');
   };
   const button=(title,fn)=>{const b=document.createElement('button');b.textContent=title;b.style.cssText='padding:12px;margin:4px';b.onclick=fn;panel.append(b)};
-  button('Top King attacks',()=>{fixture.opponent_hp-=1400;update()});
-  button('Enemy attacks',()=>{fixture.our_hp-=2100;update()});
+  button('Top King attacks',()=>{fixture.opponent_hp=Math.max(0,fixture.opponent_hp-1400);update()});
+  button('Enemy attacks',()=>{fixture.our_hp=Math.max(0,fixture.our_hp-2100);update()});
   button('Queue 4 hits',()=>{for(let i=0;i<4;i++){fixture.opponent_hp-=100+i;update()}});
   button('Unchanged poll',update);
   button('Switch bot / raider',()=>{fixture.opponent_type=fixture.opponent_type==='bot'?'clan':'bot';update()});
+  button('Enemy tired (20% HP)',()=>{fixture.opponent_hp=180000;update()});
+  button('Top King tired (20% HP)',()=>{fixture.our_hp=180000;update()});
+  button('Defeat enemy',()=>{fixture.opponent_hp=0;update()});
+  button('Defeat Top King',()=>{fixture.our_hp=0;update()});
   button('Reset battle',()=>{window.TopKingBattleV4.update(null);fixture={...fixture,war_id:fixture.war_id+'x',opponent_hp:900000,our_hp:900000};update()});
   panel.append(status);document.querySelector('main').prepend(panel);update();
 })();

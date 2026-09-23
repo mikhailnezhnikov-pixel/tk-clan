@@ -21,7 +21,7 @@ jobs:
           for f in assets/war/battle/*.js; do node --check "$f"; done
           node --test assets/war/battle/verify.cjs
           ! grep -Fq 'battle-engine-v2.js?v=' wars/index.html
-          grep -Fq "version:'4.2.0-frame-motion'" assets/war/battle/battle-runtime-v4.js
+          grep -Fq "version:'4.3.0-continuous-combat'" assets/war/battle/battle-runtime-v4.js
       - name: Decode production fighter sources
         run: |
           python -m pip install --quiet pillow

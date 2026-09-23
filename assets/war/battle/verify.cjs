@@ -23,3 +23,9 @@ test('queue drains serially and resumes a new epoch after cancellation',async()=
  q.enqueueMany([1,2]);assert.deepEqual(seen,[1]);q.clear();q.enqueueMany([3,4]);release();
  await new Promise(r=>setImmediate(r));assert.deepEqual(seen,[1,3,4]);assert.equal(q.running,false);
 });
+test('queue announces completion only after the last real attack',async()=>{
+ let release;const seen=[];const q=new BattleEventQueue(async e=>{seen.push(e);await new Promise(r=>release=r)},()=>seen.push('settled'));
+ q.enqueueMany([1,2]);assert.deepEqual(seen,[1]);release();await new Promise(r=>setImmediate(r));
+ assert.deepEqual(seen,[1,2]);release();await new Promise(r=>setImmediate(r));
+ assert.deepEqual(seen,[1,2,'settled']);
+});

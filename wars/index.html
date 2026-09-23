@@ -651,12 +651,12 @@ window.TK_PAGE_TRANSLATIONS={
 <script src="../assets/site-i18n.js?v=20260920-10"></script>
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.21.0/dist/pixi.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
-<script src="../assets/war/battle/BattleEventQueue.js?v=20260923-1"></script>
+<script src="../assets/war/battle/BattleEventQueue.js?v=20260923-7"></script>
 <script src="../assets/war/battle/WarEventAdapter.js?v=20260923-1"></script>
-<script src="../assets/war/battle/Fighter.js?v=20260923-6"></script>
-<script src="../assets/war/battle/BattleAnimator.js?v=20260923-5"></script>
-<script src="../assets/war/battle/BattleScene.js?v=20260923-5"></script>
-<script src="../assets/war/battle/battle-runtime-v4.js?v=20260923-5"></script>
+<script src="../assets/war/battle/Fighter.js?v=20260923-7"></script>
+<script src="../assets/war/battle/BattleAnimator.js?v=20260923-7"></script>
+<script src="../assets/war/battle/BattleScene.js?v=20260923-7"></script>
+<script src="../assets/war/battle/battle-runtime-v4.js?v=20260923-7"></script>
 <script>
 const API='https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war';
 let currentWar=null;
@@ -733,8 +733,11 @@ function renderBattleScene(war,info){
   const ourHpMax=Number(war?.our_hp_max);
   const defending=Number.isFinite(ourHpMax)&&ourHpMax>0&&!(Number.isFinite(opponentHpMax)&&opponentHpMax>0);
   document.getElementById('battle-mode').textContent=defending?'Оборона Top King':'Атака Top King';
-  document.getElementById('battle-our-state').textContent=defending?'Держим оборону':'Атакуем';
-  document.getElementById('battle-action').textContent=kind==='bot'?'БОЙ С БОТОМ':'БИТВА ИДЁТ';
+  const enemyFallen=Number(war?.opponent_hp_max)>0&&Number(war?.opponent_hp)<=0;
+  const oursFallen=Number(war?.our_hp_max)>0&&Number(war?.our_hp)<=0;
+  document.getElementById('battle-our-state').textContent=oursFallen?'Повержен':defending?'Держим оборону':'Атакуем';
+  document.getElementById('battle-enemy-style').textContent=enemyFallen?'Повержен':kind==='bot'?'Автоматический противник':'Клан противника';
+  document.getElementById('battle-action').textContent=enemyFallen?'ПРОТИВНИК ПОВЕРЖЕН':oursFallen?'TOP KING ПОВЕРЖЕН':kind==='bot'?'БОЙ С БОТОМ':'БИТВА ИДЁТ';
 
 }
 function fmtNumber(value){
@@ -822,6 +825,6 @@ document.addEventListener('tk-language-change',render);
 if(!new URLSearchParams(location.search).has('battlePreview')){load();setInterval(load,60000)}
 </script>
 <script src="../assets/site-nav.js?v=20260920-11"></script>
-<script src="../assets/war/battle/battle-preview.js?v=20260923-3"></script>
+<script src="../assets/war/battle/battle-preview.js?v=20260923-7"></script>
 </body>
 </html>
