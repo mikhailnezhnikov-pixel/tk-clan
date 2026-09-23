@@ -1,24 +1,35 @@
-import importlib.util,sqlite3
-from pathlib import Path
+import importlib.util,sqlite3,json,time
 
 server_path="/opt/hamsterking-license/server.py"
-source=Path(server_path).read_text(encoding="utf-8")
-print("RUNTIME_SMOKE_MARKER", "RUNTIME_SMOKE_CAPTURE_V1" in source)
-print("RUNTIME_SMOKE_ROUTE", "/api/v1/runtime-smoke/capture" in source)
-
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec);spec.loader.exec_module(server)
-print("RUNTIME_SMOKE_SCHEMA_FN", hasattr(server,"ensure_runtime_smoke_capture_schema"))
-print("SERVER_DB_PATH", getattr(server,"DB_PATH",""))
-if hasattr(server,"ensure_runtime_smoke_capture_schema"):
-    server.ensure_runtime_smoke_capture_schema()
+server.ensure_runtime_smoke_capture_schema()
 
-db_path=str(getattr(server,"DB_PATH","") or "/opt/hamsterking-license/licenses.db")
-db=sqlite3.connect(db_path)
-rows=db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%smoke%' ORDER BY name").fetchall()
-print("SMOKE_TABLES", [row[0] for row in rows])
-row=db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='runtime_smoke_captures'").fetchone()
-print("RUNTIME_SMOKE_TABLE", bool(row))
-if row:
-    count=db.execute("SELECT COUNT(*) FROM runtime_smoke_captures").fetchone()[0]
-    print("RUNTIME_SMOKE_ROWS", count)
+db=sqlite3.connect(str(server.DB_PATH))
+db.row_factory=sqlite3.Row
+now=int(time.time())
+
+versions=[dict(r) for r in db.execute("""SELECT script_version,COUNT(*) AS devices,MAX(last_seen) AS last_seen
+                                       FROM devices
+                                       GROUP BY script_version
+                                       ORDER BY last_seen DESC
+                                       LIMIT 20""")]
+for row in versions:
+    row["age_s"]=now-int(row.get("last_seen") or 0)
+print("DEVICE_VERSIONS",json.dumps(versions,ensure_ascii=False))
+
+rows=[dict(r) for r in db.execute("""SELECT id,script_version,revision,summary_json,events_json,captured_at
+                                    FROM runtime_smoke_captures
+                                    ORDER BY captured_at DESC,id DESC LIMIT 20""")]
+print("RUNTIME_SMOKE_ROWS",len(rows))
+for row in rows:
+    summary=json.loads(row.get("summary_json") or "{}")
+    events=json.loads(row.get("events_json") or "[]")
+    print("RUNTIME_SMOKE_ROW",json.dumps({
+        "id":row.get("id"),
+        "script_version":row.get("script_version"),
+        "revision":row.get("revision"),
+        "age_s":now-int(row.get("captured_at") or 0),
+        "summary":summary,
+        "event_types":[str(e.get("type") or "") for e in events[-24:]]
+    },ensure_ascii=False))
