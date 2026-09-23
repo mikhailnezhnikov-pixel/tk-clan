@@ -1,0 +1,301 @@
+name: Deploy Userscript Generic Safe
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/userscript-release.json'
+      - '.github/workflows/deploy-userscript-generic-safe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load release manifest
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,re,os
+          from pathlib import Path
+
+          m=json.loads(Path('deploy/topking/userscript-release.json').read_text())
+
+          source=str(m['source_version'])
+          target=str(m['target_version'])
+          candidate=str(m['candidate_path'])
+          marker=str(m['primary_marker'])
+          audit=str(m['audit_status_path'])
+          message=str(m['commit_message'])
+
+          assert re.fullmatch(r'\d+\.\d+\.\d+',source)
+          assert re.fullmatch(r'\d+\.\d+\.\d+',target)
+          assert candidate.startswith('deploy/topking/')
+          assert candidate.endswith('.candidate.user.js')
+          assert Path(candidate).is_file()
+          assert audit.startswith('audit/')
+          assert '\n' not in marker
+          assert '\n' not in message
+
+          with open(os.environ['GITHUB_ENV'],'a') as f:
+              f.write(f'SOURCE_VERSION={source}\n')
+              f.write(f'TARGET_VERSION={target}\n')
+              f.write(f'CANDIDATE_PATH={candidate}\n')
+              f.write(f'PRIMARY_MARKER={marker}\n')
+              f.write(f'AUDIT_STATUS_PATH={audit}\n')
+              f.write(f'RELEASE_COMMIT_MESSAGE={message}\n')
+          PY
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Validate candidate
+        run: |
+          set -euo pipefail
+
+          cp "$CANDIDATE_PATH" /tmp/candidate.user.js
+          node --check /tmp/candidate.user.js
+
+          grep -Fq "// @version      $TARGET_VERSION" /tmp/candidate.user.js
+          grep -Fq "const BUILD_VERSION = '$TARGET_VERSION';" /tmp/candidate.user.js
+          grep -Fq "$PRIMARY_MARKER" /tmp/candidate.user.js
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          m=json.loads(Path('deploy/topking/userscript-release.json').read_text())
+          s=Path('/tmp/candidate.user.js').read_text()
+
+          for marker in m.get('preserve_markers',[]):
+              assert marker in s, f'missing candidate marker: {marker}'
+          PY
+
+          sha256sum /tmp/candidate.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Fetch exact current live
+        run: |
+          set -euo pipefail
+
+          scp -q \
+            -i "$HOME/.ssh/topking" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js \
+            /tmp/live.user.js
+
+          node --check /tmp/live.user.js
+          grep -Fq "// @version      $SOURCE_VERSION" /tmp/live.user.js
+
+          cmp -s \
+            /tmp/live.user.js \
+            baseline/topking/HamsterKingMobile.current.user.js
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          m=json.loads(Path('deploy/topking/userscript-release.json').read_text())
+          s=Path('/tmp/live.user.js').read_text()
+
+          for marker in m.get('preserve_markers',[]):
+              assert marker in s, f'missing source marker: {marker}'
+          PY
+
+          sha256sum /tmp/live.user.js | awk '{print $1}' > /tmp/source.sha
+
+      - name: Race-safe deploy
+        run: |
+          set -euo pipefail
+
+          source_sha="$(cat /tmp/source.sha)"
+          candidate_sha="$(cat /tmp/candidate.sha)"
+
+          scp -q \
+            -i "$HOME/.ssh/topking" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=accept-new \
+            /tmp/candidate.user.js \
+            root@89.125.1.71:/tmp/HamsterKingMobile.release.user.js
+
+          ssh \
+            -i "$HOME/.ssh/topking" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 \
+            "SOURCE_SHA='$source_sha' CANDIDATE_SHA='$candidate_sha' SOURCE_VERSION='$SOURCE_VERSION' TARGET_VERSION='$TARGET_VERSION' PRIMARY_MARKER='$PRIMARY_MARKER' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          live=/opt/hamsterking-license/HamsterKingMobile.user.js
+          candidate=/tmp/HamsterKingMobile.release.user.js
+          backup=/opt/hamsterking-license/HamsterKingMobile.user.js.rollback.generic
+          minconf=/etc/systemd/system/hamsterking-license.service.d/min-version.conf
+
+          test "$(sha256sum "$live" | awk '{print $1}')" = "$SOURCE_SHA"
+          test "$(sha256sum "$candidate" | awk '{print $1}')" = "$CANDIDATE_SHA"
+
+          node --check "$candidate"
+
+          cp -a "$live" "$backup"
+
+          rollback() {
+            set +e
+            install -m 0644 "$backup" "$live"
+            printf "%s\n" \
+              "[Service]" \
+              "Environment=\"HK_MIN_SCRIPT_VERSION=$SOURCE_VERSION\"" \
+              > "$minconf"
+            systemctl daemon-reload
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          }
+
+          trap rollback ERR
+
+          install -m 0644 "$candidate" "$live"
+
+          printf "%s\n" \
+            "[Service]" \
+            "Environment=\"HK_MIN_SCRIPT_VERSION=$TARGET_VERSION\"" \
+            > "$minconf"
+
+          systemctl daemon-reload
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+
+          node --check "$live"
+
+          test "$(sha256sum "$live" | awk '{print $1}')" = "$CANDIDATE_SHA"
+          grep -Fq "// @version      $TARGET_VERSION" "$live"
+          grep -Fq "$PRIMARY_MARKER" "$live"
+
+          trap - ERR
+          REMOTE
+
+      - name: Verify public exact match
+        id: public_verify
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          curl -fsSL \
+            --retry 5 \
+            --retry-delay 2 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?release=$(date +%s)" \
+            -o /tmp/public.js
+
+          node --check /tmp/public.js
+          cmp -s /tmp/candidate.user.js /tmp/public.js
+
+          test "$(sha256sum /tmp/public.js | awk '{print $1}')" = \
+               "$(cat /tmp/candidate.sha)"
+
+          grep -Fq "// @version      $TARGET_VERSION" /tmp/public.js
+          grep -Fq "$PRIMARY_MARKER" /tmp/public.js
+
+      - name: Roll back if public verification failed
+        if: steps.public_verify.outcome == 'failure'
+        run: |
+          set -euo pipefail
+
+          ssh \
+            -i "$HOME/.ssh/topking" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 \
+            "SOURCE_VERSION='$SOURCE_VERSION' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          live=/opt/hamsterking-license/HamsterKingMobile.user.js
+          backup=/opt/hamsterking-license/HamsterKingMobile.user.js.rollback.generic
+          minconf=/etc/systemd/system/hamsterking-license.service.d/min-version.conf
+
+          install -m 0644 "$backup" "$live"
+
+          printf "%s\n" \
+            "[Service]" \
+            "Environment=\"HK_MIN_SCRIPT_VERSION=$SOURCE_VERSION\"" \
+            > "$minconf"
+
+          systemctl daemon-reload
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+
+          node --check "$live"
+          grep -Fq "// @version      $SOURCE_VERSION" "$live"
+          REMOTE
+
+          exit 1
+
+      - name: Sync verified baseline
+        if: steps.public_verify.outcome == 'success'
+        run: |
+          set -euo pipefail
+
+          git pull --rebase origin main
+
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = \
+               "$(cat /tmp/source.sha)"
+
+          cp /tmp/candidate.user.js \
+             baseline/topking/HamsterKingMobile.current.user.js
+
+          mkdir -p "$(dirname "$AUDIT_STATUS_PATH")"
+
+          {
+            echo "GENERIC_USERSCRIPT_DEPLOY=PASS"
+            echo "source_version=$SOURCE_VERSION"
+            echo "target_version=$TARGET_VERSION"
+            echo "marker=$PRIMARY_MARKER"
+            echo "source_sha256=$(cat /tmp/source.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+            echo "public_exact_match=PASS"
+            echo "server_rollback_guard=ENABLED"
+            echo "public_verify_rollback=ENABLED"
+            echo "ci_game_mutations=NONE"
+          } > "$AUDIT_STATUS_PATH"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            baseline/topking/HamsterKingMobile.current.user.js \
+            "$AUDIT_STATUS_PATH"
+
+          if ! git diff --cached --quiet; then
+            git commit -m "$RELEASE_COMMIT_MESSAGE"
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f \
+            "$HOME/.ssh/topking" \
+            /tmp/candidate.user.js \
+            /tmp/live.user.js \
+            /tmp/public.js \
+            /tmp/source.sha \
+            /tmp/candidate.sha
