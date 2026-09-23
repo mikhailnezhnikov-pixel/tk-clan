@@ -140,7 +140,7 @@
       <article class="start-step"><span class="start-step-num">5</span><b>Дойдите до Сокровищницы</b><span>Вход в Сокровищницу завершает текущую Карту сокровищ.</span></article>
     </div>
     <nav class="quick-links" aria-label="Быстрый переход по гайду">
-      <a href="#room-cheatsheet">Что делать в комнатах</a><a href="#newbie-guide">Первый заход</a><a href="#fishing-guide">Рыбалка</a><a href="#chests-guide">Сундуки</a><a href="#trader-guide">Торговец</a><a href="#pets-guide">Питомцы</a><a href="#economy-guide">Экономика</a><a href="#shop-guide">Магазин</a>
+      <a href="#room-cheatsheet">Что делать в комнатах</a><a href="#newbie-guide">Первый заход</a><a href="#fishing-guide">Рыбалка</a><a href="#labyrinth-guide">Лабиринт</a><a href="#battle-guide">Сражение</a><a href="#chests-guide">Сундуки</a><a href="#trader-guide">Торговец</a><a href="#pets-guide">Питомцы</a><a href="#treasury-guide">Сокровищница</a><a href="#economy-guide">Экономика</a><a href="#shop-guide">Магазин</a>
     </nav>
   </section>
 
@@ -161,6 +161,15 @@
 
   <div class="section-head" id="fishing-guide"><div><h2>Рыбалка — пошаговый гайд</h2><p>Что делать после входа в Необычный Водоём, как читать клетки и что влияет на находки.</p></div></div>
   <section class="deep-guide" id="fishing-guide-content"></section>
+
+  <div class="section-head" id="labyrinth-guide"><div><h2>Лабиринт — пошаговый гайд</h2><p>Как работает поле 3×3 и как пользоваться закладкой-помощником.</p></div></div>
+  <section class="walkthrough" id="labyrinth-guide-content"></section>
+
+  <div class="section-head" id="battle-guide"><div><h2>Сражение — пошаговый гайд</h2><p>HP, цепные эффекты врагов и порядок целей.</p></div></div>
+  <section class="walkthrough" id="battle-guide-content"></section>
+
+  <div class="section-head" id="treasury-guide"><div><h2>Сокровищница — завершение карты</h2><p>Три пути, стоимость и что действительно подтверждено.</p></div></div>
+  <section class="walkthrough" id="treasury-guide-content"></section>
 
   <div class="section-head"><div><h2>Механики события</h2><p>Как работают основные комнаты и мини-игры: что тратится, что означают клетки и как читать поле.</p></div></div>
   <section class="mechanics-hub" id="event-mechanics"></section>
@@ -285,6 +294,9 @@
       lights:'Нужно привести поле 3×3 к состоянию, где включены все лампы. Помощник Top King может показать порядок нажатий.',
       treasury:'Выберите один из трёх путей. Каждый подтверждённый путь стоит 5 Провизии.'
     };
+    const labyrinthGuide=data.labyrinth_guide||{};
+    const battleGuide=data.battle_guide||{};
+    const treasuryGuide=data.treasury_guide||{};
     const beginnerGuide=data.beginner_event_guide||{};
     const chestsGuide=data.chests_guide||{};
     const traderGuide=data.trader_guide||{};
@@ -328,6 +340,17 @@
       (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
       '<h4>'+safe(v.title)+'</h4><p>'+safe(v.text)+'</p></article>'
     ).join('')+'</div>';
+
+
+    const renderSimpleWalkthrough=(target,g)=>{
+      const el=document.getElementById(target); if(!el)return;
+      el.innerHTML='<div class="walkthrough-head"><div><h3>'+safe(g.title||'')+'</h3><p>'+safe(g.intro||'')+'</p></div>'+
+        (g.entry?'<div class="walkthrough-cost">'+(g.entry.image?'<img src="'+safe(g.entry.image)+'" alt="">':'')+safe(g.entry.value||'')+'</div>':'')+'</div>'+
+        renderSteps(g.steps)+(g.note?'<div class="guide-warning">'+safe(g.note)+'</div>':'');
+    };
+    renderSimpleWalkthrough('labyrinth-guide-content',labyrinthGuide);
+    renderSimpleWalkthrough('battle-guide-content',battleGuide);
+    renderSimpleWalkthrough('treasury-guide-content',treasuryGuide);
 
     if(document.getElementById('newbie-guide-content')){
       const g=beginnerGuide||{};
