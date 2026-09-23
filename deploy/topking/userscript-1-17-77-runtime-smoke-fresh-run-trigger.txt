@@ -1,0 +1,4 @@
+runtime_smoke_fresh_run=1.17.77
+source=1.17.76
+marker=runtime-smoke-fresh-run-20260923-r1
+stamp=2026-09-23T23:23+09:00
