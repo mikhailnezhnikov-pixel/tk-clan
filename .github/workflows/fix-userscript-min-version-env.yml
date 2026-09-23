@@ -1,0 +1,147 @@
+name: Fix Userscript Minimum Version Environment
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/userscript-min-version-env-fix-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Repair effective minimum version
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 bash -s <<'REMOTE'
+          set -euo pipefail
+          live=/opt/hamsterking-license/HamsterKingMobile.user.js
+          envfile=/etc/hamsterking-license.env
+          dropin=/etc/systemd/system/hamsterking-license.service.d/min-version.conf
+          envbak=/tmp/hamsterking-license.env.before-min-version-fix
+          dropbak=/tmp/min-version.conf.before-min-version-fix
+
+          grep -Fq "// @version      1.17.83" "$live"
+          test -f "$envfile"
+          cp -a "$envfile" "$envbak"
+          if test -f "$dropin"; then cp -a "$dropin" "$dropbak"; else rm -f "$dropbak"; fi
+
+          rollback() {
+            set +e
+            cp -a "$envbak" "$envfile"
+            if test -f "$dropbak"; then
+              install -d -m 0755 "$(dirname "$dropin")"
+              cp -a "$dropbak" "$dropin"
+            else
+              rm -f "$dropin"
+            fi
+            systemctl daemon-reload
+            systemctl restart hamsterking-license.service
+          }
+          trap rollback ERR
+
+          python3 - "$envfile" <<'PY'
+          from pathlib import Path
+          import re, sys
+          path=Path(sys.argv[1])
+          text=path.read_text(encoding="utf-8")
+          rows=text.splitlines()
+          out=[]
+          written=False
+          for row in rows:
+              if re.match(r"^\s*HK_MIN_SCRIPT_VERSION\s*=",row):
+                  if not written:
+                      out.append("HK_MIN_SCRIPT_VERSION=1.17.83")
+                      written=True
+                  continue
+              out.append(row)
+          if not written:
+              out.append("HK_MIN_SCRIPT_VERSION=1.17.83")
+          path.write_text("\n".join(out)+"\n",encoding="utf-8")
+          PY
+
+          # The EnvironmentFile is authoritative; remove the obsolete duplicate drop-in.
+          rm -f "$dropin"
+          systemctl daemon-reload
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+
+          pid="$(systemctl show hamsterking-license.service -p MainPID --value)"
+          test -n "$pid"
+          python3 - "$pid" <<'PY'
+          from pathlib import Path
+          import sys
+          pid=sys.argv[1]
+          values=[]
+          for entry in Path(f"/proc/{pid}/environ").read_bytes().split(b"\0"):
+              if entry.startswith(b"HK_MIN_SCRIPT_VERSION="):
+                  values.append(entry.split(b"=",1)[1].decode())
+          print("PROCESS_MIN_VALUES",values)
+          if values != ["1.17.83"]:
+              raise SystemExit(f"effective minimum version mismatch: {values}")
+          PY
+
+          grep -Fq "HK_MIN_SCRIPT_VERSION=1.17.83" "$envfile"
+          test ! -e "$dropin"
+          node --check "$live"
+          grep -Fq "// @version      1.17.83" "$live"
+          trap - ERR
+          REMOTE
+
+      - name: Verify public release
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 5 --retry-delay 2 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?min-env-fix=$(date +%s)" \
+            -o /tmp/public.js
+          node --check /tmp/public.js
+          grep -Fq "// @version      1.17.83" /tmp/public.js
+          cmp -s /tmp/public.js baseline/topking/HamsterKingMobile.current.user.js
+
+      - name: Persist audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          printf "%s\n" \
+            "USERSCRIPT_MIN_VERSION_ENV_FIX=PASS" \
+            "target_version=1.17.83" \
+            "environment_file=/etc/hamsterking-license.env" \
+            "effective_process_min=1.17.83" \
+            "obsolete_dropin=REMOVED" \
+            "service_active=PASS" \
+            "public_exact_match=PASS" \
+            > audit/hk-userscript-min-version-env-fix-status.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-userscript-min-version-env-fix-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "fix: align effective userscript minimum version"
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/public.js
