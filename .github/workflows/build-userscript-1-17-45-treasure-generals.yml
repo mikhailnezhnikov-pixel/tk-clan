@@ -1,0 +1,124 @@
+name: Build Userscript 1.17.45 Treasure Generals
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_treasure_pet_skill_selective_1_17_45.py'
+      - 'deploy/topking/patch_generals_kokkaras_live_display_1_17_45.py'
+      - '.github/workflows/build-userscript-1-17-45-treasure-generals.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-17-45
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate from exact live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.17.44" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.44';" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_treasure_pet_skill_selective_1_17_45.py
+          python3 deploy/topking/patch_generals_kokkaras_live_display_1_17_45.py
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.45" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.45';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-guide-pet-skill-selective-20260923-r3" /tmp/HamsterKingMobile.user.js
+          grep -Fq "generals-kokkaras-live-display-20260923-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "generals-kokkaras-cost-parity-20260923-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function growthUsableAccountState(state,scope='account')" /tmp/HamsterKingMobile.user.js
+          grep -Fq "if(scope==='generals')return generals.length>0&&hasCurrencies&&hasItems;" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const scope=page==='growth-generals'?'generals'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const liveScope=scope==='generals'?'generals'" /tmp/HamsterKingMobile.user.js
+          grep -Fq "startNuts=growthResource(GROWTH_HAMSTER_BUDGET_ID,state)" /tmp/HamsterKingMobile.user.js
+          grep -Fq "Pit-бюджет" /tmp/HamsterKingMobile.user.js
+          grep -Fq "полная цена из live costs" /tmp/HamsterKingMobile.user.js
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.45.treasure-generals-live-display.candidate.user.js
+          audit=audit/hk-userscript-1-17-45-treasure-generals-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            cat > deploy/topking/userscript-release.json <<'JSON'
+{
+  "schema": 1,
+  "source_version": "1.17.44",
+  "target_version": "1.17.45",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.45.treasure-generals-live-display.candidate.user.js",
+  "primary_marker": "generals-kokkaras-live-display-20260923-r2",
+  "preserve_markers": [
+    "treasure-guide-pet-skill-selective-20260923-r3",
+    "generals-kokkaras-cost-parity-20260923-r1",
+    "hamsters-kokkaras-auth-state-20260923-r3",
+    "hamsters-kokkaras-live-state-20260923-r2",
+    "hamsters-kokkaras-cost-parity-20260923-r1",
+    "treasure-guide-selective-extract-20260923-r2",
+    "treasure-guide-passive-capture-20260923-r1",
+    "maps-manual-scan-only-20260923-r1",
+    "growth-hamster-nuts-canon-20260923-r1",
+    "clan-snapshot-numeric-player-id-20260923-r1",
+    "auto-routines-in-today-20260922-r3",
+    "game-api-rate-guard-20260922-r1",
+    "public-collector-activity-lease-20260922-r1",
+    "businesses-kokkaras-donor-20260922-r1",
+    "businesses-runner-vertical-20260922-r1"
+  ],
+  "audit_status_path": "audit/hk-userscript-1-17-45-treasure-generals-live-status.txt",
+  "commit_message": "fix: deploy Generals live-state display in userscript 1.17.45"
+}
+JSON
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_17_45_TREASURE_GENERALS_PREDEPLOY=PASS"
+              echo "source_version=1.17.44"
+              echo "target_version=1.17.45"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+              echo "treasure_pet_skill_marker=PASS"
+              echo "generals_live_display_marker=PASS"
+              echo "generals_scoped_cache_guard=PASS"
+              echo "generals_nuts_and_pit_display=PASS"
+              echo "syntax=PASS"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.17.45 Treasure and Generals live display"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
