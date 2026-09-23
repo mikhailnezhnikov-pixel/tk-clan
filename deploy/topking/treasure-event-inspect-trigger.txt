@@ -1,2 +1,2 @@
-inspect=treasure-exact-pet-skill-objects
-stamp=2026-09-23T14:21+09:00
+inspect=treasure-recent-dom-b2
+stamp=2026-09-23T14:24+09:00
