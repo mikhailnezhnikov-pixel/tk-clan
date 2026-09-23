@@ -1,28 +1,31 @@
-import importlib.util, json
+import importlib.util, json, re
 
 server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 with server.db_session() as db:
-    row=db.execute("""SELECT id,path,payload_json FROM treasure_guide_captures
-                      WHERE path='/fair/reroll#treasure-1'
-                      ORDER BY id DESC LIMIT 1""").fetchone()
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json FROM treasure_guide_captures
+                                        WHERE path LIKE '/shop/view#treasure-%'
+                                        ORDER BY id""")]
 
-obj=json.loads(row["payload_json"])
-arr=obj.get("rows",[])
-fairs={}
-for item in arr:
-    if not isinstance(item,dict): continue
-    p=str(item.get("path") or "")
-    payload=item.get("payload")
-    if not isinstance(payload,dict): continue
-    if p.startswith("$.fair[") and p.count(".")==1 and "id" in payload:
-        fid=str(payload.get("id") or "")
-        fairs[fid]={
-          "id":fid,
-          "reroll":payload.get("fair_reroll_cost"),
-          "slot_count":len(payload.get("fair_slots") or []),
-          "slots":[x.get("shop_lot_id") for x in (payload.get("fair_slots") or []) if isinstance(x,dict)][:80]
-        }
-print("FAIR_COSTS",json.dumps(list(fairs.values()),ensure_ascii=False))
+rx=re.compile(r"(?:treasury|lights|fishing|chests|trader|fight|treasure)",re.I)
+out={}
+for r in rows:
+    try: obj=json.loads(r["payload_json"] or "{}")
+    except: continue
+    arr=obj.get("rows",[]) if isinstance(obj,dict) else []
+    for item in arr if isinstance(arr,list) else []:
+        payload=item.get("payload") if isinstance(item,dict) else None
+        if not isinstance(payload,dict): continue
+        oid=str(payload.get("id") or "")
+        if not oid or "achievement" in oid.lower() or not rx.search(oid): continue
+        if "lot_view" not in payload and "cost" not in payload: continue
+        out.setdefault(oid,{
+          "id":oid,
+          "cost":payload.get("cost"),
+          "lot_view":payload.get("lot_view"),
+          "source":r["path"],
+          "json_path":item.get("path")
+        })
+print("NON_ACHIEVEMENT_LOTS",json.dumps(list(out.values()),ensure_ascii=False,separators=(",",":")))
