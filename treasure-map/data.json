@@ -2362,5 +2362,1655 @@
       },
       "status": "confirmed"
     }
+  ],
+  "trader_exact_offers": [
+    {
+      "id": "mf_fairlot_minigame_trader_01_verse_gold4food_l",
+      "trader": 1,
+      "title": "Золото",
+      "tier": "L",
+      "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 250,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "cur_gold",
+          "type": "cur",
+          "title": "Золото",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_verse_gold4food_m",
+      "trader": 1,
+      "title": "Золото",
+      "tier": "M",
+      "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 180,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "cur_gold",
+          "type": "cur",
+          "title": "Золото",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_verse_gold4food_s",
+      "trader": 1,
+      "title": "Золото",
+      "tier": "S",
+      "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 100,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "cur_gold",
+          "type": "cur",
+          "title": "Золото",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_map_bonus4food",
+      "trader": 1,
+      "title": "Карта сокровищ",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 500,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_event_treasure_map_path",
+          "type": "item",
+          "title": "Карта сокровищ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_key_uncommon4food",
+      "trader": 1,
+      "title": "Необычный ключ",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 100,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_key_uncommon",
+          "type": "item",
+          "title": "Необычный ключ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_food_l",
+      "trader": 1,
+      "title": "Провизия",
+      "tier": "L",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 70,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 47,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_food_m",
+      "trader": 1,
+      "title": "Провизия",
+      "tier": "M",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 60,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 38,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_food_s",
+      "trader": 1,
+      "title": "Провизия",
+      "tier": "S",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 50,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 28,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_pet_skill_change",
+      "trader": 1,
+      "title": "Смена навыка питомца",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 300,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_pet_skill_change",
+          "type": "item",
+          "title": "Смена навыка питомца",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_rod_up1",
+      "trader": 1,
+      "title": "Удочка R3",
+      "tier": "R3",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/treasure_minigame_rod_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [],
+      "random": false,
+      "technical_effect": true
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_rod_up2",
+      "trader": 1,
+      "title": "Удочка R4",
+      "tier": "R4",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/treasure_minigame_rod_r4_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 1800,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [],
+      "random": false,
+      "technical_effect": true
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_fish_egg_01",
+      "trader": 1,
+      "title": "Яйцо Рыбы",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 300,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_01",
+          "type": "item",
+          "title": "Яйцо Рыбы",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_fish_egg_02",
+      "trader": 1,
+      "title": "Яйцо Рыбы",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_02_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_02",
+          "type": "item",
+          "title": "Яйцо Рыбы",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_02_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_fish_egg_03",
+      "trader": 1,
+      "title": "Яйцо Рыбы",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_03_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_03",
+          "type": "item",
+          "title": "Яйцо Рыбы",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_03_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_fish_egg_05",
+      "trader": 1,
+      "title": "Яйцо Рыбы",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_05_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_05",
+          "type": "item",
+          "title": "Яйцо Рыбы",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_05_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_01_fish_egg_06",
+      "trader": 1,
+      "title": "Яйцо Рыбы",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_06_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_06",
+          "type": "item",
+          "title": "Яйцо Рыбы",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_06_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_verse_gold4coins_l",
+      "trader": 2,
+      "title": "Золото",
+      "tier": "L",
+      "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 250,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "cur_gold",
+          "type": "cur",
+          "title": "Золото",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_verse_gold4coins_m",
+      "trader": 2,
+      "title": "Золото",
+      "tier": "M",
+      "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 180,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "cur_gold",
+          "type": "cur",
+          "title": "Золото",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_verse_gold4coins_s",
+      "trader": 2,
+      "title": "Золото",
+      "tier": "S",
+      "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 100,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "cur_gold",
+          "type": "cur",
+          "title": "Золото",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_map_bonus4coins",
+      "trader": 2,
+      "title": "Карта сокровищ",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 300,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_event_treasure_map_path",
+          "type": "item",
+          "title": "Карта сокровищ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_pet_food",
+      "trader": 2,
+      "title": "Корм питомца",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 100,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_pet_food",
+          "type": "item",
+          "title": "Корм питомца",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_sword_up1",
+      "trader": 2,
+      "title": "Меч R3",
+      "tier": "R3",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [],
+      "random": false,
+      "technical_effect": true
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_sword_up2",
+      "trader": 2,
+      "title": "Меч R4",
+      "tier": "R4",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 1800,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [],
+      "random": false,
+      "technical_effect": true
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_key_uncommon4key1",
+      "trader": 2,
+      "title": "Необычный ключ",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_key_common",
+          "type": "item",
+          "title": "Обычный ключ",
+          "quantity": 5,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_common_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_key_uncommon",
+          "type": "item",
+          "title": "Необычный ключ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_expedition_supplies",
+      "trader": 2,
+      "title": "Походные припасы",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 200,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 47,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_pet_skill_change",
+          "type": "item",
+          "title": "Смена навыка питомца",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_pet_skill_change",
+      "trader": 2,
+      "title": "Смена навыка питомца",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 300,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_pet_skill_change",
+          "type": "item",
+          "title": "Смена навыка питомца",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_mothcat_egg_01",
+      "trader": 2,
+      "title": "Яйцо Молекота",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 300,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_01",
+          "type": "item",
+          "title": "Яйцо Молекота",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_mothcat_egg_02",
+      "trader": 2,
+      "title": "Яйцо Молекота",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_02_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_02",
+          "type": "item",
+          "title": "Яйцо Молекота",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_02_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_mothcat_egg_03",
+      "trader": 2,
+      "title": "Яйцо Молекота",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_03_upd_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_03",
+          "type": "item",
+          "title": "Яйцо Молекота",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_03_upd_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_mothcat_egg_05",
+      "trader": 2,
+      "title": "Яйцо Молекота",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_05_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_05",
+          "type": "item",
+          "title": "Яйцо Молекота",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_05_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_02_mothcat_egg_06",
+      "trader": 2,
+      "title": "Яйцо Молекота",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_06_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 600,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_06",
+          "type": "item",
+          "title": "Яйцо Молекота",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_06_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_verse_gold4coins",
+      "trader": 3,
+      "title": "Золото",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 300,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "cur_gold",
+          "type": "cur",
+          "title": "Золото",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_map_bonus4food",
+      "trader": 3,
+      "title": "Карта сокровищ",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 300,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_event_treasure_map_path",
+          "type": "item",
+          "title": "Карта сокровищ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_map4coins",
+      "trader": 3,
+      "title": "Карта сокровищ",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 500,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_event_treasure_map_path",
+          "type": "item",
+          "title": "Карта сокровищ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_key_uncommon4coins",
+      "trader": 3,
+      "title": "Необычный ключ",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 300,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_key_uncommon",
+          "type": "item",
+          "title": "Необычный ключ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_food_l",
+      "trader": 3,
+      "title": "Провизия",
+      "tier": "L",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 70,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 47,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_food_m",
+      "trader": 3,
+      "title": "Провизия",
+      "tier": "M",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 60,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 38,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_food_s",
+      "trader": 3,
+      "title": "Провизия",
+      "tier": "S",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 50,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 28,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_random4food_l",
+      "trader": 3,
+      "title": "Случайная Провизия",
+      "tier": "L",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 50,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 25,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 75,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 100,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 200,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "random": true,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_random4food_m",
+      "trader": 3,
+      "title": "Случайная Провизия",
+      "tier": "M",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 30,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 20,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 40,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 50,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 150,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "random": true,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_random4food_s",
+      "trader": 3,
+      "title": "Случайная Провизия",
+      "tier": "S",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 20,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 15,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 25,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 30,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "type": "item",
+          "title": "Провизия",
+          "quantity": 100,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "random": true,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_random4coins_l",
+      "trader": 3,
+      "title": "Случайные Монеты сокровищ",
+      "tier": "L",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 50,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 25,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 75,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 100,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 200,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "random": true,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_random4coins_m",
+      "trader": 3,
+      "title": "Случайные Монеты сокровищ",
+      "tier": "M",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 30,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 20,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 40,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 50,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 150,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "random": true,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_random4coins_s",
+      "trader": 3,
+      "title": "Случайные Монеты сокровищ",
+      "tier": "S",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 20,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 10,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 15,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 25,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 30,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 100,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "random": true,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_mothcat_egg_01_r3",
+      "trader": 3,
+      "title": "Яйцо Молекота R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_01_r3",
+          "type": "item",
+          "title": "Яйцо Молекота R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_mothcat_egg_02_r3",
+      "trader": 3,
+      "title": "Яйцо Молекота R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_02_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_02_r3",
+          "type": "item",
+          "title": "Яйцо Молекота R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_02_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_mothcat_egg_03_r3",
+      "trader": 3,
+      "title": "Яйцо Молекота R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_03_upd_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_03_r3",
+          "type": "item",
+          "title": "Яйцо Молекота R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_03_upd_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_mothcat_egg_05_r3",
+      "trader": 3,
+      "title": "Яйцо Молекота R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_05_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_05_r3",
+          "type": "item",
+          "title": "Яйцо Молекота R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_05_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_mothcat_egg_06_r3",
+      "trader": 3,
+      "title": "Яйцо Молекота R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_06_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_mothcat_egg_06_r3",
+          "type": "item",
+          "title": "Яйцо Молекота R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_06_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_fish_egg_01_r3",
+      "trader": 3,
+      "title": "Яйцо Рыбы R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_01_r3",
+          "type": "item",
+          "title": "Яйцо Рыбы R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_fish_egg_02_r3",
+      "trader": 3,
+      "title": "Яйцо Рыбы R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_02_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_02_r3",
+          "type": "item",
+          "title": "Яйцо Рыбы R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_02_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_fish_egg_03_r3",
+      "trader": 3,
+      "title": "Яйцо Рыбы R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_03_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_03_r3",
+          "type": "item",
+          "title": "Яйцо Рыбы R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_03_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_fish_egg_05_r3",
+      "trader": 3,
+      "title": "Яйцо Рыбы R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_05_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_05_r3",
+          "type": "item",
+          "title": "Яйцо Рыбы R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_05_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    },
+    {
+      "id": "mf_fairlot_minigame_trader_03_fish_egg_06_r3",
+      "trader": 3,
+      "title": "Яйцо Рыбы R3",
+      "tier": "",
+      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_06_r3_icon.png",
+      "cost": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "type": "item",
+          "title": "Монеты сокровищ",
+          "quantity": 2000,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "item_pet_fish_egg_06_r3",
+          "type": "item",
+          "title": "Яйцо Рыбы R3",
+          "quantity": 1,
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_06_r3_icon.png"
+        }
+      ],
+      "random": false,
+      "technical_effect": false
+    }
+  ],
+  "trader_value_notes": [
+    {
+      "title": "Провизия за Монеты сокровищ",
+      "status": "confirmed",
+      "note": "Из прямых лотов крупный пакет эффективнее по курсу: 70 монет → 47 провизии (~1,49 монеты за 1 провизию), затем 60 → 38 (~1,58), затем 50 → 28 (~1,79).",
+      "offers": [
+        {
+          "cost": 70,
+          "reward": 47,
+          "cost_item": "Монеты сокровищ",
+          "reward_item": "Провизия"
+        },
+        {
+          "cost": 60,
+          "reward": 38,
+          "cost_item": "Монеты сокровищ",
+          "reward_item": "Провизия"
+        },
+        {
+          "cost": 50,
+          "reward": 28,
+          "cost_item": "Монеты сокровищ",
+          "reward_item": "Провизия"
+        }
+      ]
+    },
+    {
+      "title": "Золото за одинаковую валюту",
+      "status": "confirmed",
+      "note": "Когда доступно несколько вариантов за одну и ту же валюту, все дают 1 золото — поэтому меньшая цена выгоднее: 100 лучше 180 и 250; вариант за 300 Монет сокровищ дороже вариантов за 100/180/250."
+    },
+    {
+      "title": "Карта сокровищ",
+      "status": "confirmed",
+      "note": "За Монеты сокровищ подтверждены цены 300 и 500 за одну карту — 300 дешевле. За Провизию подтверждены цены 300 и 500 — 300 дешевле."
+    },
+    {
+      "title": "Походные припасы",
+      "status": "confirmed",
+      "note": "200 Монет сокровищ → 47 Провизии + 1 Смена навыка. По известным отдельным ценам те же 47 Провизии стоят 70 монет, а Смена навыка — 300 монет; сумма отдельных цен = 370. Пакет дешевле на 170 монет."
+    },
+    {
+      "title": "Случайные лоты",
+      "status": "probabilities_unknown",
+      "note": "У случайных лотов известны цена и возможные количества, но не их вероятности. Поэтому математически обоснованную среднюю выгоду пока не считаем."
+    }
   ]
 }
