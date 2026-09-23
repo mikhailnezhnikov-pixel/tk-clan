@@ -1,3 +1,3 @@
-inspect=runtime-smoke-backend-verify
-stamp=2026-09-24T01:06+09:00
-snapshot=16
+inspect=runtime-smoke-db-path
+stamp=2026-09-24T01:10+09:00
+snapshot=17
