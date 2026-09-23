@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.81
+// @version      1.17.82
+// @release-note Smoke-test: уже записанные обезличенные Rat Hunt / War / Районы evidence пассивно синхронизируются с HK backend; дополнительных запросов к игре нет.
 // @release-note Обновление userscript: добавлены штатные update/download URL на текущий panel.js; после ручного перехода на эту версию менеджер userscript сможет проверять и загружать новые версии автоматически.
 // @release-note Smoke-test: Rat Hunt / War / Районы показывают покрытие контрольных точек старт → мутация → завершение; это индикатор полноты доказательств, а не автоматический runtime PASS.
 // @release-note Карта Сокровищ: пассивный DOM-захват теперь сохраняет структуру каждой из четырёх ограниченных карточек набора отдельно — текст, порядок узлов и игровые иконки; новых запросов к игре нет.
@@ -90,7 +91,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.81';
+  const BUILD_VERSION = '1.17.82';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -119,6 +120,9 @@
   const HK_RUNTIME_SMOKE_FRESH_RUN_REV = 'runtime-smoke-fresh-run-20260923-r1';
   const HK_RUNTIME_SMOKE_AUTOSTART_REV = 'runtime-smoke-autostart-20260923-r1';
   const HK_RUNTIME_SMOKE_COVERAGE_REV = 'runtime-smoke-coverage-20260923-r1';
+  const HK_RUNTIME_SMOKE_CAPTURE_REV = 'runtime-smoke-capture-20260924-r1';
+  let runtimeSmokeSyncTimer=null;
+  let runtimeSmokeLastFingerprint='';
   function hkSmokeObjectKeys(value){
     return value&&typeof value==='object'&&!Array.isArray(value)?Object.keys(value).slice(0,24):[];
   }
@@ -323,7 +327,10 @@
     diagnostic.events.push(event);
     diagnosticPersistRuntimeSmokeEvent(event);
     if (diagnostic.events.length > DIAGNOSTIC_MAX_EVENTS) diagnostic.events.splice(0, diagnostic.events.length - DIAGNOSTIC_MAX_EVENTS);
-    if(event.type.startsWith('runtime-smoke-'))try{renderRuntimeSmokeStatus();}catch(_){}
+    if(event.type.startsWith('runtime-smoke-')){
+      try{renderRuntimeSmokeStatus();}catch(_){}
+      try{runtimeSmokeScheduleSync();}catch(_){}
+    }
   }
   function runtimeSmokeCoverage(prefix,rows) {
     const types=rows.map(row=>String(row?.type||''));
@@ -378,6 +385,59 @@
       neighborhoods:runtimeSmokeModuleState('neighborhood')
     };
   }
+  function runtimeSmokeCaptureRows() {
+    return diagnostic.events
+      .filter(row=>String(row?.type||'').startsWith('runtime-smoke-'))
+      .slice(-160);
+  }
+
+  function runtimeSmokeCaptureFingerprint(events,summary) {
+    try{return diagnosticFingerprint(JSON.stringify({version:BUILD_VERSION,summary,events}));}
+    catch(_){return diagnosticFingerprint(String(events?.length||0)+':'+BUILD_VERSION);}
+  }
+
+  async function runtimeSmokeSubmitSnapshot() {
+    runtimeSmokeSyncTimer=null;
+    if(!licenseState.allowed)return;
+    const events=runtimeSmokeCaptureRows();
+    if(!events.length)return;
+    const summary=runtimeSmokeSummary();
+    const fingerprint=runtimeSmokeCaptureFingerprint(events,summary);
+    if(fingerprint===runtimeSmokeLastFingerprint)return;
+    try{
+      const result=await licensedServerJson(
+        CLAN_SHOP_FACT_API_BASE,
+        '/runtime-smoke/capture',
+        {
+          capture_key:'runtime-smoke:'+BUILD_VERSION+':'+fingerprint,
+          script_version:BUILD_VERSION,
+          revision:HK_RUNTIME_SMOKE_CAPTURE_REV,
+          summary,
+          events
+        },
+        false,
+        'runtime-smoke-capture'
+      );
+      runtimeSmokeLastFingerprint=fingerprint;
+      recordDiagnostic('smoke-sync',{
+        revision:HK_RUNTIME_SMOKE_CAPTURE_REV,
+        events:events.length,
+        accepted:Number(result?.events||0)
+      });
+    }catch(error){
+      recordDiagnostic('smoke-sync-error',{
+        revision:HK_RUNTIME_SMOKE_CAPTURE_REV,
+        status:Number(error?.httpStatus||0),
+        message:String(error?.message||error||'').slice(0,500)
+      });
+    }
+  }
+
+  function runtimeSmokeScheduleSync(delay=1400) {
+    if(runtimeSmokeSyncTimer)clearTimeout(runtimeSmokeSyncTimer);
+    runtimeSmokeSyncTimer=setTimeout(()=>{void runtimeSmokeSubmitSnapshot();},Math.max(250,Number(delay)||1400));
+  }
+
   function renderRuntimeSmokeStatus() {
     const host=root?.querySelector?.('#hk-smoke-status');
     if(!host)return;
@@ -1637,6 +1697,7 @@
         setHealth('license', false, 'не удалось проверить');
       }
       licenseCheckPromise = null; updateLicenseUI();
+      if(licenseState.allowed)try{runtimeSmokeScheduleSync(900);}catch(_){}
 
       // AUTH_BRIDGE_EARLY_ISOLATED_R1
       // Run the technical collector bridge before and independently from all

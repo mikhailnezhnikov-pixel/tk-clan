@@ -1,0 +1,9 @@
+USERSCRIPT_1_17_82_RUNTIME_SMOKE_CAPTURE=PASS
+source_version=1.17.81
+target_version=1.17.82
+mode=PASSIVE_SERVER_SYNC
+new_game_requests=NONE
+runtime_smoke_backend=ENABLED
+update_metadata=PRESERVED
+treasure_bundle_card_capture=PRESERVED
+public_exact_match=PASS
