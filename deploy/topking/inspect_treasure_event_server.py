@@ -4,52 +4,26 @@ spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
+titles=["Солнечный Лес","Заброшенная Шахта","Необычный Водоём","Тайный Торговец","Охота за сундуками","Сражение","Лабиринт","Сокровищница"]
 with server.db_session() as db:
-    row=db.execute("""SELECT id,payload_json FROM treasure_guide_captures
-                      WHERE path='/shop/view' AND payload_json<>''
-                      ORDER BY id DESC LIMIT 1""").fetchone()
+    rows=[dict(r) for r in db.execute("""SELECT id,page_text,captured_at
+                                        FROM treasure_guide_captures
+                                        WHERE source='dom' AND page_text LIKE '%МОЖНО ОТЫСКАТЬ%'
+                                        ORDER BY id""")]
 
-raw=str(row["payload_json"] or "")
-start=raw.find('"shop_lots":[')
-lots=[]
-if start>=0:
-    i=raw.find('[',start)+1
-    while i<len(raw):
-        while i<len(raw) and raw[i] in " \r\n\t,": i+=1
-        if i>=len(raw) or raw[i]!='{': break
-        st=i;depth=0;ins=False;esc=False;j=i
-        while j<len(raw):
-            ch=raw[j]
-            if ins:
-                if esc:esc=False
-                elif ch=='\\':esc=True
-                elif ch=='"':ins=False
-            else:
-                if ch=='"':ins=True
-                elif ch=='{':depth+=1
-                elif ch=='}':
-                    depth-=1
-                    if depth==0:
-                        try: lots.append(json.loads(raw[st:j+1]))
-                        except: pass
-                        i=j+1;break
-            j+=1
-        else: break
-
-out=[]
-rx=re.compile(r"(forest|mine|fishing|fight|lights|riddle|treasury|trader|chest)",re.I)
-for o in lots:
-    oid=str(o.get("id") or "")
-    if "achievement" in oid.lower(): continue
-    if not (oid.startswith("mf_treasurelot_") or oid.startswith("mf_fair_")): continue
-    if not rx.search(oid): continue
-    lv=o.get("lot_view") or {}
-    out.append({
-      "id":oid,
-      "cost":o.get("cost"),
-      "content":lv.get("content_view"),
-      "name":lv.get("name"),
-      "desc":lv.get("desc"),
-      "icon":lv.get("icon_card")
-    })
-print("ROOM_LOTS",json.dumps(out,ensure_ascii=False))
+for title in titles:
+    vals=[];seen=set()
+    for r in rows:
+        text=re.sub(r"\s+"," ",str(r["page_text"] or "")).strip()
+        pos=text.find(title)
+        if pos<0:continue
+        seg=text[pos:pos+1800]
+        hk=seg.find(" HK")
+        if hk>0:seg=seg[:hk]
+        if "МОЖНО ОТЫСКАТЬ" not in seg:continue
+        nums=re.findall(r"(?<![A-Za-zА-Яа-я])\d+(?![A-Za-zА-Яа-я])",seg)
+        key=seg[:1200]
+        if key in seen:continue
+        seen.add(key)
+        vals.append({"id":r["id"],"captured_at":r["captured_at"],"last_number":nums[-1] if nums else None,"segment":seg})
+    print("ROOM",title,json.dumps(vals[-12:],ensure_ascii=False))
