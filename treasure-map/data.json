@@ -1786,5 +1786,168 @@
       "value": "1% → 2%",
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
     }
+  ],
+  "trader_variants": [
+    {
+      "id": "type_01",
+      "title": "Тайный торговец · набор I",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png",
+      "offers": [
+        {
+          "title": "Яйца Рыбы",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png",
+          "note": "несколько вариантов яиц"
+        },
+        {
+          "title": "Провизия",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+          "note": "малые / средние / крупные лоты"
+        },
+        {
+          "title": "Золото за провизию",
+          "image": null,
+          "note": "несколько размеров обмена"
+        },
+        {
+          "title": "Необычный ключ за провизию",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png",
+          "note": "обменный лот"
+        },
+        {
+          "title": "Смена навыка питомца",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png",
+          "note": "может появляться в наборе"
+        }
+      ]
+    },
+    {
+      "id": "type_02",
+      "title": "Тайный торговец · набор II",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png",
+      "offers": [
+        {
+          "title": "Яйца Молекота",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png",
+          "note": "несколько вариантов яиц"
+        },
+        {
+          "title": "Походные припасы",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+          "note": "отдельный лот"
+        },
+        {
+          "title": "Корм питомца",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png",
+          "note": "отдельный лот"
+        },
+        {
+          "title": "Золото за Монеты сокровищ",
+          "image": null,
+          "note": "несколько размеров обмена"
+        },
+        {
+          "title": "Обмен ключей",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png",
+          "note": "может появляться в наборе"
+        },
+        {
+          "title": "Смена навыка питомца",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png",
+          "note": "может появляться в наборе"
+        }
+      ]
+    },
+    {
+      "id": "type_03",
+      "title": "Тайный торговец · набор III",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png",
+      "offers": [
+        {
+          "title": "Яйца Рыбы и Молекота",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png",
+          "note": "усиленные варианты"
+        },
+        {
+          "title": "Провизия",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+          "note": "малые / средние / крупные лоты"
+        },
+        {
+          "title": "Необычный ключ за Монеты сокровищ",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png",
+          "note": "обменный лот"
+        },
+        {
+          "title": "Карта сокровищ",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+          "reward": {
+            "title": "Карта сокровищ",
+            "quantity": 1,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+          },
+          "cost": {
+            "title": "Монеты сокровищ",
+            "quantity": 500,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+          },
+          "note": "точная цена подтверждена"
+        },
+        {
+          "title": "Случайные лоты",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png",
+          "note": "варианты за Монеты сокровищ и Провизию"
+        },
+        {
+          "title": "Золото за Монеты сокровищ",
+          "image": null,
+          "note": "отдельный обмен"
+        }
+      ]
+    }
+  ],
+  "chest_hunt": {
+    "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
+    "title": "Охота за сундуками",
+    "facts": [
+      "Одновременно встречаются три основных уровня сундуков.",
+      "На поле есть шесть отдельных точек раскопки.",
+      "У первого сундука зафиксировано дополнительное состояние/вариант.",
+      "Точные цены открытия и полный дроп каждого уровня будут добавляться только после подтверждения карточек."
+    ]
+  },
+  "special_items": [
+    {
+      "id": "golden_berry",
+      "title": "Золотая ягода",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png",
+      "note": "Крайне редкий предмет. Нужна для открытия линий «Тёмный пакт» и «Светлый пакт»; на каждую линию требуется 1 ягода. Ягоду можно вместо этого открыть, но тогда она расходуется.",
+      "contents": [
+        {
+          "title": "Ценный ключ сокровищ",
+          "quantity": 1,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png"
+        },
+        {
+          "title": "Карта сокровищ",
+          "quantity": 3,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+        },
+        {
+          "title": "Карта рыбалки",
+          "quantity": 3,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fishing_icon.png"
+        },
+        {
+          "title": "Карта сражения",
+          "quantity": 3,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png"
+        },
+        {
+          "title": "Карта торговца",
+          "quantity": 9,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+        }
+      ]
+    }
   ]
 }
