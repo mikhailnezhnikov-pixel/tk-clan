@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.67
+// @version      1.17.68
+// @release-note Клан: «Охота на крыс» восстановлена как полноценный Rat Hunt runner по закреплённому Kokkaras-донору — пресеты, free/item/premium планы, лапы восстановления, battle/respawn/finish; месячные рейтинги сохранены отдельным блоком.
 // @release-note Бои: добавлены канонические «Районы / Neighborhood Battles» по закреплённому Kokkaras-донору: idler/view, claim, level, update и безопасные human-like tap-пакеты без принудительного /player/me во время боя.
 // @release-note Клан: добавлен отдельный экран «Охота на крыс» для трёх подтверждённых месячных рейтингов Cat / Dog / Pigeon с текущим местом/очками и отдельным сбором только крысиных рейтинговых наград.
 // @release-note Ярмарка: финальная чистка режима 3/6/9 — понятное название режима, мгновенное обновление прогноза при переключении бонусов и корректные причины остановки вместо ложного «завершена» при недостигнутой цели.
@@ -74,7 +75,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.67';
+  const BUILD_VERSION = '1.17.68';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -91,6 +92,7 @@
   const HK_FAIR_BONUS_COST_FORECAST_REV = 'fair-bonus-cost-forecast-20260923-r1';
   const HK_FAIR_FINAL_CLEANUP_REV = 'fair-final-cleanup-20260923-r1';
   const HK_RAT_HUNT_REV = 'rat-hunt-leaderboards-20260923-r1';
+  const HK_RAT_HUNT_COMBAT_REV = 'rat-hunt-combat-20260923-r1';
   const HK_NEIGHBORHOOD_BATTLES_REV = 'neighborhood-battles-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
@@ -6561,6 +6563,12 @@
   ]);
   let ratHuntRows = [];
   let ratHuntLastReadAt = 0;
+  const RAT_HUNT_FREE_PASS_ID='cur_pit_generals_pass';
+  const RAT_HUNT_PASS_ITEM_ID='item_pit_generals_pass_ticket';
+  const RAT_HUNT_REWARD_ITEM_ID='item_pit_rat_tokens';
+  const RAT_HUNT_RESTORATION_ITEM_ID='item_pit_health_ticket';
+  const RAT_HUNT_CLAN_GOLD_ID='item_clan_cur';
+  const ratHuntCombat={loaded:false,presets:[],view:null,state:null,presetId:'',currentPresetId:'',plans:[],planId:'',autofinish:false,maxRestoration:0,lastReadAt:0};
   let neighborhoodEnemies = [];
   let neighborhoodIdler = null;
   let neighborhoodLastReadAt = 0;
@@ -7010,6 +7018,359 @@
     return rows;
   }
 
+
+  function ratHuntCombatSaved() {
+    const value=load().ratHuntCombat;
+    return value&&typeof value==='object'?value:{};
+  }
+
+  function ratHuntCombatSave() {
+    save({ratHuntCombat:{
+      presetId:String(ratHuntCombat.presetId||''),
+      planId:String(ratHuntCombat.planId||''),
+      autofinish:!!ratHuntCombat.autofinish,
+      maxRestoration:pitCanonWhole(ratHuntCombat.maxRestoration)
+    }});
+  }
+
+  function ratHuntCombatState(documentValue=playerDocument) {
+    return documentValue&&typeof documentValue.pit_generals==='object'?documentValue.pit_generals:null;
+  }
+
+  function ratHuntPresetName(preset) {
+    const key=String(preset?.meta?.name||'');
+    return gameText(key||preset?.id||'');
+  }
+
+  function ratHuntPresetLabel(preset) {
+    const power=pitCanonWhole(preset?.meta?.power);
+    return ratHuntPresetName(preset)+(power>0?' — '+power.toLocaleString(locale()):'');
+  }
+
+  function ratHuntSwitchCost(preset) {
+    const row=(preset?.switch_cost?.items||[]).find(item=>String(item?.id||'')===RAT_HUNT_CLAN_GOLD_ID);
+    return pitCanonWhole(row?.quantity);
+  }
+
+  function ratHuntMasses(state,view) {
+    const values=[];
+    for(const row of view?.mass_multipliers||[])values.push(pitCanonWhole(row?.mass_multiplier));
+    for(const row of state?.retry_cost?.mass_multipliers||[])if(row?.available!==false)values.push(pitCanonWhole(row?.mass_multiplier));
+    for(const row of state?.pass_costs||[])values.push(pitCanonWhole(row?.mass_multiplier));
+    return [...new Set(values.filter(value=>value>0))].sort((a,b)=>b-a);
+  }
+
+  function ratHuntDecomposeExact(total,masses) {
+    let remaining=pitCanonWhole(total),chunks=[];
+    for(const mass of [...new Set((masses||[]).map(pitCanonWhole).filter(Boolean))].sort((a,b)=>b-a)){
+      while(remaining>=mass){chunks.push(mass);remaining-=mass;}
+    }
+    return remaining===0?chunks:[];
+  }
+
+  function ratHuntDirectPassCost(state,mass,payment) {
+    const prem=payment==='PREM';
+    const row=(state?.pass_costs||[]).find(entry=>entry?.is_prem===prem&&pitCanonWhole(entry?.mass_multiplier)===pitCanonWhole(mass));
+    if(!row)return null;
+    return pitCanonCostQuantity(row?.cost,prem?'cur_prem':RAT_HUNT_PASS_ITEM_ID,prem?'currency':'item');
+  }
+
+  function ratHuntRespawnCost(state) {
+    const option=(state?.respawn_costs||[]).find(row=>row?.is_prem===false);
+    const cost=pitCanonCostQuantity(option,RAT_HUNT_RESTORATION_ITEM_ID,'item');
+    return cost===null?0:pitCanonWhole(cost);
+  }
+
+  function ratHuntBuildPlans(state,available,view) {
+    if(!state)return[];
+    if(state.is_finish===false){
+      const chunk=Math.max(1,pitCanonWhole(state?.mass_multiplier)||1);
+      return[{id:'active',kind:'active',total:chunk,paymentMode:'ACTIVE',steps:[{chunk,payment:'ACTIVE',cost:0}],crystalCost:0,itemCost:0}];
+    }
+    const plans=[],masses=ratHuntMasses(state,view),free=ratHuntDecomposeExact(available,masses);
+    if(available>0&&free.length&&free.reduce((sum,value)=>sum+value,0)===pitCanonWhole(available)){
+      plans.push({id:'free-exact',kind:'exact',total:pitCanonWhole(available),paymentMode:'FREE',steps:free.map(chunk=>({chunk,payment:'FREE',cost:0})),crystalCost:0,itemCost:0});
+    }
+    const seen=new Set();
+    const rows=[...(state?.pass_costs||[])].filter(row=>pitCanonWhole(row?.mass_multiplier)>0).sort((a,b)=>
+      pitCanonWhole(a?.mass_multiplier)-pitCanonWhole(b?.mass_multiplier)||
+      ((a?.is_prem===true?0:1)-(b?.is_prem===true?0:1))
+    );
+    for(const row of rows){
+      const mass=pitCanonWhole(row.mass_multiplier),payment=row?.is_prem===true?'PREM':'ITEM',key=payment+':'+mass;
+      if(seen.has(key))continue;seen.add(key);
+      const cost=ratHuntDirectPassCost(state,mass,payment);
+      if(cost===null)continue;
+      plans.push({id:'direct-'+payment.toLowerCase()+'-'+mass,kind:'direct',total:mass,paymentMode:payment,
+        steps:[{chunk:mass,payment,cost:pitCanonWhole(cost)}],
+        crystalCost:payment==='PREM'?pitCanonWhole(cost):0,itemCost:payment==='ITEM'?pitCanonWhole(cost):0});
+    }
+    return plans;
+  }
+
+  function ratHuntMaxLevel(view=ratHuntCombat.view,state=ratHuntCombat.state) {
+    const fromView=Math.max(0,...(view?.levels||[]).map(row=>pitCanonWhole(row?.level)+1));
+    return Math.max(fromView,pitCanonWhole(state?.max_preset_level));
+  }
+
+  function ratHuntRewardToMax(view=ratHuntCombat.view,state=ratHuntCombat.state) {
+    const maxLevel=ratHuntMaxLevel(view,state);let total=0;
+    for(const level of view?.levels||[]){
+      if(pitCanonWhole(level?.level)>=maxLevel)continue;
+      const row=(level?.reward_view?.reward?.items||[]).find(item=>String(item?.id||'')===RAT_HUNT_REWARD_ITEM_ID);
+      total+=pitCanonWhole(row?.count??row?.quantity);
+    }
+    return total;
+  }
+
+  function ratHuntSelectedPlan() {
+    return ratHuntCombat.plans.find(plan=>plan.id===ratHuntCombat.planId)||null;
+  }
+
+  function ratHuntEffectiveSteps() {
+    const plan=ratHuntSelectedPlan();if(!plan)return[];
+    const steps=(plan.steps||[]).map(step=>({...step}));
+    return ratHuntCombat.state?.is_finish===false||ratHuntCombat.autofinish?steps:steps.slice(0,1);
+  }
+
+  function ratHuntEffectiveCosts() {
+    let crystalCost=0,itemCost=0;
+    for(const step of ratHuntEffectiveSteps()){
+      if(step.payment==='PREM')crystalCost+=pitCanonWhole(step.cost);
+      if(step.payment==='ITEM')itemCost+=pitCanonWhole(step.cost);
+    }
+    return {crystalCost,itemCost};
+  }
+
+  function ratHuntPlanLabel(plan) {
+    if(!plan)return either('Нет доступного плана','No available plan');
+    if(plan.kind==='active')return either('Продолжить активную охоту','Continue active hunt');
+    const chunks=(plan.steps||[]).map(step=>'×'+pitCanonWhole(step.chunk)).join(' + ');
+    if(plan.paymentMode==='FREE')return either('Бесплатные жетоны','Free tokens')+': '+chunks;
+    if(plan.paymentMode==='PREM')return '💎 '+pitCanonWhole(plan.crystalCost).toLocaleString(locale())+' · '+chunks;
+    if(plan.paymentMode==='ITEM')return '🎟 '+pitCanonWhole(plan.itemCost).toLocaleString(locale())+' · '+chunks;
+    return chunks;
+  }
+
+  function ratHuntAcceptResponse(response,reason='rat-hunt') {
+    if(response&&typeof response==='object'){
+      try{hkStateStore.merge(response,reason);}catch(_){}
+      playerDocument=hkStateStore.snapshot||playerDocument;
+      if(response?.pit_generals&&typeof response.pit_generals==='object'&&(!playerDocument||playerDocument.pit_generals!==response.pit_generals)){
+        playerDocument={...(playerDocument||{}),pit_generals:response.pit_generals};
+      }
+    }
+    ratHuntCombat.state=ratHuntCombatState(playerDocument)||ratHuntCombat.state;
+    return response;
+  }
+
+  async function ratHuntFetchPresets() {
+    const data=await apiJson('/battle_presets/view','GET',null,true,1);
+    return (Array.isArray(data?.pit_generals_presets)?data.pit_generals_presets:[])
+      .filter(row=>String(row?.id||''))
+      .map(row=>({...row,id:String(row.id),meta:row.meta&&typeof row.meta==='object'?row.meta:{}}))
+      .sort((a,b)=>pitCanonWhole(a?.meta?.power)-pitCanonWhole(b?.meta?.power));
+  }
+
+  async function ratHuntFetchView(presetId) {
+    return apiJson('/pit_generals/view?preset_id='+encodeURIComponent(String(presetId||'')),'GET',null,true,1);
+  }
+
+  function ratHuntRefreshPlans() {
+    const state=ratHuntCombat.state;
+    const available=pitCanonResourceQuantity(playerDocument,RAT_HUNT_FREE_PASS_ID,'currency');
+    ratHuntCombat.plans=ratHuntBuildPlans(state,available,ratHuntCombat.view);
+    const saved=ratHuntCombatSaved();
+    const selected=ratHuntCombat.plans.find(plan=>plan.id===ratHuntCombat.planId)||
+      ratHuntCombat.plans.find(plan=>plan.id===String(saved.planId||''))||
+      ratHuntCombat.plans.find(plan=>plan.paymentMode==='FREE')||
+      ratHuntCombat.plans[0]||null;
+    ratHuntCombat.planId=selected?.id||'';
+    ratHuntCombatSave();
+  }
+
+  async function loadRatHuntCombat(force=false) {
+    if(!requireLicense())return null;
+    playerDocument=await hkAuthoritativePlayerRead(force?'rat-hunt:refresh':'rat-hunt:load');
+    const state=ratHuntCombatState(playerDocument);
+    const presets=await ratHuntFetchPresets();
+    if(!state||!presets.length)throw new Error(either('Данные Rat Hunt недоступны','Rat Hunt data is unavailable'));
+    const saved=ratHuntCombatSaved(),active=state.is_finish===false;
+    const currentPresetId=String(state?.preset_id||presets[0]?.id||'');
+    const savedPresetId=String(saved?.presetId||'');
+    const presetId=active?currentPresetId:(presets.some(row=>row.id===savedPresetId)?savedPresetId:currentPresetId);
+    const view=await ratHuntFetchView(presetId);
+    ratHuntCombat.loaded=true;ratHuntCombat.presets=presets;ratHuntCombat.view=view;ratHuntCombat.state=state;
+    ratHuntCombat.currentPresetId=currentPresetId;ratHuntCombat.presetId=presetId;
+    ratHuntCombat.autofinish=saved?.autofinish===true;
+    ratHuntCombat.maxRestoration=Math.min(
+      pitCanonResourceQuantity(playerDocument,RAT_HUNT_RESTORATION_ITEM_ID,'item'),
+      pitCanonWhole(saved?.maxRestoration)
+    );
+    ratHuntCombat.planId=String(saved?.planId||'');
+    ratHuntCombat.lastReadAt=Date.now();
+    ratHuntRefreshPlans();
+    return ratHuntCombat;
+  }
+
+  function ratHuntResourceBadge(id,kind='item') {
+    const amount=pitCanonResourceQuantity(playerDocument,id,kind);
+    const icon=fairIconHtml(paymentIcon({id,kind:kind==='currency'?'currencies':'items'}),'hk-price-icon');
+    return '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #304057;border-radius:9px">'+icon+'<b>'+amount.toLocaleString(locale())+'</b></span>';
+  }
+
+  function ratHuntCombatHtml() {
+    if(!ratHuntCombat.loaded)return '<section style="padding:12px;border:1px solid #304057;border-radius:12px;background:#101927"><p class="hk-muted">'+either('Загрузка боевой Охоты на крыс…','Loading Rat Hunt combat…')+'</p></section>';
+    const state=ratHuntCombat.state||{},active=state.is_finish===false,plan=ratHuntSelectedPlan(),steps=ratHuntEffectiveSteps(),costs=ratHuntEffectiveCosts();
+    const selectedPreset=ratHuntCombat.presets.find(row=>row.id===ratHuntCombat.presetId);
+    const switchCost=!active&&ratHuntCombat.presetId!==ratHuntCombat.currentPresetId?ratHuntSwitchCost(selectedPreset):0;
+    const presets=ratHuntCombat.presets.map(row=>'<option value="'+escapeHtml(row.id)+'" '+(row.id===ratHuntCombat.presetId?'selected':'')+'>'+
+      escapeHtml(ratHuntPresetLabel(row)+(row.id===ratHuntCombat.currentPresetId?' · '+either('текущий','current'):''))+'</option>').join('');
+    const plans=ratHuntCombat.plans.map(row=>'<option value="'+escapeHtml(row.id)+'" '+(row.id===ratHuntCombat.planId?'selected':'')+'>'+escapeHtml(ratHuntPlanLabel(row))+'</option>').join('');
+    const maxLevel=ratHuntMaxLevel(),level=pitCanonWhole(state.level),health=pitCanonWhole(state.health);
+    const multiplier=steps.reduce((sum,step)=>sum+pitCanonWhole(step.chunk),0);
+    const expected=ratHuntRewardToMax()*multiplier;
+    const paws=pitCanonResourceQuantity(playerDocument,RAT_HUNT_RESTORATION_ITEM_ID,'item');
+    const totalPaws=pitCanonWhole(ratHuntCombat.maxRestoration)*steps.length;
+    return '<section style="padding:12px;border:1px solid #304057;border-radius:12px;background:#101927;margin-bottom:12px">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>'+either('Боевая Охота','Combat Rat Hunt')+'</b><small style="display:block;margin-top:3px">'+HK_RAT_HUNT_COMBAT_REV+'</small></div>'+
+      '<span class="'+(active?'hk-free':'hk-muted')+'">'+(active?either('АКТИВНА','ACTIVE'):either('готова','ready'))+'</span></div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0">'+
+        ratHuntResourceBadge(RAT_HUNT_FREE_PASS_ID,'currency')+
+        ratHuntResourceBadge(RAT_HUNT_PASS_ITEM_ID,'item')+
+        ratHuntResourceBadge(RAT_HUNT_RESTORATION_ITEM_ID,'item')+
+        ratHuntResourceBadge(RAT_HUNT_CLAN_GOLD_ID,'item')+
+        ratHuntResourceBadge('cur_prem','currency')+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0"><span><small>'+either('Уровень','Level')+'</small><b style="display:block">'+level+' / '+maxLevel+'</b></span>'+
+      '<span><small>HP</small><b style="display:block">'+health.toLocaleString(locale())+'</b></span></div>'+
+      '<div class="hk-grid">'+
+        '<span>'+either('Пресет крыс','Rat preset')+'</span><select id="hk-rat-preset" '+(active?'disabled':'')+'>'+presets+'</select>'+
+        '<span>'+either('План пропусков','Pass plan')+'</span><select id="hk-rat-plan" '+(active?'disabled':'')+'>'+plans+'</select>'+
+        '<span>'+either('Максимум лап на раунд','Max paws per round')+'</span><input id="hk-rat-paws" type="number" min="0" max="'+paws+'" value="'+Math.min(paws,pitCanonWhole(ratHuntCombat.maxRestoration))+'">'+
+        '<span>'+either('Автозавершение','Auto finish')+'</span><input id="hk-rat-autofinish" type="checkbox" '+(ratHuntCombat.autofinish?'checked':'')+'>'+
+      '</div>'+
+      '<div style="margin:10px 0;padding:9px;border:1px solid #27364b;border-radius:10px"><small>'+
+        (plan?escapeHtml(ratHuntPlanLabel(plan)):'—')+
+        (switchCost?' · '+either('смена пресета','preset switch')+': 🪙 '+switchCost.toLocaleString(locale()):'')+
+        (costs.crystalCost?' · 💎 '+costs.crystalCost.toLocaleString(locale()):'')+
+        (costs.itemCost?' · 🎟 '+costs.itemCost.toLocaleString(locale()):'')+
+        (totalPaws?' · 🐾 ≤ '+totalPaws.toLocaleString(locale()):'')+
+        (expected?' · 🐀 ~'+expected.toLocaleString(locale()):'')+
+        (!active&&!ratHuntCombat.autofinish&&plan?.steps?.length>1?' · '+either('без автозавершения выполнится только первый раунд','without auto finish only the first round will run'):'')+
+      '</small></div>'+
+      '<button id="hk-rat-run" class="hk-primary" '+(plan?'':'disabled')+'>'+either(active?'Продолжить Охоту':'Запустить Охоту',active?'Continue Hunt':'Start Hunt')+'</button>'+
+    '</section>';
+  }
+
+  async function changeRatHuntPreset(presetId) {
+    if(ratHuntCombat.state?.is_finish===false)return;
+    if(!ratHuntCombat.presets.some(row=>row.id===presetId))return;
+    ratHuntCombat.presetId=presetId;ratHuntCombat.view=await ratHuntFetchView(presetId);ratHuntRefreshPlans();ratHuntCombatSave();renderRatHunt();
+  }
+
+  async function runRatHuntCombat() {
+    if(!requireLicense())return;
+    if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
+    if(!ratHuntCombat.loaded)await loadRatHuntCombat(false);
+    const selectedPlan=ratHuntSelectedPlan(),steps=ratHuntEffectiveSteps().map(step=>({...step}));
+    if(!selectedPlan||!steps.length){log(either('Нет доступного плана Rat Hunt','No Rat Hunt plan available'),'warn');return;}
+    const selectedPreset=ratHuntCombat.presets.find(row=>row.id===ratHuntCombat.presetId);
+    const switchCost=ratHuntCombat.state?.is_finish===false||ratHuntCombat.presetId===ratHuntCombat.currentPresetId?0:ratHuntSwitchCost(selectedPreset);
+    const costs=ratHuntEffectiveCosts(),rounds=steps.length,totalPaws=pitCanonWhole(ratHuntCombat.maxRestoration)*rounds;
+    if(!confirm(either(
+      'Запустить Охоту на крыс?\\n\\nПресет: '+ratHuntPresetLabel(selectedPreset)+'\\nРаунды: '+steps.map(step=>'×'+pitCanonWhole(step.chunk)).join(' + ')+(switchCost?'\\nСмена пресета: '+switchCost+' кланового золота':'')+(costs.crystalCost?'\\nКристаллы: '+costs.crystalCost:'')+(costs.itemCost?'\\nЖетоны пополнения: '+costs.itemCost:'')+'\\nЛапы восстановления: до '+totalPaws,
+      'Start Rat Hunt?\\n\\nPreset: '+ratHuntPresetLabel(selectedPreset)+'\\nRounds: '+steps.map(step=>'×'+pitCanonWhole(step.chunk)).join(' + ')+(switchCost?'\\nPreset switch: '+switchCost+' Clan Gold':'')+(costs.crystalCost?'\\nCrystals: '+costs.crystalCost:'')+(costs.itemCost?'\\nRefill tickets: '+costs.itemCost:'')+'\\nRestoration Paws: up to '+totalPaws
+    )))return;
+
+    hkRunner.start({title:either('Охота на крыс','Rat Hunt'),total:rounds,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    let completed=0;
+    try{
+      playerDocument=await hkAuthoritativePlayerRead('rat-hunt:preflight');
+      let state=ratHuntCombatState(playerDocument);if(!state)throw new Error(either('Rat Hunt недоступна','Rat Hunt is unavailable'));
+
+      if(state.is_finish!==false&&String(state.preset_id||'')!==String(ratHuntCombat.presetId||'')){
+        const presets=await ratHuntFetchPresets(),livePreset=presets.find(row=>row.id===ratHuntCombat.presetId);
+        const liveCost=livePreset?ratHuntSwitchCost(livePreset):null;
+        if(liveCost===null||liveCost!==pitCanonWhole(switchCost))throw new Error(either('Стоимость смены пресета изменилась — обновите данные','Preset switch cost changed — refresh data'));
+        if(pitCanonResourceQuantity(playerDocument,RAT_HUNT_CLAN_GOLD_ID,'item')<liveCost)throw new Error(either('Недостаточно кланового золота','Not enough Clan Gold'));
+        hkRunner.setStep(either('Смена пресета','Changing preset'),completed,rounds);
+        const changed=await apiJson('/pit_generals/change_preset','POST',{preset_id:ratHuntCombat.presetId},true,0);
+        ratHuntAcceptResponse(changed,'rat-hunt:change-preset');state=ratHuntCombatState(playerDocument);
+        if(String(state?.preset_id||'')!==String(ratHuntCombat.presetId))throw new Error(either('Пресет не изменился','Preset did not change'));
+      }
+
+      for(let index=0;index<steps.length;index++){
+        await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+        const step=steps[index];state=ratHuntCombatState(playerDocument);if(!state)throw new Error(either('Состояние Rat Hunt потеряно','Rat Hunt state is unavailable'));
+        const resuming=step.payment==='ACTIVE';
+        if(resuming){
+          if(state.is_finish!==false)throw new Error(either('Активная Охота уже завершена','Active hunt is already finished'));
+        }else{
+          if(state.is_finish===false)throw new Error(either('Уже есть активная Охота — обновите данные','A Rat Hunt is already active — refresh data'));
+          const chunk=pitCanonWhole(step.chunk);
+          hkRunner.setStep(either('Запуск раунда','Starting round')+' ×'+chunk,completed,rounds);
+          let result;
+          if(step.payment==='FREE'){
+            if(pitCanonResourceQuantity(playerDocument,RAT_HUNT_FREE_PASS_ID,'currency')<chunk)throw new Error(either('Свободные жетоны изменились — обновите данные','Free tokens changed — refresh data'));
+            result=await apiJson('/pit_generals/start','POST',{mass_multiplier:chunk},true,0);
+          }else{
+            const liveCost=ratHuntDirectPassCost(state,chunk,step.payment);
+            if(liveCost===null||pitCanonWhole(liveCost)!==pitCanonWhole(step.cost))throw new Error(either('Цена запуска изменилась — обновите данные','Run price changed — refresh data'));
+            const resourceId=step.payment==='PREM'?'cur_prem':RAT_HUNT_PASS_ITEM_ID,kind=step.payment==='PREM'?'currency':'item';
+            if(pitCanonResourceQuantity(playerDocument,resourceId,kind)<pitCanonWhole(liveCost))throw new Error(either('Недостаточно ресурса для запуска','Not enough resource to start'));
+            result=await apiJson('/pit_generals/pass','POST',{mass_multiplier:chunk,payment_type:step.payment},true,0);
+          }
+          ratHuntAcceptResponse(result,'rat-hunt:start');state=ratHuntCombatState(playerDocument);
+        }
+
+        let restorationSpent=0,stoppedForRestoration=false;
+        while(state&&state.is_finish===false&&pitCanonWhole(state.level)<pitCanonWhole(state.max_preset_level||10)){
+          await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+          if(pitCanonWhole(state.health)<=0){
+            const cost=ratHuntRespawnCost(state),available=pitCanonResourceQuantity(playerDocument,RAT_HUNT_RESTORATION_ITEM_ID,'item');
+            if(cost<=0||restorationSpent+cost>pitCanonWhole(ratHuntCombat.maxRestoration)||available<cost){stoppedForRestoration=true;break;}
+            hkRunner.setStep(either('Восстановление','Restoring')+' 🐾 '+cost,completed,rounds);
+            const restored=await apiJson('/pit_generals/respawn','POST',{payment_type:'ITEM'},true,0);
+            ratHuntAcceptResponse(restored,'rat-hunt:respawn');restorationSpent+=cost;state=ratHuntCombatState(playerDocument);continue;
+          }
+          const beforeLevel=pitCanonWhole(state.level),beforeHealth=pitCanonWhole(state.health);
+          hkRunner.setStep(either('Бой','Battle')+' · '+beforeLevel+'/'+pitCanonWhole(state.max_preset_level||10)+' · HP '+beforeHealth,completed,rounds);
+          await gameRetryDelay(1000);
+          const battle=await apiJson('/pit_generals/battle','POST',null,true,0);
+          ratHuntAcceptResponse(battle,'rat-hunt:battle');state=ratHuntCombatState(playerDocument);
+          const won=pitCanonWhole(state?.level)>beforeLevel||battle?.battle_result?.is_win===true;
+          log((won?'✓ ':'✗ ')+either('Охота на крыс','Rat Hunt')+': '+beforeLevel+' → '+pitCanonWhole(state?.level)+' · HP '+pitCanonWhole(state?.health),won?'ok':'warn');
+        }
+
+        state=ratHuntCombatState(playerDocument);
+        if(stoppedForRestoration)log(either('Остановлено: достигнут лимит Лап восстановления','Stopped: Restoration Paws limit reached'),'warn');
+        if(state?.is_finish===false){
+          if(ratHuntCombat.autofinish){
+            hkRunner.setStep(either('Завершение раунда','Finishing round'),completed,rounds);
+            const finished=await apiJson('/pit_generals/finish','POST',null,true,0);
+            ratHuntAcceptResponse(finished,'rat-hunt:finish');
+          }else{
+            log(either('Охота оставлена активной для ручного продолжения','Hunt left active for manual continuation'),'warn');
+            completed++;hkRunner.setStep(either('Раунд оставлен активным','Round left active'),completed,rounds);break;
+          }
+        }
+        completed++;hkRunner.setStep(either('Раунд завершён','Round completed'),completed,rounds);
+      }
+
+      playerDocument=await hkAuthoritativePlayerRead('rat-hunt:complete');
+      await loadRatHuntCombat(false);
+      hkRunner.finish(either('План Охоты на крыс завершён','Rat Hunt plan completed'));
+      log(either('План Охоты на крыс завершён','Rat Hunt plan completed'),'ok');
+      renderRatHunt();
+    }catch(error){
+      try{playerDocument=await hkAuthoritativePlayerRead('rat-hunt:error');await loadRatHuntCombat(false);}catch(_){}
+      if(error?.name==='AbortError'){hkRunner.reset();log(either('Охота на крыс остановлена','Rat Hunt stopped'),'warn');}
+      else{hkRunner.fail(error);log(either('Ошибка Охоты на крыс','Rat Hunt error')+': '+(error?.message||error),'bad');}
+      renderRatHunt();
+    }
+  }
+
   function renderRatHunt() {
     const box=root?.querySelector('#hk-rat-content');
     if(!box)return;
@@ -7022,35 +7383,46 @@
       const previousRank=row.previousRank===null||row.previousRank===undefined?'—':'#'+Number(row.previousRank).toLocaleString(locale());
       const previousScore=row.previousScore===null||row.previousScore===undefined?'—':Number(row.previousScore).toLocaleString(locale());
       const rewardState=row.claimable?either('можно получить','claimable'):row.claimed?either('получено','claimed'):either('нет доступной награды','no claimable reward');
-      return '<section style="padding:12px;margin:9px 0;border:1px solid #304057;border-radius:12px;background:#101927">'+
+      return '<section style="padding:10px;margin:8px 0;border:1px solid #304057;border-radius:12px;background:#101927">'+
         '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><b>'+escapeHtml(label)+'</b><small>'+escapeHtml(row.id||'')+'</small></div>'+
         (row.available
-          ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
+          ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
               '<div><small>'+either('Текущий рейтинг','Current ranking')+'</small><div><b>'+currentRank+'</b> · '+either('очки','score')+': <b>'+currentScore+'</b></div></div>'+
               '<div><small>'+either('Прошлый период','Previous period')+'</small><div><b>'+previousRank+'</b> · '+either('очки','score')+': <b>'+previousScore+'</b></div></div>'+
-            '</div><div style="margin-top:8px"><small>'+either('Награда','Reward')+': '+escapeHtml(rewardState)+'</small>'+ratHuntRewardHtml(row.rewardView)+'</div>'
+            '</div><div style="margin-top:7px"><small>'+either('Награда','Reward')+': '+escapeHtml(rewardState)+'</small>'+ratHuntRewardHtml(row.rewardView)+'</div>'
           : '<p class="hk-muted">'+either('Рейтинг сейчас недоступен или ещё не считан.','Leaderboard is unavailable or has not been read yet.')+'</p>')+
       '</section>';
     }).join('');
     box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Охота на крыс','Rat Hunt')+'</h3><small>'+
-      either('Месячные рейтинги Cat / Dog / Pigeon','Monthly Cat / Dog / Pigeon leaderboards')+' · '+HK_RAT_HUNT_REV+
-      '</small></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button id="hk-rat-refresh" class="hk-secondary">'+either('Обновить','Refresh')+
-      '</button><button id="hk-rat-claim" class="hk-primary" '+(pending?'':'disabled')+'>'+either('Получить награды','Claim rewards')+
-      (pending?' ('+pending+')':'')+'</button></div></div>'+
-      (ratHuntLastReadAt?'<p class="hk-muted">'+either('Обновлено','Updated')+': '+new Date(ratHuntLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'})+'</p>':'')+
-      cards;
+      either('Боевая механика + месячные рейтинги','Combat runner + monthly leaderboards')+
+      '</small></div><button id="hk-rat-refresh" class="hk-secondary">'+either('Обновить всё','Refresh all')+'</button></div>'+
+      ratHuntCombatHtml()+
+      '<details open style="margin-top:10px"><summary style="cursor:pointer"><b>'+either('Месячные рейтинги Cat / Dog / Pigeon','Monthly Cat / Dog / Pigeon leaderboards')+'</b></summary>'+
+      '<div style="display:flex;justify-content:flex-end;margin:8px 0"><button id="hk-rat-claim" class="hk-secondary" '+(pending?'':'disabled')+'>'+either('Получить рейтинговые награды','Claim leaderboard rewards')+(pending?' ('+pending+')':'')+'</button></div>'+
+      cards+'</details>';
     box.querySelector('#hk-rat-refresh')?.addEventListener('click',()=>void refreshModuleLive('rats',{force:true}));
     box.querySelector('#hk-rat-claim')?.addEventListener('click',()=>void claimRatHuntRewards());
+    box.querySelector('#hk-rat-run')?.addEventListener('click',()=>void runRatHuntCombat());
+    box.querySelector('#hk-rat-preset')?.addEventListener('change',event=>void changeRatHuntPreset(String(event.target.value||'')));
+    box.querySelector('#hk-rat-plan')?.addEventListener('change',event=>{ratHuntCombat.planId=String(event.target.value||'');ratHuntCombatSave();renderRatHunt();});
+    box.querySelector('#hk-rat-autofinish')?.addEventListener('change',event=>{ratHuntCombat.autofinish=!!event.target.checked;ratHuntCombatSave();renderRatHunt();});
+    box.querySelector('#hk-rat-paws')?.addEventListener('change',event=>{
+      ratHuntCombat.maxRestoration=Math.min(pitCanonResourceQuantity(playerDocument,RAT_HUNT_RESTORATION_ITEM_ID,'item'),pitCanonWhole(event.target.value));
+      ratHuntCombatSave();renderRatHunt();
+    });
   }
 
   async function refreshRatHunt(force=false) {
     if(!requireLicense())return null;
     try{
-      ratHuntRows=await readRatHuntLeaderboards();
+      const results=await Promise.allSettled([loadRatHuntCombat(force),readRatHuntLeaderboards()]);
+      if(results[0].status==='rejected')log(either('Ошибка боевой Охоты','Rat Hunt combat read error')+': '+(results[0].reason?.message||results[0].reason),'warn');
+      if(results[1].status==='fulfilled')ratHuntRows=results[1].value;
+      else log(either('Ошибка рейтингов Охоты','Rat Hunt leaderboard read error')+': '+(results[1].reason?.message||results[1].reason),'warn');
       ratHuntLastReadAt=Date.now();
       renderRatHunt();
-      if(force)log(either('Рейтинги Охоты на крыс обновлены','Rat Hunt leaderboards refreshed'),'ok');
-      return ratHuntRows;
+      if(force)log(either('Охота на крыс обновлена','Rat Hunt refreshed'),results[0].status==='fulfilled'?'ok':'warn');
+      return {combat:results[0].status==='fulfilled'?results[0].value:null,leaderboards:ratHuntRows};
     }catch(error){
       log(either('Ошибка чтения Охоты на крыс','Rat Hunt read error')+': '+(error?.message||error),'warn');
       renderRatHunt();
