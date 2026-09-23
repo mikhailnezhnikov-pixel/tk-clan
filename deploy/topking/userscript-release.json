@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.69",
-  "target_version": "1.17.70",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.70.mutation-bridge-readonly.candidate.user.js",
-  "primary_marker": "mutation-bridge-readonly-20260923-r1",
+  "source_version": "1.17.70",
+  "target_version": "1.17.71",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.71.growth-fresh-preflight.candidate.user.js",
+  "primary_marker": "growth-fresh-preflight-20260923-r1",
   "preserve_markers": [
+    "mutation-bridge-readonly-20260923-r1",
     "war-combat-20260923-r1",
     "rat-hunt-combat-20260923-r1",
     "neighborhood-battles-20260923-r1",
@@ -45,6 +46,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-70-mutation-bridge-readonly-live-status.txt",
-  "commit_message": "fix: deploy read-only mutation bridge safety in userscript 1.17.70"
+  "audit_status_path": "audit/hk-userscript-1-17-71-growth-fresh-preflight-live-status.txt",
+  "commit_message": "fix: deploy Growth fresh-state safety in userscript 1.17.71"
 }
