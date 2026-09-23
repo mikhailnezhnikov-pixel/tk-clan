@@ -23,6 +23,12 @@
     renderFrame(){
       const frames=this.textures[this.state]||this.textures.idle;
       const phase=this.state==='idle'?(this.time/2.25%1)*frames.length:this.motion.progress*(frames.length-1);
+      if(this.state!=='idle'){
+        const frame=frames[Math.min(frames.length-1,Math.round(phase))];
+        if(this.front.texture!==frame)this.front.texture=frame;
+        this.front.alpha=1;this.back.alpha=0;
+        return;
+      }
       const index=Math.min(frames.length-1,Math.floor(phase));
       const next=this.state==='idle'?(index+1)%frames.length:Math.min(frames.length-1,index+1);
       const mix=phase-index;
