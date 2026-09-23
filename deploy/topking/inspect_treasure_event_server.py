@@ -4,27 +4,34 @@ spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
-terms=["bp_event_minigame_line_free","bp_event_minigame_line_paid_01","bp_event_minigame_line_paid_02"]
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,captured_at
+    rows=[dict(r) for r in db.execute("""SELECT id,player_id,payload_json,captured_at
                                         FROM treasure_guide_captures
-                                        WHERE path LIKE '/client_config%'
+                                        WHERE path='/battlepass/claim'
                                           AND payload_json<>''
-                                        ORDER BY id DESC""")]
+                                        ORDER BY player_id,id""")]
 
-for term in terms:
-    hits=[]
-    for r in rows:
-        raw=str(r["payload_json"] or "")
-        start=0
-        while True:
-            pos=raw.find(term,start)
-            if pos<0: break
-            hits.append({
-              "id":r["id"],"path":r["path"],"captured_at":r["captured_at"],
-              "snippet":raw[max(0,pos-2500):pos+9000]
-            })
-            start=pos+len(term)
-            if len(hits)>=12: break
-        if len(hits)>=12: break
-    print("CFG_LINE",term,json.dumps(hits,ensure_ascii=False))
+out=[]
+for r in rows:
+    try:o=json.loads(r["payload_json"])
+    except:continue
+    bp=o.get("player_battle_pass") if isinstance(o,dict) else None
+    if not isinstance(bp,dict) or bp.get("id")!="bp_event_minigame":continue
+    line_counts={}
+    for line in bp.get("lines") or []:
+        if isinstance(line,dict):
+            line_counts[str(line.get("id") or "")]=len(line.get("claimed_levels") or [])
+    rew=o.get("reward") if isinstance(o,dict) else None
+    if not isinstance(rew,dict):continue
+    items=[[x.get("id"),x.get("quantity")] for x in (rew.get("items") or []) if isinstance(x,dict)]
+    curs=[[x.get("id"),x.get("quantity")] for x in (rew.get("currencies") or []) if isinstance(x,dict)]
+    if not items and not curs:continue
+    out.append({
+      "id":r["id"],
+      "player":str(r["player_id"])[-4:],
+      "captured_at":r["captured_at"],
+      "counts":line_counts,
+      "items":items,
+      "currencies":curs
+    })
+print("CLAIMS",json.dumps(out,ensure_ascii=False))
