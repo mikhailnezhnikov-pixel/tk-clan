@@ -4998,10 +4998,10 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fight_icon.png",
       "summary": "На поле выбираем врагов и расходуем боевой ресурс. Карточка врага показывает его HP и стоимость действия.",
       "facts": [
-        "На присланном поле красные враги имеют 2 HP, зелёные — 3 HP, голубые — 4 HP.",
-        "Под карточками показана стоимость действия: 2 / 3 / 4 единицы боевого ресурса.",
-        "Верхняя панель содержит состояние оружия и активные бонусы.",
-        "Нумерация 1–6 на примере показывает один из порядков прохождения этого конкретного поля."
+        "На подтверждённом поле красные враги имеют 2 HP, синие — 3 HP, зелёные — 4 HP.",
+        "После гибели синий враг наносит −2 HP соседним живым врагам.",
+        "После гибели зелёный враг добавляет +3 HP соседним живым врагам.",
+        "Верхняя панель содержит состояние оружия и доступный боевой ресурс; порядок целей зависит от текущего поля."
       ],
       "sequence": [
         "1",
@@ -5011,7 +5011,7 @@
         "5",
         "6"
       ],
-      "hint": "Достижения дополнительно учитывают цвет врагов, суммарное HP, зачистки и число боёв.",
+      "hint": "Для этой комнаты можно использовать закладку-помощник Top King: она рассчитывает порядок целей и ставит цифры 1 → 2 → 3… прямо на поле.",
       "visuals": [
         {
           "title": "Оружие",
@@ -6326,5 +6326,128 @@
       }
     ],
     "caution": "Случайные лоты не оцениваются по средней выгоде, пока игра не раскрывает вероятности отдельных исходов."
+  },
+  "labyrinth_guide": {
+    "title": "Лабиринт — как проходить",
+    "intro": "Лабиринт — поле 3×3 из девяти ламп. Цель — включить все лампы. Нажатие меняет выбранную клетку и её соседей сверху, снизу, слева и справа.",
+    "entry": {
+      "value": "20 Провизии",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+    },
+    "steps": [
+      {
+        "n": 1,
+        "title": "Войдите в Лабиринт",
+        "text": "Обычный вход в комнату стоит 20 Провизии.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_riddle_icon.png"
+      },
+      {
+        "n": 2,
+        "title": "Посмотрите текущее поле",
+        "text": "Комбинация каждый раз зависит от того, какие из 9 ламп уже включены.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/lights/icons/treasure_minigame_light_true_icon.png"
+      },
+      {
+        "n": 3,
+        "title": "Помните правило нажатия",
+        "text": "Меняется сама выбранная лампа и ортогональные соседи: верх, низ, лево, право.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/lights/icons/treasure_minigame_light_false_icon.png"
+      },
+      {
+        "n": 4,
+        "title": "Используйте помощник при необходимости",
+        "text": "Закладка Top King автоматически распознаёт поле и показывает короткую последовательность цифрами.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_riddle_icon.png"
+      },
+      {
+        "n": 5,
+        "title": "Нажимайте 1 → 2 → 3…",
+        "text": "Помощник не кликает сам. После каждого решения игрок выполняет отмеченные ходы вручную.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/lights/icons/treasure_minigame_light_true_icon.png"
+      }
+    ],
+    "note": "Пример 1 → 2 → 3 → 4 относится только к одному сохранённому полю и не является универсальной комбинацией."
+  },
+  "battle_guide": {
+    "title": "Сражение — как проходить",
+    "intro": "В Сражении нужно уничтожить максимум врагов доступной силой меча. Главное — учитывать цепные эффекты синих и зелёных врагов, поэтому порядок целей имеет значение.",
+    "entry": {
+      "value": "40 Провизии",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+    },
+    "steps": [
+      {
+        "n": 1,
+        "title": "Войдите в Сражение",
+        "text": "Обычный вход в комнату стоит 40 Провизии.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fight_icon.png"
+      },
+      {
+        "n": 2,
+        "title": "Посмотрите HP и запас атаки",
+        "text": "Каждая цель имеет текущий HP. Для прямого уничтожения цели расходуется величина её текущего HP.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png"
+      },
+      {
+        "n": 3,
+        "title": "Синий: взрыв −2",
+        "text": "После гибели синий враг наносит 2 урона соседним живым врагам. Это может запустить цепочку смертей.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_02_icon.png"
+      },
+      {
+        "n": 4,
+        "title": "Зелёный: лечение +3",
+        "text": "После гибели зелёный враг добавляет 3 HP соседним живым врагам. Неправильный порядок может сделать поле дороже.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_03_icon.png"
+      },
+      {
+        "n": 5,
+        "title": "Следуйте рассчитанному порядку",
+        "text": "Закладка-помощник перебирает варианты, максимизирует число уничтоженных врагов и при равенстве старается тратить меньше атаки.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png"
+      }
+    ],
+    "note": "Помощник только рисует номера целей. Все нажатия остаются за игроком."
+  },
+  "treasury_guide": {
+    "title": "Сокровищница — завершение карты",
+    "intro": "Сокровищница — финальная точка путешествия. Внутри выбирается один из трёх путей. По текущим данным стоимость всех трёх путей одинакова, поэтому без вероятностей наград «лучшего» пути не существует.",
+    "entry": {
+      "value": "5 Провизии на карточке комнаты",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+    },
+    "steps": [
+      {
+        "n": 1,
+        "title": "Дойдите до Сокровищницы",
+        "text": "Вход в Сокровищницу используется как условие завершения Карты сокровищ.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png"
+      },
+      {
+        "n": 2,
+        "title": "Откройте выбор пути",
+        "text": "Внутри доступны три направления.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_1_icon.png"
+      },
+      {
+        "n": 3,
+        "title": "Путь 1",
+        "text": "Подтверждённая стоимость — 5 Провизии.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_1_icon.png"
+      },
+      {
+        "n": 4,
+        "title": "Путь 2",
+        "text": "Подтверждённая стоимость — 5 Провизии.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_2_icon.png"
+      },
+      {
+        "n": 5,
+        "title": "Путь 3",
+        "text": "Подтверждённая стоимость — 5 Провизии.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_3_icon.png"
+      }
+    ],
+    "note": "Вероятности наград по трём направлениям не подтверждены, поэтому гайд не рекомендует конкретный путь."
   }
 }
