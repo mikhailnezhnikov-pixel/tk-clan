@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.59",
-  "target_version": "1.17.60",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.60.war-unknown-score.candidate.user.js",
-  "primary_marker": "war-unknown-score-20260923-r1",
+  "source_version": "1.17.60",
+  "target_version": "1.17.61",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.61.fair-balance-rerolls.candidate.user.js",
+  "primary_marker": "fair-balance-rerolls-20260923-r1",
   "preserve_markers": [
+    "war-unknown-score-20260923-r1",
     "war-hp-ui-20260923-r1",
     "fair-bonus-threshold-state-20260923-r1",
     "fair-tiered-combo-20260923-r1",
@@ -35,6 +36,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-60-war-unknown-score-live-status.txt",
-  "commit_message": "fix: deploy War unknown score display in userscript 1.17.60"
+  "audit_status_path": "audit/hk-userscript-1-17-61-fair-balance-rerolls-live-status.txt",
+  "commit_message": "fix: deploy balance-driven Fair rerolls in userscript 1.17.61"
 }
