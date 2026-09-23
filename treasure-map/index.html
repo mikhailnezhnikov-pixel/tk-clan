@@ -21,9 +21,17 @@
     .quest-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.quest h3{margin:0;font-size:21px}.badge{padding:5px 8px;border:1px solid rgba(232,182,84,.3);border-radius:999px;color:var(--gold2);background:rgba(232,182,84,.06);font-size:11px;font-weight:900}
     .quest-condition{margin:10px 0 0;color:#c7ced7;font-size:14px;line-height:1.55}.choices{display:grid;gap:8px;margin-top:14px}.choice{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025)}.choice.best{border-color:rgba(143,224,168,.34);background:rgba(75,170,103,.07)}.choice-index{color:var(--gold);font-weight:900}.choice-reward{color:var(--muted);font-size:12px}
     .recommend{margin-top:14px;padding:12px 13px;border-left:3px solid var(--gold);border-radius:8px;background:rgba(232,182,84,.055);color:#d6dce4;font-size:13px;line-height:1.55}.recommend b{color:var(--gold2)}
+    .requirements{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.req{padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.025);color:#cfd5dc;font-size:12px}
+    .reward{margin-top:10px;color:var(--gold2);font-weight:900;font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:42px}
+    .mini-card{padding:16px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-height:100%}
+    .mini-card img{width:56px;height:56px;object-fit:contain;display:block;margin-bottom:12px}.mini-card h3{margin:0 0 8px;font-size:17px}.mini-card p{margin:0;color:#b9c1cb;font-size:13px;line-height:1.55}
+    .facts{display:grid;gap:10px;margin-bottom:42px}.fact{padding:14px 16px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}.fact b{color:var(--gold2)}.fact p{margin:7px 0 0;color:#b9c1cb;line-height:1.55;font-size:13px}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:42px}.chip{padding:8px 10px;border:1px solid var(--line);border-radius:999px;background:#0d1118;color:#c8d0da;font-size:12px}
+    .shop-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:42px}.shop-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 15px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.shop-item strong{font-size:13px}.shop-meta{color:var(--gold2);font-weight:900;font-size:12px;white-space:nowrap}
     .empty{padding:34px;border:1px dashed rgba(232,182,84,.28);border-radius:20px;text-align:center;color:var(--muted);background:rgba(232,182,84,.035)}.empty strong{display:block;margin-bottom:8px;color:#fff;font-size:18px}
     footer{padding:28px 0 40px;border-top:1px solid var(--line);color:#7f8996;font-size:12px}
-    @media(max-width:760px){.summary{grid-template-columns:1fr}.quest{grid-template-columns:1fr}.quest-media{min-height:190px}.section-head{align-items:flex-start;flex-direction:column}.choice{grid-template-columns:22px 1fr}.choice-reward{grid-column:2}}
+    @media(max-width:900px){.grid,.shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.summary,.grid,.shop-grid{grid-template-columns:1fr}.quest{grid-template-columns:1fr}.quest-media{min-height:190px}.section-head{align-items:flex-start;flex-direction:column}.choice{grid-template-columns:22px 1fr}.choice-reward{grid-column:2}}
   </style>
 </head>
 <body>
@@ -37,15 +45,26 @@
   </section>
 
   <section class="summary">
-    <div><span>Квестов найдено</span><b id="quest-count">0</b></div>
-    <div><span>Изображений события</span><b id="asset-count">0</b></div>
-    <div><span>Рекомендаций готово</span><b id="recommend-count">0</b></div>
+    <div><span>Квестов считано</span><b id="quest-count">0</b></div>
+    <div><span>Игровых ассетов найдено</span><b id="asset-count">0</b></div>
+    <div><span>Снимков события</span><b id="capture-count">0</b></div>
   </section>
 
-  <div class="section-head"><div><h2>Квесты и выборы</h2><p>Карточки будут заполняться по данным события из игры.</p></div><p>Лучший вариант выделяем после проверки механики и наград.</p></div>
-  <section class="quests" id="quests">
-    <div class="empty"><strong>Сбор данных события включён</strong>Откройте «Карту Сокровищ» в игре на актуальной версии скрипта. После считывания сюда будут добавлены квесты, изображения и варианты выбора.</div>
-  </section>
+  <div class="section-head"><div><h2>Квесты</h2><p>Фактические условия и награды, считанные из игры.</p></div><p>Совет «лучший вариант» добавляем отдельно, после проверки выгоды.</p></div>
+  <section class="quests" id="quests"></section>
+
+  <div class="section-head"><div><h2>Что встречается на карте</h2><p>Типы точек, найденные в структуре карты и игровых ассетах.</p></div></div>
+  <section class="grid" id="mechanics"></section>
+
+  <div class="section-head"><div><h2>Питомцы и поручения</h2><p>Эффекты и правила, которые удалось снять прямо с экрана события.</p></div></div>
+  <section class="facts" id="pets"></section>
+
+  <div class="section-head"><div><h2>Магазин</h2><p>Позиции, которые были видны в событии во время считывания.</p></div></div>
+  <section class="shop-grid" id="shop"></section>
+
+  <div class="section-head"><div><h2>Достижения</h2><p>Условия из текущего списка достижений. Названия и точные награды прикрепляем по мере извлечения модальных карточек.</p></div></div>
+  <section class="facts" id="achievement-examples"></section>
+  <section class="chips" id="achievement-conditions"></section>
 </main>
 <footer><div class="shell">Top King · неофициальный гайд для игроков Hamster King</div></footer>
 <script>
@@ -54,23 +73,46 @@
     const response=await fetch('./data.json?'+Date.now(),{cache:'no-store'});
     if(!response.ok)return;
     const data=await response.json();
-    const quests=Array.isArray(data.quests)?data.quests:[];
-    const assets=Array.isArray(data.assets)?data.assets:[];
-    document.getElementById('quest-count').textContent=quests.length;
-    document.getElementById('asset-count').textContent=assets.length;
-    document.getElementById('recommend-count').textContent=quests.filter(q=>q.best_choice||q.recommendation).length;
-    if(data.status_text)document.getElementById('status-text').textContent=data.status_text;
-    if(!quests.length)return;
     const safe=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const quests=Array.isArray(data.quests)?data.quests:[];
+    const mechanics=Array.isArray(data.mechanics)?data.mechanics:[];
+    const shop=Array.isArray(data.shop)?data.shop:[];
+    const examples=Array.isArray(data.achievement_examples)?data.achievement_examples:[];
+    const conditions=Array.isArray(data.achievement_conditions)?data.achievement_conditions:[];
+    document.getElementById('quest-count').textContent=quests.length;
+    document.getElementById('asset-count').textContent=Number(data?.captured?.assets_found||data?.assets?.length||0);
+    document.getElementById('capture-count').textContent=Number(data?.captured?.snapshots||0);
+    if(data.status_text)document.getElementById('status-text').textContent=data.status_text;
+
     document.getElementById('quests').innerHTML=quests.map((q,index)=>{
       const image=q.image?'<img src="'+safe(q.image)+'" alt="">':'<span class="quest-placeholder">🗺️</span>';
-      const choices=Array.isArray(q.choices)?q.choices:[];
+      const reqs=Array.isArray(q.requirements)?q.requirements:[];
       return '<article class="quest"><div class="quest-media">'+image+'</div><div><div class="quest-top"><h3>'+safe(q.title||('Квест '+(index+1)))+'</h3><span class="badge">'+safe(q.stage||('№ '+(index+1)))+'</span></div>'+
         (q.condition?'<p class="quest-condition">'+safe(q.condition)+'</p>':'')+
-        (choices.length?'<div class="choices">'+choices.map((c,i)=>'<div class="choice '+((q.best_choice===i||c.best)?'best':'')+'"><span class="choice-index">'+(i+1)+'</span><span>'+safe(c.text||c.title||'Вариант')+'</span><span class="choice-reward">'+safe(c.reward||'')+'</span></div>').join('')+'</div>':'')+
-        '<div class="recommend"><b>Лучший вариант:</b> '+safe(q.recommendation||'пока не определён — добавим после проверки механики и наград.')+'</div></div></article>';
-    }).join('');
-  }catch(_){}
+        (reqs.length?'<div class="requirements">'+reqs.map(v=>'<span class="req">'+safe(v)+'</span>').join('')+'</div>':'')+
+        (q.reward?'<div class="reward">Награда: '+safe(q.reward)+'</div>':'')+
+        '<div class="recommend"><b>Лучший вариант:</b> '+safe(q.recommendation||'ещё не утверждён — сначала сравниваем стоимость и ценность награды.')+'</div></div></article>';
+    }).join('')||'<div class="empty"><strong>Квесты пока не считаны</strong>Нужен новый снимок экрана события.</div>';
+
+    document.getElementById('mechanics').innerHTML=mechanics.map(m=>'<article class="mini-card">'+
+      (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+
+      '<h3>'+safe(m.title)+'</h3><p>'+safe(m.note||'')+'</p></article>').join('');
+
+    const petFacts=[];
+    if(data?.pets?.overview)petFacts.push('<div class="fact"><b>Питомцы</b><p>'+safe(data.pets.overview)+'</p></div>');
+    if(data?.pets?.missions)petFacts.push('<div class="fact"><b>Поручения питомцам</b><p>'+safe(data.pets.missions)+'</p></div>');
+    (Array.isArray(data?.pets?.known_effects)?data.pets.known_effects:[]).forEach(v=>petFacts.push('<div class="fact"><b>'+safe(v.title)+'</b><p>'+safe(v.text)+'</p></div>'));
+    document.getElementById('pets').innerHTML=petFacts.join('');
+
+    document.getElementById('shop').innerHTML=shop.map(v=>'<div class="shop-item"><div><strong>'+safe(v.title)+'</strong><div class="muted">'+safe(v.qty||'')+'</div></div><span class="shop-meta">'+safe(v.price||'')+'</span></div>').join('');
+
+    document.getElementById('achievement-examples').innerHTML=examples.map(v=>'<div class="fact"><b>'+safe(v.title)+'</b><p>'+safe(v.condition)+'</p>'+
+      (Array.isArray(v.rewards)&&v.rewards.length?'<p>Награды: '+v.rewards.map(safe).join(' · ')+'</p>':'')+'</div>').join('');
+
+    document.getElementById('achievement-conditions').innerHTML=conditions.map(v=>'<span class="chip">'+safe(v)+'</span>').join('');
+  }catch(error){
+    console.warn('Treasure guide data load failed',error);
+  }
 })();
 </script>
 </body></html>
