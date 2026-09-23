@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.59
+// @version      1.17.60
+// @release-note Войны: если активная война отдаёт HP, но не отдаёт счёт, интерфейс больше не подставляет фиктивные 0:0 — неизвестные очки показываются как «—».
 // @release-note Войны: в карточке активной войны теперь отображаются фактические HP сторон, максимум, процент и полосы здоровья, когда эти значения присутствуют в ответе игры.
 // @release-note Ярмарка: нижние бонусные ячейки 3/6/9 теперь определяются по фактически купленным основным ячейкам текущего поля, поэтому поэтапные покупки 3→6→9 корректно открывают первый, второй и третий бонус.
 // @release-note Ярмарка: восстановлена ступенчатая логика 3/6/9 — выбранное значение задаёт максимальный размер пачки, поэтому при 9 скрипт также выкупает найденные группы по 3 и 6 и открывает соответствующие нижние ячейки.
@@ -66,7 +67,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.59';
+  const BUILD_VERSION = '1.17.60';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -884,6 +885,7 @@
   const HK_STAGE2G_RUMORS_REV = 'stage2g-rumors-20260919-r1';
   const HK_STAGE2H_WARS_REV = 'stage2h-wars-20260919-r1';
   const HK_WAR_HP_UI_REV = 'war-hp-ui-20260923-r1';
+  const HK_WAR_UNKNOWN_SCORE_REV = 'war-unknown-score-20260923-r1';
   const HK_STAGE2I_BUILDINGS_REV = 'stage2i-buildings-explore-20260919-r1';
   const HK_BUILDINGS_CANON_REV = 'buildings-canon-core-20260920-r1';
   const HK_BUILDINGS_UI_REV = 'buildings-ui-20260921-r3';
@@ -7213,7 +7215,7 @@
         const war={
           our_clan:ownClan,
           opponent:firstText(attack.name,attack.defender_clan_name,'—'),
-          our_score:0,opponent_score:0,status:'active',
+          our_score:null,opponent_score:null,status:'active',
           started_at:0,ends_at:hkV4EndTimer(attack.end_timer),
           war_id:String(attack.id||''),war_type:'attack'
         };
@@ -7232,7 +7234,7 @@
         const war={
           our_clan:ownClan,
           opponent:firstText(defense.name,defense.attacker_alliance_name,'—'),
-          our_score:0,opponent_score:0,status:'active',
+          our_score:null,opponent_score:null,status:'active',
           started_at:0,ends_at:hkV4EndTimer(defense.end_timer),
           war_id:String(defense.id||''),war_type:'defense'
         };

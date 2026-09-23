@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.59
+target_version=1.17.60
+marker=war-unknown-score-20260923-r1
+source_sha256=72c0da1cc1b6eb697860be43396bd6d993074eb5683e4316857d1a2b2358d894
+candidate_sha256=ca3df530d40f276b11ec4f0534f01ce266e3c7c4a33c2a7eceb78a95a904afa0
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
