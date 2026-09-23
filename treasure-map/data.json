@@ -5058,6 +5058,50 @@
         "quantity": 5,
         "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
       }
+    },
+    {
+      "id": "forest",
+      "title": "Солнечный Лес",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_forest_g_icon.png",
+      "summary": "Комната поиска дорожных запасов и тайников.",
+      "facts": [
+        "Вход — 20 Провизии.",
+        "На карточке подтверждено: 11 Монет сокровищ и 28 Провизии.",
+        "Дополнительно есть два редких слота по ×1; их точные предметы пока не подписываем."
+      ],
+      "visuals": [
+        {
+          "title": "Монеты ×11",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "title": "Провизия ×28",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "hint": "Текст комнаты меняется, но подтверждённые количества на найденных карточках одинаковы."
+    },
+    {
+      "id": "mine",
+      "title": "Заброшенная Шахта",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png",
+      "summary": "Комната поиска старых запасов в шахте.",
+      "facts": [
+        "Вход — 20 Провизии.",
+        "На карточке подтверждено: 35 Монет сокровищ и 14 Провизии.",
+        "Дополнительно есть два редких слота по ×1; их точные предметы пока не подписываем."
+      ],
+      "visuals": [
+        {
+          "title": "Монеты ×35",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "title": "Провизия ×14",
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        }
+      ],
+      "hint": "Текст комнаты меняется, но подтверждённые количества на найденных карточках одинаковы."
     }
   ],
   "pet_skill_groups": [
@@ -5352,7 +5396,31 @@
         "quantity": 20,
         "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
       },
-      "note": "На карточке комнаты подтверждён вход за 20 Провизии."
+      "note": "Вход — 20 Провизии.",
+      "summary": "Небольшая поисковая комната: за вход исследуем тайник в лесу и получаем дорожные ресурсы.",
+      "possible_rewards": [
+        {
+          "title": "Монеты сокровищ",
+          "quantity": 11,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "title": "Провизия",
+          "quantity": 28,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "title": "Редкая находка",
+          "quantity": 1,
+          "image": null
+        },
+        {
+          "title": "Редкая находка",
+          "quantity": 1,
+          "image": null
+        }
+      ],
+      "reward_note": "Два слота ×1 подтверждены на карточке комнаты, но их точные предметы в сохранённых данных не раскрыты."
     },
     {
       "id": "mine",
@@ -5363,7 +5431,31 @@
         "quantity": 20,
         "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
       },
-      "note": "На карточке комнаты подтверждён вход за 20 Провизии."
+      "note": "Вход — 20 Провизии.",
+      "summary": "Поисковая комната в шахте: осматриваем укрытия и старые запасы.",
+      "possible_rewards": [
+        {
+          "title": "Монеты сокровищ",
+          "quantity": 35,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+        },
+        {
+          "title": "Провизия",
+          "quantity": 14,
+          "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        },
+        {
+          "title": "Редкая находка",
+          "quantity": 1,
+          "image": null
+        },
+        {
+          "title": "Редкая находка",
+          "quantity": 1,
+          "image": null
+        }
+      ],
+      "reward_note": "Два слота ×1 подтверждены на карточке комнаты, но их точные предметы в сохранённых данных не раскрыты."
     },
     {
       "id": "fishing",
