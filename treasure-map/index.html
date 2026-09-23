@@ -91,6 +91,12 @@
   <div class="section-head"><div><h2>Сундуки</h2><p>Возможное содержимое показано иконками.</p></div></div>
   <section class="loot-grid" id="verified-chests"></section>
 
+  <div class="section-head"><div><h2>Тайный торговец</h2><p>Три подтверждённых набора предложений. Точные цены показываются только там, где они уже подтверждены.</p></div></div>
+  <section class="grid" id="trader-variants"></section>
+
+  <div class="section-head"><div><h2>Редкие предметы</h2><p>Особые предметы события и их содержимое.</p></div></div>
+  <section class="loot-grid" id="special-items"></section>
+
   <div class="section-head"><div><h2>Магазин</h2><p>Предмет, количество и цена — на одной карточке.</p></div></div>
   <section class="shop-grid" id="shop"></section>
 
@@ -118,6 +124,8 @@
     const verifiedEconomy=data.verified_economy||{};
     const verifiedChests=Array.isArray(data.verified_chests)?data.verified_chests:[];
     const petSkills=Array.isArray(data.pet_skills_confirmed)?data.pet_skills_confirmed:[];
+    const traderVariants=Array.isArray(data.trader_variants)?data.trader_variants:[];
+    const specialItems=Array.isArray(data.special_items)?data.special_items:[];
 
     const iconFor=(id,name='')=>{
       const raw=(String(id||'')+' '+String(name||'')).toLowerCase();
@@ -207,6 +215,27 @@
     document.getElementById('verified-chests').innerHTML=verifiedChests.map(v=>'<article class="loot-card">'+
       '<div class="loot-head">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><h3>'+safe(v.title)+'</h3><p>Возможное содержимое</p></div></div>'+
       '<div class="loot-items">'+(Array.isArray(v.contents)?v.contents:[]).map(x=>resource(x.name||x.id,x.quantity,iconFor(x.id,x.name),x.id)).join('')+'</div></article>').join('');
+
+    document.getElementById('trader-variants').innerHTML=traderVariants.map(v=>'<article class="mini-card">'+
+      (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+      '<h3>'+safe(v.title)+'</h3>'+
+      '<div class="tag-list">'+(Array.isArray(v.offers)?v.offers:[]).map(o=>{
+        if(o.reward&&o.cost){
+          return '<div style="width:100%;margin-top:4px">'+
+            '<div class="resource-list">'+
+              resource(o.reward.title,o.reward.quantity,o.reward.image||'')+
+              '<span class="cost-arrow">←</span>'+
+              resource(o.cost.title,o.cost.quantity,o.cost.image||'')+
+            '</div>'+
+            (o.note?'<p style="margin-top:6px">'+safe(o.note)+'</p>':'')+
+          '</div>';
+        }
+        return '<span class="tag">'+safe(o.title)+(o.note?' · '+safe(o.note):'')+'</span>';
+      }).join('')+'</div></article>').join('');
+
+    document.getElementById('special-items').innerHTML=specialItems.map(v=>'<article class="loot-card">'+
+      '<div class="loot-head">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><h3>'+safe(v.title)+'</h3><p>'+safe(v.note||'')+'</p></div></div>'+
+      '<div class="loot-items">'+(Array.isArray(v.contents)?v.contents:[]).map(x=>resource(x.title,x.quantity,x.image||'')).join('')+'</div></article>').join('');
 
     document.getElementById('shop').innerHTML=shop.map(v=>'<article class="shop-item">'+
       (v.image?'<img src="'+safe(v.image)+'" alt="">':'<span class="resource-fallback">?</span>')+
