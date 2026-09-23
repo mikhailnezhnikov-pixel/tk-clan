@@ -1,4 +1,5 @@
 runtime_smoke_status=1.17.76
 source=1.17.75
 marker=runtime-smoke-status-20260923-r1
-stamp=2026-09-23T23:16+09:00
+stamp=2026-09-23T23:19+09:00
+retry=2
