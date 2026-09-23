@@ -189,15 +189,15 @@
 <div class="solver-modal" id="solverInstallModal" aria-hidden="true">
   <div class="solver-dialog" role="dialog" aria-modal="true" aria-labelledby="solverInstallTitle">
     <button class="solver-close" type="button" data-solver-close aria-label="Закрыть">×</button>
-    <h2 id="solverInstallTitle">HK Puzzle Solver</h2>
-    <p>Отдельный помощник для Лабиринта и Сражения. Он не делает клики за игрока: только ставит номера 1 → 2 → 3… поверх нужных клеток или целей.</p>
+    <h2 id="solverInstallTitle">Добавить помощник в закладки</h2>
+    <p>Без расширений и без установки файлов. Закладка содержит только короткий загрузчик, а сам решатель хранится на сайте Top King.</p>
     <div class="solver-steps">
-      <div class="solver-step"><i>1</i><div><b>Установите Tampermonkey.</b><br>Если расширение уже есть — переходите дальше.</div></div>
-      <div class="solver-step"><i>2</i><div><b>Откройте установку скрипта.</b><br>Нажмите кнопку ниже и подтвердите установку HK Puzzle Solver.</div></div>
-      <div class="solver-step"><i>3</i><div><b>Обновите Hamster King.</b><br>В Лабиринте или Сражении номера появятся автоматически после загрузки поля.</div></div>
-      <div class="solver-step"><i>4</i><div><b>Нажимайте сами по порядку.</b><br>№1 → №2 → №3 и далее.</div></div>
+      <div class="solver-step"><i>1</i><div><b>Создайте новую закладку.</b><br>Название, например: «HK Помощник».</div></div>
+      <div class="solver-step"><i>2</i><div><b>Скопируйте код и вставьте вместо адреса:</b><br><code id="solverBookmarkCode" style="display:block;margin-top:7px;padding:9px;border-radius:9px;background:rgba(0,0,0,.3);word-break:break-all;font-size:9px">javascript:(()=&gt;{if(window.__HK_PUZZLE_SOLVER__)return window.__HK_PUZZLE_SOLVER__.check();let s=document.createElement('script');s.src='https://tk-clan.ru/scripts/hk-puzzle-bookmark.js?'+Date.now();document.documentElement.appendChild(s)})()</code><button type="button" class="solver-cancel" data-copy-solver-bookmark style="margin-top:8px">Скопировать код</button></div></div>
+      <div class="solver-step"><i>3</i><div><b>Откройте Hamster King и нажмите закладку.</b><br>На поле появятся номера 1 → 2 → 3…</div></div>
     </div>
-    <div class="solver-actions"><a class="solver-install" href="../scripts/hk-puzzle-solver.user.js">Продолжить установку</a><button class="solver-cancel" type="button" data-solver-close>Закрыть</button></div>
+    <p><b>Переустанавливать ничего не нужно:</b> при каждом запуске загружается актуальная версия помощника.</p>
+    <div class="solver-actions"><button class="solver-cancel" type="button" data-solver-close>Готово</button></div>
   </div>
 </div>
 
@@ -235,8 +235,8 @@
       fishing:'Расходуйте забросы на клетки воды; число под клеткой показывает стоимость забросов.',
       trader:'Смотрите товар и цену на карточке предложения и выбирайте нужный обмен.',
       chests:'Раскопайте точки, затем открывайте найденные сундуки Провизией или подходящими ключами.',
-      fight:'Выбирайте порядок противников. Для расчёта последовательности можно включить отдельный HK Puzzle Solver.',
-      lights:'Нужно привести поле 3×3 к состоянию, где включены все лампы. HK Puzzle Solver может показать порядок нажатий.',
+      fight:'Выбирайте порядок противников. Для расчёта последовательности можно включить отдельный Помощник Top King.',
+      lights:'Нужно привести поле 3×3 к состоянию, где включены все лампы. Помощник Top King может показать порядок нажатий.',
       treasury:'Выберите один из трёх путей. Каждый подтверждённый путь стоит 5 Провизии.'
     };
     const travelFlow=data.travel_flow||{};
@@ -346,7 +346,7 @@
         '</div>'+
         (Array.isArray(m.visuals)&&m.visuals.length?'<div class="mechanic-visuals">'+m.visuals.map(v=>'<div class="mechanic-visual">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<span>'+safe(v.title)+'</span></div>').join('')+'</div>':'')+
         (m.hint?'<div class="mechanic-hint">'+safe(m.hint)+'</div>':'')+
-        ((m.id==='lights'||m.id==='fight')?'<div class="solver-inline"><div><strong>Помощник Top King</strong><span>Покажет порядок действий цифрами прямо на игровом поле. Работает через обычную закладку.</span></div><button type="button" class="solver-button" data-solver-install>Добавить закладку-помощник</button></div>':'')+
+        ((m.id==='lights'||m.id==='fight')?'<div class="solver-inline"><div><strong>Помощник Top King</strong><span>Покажет порядок действий цифрами прямо на игровом поле. Работает через обычную закладку. Работает через обычную закладку.</span></div><button type="button" class="solver-button" data-solver-install>Добавить закладку-помощник</button></div>':'')+
       '</article>'
     ).join('');
 
