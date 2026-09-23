@@ -44,6 +44,7 @@
     .mechanic-visuals{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:7px;margin-top:2px}.mechanic-visual{display:flex;align-items:center;gap:7px;padding:7px;border:1px solid rgba(255,255,255,.06);border-radius:11px;background:rgba(255,255,255,.02);min-width:0}.mechanic-visual img{width:42px;height:42px;object-fit:contain;flex:0 0 42px}.mechanic-visual span{color:#aeb7c3;font-size:9px;line-height:1.25}
     .mechanic-hint{grid-column:1/-1;margin-top:2px;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.025);color:#8f99a6;font-size:10px;line-height:1.45}
     .room-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:42px}.room-card{padding:11px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-width:0}.room-card-media{height:82px;display:grid;place-items:center;border-radius:11px;background:#0b0f14;overflow:hidden;margin-bottom:8px}.room-card-media img{width:100%;height:100%;object-fit:contain}.room-card h3{margin:0 0 8px;font-size:12px;line-height:1.25}.room-card p{margin:7px 0 0;color:#8f99a6;font-size:8px;line-height:1.4}
+    .travel-flow{margin-bottom:42px}.travel-intro{max-width:860px;margin:0 0 14px;color:#b7c0cb;font-size:12px;line-height:1.55}.travel-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.travel-step{position:relative;padding:12px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-width:0}.travel-step-num{position:absolute;top:8px;left:8px;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;background:rgba(232,182,84,.14);border:1px solid rgba(232,182,84,.35);color:var(--gold2);font-size:10px;font-weight:950}.travel-step img{display:block;width:58px;height:58px;object-fit:contain;margin:6px auto 8px}.travel-step h3{margin:0 0 5px;text-align:center;font-size:11px}.travel-step p{margin:0;color:#9ea8b4;font-size:8px;line-height:1.4;text-align:center}.travel-room-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.travel-room{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid rgba(255,255,255,.06);border-radius:11px;background:rgba(255,255,255,.02);min-width:0}.travel-room img{width:40px;height:40px;object-fit:contain;flex:0 0 40px}.travel-room-title{display:block;font-size:9px;font-weight:900}.travel-room-role{display:block;margin-top:2px;color:#8f99a6;font-size:8px}.travel-note{margin-top:10px;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.025);color:#8f99a6;font-size:9px;line-height:1.45}
     .equipment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}.equipment-card{padding:14px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel))}.equipment-card h3{margin:0;font-size:16px}.equipment-card>p{margin:5px 0 10px;color:#9ea8b4;font-size:10px}.equipment-levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.equipment-level{padding:10px;border:1px solid rgba(255,255,255,.06);border-radius:12px;background:rgba(255,255,255,.02)}.equipment-level-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}.equipment-level-head img{width:50px;height:50px;object-fit:contain}.equipment-rank{color:var(--gold2);font-size:13px;font-weight:950}.equipment-note{margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.06);color:#8f99a6;font-size:9px;line-height:1.45}
     .skill-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}
     .skill-group{padding:14px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel))}
@@ -76,7 +77,7 @@
 
     @media(max-width:980px){.achievement-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.economy-grid,.shop-grid,.trader-offers{grid-template-columns:repeat(2,minmax(0,1fr))}.mechanics-hub,.skill-groups,.reward-lines{grid-template-columns:1fr}}
     @media(max-width:760px){.quests,.loot-grid,.facts{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.quest{grid-template-columns:68px minmax(0,1fr)}.quest-media{width:68px;height:68px}.loot-items{grid-template-columns:repeat(2,minmax(0,1fr))}.section-head{align-items:flex-start;flex-direction:column}}
-    @media(max-width:520px){.grid,.economy-grid,.shop-grid,.trader-offers,.value-grid,.room-grid{grid-template-columns:1fr}.equipment-levels{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.achievement,.achievement-series-card{padding:10px}.resource{min-width:98px}}
+    @media(max-width:520px){.grid,.economy-grid,.shop-grid,.trader-offers,.value-grid,.room-grid,.travel-steps,.travel-room-list{grid-template-columns:1fr}.equipment-levels{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.achievement,.achievement-series-card{padding:10px}.resource{min-width:98px}}
   </style>
 </head>
 <body>
@@ -87,6 +88,9 @@
     <h1>Карта Сокровищ</h1>
     <p>Квесты, покупки, сундуки, питомцы, достижения и механики события — в компактном виде с игровыми иконками и понятными наградами.</p>
   </section>
+
+  <div class="section-head"><div><h2>Как проходит путешествие</h2><p>От запуска Карты сокровищ до завершения маршрута через Сокровищницу.</p></div></div>
+  <section class="travel-flow" id="travel-flow"></section>
 
   <div class="section-head"><div><h2>Квесты</h2><p>Что нужно отдать и что получаем — сразу на карточке.</p></div></div>
   <section class="quests" id="quests"></section>
@@ -166,6 +170,7 @@
     const treasuryChoices=Array.isArray(data.treasury_choices_verified)?data.treasury_choices_verified:[];
     const rewardTracks=data.reward_tracks||{};
     const navigationItems=data.navigation_items||{};
+    const travelFlow=data.travel_flow||{};
 
     const iconFor=(id,name='')=>{
       const raw=(String(id||'')+' '+String(name||'')).toLowerCase();
@@ -190,6 +195,28 @@
         (img?'<img src="'+safe(img)+'" alt="">':'<span class="resource-fallback">'+safe(String(name||'?').slice(0,1).toUpperCase())+'</span>')+
         '<span class="resource-copy"><span class="resource-name">'+safe(name||id||'Ресурс')+'</span><span class="resource-qty">×'+safe(qty??'—')+'</span></span></span>';
     };
+
+    if(document.getElementById('travel-flow')){
+      const steps=Array.isArray(travelFlow.steps)?travelFlow.steps:[];
+      const rooms=Array.isArray(travelFlow.room_types)?travelFlow.room_types:[];
+      document.getElementById('travel-flow').innerHTML=
+        (travelFlow.intro?'<p class="travel-intro">'+safe(travelFlow.intro)+'</p>':'')+
+        '<div class="travel-steps">'+steps.map(v=>
+          '<article class="travel-step">'+
+            '<span class="travel-step-num">'+safe(v.n)+'</span>'+
+            (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+            '<h3>'+safe(v.title)+'</h3>'+
+            '<p>'+safe(v.text)+'</p>'+
+          '</article>'
+        ).join('')+'</div>'+
+        '<div class="travel-room-list">'+rooms.map(v=>
+          '<div class="travel-room">'+
+            (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+            '<span><span class="travel-room-title">'+safe(v.title)+'</span><span class="travel-room-role">'+safe(v.role)+'</span></span>'+
+          '</div>'
+        ).join('')+'</div>'+
+        (travelFlow.note?'<div class="travel-note">'+safe(travelFlow.note)+'</div>':'');
+    }
 
     document.getElementById('quests').innerHTML=quests.map((q,index)=>{
       const image=q.image?'<img src="'+safe(q.image)+'" alt="">':'<span class="quest-placeholder">🗺️</span>';
