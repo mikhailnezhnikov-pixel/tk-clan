@@ -1,2 +1,2 @@
-inspect=treasure-exact-treasury-chest-lots
-stamp=2026-09-23T15:28+09:00
+inspect=treasure-exact-chest-treasury-objects
+stamp=2026-09-23T15:31+09:00
