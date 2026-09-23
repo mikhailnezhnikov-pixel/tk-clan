@@ -103,10 +103,10 @@ replace_once(
 )
 
 replace_once(
-"""      <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">\${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">\${either('Диагностика','Diagnostics')}</button></div>
+"""      <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">${either('Диагностика','Diagnostics')}</button></div>
       <div id="hk-update-banner" class="hk-update"></div>
 """,
-"""      <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">\${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">\${either('Диагностика','Diagnostics')}</button></div>
+"""      <div class="hk-health-actions"><button id="hk-health-check" class="hk-secondary">${either('Проверить связь','Check connection')}</button><button id="hk-diagnostic">${either('Диагностика','Diagnostics')}</button></div>
       <div id="hk-smoke-status" style="margin:8px 12px 0;padding:9px;border:1px solid #243449;border-radius:11px;background:#0d1521"></div>
       <div id="hk-update-banner" class="hk-update"></div>
 """,
