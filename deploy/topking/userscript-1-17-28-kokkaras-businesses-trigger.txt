@@ -1,3 +1,0 @@
-deploy=1.17.28-kokkaras-businesses-canon
-base=1.17.27
-donor=Kokkaras-5.3.22-ui-icons-pit-dim

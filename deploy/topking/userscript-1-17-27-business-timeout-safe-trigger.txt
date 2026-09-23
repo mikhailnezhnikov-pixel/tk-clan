@@ -1,3 +1,0 @@
-deploy=1.17.27-business-timeout-safe
-base=1.17.26
-reason=remove-timeout-game-logic

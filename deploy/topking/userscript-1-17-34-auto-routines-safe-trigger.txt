@@ -1,3 +1,0 @@
-deploy=1.17.34-auto-routines-safe
-base=1.17.33
-stage=2.10

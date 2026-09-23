@@ -1,3 +1,0 @@
-deploy userscript 1.17.40 Hamsters cost parity
-source live must be exact 1.17.39 baseline
-rollback guards enabled

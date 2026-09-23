@@ -1,4 +1,0 @@
-runtime_smoke_capture=1.17.82
-source=1.17.81
-marker=runtime-smoke-capture-20260924-r1
-stamp=2026-09-24T01:18+09:00

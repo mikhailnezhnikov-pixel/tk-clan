@@ -1,6 +1,0 @@
-runtime_smoke_coverage=1.17.80
-source=1.17.79
-marker=runtime-smoke-coverage-20260923-r1
-preserve=treasure-guide-bundle-card-dom-20260923-r1
-stamp=2026-09-23T23:59+09:00
-retry=2

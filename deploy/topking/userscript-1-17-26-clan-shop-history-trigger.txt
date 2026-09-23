@@ -1,2 +1,0 @@
-deploy=userscript-1.17.26-clan-shop-history-parser-retry
-stamp=2026-09-22T22:37+09:00

@@ -1,4 +1,0 @@
-runtime_smoke_autostart=1.17.78
-source=1.17.77
-marker=runtime-smoke-autostart-20260923-r1
-stamp=2026-09-23T23:34+09:00
