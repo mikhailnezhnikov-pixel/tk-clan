@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.69
+// @version      1.17.70
+// @release-note Безопасность: Game Bridge больше не считает read-only POST запросы мутациями и не запускает лишний refresh React; особый claim /player/building сохраняет явный mutation signal.
 // @release-note Клан: «Войны» дополнены каноническим боевым runner по закреплённому Kokkaras-донору — free-план, один premium refill, выбор слабейшего противника по эффективной силе с усталостью и alliance_war/fight.
 // @release-note Клан: «Охота на крыс» восстановлена как полноценный Rat Hunt runner по закреплённому Kokkaras-донору — пресеты, free/item/premium планы, лапы восстановления, battle/respawn/finish; месячные рейтинги сохранены отдельным блоком.
 // @release-note Бои: добавлены канонические «Районы / Neighborhood Battles» по закреплённому Kokkaras-донору: idler/view, claim, level, update и безопасные human-like tap-пакеты без принудительного /player/me во время боя.
@@ -76,7 +77,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.69';
+  const BUILD_VERSION = '1.17.70';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -95,6 +96,7 @@
   const HK_RAT_HUNT_REV = 'rat-hunt-leaderboards-20260923-r1';
   const HK_RAT_HUNT_COMBAT_REV = 'rat-hunt-combat-20260923-r1';
   const HK_WAR_COMBAT_REV = 'war-combat-20260923-r1';
+  const HK_MUTATION_BRIDGE_READONLY_REV = 'mutation-bridge-readonly-20260923-r1';
   const HK_NEIGHBORHOOD_BATTLES_REV = 'neighborhood-battles-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
@@ -849,12 +851,12 @@
       clearTimer();
       timer = setTimeout(() => { timer=null; if (dirty && !hkRunner.running) void flush(false); }, Math.max(0,Number(delay)||0));
     };
-    const noteMutation = (path, method = 'POST') => {
+    const noteMutation = (path, method = 'POST', force = false) => {
       const verb = String(method || 'GET').toUpperCase();
       const route = String(path || '').split('?')[0];
-      if (['GET','HEAD','OPTIONS'].includes(verb) || route === '/player/me' || route === '/rumors/search' || route === '/regional_boss/battle_state') return;
+      if (!force && (!hkIsMutationRequest(path, verb) || route === '/rumors/search')) return;
       dirty = true;
-      recordDiagnostic('game-bridge-dirty',{path:route,method:verb});
+      recordDiagnostic('game-bridge-dirty',{path:route,method:verb,force:!!force});
       if (!hkRunner.running) schedule(180);
     };
     const buildingState = buildingId => {
@@ -1910,7 +1912,9 @@
 
   async function buildingCanonOpen(buildingId) {
     const path='/player/building?building_id='+encodeURIComponent(String(buildingId||''));
-    return hkMutationGate.run('/player/building',()=>apiJsonCore(path,'POST',null,true,0));
+    const result=await hkMutationGate.run('/player/building',()=>apiJsonCore(path,'POST',null,true,0));
+    hkGameBridge.noteMutation('/player/building','POST',true);
+    return result;
   }
 
   async function buildingCanonFavorite(buildingId) {
