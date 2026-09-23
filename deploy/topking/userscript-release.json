@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.53",
-  "target_version": "1.17.54",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.54.shop-caps-compact.candidate.user.js",
-  "primary_marker": "shop-cap-balance-mode-20260923-r1",
+  "source_version": "1.17.54",
+  "target_version": "1.17.55",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.55.fair-exact-combo.candidate.user.js",
+  "primary_marker": "fair-exact-combo-20260923-r1",
   "preserve_markers": [
+    "shop-cap-balance-mode-20260923-r1",
     "treasure-guide-priority-lots-20260923-r1",
     "fair-unified-nav-20260923-r1",
     "fair-single-preflight-20260923-r1",
@@ -30,6 +31,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-54-shop-caps-compact-live-status.txt",
-  "commit_message": "fix: deploy caps-driven compact Shop in userscript 1.17.54"
+  "audit_status_path": "audit/hk-userscript-1-17-55-fair-exact-combo-live-status.txt",
+  "commit_message": "fix: deploy strict Fair 3-6-9 combinations in userscript 1.17.55"
 }
