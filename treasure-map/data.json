@@ -1083,11 +1083,17 @@
     }
   ],
   "pet_skill_ids": [
-    "trader_keys_r4",
-    "fight_hp_up_r4",
-    "more_money_r4",
-    "treasure_goblin_r4",
-    "more_food_r4"
+    "more_money",
+    "more_food",
+    "fight_hp_up",
+    "fight_treasure_goblin",
+    "fishing_map_finder",
+    "chest_finder",
+    "chest_map_finder",
+    "map_generator",
+    "trader_maps",
+    "trader_keys",
+    "trader_rep"
   ],
   "verified_economy": {
     "treasury": {
@@ -1295,5 +1301,101 @@
       "empty": 10
     },
     "note": "Состав конкретной считанной карты из 30 слотов: 17 клеток с явно читаемым типом, 3 дорожных/служебных клетки без типа в ID и 10 пустых. Это не вероятности генерации."
+  },
+  "confirmed_economy": {
+    "treasury_paths": {
+      "path_1": {
+        "cost_item": "item_treasurehunt_energy",
+        "cost_quantity": 5,
+        "status": "confirmed"
+      },
+      "path_2": {
+        "status": "not_captured_yet"
+      },
+      "path_3": {
+        "cost_item": "item_treasurehunt_energy",
+        "cost_quantity": 5,
+        "status": "confirmed"
+      }
+    },
+    "treasury_big_chest": [
+      [
+        "item_treasurehunt_cur_coins",
+        70
+      ],
+      [
+        "item_treasurehunt_energy",
+        47
+      ],
+      [
+        "item_treasurehunt_key_common",
+        1
+      ],
+      [
+        "item_treasurehunt_key_uncommon",
+        1
+      ],
+      [
+        "item_event_treasure_golden_berry",
+        1
+      ],
+      [
+        "cur_gold",
+        1
+      ],
+      [
+        "item_event_treasure_map_path",
+        1
+      ],
+      [
+        "item_event_treasure_map_trader",
+        1
+      ],
+      [
+        "item_event_treasure_map_fishing",
+        1
+      ],
+      [
+        "item_event_treasure_map_fight",
+        1
+      ]
+    ],
+    "fight_big_chest": [
+      [
+        "item_treasurehunt_energy",
+        14
+      ],
+      [
+        "item_treasurehunt_cur_coins",
+        11
+      ],
+      [
+        "item_treasurehunt_key_common",
+        1
+      ],
+      [
+        "item_pet_mothcat_egg_02",
+        1
+      ],
+      [
+        "item_pet_mothcat_egg_03",
+        1
+      ],
+      [
+        "cur_gold",
+        1
+      ]
+    ],
+    "premium_shop": {
+      "item": "item_treasurehunt_energy",
+      "quantity": 200,
+      "price_currency": "cur_prem",
+      "price_quantity": 300
+    },
+    "pet_missions_confirmed": {
+      "B": "2 корма → 1 золотая монета",
+      "S": "12 корма → 3 золотые монеты; шанс яйца 5% на питомца",
+      "S_plus": "точная стоимость/награда ещё не поймана отдельной карточкой"
+    }
   }
 }
