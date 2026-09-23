@@ -39,7 +39,7 @@
     }
     tick(seconds,reduced){if(this.state==='idle'&&!reduced)this.time+=seconds*(1-this.fatigue*.35);this.renderFrame()}
     setHealth(ratio){this.fatigue=Math.max(0,Math.min(1,(1-ratio)*1.2));this.defeated=ratio<=0}
-    reset(){this.container.position.set(this.base.x,this.base.y);this.container.rotation=0;this.container.alpha=1;this.pose.rotation=this.face*this.fatigue*.14;this.setMotion('idle',0)}
+    reset(){this.container.position.set(this.base.x,this.base.y);this.container.rotation=0;this.container.alpha=1;this.pose.scale.set(1);this.pose.rotation=this.face*this.fatigue*.14;this.setMotion('idle',0)}
     destroy(){this.front.destroy();this.back.destroy()}
   }
   w.TopKingBattleCore=w.TopKingBattleCore||{};w.TopKingBattleCore.Fighter=Fighter;

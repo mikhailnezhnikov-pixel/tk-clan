@@ -41,8 +41,12 @@
         if(this.fallen===fallen)return;
         this.fallTween?.kill();this.fallen=fallen;
         fallen.setMotion('hit',.8);
-        if(this.motion.matches){fallen.pose.rotation=fallen.face*1.1;return}
-        this.fallTween=this.gsap.to(fallen.pose,{rotation:fallen.face*1.1,duration:.55,ease:'power2.inOut',onComplete:()=>{this.fallTween=null}});
+        const scale=this.scene.width<600?.76:.86;
+        if(this.motion.matches){fallen.pose.rotation=fallen.face*1.42;fallen.pose.scale.set(scale);fallen.container.y=fallen.base.y-fallen.height*.12;return}
+        this.fallTween=this.gsap.timeline({onComplete:()=>{this.fallTween=null}})
+          .to(fallen.pose,{rotation:fallen.face*1.42,duration:.62,ease:'power2.inOut'},0)
+          .to(fallen.pose.scale,{x:scale,y:scale,duration:.62},0)
+          .to(fallen.container,{y:fallen.base.y-fallen.height*.12,duration:.62},0);
         return;
       }
       this.fallen=null;this.schedule(this.turn?420:850);
