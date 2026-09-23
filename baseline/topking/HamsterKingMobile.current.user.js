@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.72
+// @version      1.17.73
+// @release-note Карта Сокровищ: четыре ограниченных набора магазина приоритетно сохраняются из уже загруженного /shop/view без дополнительных запросов к игре.
 // @release-note Безопасность боёв: Ямы, Боссы и Районы теперь требуют явное подтверждение перед запуском; Районы дополнительно всегда перечитывают свежий idler/view перед формированием и непосредственно перед стартом плана.
 // @release-note Безопасность Growth: Развитие / Хомяки / Генералы теперь всегда делают fresh /player/me перед необратимым запуском, требуют явное подтверждение по live-балансам и перечитывают authoritative state после завершения.
 // @release-note Безопасность: Game Bridge больше не считает read-only POST запросы мутациями и не запускает лишний refresh React; особый claim /player/building сохраняет явный mutation signal.
@@ -79,7 +80,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.72';
+  const BUILD_VERSION = '1.17.73';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -3541,11 +3542,12 @@
   const HK_TREASURE_GUIDE_PRIORITY_LOTS_REV='treasure-guide-priority-lots-20260923-r1';
   const HK_TREASURE_GUIDE_PRIORITY_TRADER_REV='treasure-guide-priority-trader-lots-20260923-r1';
   const HK_TREASURE_GUIDE_PRIORITY_BATTLEPASS_REV='treasure-guide-priority-battlepass-lines-20260923-r1';
+  const HK_TREASURE_GUIDE_PRIORITY_BUNDLES_REV='treasure-guide-priority-bundles-20260923-r1';
 
   function treasureGuidePriorityRows(path,body) {
     const rows=[];
     if(path==='/shop/view'&&Array.isArray(body?.shop_lots)){
-      const wanted=/^(?:mf_fair_treasury_room_choose_way_[123]|mf_treasurelot_chest_type_(?:01|015|02|03)|mf_treasurelot_chest_digging_spot_sl[4-9]|mf_fairlot_minigame_trader_(?:01|02|03)_.+|mf_treasurelot_trader_type_(?:01|02|03)_active_rep_5)$/;
+      const wanted=/^(?:mf_fair_treasury_room_choose_way_[123]|mf_treasurelot_chest_type_(?:01|015|02|03)|mf_treasurelot_chest_digging_spot_sl[4-9]|mf_fairlot_minigame_trader_(?:01|02|03)_.+|mf_treasurelot_trader_type_(?:01|02|03)_active_rep_5|mf_shoplot_treasure_offer_(?:pets_collection_10|energy_collection_10|keys_collection_10|maps_golden_berries_10))$/;
       for(let i=0;i<body.shop_lots.length;i++){
         const lot=body.shop_lots[i];
         if(!lot||typeof lot!=='object'||!wanted.test(String(lot.id||'')))continue;
