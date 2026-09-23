@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.47
+target_version=1.17.48
+marker=shop-today-dedup-20260923-r1
+source_sha256=bd2eba8c146a239051d50059a6e86576cc5acc86cf409bbaab7713140a5b535e
+candidate_sha256=beaa6b29b140933821a7a7cd39f0d59892e7c620a907ffa13cbdd8fc1ed76548
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

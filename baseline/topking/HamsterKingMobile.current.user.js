@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.47
+// @version      1.17.48
+// @release-note Магазин: из ручной вкладки убраны Регулярный магазин и Личные лоты клана, потому что они обслуживаются во вкладке «Сегодня». В ручном магазине остаются Обычный магазин и Общие лоты клана.
 // @release-note Магазин: активная подгруппа теперь едина для отображения, «Выбрать доступные» и финального плана покупки; личные и общие лоты Кланового магазина больше не смешиваются.
 // @release-note Магазин: карточки показывают название товара; выбор, MAX и количества ограничиваются реальным балансом и единым бюджетом; сводка показывает Баланс → Расход → Останется.
 // @release-note Generals: отображение прокачки переведено на live-state канон Hamsters; перед показом и запуском проверяются Generals, Орехи и Pit Tokens, а Runner показывает обе части стоимости.
@@ -55,11 +56,12 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.47';
+  const BUILD_VERSION = '1.17.48';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
   const HK_SHOP_ACTIVE_VIEW_REV = 'shop-active-view-canon-20260923-r1';
+  const HK_SHOP_TODAY_DEDUP_REV = 'shop-today-dedup-20260923-r1';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -507,7 +509,7 @@
   let shopRows = [];
   let selectedShopLots = new Set();
   let selectedShopCounts = new Map();
-  let selectedShopSection = 'regular';
+  let selectedShopSection = 'ordinary';
   let selectedShopGroup = 'resources';
   let shopRunning = false;
   let recipeFairId = load().recipeFairId || '';
@@ -8188,9 +8190,7 @@
     if (groupBar) {
       const groups = selectedShopSection === 'ordinary'
         ? [['resources','resourcesShop'],['renovation','renovationShop'],['invest','investShop']]
-        : selectedShopSection === 'clan'
-          ? [['personal','personalLots'],['shared','sharedLots']]
-          : [];
+        : [];
       groupBar.style.display = groups.length ? '' : 'none';
       groupBar.innerHTML = groups.map(([id, label]) => `<button class="${selectedShopGroup === id ? 'active' : ''}" data-shop-group="${id}" data-i18n="${label}">${tr(label)}</button>`).join('');
       groupBar.querySelectorAll('[data-shop-group]').forEach(button => button.onclick = () => {
@@ -13291,7 +13291,7 @@
       </div>
       <div class="hk-page" data-content="shop">
         <div class="hk-cardbox"><h3 data-i18n="shop">${tr('shop')}</h3>
-          <div class="hk-shop-tabs"><button class="active" data-shop-section="regular" data-i18n="regularShop">${tr('regularShop')}</button><button data-shop-section="ordinary" data-i18n="ordinaryShop">${tr('ordinaryShop')}</button><button data-shop-section="clan" data-i18n="clanShop">${tr('clanShop')}</button></div>
+          <div class="hk-shop-tabs"><button class="active" data-shop-section="ordinary" data-i18n="ordinaryShop">${tr('ordinaryShop')}</button><button data-shop-section="clan" data-i18n="clanShop">${tr('clanShop')}</button></div>
           <div id="hk-shop-groups" class="hk-shop-groups" style="display:none"><button class="active" data-shop-group="resources" data-i18n="resourcesShop">${tr('resourcesShop')}</button><button data-shop-group="renovation" data-i18n="renovationShop">${tr('renovationShop')}</button><button data-shop-group="invest" data-i18n="investShop">${tr('investShop')}</button></div>
           <button id="hk-shop-load" class="hk-secondary" data-i18n="readShop">${tr('readShop')}</button>
           <button id="hk-shop-select" class="hk-secondary" data-i18n="selectAvailable">${tr('selectAvailable')}</button>
@@ -13590,7 +13590,7 @@
     };
     root.querySelectorAll('[data-shop-section]').forEach(button => button.onclick = () => {
       selectedShopSection = button.dataset.shopSection;
-      selectedShopGroup = selectedShopSection === 'ordinary' ? 'resources' : selectedShopSection === 'clan' ? 'personal' : '';
+      selectedShopGroup = selectedShopSection === 'ordinary' ? 'resources' : selectedShopSection === 'clan' ? 'shared' : '';
       selectedShopLots.clear();
       selectedShopCounts.clear();
       root.querySelectorAll('[data-shop-section]').forEach(element => element.classList.toggle('active', element === button));
