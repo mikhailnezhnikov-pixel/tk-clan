@@ -1,2 +1,2 @@
-trigger=clan-shop-current-roster-v19
-stamp=2026-09-23T00:26+09:00
+trigger=clan-shop-dom-player-id-guard-v19
+stamp=2026-09-23T11:12+09:00
