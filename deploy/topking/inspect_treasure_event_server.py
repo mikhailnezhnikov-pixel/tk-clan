@@ -4,20 +4,15 @@ spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("SELECT id,path,payload_json,page_text FROM treasure_guide_captures ORDER BY id")]
+    rows=[dict(r) for r in db.execute("SELECT id,path,page_text FROM treasure_guide_captures WHERE page_text<>'' ORDER BY id")]
 
-ids=[f"item_{kind}_t{n}" for n in range(1,6) for kind in ("box","food","water")]
 names=["Вареная колбаса","Петрушка","Рыбные консервы","Конфеты","Мясо","Перец","Кукуруза","Яичный порошок","Вареная ветчина","Зеленый горошек","Сухари","Молоко","Молотый кофе","Соль","Морковь"]
-
-for term in ids+names:
+for term in names:
     hits=[]
-    rx=re.compile(re.escape(term),re.I)
     for r in rows:
-        for field in ("payload_json","page_text"):
-            txt=str(r.get(field) or "")
-            m=rx.search(txt)
-            if not m: continue
-            hits.append({"id":r["id"],"path":r["path"],"field":field,"snippet":txt[max(0,m.start()-500):m.end()+1200]})
-            if len(hits)>=12: break
-        if len(hits)>=12: break
-    print("TERM",term,json.dumps(hits,ensure_ascii=False))
+        text=re.sub(r"\s+"," ",str(r.get("page_text") or "")).strip()
+        pos=text.lower().find(term.lower())
+        if pos<0: continue
+        hits.append({"id":r["id"],"path":r["path"],"snippet":text[max(0,pos-280):pos+650]})
+        if len(hits)>=20:break
+    print("NAME",term,json.dumps(hits,ensure_ascii=False))
