@@ -411,5 +411,6 @@
   }else{
     render();sendSiteAnalytics();
   }
+  document.addEventListener('tk-language-change',render);
   window.addEventListener('tk-language-change',render);
 })();
