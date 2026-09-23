@@ -1,1 +1,5 @@
-2026-09-21 sync freshly updated collector token and rebuild public cache
+race-safe userscript transport
+target=1.17.44
+marker=generals-kokkaras-cost-parity-20260923-r1
+source=exact-baseline-1.17.43
+collector=repo-r6-activity-lease-noop
