@@ -1,0 +1,68 @@
+name: Verify Userscript Rollout After Env Fix
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/userscript-rollout-verify-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: audit-userscript-rollout-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Run rollout verification on live server
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/verify_userscript_rollout_after_env_fix.py \
+            root@89.125.1.71:/tmp/verify_userscript_rollout_after_env_fix.py
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 bash -s <<'REMOTE' | tee /tmp/userscript-rollout-verify.txt
+          set -euo pipefail
+          set -a
+          . /etc/hamsterking-license.env
+          set +a
+          python3 /tmp/verify_userscript_rollout_after_env_fix.py
+          REMOTE
+
+          grep -Fq "USERSCRIPT_ROLLOUT_VERIFY=PASS" /tmp/userscript-rollout-verify.txt
+          grep -Fq "MIN_SCRIPT_VERSION 1.17.83" /tmp/userscript-rollout-verify.txt
+
+      - name: Persist audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/userscript-rollout-verify.txt audit/hk-userscript-rollout-verify.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-userscript-rollout-verify.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist userscript rollout verification"
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/userscript-rollout-verify.txt
