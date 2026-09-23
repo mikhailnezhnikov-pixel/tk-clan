@@ -1,34 +1,39 @@
-import importlib.util,json
+import importlib.util,json,re
+
 server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec);spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
+rx=re.compile(r"^mf_shoplot_treasure_offer_(?:pets_collection_10|energy_collection_10|keys_collection_10|maps_golden_berries_10)$")
+
 with server.db_session() as db:
-    r=db.execute("""SELECT id,source,path,payload_json,page_text,assets_json,captured_at
-                    FROM treasure_guide_captures
-                    WHERE source='dom' AND page_text LIKE '%Друзья в дорогу%'
-                    ORDER BY id DESC LIMIT 1""").fetchone()
-    if not r:
-        raise SystemExit("SHOP_DOM_CAPTURE_MISSING")
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,captured_at
+                                        FROM treasure_guide_captures
+                                        WHERE path LIKE '/shop/view#treasure-%'
+                                        ORDER BY id DESC LIMIT 200""")]
 
-    row=dict(r)
-    assets=json.loads(row.get("assets_json") or "[]")
-    page_text=str(row.get("page_text") or "")
-    payload_text=str(row.get("payload_json") or "")
+found={}
+captures=[]
+for r in rows:
+    try:
+        obj=json.loads(r.get("payload_json") or "{}")
+    except Exception:
+        continue
+    for row in obj.get("rows",[]) if isinstance(obj,dict) else []:
+        payload=row.get("payload") if isinstance(row,dict) else None
+        lot_id=str(payload.get("id") or "") if isinstance(payload,dict) else ""
+        if not rx.match(lot_id):
+            continue
+        captures.append({
+            "capture":r.get("id"),
+            "captured_at":r.get("captured_at"),
+            "path":r.get("path"),
+            "lot_id":lot_id,
+            "payload":payload
+        })
+        if lot_id not in found:
+            found[lot_id]=captures[-1]
 
-    print("SHOP_CAPTURE_META",json.dumps({
-        "id":row.get("id"),
-        "source":row.get("source"),
-        "path":row.get("path"),
-        "captured_at":row.get("captured_at"),
-        "page_text_len":len(page_text),
-        "payload_len":len(payload_text),
-        "asset_count":len(assets)
-    },ensure_ascii=False))
-
-    print("SHOP_PAGE_TEXT",json.dumps(page_text[:50000],ensure_ascii=False))
-    print("SHOP_PAYLOAD",payload_text[:70000])
-
-    window=[{"i":i,"url":assets[i]} for i in range(min(0,len(assets)),min(80,len(assets)))]
-    print("SHOP_ASSETS",json.dumps(window,ensure_ascii=False))
+print("BUNDLE_PRIORITY_LATEST",json.dumps(found,ensure_ascii=False))
+print("BUNDLE_PRIORITY_ALL",json.dumps(captures[:40],ensure_ascii=False))
