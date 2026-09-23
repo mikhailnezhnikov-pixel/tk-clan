@@ -1,4 +1,4 @@
-import importlib.util, json, re, os, glob
+import importlib.util, json, re
 
 server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
@@ -6,24 +6,14 @@ server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
 with server.db_session() as db:
-    tables=[x[0] for x in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
-    print("TABLES",json.dumps(tables,ensure_ascii=False))
-    rows=[dict(r) for r in db.execute("""SELECT id,source,path,payload_json,page_text,assets_json,captured_at
-                                        FROM treasure_guide_captures ORDER BY id""")]
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json FROM treasure_guide_captures ORDER BY id""")]
 
-for target in ["/shop/view","/quests","/client_config","/fair/reroll","/shop/buy","/battlepass/claim","/quest/claim"]:
-    subset=[r for r in rows if r["path"]==target]
-    print("PATH",target,"COUNT",len(subset))
-    for r in subset[-4:]:
-        p=str(r["payload_json"] or "")
-        valid=True
-        try: obj=json.loads(p)
-        except Exception as e: valid=False; obj=None
-        print("PAYLOAD_META",json.dumps({"id":r["id"],"path":target,"len":len(p),"valid_json":valid,"head":p[:250],"tail":p[-250:]},ensure_ascii=False))
-        if valid and isinstance(obj,dict):
-            print("TOP_KEYS",r["id"],json.dumps(list(obj.keys())[:100],ensure_ascii=False))
+shop=next((str(r["payload_json"] or "") for r in rows if r["path"]=="/shop/view"),"")
+print("SHOP_LEN",len(shop))
+for key in ['"shop_lots"', '"shopLots"', '"lots"', '"fairs"', '"offers"', '"content_view"', '"cost"', '"costs"']:
+    pos=shop.find(key)
+    print("SHOP_KEY",key,pos, shop[max(0,pos-200):pos+1000] if pos>=0 else "")
 
-# Search raw captured payloads for known treasure lot ids and print surrounding text.
 terms=[
  "mf_fair_treasury_room_choose_way_1",
  "mf_fair_treasury_room_choose_way_2",
@@ -42,22 +32,40 @@ terms=[
  "mf_treasurelot_sword_03_28",
 ]
 for term in terms:
-    hits=[]
-    for r in rows:
-        p=str(r["payload_json"] or "")
-        i=p.find(term)
-        if i>=0:
-            hits.append({"id":r["id"],"path":r["path"],"snippet":p[max(0,i-1200):i+5000]})
-    print("TERM_HITS",term,json.dumps(hits[-5:],ensure_ascii=False)[:45000])
+    pos=shop.find(term)
+    print("SHOP_TERM",term,pos)
+    if pos>=0:
+        print("SHOP_SNIP",term,shop[max(0,pos-900):pos+2200])
 
-# Inspect possible static snapshot/cache files on disk.
-paths=[]
-for base in ["/opt/hamsterking-license","/var/lib/hamsterking-license","/opt"]:
-    if not os.path.exists(base): continue
-    for pat in ["**/*static*","**/*document*","**/*client_config*","**/*shop*json","**/*items*json","**/*events*json"]:
-        for p in glob.glob(os.path.join(base,pat),recursive=True):
-            try:
-                if os.path.isfile(p) and os.path.getsize(p)<50_000_000:
-                    paths.append({"path":p,"size":os.path.getsize(p)})
-            except: pass
-print("CACHE_FILES",json.dumps(paths[:300],ensure_ascii=False))
+# Look for exact lot ids in any VALID JSON response and recursively show the containing object.
+valid_rows=[]
+for r in rows:
+    p=str(r["payload_json"] or "")
+    try: obj=json.loads(p)
+    except: continue
+    valid_rows.append((r["id"],r["path"],obj))
+
+def find_objects(v,term,path="$",out=None,depth=0):
+    if out is None: out=[]
+    if depth>12 or len(out)>=20:return out
+    if isinstance(v,dict):
+        try: blob=json.dumps(v,ensure_ascii=False,separators=(",",":"))
+        except: blob=""
+        if term in blob and len(blob)<=12000:
+            out.append((path,v))
+            return out
+        for k,val in v.items():
+            if isinstance(val,(dict,list)): find_objects(val,term,path+"."+str(k),out,depth+1)
+    elif isinstance(v,list):
+        for i,val in enumerate(v[:2000]):
+            if isinstance(val,(dict,list)): find_objects(val,term,path+f"[{i}]",out,depth+1)
+    return out
+
+for term in terms:
+    found=[]
+    for rid,path,obj in valid_rows:
+        hits=find_objects(obj,term)
+        for hp,hv in hits[:3]:
+            found.append({"capture":rid,"path":path,"json_path":hp,"obj":hv})
+        if len(found)>=5:break
+    print("VALID_TERM",term,json.dumps(found,ensure_ascii=False)[:20000])
