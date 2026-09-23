@@ -88,7 +88,10 @@
   <div class="section-head"><div><h2>Полезные стоимости</h2><p>Расходы и обмены, которые важно видеть до выбора.</p></div></div>
   <section class="economy-grid" id="verified-economy"></section>
 
-  <div class="section-head"><div><h2>Сундуки</h2><p>Возможное содержимое показано иконками.</p></div></div>
+  <div class="section-head"><div><h2>Охота за сундуками</h2><p>Три основных сундука и шесть точек раскопки.</p></div></div>
+  <section class="grid" id="chest-hunt"></section>
+
+  <div class="section-head"><div><h2>Сундуки</h2><p>Подтверждённое содержимое показано игровыми иконками.</p></div></div>
   <section class="loot-grid" id="verified-chests"></section>
 
   <div class="section-head"><div><h2>Тайный торговец</h2><p>Три подтверждённых набора предложений. Точные цены показываются только там, где они уже подтверждены.</p></div></div>
@@ -126,6 +129,7 @@
     const petSkills=Array.isArray(data.pet_skills_confirmed)?data.pet_skills_confirmed:[];
     const traderVariants=Array.isArray(data.trader_variants)?data.trader_variants:[];
     const specialItems=Array.isArray(data.special_items)?data.special_items:[];
+    const chestHunt=data.chest_hunt||{};
 
     const iconFor=(id,name='')=>{
       const raw=(String(id||'')+' '+String(name||'')).toLowerCase();
@@ -194,7 +198,7 @@
       const v=verifiedEconomy.event_map;
       economy.push('<article class="economy-card"><h3>'+safe(v.title||'Новая карта')+'</h3><div class="resource-list">'+resource(v.cost?.item||'Карта сокровищ',v.cost?.quantity,iconFor(v.cost?.item_id,v.cost?.item),v.cost?.item_id)+'</div></article>');
     }
-    for(const key of ['pet_mission_refresh','trader_refresh']){
+    for(const key of ['pet_mission_refresh','trader_refresh','chest_room_refresh']){
       const v=verifiedEconomy[key];if(!v)continue;
       economy.push('<article class="economy-card"><h3>'+safe(v.title||'Обновление')+'</h3><div class="resource-list">'+resource(v.cost?.currency||v.cost?.item||'Стоимость',v.cost?.quantity,'',v.cost?.currency_id||v.cost?.item_id)+'</div></article>');
     }
@@ -211,6 +215,24 @@
         '<span class="cost-arrow">←</span>'+resource('Стоимость',v.cost?.quantity,'',v.cost?.currency_id)+'</div></article>');
     });
     document.getElementById('verified-economy').innerHTML=economy.join('');
+
+    const chestCards=[];
+    (Array.isArray(chestHunt.types)?chestHunt.types:[]).forEach(v=>{
+      chestCards.push('<article class="mini-card">'+
+        (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+        '<h3>'+safe(v.title)+'</h3>'+
+        (v.quantity?'<div class="tag-list"><span class="tag">×'+safe(v.quantity)+'</span></div>':'')+
+        '<p>'+safe(v.note||'')+'</p></article>');
+    });
+    (Array.isArray(chestHunt.observed)?chestHunt.observed:[]).forEach(v=>{
+      const r=v.result||{};
+      chestCards.push('<article class="mini-card">'+
+        '<h3>'+safe(v.title)+'</h3>'+
+        '<p>'+safe(v.note||'')+'</p>'+
+        (r.quantity?'<div class="resource-list" style="margin-top:10px">'+resource(r.name||r.item_id,r.quantity,iconFor(r.item_id,r.name),r.item_id)+'</div>':'')+
+        '</article>');
+    });
+    document.getElementById('chest-hunt').innerHTML=chestCards.join('');
 
     document.getElementById('verified-chests').innerHTML=verifiedChests.map(v=>'<article class="loot-card">'+
       '<div class="loot-head">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><h3>'+safe(v.title)+'</h3><p>Возможное содержимое</p></div></div>'+
