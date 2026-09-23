@@ -217,20 +217,24 @@
     document.getElementById('verified-economy').innerHTML=economy.join('');
 
     const chestCards=[];
+    const digging=chestHunt.digging||null;
+    if(digging){
+      const c=digging.cost||{};
+      chestCards.push('<article class="mini-card">'+
+        (digging.image?'<img src="'+safe(digging.image)+'" alt="">':'')+
+        '<div class="quest-top"><h3>Раскопки</h3><span class="badge">×'+safe(digging.quantity||6)+'</span></div>'+
+        (c.quantity?'<div class="quest-block"><div class="quest-block-title">Стоимость каждой</div><div class="resource-list">'+resource(c.item||'Стоимость',c.quantity,iconFor(c.item_id,c.item),c.item_id)+'</div></div>':'')+
+        '<p>'+safe(digging.note||'')+'</p></article>');
+    }
     (Array.isArray(chestHunt.types)?chestHunt.types:[]).forEach(v=>{
+      const c=v.cost||{};
       chestCards.push('<article class="mini-card">'+
         (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
         '<h3>'+safe(v.title)+'</h3>'+
-        (v.quantity?'<div class="tag-list"><span class="tag">×'+safe(v.quantity)+'</span></div>':'')+
-        '<p>'+safe(v.note||'')+'</p></article>');
-    });
-    (Array.isArray(chestHunt.observed)?chestHunt.observed:[]).forEach(v=>{
-      const r=v.result||{};
-      chestCards.push('<article class="mini-card">'+
-        '<h3>'+safe(v.title)+'</h3>'+
-        '<p>'+safe(v.note||'')+'</p>'+
-        (r.quantity?'<div class="resource-list" style="margin-top:10px">'+resource(r.name||r.item_id,r.quantity,iconFor(r.item_id,r.name),r.item_id)+'</div>':'')+
-        '</article>');
+        (c.quantity?'<div class="quest-block"><div class="quest-block-title">Открытие</div><div class="resource-list">'+resource(c.item||'Стоимость',c.quantity,iconFor(c.item_id,c.item),c.item_id)+'</div></div>':'')+
+        '<div class="quest-block"><div class="quest-block-title">Может содержать</div><div class="resource-list">'+
+          (Array.isArray(v.contents)?v.contents:[]).map(x=>resource(x.name||x.id,x.quantity,x.image||iconFor(x.id,x.name),x.id)).join('')+
+        '</div></div></article>');
     });
     document.getElementById('chest-hunt').innerHTML=chestCards.join('');
 
