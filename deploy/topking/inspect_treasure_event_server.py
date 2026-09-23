@@ -4,28 +4,25 @@ server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
-
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json FROM treasure_guide_captures
-                                        WHERE path LIKE '/shop/view#treasure-%'
-                                        ORDER BY id""")]
+    rows=[dict(r) for r in db.execute("""SELECT id,path,page_text FROM treasure_guide_captures
+                                        WHERE page_text<>'' ORDER BY id""")]
 
-rx=re.compile(r"(?:trader_0[23]|pet_skill|chest_type|fishing_rod|sword|treasury_room_choose|shoplot_treasure)",re.I)
-out=[]
-for r in rows:
-    try: obj=json.loads(r["payload_json"] or "{}")
-    except: continue
-    arr=obj.get("rows",[]) if isinstance(obj,dict) else []
-    for item in arr if isinstance(arr,list) else []:
-        if not isinstance(item,dict): continue
-        p=str(item.get("path") or "")
-        payload=item.get("payload")
-        if not isinstance(payload,dict): continue
-        oid=str(payload.get("id") or "")
-        if oid and rx.search(oid):
-            out.append({
-              "capture":r["id"],"source":r["path"],"json_path":p,"id":oid,
-              "has_cost":"cost" in payload,"has_lot_view":"lot_view" in payload,
-              "object":payload if ("cost" in payload or "lot_view" in payload) else None
-            })
-print("SHOP_DIRECT_TARGET_ROWS",json.dumps(out,ensure_ascii=False,separators=(",",":")))
+terms=[
+ "Провизия","Удочка","удочка","Меч","меч","Рыбалка","Сражение",
+ "Торговец","Сундук","сундук","Лабиринт","Сокровищница","навык","Навык",
+ "Золотую Ягоду","ключ","Ключ"
+]
+for term in terms:
+    hits=[]
+    for r in rows:
+        text=re.sub(r"\s+"," ",str(r["page_text"] or "")).strip()
+        start=0
+        while True:
+            i=text.lower().find(term.lower(),start)
+            if i<0: break
+            hits.append({"id":r["id"],"path":r["path"],"snippet":text[max(0,i-260):i+900]})
+            start=i+len(term)
+            if len(hits)>=35: break
+        if len(hits)>=35: break
+    print("TERM",term,json.dumps(hits,ensure_ascii=False))
