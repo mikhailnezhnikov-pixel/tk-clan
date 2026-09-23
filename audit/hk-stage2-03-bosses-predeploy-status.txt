@@ -1,6 +1,6 @@
-checked_utc=2026-09-20T08:29:11Z
-status=PASS
-reason=none
-detail=
-input_sha256=c733c62a49c38ae6c497c03c89ee9ec018363bc8f75c2ec64e7e8f3990dfafdb
-patched_sha256=571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9
+checked_utc=2026-09-23T15:32:30Z
+status=FAIL
+reason=exact_sha
+detail=048683968bafaf8164340dd2aa7c2fcb622306ad0f048fd2c2f4fdfad1f3bcb3
+input_sha256=048683968bafaf8164340dd2aa7c2fcb622306ad0f048fd2c2f4fdfad1f3bcb3
+patched_sha256=unknown
