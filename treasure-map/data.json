@@ -5418,17 +5418,17 @@
           "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
         },
         {
-          "title": "Редкая находка",
+          "title": "Золотая ягода",
           "quantity": 1,
-          "image": null
+          "image": "https://cdn-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png"
         },
         {
-          "title": "Редкая находка",
+          "title": "Обычное яйцо Рыбы",
           "quantity": 1,
-          "image": null
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_icon.png"
         }
       ],
-      "reward_note": "Два слота ×1 подтверждены на карточке комнаты, но их точные предметы в сохранённых данных не раскрыты."
+      "reward_note": "Полный набор возможных наград подтверждён по карточке комнаты и появляющимся игровым иконкам."
     },
     {
       "id": "mine",
@@ -5453,17 +5453,17 @@
           "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
         },
         {
-          "title": "Редкая находка",
+          "title": "Золотая ягода",
           "quantity": 1,
-          "image": null
+          "image": "https://cdn-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png"
         },
         {
-          "title": "Редкая находка",
+          "title": "Обычное яйцо Молекота",
           "quantity": 1,
-          "image": null
+          "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_icon.png"
         }
       ],
-      "reward_note": "Два слота ×1 подтверждены на карточке комнаты, но их точные предметы в сохранённых данных не раскрыты."
+      "reward_note": "Полный набор возможных наград подтверждён по карточке комнаты и появляющимся игровым иконкам."
     },
     {
       "id": "fishing",
