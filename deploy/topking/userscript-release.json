@@ -24,3 +24,4 @@
   "audit_status_path": "audit/hk-userscript-1-17-45-treasure-generals-live-status.txt",
   "commit_message": "fix: deploy Generals live-state display in userscript 1.17.45"
 }
+
