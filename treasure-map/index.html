@@ -97,6 +97,9 @@
   <div class="section-head"><div><h2>Комнаты на карте</h2><p>Сколько Провизии показывает карточка каждой комнаты перед входом.</p></div></div>
   <section class="room-grid" id="map-rooms"></section>
 
+  <div class="section-head"><div><h2>Карты и ключи</h2><p>Какая карта ведёт в какую комнату и каким ключом открывается каждый сундук.</p></div></div>
+  <section class="grid" id="navigation-items"></section>
+
   <div class="section-head"><div><h2>Снаряжение мини-игр</h2><p>Подтверждённые уровни удочки и меча с точной стоимостью апгрейдов.</p></div></div>
   <section class="equipment-grid" id="equipment-progression"></section>
 
@@ -162,6 +165,7 @@
     const chestHunt=data.chest_hunt||{};
     const treasuryChoices=Array.isArray(data.treasury_choices_verified)?data.treasury_choices_verified:[];
     const rewardTracks=data.reward_tracks||{};
+    const navigationItems=data.navigation_items||{};
 
     const iconFor=(id,name='')=>{
       const raw=(String(id||'')+' '+String(name||'')).toLowerCase();
@@ -222,6 +226,30 @@
         (v.note?'<p>'+safe(v.note)+'</p>':'')+
       '</article>'
     ).join('');
+
+    const navCards=[];
+    (Array.isArray(navigationItems.maps)?navigationItems.maps:[]).forEach(v=>{
+      navCards.push('<article class="mini-card">'+
+        (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+        '<h3>'+safe(v.title)+'</h3><p>'+safe(v.effect||'')+'</p>'+
+        (v.usage?'<div class="tag-list"><span class="tag">'+safe(v.usage)+'</span></div>':'')+
+      '</article>');
+    });
+    (Array.isArray(navigationItems.keys)?navigationItems.keys:[]).forEach(v=>{
+      navCards.push('<article class="mini-card">'+
+        (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+        '<h3>'+safe(v.title)+'</h3><p>Открывает: '+safe(v.opens||'')+'</p>'+
+        '<div class="resource-list">'+resource(v.title,v.quantity||1,v.image||'',v.id||'')+'</div>'+
+      '</article>');
+    });
+    (Array.isArray(navigationItems.exchanges)?navigationItems.exchanges:[]).forEach(v=>{
+      navCards.push('<article class="mini-card"><h3>Обмен ключей</h3>'+
+        '<div class="resource-list">'+resource(v.receive.title,v.receive.quantity,v.receive.image||'')+
+        '<span class="cost-arrow">←</span>'+resource(v.give.title,v.give.quantity,v.give.image||'')+'</div>'+
+        (v.note?'<p>'+safe(v.note)+'</p>':'')+
+      '</article>');
+    });
+    document.getElementById('navigation-items').innerHTML=navCards.join('');
 
     document.getElementById('equipment-progression').innerHTML=equipmentProgression.map(v=>
       '<article class="equipment-card"><h3>'+safe(v.title)+'</h3><p>'+safe(v.mechanic||'')+'</p>'+
