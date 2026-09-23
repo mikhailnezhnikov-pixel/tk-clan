@@ -130,6 +130,7 @@
     const traderVariants=Array.isArray(data.trader_variants)?data.trader_variants:[];
     const specialItems=Array.isArray(data.special_items)?data.special_items:[];
     const chestHunt=data.chest_hunt||{};
+    const treasuryChoices=Array.isArray(data.treasury_choices_verified)?data.treasury_choices_verified:[];
 
     const iconFor=(id,name='')=>{
       const raw=(String(id||'')+' '+String(name||'')).toLowerCase();
@@ -217,24 +218,42 @@
     document.getElementById('verified-economy').innerHTML=economy.join('');
 
     const chestCards=[];
+    if(treasuryChoices.length){
+      chestCards.push('<article class="mini-card"><h3>Сокровищница — выбор пути</h3><div class="resource-list">'+treasuryChoices.map(v=>{
+        if(v.cost)return resource(v.title+' · '+v.cost.title,v.cost.quantity,v.cost.image||'');
+        return '<span class="resource">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'<span class="resource-fallback">2</span>')+'<span class="resource-copy"><span class="resource-name">'+safe(v.title)+'</span><span class="resource-qty">точная цена уточняется</span></span></span>';
+      }).join('')+'</div></article>');
+    }
+    if(chestHunt.room_entry?.cost){
+      const c=chestHunt.room_entry.cost;
+      chestCards.push('<article class="mini-card">'+
+        (chestHunt.image?'<img src="'+safe(chestHunt.image)+'" alt="">':'')+
+        '<h3>Вход в «Охоту за сундуками»</h3>'+
+        '<div class="resource-list">'+resource(c.title||'Провизия',c.quantity,c.image||'')+'</div>'+
+        '<p>'+safe(chestHunt.room_entry.note||'')+'</p></article>');
+    }
     const digging=chestHunt.digging||null;
     if(digging){
-      const c=digging.cost||{};
       chestCards.push('<article class="mini-card">'+
         (digging.image?'<img src="'+safe(digging.image)+'" alt="">':'')+
-        '<div class="quest-top"><h3>Раскопки</h3><span class="badge">×'+safe(digging.quantity||6)+'</span></div>'+
-        (c.quantity?'<div class="quest-block"><div class="quest-block-title">Стоимость каждой</div><div class="resource-list">'+resource(c.item||'Стоимость',c.quantity,iconFor(c.item_id,c.item),c.item_id)+'</div></div>':'')+
+        '<div class="quest-top"><h3>Раскопки</h3><span class="badge">×'+safe(digging.count||6)+'</span></div>'+
         '<p>'+safe(digging.note||'')+'</p></article>');
     }
-    (Array.isArray(chestHunt.types)?chestHunt.types:[]).forEach(v=>{
-      const c=v.cost||{};
+    (Array.isArray(chestHunt.chest_types)?chestHunt.chest_types:[]).forEach(v=>{
       chestCards.push('<article class="mini-card">'+
         (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
         '<h3>'+safe(v.title)+'</h3>'+
-        (c.quantity?'<div class="quest-block"><div class="quest-block-title">Открытие</div><div class="resource-list">'+resource(c.item||'Стоимость',c.quantity,iconFor(c.item_id,c.item),c.item_id)+'</div></div>':'')+
-        '<div class="quest-block"><div class="quest-block-title">Может содержать</div><div class="resource-list">'+
-          (Array.isArray(v.contents)?v.contents:[]).map(x=>resource(x.name||x.id,x.quantity,x.image||iconFor(x.id,x.name),x.id)).join('')+
-        '</div></div></article>');
+        '<p>'+(v.opening_cost?'Стоимость открытия подтверждена':'Точная стоимость открытия ещё не подтверждена')+'</p>'+
+        '</article>');
+    });
+    (Array.isArray(chestHunt.observed_openings)?chestHunt.observed_openings:[]).forEach(v=>{
+      chestCards.push('<article class="mini-card"><h3>'+safe(v.title)+'</h3>'+
+        '<p>'+safe(v.note||'')+'</p>'+
+        '<div class="quest-block"><div class="quest-block-title">Фактический результат</div><div class="resource-list">'+
+        (Array.isArray(v.rewards)?v.rewards:[]).map(x=>resource(x.title,x.quantity,x.image||'')).join('')+
+        '</div></div>'+
+        (v.cost_observed?'<p>'+safe(v.cost_observed)+'</p>':'')+
+        '</article>');
     });
     document.getElementById('chest-hunt').innerHTML=chestCards.join('');
 
