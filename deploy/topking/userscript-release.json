@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.61",
-  "target_version": "1.17.62",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.62.fair-purchase-target.candidate.user.js",
+  "source_version": "1.17.62",
+  "target_version": "1.17.63",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.63.fair-purchase-target.candidate.user.js",
   "primary_marker": "fair-purchase-target-20260923-r1",
   "preserve_markers": [
+    "treasure-guide-priority-battlepass-lines-20260923-r1",
     "fair-balance-rerolls-20260923-r1",
     "war-unknown-score-20260923-r1",
     "war-hp-ui-20260923-r1",
@@ -37,6 +38,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-62-fair-purchase-target-live-status.txt",
-  "commit_message": "fix: deploy coherent Fair purchase target in userscript 1.17.62"
+  "audit_status_path": "audit/hk-userscript-1-17-63-fair-purchase-target-live-status.txt",
+  "commit_message": "fix: deploy coherent Fair purchase target in userscript 1.17.63"
 }
