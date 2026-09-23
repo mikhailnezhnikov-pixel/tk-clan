@@ -1,0 +1,8 @@
+USERSCRIPT_1_17_77_RUNTIME_SMOKE_FRESH_RUN=PASS
+source_version=1.17.76
+target_version=1.17.77
+mode=PASSIVE_LOCAL_STATUS
+new_game_requests=NONE
+latest_event_status=ENABLED
+smoke_reset=ENABLED
+public_exact_match=PASS

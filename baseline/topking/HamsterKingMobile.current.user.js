@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.76
+// @version      1.17.77
+// @release-note Smoke-test: статус теперь отражает именно последний запуск, а отдельная кнопка очищает только smoke-историю перед новым прогоном.
 // @release-note Smoke-test: в шапке панели появился локальный статус Rat Hunt / War / Районов; сводка также попадает в Diagnostics JSON без новых запросов к игре.
 // @release-note Диагностика smoke-test: события Rat Hunt / War / Районов теперь переживают перезагрузку текущей вкладки через sessionStorage; сохраняются только обезличенные runtime-smoke события.
 // @release-note Диагностика smoke-test: Rat Hunt, War и Районы теперь пассивно записывают форму ответов и подтверждённое состояние после мутаций без дополнительных запросов к игре.
@@ -83,7 +84,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.76';
+  const BUILD_VERSION = '1.17.77';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -108,6 +109,7 @@
   const HK_RUNTIME_SMOKE_OBSERVABILITY_REV = 'runtime-smoke-observability-20260923-r1';
   const HK_RUNTIME_SMOKE_SESSION_REV = 'runtime-smoke-session-20260923-r1';
   const HK_RUNTIME_SMOKE_STATUS_REV = 'runtime-smoke-status-20260923-r1';
+  const HK_RUNTIME_SMOKE_FRESH_RUN_REV = 'runtime-smoke-fresh-run-20260923-r1';
   function hkSmokeObjectKeys(value){
     return value&&typeof value==='object'&&!Array.isArray(value)?Object.keys(value).slice(0,24):[];
   }
@@ -318,12 +320,16 @@
     const rows=diagnostic.events.filter(row=>String(row?.type||'').startsWith('runtime-smoke-'+prefix));
     if(!rows.length)return {state:'idle',label:either('не запускалось','not run'),events:0,lastAt:null};
     let state='data',label=either('есть данные','has data');
-    const terminals=rows.filter(row=>/-complete$|-error$/.test(String(row?.type||'')));
-    const last=terminals[terminals.length-1]||rows[rows.length-1];
+    const last=rows[rows.length-1];
     const type=String(last?.type||'');
     if(type.endsWith('-error')){state='error';label=either('ошибка','error');}
     else if(type.endsWith('-complete')){state='complete';label=either('завершено','completed');}
-    return {state,label,events:rows.length,lastAt:last?.at||rows[rows.length-1]?.at||null};
+    return {state,label,events:rows.length,lastAt:last?.at||null};
+  }
+  function runtimeSmokeReset() {
+    diagnostic.events=diagnostic.events.filter(row=>!String(row?.type||'').startsWith('runtime-smoke-'));
+    try{sessionStorage.removeItem(HK_RUNTIME_SMOKE_SESSION_KEY);}catch(_){}
+    renderRuntimeSmokeStatus();
   }
   function runtimeSmokeSummary() {
     return {
@@ -343,10 +349,12 @@
       [either('Районы','Neighborhoods'),summary.neighborhoods]
     ];
     const tone=state=>state==='complete'?'#6ee7a8':state==='error'?'#ff7b7b':state==='data'?'#ffd166':'#9aa8bc';
-    host.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"><b>'+either('Smoke-test','Smoke test')+'</b><small style="color:#9aa8bc">'+escapeHtml(BUILD_VERSION)+'</small></div>'+
+    host.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"><b>'+either('Smoke-test','Smoke test')+'</b><div style="display:flex;align-items:center;gap:7px"><small style="color:#9aa8bc">'+escapeHtml(BUILD_VERSION)+'</small><button id="hk-smoke-reset" type="button" class="hk-secondary" style="padding:4px 7px;font-size:11px">'+either('Сбросить','Reset')+'</button></div></div>'+
       '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">'+rows.map(([name,row])=>
         '<div style="padding:7px 8px;border:1px solid #304057;border-radius:9px;background:#101927;min-width:0"><small style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escapeHtml(name)+'</small><b style="display:block;color:'+tone(row.state)+'">'+escapeHtml(row.label)+'</b><small style="color:#7f8da3">'+row.events+' '+either('событ.','events')+'</small></div>'
       ).join('')+'</div>';
+    const reset=host.querySelector('#hk-smoke-reset');
+    if(reset)reset.onclick=runtimeSmokeReset;
   }
 
   function setHealth(name, ok, detail = '') {
