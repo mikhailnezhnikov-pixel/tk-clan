@@ -1,0 +1,110 @@
+name: Build Userscript 1.17.46 Shop
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/HamsterKingMobile.1.17.46.shop-purchase-plan.candidate.user.js'
+      - '.github/workflows/build-userscript-1-17-46-shop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-17-46-shop
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate shop candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.46.shop-purchase-plan.candidate.user.js
+          node --check "$candidate"
+          grep -Fq "// @version      1.17.46" "$candidate"
+          grep -Fq "const BUILD_VERSION = '1.17.46';" "$candidate"
+          grep -Fq "shop-purchase-plan-canon-20260923-r1" "$candidate"
+          grep -Fq "function shopPurchasableCount(row, documentValue = playerDocument)" "$candidate"
+          grep -Fq "function shopDisplayName(row)" "$candidate"
+          grep -Fq "function shopWalletForecastHtml(parts)" "$candidate"
+          grep -Fq 'class="hk-shop-name"' "$candidate"
+          grep -Fq 'max="${maximumCount}"' "$candidate"
+          grep -Fq "shopWalletForecastHtml(totals)" "$candidate"
+          grep -Fq "generals-kokkaras-live-display-20260923-r2" "$candidate"
+          grep -Fq "treasure-guide-pet-skill-selective-20260923-r3" "$candidate"
+          grep -Fq "hamsters-kokkaras-auth-state-20260923-r3" "$candidate"
+          sha256sum "$candidate" | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.46.shop-purchase-plan.candidate.user.js
+          audit=audit/hk-userscript-1-17-46-shop-predeploy.txt
+          candidate_sha="$(cat /tmp/candidate.sha)"
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            test -f "$candidate"
+            test "$(sha256sum "$candidate" | awk '{print $1}')" = "$candidate_sha"
+
+            node - <<'NODE'
+          const fs=require('fs');
+          const manifest={
+            schema:1,
+            source_version:"1.17.45",
+            target_version:"1.17.46",
+            candidate_path:"deploy/topking/HamsterKingMobile.1.17.46.shop-purchase-plan.candidate.user.js",
+            primary_marker:"shop-purchase-plan-canon-20260923-r1",
+            preserve_markers:[
+              "generals-kokkaras-live-display-20260923-r2",
+              "treasure-guide-pet-skill-selective-20260923-r3",
+              "generals-kokkaras-cost-parity-20260923-r1",
+              "hamsters-kokkaras-auth-state-20260923-r3",
+              "hamsters-kokkaras-live-state-20260923-r2",
+              "hamsters-kokkaras-cost-parity-20260923-r1",
+              "treasure-guide-selective-extract-20260923-r2",
+              "treasure-guide-passive-capture-20260923-r1",
+              "maps-manual-scan-only-20260923-r1",
+              "growth-hamster-nuts-canon-20260923-r1",
+              "clan-snapshot-numeric-player-id-20260923-r1",
+              "auto-routines-in-today-20260922-r3",
+              "game-api-rate-guard-20260922-r1",
+              "public-collector-activity-lease-20260922-r1",
+              "businesses-kokkaras-donor-20260922-r1",
+              "businesses-runner-vertical-20260922-r1"
+            ],
+            audit_status_path:"audit/hk-userscript-1-17-46-shop-live-status.txt",
+            commit_message:"fix: deploy shop purchase-plan canon in userscript 1.17.46"
+          };
+          fs.writeFileSync('deploy/topking/userscript-release.json',JSON.stringify(manifest,null,2)+'\n');
+          NODE
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_17_46_SHOP_PREDEPLOY=PASS"
+              echo "source_version=1.17.45"
+              echo "target_version=1.17.46"
+              echo "candidate_sha256=$candidate_sha"
+              echo "syntax=PASS"
+              echo "shop_names=PASS"
+              echo "shop_affordable_selection=PASS"
+              echo "shop_max_balance_cap=PASS"
+              echo "shop_balance_forecast=PASS"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.17.46 Shop"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
