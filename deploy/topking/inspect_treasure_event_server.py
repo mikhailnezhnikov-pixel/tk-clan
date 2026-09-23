@@ -6,52 +6,66 @@ server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
 with server.db_session() as db:
-    row=db.execute("""SELECT id,payload_json FROM treasure_guide_captures
-                      WHERE path='/shop/view' AND payload_json<>''
-                      ORDER BY id DESC LIMIT 1""").fetchone()
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,page_text,assets_json
+                                        FROM treasure_guide_captures ORDER BY id""")]
 
-raw=str(row["payload_json"] or "")
-print("SHOP_CAPTURE",row["id"],"LEN",len(raw))
-start=raw.find('"shop_lots":[')
-print("SHOP_LOTS_START",start)
-if start<0: raise SystemExit(0)
-arr_start=raw.find('[',start)
+# Parse relevant shop lots from the most recent /shop/view capture.
+shop_row=next((r for r in reversed(rows) if r["path"]=="/shop/view" and r["payload_json"]),None)
+lots=[]
+if shop_row:
+    raw=str(shop_row["payload_json"])
+    start=raw.find('"shop_lots":[')
+    if start>=0:
+        i=raw.find('[',start)+1
+        while i<len(raw):
+            while i<len(raw) and raw[i] in " \r\n\t,": i+=1
+            if i>=len(raw) or raw[i]!='{': break
+            st=i; depth=0; ins=False; esc=False; j=i
+            while j<len(raw):
+                ch=raw[j]
+                if ins:
+                    if esc: esc=False
+                    elif ch=='\\': esc=True
+                    elif ch=='"': ins=False
+                else:
+                    if ch=='"': ins=True
+                    elif ch=='{': depth+=1
+                    elif ch=='}':
+                        depth-=1
+                        if depth==0:
+                            try: lots.append(json.loads(raw[st:j+1]))
+                            except: pass
+                            i=j+1; break
+                j+=1
+            else: break
 
-objs=[]
-i=arr_start+1
-n=len(raw)
-while i<n:
-    while i<n and raw[i] in " \r\n\t,": i+=1
-    if i>=n or raw[i]!= '{': break
-    obj_start=i
-    depth=0; in_str=False; esc=False
-    j=i
-    while j<n:
-        ch=raw[j]
-        if in_str:
-            if esc: esc=False
-            elif ch=='\\': esc=True
-            elif ch=='"': in_str=False
-        else:
-            if ch=='"': in_str=True
-            elif ch=='{': depth+=1
-            elif ch=='}':
-                depth-=1
-                if depth==0:
-                    text=raw[obj_start:j+1]
-                    try:
-                        obj=json.loads(text); objs.append(obj)
-                    except Exception as e:
-                        print("OBJ_PARSE_ERROR",obj_start,j,repr(e))
-                    i=j+1
-                    break
-        j+=1
-    else:
-        break
+want=lambda o: re.search(r"^mf_shoplot_treasure_|big_chest$|treasury_room_choose_way_|achievement_(?:01|02)_",str(o.get("id") or ""),re.I)
+summ=[]
+for o in lots:
+    if not want(o): continue
+    summ.append({
+      "id":o.get("id"),
+      "cost":o.get("cost"),
+      "content":(o.get("lot_view") or {}).get("content_view"),
+      "quantity":(o.get("lot_view") or {}).get("quantity"),
+      "name":(o.get("lot_view") or {}).get("name"),
+      "desc":(o.get("lot_view") or {}).get("desc"),
+      "icon":(o.get("lot_view") or {}).get("icon_card")
+    })
+print("EXACT_LOTS",json.dumps(summ,ensure_ascii=False))
 
-print("PARSED_LOTS",len(objs))
-pattern=re.compile(r"treasure|treasury|minigame_(?:trader|fishing|fight|chests)|pet_skill|golden_berry",re.I)
-rel=[o for o in objs if pattern.search(str(o.get("id") or ""))]
-print("RELEVANT_COUNT",len(rel))
-for o in rel:
-    print("LOT",json.dumps(o,ensure_ascii=False,separators=(",",":"))[:12000])
+# DOM text fragments related to pet skill/property popups and rewards.
+patterns=[
+  r"ключ",r"корм",r"монет",r"HP",r"здоров",r"ягод",r"питомц",r"навык",
+  r"торгов",r"гоблин",r"рыбк",r"сокровищ",r"урон",r"шанс"
+]
+for pat in patterns:
+    hits=[]
+    rx=re.compile(pat,re.I)
+    for r in rows:
+        text=re.sub(r"\s+"," ",str(r.get("page_text") or "")).strip()
+        if not text or not rx.search(text): continue
+        # capture local windows around first two matches
+        for m in list(rx.finditer(text))[:2]:
+            hits.append({"id":r["id"],"snippet":text[max(0,m.start()-350):m.end()+900]})
+    print("DOM_TERM",pat,json.dumps(hits[:20],ensure_ascii=False))
