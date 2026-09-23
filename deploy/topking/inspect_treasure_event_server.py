@@ -5,33 +5,29 @@ spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec);spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
-needles=["Друзья в дорогу","Запас на удачу","Секреты под замком","Золотой урожай"]
 now=int(time.time())
-
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,captured_at
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,page_text,captured_at
                                         FROM treasure_guide_captures
-                                        WHERE source='api'
-                                        ORDER BY captured_at DESC,id DESC LIMIT 800""")]
+                                        WHERE source='dom'
+                                        ORDER BY captured_at DESC,id DESC LIMIT 500""")]
 
-found=[]
+with_payload=[]
 for row in rows:
     payload=str(row.get("payload_json") or "")
-    for needle in needles:
-        pos=payload.find(needle)
-        if pos<0:
-            continue
-        found.append({
-            "capture_id":row.get("id"),
-            "api_path":row.get("path"),
+    if payload:
+        with_payload.append({
+            "id":row.get("id"),
             "age_s":now-int(row.get("captured_at") or 0),
-            "needle":needle,
-            "context":payload[max(0,pos-700):pos+2200]
+            "path":row.get("path"),
+            "payload_len":len(payload),
+            "has_bundle_cards":"bundle_cards" in payload,
+            "page_head":str(row.get("page_text") or "")[:260]
         })
-        break
-    if len(found)>=12:
-        break
+        if len(with_payload)>=30:
+            break
 
-print("TITLE_MATCH_COUNT",len(found))
-for item in found:
-    print("TITLE_MATCH",json.dumps(item,ensure_ascii=False))
+print("DOM_ROWS_SCANNED",len(rows))
+print("DOM_WITH_PAYLOAD_COUNT",len(with_payload))
+for item in with_payload:
+    print("DOM_WITH_PAYLOAD",json.dumps(item,ensure_ascii=False))
