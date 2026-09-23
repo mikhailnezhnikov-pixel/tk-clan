@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.51",
-  "target_version": "1.17.52",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.52.fair-unified-nav.candidate.user.js",
-  "primary_marker": "fair-unified-nav-20260923-r1",
+  "source_version": "1.17.52",
+  "target_version": "1.17.53",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.53.shop-caps-compact.candidate.user.js",
+  "primary_marker": "shop-cap-balance-mode-20260923-r1",
   "preserve_markers": [
+    "fair-unified-nav-20260923-r1",
     "fair-single-preflight-20260923-r1",
     "shop-shared-limits-ui-20260923-r1",
     "shop-buy-fast-path-20260923-r1",
@@ -28,6 +29,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-52-fair-unified-nav-live-status.txt",
-  "commit_message": "ui: deploy unified Fair navigation in userscript 1.17.52"
+  "audit_status_path": "audit/hk-userscript-1-17-53-shop-caps-compact-live-status.txt",
+  "commit_message": "fix: deploy caps-driven compact Shop in userscript 1.17.53"
 }
