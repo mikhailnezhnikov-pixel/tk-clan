@@ -1,2 +1,2 @@
-inspect=treasure-event-server-routes
-stamp=2026-09-23T11:52+09:00
+inspect=treasure-event-captured-data
+stamp=2026-09-23T12:10+09:00
