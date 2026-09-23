@@ -543,113 +543,463 @@
   "achievement_series": [
     {
       "category": "Карты",
-      "thresholds": [
-        10,
-        25,
-        50,
-        100,
-        250,
-        500
-      ],
-      "source": "minigame_all_maps_achievement_01"
+      "source": "minigame_all_maps_achievement_01",
+      "milestones": [
+        {
+          "value": 10,
+          "rewards": [
+            [
+              "Очки события",
+              60
+            ],
+            [
+              "Провизия",
+              5
+            ],
+            [
+              "Яйцо молекота R3",
+              1
+            ]
+          ]
+        },
+        {
+          "value": 25,
+          "rewards": [
+            [
+              "Очки события",
+              100
+            ],
+            [
+              "Провизия",
+              10
+            ],
+            [
+              "Эпический ключ",
+              1
+            ]
+          ]
+        },
+        {
+          "value": 50,
+          "rewards": [
+            [
+              "Очки события",
+              140
+            ],
+            [
+              "Провизия",
+              15
+            ],
+            [
+              "Эпический ключ",
+              1
+            ]
+          ]
+        },
+        {
+          "value": 100,
+          "rewards": null
+        },
+        {
+          "value": 250,
+          "rewards": [
+            [
+              "Очки события",
+              70
+            ],
+            [
+              "Провизия",
+              25
+            ],
+            [
+              "Необычный ключ",
+              5
+            ],
+            [
+              "Смена навыка питомца",
+              3
+            ]
+          ]
+        },
+        {
+          "value": 500,
+          "rewards": [
+            [
+              "Очки события",
+              80
+            ],
+            [
+              "Провизия",
+              31
+            ],
+            [
+              "Яйцо молекота R4",
+              1
+            ],
+            [
+              "Смена навыка питомца",
+              5
+            ]
+          ]
+        }
+      ]
     },
     {
-      "category": "Леса",
-      "thresholds": [
-        25,
-        100,
-        350
-      ],
-      "source": "minigame_forests_achievement_01"
-    },
-    {
-      "category": "Шахты",
-      "thresholds": [
-        25,
-        100,
-        350
-      ],
-      "source": "minigame_mines_achievement_01"
-    },
-    {
-      "category": "Бои",
-      "thresholds": [
-        25,
-        100,
-        350
-      ],
-      "source": "minigame_fight_achievement_01"
+      "category": "Сражения",
+      "source": "minigame_fight_achievement_01",
+      "milestones": [
+        {
+          "value": 25,
+          "rewards": [
+            [
+              "Очки события",
+              60
+            ],
+            [
+              "Провизия",
+              5
+            ],
+            [
+              "Монеты сокровищ",
+              10
+            ],
+            [
+              "Карта сражения",
+              1
+            ]
+          ]
+        },
+        {
+          "value": 100,
+          "rewards": [
+            [
+              "Очки события",
+              100
+            ],
+            [
+              "Провизия",
+              10
+            ],
+            [
+              "Монеты сокровищ",
+              20
+            ],
+            [
+              "Карта сражения",
+              2
+            ]
+          ]
+        },
+        {
+          "value": 350,
+          "rewards": [
+            [
+              "Очки события",
+              20
+            ],
+            [
+              "Провизия",
+              15
+            ],
+            [
+              "Монеты сокровищ",
+              25
+            ],
+            [
+              "Карта сражения",
+              3
+            ]
+          ]
+        }
+      ]
     },
     {
       "category": "Рыбалка",
-      "thresholds": [
-        10,
-        50,
-        150
-      ],
-      "source": "minigame_fishing_achievement_01"
+      "source": "minigame_fishing_achievement_01",
+      "milestones": [
+        {
+          "value": 10,
+          "rewards": [
+            [
+              "Очки события",
+              60
+            ],
+            [
+              "Провизия",
+              5
+            ],
+            [
+              "Корм питомца",
+              5
+            ],
+            [
+              "Карта рыбалки",
+              1
+            ]
+          ]
+        },
+        {
+          "value": 50,
+          "rewards": [
+            [
+              "Очки события",
+              100
+            ],
+            [
+              "Провизия",
+              10
+            ],
+            [
+              "Корм питомца",
+              5
+            ],
+            [
+              "Карта рыбалки",
+              2
+            ]
+          ]
+        },
+        {
+          "value": 150,
+          "rewards": [
+            [
+              "Очки события",
+              20
+            ],
+            [
+              "Провизия",
+              15
+            ],
+            [
+              "Корм питомца",
+              5
+            ],
+            [
+              "Карта рыбалки",
+              3
+            ]
+          ]
+        }
+      ]
     },
     {
-      "category": "Торговец — серия 1",
-      "thresholds": [
-        10,
-        50,
-        150
-      ],
-      "source": "minigame_trader_achievement_01"
+      "category": "Торговец — встречи",
+      "source": "minigame_trader_achievement_01",
+      "milestones": [
+        {
+          "value": 10,
+          "rewards": [
+            [
+              "Очки события",
+              60
+            ],
+            [
+              "Провизия",
+              5
+            ],
+            [
+              "Монеты сокровищ",
+              10
+            ],
+            [
+              "Карта торговца",
+              1
+            ]
+          ]
+        },
+        {
+          "value": 50,
+          "rewards": [
+            [
+              "Очки события",
+              100
+            ],
+            [
+              "Провизия",
+              10
+            ],
+            [
+              "Монеты сокровищ",
+              20
+            ],
+            [
+              "Карта торговца",
+              2
+            ]
+          ]
+        },
+        {
+          "value": 150,
+          "rewards": [
+            [
+              "Очки события",
+              20
+            ],
+            [
+              "Провизия",
+              15
+            ],
+            [
+              "Монеты сокровищ",
+              25
+            ]
+          ]
+        }
+      ]
     },
     {
-      "category": "Торговец — серия 2",
-      "thresholds": [
-        15,
-        60,
-        300
-      ],
-      "source": "minigame_trader_achievement_02"
+      "category": "Торговец — сделки",
+      "source": "minigame_trader_achievement_02",
+      "milestones": [
+        {
+          "value": 15,
+          "rewards": [
+            [
+              "Очки события",
+              60
+            ],
+            [
+              "Провизия",
+              5
+            ],
+            [
+              "Монеты сокровищ",
+              10
+            ]
+          ]
+        },
+        {
+          "value": 60,
+          "rewards": [
+            [
+              "Очки события",
+              100
+            ],
+            [
+              "Провизия",
+              10
+            ],
+            [
+              "Монеты сокровищ",
+              20
+            ]
+          ]
+        },
+        {
+          "value": 300,
+          "rewards": [
+            [
+              "Очки события",
+              20
+            ],
+            [
+              "Провизия",
+              15
+            ],
+            [
+              "Монеты сокровищ",
+              25
+            ]
+          ]
+        }
+      ]
     },
     {
-      "category": "Сундуки — серия 1",
-      "thresholds": [
-        20,
-        250,
-        1000
-      ],
-      "source": "minigame_chests_achievement_01"
+      "category": "Раскопки / сундуки — серия 1",
+      "source": "minigame_chests_achievement_01",
+      "milestones": [
+        {
+          "value": 20,
+          "rewards": [
+            [
+              "Очки события",
+              60
+            ],
+            [
+              "Провизия",
+              5
+            ],
+            [
+              "Монеты сокровищ",
+              10
+            ]
+          ]
+        },
+        {
+          "value": 250,
+          "rewards": [
+            [
+              "Очки события",
+              100
+            ],
+            [
+              "Провизия",
+              10
+            ],
+            [
+              "Монеты сокровищ",
+              20
+            ]
+          ]
+        },
+        {
+          "value": 1000,
+          "rewards": [
+            [
+              "Очки события",
+              20
+            ],
+            [
+              "Провизия",
+              15
+            ],
+            [
+              "Монеты сокровищ",
+              25
+            ]
+          ]
+        }
+      ]
     },
     {
-      "category": "Сундуки — серия 2",
-      "thresholds": [
-        10,
-        60,
-        200
-      ],
-      "source": "minigame_chests_achievement_02"
-    },
-    {
-      "category": "Загадки / Lights Out",
-      "thresholds": [
-        25,
-        200
-      ],
-      "source": "minigame_lights_achievement_06"
-    },
-    {
-      "category": "Рыбалка — серия 5",
-      "thresholds": [
-        10,
-        100,
-        400
-      ],
-      "source": "minigame_fishing_achievement_05"
-    },
-    {
-      "category": "Бой — серия 17",
-      "thresholds": [
-        1,
-        5,
-        20
-      ],
-      "source": "minigame_fight_achievement_17"
+      "category": "Раскопки / сундуки — серия 2",
+      "source": "minigame_chests_achievement_02",
+      "milestones": [
+        {
+          "value": 10,
+          "rewards": [
+            [
+              "Очки события",
+              60
+            ],
+            [
+              "Провизия",
+              5
+            ],
+            [
+              "Монеты сокровищ",
+              10
+            ]
+          ]
+        },
+        {
+          "value": 200,
+          "rewards": [
+            [
+              "Очки события",
+              20
+            ],
+            [
+              "Провизия",
+              15
+            ],
+            [
+              "Монеты сокровищ",
+              25
+            ]
+          ]
+        }
+      ]
     }
   ],
   "minigame_details": [
@@ -720,5 +1070,166 @@
     "more_money_r4",
     "treasure_goblin_r4",
     "more_food_r4"
+  ],
+  "verified_economy": {
+    "treasury": {
+      "path_1": {
+        "cost": {
+          "item": "Провизия",
+          "item_id": "item_treasurehunt_energy",
+          "quantity": 5
+        },
+        "source_id": "mf_fair_treasury_room_choose_way_1"
+      },
+      "path_2": {
+        "cost": null,
+        "note": "Путь присутствует в активной сокровищнице, но его карточка стоимости ещё не попала в полный захваченный shop_lots.",
+        "source_id": "mf_fair_treasury_room_choose_way_2"
+      },
+      "path_3": {
+        "cost": {
+          "item": "Провизия",
+          "item_id": "item_treasurehunt_energy",
+          "quantity": 5
+        },
+        "source_id": "mf_fair_treasury_room_choose_way_3"
+      },
+      "recommendation": "Пути 1 и 3 стоят одинаково — по 5 провизии. Лучший путь пока не выбираем: фактическая таблица результатов treasure_search_result ещё не извлечена."
+    },
+    "premium_shop": [
+      {
+        "source_id": "mf_shoplot_treasure_food",
+        "title": "Провизия для путешествий",
+        "receive": {
+          "item_id": "item_treasurehunt_energy",
+          "quantity": 200
+        },
+        "cost": {
+          "currency_id": "cur_prem",
+          "quantity": 300
+        },
+        "note": "Точная карточка из /shop/view."
+      }
+    ],
+    "pet_missions": [
+      {
+        "rank": "B",
+        "food": 2,
+        "gold": 1,
+        "gold_per_food": 0.5,
+        "special_reward": "Нет отдельного процента в раскрытой карточке."
+      },
+      {
+        "rank": "A",
+        "food": 5,
+        "gold": 2,
+        "gold_per_food": 0.4,
+        "special_reward": "Нет отдельного процента в раскрытой карточке."
+      },
+      {
+        "rank": "S",
+        "food": 12,
+        "gold": 3,
+        "gold_per_food": 0.25,
+        "special_reward": "Шанс яйца — 5% на питомца. Таинственные яйца всегда S+."
+      }
+    ],
+    "pet_mission_recommendation": "Если цель только Золотые монеты — B эффективнее по корму: 1 монета за 2 корма. S хуже по чистой монетной эффективности, но даёт отдельный 5% шанс яйца на питомца, поэтому его смысл — охота за яйцами, а не экономия корма."
+  },
+  "verified_chests": [
+    {
+      "title": "Большой сундук сокровищницы",
+      "source_id": "mf_fairlot_minigame_treasury_room_big_chest",
+      "note": "Список «может содержать» из игровой карточки.",
+      "contents": [
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "name": "Монеты сокровищ",
+          "quantity": 70
+        },
+        {
+          "id": "item_treasurehunt_energy",
+          "name": "Провизия",
+          "quantity": 47
+        },
+        {
+          "id": "item_treasurehunt_key_common",
+          "name": "Обычный ключ",
+          "quantity": 1
+        },
+        {
+          "id": "item_treasurehunt_key_uncommon",
+          "name": "Необычный ключ",
+          "quantity": 1
+        },
+        {
+          "id": "item_event_treasure_golden_berry",
+          "name": "Золотая Ягода",
+          "quantity": 1
+        },
+        {
+          "id": "cur_gold",
+          "name": "Золото",
+          "quantity": 1
+        },
+        {
+          "id": "item_event_treasure_map_path",
+          "name": "Карта сокровищ",
+          "quantity": 1
+        },
+        {
+          "id": "item_event_treasure_map_trader",
+          "name": "Карта торговца",
+          "quantity": 1
+        },
+        {
+          "id": "item_event_treasure_map_fishing",
+          "name": "Карта рыбалки",
+          "quantity": 1
+        },
+        {
+          "id": "item_event_treasure_map_fight",
+          "name": "Карта сражения",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "title": "Большой сундук после сражения",
+      "source_id": "mf_fairlot_minigame_fight_room_big_chest",
+      "note": "Список «может содержать» из игровой карточки.",
+      "contents": [
+        {
+          "id": "item_treasurehunt_energy",
+          "name": "Провизия",
+          "quantity": 14
+        },
+        {
+          "id": "item_treasurehunt_cur_coins",
+          "name": "Монеты сокровищ",
+          "quantity": 11
+        },
+        {
+          "id": "item_treasurehunt_key_common",
+          "name": "Обычный ключ",
+          "quantity": 1
+        },
+        {
+          "id": "item_pet_mothcat_egg_02",
+          "name": "Яйцо молекота #2",
+          "quantity": 1
+        },
+        {
+          "id": "item_pet_mothcat_egg_03",
+          "name": "Яйцо молекота #3",
+          "quantity": 1
+        },
+        {
+          "id": "cur_gold",
+          "name": "Золото",
+          "quantity": 1
+        }
+      ]
+    }
   ]
 }
