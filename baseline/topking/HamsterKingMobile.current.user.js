@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.51
+// @version      1.17.52
+// @release-note Ярмарка: удалён отдельный дубль «Обычная ярмарка». В «Торговле» остаётся одна объединённая Ярмарка, которая показывает обычную и событийную ярмарки и сохраняет настройки 3/6/9 с дополнительными лотами.
 // @release-note Ярмарка: убран второй дублирующий preflight перед запуском. Каталог и состояние игрока теперь обновляются один раз перед стартом вместо двух.
 // @release-note Клановый магазин: на общих лотах отображаются отдельные счётчики «Клан: куплено/лимит» и «Вы: куплено/лимит», без изменения логики покупки.
 // @release-note Магазин: быстрые последовательные /shop/buy снова не ждут глобальные 2,5 с между покупками; защита 429, cooldown, mutation-gate и запрет ретраев необратимых покупок сохранены.
@@ -59,7 +60,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.51';
+  const BUILD_VERSION = '1.17.52';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -68,6 +69,7 @@
   const HK_SHOP_BUY_FAST_PATH_REV = 'shop-buy-fast-path-20260923-r1';
   const HK_SHOP_SHARED_LIMITS_UI_REV = 'shop-shared-limits-ui-20260923-r1';
   const HK_FAIR_SINGLE_PREFLIGHT_REV = 'fair-single-preflight-20260923-r1';
+  const HK_FAIR_UNIFIED_NAV_REV = 'fair-unified-nav-20260923-r1';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -13229,7 +13231,7 @@
       {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
-      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'},{page:'fair-regular',ru:'Обычная ярмарка',en:'Regular Fair'}]},
+      {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'}]},
       {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
     ];
     const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
@@ -13430,11 +13432,11 @@
       box.querySelectorAll('[data-module]:not([disabled])').forEach(button=>button.onclick=()=>activateModule(button.dataset.module,true));
     };
     const activateModule = (page,persist=true) => {
-      const regularFairAlias = page === 'fair-regular';
-      const contentPage = regularFairAlias ? 'fair' : page;
+      const legacyRegularFair = page === 'fair-regular';
+      const contentPage = legacyRegularFair ? 'fair' : page;
       const target=root.querySelector(`[data-content="${contentPage}"]`) || root.querySelector('[data-content="daily"]');
       const finalPage=target.dataset.content;
-      const navPage=regularFairAlias ? 'fair-regular' : finalPage;
+      const navPage=legacyRegularFair ? 'fair' : finalPage;
       const group=groupForPage(navPage);
       root.querySelectorAll('.hk-tab').forEach(button=>button.classList.toggle('active',button.dataset.group===group.id));
       root.querySelectorAll('.hk-page').forEach(section=>section.classList.toggle('active',section===target));
@@ -13450,13 +13452,7 @@
       if (finalPage === 'wars') renderWars();
       if (finalPage === 'bosses') renderBosses();
       if (finalPage === 'fair') {
-        fairViewMode = regularFairAlias ? 'regular' : 'all';
-        if (regularFairAlias) {
-          selectedFairId = 'fair_default';
-          selectedFairLots.clear();
-          selectedFairSlotRules.clear();
-          selectedFairCurrency = '';
-        }
+        fairViewMode = 'all';
         renderFair();
       }
       if (finalPage === 'shop') renderShop();
@@ -13470,9 +13466,10 @@
       activateModule(preferred,true);
     });
     const rememberedRaw=clean(load().navModule||'daily');
-    const remembered=rememberedRaw==='routines'?'daily':rememberedRaw;
+    const remembered=rememberedRaw==='routines'?'daily':rememberedRaw==='fair-regular'?'fair':rememberedRaw;
     if(rememberedRaw==='routines')save({navGroup:'today',navModule:'daily'});
-    activateModule(remembered === 'fair-regular' || root.querySelector(`[data-content="${remembered}"]`) ? remembered : 'daily',false);
+    if(rememberedRaw==='fair-regular')save({navGroup:'trade',navModule:'fair'});
+    activateModule(root.querySelector(`[data-content="${remembered}"]`) ? remembered : 'daily',false);
     const activateBusinessPane = (paneName, persist = true) => {
       const pane = ['optimizer','catalog'].includes(paneName) ? paneName : 'regular';
       root.querySelectorAll('[data-business-tab]').forEach(button => button.classList.toggle('active', button.dataset.businessTab === pane));

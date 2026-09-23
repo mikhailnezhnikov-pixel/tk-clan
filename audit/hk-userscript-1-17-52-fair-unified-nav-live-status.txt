@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.51
+target_version=1.17.52
+marker=fair-unified-nav-20260923-r1
+source_sha256=4ae496309cc439d1f0aafa0a6fbdb45860709623bbd7d7a5eee9dfdb2a73b0e5
+candidate_sha256=3adadbe1d0b47518b784257feb91bd2130fd6236b745f81920e315f86e000353
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
