@@ -2037,14 +2037,9 @@
       "quantity": 10
     },
     "digging": {
-      "quantity": 6,
-      "cost": {
-        "item": "Провизия",
-        "item_id": "item_treasurehunt_energy",
-        "quantity": 5
-      },
+      "count": 6,
       "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
-      "note": "Каждая из шести точек раскопки стоит 5 провизии. По наблюдённым состояниям раскопка может оказаться пустой или открыть дополнительный найденный сундук; вероятность каждого исхода пока неизвестна."
+      "note": "Шесть отдельных точек раскопки. После раскопки может появиться обычный сундук type_01 либо пустое место."
     },
     "types": [
       {
@@ -2258,7 +2253,59 @@
         ]
       }
     ],
-    "note": "Перечни выше — содержимое, которое сундук может выдать. Вероятности отдельных наград пока не подтверждены, поэтому ожидаемую ценность сундуков не рассчитываем."
+    "note": "Перечни выше — содержимое, которое сундук может выдать. Вероятности отдельных наград пока не подтверждены, поэтому ожидаемую ценность сундуков не рассчитываем.",
+    "room_entry": {
+      "title": "Вход в комнату",
+      "cost": {
+        "title": "Провизия",
+        "quantity": 40,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      "note": "40 отображается на карточке комнаты на карте. Это стоимость входа в комнату, а не цена открытия отдельного сундука."
+    },
+    "chest_types": [
+      {
+        "id": "mf_treasurelot_chest_type_015",
+        "title": "Сундук I",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_015_icon.png",
+        "status": "confirmed_present",
+        "opening_cost": null
+      },
+      {
+        "id": "mf_treasurelot_chest_type_02",
+        "title": "Сундук II",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_02_icon.png",
+        "status": "confirmed_present",
+        "opening_cost": null
+      },
+      {
+        "id": "mf_treasurelot_chest_type_03",
+        "title": "Сундук III",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_03_icon.png",
+        "status": "confirmed_present",
+        "opening_cost": null
+      }
+    ],
+    "observed_openings": [
+      {
+        "chest_id": "mf_treasurelot_chest_type_01",
+        "title": "Обычный найденный сундук",
+        "note": "Один чисто изолированный фактический результат открытия.",
+        "cost_observed": "В этой транзакции не списались Провизия, ключи или отслеживаемая валюта.",
+        "rewards": [
+          {
+            "title": "Монеты сокровищ",
+            "quantity": 11,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+          },
+          {
+            "title": "Корм питомца",
+            "quantity": 3,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
+          }
+        ]
+      }
+    ]
   },
   "special_items": [
     {
@@ -2326,5 +2373,37 @@
       "item_id": "item_treasurehunt_energy",
       "quantity": 35
     }
-  }
+  },
+  "treasury_choices_verified": [
+    {
+      "id": "way_1",
+      "title": "Путь 1",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_1_icon.png",
+      "cost": {
+        "title": "Провизия",
+        "quantity": 5,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      "status": "confirmed"
+    },
+    {
+      "id": "way_2",
+      "title": "Путь 2",
+      "image": null,
+      "cost": null,
+      "note": "Путь присутствует в сокровищнице отдельным выбором. В shop-lots определения стоимости нет; бесплатным его пока не называем.",
+      "status": "needs_exact_cost"
+    },
+    {
+      "id": "way_3",
+      "title": "Путь 3",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_3_icon.png",
+      "cost": {
+        "title": "Провизия",
+        "quantity": 5,
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      },
+      "status": "confirmed"
+    }
+  ]
 }
