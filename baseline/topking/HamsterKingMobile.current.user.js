@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.65
+// @version      1.17.66
+// @release-note Клан: добавлен отдельный экран «Охота на крыс» для трёх подтверждённых месячных рейтингов Cat / Dog / Pigeon с текущим местом/очками и отдельным сбором только крысиных рейтинговых наград.
 // @release-note Ярмарка: финальная чистка режима 3/6/9 — понятное название режима, мгновенное обновление прогноза при переключении бонусов и корректные причины остановки вместо ложного «завершена» при недостигнутой цели.
 // @release-note Ярмарка: прогноз максимальных расходов теперь включает выбранные нижние бонусы ×5/×10/×30 по порогам 3/6/9; тот же расчёт используется в кошельке и предупреждении по алмазам перед запуском.
 // @release-note Ярмарка: «Всего покупок» уточнено как цель основных покупок. В режиме 3/6/9 цель автоматически приводится к целым тройкам без округления вверх, а бонусные нижние ячейки считаются отдельно и доступны только когда достижимы текущей целью.
@@ -72,7 +73,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.65';
+  const BUILD_VERSION = '1.17.66';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -88,6 +89,7 @@
   const HK_FAIR_PURCHASE_TARGET_REV = 'fair-purchase-target-20260923-r1';
   const HK_FAIR_BONUS_COST_FORECAST_REV = 'fair-bonus-cost-forecast-20260923-r1';
   const HK_FAIR_FINAL_CLEANUP_REV = 'fair-final-cleanup-20260923-r1';
+  const HK_RAT_HUNT_REV = 'rat-hunt-leaderboards-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
   function hkRuntimeVersionTuple(value) {
@@ -6550,6 +6552,13 @@
   let bossLastReadAt = 0;
   let warSnapshot = null;
   let warLastReadAt = 0;
+  const RAT_HUNT_LEADERBOARDS = Object.freeze([
+    {id:'beast_boss_cat_monthly_lb',ru:'Кот',en:'Cat'},
+    {id:'beast_boss_dog_monthly_lb',ru:'Собака',en:'Dog'},
+    {id:'beast_boss_pigeon_monthly_lb',ru:'Голубь',en:'Pigeon'}
+  ]);
+  let ratHuntRows = [];
+  let ratHuntLastReadAt = 0;
 
   function warTimestamp(value) {
     const number=Number(value||0);
@@ -6934,6 +6943,145 @@
       log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
       renderWars();
       return null;
+    }
+  }
+
+  function ratHuntSlot(documentValue) {
+    return documentValue?.your_lb_slot || documentValue?.player_slot || documentValue?.slot || null;
+  }
+
+  function ratHuntRewardParts(rewardView) {
+    const result=[];
+    for (const kind of ['items','currencies']) for (const reward of rewardView?.[kind] || []) {
+      const id=String(reward?.id || reward?.item_id || reward?.currency_id || '');
+      const quantity=Math.max(0,Number(reward?.quantity ?? reward?.value ?? 0));
+      if(id && quantity>0) result.push({kind,id,quantity});
+    }
+    return result;
+  }
+
+  function ratHuntRewardHtml(rewardView) {
+    const parts=ratHuntRewardParts(rewardView);
+    if(!parts.length) return '<span class="hk-muted">—</span>';
+    return '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">'+parts.map(part =>
+      '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #304057;border-radius:9px;background:#101927">'+
+      fairIconHtml(paymentIcon(part),'hk-price-icon')+
+      '<b>'+escapeHtml(gameText(part.id)||paymentLabel(part.id)||part.id)+' ×'+Number(part.quantity).toLocaleString(locale())+'</b></span>'
+    ).join('')+'</div>';
+  }
+
+  function ratHuntMetric(slot, keys) {
+    const value=metricFromObject(slot,keys);
+    return value===null?null:Number(value);
+  }
+
+  function normalizeRatHuntRow(def,current,previous) {
+    const currentSlot=ratHuntSlot(current);
+    const previousSlot=ratHuntSlot(previous);
+    const rank=ratHuntMetric(currentSlot,['rank','place','position']);
+    const score=ratHuntMetric(currentSlot,['score','points','value','amount','result']);
+    const previousRank=ratHuntMetric(previousSlot,['rank','place','position']);
+    const previousScore=ratHuntMetric(previousSlot,['score','points','value','amount','result']);
+    const claimable=String(previous?.status||'').toUpperCase()==='RELOAD' &&
+      previousSlot?.is_claimed===false && !!previousSlot?.reward_view && !!previous?.id;
+    const claimed=previousSlot?.is_claimed===true;
+    return {
+      ...def,current,previous,currentSlot,previousSlot,rank,score,previousRank,previousScore,
+      rewardView:previousSlot?.reward_view||null,claimable,claimed,
+      available:!!current||!!previous
+    };
+  }
+
+  async function readRatHuntLeaderboards() {
+    const rows=[];
+    for(const def of RAT_HUNT_LEADERBOARDS) {
+      let current=null,previous=null;
+      try { current=await apiJson('/leaderboard','POST',{leaderboard_type:def.id,leaderboard_status:'ACTUAL'},true,1); }
+      catch(error) { recordDiagnostic('rat-hunt-current-read',{id:def.id,error:error?.message||error}); }
+      try { previous=await apiJson('/leaderboard','POST',{leaderboard_type:def.id,leaderboard_status:'RELOAD'},true,1); }
+      catch(error) { recordDiagnostic('rat-hunt-reload-read',{id:def.id,error:error?.message||error}); }
+      rows.push(normalizeRatHuntRow(def,current,previous));
+    }
+    return rows;
+  }
+
+  function renderRatHunt() {
+    const box=root?.querySelector('#hk-rat-content');
+    if(!box)return;
+    const pending=ratHuntRows.filter(row=>row.claimable).length;
+    const rows=ratHuntRows.length?ratHuntRows:RAT_HUNT_LEADERBOARDS.map(def=>({...def,available:false}));
+    const cards=rows.map(row=>{
+      const label=language==='en'?row.en:row.ru;
+      const currentRank=row.rank===null||row.rank===undefined?'—':'#'+Number(row.rank).toLocaleString(locale());
+      const currentScore=row.score===null||row.score===undefined?'—':Number(row.score).toLocaleString(locale());
+      const previousRank=row.previousRank===null||row.previousRank===undefined?'—':'#'+Number(row.previousRank).toLocaleString(locale());
+      const previousScore=row.previousScore===null||row.previousScore===undefined?'—':Number(row.previousScore).toLocaleString(locale());
+      const rewardState=row.claimable?either('можно получить','claimable'):row.claimed?either('получено','claimed'):either('нет доступной награды','no claimable reward');
+      return '<section style="padding:12px;margin:9px 0;border:1px solid #304057;border-radius:12px;background:#101927">'+
+        '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><b>'+escapeHtml(label)+'</b><small>'+escapeHtml(row.id||'')+'</small></div>'+
+        (row.available
+          ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
+              '<div><small>'+either('Текущий рейтинг','Current ranking')+'</small><div><b>'+currentRank+'</b> · '+either('очки','score')+': <b>'+currentScore+'</b></div></div>'+
+              '<div><small>'+either('Прошлый период','Previous period')+'</small><div><b>'+previousRank+'</b> · '+either('очки','score')+': <b>'+previousScore+'</b></div></div>'+
+            '</div><div style="margin-top:8px"><small>'+either('Награда','Reward')+': '+escapeHtml(rewardState)+'</small>'+ratHuntRewardHtml(row.rewardView)+'</div>'
+          : '<p class="hk-muted">'+either('Рейтинг сейчас недоступен или ещё не считан.','Leaderboard is unavailable or has not been read yet.')+'</p>')+
+      '</section>';
+    }).join('');
+    box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Охота на крыс','Rat Hunt')+'</h3><small>'+
+      either('Месячные рейтинги Cat / Dog / Pigeon','Monthly Cat / Dog / Pigeon leaderboards')+' · '+HK_RAT_HUNT_REV+
+      '</small></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button id="hk-rat-refresh" class="hk-secondary">'+either('Обновить','Refresh')+
+      '</button><button id="hk-rat-claim" class="hk-primary" '+(pending?'':'disabled')+'>'+either('Получить награды','Claim rewards')+
+      (pending?' ('+pending+')':'')+'</button></div></div>'+
+      (ratHuntLastReadAt?'<p class="hk-muted">'+either('Обновлено','Updated')+': '+new Date(ratHuntLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'})+'</p>':'')+
+      cards;
+    box.querySelector('#hk-rat-refresh')?.addEventListener('click',()=>void refreshModuleLive('rats',{force:true}));
+    box.querySelector('#hk-rat-claim')?.addEventListener('click',()=>void claimRatHuntRewards());
+  }
+
+  async function refreshRatHunt(force=false) {
+    if(!requireLicense())return null;
+    try{
+      ratHuntRows=await readRatHuntLeaderboards();
+      ratHuntLastReadAt=Date.now();
+      renderRatHunt();
+      if(force)log(either('Рейтинги Охоты на крыс обновлены','Rat Hunt leaderboards refreshed'),'ok');
+      return ratHuntRows;
+    }catch(error){
+      log(either('Ошибка чтения Охоты на крыс','Rat Hunt read error')+': '+(error?.message||error),'warn');
+      renderRatHunt();
+      return null;
+    }
+  }
+
+  async function claimRatHuntRewards() {
+    if(!requireLicense())return;
+    if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
+    if(!ratHuntRows.length) await refreshRatHunt(false);
+    const pending=ratHuntRows.filter(row=>row.claimable&&row.previous?.id);
+    if(!pending.length){log(either('Доступных наград Охоты на крыс нет','No Rat Hunt rewards are available'),'warn');renderRatHunt();return;}
+    if(!confirm(either(`Получить награды Охоты на крыс: ${pending.length}?`,`Claim Rat Hunt rewards: ${pending.length}?`)))return;
+    hkRunner.start({title:either('Охота на крыс','Rat Hunt'),total:pending.length,step:either('Получение наград','Claiming rewards'),pausable:true,stoppable:true});
+    let claimed=0;
+    try{
+      for(const row of pending){
+        if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep((language==='en'?row.en:row.ru),claimed,pending.length);
+        try{
+          const result=await apiJson('/leaderboard/reward','POST',{leaderboard_id:String(row.previous.id)});
+          playerDocument=hkStateStore.snapshot||result||playerDocument;
+          claimed+=1;
+          log(either('Получена награда Охоты на крыс','Rat Hunt reward claimed')+': '+row.id,'ok');
+        }catch(error){
+          if(!/HTTP 409/.test(String(error?.message||error)))throw error;
+        }
+      }
+      hkRunner.finish(either('Награды Охоты на крыс получены','Rat Hunt rewards claimed'));
+      await refreshRatHunt(false);
+      log(either(`Получено наград Охоты на крыс: ${claimed}`,`Rat Hunt rewards claimed: ${claimed}`),'ok');
+    }catch(error){
+      if(error?.name==='AbortError'){hkRunner.reset();log(either('Сбор наград Охоты на крыс остановлен','Rat Hunt reward claim stopped'),'warn');}
+      else{hkRunner.fail(error);log(either('Ошибка получения наград Охоты на крыс','Rat Hunt reward claim error')+': '+(error?.message||error),'bad');}
     }
   }
 
@@ -13374,6 +13522,7 @@
         }
         if (key === 'bosses') {const value=await refreshBosses(false);liveReadOk=true;return value;}
         if (key === 'wars') {const value=await refreshWars(false);liveReadOk=true;return value;}
+        if (key === 'rats') {const value=await refreshRatHunt(false);liveReadOk=!!value;return value;}
         if (key === 'clan') {
           playerDocument = await apiJson('/player/me','POST');
           renderClanSkills();
@@ -13509,7 +13658,7 @@
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
       {id:'trade',label:'navTrade',hint:'navTradeHint',image:'fair.png',modules:[{page:'fair',ru:'Ярмарка',en:'Fair'},{page:'shop',ru:'Магазин',en:'Shop'}]},
-      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{planned:true,ru:'Охота на крыс',en:'Rat Hunt'}]}
+      {id:'clan',label:'navClan',hint:'navClanHint',image:'clan.png',modules:[{page:'clan',ru:'Навыки',en:'Skills'},{page:'wars',ru:'Войны',en:'Wars'},{page:'rats',ru:'Охота на крыс',en:'Rat Hunt'}]}
     ];
     const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
     root = document.createElement('div'); root.id = 'hk-mobile-root'; root.dataset.hkRevision = HK_CORE_REVISION;
@@ -13650,6 +13799,9 @@
       <div class="hk-page" data-content="wars">
         <div id="hk-war-content" class="hk-cardbox"><h3>${either('Войны','Wars')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать текущую войну.','Open this tab to read the current war.')}</p></div>
       </div>
+      <div class="hk-page" data-content="rats">
+        <div id="hk-rat-content" class="hk-cardbox"><h3>${either('Охота на крыс','Rat Hunt')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать месячные рейтинги.','Open this tab to read the monthly leaderboards.')}</p></div>
+      </div>
       <div class="hk-page" data-content="buildings">
         <div id="hk-buildings-content" class="hk-cardbox"><h3>${either('Здания','Buildings')}</h3></div>
       </div>
@@ -13728,6 +13880,7 @@
       if (finalPage === 'explore') renderExplore();
       if (finalPage === 'clan') renderClanSkills();
       if (finalPage === 'wars') renderWars();
+      if (finalPage === 'rats') renderRatHunt();
       if (finalPage === 'bosses') renderBosses();
       if (finalPage === 'fair') {
         fairViewMode = 'all';

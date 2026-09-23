@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.65
+target_version=1.17.66
+marker=rat-hunt-leaderboards-20260923-r1
+source_sha256=fbb68da7538fdbfa695b717d96ff0061b4223be3595b9a67f98caa3b0bbb10bf
+candidate_sha256=e486effa79aaab413bb3e969996c143e12429ccae3581a3d32ac0e2124ea6549
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
