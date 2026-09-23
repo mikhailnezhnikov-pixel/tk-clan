@@ -1,0 +1,6 @@
+USERSCRIPT_1_17_41_TREASURE_SELECTIVE=PASS
+version=1.17.41
+base=1.17.40
+mode=PASSIVE_ONLY
+new_game_requests=NONE
+large_payloads=TREASURE_ONLY_CHUNKS

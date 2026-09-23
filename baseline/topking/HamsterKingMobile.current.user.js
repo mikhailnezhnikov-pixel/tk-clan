@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.40
+// @version      1.17.41
+// @release-note Карта Сокровищ: крупные ответы /quests, /shop/view и /client_config теперь дополнительно режутся на компактные treasure-only срезы без новых запросов к игре.
 // @release-note Hamsters: выровнен cost-parity с закреплённым Kokkaras donor — бюджет по-прежнему считается по Орехам, но допустимые дополнительные non-premium/non-hard компоненты стоимости больше не отбрасываются.
 // @release-note Добавлен пассивный сбор нового события «Карта Сокровищ»: скрипт сохраняет только уже загруженные игрой API-ответы, текст экрана и ссылки на ассеты для построения гайда; дополнительных запросов к игре не делает.
 // @release-note Карты: исследование районов больше не запускается автоматически при открытии вкладки или по 24-часовому таймеру; полный проход запускается только явной кнопкой «Считать карты аккаунта».
@@ -48,7 +49,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.40';
+  const BUILD_VERSION = '1.17.41';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -3423,11 +3424,96 @@
     }
   }
 
+  const HK_TREASURE_GUIDE_SELECTIVE_REV='treasure-guide-selective-extract-20260923-r2';
+
+  function treasureGuideLooksRelevant(value) {
+    return /treasure|treasurehunt|minigame|event_treasures|fair_treasures|pet_mission|golden_berry|карта.{0,16}сокровищ|сокровищ/i.test(String(value||''));
+  }
+
+  function treasureGuideCompactObject(value,path='$',out=[],seen=new Set(),depth=0) {
+    if(!value||typeof value!=='object'||seen.has(value)||depth>14||out.length>=700)return out;
+    seen.add(value);
+    if(Array.isArray(value)){
+      for(let i=0;i<value.length&&i<2500&&out.length<700;i++)treasureGuideCompactObject(value[i],path+'['+i+']',out,seen,depth+1);
+      return out;
+    }
+    let scalarText='';
+    const keys=Object.keys(value);
+    for(const key of keys){
+      const item=value[key];
+      if(item==null||typeof item==='string'||typeof item==='number'||typeof item==='boolean'){
+        scalarText+=' '+key+' '+String(item);
+      }
+    }
+    if(treasureGuideLooksRelevant(keys.join(' ')+' '+scalarText)){
+      let payload=null;
+      try{
+        const full=JSON.stringify(value);
+        if(full.length<=18000)payload=value;
+      }catch(_){}
+      if(!payload){
+        payload={};
+        for(const key of keys){
+          const item=value[key];
+          if(item==null||typeof item==='string'||typeof item==='number'||typeof item==='boolean'){
+            payload[key]=item;
+          }else if(Array.isArray(item)&&item.length<=20&&item.every(v=>v==null||['string','number','boolean'].includes(typeof v))){
+            payload[key]=item;
+          }else if(item&&typeof item==='object'&&!Array.isArray(item)){
+            try{
+              const text=JSON.stringify(item);
+              if(text.length<=5000)payload[key]=item;
+            }catch(_){}
+          }
+        }
+      }
+      out.push({path,payload});
+    }
+    for(const key of keys){
+      const item=value[key];
+      if(item&&typeof item==='object')treasureGuideCompactObject(item,path+'.'+key,out,seen,depth+1);
+      if(out.length>=700)break;
+    }
+    return out;
+  }
+
+  function treasureGuideSendSelective(path,body) {
+    if(!['/quests','/shop/view','/client_config','/items','/events'].includes(path) &&
+       !path.startsWith('/battlepass') &&
+       !path.startsWith('/fair/'))return;
+    const rows=treasureGuideCompactObject(body);
+    if(!rows.length)return;
+    let chunk=[],size=2,index=1;
+    const flush=()=>{
+      if(!chunk.length)return;
+      const payloadJson=JSON.stringify({source_path:path,rows:chunk});
+      const key='api-selective:'+path+':'+index+':'+treasureGuideHash(payloadJson);
+      void treasureGuideSubmit({
+        capture_key:key,
+        source:'api',
+        path:path+'#treasure-'+index,
+        payload_json:payloadJson,
+        page_text:'',
+        assets:treasureGuideScreenVisible()?treasureGuideAssetUrls():[]
+      });
+      index+=1;chunk=[];size=2;
+    };
+    for(const row of rows){
+      let text='';
+      try{text=JSON.stringify(row);}catch(_){continue;}
+      if(text.length>45000)continue;
+      if(size+text.length+1>185000)flush();
+      chunk.push(row);size+=text.length+1;
+    }
+    flush();
+  }
+
   function acceptTreasureGuideApi(url,body) {
     if(!body||typeof body!=='object')return;
     let path='';
     try{path=new URL(String(url||''),location.href).pathname;}catch(_){return;}
     const payloadJson=treasureGuidePayloadText(body);
+    treasureGuideSendSelective(path,body);
     if(!treasureGuideApiRelevant(path,payloadJson))return;
     const key='api:'+path+':'+treasureGuideHash(payloadJson);
     void treasureGuideSubmit({
