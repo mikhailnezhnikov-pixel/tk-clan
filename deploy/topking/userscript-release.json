@@ -5,7 +5,6 @@
   "candidate_path": "deploy/topking/HamsterKingMobile.1.17.45.treasure-generals-live-display.candidate.user.js",
   "primary_marker": "generals-kokkaras-live-display-20260923-r2",
   "preserve_markers": [
-    "treasure-guide-pet-skill-selective-20260923-r3",
     "generals-kokkaras-cost-parity-20260923-r1",
     "hamsters-kokkaras-auth-state-20260923-r3",
     "hamsters-kokkaras-live-state-20260923-r2",
@@ -24,4 +23,3 @@
   "audit_status_path": "audit/hk-userscript-1-17-45-treasure-generals-live-status.txt",
   "commit_message": "fix: deploy Generals live-state display in userscript 1.17.45"
 }
-
