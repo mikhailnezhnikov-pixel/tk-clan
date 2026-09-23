@@ -106,7 +106,41 @@
         "[S+] Светлое яйцо Молекота ×1",
         "[S+] Сияющее яйцо Молекота ×1"
       ],
-      "recommendation": ""
+      "recommendation": "",
+      "visual_requirements": [
+        [
+          "Обычное яйцо Молекота S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ],
+        [
+          "Тёмное яйцо Молекота S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ],
+        [
+          "Зловещее яйцо Молекота S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ],
+        [
+          "Светлое яйцо Молекота S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ],
+        [
+          "Сияющее яйцо Молекота S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ]
+      ],
+      "visual_rewards": [
+        [
+          "Таинственное S+ яйцо Молекота",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ]
+      ]
     },
     {
       "id": "fish_splus_collection",
@@ -121,7 +155,41 @@
         "[S+] Светлое яйцо Рыбы ×1",
         "[S+] Сияющее яйцо Рыбы ×1"
       ],
-      "recommendation": ""
+      "recommendation": "",
+      "visual_requirements": [
+        [
+          "Обычное яйцо Рыбы S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ],
+        [
+          "Тёмное яйцо Рыбы S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ],
+        [
+          "Зловещее яйцо Рыбы S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ],
+        [
+          "Светлое яйцо Рыбы S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ],
+        [
+          "Сияющее яйцо Рыбы S+",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ]
+      ],
+      "visual_rewards": [
+        [
+          "Таинственное S+ яйцо Рыбы",
+          1,
+          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+        ]
+      ]
     },
     {
       "id": "daily_maps",
@@ -130,7 +198,21 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
       "condition": "Обменять 3 000 крышек хомяколы на 3 карты сокровищ. Задание можно выполнить один раз в день.",
       "reward": "3 карты сокровищ",
-      "recommendation": ""
+      "recommendation": "",
+      "visual_requirements": [
+        [
+          "Крышки хомяколы",
+          3000,
+          null
+        ]
+      ],
+      "visual_rewards": [
+        [
+          "Карта сокровищ",
+          3,
+          "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+        ]
+      ]
     },
     {
       "id": "daily_cooking_1",
@@ -139,7 +221,14 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
       "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
       "reward": "35 провизии",
-      "recommendation": ""
+      "recommendation": "",
+      "visual_rewards": [
+        [
+          "Провизия",
+          35,
+          "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        ]
+      ]
     },
     {
       "id": "daily_cooking_2",
@@ -148,7 +237,14 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
       "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
       "reward": "35 провизии",
-      "recommendation": ""
+      "recommendation": "",
+      "visual_rewards": [
+        [
+          "Провизия",
+          35,
+          "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        ]
+      ]
     },
     {
       "id": "daily_cooking_3",
@@ -157,7 +253,14 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
       "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
       "reward": "35 провизии",
-      "recommendation": ""
+      "recommendation": "",
+      "visual_rewards": [
+        [
+          "Провизия",
+          35,
+          "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        ]
+      ]
     },
     {
       "id": "daily_cooking_4",
@@ -166,7 +269,14 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
       "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
       "reward": "35 провизии",
-      "recommendation": ""
+      "recommendation": "",
+      "visual_rewards": [
+        [
+          "Провизия",
+          35,
+          "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        ]
+      ]
     },
     {
       "id": "daily_cooking_5",
@@ -175,7 +285,14 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
       "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
       "reward": "35 провизии",
-      "recommendation": ""
+      "recommendation": "",
+      "visual_rewards": [
+        [
+          "Провизия",
+          35,
+          "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+        ]
+      ]
     }
   ],
   "pets": {
@@ -193,47 +310,56 @@
     {
       "title": "Карта сокровищ",
       "qty": "×1",
-      "price": "300"
+      "price": "300",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
     },
     {
       "title": "Провизия для путешествий",
       "qty": "×200",
-      "price": "300"
+      "price": "300",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
     },
     {
       "title": "Монеты сокровищ",
       "qty": "×300",
-      "price": "300"
+      "price": "300",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
     },
     {
       "title": "Карта торговца",
       "qty": "×1",
-      "price": "200"
+      "price": "200",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
     },
     {
       "title": "Карта сражения",
       "qty": "×1",
-      "price": "200"
+      "price": "200",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png"
     },
     {
       "title": "Карта рыбалки",
       "qty": "×1",
-      "price": "200"
+      "price": "200",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fishing_icon.png"
     },
     {
       "title": "Смена навыка питомца",
       "qty": "×3",
-      "price": "300"
+      "price": "300",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png"
     },
     {
       "title": "Вкусняшки для питомца",
       "qty": "×150",
-      "price": "300"
+      "price": "300",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png"
     },
     {
       "title": "Необычный ключ сокровищ",
       "qty": "×3",
-      "price": "300"
+      "price": "300",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
     }
   ],
   "bundles": [
@@ -266,7 +392,8 @@
         "×60",
         "×5",
         "×10"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
     },
     {
       "title": "Синяя жатва III",
@@ -275,7 +402,8 @@
         "×20",
         "×15",
         "×25"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
     },
     {
       "title": "Да он только крепче стал!",
@@ -284,7 +412,8 @@
         "×60",
         "×5",
         "×10"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
     },
     {
       "title": "Это вышло из-под контроля",
@@ -293,7 +422,8 @@
         "×50",
         "×20",
         "×35"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
     },
     {
       "title": "Абсолютная единица",
@@ -302,7 +432,8 @@
         "×100",
         "×10",
         "×20"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
     },
     {
       "title": "Чистая работа III",
@@ -311,7 +442,8 @@
         "×50",
         "×20",
         "×30"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
     },
     {
       "title": "Кто там, в глубине?",
@@ -320,7 +452,8 @@
         "×60",
         "×5",
         "×5"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
     },
     {
       "title": "Хватка глубин I",
@@ -329,7 +462,8 @@
         "×100",
         "×10",
         "×5"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
     },
     {
       "title": "Вода успокоилась",
@@ -338,7 +472,8 @@
         "×60",
         "×5",
         "×5"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
     },
     {
       "title": "Крупная находка",
@@ -347,7 +482,8 @@
         "×140",
         "×15",
         "×25"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
     },
     {
       "title": "Нашёл выход",
@@ -356,7 +492,8 @@
         "×60",
         "×5",
         "×10"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png"
     },
     {
       "title": "Бартерщик",
@@ -365,7 +502,8 @@
         "×60",
         "×5",
         "×10"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
     },
     {
       "title": "Редкая связка",
@@ -374,7 +512,8 @@
         "×60",
         "×5",
         "×10"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png"
     },
     {
       "title": "Искатель сокровищ II",
@@ -383,7 +522,8 @@
         "×100",
         "×10",
         "×1"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
     },
     {
       "title": "Искатель сокровищ VI",
@@ -393,7 +533,8 @@
         "×31",
         "×1",
         "×5"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
     },
     {
       "title": "Глубже в горы I",
@@ -402,7 +543,8 @@
         "×60",
         "×5",
         "×10"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png"
     },
     {
       "title": "Глубже в горы III",
@@ -411,7 +553,8 @@
         "×20",
         "×15",
         "×25"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png"
     },
     {
       "title": "Землекоп II",
@@ -420,7 +563,8 @@
         "×100",
         "×10",
         "×20"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
     },
     {
       "title": "Землекоп III",
@@ -429,7 +573,8 @@
         "×20",
         "×15",
         "×25"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
     },
     {
       "title": "Навстречу шторму III",
@@ -438,7 +583,8 @@
         "×20",
         "×15",
         "×5"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
     },
     {
       "title": "Не заблудился",
@@ -447,7 +593,8 @@
         "×20",
         "×15",
         "×25"
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png"
     }
   ],
   "achievement_conditions": [
@@ -660,7 +807,8 @@
             ]
           ]
         }
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
     },
     {
       "category": "Сражения",
@@ -729,7 +877,8 @@
             ]
           ]
         }
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png"
     },
     {
       "category": "Рыбалка",
@@ -798,7 +947,8 @@
             ]
           ]
         }
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
     },
     {
       "category": "Торговец — встречи",
@@ -863,7 +1013,8 @@
             ]
           ]
         }
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
     },
     {
       "category": "Торговец — сделки",
@@ -920,7 +1071,8 @@
             ]
           ]
         }
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
     },
     {
       "category": "Раскопки / сундуки — серия 1",
@@ -977,7 +1129,8 @@
             ]
           ]
         }
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
     },
     {
       "category": "Раскопки / сундуки — серия 2",
@@ -1017,7 +1170,8 @@
             ]
           ]
         }
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
     }
   ],
   "minigame_details": [
@@ -1247,7 +1401,8 @@
           "name": "Карта сражения",
           "quantity": 1
         }
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
     },
     {
       "title": "Большой сундук после сражения",
@@ -1284,7 +1439,8 @@
           "name": "Золото",
           "quantity": 1
         }
-      ]
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
     }
   ],
   "verified_map": {
@@ -1397,5 +1553,28 @@
       "S": "12 корма → 3 золотые монеты; шанс яйца 5% на питомца",
       "S_plus": "точная стоимость/награда ещё не поймана отдельной карточкой"
     }
+  },
+  "icon_catalog": {
+    "event": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png",
+    "map": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+    "energy": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+    "coins": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png",
+    "key_common": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_common_icon.png",
+    "key_uncommon": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png",
+    "key_epic": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png",
+    "pet_food": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png",
+    "skill_change": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png",
+    "berry": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png",
+    "trader_map": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png",
+    "fight_map": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png",
+    "fishing_map": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fishing_icon.png",
+    "egg": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png",
+    "mine": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png",
+    "fishing": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png",
+    "chest": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
+    "forest": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_forest_g_icon.png",
+    "fight": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+    "riddle": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png",
+    "treasury": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png"
   }
 }
