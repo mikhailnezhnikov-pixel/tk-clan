@@ -476,22 +476,30 @@
     {
       "title": "Друзья в дорогу",
       "limit": "Осталось 3",
-      "price": "490"
+      "price": "490",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_pets_collection_10_icon.png",
+      "composition_note": "Состав на карточке подтверждён визуально, но названия отдельных предметов пока не связываются без догадки."
     },
     {
       "title": "Запас на удачу",
       "limit": "Осталось 3",
-      "price": "490"
+      "price": "490",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_energy_collection_10_icon.png",
+      "composition_note": "Состав на карточке подтверждён визуально, но названия отдельных предметов пока не связываются без догадки."
     },
     {
       "title": "Секреты под замком",
       "limit": "Осталось 3",
-      "price": "490"
+      "price": "490",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_keys_collection_10_icon.png",
+      "composition_note": "Состав на карточке подтверждён визуально, но названия отдельных предметов пока не связываются без догадки."
     },
     {
       "title": "Золотой урожай",
       "limit": "Остался 1",
-      "price": "490"
+      "price": "490",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_maps_golden_berries_10_icon.png",
+      "composition_note": "Состав на карточке подтверждён визуально, но названия отдельных предметов пока не связываются без догадки."
     }
   ],
   "achievement_examples": [
