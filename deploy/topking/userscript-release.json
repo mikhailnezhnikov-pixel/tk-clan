@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.70",
-  "target_version": "1.17.71",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.71.growth-fresh-preflight.candidate.user.js",
-  "primary_marker": "growth-fresh-preflight-20260923-r1",
+  "source_version": "1.17.71",
+  "target_version": "1.17.72",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.72.stage7-combat-confirm.candidate.user.js",
+  "primary_marker": "stage7-combat-confirm-20260923-r1",
   "preserve_markers": [
+    "growth-fresh-preflight-20260923-r1",
     "mutation-bridge-readonly-20260923-r1",
     "war-combat-20260923-r1",
     "rat-hunt-combat-20260923-r1",
@@ -46,6 +47,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-71-growth-fresh-preflight-live-status.txt",
-  "commit_message": "fix: deploy Growth fresh-state safety in userscript 1.17.71"
+  "audit_status_path": "audit/hk-userscript-1-17-72-stage7-combat-confirm-live-status.txt",
+  "commit_message": "fix: deploy Stage 7 combat confirmations in userscript 1.17.72"
 }
