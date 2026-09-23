@@ -5257,5 +5257,59 @@
         ]
       }
     ]
-  }
+  },
+  "equipment_progression": [
+    {
+      "id": "rod",
+      "title": "Удочка",
+      "mechanic": "Рыбалка",
+      "levels": [
+        {
+          "rank": "R3",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/treasure_minigame_rod_r3_icon.png",
+          "cost": {
+            "title": "Монеты сокровищ",
+            "quantity": 600,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+          }
+        },
+        {
+          "rank": "R4",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/treasure_minigame_rod_r4_icon.png",
+          "cost": {
+            "title": "Монеты сокровищ",
+            "quantity": 1800,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+          }
+        }
+      ],
+      "note": "Апгрейды продаются у Тайного торговца I. Численный бонус уровней R3/R4 в игровом интерфейсе не подписан, поэтому на странице он не додумывается."
+    },
+    {
+      "id": "sword",
+      "title": "Меч",
+      "mechanic": "Сражение",
+      "levels": [
+        {
+          "rank": "R3",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r3_icon.png",
+          "cost": {
+            "title": "Монеты сокровищ",
+            "quantity": 600,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+          }
+        },
+        {
+          "rank": "R4",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png",
+          "cost": {
+            "title": "Монеты сокровищ",
+            "quantity": 1800,
+            "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+          }
+        }
+      ],
+      "note": "Апгрейды продаются у Тайного торговца II. Численный бонус уровней R3/R4 в игровом интерфейсе не подписан, поэтому на странице он не додумывается."
+    }
+  ]
 }
