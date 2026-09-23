@@ -1,6 +1,366 @@
 {
-  "status": "collecting",
-  "status_text": "Сбор данных события включён. Квесты и изображения появятся после первого полного считывания «Карты Сокровищ» из игры.",
-  "assets": [],
-  "quests": []
+  "status": "captured",
+  "status_text": "Событие считано из игры: 67 снимков API/экрана, 106 игровых ассетов. Гайд заполняется только фактическими данными; рекомендации добавляем отдельно после проверки.",
+  "captured": {
+    "snapshots": 67,
+    "assets_found": 106,
+    "api_paths": [
+      "/client_config",
+      "/quests",
+      "/shop/view",
+      "/shop/buy",
+      "/quest/claim",
+      "/fair/reroll",
+      "/battlepass/claim"
+    ]
+  },
+  "assets": [
+    "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/banner_event_treasures_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_common_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fishing_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_forest_g_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png",
+    "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png"
+  ],
+  "mechanics": [
+    {
+      "id": "mine",
+      "title": "Шахта",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png",
+      "note": "Встречается на клетках карты; в данных игры есть обычные и завершённые состояния."
+    },
+    {
+      "id": "forest",
+      "title": "Лес",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_forest_g_icon.png",
+      "note": "Отдельный тип точки на карте сокровищ."
+    },
+    {
+      "id": "fight",
+      "title": "Сражение",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+      "note": "Боевая точка. В достижениях есть отдельные условия по боям, атакам и суммарному HP врагов."
+    },
+    {
+      "id": "fishing",
+      "title": "Рыбалка",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png",
+      "note": "Отдельная мини-игра; встречаются состояния спокойной, штормовой и проклятой воды."
+    },
+    {
+      "id": "chest",
+      "title": "Сундук",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png",
+      "note": "В игре считаны несколько типов сундуков, раскопки и пустые точки."
+    },
+    {
+      "id": "riddle",
+      "title": "Загадка",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_riddle_g_icon.png",
+      "note": "Точка с решением/выбором; для гайда будем отдельно фиксировать варианты и лучший ответ."
+    },
+    {
+      "id": "trader",
+      "title": "Торговец",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png",
+      "note": "Встреча с торговцем; в достижениях есть счётчики сделок, обменов и ставок."
+    },
+    {
+      "id": "treasury",
+      "title": "Сокровищница",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png",
+      "note": "Отдельная точка карты с несколькими путями; игра содержит три иконки направлений сокровищницы."
+    },
+    {
+      "id": "trap",
+      "title": "Ловушка",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_fight_icon.png",
+      "note": "В структуре карты зафиксирован отдельный тип trap."
+    }
+  ],
+  "quests": [
+    {
+      "id": "mothcat_splus_collection",
+      "title": "Коллекция молекотов S+",
+      "stage": "Однократно",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png",
+      "condition": "Сдать по одному S+ яйцу обычного, тёмного, зловещего, светлого и сияющего вида. Награда — таинственное S+ яйцо молекота. Квест выполняется один раз на аккаунт.",
+      "requirements": [
+        "[S+] Обычное яйцо Молекота ×1",
+        "[S+] Тёмное яйцо Молекота ×1",
+        "[S+] Зловещее яйцо Молекота ×1",
+        "[S+] Светлое яйцо Молекота ×1",
+        "[S+] Сияющее яйцо Молекота ×1"
+      ],
+      "recommendation": ""
+    },
+    {
+      "id": "fish_splus_collection",
+      "title": "Коллекция рыб S+",
+      "stage": "Однократно",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png",
+      "condition": "Сдать по одному S+ яйцу обычного, тёмного, зловещего, светлого и сияющего вида. Награда — таинственное S+ яйцо рыбы. Квест выполняется один раз на аккаунт.",
+      "requirements": [
+        "[S+] Обычное яйцо Рыбы ×1",
+        "[S+] Тёмное яйцо Рыбы ×1",
+        "[S+] Зловещее яйцо Рыбы ×1",
+        "[S+] Светлое яйцо Рыбы ×1",
+        "[S+] Сияющее яйцо Рыбы ×1"
+      ],
+      "recommendation": ""
+    },
+    {
+      "id": "daily_maps",
+      "title": "Карты на каждый день",
+      "stage": "Ежедневно",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png",
+      "condition": "Обменять 3 000 крышек хомяколы на 3 карты сокровищ. Задание можно выполнить один раз в день.",
+      "reward": "3 карты сокровищ",
+      "recommendation": ""
+    },
+    {
+      "id": "daily_cooking_1",
+      "title": "Ежедневная готовка I",
+      "stage": "Ежедневно",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
+      "reward": "35 провизии",
+      "recommendation": ""
+    },
+    {
+      "id": "daily_cooking_2",
+      "title": "Ежедневная готовка II",
+      "stage": "Ежедневно",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
+      "reward": "35 провизии",
+      "recommendation": ""
+    },
+    {
+      "id": "daily_cooking_3",
+      "title": "Ежедневная готовка III",
+      "stage": "Ежедневно",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
+      "reward": "35 провизии",
+      "recommendation": ""
+    },
+    {
+      "id": "daily_cooking_4",
+      "title": "Ежедневная готовка IV",
+      "stage": "Ежедневно",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
+      "reward": "35 провизии",
+      "recommendation": ""
+    },
+    {
+      "id": "daily_cooking_5",
+      "title": "Ежедневная готовка V",
+      "stage": "Ежедневно",
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png",
+      "condition": "Сдать по 50 единиц трёх требуемых ресурсов из списка. Каждый из пяти квестов готовки можно выполнить один раз в день.",
+      "reward": "35 провизии",
+      "recommendation": ""
+    }
+  ],
+  "pets": {
+    "overview": "В событии есть два семейства питомцев — молекоты и рыбы, разные редкости/облики и отдельные навыки.",
+    "known_effects": [
+      {
+        "title": "Рыбка",
+        "text": "Рыбка замечает сокровища даже в глубине Пещеры. Пока она активна, при сборе награды в Пещере есть небольшой шанс найти Золотую Ягоду.",
+        "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png"
+      }
+    ],
+    "missions": "Каждый питомец расходует 2 корма и приносит 1 Золотую монету. Питомцы редкости S и S+ имеют шанс отыскать специальные награды."
+  },
+  "shop": [
+    {
+      "title": "Карта сокровищ",
+      "qty": "×1",
+      "price": "300"
+    },
+    {
+      "title": "Провизия для путешествий",
+      "qty": "×200",
+      "price": "300"
+    },
+    {
+      "title": "Монеты сокровищ",
+      "qty": "×300",
+      "price": "300"
+    },
+    {
+      "title": "Карта торговца",
+      "qty": "×1",
+      "price": "200"
+    },
+    {
+      "title": "Карта сражения",
+      "qty": "×1",
+      "price": "200"
+    },
+    {
+      "title": "Карта рыбалки",
+      "qty": "×1",
+      "price": "200"
+    },
+    {
+      "title": "Смена навыка питомца",
+      "qty": "×3",
+      "price": "300"
+    },
+    {
+      "title": "Вкусняшки для питомца",
+      "qty": "×150",
+      "price": "300"
+    },
+    {
+      "title": "Необычный ключ сокровищ",
+      "qty": "×3",
+      "price": "300"
+    }
+  ],
+  "bundles": [
+    {
+      "title": "Друзья в дорогу",
+      "limit": "Осталось 3",
+      "price": "490"
+    },
+    {
+      "title": "Запас на удачу",
+      "limit": "Осталось 3",
+      "price": "490"
+    },
+    {
+      "title": "Секреты под замком",
+      "limit": "Осталось 3",
+      "price": "490"
+    },
+    {
+      "title": "Золотой урожай",
+      "limit": "Остался 1",
+      "price": "490"
+    }
+  ],
+  "achievement_examples": [
+    {
+      "title": "Вода успокоилась",
+      "condition": "Впервые исследовать место на рыбалке, где вода успокоилась после победы над Щупальцем.",
+      "rewards": [
+        "×60",
+        "×5",
+        "×5"
+      ]
+    },
+    {
+      "title": "Это вышло из-под контроля",
+      "condition": "Сделать так, чтобы суммарное HP живых врагов одновременно стало 68+.",
+      "rewards": [
+        "×50",
+        "×20",
+        "×35"
+      ]
+    }
+  ],
+  "achievement_conditions": [
+    "3 убито",
+    "25 убито",
+    "250 убито",
+    "25 убито",
+    "250 убито",
+    "25 убито",
+    "125 убито",
+    "+15 HP",
+    "50+ HP",
+    "10+ HP",
+    "1 зачистка",
+    "50 полей",
+    "100 убито",
+    "820 убито",
+    "0 атак",
+    "5+ атак",
+    "1 убит",
+    "5 убито",
+    "1 щупальце",
+    "10 щупалец",
+    "10 штормов",
+    "100 бурь без чар",
+    "25 мест",
+    "3 яйца",
+    "карта",
+    "10 находок",
+    "60 кладов",
+    "5 пустых",
+    "сундук #1",
+    "сундук #2",
+    "сундук #3",
+    "тайный",
+    "6 раскопок",
+    "10 × #1",
+    "50 × #1",
+    "3 × #2",
+    "15 × #2",
+    "сундук #3 — выход ≤3 хода",
+    "10 подряд",
+    "25 покупок",
+    "3 × ур. 4",
+    "уровень 5",
+    "3 × ур. 5",
+    "3 ресурса",
+    "5 обменов",
+    "10 ставок",
+    "500 монет",
+    "S-питомец",
+    "S+ питомец",
+    "тайный питомец",
+    "светлый",
+    "тёмный",
+    "свет/тьма",
+    "S+ ур. 5",
+    "повтор",
+    "редкость ↑",
+    "2 навыка",
+    "3 механики",
+    "10 замен",
+    "10 ключей",
+    "3 редких",
+    "эпик-ключ",
+    "5 карт",
+    "снаряжение II",
+    "снаряжение III",
+    "25 решений",
+    "10 карт",
+    "25 карт",
+    "50 карт",
+    "25 лесов",
+    "100 лесов",
+    "25 шахт",
+    "100 шахт",
+    "25 боёв",
+    "100 боёв",
+    "10 рыбалок",
+    "50 рыбалок",
+    "10 встреч",
+    "50 встреч",
+    "15 сделок",
+    "60 сделок",
+    "20 ям",
+    "250 ям"
+  ]
 }
