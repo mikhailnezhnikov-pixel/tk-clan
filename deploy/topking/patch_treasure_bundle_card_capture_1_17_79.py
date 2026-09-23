@@ -9,8 +9,8 @@ if MARKER in s:
     raise SystemExit(0)
 
 for required in [
-    "// @version      1.17.79",
-    "const BUILD_VERSION = '1.17.79';",
+    "// @version      1.17.78",
+    "const BUILD_VERSION = '1.17.78';",
     "treasure-guide-passive-capture-20260923-r1",
     "treasure-guide-priority-bundles-20260923-r1",
     "runtime-smoke-fresh-run-20260923-r1",
