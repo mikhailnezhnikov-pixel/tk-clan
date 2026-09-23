@@ -9,7 +9,7 @@
     :root{--bg:#07090d;--panel:#10141b;--panel2:#151a22;--text:#f6f2e7;--muted:#9aa4b2;--gold:#e8b654;--gold2:#ffe0a0;--line:rgba(255,255,255,.09);--good:#8fe0a8}
     *{box-sizing:border-box}html{background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}body{margin:0;background:radial-gradient(circle at 72% 0,rgba(232,182,84,.12),transparent 30%),var(--bg)}
     a{color:inherit}.shell{width:min(1180px,calc(100% - 32px));margin:auto}
-    header{position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line);background:rgba(7,9,13,.91);backdrop-filter:blur(14px)}
+    body>header:not(.topbar):not(.site-header){position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line);background:rgba(7,9,13,.91);backdrop-filter:blur(14px)}
     .header{min-height:72px;display:flex;align-items:center;gap:18px}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:900}.brand img{width:44px;height:44px;object-fit:contain;object-position:center}.back{margin-left:auto;color:var(--gold2);text-decoration:none;font-weight:800}
     .hero{padding:54px 0 24px}.eyebrow{color:var(--gold);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.hero h1{margin:12px 0 14px;font:700 clamp(40px,7vw,70px)/.96 Georgia,serif;letter-spacing:-.05em}.hero p{max-width:760px;margin:0;color:#c3cad3;font-size:16px;line-height:1.6}
     .section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:34px 0 16px}.section-head h2{margin:0;font-size:27px}.section-head p{margin:5px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
@@ -143,14 +143,16 @@
   </style>
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
   <link rel="apple-touch-icon" href="../assets/brand/topking-clan-crest.png">
+  <link rel="stylesheet" href="../assets/public.css">
+  <link rel="apple-touch-icon" href="../assets/brand/topking-clan-crest.png">
 </head>
 <body>
 <header><div class="shell header"><a class="brand" href="../" aria-label="Top King"><img class="tk-clan-crest" src="../assets/brand/topking-clan-crest.png" alt="Top King"></a><a class="back" href="../">← Главная</a></div></header>
 <main class="shell">
   <section class="hero">
-    <div class="eyebrow">Событие · Hamster King</div>
-    <h1>Карта Сокровищ</h1>
-    <p>Квесты, покупки, сундуки, питомцы, достижения и механики события — в компактном виде с игровыми иконками и понятными наградами.</p>
+    <div class="eyebrow" data-i18n="eyebrow">Событие · Hamster King</div>
+    <h1 data-i18n="title">Карта Сокровищ</h1>
+    <p data-i18n="lead">Квесты, покупки, сундуки, питомцы, достижения и механики события — в компактном виде с игровыми иконками и понятными наградами.</p>
   </section>
 
 
@@ -281,6 +283,14 @@
 </div>
 
 <footer><div class="shell">Top King · неофициальный гайд для игроков Hamster King</div></footer>
+<script>
+window.TK_PAGE_TRANSLATIONS={
+  ru:{pageTitle:'Карта Сокровищ — гайд Top King',eyebrow:'Событие · Hamster King',title:'Карта Сокровищ',lead:'Квесты, покупки, сундуки, питомцы, достижения и механики события — в компактном виде с игровыми иконками и понятными наградами.'},
+  en:{pageTitle:'Treasure Map guide — Top King',eyebrow:'Event · Hamster King',title:'Treasure Map',lead:'Quests, purchases, chests, pets, achievements and event mechanics in one clear guide with in-game artwork and verified rewards.'},
+  fa:{pageTitle:'راهنمای نقشه گنج — Top King',eyebrow:'رویداد · Hamster King',title:'نقشه گنج',lead:'ماموریت‌ها، خریدها، صندوق‌ها، حیوانات، دستاوردها و مکانیک‌های رویداد در یک راهنمای روشن با تصاویر داخل بازی و پاداش‌های تأییدشده.'}
+};
+</script>
+<script src="../assets/site-i18n.js?v=20260924-1"></script>
 <script>
 (async()=>{
   try{
@@ -792,5 +802,6 @@
 })();
 </script>
 <script src="../assets/site-nav.js?v=20260920-11"></script>
+<script src="../assets/site-nav.js?v=20260924-1"></script>
 </body>
 </html>
