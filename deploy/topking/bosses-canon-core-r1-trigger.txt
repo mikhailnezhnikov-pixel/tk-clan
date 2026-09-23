@@ -1,2 +1,0 @@
-2026-09-20 Bosses canonical core r1 deploy retry after predeploy PASS
-candidate_sha256=571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9
