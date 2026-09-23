@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.57
+// @version      1.17.58
+// @release-note Ярмарка: нижние бонусные ячейки 3/6/9 теперь определяются по фактически купленным основным ячейкам текущего поля, поэтому поэтапные покупки 3→6→9 корректно открывают первый, второй и третий бонус.
 // @release-note Ярмарка: восстановлена ступенчатая логика 3/6/9 — выбранное значение задаёт максимальный размер пачки, поэтому при 9 скрипт также выкупает найденные группы по 3 и 6 и открывает соответствующие нижние ячейки.
 // @release-note Карта Сокровищ: полные лоты Тайного торговца приоритетно сохраняются из уже загруженного /shop/view без дополнительных запросов к игре.
 // @release-note Магазин: ресурсные лоты покупаются по фактически доступным крышкам вместо искусственного лимита 999; карточки уплотнены, а названия подгружаются из игровой локализации.
@@ -64,7 +65,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.57';
+  const BUILD_VERSION = '1.17.58';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -75,6 +76,7 @@
   const HK_FAIR_SINGLE_PREFLIGHT_REV = 'fair-single-preflight-20260923-r1';
   const HK_FAIR_UNIFIED_NAV_REV = 'fair-unified-nav-20260923-r1';
   const HK_FAIR_TIERED_COMBO_REV = 'fair-tiered-combo-20260923-r1';
+  const HK_FAIR_BONUS_THRESHOLD_STATE_REV = 'fair-bonus-threshold-state-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
   function hkRuntimeVersionTuple(value) {
@@ -7824,8 +7826,11 @@
             playerDocument = await apiJson('/player/me', 'POST');
             fairDocument = playerDocument;
             state = fairState(selectedFairId);
-            const collars = fairSlotOptions(state).filter(({slot,index}) => {
-              if (index < 9 || index >= 9 + groupSize / 3 || slot.is_bought) return false;
+            const refreshedOptions = fairSlotOptions(state);
+            const boughtMainCells = refreshedOptions.filter(({slot,index}) => index < 9 && slot.is_bought).length;
+            const openedBonusSlots = Math.min(3, Math.floor(boughtMainCells / 3));
+            const collars = refreshedOptions.filter(({slot,index}) => {
+              if (index < 9 || index >= 9 + openedBonusSlots || slot.is_bought) return false;
               const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
               return selectedFairBonusLots.has(Number(row?.rewardQuantity || 0));
             });
