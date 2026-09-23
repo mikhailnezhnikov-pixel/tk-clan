@@ -18,9 +18,9 @@ Each module:
 - stage: 2
 - status: IN_PROGRESS
 - userscript: 1.17.39
-- current module: Growth / Развитие — Stage 2.11 verification
-- current module file: audit/hk-stage2-11-growth.md
-- current module status: SOURCE_PREFLIGHT_PASS · CANONICAL_CURRENCY_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING
+- current module: Hamsters / Хомяки — Stage 2.12 verification
+- current module file: audit/hk-stage2-12-hamsters.md
+- current module status: SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · CANDIDATE_1_17_40_STATIC_CI_PASS · LIVE_DEPLOY_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: LIVE PASS
@@ -1893,3 +1893,19 @@ Current behavior:
 ## Treasure Map guide capture
 
 - Treasure Map guide capture 1.17.39: TECHNICAL LIVE PASS; passive-only event/API/DOM/asset collector; guide population pending captured event data.
+
+
+## Stage 2.12 Hamsters candidate
+
+- current live userscript remains **1.17.39**;
+- candidate: **1.17.40**;
+- marker: `hamsters-kokkaras-cost-parity-20260923-r1`;
+- source preflight against pinned Kokkaras donor: PASS;
+- donor order Copy Priority → Rarity → Levels: preserved;
+- Nuts budget and `nutsPercent`: preserved;
+- safe additional non-premium/non-hard cost components: restored to donor parity;
+- premium/hard safety block: preserved;
+- static CI run `35812191033`: PASS;
+- destructive/gameplay CI mutations: NONE;
+- production deploy: PENDING;
+- user browser/live check: PENDING.
