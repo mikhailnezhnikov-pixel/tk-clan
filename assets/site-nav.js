@@ -1,12 +1,12 @@
 (()=>{
   const labels={
-    ru:{home:'Главная',information:'Гайд по игре',announcements:'Новости игры',recipes:'Рецепты',calculators:'Калькуляторы',maps:'Карты',wars:'Клановые войны',ratings:'Рейтинг',feedback:'Обратная связь',cabinet:'Личный кабинет',game:'Игра',clan:'Клан',contact:'Связь'},
-    en:{home:'Home',information:'Game guide',announcements:'Game news',recipes:'Recipes',calculators:'Calculators',maps:'Maps',wars:'Clan wars',ratings:'Rankings',feedback:'Feedback',cabinet:'Member area',game:'Game',clan:'Clan',contact:'Contact'},
-    fa:{home:'خانه',information:'راهنمای بازی',announcements:'اخبار بازی',recipes:'دستورها',calculators:'محاسبه‌گرها',maps:'نقشه‌ها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',feedback:'بازخورد',cabinet:'پنل اعضا',game:'بازی',clan:'قبیله',contact:'ارتباط'}
+    ru:{home:'Главная',information:'Гайд по игре',treasure:'Карта сокровищ',announcements:'Новости игры',recipes:'Рецепты',calculators:'Калькуляторы',maps:'Карты',wars:'Клановые войны',ratings:'Рейтинг',feedback:'Обратная связь',cabinet:'Личный кабинет',game:'Игра',clan:'Клан',contact:'Связь'},
+    en:{home:'Home',information:'Game guide',treasure:'Treasure Map',announcements:'Game news',recipes:'Recipes',calculators:'Calculators',maps:'Maps',wars:'Clan wars',ratings:'Rankings',feedback:'Feedback',cabinet:'Member area',game:'Game',clan:'Clan',contact:'Contact'},
+    fa:{home:'خانه',information:'راهنمای بازی',treasure:'نقشه گنج',announcements:'اخبار بازی',recipes:'دستورها',calculators:'محاسبه‌گرها',maps:'نقشه‌ها',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',feedback:'بازخورد',cabinet:'پنل اعضا',game:'بازی',clan:'قبیله',contact:'ارتباط'}
   };
-  const items=[['home',''],['information','information/'],['announcements','news/'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/'],['wars','wars/'],['ratings','ratings/'],['feedback','feedback/'],['cabinet','cabinet/']];
+  const items=[['home',''],['information','information/'],['treasure','treasure-map/'],['announcements','news/'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/'],['wars','wars/'],['ratings','ratings/'],['feedback','feedback/'],['cabinet','cabinet/']];
   const desktopGroups=[
-    {label:'game',items:[['information','information/'],['announcements','news/'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/']]},
+    {label:'game',items:[['information','information/'],['treasure','treasure-map/'],['announcements','news/'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/']]},
     {label:'clan',items:[['wars','wars/'],['ratings','ratings/']]},
     {label:'contact',items:[['feedback','feedback/']]}
   ];
@@ -63,7 +63,7 @@
       ? current()==='news'
       : key==='cabinet'
         ? current()==='cabinet'
-        : current()===key||(key==='home'&&current()==='home');
+        : key==='treasure' ? current()==='treasure-map' : current()===key||(key==='home'&&current()==='home');
     if(active)a.classList.add('active');
     if(key==='cabinet')a.classList.add(mobile?'mobile-login':'nav-login');
     return a;
