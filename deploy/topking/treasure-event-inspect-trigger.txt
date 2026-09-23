@@ -1,2 +1,2 @@
-inspect=treasure-raw-target-scan
-stamp=2026-09-23T13:46+09:00
+inspect=treasure-definition-vs-reference
+stamp=2026-09-23T13:52+09:00
