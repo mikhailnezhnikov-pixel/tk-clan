@@ -11,7 +11,7 @@
       this.running=true;const epoch=this.epoch;
       try{while(this.items.length&&epoch===this.epoch){const event=this.items.shift();await this.runner(event)}}
       catch(err){console.error('[BattleEventQueue]',err)}
-      finally{this.running=false;if(this.items.length&&epoch===this.epoch)this.drain()}
+      finally{this.running=false;if(this.items.length)this.drain()}
     }
   }
   w.TopKingBattleCore=w.TopKingBattleCore||{};
