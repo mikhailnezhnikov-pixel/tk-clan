@@ -1,6 +1,6 @@
-checked_utc=2026-09-20T08:30:00Z
-marker=BOSSES_R1
-live_sha256=571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9
-public_sha256=571d97f7aa2adf5d747f94275350abf0872f04a63bdaf795c9ec53aed2b393a9
+checked_utc=2026-09-23T15:32:33Z
+marker=BOSSES_UNKNOWN
+live_sha256=048683968bafaf8164340dd2aa7c2fcb622306ad0f048fd2c2f4fdfad1f3bcb3
+public_sha256=048683968bafaf8164340dd2aa7c2fcb622306ad0f048fd2c2f4fdfad1f3bcb3
 public_byte_equality=PASS
 syntax=PASS
