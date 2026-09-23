@@ -297,6 +297,7 @@
     .clanshop-request-add{display:inline-flex;align-items:center;justify-content:center;min-width:82px;padding:6px 8px;border:1px solid rgba(232,182,84,.38);border-radius:9px;background:rgba(232,182,84,.08);color:#ffe0a0;font-size:11px;font-weight:900;cursor:pointer}
     .clanshop-request-add:disabled{border-color:rgba(255,255,255,.09);background:rgba(255,255,255,.025);color:#68717c;cursor:default}
     .clanshop-final-title{margin:18px 0 9px;color:#fff;font-size:18px}
+    .clanshop-final-count{color:var(--muted);font-size:13px;font-weight:750}
     .clanshop-history{margin-top:20px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}
     .clanshop-history-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}
     .clanshop-history-head h3{margin:0 0 5px;color:#fff;font-size:20px}
@@ -781,7 +782,7 @@
           <p id="clanshop-message" class="message" role="status" aria-live="polite"></p>
 
           <section id="clanshop-final-list">
-            <h3 class="clanshop-final-title">Итоговый список</h3>
+            <h3 class="clanshop-final-title">Итоговый список <span id="clanshop-final-count" class="clanshop-final-count"></span></h3>
             <div class="clanshop-table-wrap">
               <table class="clanshop-table">
                 <thead>
@@ -1691,9 +1692,34 @@
     const data=clanShopData;
     const body=$('clanshop-body');
     if(!data||!body)return;
-    const participants=Array.isArray(data.participants)?data.participants:[];
+    const rawParticipants=Array.isArray(data.participants)?data.participants:[];
+    // Один игрок = одна строка. Дедупликация только по точному player_id,
+    // а если ID отсутствует — по стабильному player_key. По нику не связываем.
+    const participantMap=new Map();
+    rawParticipants.forEach(row=>{
+      const playerId=String(row?.player_id||'').trim();
+      const playerKey=String(row?.player_key||'').trim();
+      const key=playerId?'id:'+playerId:(playerKey?'key:'+playerKey:'');
+      if(!key)return;
+      const previous=participantMap.get(key);
+      if(!previous){
+        participantMap.set(key,{...row});
+        return;
+      }
+      participantMap.set(key,{
+        ...previous,
+        ...row,
+        nickname:String(row?.nickname||previous?.nickname||'').trim(),
+        cabinet_access:typeof row?.cabinet_access==='boolean'?row.cabinet_access:previous?.cabinet_access,
+        idol_orbs:Math.max(Number(previous?.idol_orbs||0),Number(row?.idol_orbs||0)),
+        splus_businesses:Math.max(Number(previous?.splus_businesses||0),Number(row?.splus_businesses||0)),
+        request_splus_businesses:Math.max(Number(previous?.request_splus_businesses||0),Number(row?.request_splus_businesses||0))
+      });
+    });
+    const participants=[...participantMap.values()];
     const limits=data.limits||{};
     const totals=data.totals||{};
+    if($('clanshop-final-count'))$('clanshop-final-count').textContent='· '+participants.length;
     const query=String($('clanshop-search')?.value||'').trim().toLowerCase();
     const sortMode=String($('clanshop-sort')?.value||clanShopSort||'purchases_asc');
     clanShopSort=sortMode;
