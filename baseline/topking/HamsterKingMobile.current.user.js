@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.54
+// @version      1.17.55
+// @release-note Ярмарка: режим 3/6/9 теперь ждёт полную выбранную комбинацию на текущем поле и не начинает частичный выкуп; бонусные слоты открываются только после полного набора.
 // @release-note Магазин: ресурсные лоты покупаются по фактически доступным крышкам вместо искусственного лимита 999; карточки уплотнены, а названия подгружаются из игровой локализации.
 // @release-note Карта Сокровищ: приоритетно сохраняются полные lot-объекты сундуков и трёх путей сокровищницы из уже загруженного /shop/view без новых запросов к игре.
 // @release-note Ярмарка: удалён отдельный дубль «Обычная ярмарка». В «Торговле» остаётся одна объединённая Ярмарка, которая показывает обычную и событийную ярмарки и сохраняет настройки 3/6/9 с дополнительными лотами.
@@ -62,7 +63,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.54';
+  const BUILD_VERSION = '1.17.55';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -72,6 +73,7 @@
   const HK_SHOP_SHARED_LIMITS_UI_REV = 'shop-shared-limits-ui-20260923-r1';
   const HK_FAIR_SINGLE_PREFLIGHT_REV = 'fair-single-preflight-20260923-r1';
   const HK_FAIR_UNIFIED_NAV_REV = 'fair-unified-nav-20260923-r1';
+  const HK_FAIR_EXACT_COMBO_REV = 'fair-exact-combo-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
   function hkRuntimeVersionTuple(value) {
@@ -7744,6 +7746,10 @@
     const rerollLimit = Math.max(0, Number(root.querySelector('#hk-fair-reroll-limit').value || 0));
     const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
     const combo = fairComboSettings();
+    if (combo.exactLots && buyLimit < combo.exactLots) {
+      alert(either(`Для комбинации ${combo.exactLots} общий лимит покупок должен быть не меньше ${combo.exactLots}.`, `For a ${combo.exactLots}-lot combination, the total purchase limit must be at least ${combo.exactLots}.`));
+      return;
+    }
     let state = fairState(selectedFairId);
     if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
     const cost = costParts(state?.fair_reroll_cost)[0];
@@ -7768,8 +7774,8 @@
         if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
         await hkRunner.waitIfPaused();
         hkRunner.setStep(either('Поиск и покупка лотов','Searching and buying lots'), bought, buyLimit);
-        if (combo.exactLots && buyLimit - bought < 3) {
-          log(either(`Остаток лимита ${buyLimit - bought}: для комбинации требуется минимум 3 покупки.`, `Remaining limit ${buyLimit - bought}: a combination requires at least 3 purchases.`), 'warn');
+        if (combo.exactLots && buyLimit - bought < combo.exactLots) {
+          log(either(`Остаток лимита ${buyLimit - bought}: для комбинации ${combo.exactLots} этого недостаточно.`, `Remaining limit ${buyLimit - bought}: not enough for a ${combo.exactLots}-lot combination.`), 'warn');
           break;
         }
         state = fairState(selectedFairId);
@@ -7784,13 +7790,12 @@
           const groups = selectedFairSlotRules.get(String(slot.shop_lot_id));
           return !groups || (vip ? groups.vip : groups.regular);
         });
-        const maximumGroup = combo.exactLots
-          ? Math.floor(Math.min(combo.exactLots, buyLimit - bought) / 3) * 3
-          : 0;
-        const matchedTargets = maximumGroup ? targets.slice(0, maximumGroup) : [];
-        const groupSize = Math.floor(matchedTargets.length / 3) * 3;
-        const purchaseTargets = matchedTargets.slice(0, groupSize);
-        if (combo.exactLots && groupSize >= 3) {
+        const requiredGroup = combo.exactLots ? Math.min(9, Math.max(3, Math.trunc(combo.exactLots))) : 0;
+        const purchaseTargets = requiredGroup && targets.length >= requiredGroup
+          ? targets.slice(0, requiredGroup)
+          : [];
+        const groupSize = purchaseTargets.length;
+        if (combo.exactLots && groupSize === requiredGroup) {
           const totalCosts = new Map();
           for (const {slot} of purchaseTargets) {
             const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
@@ -7833,6 +7838,9 @@
               bonusBought++; purchased = true; authRetries = 0;
             }
           }
+        }
+        if (combo.exactLots && targets.length > 0 && targets.length < combo.exactLots) {
+          log(either(`Найдено ${targets.length}/${combo.exactLots} подходящих ячеек — комбинация неполная, прокручиваю дальше.`, `Found ${targets.length}/${combo.exactLots} matching cells — combination incomplete, rerolling.`));
         }
         if (!combo.exactLots) for (const {slot, vip} of options) {
           if (fairStop || bought >= buyLimit || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) continue;
