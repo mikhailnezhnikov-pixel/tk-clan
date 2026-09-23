@@ -1,0 +1,12 @@
+USERSCRIPT_SERVICE_ENV_INSPECT=1
+captured_at_utc=2026-09-23T15:06:12Z
+SERVICE hamsterking-license.service
+MAIN_PID 7131
+UNIT_MIN_VALUES ["1.17.83"]
+PROCESS_MIN_VALUES ["1.2.0"]
+ENVIRONMENT_FILES_RAW /etc/hamsterking-license.env (ignore_errors=no)
+DROPIN_PATHS /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+SOURCE {"path": "/etc/environment", "lines": []}
+SOURCE {"path": "/etc/hamsterking-license.env", "lines": ["HK_MIN_SCRIPT_VERSION=1.2.0"]}
+SOURCE {"path": "/etc/systemd/system/hamsterking-license.service", "lines": ["EnvironmentFile=/etc/hamsterking-license.env"]}
+SOURCE {"path": "/etc/systemd/system/hamsterking-license.service.d/min-version.conf", "lines": ["Environment=\"HK_MIN_SCRIPT_VERSION=1.17.83\""]}
