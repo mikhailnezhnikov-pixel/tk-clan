@@ -1,2 +1,2 @@
-inspect=treasure-localization-captures
-stamp=2026-09-23T13:15+09:00
+inspect=treasure-selective-definitions
+stamp=2026-09-23T13:18+09:00
