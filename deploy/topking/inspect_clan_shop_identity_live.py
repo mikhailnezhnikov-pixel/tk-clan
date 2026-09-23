@@ -208,3 +208,22 @@ try:
     print("PLAYER_TABLE_CANDIDATES",json.dumps(candidates,ensure_ascii=False))
 except Exception as e:
     print("PLAYER_TABLE_CANDIDATES_ERROR",repr(e))
+
+
+try:
+    participants=server.clan_shop_participants()
+    print("PARTICIPANTS_COUNT",len(participants))
+    by_id={}
+    by_name={}
+    for row in participants:
+        pid=str(row.get("player_id") or "").strip()
+        name=str(row.get("nickname") or "").strip()
+        if pid: by_id.setdefault(pid,[]).append(row)
+        if name: by_name.setdefault(name.casefold(),[]).append(row)
+    dupes={
+        "ids":{k:v for k,v in by_id.items() if len(v)>1},
+        "names":{k:v for k,v in by_name.items() if len(v)>1},
+    }
+    print("PARTICIPANTS_DUPES",json.dumps(dupes,ensure_ascii=False))
+except Exception as e:
+    print("PARTICIPANTS_DUPES_ERROR",repr(e))
