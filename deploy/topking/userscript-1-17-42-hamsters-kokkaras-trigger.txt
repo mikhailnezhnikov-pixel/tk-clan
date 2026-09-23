@@ -1,0 +1,4 @@
+deploy userscript 1.17.42 Hamsters Kokkaras live-state
+source must be exact live/baseline 1.17.41
+preserve Treasure selective capture r2
+rollback to 1.17.41 on failure
