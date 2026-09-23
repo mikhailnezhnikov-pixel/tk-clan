@@ -4,53 +4,54 @@ server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
+
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("SELECT id,path,payload_json,page_text,captured_at FROM treasure_guide_captures ORDER BY id")]
+    row=db.execute("""SELECT id,payload_json FROM treasure_guide_captures
+                      WHERE path='/shop/view' AND payload_json<>''
+                      ORDER BY id DESC LIMIT 1""").fetchone()
 
-# Parse complete shop lots.
-shop=next((str(r["payload_json"] or "") for r in rows if r["path"]=="/shop/view"),"")
-start=shop.find('"shop_lots":['); start=shop.find('[',start)+1 if start>=0 else -1
+raw=str(row["payload_json"] or "")
+print("SHOP_CAPTURE",row["id"],"LEN",len(raw))
+start=raw.find('"shop_lots":[')
+print("SHOP_LOTS_START",start)
+if start<0: raise SystemExit(0)
+arr_start=raw.find('[',start)
+
 objs=[]
-if start>=0:
-    i=start;n=len(shop)
-    while i<n:
-        while i<n and shop[i] in ' \r\n\t,': i+=1
-        if i>=n or shop[i]!='{': break
-        d=0;ins=False;esc=False;j=i
-        while j<n:
-            ch=shop[j]
-            if ins:
-                if esc: esc=False
-                elif ch=='\\': esc=True
-                elif ch=='"': ins=False
-            else:
-                if ch=='"': ins=True
-                elif ch=='{': d+=1
-                elif ch=='}':
-                    d-=1
-                    if d==0:
-                        try: objs.append(json.loads(shop[i:j+1]))
-                        except: pass
-                        i=j+1;break
-            j+=1
-        else: break
-        if d!=0: break
+i=arr_start+1
+n=len(raw)
+while i<n:
+    while i<n and raw[i] in " \r\n\t,": i+=1
+    if i>=n or raw[i]!= '{': break
+    obj_start=i
+    depth=0; in_str=False; esc=False
+    j=i
+    while j<n:
+        ch=raw[j]
+        if in_str:
+            if esc: esc=False
+            elif ch=='\\': esc=True
+            elif ch=='"': in_str=False
+        else:
+            if ch=='"': in_str=True
+            elif ch=='{': depth+=1
+            elif ch=='}':
+                depth-=1
+                if depth==0:
+                    text=raw[obj_start:j+1]
+                    try:
+                        obj=json.loads(text); objs.append(obj)
+                    except Exception as e:
+                        print("OBJ_PARSE_ERROR",obj_start,j,repr(e))
+                    i=j+1
+                    break
+        j+=1
+    else:
+        break
 
-def compact(o):
-    v=o.get("lot_view") if isinstance(o.get("lot_view"),dict) else {}
-    return {"id":o.get("id"),"cost":o.get("cost"),"rewards":v.get("content_view"),"name":v.get("name"),"desc":v.get("desc"),"icon":v.get("icon_card"),"ad":o.get("is_ad")}
-
-mission=[compact(o) for o in objs if re.match(r"mf_pm_(?:fish|mothcat)_",str(o.get("id") or ""))]
-print("PET_MISSION_LOTS",json.dumps(mission,ensure_ascii=False))
-
-# All compact modal texts the user opened, excluding the general achievement list.
-modals=[];seen=set()
-for r in rows:
-    t=re.sub(r"\s+"," ",str(r.get("page_text") or "")).strip()
-    if "Понятно" not in t or len(t)>1800: continue
-    pos=t.rfind(" HK ")
-    body=t[pos+4:] if pos>=0 else t
-    if len(body)>500 or body in seen: continue
-    seen.add(body)
-    modals.append({"id":r["id"],"body":body})
-print("ALL_MODALS",json.dumps(modals,ensure_ascii=False))
+print("PARSED_LOTS",len(objs))
+pattern=re.compile(r"treasure|treasury|minigame_(?:trader|fishing|fight|chests)|pet_skill|golden_berry",re.I)
+rel=[o for o in objs if pattern.search(str(o.get("id") or ""))]
+print("RELEVANT_COUNT",len(rel))
+for o in rel:
+    print("LOT",json.dumps(o,ensure_ascii=False,separators=(",",":"))[:12000])
