@@ -1,44 +1,78 @@
 from pathlib import Path
-import re, json, sqlite3, glob, os, importlib.util
+import importlib.util, json, re, collections
 
 server_path="/opt/hamsterking-license/server.py"
-source=Path(server_path).read_text(encoding="utf-8")
-print("SERVER_TREASURE_MARKER", "TREASURE_GUIDE_CAPTURE_V1" in source)
-for pattern in [r"DB_PATH\s*=.*", r"SQLITE[^\n]*", r"def db_session\(.*?\n(?:    .*\n){0,20}"]:
-    print("PATTERN",pattern)
-    for m in re.finditer(pattern,source,re.S|re.M):
-        print(m.group(0)[:4000])
-
-print("DB_FILES",json.dumps([
-    {"path":p,"size":os.path.getsize(p)} for p in glob.glob("/opt/hamsterking-license/**/*.db",recursive=True)
-],ensure_ascii=False))
-
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
-server=importlib.util.module_from_spec(spec)
-spec.loader.exec_module(server)
-print("IMPORTED",True)
-if hasattr(server,"DB_PATH"):
-    print("SERVER_DB_PATH",getattr(server,"DB_PATH"))
-if hasattr(server,"ensure_treasure_guide_capture_schema"):
-    server.ensure_treasure_guide_capture_schema()
-    print("ENSURE_TREASURE_SCHEMA",True)
-try:
-    with server.db_session() as db:
-        tables=[r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
-        print("TABLES",json.dumps(tables,ensure_ascii=False))
-        if "treasure_guide_captures" in tables:
-            rows=[dict(r) for r in db.execute("""SELECT id,source,path,length(payload_json) AS payload_len,
-                                                       length(page_text) AS text_len,assets_json,captured_at
-                                                FROM treasure_guide_captures
-                                                ORDER BY captured_at DESC,id DESC LIMIT 80""")]
-            print("TREASURE_CAPTURE_COUNT",len(rows))
-            print("TREASURE_CAPTURES",json.dumps(rows,ensure_ascii=False))
-            for row in db.execute("""SELECT id,source,path,payload_json,page_text,assets_json,captured_at
-                                     FROM treasure_guide_captures
-                                     ORDER BY captured_at DESC,id DESC LIMIT 12"""):
-                data=dict(row)
-                data["payload_json"]=str(data.get("payload_json") or "")[:16000]
-                data["page_text"]=str(data.get("page_text") or "")[:16000]
-                print("TREASURE_SAMPLE",json.dumps(data,ensure_ascii=False))
-except Exception as e:
-    print("TREASURE_CAPTURE_ERROR",repr(e))
+server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
+server.ensure_treasure_guide_capture_schema()
+
+with server.db_session() as db:
+    rows=[dict(r) for r in db.execute("""SELECT id,source,path,payload_json,page_text,assets_json,captured_at
+                                        FROM treasure_guide_captures
+                                        ORDER BY captured_at,id""")]
+
+print("COUNT",len(rows))
+pc=collections.Counter((r["source"],r["path"]) for r in rows)
+print("PATH_COUNTS",json.dumps([{"source":k[0],"path":k[1],"count":v} for k,v in pc.most_common()],ensure_ascii=False))
+
+# DOM screen snapshots, compact and unique.
+seen=set(); dom=[]
+for r in rows:
+    text=re.sub(r"\s+"," ",str(r.get("page_text") or "")).strip()
+    if not text: continue
+    sig=text[:320]
+    if sig in seen: continue
+    seen.add(sig)
+    dom.append({"id":r["id"],"path":r["path"],"text":text[:1800]})
+print("DOM_SNAPSHOTS",json.dumps(dom[:40],ensure_ascii=False))
+
+# Treasure-related assets only.
+assets=[]
+for r in rows:
+    try: vals=json.loads(r.get("assets_json") or "[]")
+    except: vals=[]
+    for u in vals:
+        u=str(u)
+        if re.search(r"treasure|minigame/(?:pets|fishing|chests)|event_treasure|golden_berry",u,re.I):
+            assets.append(u)
+assets=sorted(set(assets))
+print("ASSET_COUNT",len(assets))
+print("ASSETS",json.dumps(assets[:400],ensure_ascii=False))
+
+# Traverse JSON and surface only compact objects likely defining event config/content.
+keywords=re.compile(r"treasure|pet_mission|fishing|minigame_chest|golden_berry|event_treasure|treasurehunt",re.I)
+interesting=[]
+seen_obj=set()
+
+def short(v,limit=1200):
+    try:s=json.dumps(v,ensure_ascii=False,separators=(",",":"))
+    except:s=str(v)
+    return s if len(s)<=limit else s[:limit]+"…"
+
+def walk(v,path="$",depth=0):
+    if depth>12:return
+    if isinstance(v,dict):
+        # stringify scalar fields only for relevance
+        scalar={k:val for k,val in v.items() if isinstance(val,(str,int,float,bool)) or val is None}
+        blob=short(scalar,3000)
+        keys=" ".join(map(str,v.keys()))
+        if keywords.search(keys+" "+blob):
+            sig=(path,blob[:500])
+            if sig not in seen_obj:
+                seen_obj.add(sig)
+                interesting.append({"path":path,"keys":list(v.keys())[:40],"value":short(v,2200)})
+        for k,val in v.items():
+            walk(val,path+"."+str(k),depth+1)
+    elif isinstance(v,list):
+        for i,val in enumerate(v[:1000]):
+            walk(val,path+f"[{i}]",depth+1)
+
+for r in rows:
+    pj=r.get("payload_json") or ""
+    if not pj: continue
+    try: obj=json.loads(pj)
+    except: continue
+    walk(obj,f"capture[{r['id']}]:{r['path']}")
+
+print("INTERESTING_COUNT",len(interesting))
+print("INTERESTING",json.dumps(interesting[:250],ensure_ascii=False))
