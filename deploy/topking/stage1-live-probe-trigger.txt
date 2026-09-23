@@ -1,2 +1,0 @@
-probe=2026-09-19T15:31:00Z
-purpose=verify-live-after-rumors-deploy

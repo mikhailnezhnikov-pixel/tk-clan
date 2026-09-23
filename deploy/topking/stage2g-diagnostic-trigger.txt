@@ -1,3 +1,0 @@
-diagnose=2026-09-19T15:16:00Z
-version=1.16.6
-module=rumors

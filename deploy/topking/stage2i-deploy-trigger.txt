@@ -1,3 +1,0 @@
-deploy=2026-09-20T00:35:00Z
-version=1.16.9
-module=bosses
