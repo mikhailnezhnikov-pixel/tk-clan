@@ -1,2 +1,2 @@
-inspect=treasure-cooking-resources
-stamp=2026-09-23T15:12+09:00
+inspect=treasure-cooking-resource-names
+stamp=2026-09-23T15:14+09:00
