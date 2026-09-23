@@ -65,7 +65,7 @@ Built from exact live-synced baseline 1.17.39 and preserves:
 - production deploy: **PASS**;
 - server-side rollback trap: **ENABLED**;
 - public verification rollback: **ENABLED**;
-- baseline synchronized to live 1.17.40 only after successful public exact-match verification;
+- baseline synchronized to live 1.17.42 only after successful public exact-match verification;
 - user browser/live gate: **PENDING**.
 
 ## Browser/live gate after deploy
@@ -97,3 +97,17 @@ Built from exact live-synced baseline 1.17.39 and preserves:
 - wrapped data/result account arrays are normalized into donor-style live state before Hamsters calculations;
 - Hamsters Runner uses the approved vertical progress layout;
 - runner exposes Hamsters count / level-data count / Nuts / budget for live diagnosis.
+
+
+## 1.17.42 validation and deploy
+
+- static workflow: `Check Userscript 1.17.42 Hamsters Kokkaras Live State`;
+- static run: `35814159797` — **SUCCESS**;
+- production deploy run: `35814242259` — **SUCCESS**;
+- source live: `1.17.41`;
+- deployed live: `1.17.42`;
+- public exact match: **PASS**;
+- rollback guards: **ENABLED**;
+- Treasure selective capture r2: **PRESERVED**;
+- Maps manual-only scan: **PRESERVED**;
+- gameplay mutations from CI: **NONE**.
