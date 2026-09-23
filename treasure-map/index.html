@@ -346,7 +346,7 @@
         '</div>'+
         (Array.isArray(m.visuals)&&m.visuals.length?'<div class="mechanic-visuals">'+m.visuals.map(v=>'<div class="mechanic-visual">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<span>'+safe(v.title)+'</span></div>').join('')+'</div>':'')+
         (m.hint?'<div class="mechanic-hint">'+safe(m.hint)+'</div>':'')+
-        ((m.id==='lights'||m.id==='fight')?'<div class="solver-inline"><div><strong>HK Puzzle Solver</strong><span>Покажет порядок действий цифрами прямо на игровом поле.</span></div><button type="button" class="solver-button" data-solver-install>Установить помощник</button></div>':'')+
+        ((m.id==='lights'||m.id==='fight')?'<div class="solver-inline"><div><strong>Помощник Top King</strong><span>Покажет порядок действий цифрами прямо на игровом поле. Работает через обычную закладку.</span></div><button type="button" class="solver-button" data-solver-install>Добавить закладку-помощник</button></div>':'')+
       '</article>'
     ).join('');
 
@@ -592,6 +592,13 @@
       if(event.target===solverModal)closeSolver();
     });
     document.addEventListener('keydown',event=>{if(event.key==='Escape')closeSolver()});
+    document.addEventListener('click',async event=>{
+      const copy=event.target.closest('[data-copy-solver-bookmark]');
+      if(!copy)return;
+      const code=document.getElementById('solverBookmarkCode')?.textContent||'';
+      try{await navigator.clipboard.writeText(code);copy.textContent='Скопировано ✓';setTimeout(()=>copy.textContent='Скопировать код',1600)}
+      catch(_){window.prompt('Скопируйте код закладки:',code)}
+    });
 
   }catch(error){console.error('Treasure guide render failed',error)}
 })();
