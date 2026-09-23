@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.49
+// @version      1.17.50
+// @release-note Клановый магазин: на общих лотах отображаются отдельные счётчики «Клан: куплено/лимит» и «Вы: куплено/лимит», без изменения логики покупки.
 // @release-note Магазин: быстрые последовательные /shop/buy снова не ждут глобальные 2,5 с между покупками; защита 429, cooldown, mutation-gate и запрет ретраев необратимых покупок сохранены.
 // @release-note Магазин: из ручной вкладки убраны Регулярный магазин и Личные лоты клана, потому что они обслуживаются во вкладке «Сегодня». В ручном магазине остаются Обычный магазин и Общие лоты клана.
 // @release-note Магазин: активная подгруппа теперь едина для отображения, «Выбрать доступные» и финального плана покупки; личные и общие лоты Кланового магазина больше не смешиваются.
@@ -57,13 +58,14 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.49';
+  const BUILD_VERSION = '1.17.50';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
   const HK_SHOP_ACTIVE_VIEW_REV = 'shop-active-view-canon-20260923-r1';
   const HK_SHOP_TODAY_DEDUP_REV = 'shop-today-dedup-20260923-r1';
   const HK_SHOP_BUY_FAST_PATH_REV = 'shop-buy-fast-path-20260923-r1';
+  const HK_SHOP_SHARED_LIMITS_UI_REV = 'shop-shared-limits-ui-20260923-r1';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -7957,6 +7959,7 @@
       if (sharedLimit) remainingValues.push(Math.max(0, Number(sharedLimit.limit || 0) + Number(sharedLimit.bonus || 0) - Number(sharedLimit.value || 0)));
       if (!remainingValues.length && !unlimited) return [];
       const bought = limits.get(lotId) || 0;
+      const playerMaximum = playerLimit ? Math.max(0, Number(playerLimit.limit || 0) + Number(playerLimit.bonus || 0)) : 0;
       const remaining = unlimited ? SHOP_UNLIMITED_RUN_MAX : Math.min(...remainingValues);
       const parts = costParts(lot.cost);
       const content = (view.content_view || [])[0] || {};
@@ -7980,7 +7983,7 @@
       return [{lotId, name:String(view.name || rewardId || lotId), rewardId,
         rewardQuantity, resourceTier:resourceMatch ? Number(resourceMatch[1].slice(-1)) : 0,
         cost:lot.cost || {}, safe, affordable:canAffordCost(lot.cost || {}, playerDoc), premium, group,
-        bought, maximum:bought + remaining, remaining, unlimited, section, clanGroup,
+        bought, maximum:bought + remaining, playerMaximum, remaining, unlimited, section, clanGroup,
         sharedPurchased:sharedLimit ? Math.max(0, Number(sharedLimit.value || 0)) : 0,
         sharedMaximum:sharedLimit ? Math.max(0, Number(sharedLimit.limit || 0) + Number(sharedLimit.bonus || 0)) : 0,
         icon:mediaUrl(view.icon_card || view.icon || content.icon_card || content.icon, rewardId)}];
@@ -8151,6 +8154,15 @@
     return true;
   }
 
+  function shopSharedLimitText(row) {
+    if (row?.section !== 'clan' || row?.clanGroup !== 'shared') return '';
+    const clanBought=Math.max(0,Number(row.sharedPurchased||0)), clanMax=Math.max(0,Number(row.sharedMaximum||0));
+    const playerBought=Math.max(0,Number(row.bought||0)), playerMax=Math.max(0,Number(row.playerMaximum||0));
+    const clanText=clanMax>0 ? `${either('Клан','Clan')}: ${clanBought.toLocaleString(locale())}/${clanMax.toLocaleString(locale())}` : `${either('Клан','Clan')}: ${clanBought.toLocaleString(locale())}`;
+    const playerText=playerMax>0 ? `${either('Вы','You')}: ${playerBought.toLocaleString(locale())}/${playerMax.toLocaleString(locale())}` : `${either('Вы','You')}: ${playerBought.toLocaleString(locale())}`;
+    return clanText+' · '+playerText;
+  }
+
   function shopAvailabilityText(row, maxCount = shopPurchasableCount(row)) {
     if (!row?.safe) return either('Заблокировано: неизвестная валюта или стоимость','Blocked: unknown currency or cost');
     if (Number(row?.remaining || 0) <= 0) return tr('boughtOut');
@@ -8213,6 +8225,7 @@
         ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}<label class="hk-shop-pick"><input type="checkbox" data-shop-lot="${escapeHtml(row.lotId)}" ${count ? 'checked' : ''} ${selectable ? '' : 'disabled'}>
         ${fairIconHtml(row.icon)}<span class="hk-shop-name">${escapeHtml(shopDisplayName(row))}</span><b>×${shownRewardQuantity.toLocaleString(locale())}</b><span class="hk-shop-cost">${costVisual(row.cost, count && row.group === 'renovation' ? count : 1)}</span></label>
         <small class="hk-shop-availability">${escapeHtml(shopAvailabilityText(row, maximumCount))}</small>
+        ${row.section === 'clan' && row.clanGroup === 'shared' ? `<small class="hk-shop-shared-limits">${escapeHtml(shopSharedLimitText(row))}</small>` : ''}
         ${isRenovationBatch(row)
           ? `<label class="hk-shop-quantity"><span>${either('Пакетов ×500','×500 packages')}</span><select data-shop-batches="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>${Array.from({length:maximumBatches + 1}, (_, n) => `<option value="${n}" ${n === selectedBatches ? 'selected' : ''}>${n} × 500</option>`).join('')}</select></label>`
           : `<label class="hk-shop-quantity"><span>${tr('quantity')}</span><input data-shop-qty="${escapeHtml(row.lotId)}" type="number" inputmode="numeric" min="0" max="${maximumCount}" value="${count}" ${selectable ? '' : 'disabled'}><button type="button" data-shop-max="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>MAX</button></label>`}</div>`;
