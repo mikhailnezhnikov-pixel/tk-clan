@@ -44,6 +44,7 @@
     .loot-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.loot-items .resource{min-width:0;padding:7px}.loot-items .resource-name{white-space:normal}
 
     .shop-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:42px}.shop-item{position:relative;display:grid;grid-template-columns:58px minmax(0,1fr);gap:11px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,var(--panel2),var(--panel))}
+    .trader-group{margin-bottom:22px}.trader-group-head{display:flex;align-items:center;gap:10px;margin:0 0 10px}.trader-group-head img{width:42px;height:42px;object-fit:contain}.trader-group-head h3{margin:0;font-size:18px}.trader-offers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.trader-offer{padding:10px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-width:0}.trader-offer-top{display:flex;align-items:center;gap:9px}.trader-offer-top>img{width:46px;height:46px;object-fit:contain;flex:0 0 46px}.trader-offer h4{margin:0;font-size:12px;line-height:1.2}.trade-tier{margin-top:3px;color:var(--gold2);font-size:9px;font-weight:900}.trade-flow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:9px}.trade-flow .resource{min-width:0;flex:1}.trade-flow .resource-name{white-space:normal}.trade-random{margin-top:7px;color:#9ea8b4;font-size:9px;line-height:1.35}.value-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:42px}.value-card{padding:13px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}.value-card h3{margin:0 0 6px;font-size:14px}.value-card p{margin:0;color:#b7c0cb;font-size:11px;line-height:1.5}
     .shop-item img{width:58px;height:58px;object-fit:contain}.shop-item h3{margin:0;font-size:13px;line-height:1.25}.shop-qty{margin-top:5px;color:#aab3bf;font-size:11px}.shop-price{display:inline-flex;align-items:center;justify-content:center;margin-top:8px;min-width:58px;padding:5px 9px;border-radius:999px;background:rgba(232,182,84,.12);color:var(--gold2);font-size:14px;font-weight:950}
 
     .achievement-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:42px}
@@ -56,9 +57,9 @@
     .empty{padding:28px;border:1px dashed rgba(232,182,84,.28);border-radius:18px;text-align:center;color:var(--muted);background:rgba(232,182,84,.035)}
     footer{padding:28px 0 40px;border-top:1px solid var(--line);color:#7f8996;font-size:12px}
 
-    @media(max-width:980px){.achievement-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.economy-grid,.shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:980px){.achievement-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.economy-grid,.shop-grid,.trader-offers{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:760px){.quests,.loot-grid,.facts{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.quest{grid-template-columns:68px minmax(0,1fr)}.quest-media{width:68px;height:68px}.loot-items{grid-template-columns:repeat(2,minmax(0,1fr))}.section-head{align-items:flex-start;flex-direction:column}}
-    @media(max-width:520px){.grid,.economy-grid,.shop-grid{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.achievement,.achievement-series-card{padding:10px}.resource{min-width:98px}}
+    @media(max-width:520px){.grid,.economy-grid,.shop-grid,.trader-offers,.value-grid{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.achievement,.achievement-series-card{padding:10px}.resource{min-width:98px}}
   </style>
 </head>
 <body>
@@ -94,8 +95,11 @@
   <div class="section-head"><div><h2>Сундуки</h2><p>Подтверждённое содержимое показано игровыми иконками.</p></div></div>
   <section class="loot-grid" id="verified-chests"></section>
 
-  <div class="section-head"><div><h2>Тайный торговец</h2><p>Три подтверждённых набора предложений. Точные цены показываются только там, где они уже подтверждены.</p></div></div>
-  <section class="grid" id="trader-variants"></section>
+  <div class="section-head"><div><h2>Тайный торговец</h2><p>Три набора с точными товарами, количеством и стоимостью.</p></div></div>
+  <section id="trader-variants"></section>
+
+  <div class="section-head"><div><h2>Сравнение предложений</h2><p>Только сравнения, где одинаковы товар и валюта оплаты.</p></div></div>
+  <section class="value-grid" id="trader-value"></section>
 
   <div class="section-head"><div><h2>Редкие предметы</h2><p>Особые предметы события и их содержимое.</p></div></div>
   <section class="loot-grid" id="special-items"></section>
@@ -128,6 +132,8 @@
     const verifiedChests=Array.isArray(data.verified_chests)?data.verified_chests:[];
     const petSkills=Array.isArray(data.pet_skills_confirmed)?data.pet_skills_confirmed:[];
     const traderVariants=Array.isArray(data.trader_variants)?data.trader_variants:[];
+    const traderExact=Array.isArray(data.trader_exact_offers)?data.trader_exact_offers:[];
+    const traderValue=Array.isArray(data.trader_value_notes)?data.trader_value_notes:[];
     const specialItems=Array.isArray(data.special_items)?data.special_items:[];
     const chestHunt=data.chest_hunt||{};
     const treasuryChoices=Array.isArray(data.treasury_choices_verified)?data.treasury_choices_verified:[];
@@ -256,22 +262,38 @@
       '<div class="loot-head">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><h3>'+safe(v.title)+'</h3><p>Возможное содержимое</p></div></div>'+
       '<div class="loot-items">'+(Array.isArray(v.contents)?v.contents:[]).map(x=>resource(x.name||x.id,x.quantity,iconFor(x.id,x.name),x.id)).join('')+'</div></article>').join('');
 
-    document.getElementById('trader-variants').innerHTML=traderVariants.map(v=>'<article class="mini-card">'+
-      (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
-      '<h3>'+safe(v.title)+'</h3>'+
-      '<div class="tag-list">'+(Array.isArray(v.offers)?v.offers:[]).map(o=>{
-        if(o.reward&&o.cost){
-          return '<div style="width:100%;margin-top:4px">'+
-            '<div class="resource-list">'+
-              resource(o.reward.title,o.reward.quantity,o.reward.image||'')+
+    const traderGroupMeta={
+      1:{title:'Тайный торговец I',image:'https://cdn-prod-art.hwgame.cloud/minigames/trader/icons/minigame_trader_type_01_rep_5_s_icon.png'},
+      2:{title:'Тайный торговец II',image:'https://cdn-prod-art.hwgame.cloud/minigames/trader/icons/minigame_trader_type_02_rep_5_s_icon.png'},
+      3:{title:'Тайный торговец III',image:'https://cdn-prod-art.hwgame.cloud/minigames/trader/icons/minigame_trader_type_03_rep_5_s_icon.png'}
+    };
+    document.getElementById('trader-variants').innerHTML=[1,2,3].map(group=>{
+      const meta=traderGroupMeta[group];
+      const offers=traderExact.filter(v=>v.trader===group);
+      return '<div class="trader-group"><div class="trader-group-head"><img src="'+safe(meta.image)+'" alt=""><h3>'+safe(meta.title)+'</h3></div>'+
+        '<div class="trader-offers">'+offers.map(v=>{
+          const rewards=Array.isArray(v.rewards)?v.rewards:[];
+          const costs=Array.isArray(v.cost)?v.cost:[];
+          const randomText=v.random&&rewards.length?
+            'Возможные количества: '+rewards.map(x=>'×'+safe(x.quantity)).join(' / '):'';
+          const rewardHtml=v.technical_effect
+            ? '<span class="resource"><img src="'+safe(v.image||'')+'" alt=""><span class="resource-copy"><span class="resource-name">'+safe(v.title)+'</span><span class="resource-qty">улучшение</span></span></span>'
+            : rewards.map(x=>resource(x.title,x.quantity,x.image||'',x.id)).join('');
+          return '<article class="trader-offer"><div class="trader-offer-top">'+
+            (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+            '<div><h4>'+safe(v.title)+'</h4>'+(v.tier?'<div class="trade-tier">'+safe(v.tier)+'</div>':'')+'</div></div>'+
+            '<div class="trade-flow">'+rewardHtml+
               '<span class="cost-arrow">←</span>'+
-              resource(o.cost.title,o.cost.quantity,o.cost.image||'')+
+              costs.map(x=>resource(x.title,x.quantity,x.image||'',x.id)).join('')+
             '</div>'+
-            (o.note?'<p style="margin-top:6px">'+safe(o.note)+'</p>':'')+
-          '</div>';
-        }
-        return '<span class="tag">'+safe(o.title)+(o.note?' · '+safe(o.note):'')+'</span>';
-      }).join('')+'</div></article>').join('');
+            (randomText?'<div class="trade-random">'+randomText+' · вероятности неизвестны</div>':'')+
+          '</article>';
+        }).join('')+'</div></div>';
+    }).join('');
+
+    document.getElementById('trader-value').innerHTML=traderValue.map(v=>
+      '<article class="value-card"><h3>'+safe(v.title)+'</h3><p>'+safe(v.note)+'</p></article>'
+    ).join('');
 
     document.getElementById('special-items').innerHTML=specialItems.map(v=>'<article class="loot-card">'+
       '<div class="loot-head">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><h3>'+safe(v.title)+'</h3><p>'+safe(v.note||'')+'</p></div></div>'+
