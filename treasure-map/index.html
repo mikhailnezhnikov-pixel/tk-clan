@@ -110,9 +110,13 @@
         '<div class="recommend"><b>Лучший вариант:</b> '+safe(q.recommendation||'ещё не утверждён — сначала сравниваем стоимость и ценность награды.')+'</div></div></article>';
     }).join('')||'<div class="empty"><strong>Квесты пока не считаны</strong>Нужен новый снимок экрана события.</div>';
 
+    const mapFact=data?.verified_map;
     document.getElementById('mechanics').innerHTML=mechanics.map(m=>'<article class="mini-card">'+
       (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+
-      '<h3>'+safe(m.title)+'</h3><p>'+safe(m.note||'')+'</p></article>').join('');
+      '<h3>'+safe(m.title)+'</h3><p>'+safe(m.note||'')+'</p></article>').join('')+
+      (mapFact?'<article class="mini-card"><h3>Состав считанной карты</h3><div class="requirements">'+
+        Object.entries(mapFact.current_types||{}).map(([k,v])=>'<span class="req">'+safe(k)+' ×'+safe(v)+'</span>').join('')+
+        '</div><p style="margin-top:12px">'+safe(mapFact.note||'')+'</p></article>':'');
 
     document.getElementById('minigame-details').innerHTML=minigameDetails.map(m=>'<article class="mini-card">'+
       (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+
@@ -126,6 +130,20 @@
     document.getElementById('pets').innerHTML=petFacts.join('');
 
     const economyParts=[];
+    const eventMap=verifiedEconomy?.event_map;
+    if(eventMap){
+      economyParts.push('<div class="fact"><b>'+safe(eventMap.title||'Новая карта')+'</b><p>'+
+        'Стоимость: '+safe(eventMap?.cost?.quantity)+' × '+safe(eventMap?.cost?.item||eventMap?.cost?.item_id)+
+        (eventMap.slots?' · Слотов на считанной карте: '+safe(eventMap.slots):'')+
+        '</p>'+(eventMap.note?'<p>'+safe(eventMap.note)+'</p>':'')+'</div>');
+    }
+    for(const key of ['pet_mission_refresh','trader_refresh']){
+      const row=verifiedEconomy?.[key];
+      if(!row)continue;
+      economyParts.push('<div class="fact"><b>'+safe(row.title||key)+'</b><p>Стоимость: '+
+        safe(row?.cost?.quantity)+' × '+safe(row?.cost?.currency||row?.cost?.currency_id||row?.cost?.item||row?.cost?.item_id)+
+        '</p>'+(row.note?'<p>'+safe(row.note)+'</p>':'')+'</div>');
+    }
     const treasury=verifiedEconomy?.treasury||{};
     if(treasury.path_1||treasury.path_2||treasury.path_3){
       const pathText=[1,2,3].map(n=>{
