@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.61
+// @version      1.17.62
+// @release-note Карта Сокровищ: определения трёх линеек наград приоритетно сохраняются из уже загруженных данных события без дополнительных запросов к игре.
 // @release-note Ярмарка: числовой лимит прокруток убран. Поиск теперь крутит ярмарку, пока хватает фактической валюты прокрутки с учётом разрешённых алмазов и бюджетных ограничений.
 // @release-note Войны: если активная война отдаёт HP, но не отдаёт счёт, интерфейс больше не подставляет фиктивные 0:0 — неизвестные очки показываются как «—».
 // @release-note Войны: в карточке активной войны теперь отображаются фактические HP сторон, максимум, процент и полосы здоровья, когда эти значения присутствуют в ответе игры.
@@ -68,7 +69,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.61';
+  const BUILD_VERSION = '1.17.62';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -3517,15 +3518,42 @@
 
   const HK_TREASURE_GUIDE_PRIORITY_LOTS_REV='treasure-guide-priority-lots-20260923-r1';
   const HK_TREASURE_GUIDE_PRIORITY_TRADER_REV='treasure-guide-priority-trader-lots-20260923-r1';
+  const HK_TREASURE_GUIDE_PRIORITY_BATTLEPASS_REV='treasure-guide-priority-battlepass-lines-20260923-r1';
 
   function treasureGuidePriorityRows(path,body) {
-    if(path!=='/shop/view'||!Array.isArray(body?.shop_lots))return [];
     const rows=[];
-    const wanted=/^(?:mf_fair_treasury_room_choose_way_[123]|mf_treasurelot_chest_type_(?:01|015|02|03)|mf_treasurelot_chest_digging_spot_sl[4-9]|mf_fairlot_minigame_trader_(?:01|02|03)_.+|mf_treasurelot_trader_type_(?:01|02|03)_active_rep_5)$/;
-    for(let i=0;i<body.shop_lots.length;i++){
-      const lot=body.shop_lots[i];
-      if(!lot||typeof lot!=='object'||!wanted.test(String(lot.id||'')))continue;
-      rows.push({path:'$.shop_lots['+i+']',payload:lot});
+    if(path==='/shop/view'&&Array.isArray(body?.shop_lots)){
+      const wanted=/^(?:mf_fair_treasury_room_choose_way_[123]|mf_treasurelot_chest_type_(?:01|015|02|03)|mf_treasurelot_chest_digging_spot_sl[4-9]|mf_fairlot_minigame_trader_(?:01|02|03)_.+|mf_treasurelot_trader_type_(?:01|02|03)_active_rep_5)$/;
+      for(let i=0;i<body.shop_lots.length;i++){
+        const lot=body.shop_lots[i];
+        if(!lot||typeof lot!=='object'||!wanted.test(String(lot.id||'')))continue;
+        rows.push({path:'$.shop_lots['+i+']',payload:lot});
+      }
+    }
+    if(path==='/client_config'||path==='/battlepass'){
+      const wantedIds=new Set(['bp_event_minigame','bp_event_minigame_line_free','bp_event_minigame_line_paid_01','bp_event_minigame_line_paid_02']);
+      const stack=[['$',body]];
+      const seen=new WeakSet();
+      while(stack.length){
+        const [p,v]=stack.pop();
+        if(!v||typeof v!=='object')continue;
+        if(seen.has(v))continue;
+        seen.add(v);
+        if(!Array.isArray(v)&&wantedIds.has(String(v.id||''))){
+          try{
+            const text=JSON.stringify(v);
+            if(text.length<=44000)rows.push({path:p,payload:v});
+          }catch(_){}
+        }
+        if(Array.isArray(v)){
+          for(let i=0;i<v.length;i++)if(v[i]&&typeof v[i]==='object')stack.push([p+'['+i+']',v[i]]);
+        }else{
+          for(const k of Object.keys(v)){
+            const child=v[k];
+            if(child&&typeof child==='object')stack.push([p+'.'+k,child]);
+          }
+        }
+      }
     }
     return rows;
   }
