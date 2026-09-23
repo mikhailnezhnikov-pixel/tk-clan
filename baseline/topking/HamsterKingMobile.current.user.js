@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.66
+// @version      1.17.67
+// @release-note Бои: добавлены канонические «Районы / Neighborhood Battles» по закреплённому Kokkaras-донору: idler/view, claim, level, update и безопасные human-like tap-пакеты без принудительного /player/me во время боя.
 // @release-note Клан: добавлен отдельный экран «Охота на крыс» для трёх подтверждённых месячных рейтингов Cat / Dog / Pigeon с текущим местом/очками и отдельным сбором только крысиных рейтинговых наград.
 // @release-note Ярмарка: финальная чистка режима 3/6/9 — понятное название режима, мгновенное обновление прогноза при переключении бонусов и корректные причины остановки вместо ложного «завершена» при недостигнутой цели.
 // @release-note Ярмарка: прогноз максимальных расходов теперь включает выбранные нижние бонусы ×5/×10/×30 по порогам 3/6/9; тот же расчёт используется в кошельке и предупреждении по алмазам перед запуском.
@@ -73,7 +74,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.66';
+  const BUILD_VERSION = '1.17.67';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -90,6 +91,7 @@
   const HK_FAIR_BONUS_COST_FORECAST_REV = 'fair-bonus-cost-forecast-20260923-r1';
   const HK_FAIR_FINAL_CLEANUP_REV = 'fair-final-cleanup-20260923-r1';
   const HK_RAT_HUNT_REV = 'rat-hunt-leaderboards-20260923-r1';
+  const HK_NEIGHBORHOOD_BATTLES_REV = 'neighborhood-battles-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
   function hkRuntimeVersionTuple(value) {
@@ -6559,6 +6561,9 @@
   ]);
   let ratHuntRows = [];
   let ratHuntLastReadAt = 0;
+  let neighborhoodEnemies = [];
+  let neighborhoodIdler = null;
+  let neighborhoodLastReadAt = 0;
 
   function warTimestamp(value) {
     const number=Number(value||0);
@@ -7082,6 +7087,354 @@
     }catch(error){
       if(error?.name==='AbortError'){hkRunner.reset();log(either('Сбор наград Охоты на крыс остановлен','Rat Hunt reward claim stopped'),'warn');}
       else{hkRunner.fail(error);log(either('Ошибка получения наград Охоты на крыс','Rat Hunt reward claim error')+': '+(error?.message||error),'bad');}
+    }
+  }
+
+
+  function neighborhoodBaseName() {
+    const translated=localizationDocument?.ui_idler_building_default_name;
+    return typeof translated==='string'&&translated.trim() ? translated : either('Район под угрозой','Neighborhood Under Threat');
+  }
+
+  function neighborhoodSavedIds() {
+    const value=load().neighborhoodBattleIds;
+    return Array.isArray(value) ? value.map(String).filter(Boolean) : null;
+  }
+
+  function neighborhoodSaveIds(ids) {
+    save({neighborhoodBattleIds:[...new Set((ids||[]).map(String).filter(Boolean))]});
+  }
+
+  function neighborhoodFinalLevel(enemy) {
+    return (enemy?.levels||[]).reduce((max,row)=>Math.max(max,Math.max(0,Number(row?.level)||0)),0);
+  }
+
+  function neighborhoodLevelDef(enemy,level) {
+    const rows=Array.isArray(enemy?.levels)?enemy.levels:[];
+    return rows.find(row=>Number(row?.level)===Number(level)) || rows[0] || {};
+  }
+
+  function neighborhoodLiveRow(id) {
+    return (neighborhoodIdler?.buildings||[]).find(row=>String(row?.building_id||'')===String(id)) || {};
+  }
+
+  function neighborhoodApplyIdler(data,reason='neighborhood') {
+    const idler=data?.idler || data?.player?.idler || data?.data?.idler || data?.data?.player?.idler;
+    if(!idler||typeof idler!=='object')return false;
+    neighborhoodIdler=idler;
+    try{
+      hkStateStore.merge({idler,timestamp:data?.timestamp||data?.data?.timestamp},reason);
+      playerDocument=hkStateStore.snapshot||playerDocument;
+    }catch(_){}
+    return true;
+  }
+
+  function neighborhoodRewardParts(rewardView) {
+    const result=[];
+    for(const kind of ['currencies','items']) for(const row of rewardView?.[kind]||[]) {
+      const id=String(row?.id||row?.currency_id||row?.item_id||'');
+      const quantity=Math.max(0,Number(row?.count??row?.quantity??row?.value??0));
+      if(id&&quantity>0)result.push({kind,id,quantity});
+    }
+    return result;
+  }
+
+  function neighborhoodRewardHtml(rewardView) {
+    const parts=neighborhoodRewardParts(rewardView);
+    return parts.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px">'+parts.map(part=>
+      '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border:1px solid #304057;border-radius:8px">'+
+      fairIconHtml(paymentIcon(part),'hk-price-icon')+'<b>×'+Number(part.quantity).toLocaleString(locale())+'</b><small>'+escapeHtml(gameText(part.id))+'</small></span>'
+    ).join('')+'</div>' : '';
+  }
+
+  function neighborhoodName(enemy,index) {
+    return neighborhoodBaseName()+' '+(index+1);
+  }
+
+  function renderNeighborhoodBattles() {
+    const box=root?.querySelector('#hk-neighborhood-content'); if(!box)return;
+    const saved=neighborhoodSavedIds();
+    const selected=new Set(saved===null?neighborhoodEnemies.map(row=>String(row?.building_id||'')).filter(Boolean):saved);
+    const rows=neighborhoodEnemies.map((enemy,index)=>{
+      const id=String(enemy?.building_id||'');
+      const live=neighborhoodLiveRow(id);
+      const finalLevel=neighborhoodFinalLevel(enemy);
+      const current=Math.max(0,Number(live?.level)||0);
+      const unlocked=Math.min(finalLevel,Math.max(0,Number(live?.max_level??live?.level)||0));
+      const shown=Math.min(finalLevel,Math.max(current,unlocked));
+      const levelDef=neighborhoodLevelDef(enemy,shown);
+      const hp=Math.max(0,Number(live?.health)||0);
+      const fullHp=Math.max(hp,Math.max(0,Number(levelDef?.health)||0));
+      const image=mediaUrl(levelDef?.meta?.image||'');
+      return '<label style="display:grid;grid-template-columns:auto 44px 1fr;gap:9px;align-items:center;padding:10px;margin:8px 0;border:1px solid #304057;border-radius:12px;background:#101927">'+
+        '<input type="checkbox" data-neighborhood-id="'+escapeHtml(id)+'" '+(selected.has(id)?'checked':'')+'>'+
+        (image?'<img src="'+escapeHtml(image)+'" alt="" style="width:42px;height:42px;object-fit:contain">':'<span></span>')+
+        '<span><b>'+escapeHtml(neighborhoodName(enemy,index))+'</b><small style="display:block;margin-top:3px">'+
+        either('Уровень','Level')+': <b>'+current+'/'+finalLevel+'</b>'+(unlocked>current?' · '+either('открыт','unlocked')+' '+unlocked:'')+
+        (fullHp?' · HP '+hp.toLocaleString(locale())+'/'+fullHp.toLocaleString(locale()):'')+'</small>'+
+        neighborhoodRewardHtml(levelDef?.reward_view)+'</span></label>';
+    }).join('');
+    const selectedCount=[...selected].filter(id=>neighborhoodEnemies.some(row=>String(row?.building_id||'')===id)).length;
+    box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Районы','Neighborhoods')+'</h3><small>'+
+      either('Neighborhood Battles · живое состояние только из idler/*','Neighborhood Battles · live state only from idler/*')+' · '+HK_NEIGHBORHOOD_BATTLES_REV+
+      '</small></div><button id="hk-neighborhood-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
+      (neighborhoodLastReadAt?'<p class="hk-muted">'+either('Обновлено','Updated')+': '+new Date(neighborhoodLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'})+
+      (neighborhoodIdler?.player_tap_power!=null?' · '+either('Сила тапа','Tap power')+': '+Number(neighborhoodIdler.player_tap_power||0).toLocaleString(locale()):'')+'</p>':'')+
+      (neighborhoodEnemies.length
+        ? '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0"><label class="hk-check"><input id="hk-neighborhood-all" type="checkbox" '+(selectedCount===neighborhoodEnemies.length?'checked':'')+'><span>'+either('Выбрать все','Select all')+'</span></label><small>'+either('Выбрано','Selected')+': '+selectedCount+'/'+neighborhoodEnemies.length+'</small></div>'+rows+
+          '<button id="hk-neighborhood-run" class="hk-primary" '+(selectedCount?'':'disabled')+'>'+either('Запустить выбранные районы','Run selected Neighborhoods')+'</button>'
+        : '<p class="hk-muted">'+either('Откройте вкладку или нажмите «Обновить», чтобы считать угрозы.','Open this tab or press Refresh to read threats.')+'</p>');
+    box.querySelector('#hk-neighborhood-refresh')?.addEventListener('click',()=>void refreshModuleLive('neighborhoods',{force:true}));
+    box.querySelector('#hk-neighborhood-all')?.addEventListener('change',event=>{
+      neighborhoodSaveIds(event.target.checked?neighborhoodEnemies.map(row=>String(row?.building_id||'')).filter(Boolean):[]);
+      renderNeighborhoodBattles();
+    });
+    box.querySelectorAll('[data-neighborhood-id]').forEach(input=>input.addEventListener('change',()=>{
+      neighborhoodSaveIds([...box.querySelectorAll('[data-neighborhood-id]:checked')].map(node=>node.dataset.neighborhoodId));
+      renderNeighborhoodBattles();
+    }));
+    box.querySelector('#hk-neighborhood-run')?.addEventListener('click',()=>void runNeighborhoodBattles());
+  }
+
+  async function refreshNeighborhoodBattles(force=false) {
+    if(!requireLicense())return null;
+    try{
+      if(!neighborhoodIdler) neighborhoodIdler=hkStateStore.snapshot?.idler||playerDocument?.idler||{buildings:[]};
+      const view=await apiJson('/idler/view','GET',null,true,1);
+      neighborhoodApplyIdler(view,'neighborhood:view');
+      neighborhoodEnemies=(Array.isArray(view?.idler_enemies)?view.idler_enemies:[])
+        .filter(row=>String(row?.building_id||'')&&Array.isArray(row?.levels)&&row.levels.length);
+      neighborhoodLastReadAt=Date.now();
+      renderNeighborhoodBattles();
+      if(force)log(either('Районы обновлены','Neighborhoods refreshed')+': '+neighborhoodEnemies.length,(neighborhoodEnemies.length?'ok':'warn'));
+      return neighborhoodEnemies;
+    }catch(error){
+      log(either('Ошибка чтения Районов','Neighborhoods read error')+': '+(error?.message||error),'warn');
+      renderNeighborhoodBattles(); return null;
+    }
+  }
+
+  function neighborhoodTapBatch(health,fullHealth,power) {
+    const needed=Math.max(1,Math.ceil(Math.max(0,health)/Math.max(1,power)));
+    const damageSafe=Math.max(1,Math.floor((Math.max(1,fullHealth)*0.45)/Math.max(1,power)));
+    let clicks=6+Math.floor(Math.random()*33);
+    clicks=Math.max(1,Math.min(clicks,needed,damageSafe));
+    const tapsPerSecond=5.2+Math.random()*2.2;
+    let duration=Math.round(500+(clicks/tapsPerSecond)*1000+(Math.random()-0.5)*180);
+    duration=Math.max(800,Math.min(5000,duration));
+    return {clicks,duration};
+  }
+
+  async function neighborhoodTransientDelay(error) {
+    const status=Number(error?.httpStatus||0);
+    if(error?.name==='HKRateLimitError'||status===429) {
+      await gameRetryDelay(Math.max(1000,Number(error?.retryAfterMs||gameApiCooldownRemainingMs()||GAME_API_429_FALLBACK_COOLDOWN_MS)));
+    } else if(status>=500) await gameRetryDelay(1500);
+  }
+
+  async function neighborhoodPost(path,body) {
+    await hkRunner.waitIfPaused();
+    if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+    try{
+      const data=await apiJson(path,'POST',body,true,0);
+      neighborhoodApplyIdler(data,'neighborhood:'+path);
+      return data;
+    }catch(error){
+      neighborhoodApplyIdler(error?.apiData,'neighborhood:error:'+path);
+      throw error;
+    }
+  }
+
+  function neighborhoodRewardText(data) {
+    return neighborhoodRewardParts(data?.idler_reward).map(part=>
+      Number(part.quantity).toLocaleString(locale())+' '+gameText(part.id)
+    );
+  }
+
+  async function runNeighborhoodBattles() {
+    if(!requireLicense())return;
+    if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
+    if(!neighborhoodEnemies.length)await refreshNeighborhoodBattles(false);
+    const saved=neighborhoodSavedIds();
+    const selected=new Set(saved===null?neighborhoodEnemies.map(row=>String(row?.building_id||'')):saved);
+    const enemies=neighborhoodEnemies.filter(row=>selected.has(String(row?.building_id||'')));
+    if(!enemies.length){log(either('Не выбраны районы для боя','No Neighborhoods selected'),'warn');return;}
+    if(!neighborhoodIdler)neighborhoodIdler=hkStateStore.snapshot?.idler||playerDocument?.idler||{buildings:[]};
+
+    const finals=new Map(enemies.map(enemy=>[String(enemy.building_id),neighborhoodFinalLevel(enemy)]));
+    const total=[...finals.values()].reduce((sum,value)=>sum+value,0);
+    const indexById=new Map(neighborhoodEnemies.map((enemy,index)=>[String(enemy?.building_id||''),index]));
+    const names=new Map(enemies.map(enemy=>[String(enemy.building_id),neighborhoodName(enemy,indexById.get(String(enemy.building_id))||0)]));
+    const targetFor=(enemy,order)=>({enemy,id:String(enemy.building_id),order,finalLevel:finals.get(String(enemy.building_id))||0});
+    const live=id=>neighborhoodLiveRow(id);
+    const fullHealthFor=(enemy,level,currentHealth=0)=>Math.max(0,Number(neighborhoodLevelDef(enemy,level)?.health)||0,Number(currentHealth)||0);
+    const progress=()=>{
+      let done=0;
+      for(const [id,finalLevel] of finals){
+        const row=live(id);
+        done+=Math.min(finalLevel,Math.max(0,Number(row?.max_level??row?.level)||0));
+      }
+      hkRunner.setStep(hkRunner.state.step,done,total);
+      return done;
+    };
+
+    const claimTarget=async target=>{
+      const before=live(target.id),beforeMax=Math.max(0,Number(before?.max_level??before?.level)||0);
+      try{
+        const data=await neighborhoodPost('/idler/claim',{building_id:target.id});
+        progress();
+        const after=live(target.id),afterMax=Math.max(0,Number(after?.max_level??after?.level)||0);
+        if(afterMax>beforeMax){
+          const rewards=neighborhoodRewardText(data);
+          log('✓ '+names.get(target.id)+' · '+either('открыт уровень ','unlocked level ')+afterMax+'/'+target.finalLevel+(rewards.length?' · '+rewards.join(' · '):''),'ok');
+        }
+        return true;
+      }catch(error){
+        if(error?.name==='AbortError')throw error;
+        const status=Number(error?.httpStatus||0);
+        if(status===409)return false;
+        if(status===429||status>=500||error?.name==='HKRateLimitError'){await neighborhoodTransientDelay(error);return false;}
+        throw error;
+      }
+    };
+
+    const updateTarget=async target=>{
+      try{
+        await neighborhoodPost('/idler/update',{building_id:target.id});
+        progress(); return true;
+      }catch(error){
+        if(error?.name==='AbortError')throw error;
+        const status=Number(error?.httpStatus||0);
+        if(status===409||status===429||status>=500||error?.name==='HKRateLimitError'){await neighborhoodTransientDelay(error);return false;}
+        throw error;
+      }
+    };
+
+    const selectUnlockedLevel=async target=>{
+      let row=live(target.id),current=Math.max(0,Number(row?.level)||0),unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+      if(unlocked<=current)return false;
+      let desired=Math.min(target.finalLevel,unlocked);
+      try{
+        await neighborhoodPost('/idler/level',{building_id:target.id,level:desired});
+      }catch(error){
+        if(error?.name==='AbortError')throw error;
+        if(Number(error?.httpStatus||0)!==409)throw error;
+        row=live(target.id);current=Math.max(0,Number(row?.level)||0);unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+        if(unlocked<=current)return false;
+        desired=Math.min(target.finalLevel,unlocked);
+        await neighborhoodPost('/idler/level',{building_id:target.id,level:desired});
+      }
+      progress();
+      const confirmed=Math.max(0,Number(live(target.id)?.level)||0);
+      if(confirmed<desired)throw new Error(names.get(target.id)+' · '+either('игровое состояние изменилось','game state changed'));
+      log('↗ '+names.get(target.id)+' · '+either('уровень ','level ')+confirmed+'/'+target.finalLevel,'ok');
+      return true;
+    };
+
+    const syncTargetOnEntry=async target=>{
+      const exists=(neighborhoodIdler?.buildings||[]).some(row=>String(row?.building_id||'')===target.id);
+      if(!exists)return updateTarget(target);
+      try{return await claimTarget(target);}
+      catch(error){
+        if(error?.name==='AbortError')throw error;
+        const message=String(error?.apiData?.message||error?.apiData?.description||error?.message||'').toLowerCase();
+        if(Number(error?.httpStatus||0)===406&&message.includes('not found'))return updateTarget(target);
+        throw error;
+      }
+    };
+
+    hkRunner.start({title:either('Районы','Neighborhoods'),total,step:either('Синхронизация угроз','Syncing threats'),pausable:true,stoppable:true});
+    try{
+      progress();
+      for(let order=0;order<enemies.length;order++){
+        await hkRunner.waitIfPaused();
+        const target=targetFor(enemies[order],order);
+        hkRunner.setStep(names.get(target.id),hkRunner.state.done,total);
+        await syncTargetOnEntry(target);
+        let row=live(target.id),current=Math.max(0,Number(row?.level)||0),unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+        if(unlocked>current)await selectUnlockedLevel(target);
+        row=live(target.id);current=Math.max(0,Number(row?.level)||0);unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+        const health=Math.max(0,Number(row?.health)||0),fullHealth=fullHealthFor(target.enemy,current,health);
+        log(names.get(target.id)+' · '+either('уровень ','level ')+current+'/'+target.finalLevel+(unlocked>current?' · '+either('открыт ','unlocked ')+unlocked:'')+' · HP '+health.toLocaleString(locale())+'/'+fullHealth.toLocaleString(locale()),'info');
+      }
+
+      log(either('Сила тапа','Tap power')+': '+Math.max(0,Number(neighborhoodIdler?.player_tap_power)||0).toLocaleString(locale()),'info');
+
+      let turnIndex=0;
+      while(true){
+        await hkRunner.waitIfPaused();
+        if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+        let target=null;
+        for(let step=0;step<enemies.length;step++){
+          const order=(turnIndex+step)%enemies.length,candidate=targetFor(enemies[order],order),row=live(candidate.id);
+          const current=Math.max(0,Number(row?.level)||0),unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+          if(current<candidate.finalLevel||unlocked<candidate.finalLevel){target=candidate;turnIndex=order;break;}
+        }
+        if(!target)break;
+
+        hkRunner.setStep(names.get(target.id),hkRunner.state.done,total);
+        await syncTargetOnEntry(target);
+        let row=live(target.id),current=Math.max(0,Number(row?.level)||0),unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+        if(unlocked>current){await selectUnlockedLevel(target);turnIndex=(target.order+1)%enemies.length;continue;}
+        if(current>=target.finalLevel&&unlocked>=target.finalLevel){turnIndex=(target.order+1)%enemies.length;continue;}
+
+        let didTap=false;
+        while(true){
+          await hkRunner.waitIfPaused();
+          if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+          row=live(target.id);current=Math.max(0,Number(row?.level)||0);unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+          if(unlocked>current){await selectUnlockedLevel(target);break;}
+          if(current>=target.finalLevel)break;
+          const power=Math.max(0,Number(neighborhoodIdler?.player_tap_power)||0);
+          const health=Math.max(0,Number(row?.health)||0),fullHealth=fullHealthFor(target.enemy,current,health);
+          if(power<=0)throw new Error(names.get(target.id)+' · Tap Power 0');
+          const batch=neighborhoodTapBatch(health,fullHealth,power);
+          hkRunner.setStep(names.get(target.id)+' · '+batch.clicks+' '+either('тапов','taps'),hkRunner.state.done,total);
+          await gameRetryDelay(batch.duration);
+          const beforeMax=unlocked;
+          try{
+            const data=await neighborhoodPost('/idler/tap',{building_id:target.id,quantity:batch.clicks,duration:batch.duration});
+            didTap=true;progress();
+            const fresh=live(target.id),afterMax=Math.max(0,Number(fresh?.max_level??fresh?.level)||0),afterHealth=Math.max(0,Number(fresh?.health)||0);
+            if(afterMax>beforeMax){
+              const rewards=neighborhoodRewardText(data);
+              log('✓ '+names.get(target.id)+' · '+either('победа','defeated')+' · '+either('открыт ','unlocked ')+afterMax+'/'+target.finalLevel+(rewards.length?' · '+rewards.join(' · '):''),'ok');
+              const afterCurrent=Math.max(0,Number(fresh?.level)||0);
+              if(afterMax>afterCurrent)await selectUnlockedLevel(target);
+              break;
+            }
+            log('✓ '+names.get(target.id)+' · '+batch.clicks+' '+either('тапов','taps')+' · HP '+afterHealth.toLocaleString(locale())+'/'+fullHealth.toLocaleString(locale()),'ok');
+          }catch(error){
+            if(error?.name==='AbortError')throw error;
+            const status=Number(error?.httpStatus||0),message=String(error?.apiData?.message||error?.apiData?.description||error?.message||'').toLowerCase();
+            if(status===409){
+              row=live(target.id);current=Math.max(0,Number(row?.level)||0);unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+              if(unlocked>current){await selectUnlockedLevel(target);break;}
+              if(message.includes('claim accumulated idler rewards')){
+                await claimTarget(target);
+                row=live(target.id);current=Math.max(0,Number(row?.level)||0);unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+                if(unlocked>current){await selectUnlockedLevel(target);break;}
+              }
+              continue;
+            }
+            if(status===429||status>=500||error?.name==='HKRateLimitError'){await neighborhoodTransientDelay(error);continue;}
+            throw error;
+          }
+        }
+        if(didTap)await updateTarget(target);
+        turnIndex=(target.order+1)%enemies.length;
+      }
+
+      progress();
+      neighborhoodLastReadAt=Date.now();
+      renderNeighborhoodBattles();
+      hkRunner.finish(either('Все выбранные районы завершены','All selected Neighborhoods completed'));
+      log(either('Районы завершены','Neighborhoods completed'),'ok');
+    }catch(error){
+      neighborhoodLastReadAt=Date.now();
+      renderNeighborhoodBattles();
+      if(error?.name==='AbortError'){hkRunner.reset();log(either('Бои в Районах остановлены','Neighborhood Battles stopped'),'warn');}
+      else{hkRunner.fail(error);log(either('Ошибка Районов','Neighborhoods error')+': '+(error?.message||error),'bad');}
     }
   }
 
@@ -13521,6 +13874,7 @@
           liveReadOk=true;return playerDocument;
         }
         if (key === 'bosses') {const value=await refreshBosses(false);liveReadOk=true;return value;}
+        if (key === 'neighborhoods') {const value=await refreshNeighborhoodBattles(false);liveReadOk=!!value;return value;}
         if (key === 'wars') {const value=await refreshWars(false);liveReadOk=true;return value;}
         if (key === 'rats') {const value=await refreshRatHunt(false);liveReadOk=!!value;return value;}
         if (key === 'clan') {
@@ -13653,7 +14007,7 @@
     document.head.appendChild(style);
     const NAV_GROUPS = [
       {id:'today',label:'navToday',hint:'navTodayHint',image:'today.png',modules:[{page:'daily',ru:'Сегодня',en:'Today'}]},
-      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{page:'bosses',ru:'Боссы',en:'Bosses'},{planned:true,ru:'Районы',en:'Neighborhoods'}]},
+      {id:'battles',label:'navBattles',hint:'navBattlesHint',image:'clan-war.png',modules:[{page:'pit',ru:'Ямы',en:'Pits'},{page:'bosses',ru:'Боссы',en:'Bosses'},{page:'neighborhoods',ru:'Районы',en:'Neighborhoods'}]},
       {id:'city',label:'navCity',hint:'navCityHint',image:'maps.png',modules:[{page:'maps',ru:'Карты',en:'Maps'},{page:'resources',ru:'Ресурсы',en:'Resources'},{page:'buildings',ru:'Здания',en:'Buildings'},{page:'explore',ru:'Исследование',en:'Explore'}]},
       {id:'business',label:'navBusiness',hint:'navBusinessHint',image:'businesses.png',modules:[{page:'business',ru:'Бизнесы',en:'Businesses'},{page:'recipes',ru:'Рецепты',en:'Recipes'}]},
       {id:'growth',label:'navGrowth',hint:'navGrowthHint',icon:'📈',modules:[{page:'growth',ru:'Обзор',en:'Overview'},{page:'growth-hamsters',ru:'Хомяки',en:'Hamsters'},{page:'growth-generals',ru:'Генералы',en:'Generals'}]},
@@ -13685,6 +14039,7 @@
         <div id="hk-resource-content" class="hk-cardbox"></div>
       </div>
       <div class="hk-page" data-content="bosses"><div id="hk-boss-content" class="hk-cardbox"><h3>${either('Боссы','Bosses')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать состояние босса.','Open this tab to read boss state.')}</p></div></div>
+      <div class="hk-page" data-content="neighborhoods"><div id="hk-neighborhood-content" class="hk-cardbox"><h3>${either('Районы','Neighborhoods')}</h3><p class="hk-muted">${either('Откройте вкладку, чтобы считать угрозы Районов.','Open this tab to read Neighborhood threats.')}</p></div></div>
           <div class="hk-page" data-content="pit">
         <div id="hk-pits-content" class="hk-cardbox"><h3>${either('Ямы','Pits')}</h3><p class="hk-muted">${either('Загрузка live-данных трёх Ям…','Loading live data for all three Pits…')}</p></div>
       </div>
@@ -13878,6 +14233,7 @@
       if (finalPage === 'resources') renderResources();
       if (finalPage === 'buildings') renderBuildings();
       if (finalPage === 'explore') renderExplore();
+      if (finalPage === 'neighborhoods') renderNeighborhoodBattles();
       if (finalPage === 'clan') renderClanSkills();
       if (finalPage === 'wars') renderWars();
       if (finalPage === 'rats') renderRatHunt();
