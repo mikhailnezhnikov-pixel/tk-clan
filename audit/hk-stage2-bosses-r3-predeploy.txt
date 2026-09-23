@@ -1,9 +1,9 @@
 fetch_rc=0
-live_sha256=0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7
+live_sha256=048683968bafaf8164340dd2aa7c2fcb622306ad0f048fd2c2f4fdfad1f3bcb3
 compile_rc=1
 patch_rc=2
 node_rc=0
-candidate_sha256=0e168e81ff6e4ee42400f99aaad8a4fb9359bcfbdc051d56c981d0adcbf247e7
+candidate_sha256=048683968bafaf8164340dd2aa7c2fcb622306ad0f048fd2c2f4fdfad1f3bcb3
 r3_marker_count=0
 --- compile ---
 [Errno 2] No such file or directory: 'deploy/topking/patch_bosses_area_calculator_r3_1174.py'--- patch ---
