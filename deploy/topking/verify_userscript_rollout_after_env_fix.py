@@ -1,40 +1,17 @@
 import importlib.util
-import inspect
 import json
-import os
-import re
 import sqlite3
 import time
-from pathlib import Path
 
 server_path="/opt/hamsterking-license/server.py"
-source=Path(server_path).read_text(encoding="utf-8")
-
 spec=importlib.util.spec_from_file_location("hk_server_rollout_verify",server_path)
 server=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server)
 
 latest=server.release_version()
 minimum=server.MIN_SCRIPT_VERSION
-print("ENV_MIN_SCRIPT_VERSION",os.environ.get("HK_MIN_SCRIPT_VERSION",""))
 print("RELEASE_VERSION",latest)
 print("MIN_SCRIPT_VERSION",minimum)
-
-source_lines=source.splitlines()
-hits=[]
-for i,line in enumerate(source_lines):
-    if "MIN_SCRIPT_VERSION" in line or "minimum_version" in line or ("required" in line and "manifest" in "\n".join(source_lines[max(0,i-8):i+1]).lower()):
-        hits.append({
-            "line":i+1,
-            "text":line.strip()[:500],
-            "context":[x.strip()[:500] for x in source_lines[max(0,i-2):min(len(source_lines),i+3)]]
-        })
-print("MIN_VERSION_SOURCE_HITS",json.dumps(hits[:40],ensure_ascii=False))
-
-try:
-    print("RELEASE_MANIFEST_SOURCE",inspect.getsource(server.release_manifest)[:12000])
-except Exception as exc:
-    print("RELEASE_MANIFEST_SOURCE_ERROR",type(exc).__name__,str(exc)[:300])
 
 results=[]
 for version in ["1.17.24","1.17.81",latest]:
@@ -48,6 +25,18 @@ for version in ["1.17.24","1.17.81",latest]:
         "has_download_url":bool(manifest.get("download_url")),
     })
 print("MANIFESTS",json.dumps(results,ensure_ascii=False))
+
+assert minimum==latest,(minimum,latest)
+for row in results[:-1]:
+    assert row["latest_version"]==latest,row
+    assert row["minimum_version"]==latest,row
+    assert row["available"] is True,row
+    assert row["required"] is True,row
+    assert row["has_download_url"] is True,row
+current=results[-1]
+assert current["version"]==latest,current
+assert current["available"] is False,current
+assert current["required"] is False,current
 
 db=sqlite3.connect(str(server.DB_PATH))
 db.row_factory=sqlite3.Row
@@ -80,4 +69,4 @@ except Exception as exc:
 
 print("RUNTIME_SMOKE_ROWS",smoke_rows)
 print("RUNTIME_SMOKE_LATEST_ROWS",smoke_latest)
-print("USERSCRIPT_ROLLOUT_TRACE=PASS")
+print("USERSCRIPT_ROLLOUT_VERIFY=PASS")
