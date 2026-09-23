@@ -260,12 +260,30 @@
   ],
   "achievement_examples": [
     {
-      "title": "Вода успокоилась",
-      "condition": "Впервые исследовать место на рыбалке, где вода успокоилась после победы над Щупальцем.",
+      "title": "Красная жатва I",
+      "condition": "Победить 25 красных врагов.",
       "rewards": [
         "×60",
         "×5",
-        "×5"
+        "×10"
+      ]
+    },
+    {
+      "title": "Синяя жатва III",
+      "condition": "Победить 1500 синих врагов.",
+      "rewards": [
+        "×20",
+        "×15",
+        "×25"
+      ]
+    },
+    {
+      "title": "Да он только крепче стал!",
+      "condition": "Увеличить суммарное HP живых врагов на +15 за один бой.",
+      "rewards": [
+        "×60",
+        "×5",
+        "×10"
       ]
     },
     {
@@ -278,8 +296,80 @@
       ]
     },
     {
-      "title": "Да он только крепче стал!",
-      "condition": "Увеличить суммарное HP живых врагов на +15 за один бой.",
+      "title": "Абсолютная единица",
+      "condition": "Довести одного врага до 10+ HP.",
+      "rewards": [
+        "×100",
+        "×10",
+        "×20"
+      ]
+    },
+    {
+      "title": "Чистая работа III",
+      "condition": "Полностью зачистить 320 боевых полей.",
+      "rewards": [
+        "×50",
+        "×20",
+        "×30"
+      ]
+    },
+    {
+      "title": "Кто там, в глубине?",
+      "condition": "Впервые обнаружить Щупальце на рыбалке.",
+      "rewards": [
+        "×60",
+        "×5",
+        "×5"
+      ]
+    },
+    {
+      "title": "Хватка глубин I",
+      "condition": "Обнаружить 3 Щупальца.",
+      "rewards": [
+        "×100",
+        "×10",
+        "×5"
+      ]
+    },
+    {
+      "title": "Вода успокоилась",
+      "condition": "Впервые исследовать место на рыбалке, где вода успокоилась после победы над Щупальцем.",
+      "rewards": [
+        "×60",
+        "×5",
+        "×5"
+      ]
+    },
+    {
+      "title": "Крупная находка",
+      "condition": "Выкопать сундук #3.",
+      "rewards": [
+        "×140",
+        "×15",
+        "×25"
+      ]
+    },
+    {
+      "title": "Нашёл выход",
+      "condition": "Решить первый Лабиринт.",
+      "rewards": [
+        "×60",
+        "×5",
+        "×10"
+      ]
+    },
+    {
+      "title": "Бартерщик",
+      "condition": "Совершить покупки у торговцев за 3 разных ресурса.",
+      "rewards": [
+        "×60",
+        "×5",
+        "×10"
+      ]
+    },
+    {
+      "title": "Редкая связка",
+      "condition": "Иметь одновременно 3 необычных ключа.",
       "rewards": [
         "×60",
         "×5",
@@ -303,6 +393,42 @@
         "×31",
         "×1",
         "×5"
+      ]
+    },
+    {
+      "title": "Глубже в горы I",
+      "condition": "Посетить 25 шахт.",
+      "rewards": [
+        "×60",
+        "×5",
+        "×10"
+      ]
+    },
+    {
+      "title": "Глубже в горы III",
+      "condition": "Посетить 350 шахт.",
+      "rewards": [
+        "×20",
+        "×15",
+        "×25"
+      ]
+    },
+    {
+      "title": "Землекоп II",
+      "condition": "Раскопать 100 клеток.",
+      "rewards": [
+        "×100",
+        "×10",
+        "×20"
+      ]
+    },
+    {
+      "title": "Землекоп III",
+      "condition": "Раскопать 1000 клеток.",
+      "rewards": [
+        "×20",
+        "×15",
+        "×25"
       ]
     }
   ],
@@ -413,5 +539,186 @@
       "Загадка / Lights Out",
       "Сокровищница"
     ]
-  }
+  },
+  "achievement_series": [
+    {
+      "category": "Карты",
+      "thresholds": [
+        10,
+        25,
+        50,
+        100,
+        250,
+        500
+      ],
+      "source": "minigame_all_maps_achievement_01"
+    },
+    {
+      "category": "Леса",
+      "thresholds": [
+        25,
+        100,
+        350
+      ],
+      "source": "minigame_forests_achievement_01"
+    },
+    {
+      "category": "Шахты",
+      "thresholds": [
+        25,
+        100,
+        350
+      ],
+      "source": "minigame_mines_achievement_01"
+    },
+    {
+      "category": "Бои",
+      "thresholds": [
+        25,
+        100,
+        350
+      ],
+      "source": "minigame_fight_achievement_01"
+    },
+    {
+      "category": "Рыбалка",
+      "thresholds": [
+        10,
+        50,
+        150
+      ],
+      "source": "minigame_fishing_achievement_01"
+    },
+    {
+      "category": "Торговец — серия 1",
+      "thresholds": [
+        10,
+        50,
+        150
+      ],
+      "source": "minigame_trader_achievement_01"
+    },
+    {
+      "category": "Торговец — серия 2",
+      "thresholds": [
+        15,
+        60,
+        300
+      ],
+      "source": "minigame_trader_achievement_02"
+    },
+    {
+      "category": "Сундуки — серия 1",
+      "thresholds": [
+        20,
+        250,
+        1000
+      ],
+      "source": "minigame_chests_achievement_01"
+    },
+    {
+      "category": "Сундуки — серия 2",
+      "thresholds": [
+        10,
+        60,
+        200
+      ],
+      "source": "minigame_chests_achievement_02"
+    },
+    {
+      "category": "Загадки / Lights Out",
+      "thresholds": [
+        25,
+        200
+      ],
+      "source": "minigame_lights_achievement_06"
+    },
+    {
+      "category": "Рыбалка — серия 5",
+      "thresholds": [
+        10,
+        100,
+        400
+      ],
+      "source": "minigame_fishing_achievement_05"
+    },
+    {
+      "category": "Бой — серия 17",
+      "thresholds": [
+        1,
+        5,
+        20
+      ],
+      "source": "minigame_fight_achievement_17"
+    }
+  ],
+  "minigame_details": [
+    {
+      "id": "treasury",
+      "title": "Сокровищница",
+      "facts": [
+        "3 варианта пути",
+        "Поле конфигурации содержит 61 слот",
+        "Выборы: way 1 / way 2 / way 3"
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png"
+    },
+    {
+      "id": "lights",
+      "title": "Загадка Lights Out",
+      "facts": [
+        "Поле 3×3 — 9 клеток",
+        "Каждая клетка хранится как true/false",
+        "В достижениях есть отдельные серии по решению загадок"
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_riddle_icon.png"
+    },
+    {
+      "id": "chests",
+      "title": "Сундуки и раскопки",
+      "facts": [
+        "3 базовых типа сундуков в активной конфигурации",
+        "6 отдельных точек раскопки",
+        "Есть отдельные достижения по сундукам и раскопкам"
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_chest_icon.png"
+    },
+    {
+      "id": "fishing",
+      "title": "Рыбалка",
+      "facts": [
+        "Состояния воды: спокойная, штормовая, проклятая, штормовая проклятая",
+        "Отдельная экипировка удочки",
+        "Щупальце связано с отдельными достижениями"
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png"
+    },
+    {
+      "id": "fight",
+      "title": "Сражение",
+      "facts": [
+        "В конфигурации видны 3 типа врагов",
+        "Есть отдельное оружие/меч",
+        "Достижения отслеживают цвет врагов, HP, зачистки и число боёв"
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fight_icon.png"
+    },
+    {
+      "id": "trader",
+      "title": "Торговец",
+      "facts": [
+        "Предложения за монеты и корм",
+        "В лотах встречаются карты и яйца рыб",
+        "Отдельные достижения за сделки, покупки и разные ресурсы"
+      ],
+      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_trader_icon.png"
+    }
+  ],
+  "pet_skill_ids": [
+    "trader_keys_r4",
+    "fight_hp_up_r4",
+    "more_money_r4",
+    "treasure_goblin_r4",
+    "more_food_r4"
+  ]
 }
