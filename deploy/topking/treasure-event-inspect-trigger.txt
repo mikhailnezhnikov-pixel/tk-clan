@@ -1,2 +1,2 @@
-inspect=treasure-shop-lot-parser
-stamp=2026-09-23T12:53+09:00
+inspect=treasure-dynamic-lots-dom
+stamp=2026-09-23T12:57+09:00
