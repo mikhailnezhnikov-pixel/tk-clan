@@ -5,23 +5,21 @@ server=importlib.util.module_from_spec(spec);spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("""SELECT id,page_text,assets_json,captured_at
-                                        FROM treasure_guide_captures
-                                        WHERE source='dom' AND page_text<>''
-                                        ORDER BY id""")]
-
-for label in ("Солнечный Лес","Заброшенная Шахта"):
+    matches=[dict(r) for r in db.execute("""SELECT id,page_text,assets_json,captured_at FROM treasure_guide_captures
+                                           WHERE source='dom' AND page_text<>''
+                                             AND (page_text LIKE '%Солнечный Лес%' OR page_text LIKE '%Заброшенная Шахта%')
+                                             AND page_text LIKE '%МОЖНО ОТЫСКАТЬ%'
+                                           ORDER BY id DESC LIMIT 20""")]
     out=[]
-    seen=set()
-    for r in rows:
+    for r in matches:
+        prev=db.execute("""SELECT id,assets_json,page_text FROM treasure_guide_captures
+                           WHERE source='dom' AND id<? ORDER BY id DESC LIMIT 1""",(r["id"],)).fetchone()
+        try:cur=set(json.loads(r["assets_json"] or "[]"))
+        except:cur=set()
+        try:old=set(json.loads(prev["assets_json"] or "[]")) if prev else set()
+        except:old=set()
+        delta=[x for x in sorted(cur-old) if re.search(r"/items/|/currencies/|key_|map_|egg_|berry|skill_change|pet_food|treasurehunt_",x,re.I)]
         text=re.sub(r"\s+"," ",str(r["page_text"] or "")).strip()
-        if label not in text:continue
-        if "МОЖНО ОТЫСКАТЬ" not in text and "СОДЕРЖИТ" not in text:continue
-        try:assets=json.loads(r["assets_json"] or "[]")
-        except:assets=[]
-        rel=[a for a in assets if re.search(r"/items/|treasure_minigame|forest|mine|key_|map_|egg_|berry|skill",str(a),re.I)]
-        key=(text[-2200:],tuple(rel))
-        if key in seen:continue
-        seen.add(key)
-        out.append({"id":r["id"],"captured_at":r["captured_at"],"text":text[-3000:],"assets":rel[-160:]})
-    print("ROOM",label,json.dumps(out[-40:],ensure_ascii=False))
+        label="Солнечный Лес" if "Солнечный Лес" in text else "Заброшенная Шахта"
+        out.append({"id":r["id"],"prev":prev["id"] if prev else None,"label":label,"text":text[-800:],"delta":delta})
+print("ROOM_DELTAS",json.dumps(out,ensure_ascii=False))
