@@ -1,2 +1,2 @@
-inspect=treasure-chest-treasury-screen-flow
-stamp=2026-09-23T15:36+09:00
+inspect=treasure-unique-chest-cards
+stamp=2026-09-23T15:39+09:00
