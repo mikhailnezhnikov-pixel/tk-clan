@@ -1,27 +1,39 @@
-import importlib.util, json, re
+import importlib.util, json
 server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
+wanted={
+ "mf_fair_treasury_room_choose_way_1",
+ "mf_fair_treasury_room_choose_way_2",
+ "mf_fair_treasury_room_choose_way_3",
+ "mf_treasurelot_chest_type_01",
+ "mf_treasurelot_chest_type_015",
+ "mf_treasurelot_chest_type_02",
+ "mf_treasurelot_chest_type_03",
+ "mf_treasurelot_chest_digging_spot_sl4",
+ "mf_treasurelot_chest_digging_spot_sl5",
+ "mf_treasurelot_chest_digging_spot_sl6",
+ "mf_treasurelot_chest_digging_spot_sl7",
+ "mf_treasurelot_chest_digging_spot_sl8",
+ "mf_treasurelot_chest_digging_spot_sl9"
+}
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("""SELECT id,page_text,assets_json,captured_at
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,captured_at
                                         FROM treasure_guide_captures
-                                        WHERE source='dom' AND page_text LIKE '%Сокровищница%'
-                                        ORDER BY id""")]
-
-out=[];seen=set()
+                                        WHERE path LIKE '/shop/view#treasure-%'
+                                        ORDER BY id DESC LIMIT 80""")]
+print("META",json.dumps([{"id":r["id"],"path":r["path"],"captured_at":r["captured_at"]} for r in rows[:20]],ensure_ascii=False))
+found=[]
 for r in rows:
-    text=re.sub(r"\s+"," ",str(r["page_text"] or "")).strip()
-    if not text:continue
-    # exclude achievement pages where "сокровищница" occurs in condition text
-    if "Достижения" in text and "Сокровищница ▷" not in text and "Правила Сокровищница" not in text:
-        continue
-    key=text[:5000]
-    if key in seen:continue
-    seen.add(key)
-    try:assets=json.loads(r["assets_json"] or "[]")
-    except:assets=[]
-    rel=[a for a in assets if re.search(r"treasury|way_[123]|treasure_minigame_treasury",str(a),re.I)]
-    out.append({"id":r["id"],"captured_at":r["captured_at"],"text":text[:6000],"assets":rel})
-print("TREASURY_SCREENS",json.dumps(out,ensure_ascii=False))
+    try:obj=json.loads(r["payload_json"])
+    except:continue
+    for x in obj.get("rows",[]) if isinstance(obj,dict) else []:
+        if not isinstance(x,dict):continue
+        p=x.get("payload")
+        if not isinstance(p,dict):continue
+        pid=str(p.get("id") or "")
+        if pid in wanted:
+            found.append({"capture":r["id"],"row_path":x.get("path"),"payload":p})
+print("PRIORITY",json.dumps(found,ensure_ascii=False))
