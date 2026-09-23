@@ -1,0 +1,8 @@
+USERSCRIPT_1_17_83_SERVER_HEALTH_SCOPE=PASS
+source_version=1.17.82
+target_version=1.17.83
+mode=CORE_HEALTH_ONLY
+new_game_requests=NONE
+optional_endpoint_failures=DIAGNOSTIC_ONLY
+runtime_smoke_capture=PRESERVED
+public_exact_match=PASS

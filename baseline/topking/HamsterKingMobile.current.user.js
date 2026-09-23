@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.82
+// @version      1.17.83
+// @release-note Диагностика: общий индикатор «Сервер» теперь отражает контрольную проверку основного HK-сервера; сбой отдельного фонового endpoint остаётся в диагностике и больше не создаёт ложный красный статус.
 // @release-note Smoke-test: уже записанные обезличенные Rat Hunt / War / Районы evidence пассивно синхронизируются с HK backend; дополнительных запросов к игре нет.
 // @release-note Обновление userscript: добавлены штатные update/download URL на текущий panel.js; после ручного перехода на эту версию менеджер userscript сможет проверять и загружать новые версии автоматически.
 // @release-note Smoke-test: Rat Hunt / War / Районы показывают покрытие контрольных точек старт → мутация → завершение; это индикатор полноты доказательств, а не автоматический runtime PASS.
@@ -91,7 +92,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.82';
+  const BUILD_VERSION = '1.17.83';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -281,6 +282,7 @@
   let gameApiSlowUntil = 0;
   let gameApiRateGateTail = Promise.resolve();
   const SERVER_REQUEST_RETRY_DELAYS_MS = [1000, 3000, 7000];
+  const HK_SERVER_HEALTH_SCOPE_REV = 'server-health-core-20260924-r1';
   const DIAGNOSTIC_MAX_EVENTS = 180;
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
@@ -11300,7 +11302,7 @@
         if(error?.name==='AbortError')throw error;
         recordDiagnostic('server-network-error',{label,path,attempt:attempt+1,error:error?.message || error});
         if (attempt < retries) { const delay=SERVER_REQUEST_RETRY_DELAYS_MS[Math.min(attempt,SERVER_REQUEST_RETRY_DELAYS_MS.length-1)]; attempt += 1; await gameRetryDelay(delay); continue; }
-        setHealth('server', false, error?.name==='HKNetworkTimeout'?'тайм-аут':'ошибка сети');
+        recordDiagnostic('server-endpoint-unavailable',{revision:HK_SERVER_HEALTH_SCOPE_REV,label,path,kind:error?.name==='HKNetworkTimeout'?'timeout':'network'});
         throw error;
       }
       let value; try { value = JSON.parse(text); } catch (_) { value = null; }
@@ -11315,10 +11317,9 @@
         const delay=SERVER_REQUEST_RETRY_DELAYS_MS[Math.min(attempt,SERVER_REQUEST_RETRY_DELAYS_MS.length-1)]; attempt += 1; await gameRetryDelay(delay); continue;
       }
       if (!response.ok || !value) {
-        setHealth('server', false, `HTTP ${response.status}`);
+        recordDiagnostic('server-endpoint-unavailable',{revision:HK_SERVER_HEALTH_SCOPE_REV,label,path,kind:'http',status:response.status});
         throw new Error(`HTTP ${response.status}: ${text.slice(0, 120)}`);
       }
-      setHealth('server', true, 'сервер отвечает');
       return value;
     }
   }
