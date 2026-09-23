@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.56",
-  "target_version": "1.17.57",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.57.fair-tiered-combo.candidate.user.js",
-  "primary_marker": "fair-tiered-combo-20260923-r1",
+  "source_version": "1.17.57",
+  "target_version": "1.17.58",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.58.fair-bonus-thresholds.candidate.user.js",
+  "primary_marker": "fair-bonus-threshold-state-20260923-r1",
   "preserve_markers": [
+    "fair-tiered-combo-20260923-r1",
     "treasure-guide-priority-trader-lots-20260923-r1",
     "treasure-guide-priority-lots-20260923-r1",
     "shop-cap-balance-mode-20260923-r1",
@@ -32,6 +33,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-57-fair-tiered-combo-live-status.txt",
-  "commit_message": "fix: restore tiered Fair 3-6-9 behavior in userscript 1.17.57"
+  "audit_status_path": "audit/hk-userscript-1-17-58-fair-bonus-thresholds-live-status.txt",
+  "commit_message": "fix: deploy Fair cumulative bonus thresholds in userscript 1.17.58"
 }
