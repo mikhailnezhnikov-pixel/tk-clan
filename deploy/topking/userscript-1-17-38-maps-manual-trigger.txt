@@ -1,0 +1,3 @@
+deploy=1.17.38-maps-manual-only
+base=1.17.37
+regression=automatic-district-research
