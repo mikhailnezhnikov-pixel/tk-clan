@@ -45,3 +45,32 @@ print("deploy_topking_files",len(actual))
 print("referenced_deploy_files",len(referenced))
 print("orphan_candidates",len(orphans))
 print("ORPHANS_JSON",json.dumps(sorted(orphans),ensure_ascii=False))
+
+
+workflow_candidates=[]
+workflow_keep={
+    ".github/workflows/deploy-userscript-generic-safe.yml",
+    ".github/workflows/verify-userscript-rollout-after-env-fix.yml",
+    ".github/workflows/fix-userscript-min-version-env.yml",
+    ".github/workflows/inspect-userscript-service-env.yml",
+    ".github/workflows/deploy-runtime-smoke-capture-v1.yml",
+    ".github/workflows/repo-cleanup-reference-audit.yml",
+}
+for p in Path(".github/workflows").glob("*.yml"):
+    rel=p.as_posix()
+    try:
+        body=p.read_text(encoding="utf-8")
+    except Exception:
+        continue
+    if rel in workflow_keep:
+        continue
+    if "treasure" in rel.lower() or "war" in rel.lower():
+        continue
+    if "HamsterKingMobile.user.js" not in body:
+        continue
+    if re.search(r"^\\s*schedule:", body, re.MULTILINE):
+        continue
+    workflow_candidates.append(rel)
+
+print("userscript_workflow_candidates",len(workflow_candidates))
+print("WORKFLOW_CANDIDATES_JSON",json.dumps(sorted(workflow_candidates),ensure_ascii=False))
