@@ -36,6 +36,6 @@
     if(result.events.length)state.queue.enqueueMany(result.events);return true;
   }
   function destroy(){state.generation++;state.queue?.clear();state.scene?.destroy();state.adapter?.reset();Object.assign(state,{scene:null,adapter:null,queue:null,pending:null,hpCallback:null,eventCallback:null,ready:false,initializing:null})}
-  w.TopKingBattleV4={version:'4.1.0-character-motion',init,update,destroy};
+  w.TopKingBattleV4={version:'4.2.0-frame-motion',init,update,destroy};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>init().catch(console.error),{once:true});else init().catch(console.error);
 })(window);

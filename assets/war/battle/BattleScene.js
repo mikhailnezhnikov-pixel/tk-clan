@@ -14,7 +14,8 @@
       this.textureSets=textures;
       this.ours=new (CORE().Fighter)({PIXI,textures:textures.topking,side:'left',height:330,name:'Top King'});
       this.enemy=new (CORE().Fighter)({PIXI,textures:textures.raider,side:'right',height:330,name:'Opponent'});
-      this.world.addChild(this.ours.container,this.enemy.container);this.ready=true;this.layout();
+      this.fx=new PIXI.Container();
+      this.world.addChild(this.ours.container,this.enemy.container,this.fx);this.ready=true;this.layout();
       this.animator=new (CORE().BattleAnimator)({gsap:this.gsap,scene:this,onContact});
       this.tick=(ticker)=>{const dt=Math.min(.05,ticker.deltaMS/1000),reduced=this.animator.motion.matches;this.ours.tick(dt,reduced);this.enemy.tick(dt,reduced)};
       this.app.ticker.add(this.tick);
@@ -24,27 +25,20 @@
     async image(url){
       const image=new Image();image.src=url;await image.decode();return image;
     }
-    frame(texture,bodyHeight,footX,footY){return {texture,bodyHeight,footX,footY}}
     async loadTextures(){
       const {PIXI}=this;
-      const images=await Promise.all(['topking/idle.png','raider/idle.png','combat-atlas-v4.webp'].map(file=>this.image('../assets/war/units/'+file+'?v=20260923-1')));
+      const images=await Promise.all(['topking-motion-v5.webp','raider-motion-v5.webp','bot-motion-v5.webp'].map(file=>this.image('../assets/war/units/'+file+'?v=20260923-5')));
       if(this.disposed)return {};
-      // One-time chroma-key decode. No image readback or allocation in the render loop.
-      const sheet=document.createElement('canvas');sheet.width=images[2].width;sheet.height=images[2].height;
-      const ctx=sheet.getContext('2d',{willReadFrequently:true});ctx.drawImage(images[2],0,0);
-      const pixels=ctx.getImageData(0,0,sheet.width,sheet.height),data=pixels.data;
-      for(let i=0;i<data.length;i+=4){const r=data[i],g=data[i+1],b=data[i+2],excess=g-Math.max(r,b);if(excess>35&&g>100){data[i+3]=Math.round(255*(1-Math.min(1,(excess-35)/65)));data[i+1]=Math.min(g,Math.max(r,b)+25)}}
-      ctx.putImageData(pixels,0,0);
-      const atlas=PIXI.Texture.from(sheet);this.ownedTextures.push(atlas);
-      const crop=(x,y,width,height,body,fx,fy)=>{const texture=new PIXI.Texture({source:atlas.source,frame:new PIXI.Rectangle(x,y,width,height)});this.ownedTextures.push(texture);return this.frame(texture,body,fx,fy)};
-      const idle=(image,body,x,y)=>{const texture=PIXI.Texture.from(image);this.ownedTextures.push(texture);return this.frame(texture,body,x,y)};
-      // Atlas 1254 square. Planted soles and body heights measured per pose;
-      // weapons and transparent padding never determine character scale.
-      return {
-        topking:{idle:idle(images[0],240,72,244),attack:crop(0,450,449,360,267,150,318),hit:crop(0,840,420,414,274,202,333)},
-        raider:{idle:idle(images[1],241,74,244),attack:crop(449,450,389,360,267,112,318),hit:crop(420,840,418,414,274,195,333)},
-        bot:{idle:crop(838,0,416,430,290,186,391),attack:crop(838,450,416,360,272,164,318),hit:crop(838,840,416,414,283,237,333)}
+      const make=(image)=>{
+        const atlas=PIXI.Texture.from(image);this.ownedTextures.push(atlas);
+        const frames=[];
+        for(let i=0;i<36;i++){
+          const texture=new PIXI.Texture({source:atlas.source,frame:new PIXI.Rectangle(i%6*480,Math.floor(i/6)*320,480,320)});
+          this.ownedTextures.push(texture);frames.push(texture);
+        }
+        return {idle:frames.slice(0,16),attack:frames.slice(16,28),hit:frames.slice(28)};
       };
+      return {topking:make(images[0]),raider:make(images[1]),bot:make(images[2])};
     }
     buildArena(){
       const {PIXI}=this;this.floor=new PIXI.Graphics().ellipse(0,0,300,54).fill({color:0x0d1218,alpha:.68});this.world.addChild(this.floor);
@@ -74,6 +68,13 @@
       this.particles.children.forEach((p,i)=>{p.x=((i*813.1)%W);p.y=35+(i*197.7)%Math.max(1,H-130)});
     }
     reset(){this.animator?.cancel();this.ours?.reset();this.enemy?.reset()}
+    impact(attacker,defender){
+      const flash=new this.PIXI.Graphics().circle(0,0,11).fill({color:0xffefc3,alpha:.78});
+      flash.position.set(defender.base.x-attacker.face*defender.height*.27,defender.base.y-defender.height*.57);
+      this.fx.addChild(flash);
+      this.gsap.to(flash,{alpha:0,duration:.18,onComplete:()=>{flash.parent?.removeChild(flash);flash.destroy()}});
+      this.gsap.to(flash.scale,{x:2.5,y:2.5,duration:.18});
+    }
     async play(event){if(this.ready)return this.animator.play(event)}
     disposeTextures(){for(const texture of this.ownedTextures)texture.destroy(false);this.ownedTextures.length=0}
     destroy(){this.disposed=true;this.ready=false;this.observer?.disconnect();this.animator?.destroy();this.ours?.destroy();this.enemy?.destroy();if(this.app?.renderer)this.app.destroy(true,{children:true});this.disposeTextures();this.host.classList.remove('battle-stage-v4-ready','battle-stage-v4')}
