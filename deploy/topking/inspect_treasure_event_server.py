@@ -12,67 +12,54 @@ with server.db_session() as db:
                                         ORDER BY captured_at,id""")]
 
 print("COUNT",len(rows))
-pc=collections.Counter((r["source"],r["path"]) for r in rows)
-print("PATH_COUNTS",json.dumps([{"source":k[0],"path":k[1],"count":v} for k,v in pc.most_common()],ensure_ascii=False))
+for target in ["/quests","/client_config","/shop/view","/battlepass/claim"]:
+    subset=[r for r in rows if r["source"]=="api" and r["path"]==target]
+    print("TARGET",target,"ROWS",len(subset))
+    for r in subset[-3:]:
+        try: obj=json.loads(r["payload_json"])
+        except Exception as e:
+            print("PARSE_ERROR",target,repr(e)); continue
+        def outline(v,depth=0):
+            if depth>2:return type(v).__name__
+            if isinstance(v,dict):
+                return {k:outline(val,depth+1) for k,val in list(v.items())[:80]}
+            if isinstance(v,list):
+                return {"list_len":len(v),"sample":[outline(x,depth+1) for x in v[:3]]}
+            return type(v).__name__
+        print("OUTLINE",target,json.dumps(outline(obj),ensure_ascii=False)[:12000])
+        # print compact matching objects from this payload
+        pats=re.compile(r"treasure|minigame|quest|pet_mission|golden_berry|map_",re.I)
+        found=[]
+        def walk(v,path="$",depth=0):
+            if depth>12 or len(found)>=180:return
+            if isinstance(v,dict):
+                scalar={k:val for k,val in v.items() if isinstance(val,(str,int,float,bool)) or val is None}
+                blob=json.dumps(scalar,ensure_ascii=False)
+                if pats.search(blob) or pats.search(" ".join(map(str,v.keys()))):
+                    # keep only reasonably compact dicts / selected fields
+                    selected={}
+                    for k,val in v.items():
+                        if isinstance(val,(str,int,float,bool)) or val is None:
+                            selected[k]=val
+                        elif isinstance(val,list) and len(val)<=12 and all(isinstance(x,(str,int,float,bool,dict)) for x in val):
+                            selected[k]=val
+                        elif isinstance(val,dict) and len(val)<=12:
+                            selected[k]=val
+                    found.append({"path":path,"data":selected})
+                for k,val in v.items(): walk(val,path+"."+str(k),depth+1)
+            elif isinstance(v,list):
+                for i,val in enumerate(v[:1000]): walk(val,path+f"[{i}]",depth+1)
+        walk(obj)
+        print("MATCHES",target,json.dumps(found,ensure_ascii=False)[:36000])
 
-# DOM screen snapshots, compact and unique.
-seen=set(); dom=[]
-for r in rows:
-    text=re.sub(r"\s+"," ",str(r.get("page_text") or "")).strip()
-    if not text: continue
-    sig=text[:320]
-    if sig in seen: continue
-    seen.add(sig)
-    dom.append({"id":r["id"],"path":r["path"],"text":text[:1800]})
-print("DOM_SNAPSHOTS",json.dumps(dom[:40],ensure_ascii=False))
-
-# Treasure-related assets only.
-assets=[]
-for r in rows:
-    try: vals=json.loads(r.get("assets_json") or "[]")
-    except: vals=[]
-    for u in vals:
-        u=str(u)
-        if re.search(r"treasure|minigame/(?:pets|fishing|chests)|event_treasure|golden_berry",u,re.I):
-            assets.append(u)
-assets=sorted(set(assets))
-print("ASSET_COUNT",len(assets))
-print("ASSETS",json.dumps(assets[:400],ensure_ascii=False))
-
-# Traverse JSON and surface only compact objects likely defining event config/content.
-keywords=re.compile(r"treasure|pet_mission|fishing|minigame_chest|golden_berry|event_treasure|treasurehunt",re.I)
-interesting=[]
-seen_obj=set()
-
-def short(v,limit=1200):
-    try:s=json.dumps(v,ensure_ascii=False,separators=(",",":"))
-    except:s=str(v)
-    return s if len(s)<=limit else s[:limit]+"…"
-
-def walk(v,path="$",depth=0):
-    if depth>12:return
-    if isinstance(v,dict):
-        # stringify scalar fields only for relevance
-        scalar={k:val for k,val in v.items() if isinstance(val,(str,int,float,bool)) or val is None}
-        blob=short(scalar,3000)
-        keys=" ".join(map(str,v.keys()))
-        if keywords.search(keys+" "+blob):
-            sig=(path,blob[:500])
-            if sig not in seen_obj:
-                seen_obj.add(sig)
-                interesting.append({"path":path,"keys":list(v.keys())[:40],"value":short(v,2200)})
-        for k,val in v.items():
-            walk(val,path+"."+str(k),depth+1)
-    elif isinstance(v,list):
-        for i,val in enumerate(v[:1000]):
-            walk(val,path+f"[{i}]",depth+1)
-
-for r in rows:
-    pj=r.get("payload_json") or ""
-    if not pj: continue
-    try: obj=json.loads(pj)
-    except: continue
-    walk(obj,f"capture[{r['id']}]:{r['path']}")
-
-print("INTERESTING_COUNT",len(interesting))
-print("INTERESTING",json.dumps(interesting[:250],ensure_ascii=False))
+# Print DOM snapshots with the sections we care about, not all.
+for section in ["Достижения","Задания","Магазин","Питомцы","Поручения питомцам","Линейки наград","Карта Сокровищ"]:
+    best=[]
+    for r in rows:
+        t=str(r.get("page_text") or "")
+        if section not in t: continue
+        # prefer snapshot where section appears as active title more than once / meaningful body
+        score=len(t)
+        best.append((score,r["id"],re.sub(r"\s+"," ",t).strip()[:8000]))
+    best=sorted(best,reverse=True)[:3]
+    print("DOM_SECTION",section,json.dumps([{"id":i,"text":t} for _,i,t in best],ensure_ascii=False))
