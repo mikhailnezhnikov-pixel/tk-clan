@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.58",
-  "target_version": "1.17.59",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.59.war-hp-ui.candidate.user.js",
-  "primary_marker": "war-hp-ui-20260923-r1",
+  "source_version": "1.17.59",
+  "target_version": "1.17.60",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.60.war-unknown-score.candidate.user.js",
+  "primary_marker": "war-unknown-score-20260923-r1",
   "preserve_markers": [
+    "war-hp-ui-20260923-r1",
     "fair-bonus-threshold-state-20260923-r1",
     "fair-tiered-combo-20260923-r1",
     "treasure-guide-priority-trader-lots-20260923-r1",
@@ -34,6 +35,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-59-war-hp-ui-live-status.txt",
-  "commit_message": "ui: deploy War HP display in userscript 1.17.59"
+  "audit_status_path": "audit/hk-userscript-1-17-60-war-unknown-score-live-status.txt",
+  "commit_message": "fix: deploy War unknown score display in userscript 1.17.60"
 }
