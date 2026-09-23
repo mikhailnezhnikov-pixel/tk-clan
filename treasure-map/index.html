@@ -81,6 +81,19 @@
     @media(max-width:980px){.achievement-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.economy-grid,.shop-grid,.trader-offers{grid-template-columns:repeat(2,minmax(0,1fr))}.mechanics-hub,.skill-groups,.reward-lines{grid-template-columns:1fr}}
     @media(max-width:760px){.quests,.loot-grid,.facts{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.quest{grid-template-columns:68px minmax(0,1fr)}.quest-media{width:68px;height:68px}.loot-items{grid-template-columns:repeat(2,minmax(0,1fr))}.section-head{align-items:flex-start;flex-direction:column}}
     @media(max-width:520px){.grid,.economy-grid,.shop-grid,.trader-offers,.value-grid,.room-grid,.travel-steps,.travel-room-list,.bundle-grid{grid-template-columns:1fr}.equipment-levels{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.achievement,.achievement-series-card{padding:10px}.resource{min-width:98px}}
+  
+    .start-here{margin:0 0 42px;padding:18px;border:1px solid rgba(232,182,84,.28);border-radius:20px;background:linear-gradient(145deg,rgba(232,182,84,.09),rgba(16,20,27,.96))}
+    .start-here-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}.start-here-head h2{margin:0;font-size:24px}.start-here-head p{margin:6px 0 0;color:#b7c0cb;font-size:12px;line-height:1.5}
+    .start-badge{padding:6px 9px;border:1px solid rgba(232,182,84,.35);border-radius:999px;color:var(--gold2);font-size:10px;font-weight:900;white-space:nowrap}
+    .start-route{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.start-step{position:relative;min-height:128px;padding:13px 11px 11px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.025)}.start-step-num{width:28px;height:28px;display:grid;place-items:center;margin-bottom:9px;border-radius:50%;background:var(--gold2);color:#211604;font-size:11px;font-weight:950}.start-step b{display:block;margin-bottom:5px;font-size:11px}.start-step span{display:block;color:#9ea8b4;font-size:9px;line-height:1.45}
+    .quick-links{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}.quick-links a{padding:7px 9px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.03);color:#d8dde4;font-size:9px;font-weight:850;text-decoration:none}.quick-links a:hover{border-color:rgba(232,182,84,.38);color:var(--gold2)}
+    .room-cheatsheet{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:42px}.room-do{padding:12px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-width:0}.room-do-top{display:flex;align-items:center;gap:8px}.room-do-top img{width:44px;height:44px;object-fit:contain;flex:0 0 44px}.room-do h3{margin:0;font-size:11px;line-height:1.25}.room-do-cost{margin-top:3px;color:var(--gold2);font-size:9px;font-weight:900}.room-do p{margin:8px 0 0;color:#aab3bf;font-size:9px;line-height:1.45}
+    .solver-inline{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px;padding:10px 11px;border:1px solid rgba(232,182,84,.25);border-radius:12px;background:rgba(232,182,84,.055)}.solver-inline strong{display:block;font-size:10px}.solver-inline span{display:block;margin-top:2px;color:#9ea8b4;font-size:9px}.solver-button{border:1px solid rgba(232,182,84,.45);border-radius:10px;padding:8px 10px;background:rgba(232,182,84,.12);color:var(--gold2);font:900 9px/1 inherit;cursor:pointer;white-space:nowrap}
+    .solver-modal{display:none;position:fixed;inset:0;z-index:80;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.76);backdrop-filter:blur(8px)}.solver-modal.is-open{display:flex}.solver-dialog{width:min(620px,100%);max-height:90vh;overflow:auto;padding:22px;border:1px solid rgba(232,182,84,.32);border-radius:20px;background:#10141b;box-shadow:0 26px 90px rgba(0,0,0,.58)}.solver-dialog h2{margin:0 42px 8px 0;font-size:21px}.solver-dialog>p{color:#b7c0cb;font-size:11px;line-height:1.5}.solver-close{float:right;width:36px;height:36px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.04);color:#fff;font-size:20px;cursor:pointer}.solver-steps{display:grid;gap:8px;margin:15px 0}.solver-step{display:grid;grid-template-columns:30px 1fr;gap:9px;padding:10px;border-radius:12px;background:rgba(255,255,255,.03);color:#bfc7d1;font-size:10px;line-height:1.45}.solver-step b{color:#fff}.solver-step i{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:var(--gold2);color:#211604;font-style:normal;font-weight:950}.solver-actions{display:flex;flex-wrap:wrap;gap:8px}.solver-install{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:10px 13px;border-radius:11px;background:var(--gold2);color:#211604;font-size:10px;font-weight:950;text-decoration:none}.solver-cancel{min-height:40px;padding:10px 13px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:transparent;color:#fff;font:850 10px/1 inherit;cursor:pointer}
+
+  
+    @media(max-width:980px){.start-route{grid-template-columns:repeat(3,minmax(0,1fr))}.room-cheatsheet{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:520px){.start-here-head{flex-direction:column}.start-route,.room-cheatsheet{grid-template-columns:1fr}.solver-inline{align-items:flex-start;flex-direction:column}.solver-button{width:100%}}
   </style>
 </head>
 <body>
@@ -91,6 +104,24 @@
     <h1>Карта Сокровищ</h1>
     <p>Квесты, покупки, сундуки, питомцы, достижения и механики события — в компактном виде с игровыми иконками и понятными наградами.</p>
   </section>
+
+
+  <section class="start-here" id="start">
+    <div class="start-here-head"><div><h2>С чего начать</h2><p>Короткий маршрут для первого захода. Сначала подготовьте Провизию и Карту сокровищ, затем проходите комнаты по их типу и закончите путешествие в Сокровищнице.</p></div><span class="start-badge">первый заход</span></div>
+    <div class="start-route">
+      <article class="start-step"><span class="start-step-num">1</span><b>Проверьте ежедневные квесты</b><span>Ежедневно доступны Карты сокровищ и задания готовки на Провизию.</span></article>
+      <article class="start-step"><span class="start-step-num">2</span><b>Запустите карту</b><span>На новое путешествие используется 1 Карта сокровищ.</span></article>
+      <article class="start-step"><span class="start-step-num">3</span><b>Смотрите стоимость комнаты</b><span>Перед входом видно, сколько Провизии потребует выбранная точка маршрута.</span></article>
+      <article class="start-step"><span class="start-step-num">4</span><b>Пройдите механику комнаты</b><span>Лес/Шахта — поиск; Рыбалка — забросы; Сражение — бой; Лабиринт — лампочки.</span></article>
+      <article class="start-step"><span class="start-step-num">5</span><b>Дойдите до Сокровищницы</b><span>Вход в Сокровищницу завершает текущую Карту сокровищ.</span></article>
+    </div>
+    <nav class="quick-links" aria-label="Быстрый переход по гайду">
+      <a href="#room-cheatsheet">Что делать в комнатах</a><a href="#event-mechanics">Механики</a><a href="#quests">Квесты</a><a href="#pets">Питомцы</a><a href="#trader-variants">Торговец</a><a href="#shop">Магазин</a>
+    </nav>
+  </section>
+
+  <div class="section-head" id="room-cheatsheet"><div><h2>Что делать в каждой комнате</h2><p>Короткая памятка до входа: стоимость и основное действие. Подробности — ниже в блоке механик.</p></div></div>
+  <section class="room-cheatsheet" id="room-cheatsheet-grid"></section>
 
   <div class="section-head"><div><h2>Как проходит путешествие</h2><p>От запуска Карты сокровищ до завершения маршрута через Сокровищницу.</p></div></div>
   <section class="travel-flow" id="travel-flow"></section>
@@ -154,6 +185,22 @@
   <div class="section-head"><div><h2>Линейки наград</h2><p>Бесплатная и две премиум-линии. Ниже — только подтверждённые уровни и фактические награды.</p></div></div>
   <section id="reward-tracks"></section>
 </main>
+
+<div class="solver-modal" id="solverInstallModal" aria-hidden="true">
+  <div class="solver-dialog" role="dialog" aria-modal="true" aria-labelledby="solverInstallTitle">
+    <button class="solver-close" type="button" data-solver-close aria-label="Закрыть">×</button>
+    <h2 id="solverInstallTitle">HK Puzzle Solver</h2>
+    <p>Отдельный помощник для Лабиринта и Сражения. Он не делает клики за игрока: только ставит номера 1 → 2 → 3… поверх нужных клеток или целей.</p>
+    <div class="solver-steps">
+      <div class="solver-step"><i>1</i><div><b>Установите Tampermonkey.</b><br>Если расширение уже есть — переходите дальше.</div></div>
+      <div class="solver-step"><i>2</i><div><b>Откройте установку скрипта.</b><br>Нажмите кнопку ниже и подтвердите установку HK Puzzle Solver.</div></div>
+      <div class="solver-step"><i>3</i><div><b>Обновите Hamster King.</b><br>В Лабиринте или Сражении номера появятся автоматически после загрузки поля.</div></div>
+      <div class="solver-step"><i>4</i><div><b>Нажимайте сами по порядку.</b><br>№1 → №2 → №3 и далее.</div></div>
+    </div>
+    <div class="solver-actions"><a class="solver-install" href="../scripts/hk-puzzle-solver.user.js">Продолжить установку</a><button class="solver-cancel" type="button" data-solver-close>Закрыть</button></div>
+  </div>
+</div>
+
 <footer><div class="shell">Top King · неофициальный гайд для игроков Hamster King</div></footer>
 <script>
 (async()=>{
@@ -182,6 +229,16 @@
     const treasuryChoices=Array.isArray(data.treasury_choices_verified)?data.treasury_choices_verified:[];
     const rewardTracks=data.reward_tracks||{};
     const navigationItems=data.navigation_items||{};
+    const roomActions={
+      forest:'Исследуйте комнату и заберите выпавшие дорожные ресурсы.',
+      mine:'Исследуйте комнату и заберите выпавшие дорожные ресурсы.',
+      fishing:'Расходуйте забросы на клетки воды; число под клеткой показывает стоимость забросов.',
+      trader:'Смотрите товар и цену на карточке предложения и выбирайте нужный обмен.',
+      chests:'Раскопайте точки, затем открывайте найденные сундуки Провизией или подходящими ключами.',
+      fight:'Выбирайте порядок противников. Для расчёта последовательности можно включить отдельный HK Puzzle Solver.',
+      lights:'Нужно привести поле 3×3 к состоянию, где включены все лампы. HK Puzzle Solver может показать порядок нажатий.',
+      treasury:'Выберите один из трёх путей. Каждый подтверждённый путь стоит 5 Провизии.'
+    };
     const travelFlow=data.travel_flow||{};
     const travelParameters=data.travel_parameters||{};
     const strategyNotes=Array.isArray(data.strategy_notes)?data.strategy_notes:[];
@@ -209,6 +266,20 @@
         (img?'<img src="'+safe(img)+'" alt="">':'<span class="resource-fallback">'+safe(String(name||'?').slice(0,1).toUpperCase())+'</span>')+
         '<span class="resource-copy"><span class="resource-name">'+safe(name||id||'Ресурс')+'</span><span class="resource-qty">×'+safe(qty??'—')+'</span></span></span>';
     };
+
+
+    if(document.getElementById('room-cheatsheet-grid')){
+      const rooms=Array.isArray(travelFlow.room_types)?travelFlow.room_types:[];
+      const roomById=new Map(mapRooms.map(v=>[v.id,v]));
+      document.getElementById('room-cheatsheet-grid').innerHTML=rooms.map(v=>{
+        const info=roomById.get(v.id)||{};
+        const cost=info?.entry_cost?.quantity;
+        return '<article class="room-do"><div class="room-do-top">'+
+          (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+          '<div><h3>'+safe(v.title)+'</h3><div class="room-do-cost">'+(cost?('Вход: '+safe(cost)+' Провизии'):'Стоимость смотрите на карточке')+'</div></div></div>'+
+          '<p>'+safe(roomActions[v.id]||v.role||'')+'</p></article>';
+      }).join('');
+    }
 
     if(document.getElementById('travel-flow')){
       const steps=Array.isArray(travelFlow.steps)?travelFlow.steps:[];
