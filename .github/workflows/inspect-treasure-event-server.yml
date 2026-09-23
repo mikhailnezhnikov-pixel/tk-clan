@@ -7,7 +7,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: inspect-treasure-event-server
+  cancel-in-progress: false
 
 jobs:
   inspect:
@@ -15,6 +19,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Prepare SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
@@ -23,11 +30,39 @@ jobs:
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
+
       - name: Inspect server
         run: |
           set -euo pipefail
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new deploy/topking/inspect_treasure_event_server.py root@89.125.1.71:/tmp/inspect_treasure_event_server.py
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/inspect_treasure_event_server.py'
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            deploy/topking/inspect_treasure_event_server.py \
+            root@89.125.1.71:/tmp/inspect_treasure_event_server.py
+
+          {
+            printf 'TREASURE_EVENT_INSPECT_SNAPSHOT=1\n'
+            printf 'captured_at_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+              root@89.125.1.71 'python3 /tmp/inspect_treasure_event_server.py'
+          } | tee /tmp/treasure-event-inspect-latest.txt
+
+          test -s /tmp/treasure-event-inspect-latest.txt
+
+      - name: Persist inspection snapshot
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          mkdir -p audit
+          cp /tmp/treasure-event-inspect-latest.txt audit/treasure-event-inspect-latest.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/treasure-event-inspect-latest.txt
+
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist Treasure event inspection snapshot"
+            git push origin HEAD:main
+          fi
+
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking"
+        run: rm -f "$HOME/.ssh/topking" /tmp/treasure-event-inspect-latest.txt
