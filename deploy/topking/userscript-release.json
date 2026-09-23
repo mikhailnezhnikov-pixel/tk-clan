@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.46",
-  "target_version": "1.17.47",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.47.shop-active-view.candidate.user.js",
-  "primary_marker": "shop-active-view-canon-20260923-r1",
+  "source_version": "1.17.47",
+  "target_version": "1.17.48",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.48.shop-today-dedup.candidate.user.js",
+  "primary_marker": "shop-today-dedup-20260923-r1",
   "preserve_markers": [
+    "shop-active-view-canon-20260923-r1",
     "shop-purchase-plan-canon-20260923-r1",
     "generals-kokkaras-live-display-20260923-r2",
     "treasure-guide-pet-skill-selective-20260923-r3",
@@ -23,6 +24,6 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-47-shop-active-view-live-status.txt",
-  "commit_message": "fix: deploy Shop active-view canon in userscript 1.17.47"
+  "audit_status_path": "audit/hk-userscript-1-17-48-shop-today-dedup-live-status.txt",
+  "commit_message": "fix: deploy Shop Today dedup in userscript 1.17.48"
 }
