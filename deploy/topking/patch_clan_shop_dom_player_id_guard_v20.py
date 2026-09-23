@@ -47,7 +47,7 @@ new2='''            source_path=str(raw.get("source_path") or "").strip()[:240]
 '''
 if old2 in s:
     s=s.replace(old2,new2,1)
-elif "if source_path.startswith("dom:"):" not in s:
+elif 'if source_path.startswith("dom:"):' not in s:
     raise SystemExit("submit identity block missing")
 
 insert_at=s.find("def ensure_clan_shop_purchase_event_schema()")
