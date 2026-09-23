@@ -4,77 +4,49 @@ spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("SELECT id,path,payload_json,page_text FROM treasure_guide_captures ORDER BY id")]
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,page_text
+                                        FROM treasure_guide_captures ORDER BY id""")]
 
-# full shop catalog
-shop_row=next((r for r in rows if r["path"]=="/shop/view" and r["payload_json"]),None)
-lots=[]
-raw=str(shop_row["payload_json"] or "") if shop_row else ""
-start=raw.find('"shop_lots":[')
-if start>=0:
-    i=raw.find('[',start)+1
-    while i<len(raw):
-        while i<len(raw) and raw[i] in " \r\n\t,": i+=1
-        if i>=len(raw) or raw[i]!='{': break
-        st=i;depth=0;ins=False;esc=False;j=i
-        while j<len(raw):
-            ch=raw[j]
-            if ins:
-                if esc: esc=False
-                elif ch=='\\': esc=True
-                elif ch=='"': ins=False
-            else:
-                if ch=='"': ins=True
-                elif ch=='{': depth+=1
-                elif ch=='}':
-                    depth-=1
-                    if depth==0:
-                        try: lots.append(json.loads(raw[st:j+1]))
-                        except: pass
-                        i=j+1;break
-            j+=1
-        else: break
-byid={str(o.get("id") or ""):o for o in lots}
-
-observed={"trader":set(),"chests":set()}
+# Search all quest payloads/selective rows for cooking/treasure quest objects.
+terms=["cooking","treasure","event_minigame","quest"]
+matches=[]
 for r in rows:
-    try: obj=json.loads(r.get("payload_json") or "")
-    except: continue
-    fairs=obj.get("fair") if isinstance(obj,dict) else None
-    if not isinstance(fairs,list): continue
-    for fair in fairs:
-        if not isinstance(fair,dict): continue
-        fid=str(fair.get("id") or "")
-        target="trader" if fid=="fair_mini_game_trader" else ("chests" if fid=="fair_mini_game_chests" else None)
-        if not target: continue
-        for s in fair.get("fair_slots") or []:
-            if isinstance(s,dict) and s.get("shop_lot_id"):
-                lot=str(s["shop_lot_id"])
-                if lot not in ("mf_fairlot_empty","mf_fair_pet_skill_locked_by_bonus"):
-                    observed[target].add(lot)
+    if not str(r["path"]).startswith("/quests"):
+        continue
+    raw=str(r.get("payload_json") or "")
+    if not raw: continue
+    try:
+        obj=json.loads(raw)
+    except:
+        continue
+    def walk(v,path="$",depth=0):
+        if depth>16 or len(matches)>300: return
+        if isinstance(v,dict):
+            try: blob=json.dumps(v,ensure_ascii=False,separators=(",",":"))
+            except: blob=""
+            low=blob.lower()
+            if len(blob)<=12000 and ("cooking" in low or "treasure" in low or "minigame" in low):
+                matches.append({"capture":r["id"],"capture_path":r["path"],"json_path":path,"obj":v})
+                return
+            for k,val in v.items():
+                if isinstance(val,(dict,list)): walk(val,path+"."+str(k),depth+1)
+        elif isinstance(v,list):
+            for i,val in enumerate(v[:3000]):
+                if isinstance(val,(dict,list)): walk(val,path+f"[{i}]",depth+1)
+    walk(obj)
 
-for group in ("trader","chests"):
-    out=[]
-    for oid in sorted(observed[group]):
-        o=byid.get(oid)
-        if o:
-            lv=o.get("lot_view") or {}
-            out.append({"id":oid,"cost":o.get("cost"),"content":lv.get("content_view"),"name":lv.get("name"),"desc":lv.get("desc"),"icon":lv.get("icon_card")})
-        else:
-            out.append({"id":oid,"missing_definition":True})
-    print(group.upper()+"_DEFS",json.dumps(out,ensure_ascii=False))
+print("QUEST_OBJECTS",json.dumps(matches,ensure_ascii=False)[:120000])
 
-# compact quest modal text only
-q=[]
+# Trader DOM modals with exact visible names and prices.
+mods=[]
 seen=set()
 for r in rows:
     text=re.sub(r"\s+"," ",str(r.get("page_text") or "")).strip()
-    if not text: continue
-    if not ("Ежедневная готовка" in text or "Карты на каждый день" in text or "Коллекция" in text): continue
-    # keep modal tail if possible
+    if "Тайный Торговец" not in text: continue
+    if "СОДЕРЖИТ" not in text and "Понятно" not in text: continue
     pos=text.rfind(" HK ")
-    tail=text[pos+4:] if pos>=0 else text
-    tail=tail[:2600]
+    tail=(text[pos+4:] if pos>=0 else text)[:3000]
     if tail in seen: continue
-    seen.add(tail); q.append({"id":r["id"],"text":tail})
-print("QUEST_DETAILS",json.dumps(q,ensure_ascii=False))
+    seen.add(tail)
+    mods.append({"id":r["id"],"text":tail})
+print("TRADER_MODALS",json.dumps(mods,ensure_ascii=False))
