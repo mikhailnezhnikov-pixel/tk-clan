@@ -1,2 +1,2 @@
-inspect=treasure-pet-rank-economics
-stamp=2026-09-23T13:05+09:00
+inspect=treasure-pet-property-modals
+stamp=2026-09-23T13:10+09:00
