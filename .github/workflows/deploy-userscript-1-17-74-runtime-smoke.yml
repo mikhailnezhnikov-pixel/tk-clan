@@ -1,0 +1,194 @@
+name: Deploy Userscript 1.17.74 Runtime Smoke Observability
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/userscript-1-17-74-runtime-smoke-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact live 1.17.73
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.user.js
+
+          node --check /tmp/live.user.js
+          grep -Fq "// @version      1.17.73" /tmp/live.user.js
+          grep -Fq "stage7-combat-confirm-20260923-r1" /tmp/live.user.js
+          grep -Fq "rat-hunt-combat-20260923-r1" /tmp/live.user.js
+          grep -Fq "war-combat-20260923-r1" /tmp/live.user.js
+          grep -Fq "neighborhood-battles-20260923-r1" /tmp/live.user.js
+          grep -Fq "treasure-guide-priority-bundles-20260923-r1" /tmp/live.user.js
+
+          cmp -s /tmp/live.user.js baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum /tmp/live.user.js | awk '{print $1}' > /tmp/source.sha
+          cp /tmp/live.user.js /tmp/HamsterKingMobile.user.js
+
+      - name: Patch observability candidate
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/patch_runtime_smoke_observability_1_17_74.py
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.74" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.74';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "runtime-smoke-observability-20260923-r1" /tmp/HamsterKingMobile.user.js
+
+          for marker in \
+            stage7-combat-confirm-20260923-r1 \
+            growth-fresh-preflight-20260923-r1 \
+            mutation-bridge-readonly-20260923-r1 \
+            war-combat-20260923-r1 \
+            rat-hunt-combat-20260923-r1 \
+            neighborhood-battles-20260923-r1 \
+            treasure-guide-priority-bundles-20260923-r1 \
+            treasure-guide-priority-battlepass-lines-20260923-r1 \
+            fair-final-cleanup-20260923-r1
+          do
+            grep -Fq "$marker" /tmp/HamsterKingMobile.user.js
+          done
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Race-safe deploy
+        run: |
+          set -euo pipefail
+          source_sha="$(cat /tmp/source.sha)"
+          candidate_sha="$(cat /tmp/candidate.sha)"
+
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.74.user.js
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "SOURCE_SHA='$source_sha' CANDIDATE_SHA='$candidate_sha' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          live=/opt/hamsterking-license/HamsterKingMobile.user.js
+          candidate=/tmp/HamsterKingMobile.1.17.74.user.js
+          backup=/opt/hamsterking-license/HamsterKingMobile.user.js.rollback.1.17.74
+          minconf=/etc/systemd/system/hamsterking-license.service.d/min-version.conf
+
+          test "$(sha256sum "$live" | awk '{print $1}')" = "$SOURCE_SHA"
+          test "$(sha256sum "$candidate" | awk '{print $1}')" = "$CANDIDATE_SHA"
+          node --check "$candidate"
+
+          cp -a "$live" "$backup"
+
+          rollback() {
+            set +e
+            install -m 0644 "$backup" "$live"
+            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.73\"" > "$minconf"
+            systemctl daemon-reload
+            systemctl restart hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          }
+          trap rollback ERR
+
+          install -m 0644 "$candidate" "$live"
+          printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.74\"" > "$minconf"
+          systemctl daemon-reload
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+
+          node --check "$live"
+          test "$(sha256sum "$live" | awk '{print $1}')" = "$CANDIDATE_SHA"
+          grep -Fq "// @version      1.17.74" "$live"
+          grep -Fq "runtime-smoke-observability-20260923-r1" "$live"
+
+          trap - ERR
+          REMOTE
+
+      - name: Verify public exact match
+        id: public_verify
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 5 --retry-delay 2 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?runtime-smoke=$(date +%s)" \
+            -o /tmp/public.js
+
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          test "$(sha256sum /tmp/public.js | awk '{print $1}')" = "$(cat /tmp/candidate.sha)"
+          grep -Fq "// @version      1.17.74" /tmp/public.js
+          grep -Fq "runtime-smoke-observability-20260923-r1" /tmp/public.js
+
+      - name: Roll back if public verification failed
+        if: steps.public_verify.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 bash -s <<'REMOTE'
+          set -euo pipefail
+          live=/opt/hamsterking-license/HamsterKingMobile.user.js
+          backup=/opt/hamsterking-license/HamsterKingMobile.user.js.rollback.1.17.74
+          minconf=/etc/systemd/system/hamsterking-license.service.d/min-version.conf
+          install -m 0644 "$backup" "$live"
+          printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.73\"" > "$minconf"
+          systemctl daemon-reload
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+          node --check "$live"
+          grep -Fq "// @version      1.17.73" "$live"
+          REMOTE
+          exit 1
+
+      - name: Sync baseline and audit
+        if: steps.public_verify.outcome == 'success'
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/source.sha)"
+
+          cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+          printf "%s\n" \
+            "USERSCRIPT_1_17_74_RUNTIME_SMOKE_OBSERVABILITY=PASS" \
+            "source_version=1.17.73" \
+            "target_version=1.17.74" \
+            "mode=PASSIVE_DIAGNOSTICS_ONLY" \
+            "new_game_requests=NONE" \
+            "rat_hunt=INSTRUMENTED" \
+            "war=INSTRUMENTED" \
+            "neighborhoods=INSTRUMENTED" \
+            "public_exact_match=PASS" \
+            > audit/hk-userscript-1-17-74-runtime-smoke-observability-status.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-74-runtime-smoke-observability-status.txt
+
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: deploy runtime smoke observability in userscript 1.17.74"
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$HOME/.ssh/topking" /tmp/live.user.js /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/source.sha /tmp/candidate.sha
