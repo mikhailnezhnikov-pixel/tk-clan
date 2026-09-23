@@ -1,2 +1,2 @@
-inspect=treasure-recent-dom-b2
-stamp=2026-09-23T14:24+09:00
+inspect=treasure-fresh-b2-captures
+stamp=2026-09-23T14:30+09:00
