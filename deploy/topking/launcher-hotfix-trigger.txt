@@ -1,3 +1,0 @@
-deploy=2026-09-20T10:05:00+09:00
-scope=launcher-visible-and-self-heal
-base=1.17.4
