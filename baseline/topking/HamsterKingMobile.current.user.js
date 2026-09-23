@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.50
+// @version      1.17.51
+// @release-note Ярмарка: убран второй дублирующий preflight перед запуском. Каталог и состояние игрока теперь обновляются один раз перед стартом вместо двух.
 // @release-note Клановый магазин: на общих лотах отображаются отдельные счётчики «Клан: куплено/лимит» и «Вы: куплено/лимит», без изменения логики покупки.
 // @release-note Магазин: быстрые последовательные /shop/buy снова не ждут глобальные 2,5 с между покупками; защита 429, cooldown, mutation-gate и запрет ретраев необратимых покупок сохранены.
 // @release-note Магазин: из ручной вкладки убраны Регулярный магазин и Личные лоты клана, потому что они обслуживаются во вкладке «Сегодня». В ручном магазине остаются Обычный магазин и Общие лоты клана.
@@ -58,7 +59,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.50';
+  const BUILD_VERSION = '1.17.51';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -66,6 +67,7 @@
   const HK_SHOP_TODAY_DEDUP_REV = 'shop-today-dedup-20260923-r1';
   const HK_SHOP_BUY_FAST_PATH_REV = 'shop-buy-fast-path-20260923-r1';
   const HK_SHOP_SHARED_LIMITS_UI_REV = 'shop-shared-limits-ui-20260923-r1';
+  const HK_FAIR_SINGLE_PREFLIGHT_REV = 'fair-single-preflight-20260923-r1';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -7702,21 +7704,6 @@
       const rule = selectedFairSlotRules.get(lotId); return !(rule?.regular || rule?.vip);
     })) {
       alert(tr('noCells')); return;
-    }
-    try {
-      playerDocument = await apiJson('/player/me', 'POST');
-      fairDocument = playerDocument;
-      shopViewDocument = await apiJson('/shop/view', 'GET');
-      fairCatalog = normalizeFairCatalog(shopViewDocument);
-      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
-      if (missingSelected.length) {
-        renderFair();
-        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
-        return;
-      }
-    } catch (error) {
-      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
-      return;
     }
     try {
       playerDocument = await apiJson('/player/me', 'POST');
