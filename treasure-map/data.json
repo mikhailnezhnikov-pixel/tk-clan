@@ -2633,119 +2633,119 @@
       "title": "Любитель покушать",
       "effect": "Если в комнате получена Провизия для путешествий, её количество увеличивается на 4.",
       "value": "+4 провизии",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_more_food_r4_icon.png"
     },
     {
       "rank": "S+",
       "title": "Охотник за сокровищами",
       "effect": "В Сражении появляется шанс встретить уникального врага — Хранителя Сокровищ.",
       "value": "Хороший шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
     },
     {
       "rank": "S+",
       "title": "Любитель блестяшек",
       "effect": "Если в комнате получены Монеты сокровищ, их количество увеличивается на 4.",
       "value": "+4 монеты",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_more_money_r4_icon.png"
     },
     {
       "rank": "S+",
       "title": "Боевая кладка",
       "effect": "Вместо врага может появиться обычное яйцо Молекота или Рыбы с равными шансами. Взрыв превращает неполученное яйцо в случайное тёмное яйцо того же вида, усилитель — в светлое. Забрать яйцо стоит 1 Провизию.",
       "value": "Хороший шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fight_egg_spawn_r4_icon.png"
     },
     {
       "rank": "S+",
       "title": "Ключник",
       "effect": "Повышает шанс найти Обычные и Необычные ключи во время Рыбалки.",
       "value": "+Хороший шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_keys_r4_icon.png"
     },
     {
       "rank": "S+",
       "title": "Картограф",
       "effect": "Даёт шанс зарисовать дорогу к только что пройденному событию. Специальная Карта сокровищ затем переносит прямо в соответствующую комнату.",
       "value": "Хороший шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_map_generator_r4_icon.png"
     },
     {
       "rank": "S+",
       "title": "Карты на прилавке",
       "effect": "Торговцы начинают предлагать дополнительные лоты со специальными Картами сокровищ.",
       "value": "Хороший шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_maps_r4_icon.png"
     },
     {
       "rank": "S+",
       "title": "Рыбацкое чутьё",
       "effect": "Повышает шанс найти карту на Рыбалку в Ураганных водах.",
       "value": "1% → 5%",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fishing_map_finder_r4_icon.png"
     },
     {
       "rank": "S+",
       "title": "Любимчик торговцев",
       "effect": "Увеличивает репутацию за покупку товаров у торговцев.",
       "value": "10 → 14 (+4)",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_rep_r4_icon.png"
     },
     {
       "rank": "S",
       "title": "Чутьё на сундуки",
       "effect": "Повышает шанс найти дополнительный сундук, включая Таинственный, во время раскопок.",
       "value": "Эффект подтверждён",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_chest_finder_r4_icon.png"
     },
     {
       "rank": "S",
       "title": "Карты на прилавке",
       "effect": "Торговцы получают шанс предложить дополнительные лоты с Картами сокровищ.",
       "value": "Средний шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_maps_r4_icon.png"
     },
     {
       "rank": "S",
       "title": "Ключник",
       "effect": "Повышает шанс найти Обычные и Необычные ключи во время Рыбалки.",
       "value": "+Средний шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_keys_r4_icon.png"
     },
     {
       "rank": "A",
       "title": "Картограф",
       "effect": "Даёт шанс зарисовать дорогу к только что пройденному событию.",
       "value": "Малый шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_map_generator_r4_icon.png"
     },
     {
       "rank": "A",
       "title": "Карты на прилавке",
       "effect": "Торговцы получают шанс предложить дополнительные лоты с Картами сокровищ.",
       "value": "Малый шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_maps_r4_icon.png"
     },
     {
       "rank": "A",
       "title": "Ключник",
       "effect": "Повышает шанс найти Обычные и Необычные ключи во время Рыбалки.",
       "value": "+Малый шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_keys_r4_icon.png"
     },
     {
       "rank": "B",
       "title": "Картограф",
       "effect": "Даёт шанс зарисовать дорогу к только что пройденному событию.",
       "value": "Очень малый шанс",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_map_generator_r4_icon.png"
     },
     {
       "rank": "B",
       "title": "Рыбацкое чутьё",
       "effect": "Повышает шанс найти карту на Рыбалку в Ураганных водах.",
       "value": "1% → 2%",
-      "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_fishing_g_icon.png"
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fishing_map_finder_r4_icon.png"
     }
   ],
   "trader_variants": [
@@ -2766,7 +2766,7 @@
         },
         {
           "title": "Золото за провизию",
-          "image": null,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
           "note": "несколько размеров обмена"
         },
         {
@@ -2803,7 +2803,7 @@
         },
         {
           "title": "Золото за Монеты сокровищ",
-          "image": null,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
           "note": "несколько размеров обмена"
         },
         {
@@ -2860,7 +2860,7 @@
         },
         {
           "title": "Золото за Монеты сокровищ",
-          "image": null,
+          "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png",
           "note": "отдельный обмен"
         }
       ]
@@ -5927,8 +5927,8 @@
       },
       {
         "title": "Проклятая вода",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png",
-        "text": "Подтверждённое состояние воды в механике Рыбалки."
+        "image": null,
+        "text": "Подтверждённое состояние воды. Отдельная точная иконка этого состояния в текущем захвате ассетов не подтверждена, поэтому общий значок Рыбалки здесь не подставляется."
       },
       {
         "title": "Штормовая проклятая",
