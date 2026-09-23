@@ -6,6 +6,7 @@ on:
       - 'wars/**'
       - 'assets/war/battle/**'
       - 'assets/war/units/**'
+      - 'assets/war/arena-courtyard-*.webp'
       - '.github/workflows/verify-war-battle-v2.yml'
 permissions:
   contents: read
@@ -32,5 +33,11 @@ jobs:
                   image.load()
                   assert image.size == (2880,1920), (path,image.size)
                   assert image.mode == 'RGBA', (path,image.mode)
+                  print('DECODE_OK', path, image.size)
+          for name,size in [('desktop',(1672,941)),('mobile',(1024,1536))]:
+              path='assets/war/arena-courtyard-'+name+'-v1.webp'
+              with Image.open(path) as image:
+                  image.load()
+                  assert image.size == size, (path,image.size)
                   print('DECODE_OK', path, image.size)
           PY
