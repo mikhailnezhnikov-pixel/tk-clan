@@ -1,9 +1,0 @@
-USERSCRIPT_1_17_20_EXPLORE_SPEED_R1=PASS
-version=1.17.20
-core=core-20260921-r22-explore-speed-tune
-action_delay_default_ms=700..2000
-battle_delay_default_ms=700
-e3_single_building=PASS
-e4_enabled=NO
-buildings_native_sync=PASS
-maps_safe5=PASS

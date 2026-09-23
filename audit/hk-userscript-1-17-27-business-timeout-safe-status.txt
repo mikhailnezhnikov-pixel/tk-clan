@@ -1,9 +1,0 @@
-USERSCRIPT_1_17_27_BUSINESS_TIMEOUT_SAFE=PASS
-version=1.17.27
-base=1.17.26
-business_timeout_ms=60000
-blind_remove_retry=REMOVED
-game_logic_skip=PASS
-uncertain_auto_rollback=DISABLED
-business_runner_canon=PRESERVED
-clan_shop_1_17_25=PRESERVED

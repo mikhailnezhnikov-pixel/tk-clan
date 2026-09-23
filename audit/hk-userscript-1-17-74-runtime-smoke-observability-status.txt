@@ -1,9 +1,0 @@
-USERSCRIPT_1_17_74_RUNTIME_SMOKE_OBSERVABILITY=PASS
-source_version=1.17.73
-target_version=1.17.74
-mode=PASSIVE_DIAGNOSTICS_ONLY
-new_game_requests=NONE
-rat_hunt=INSTRUMENTED
-war=INSTRUMENTED
-neighborhoods=INSTRUMENTED
-public_exact_match=PASS

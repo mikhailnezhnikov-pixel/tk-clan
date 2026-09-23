@@ -1,6 +1,0 @@
-USERSCRIPT_1_17_24_BUSINESSES_FINALIZE_LOADER_COMPAT=PASS
-version=1.17.24
-core=core-20260921-r27-businesses-runner-canon
-finalize_marker=businesses-finalize-single-snapshot-20260921-r1
-single_snapshot_final_check=PASS
-public_loader_r24_core_r27=COMPATIBLE
