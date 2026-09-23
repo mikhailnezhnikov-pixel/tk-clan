@@ -1,2 +1,2 @@
-inspect=treasure-treasury-choice-transaction
-stamp=2026-09-23T16:03+09:00
+inspect=treasure-chest-transaction-deltas
+stamp=2026-09-23T15:58+09:00
