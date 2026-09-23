@@ -46,6 +46,7 @@
     .room-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:42px}.room-card{padding:11px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-width:0}.room-card-media{height:82px;display:grid;place-items:center;border-radius:11px;background:#0b0f14;overflow:hidden;margin-bottom:8px}.room-card-media img{width:100%;height:100%;object-fit:contain}.room-card h3{margin:0 0 8px;font-size:12px;line-height:1.25}.room-card p{margin:7px 0 0;color:#8f99a6;font-size:8px;line-height:1.4}
     .travel-flow{margin-bottom:42px}.travel-intro{max-width:860px;margin:0 0 14px;color:#b7c0cb;font-size:12px;line-height:1.55}.travel-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.travel-step{position:relative;padding:12px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-width:0}.travel-step-num{position:absolute;top:8px;left:8px;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;background:rgba(232,182,84,.14);border:1px solid rgba(232,182,84,.35);color:var(--gold2);font-size:10px;font-weight:950}.travel-step img{display:block;width:58px;height:58px;object-fit:contain;margin:6px auto 8px}.travel-step h3{margin:0 0 5px;text-align:center;font-size:11px}.travel-step p{margin:0;color:#9ea8b4;font-size:8px;line-height:1.4;text-align:center}.travel-room-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.travel-room{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid rgba(255,255,255,.06);border-radius:11px;background:rgba(255,255,255,.02);min-width:0}.travel-room img{width:40px;height:40px;object-fit:contain;flex:0 0 40px}.travel-room-title{display:block;font-size:9px;font-weight:900}.travel-room-role{display:block;margin-top:2px;color:#8f99a6;font-size:8px}.travel-note{margin-top:10px;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.025);color:#8f99a6;font-size:9px;line-height:1.45}
     .travel-params{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin:12px 0 42px}.param-card{padding:13px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,var(--panel2),var(--panel))}.param-card h3{margin:0 0 9px;font-size:14px}.param-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.param-item{display:flex;align-items:center;gap:6px;padding:7px;border-radius:9px;background:rgba(255,255,255,.025);color:#c3cad3;font-size:9px}.param-item img{width:24px;height:24px;object-fit:contain}.param-note{margin:8px 0 0;color:#8f99a6;font-size:9px;line-height:1.4}
+    .strategy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:42px}.strategy-card{padding:13px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,var(--panel2),var(--panel))}.strategy-head{display:flex;align-items:center;gap:9px}.strategy-head img{width:42px;height:42px;object-fit:contain;flex:0 0 42px}.strategy-card h3{margin:0;font-size:13px}.strategy-summary{margin:8px 0 0;color:#aeb7c3;font-size:10px;line-height:1.45}.strategy-math{display:grid;gap:4px;margin-top:9px}.strategy-line{padding:6px 7px;border-radius:8px;background:rgba(255,255,255,.025);color:#cbd2db;font-size:9px}.strategy-conclusion{margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);color:var(--gold2);font-size:10px;font-weight:850;line-height:1.4}
     .equipment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}.equipment-card{padding:14px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel))}.equipment-card h3{margin:0;font-size:16px}.equipment-card>p{margin:5px 0 10px;color:#9ea8b4;font-size:10px}.equipment-levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.equipment-level{padding:10px;border:1px solid rgba(255,255,255,.06);border-radius:12px;background:rgba(255,255,255,.02)}.equipment-level-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}.equipment-level-head img{width:50px;height:50px;object-fit:contain}.equipment-rank{color:var(--gold2);font-size:13px;font-weight:950}.equipment-note{margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.06);color:#8f99a6;font-size:9px;line-height:1.45}
     .skill-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}
     .skill-group{padding:14px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel))}
@@ -94,6 +95,9 @@
   <section class="travel-flow" id="travel-flow"></section>
 
   <section class="travel-params" id="travel-parameters"></section>
+
+  <div class="section-head"><div><h2>Что выгоднее</h2><p>Только сравнения, которые можно посчитать по подтверждённым ценам и наградам.</p></div></div>
+  <section class="strategy-grid" id="strategy-notes"></section>
 
   <div class="section-head"><div><h2>Квесты</h2><p>Что нужно отдать и что получаем — сразу на карточке.</p></div></div>
   <section class="quests" id="quests"></section>
@@ -175,6 +179,7 @@
     const navigationItems=data.navigation_items||{};
     const travelFlow=data.travel_flow||{};
     const travelParameters=data.travel_parameters||{};
+    const strategyNotes=Array.isArray(data.strategy_notes)?data.strategy_notes:[];
 
     const iconFor=(id,name='')=>{
       const raw=(String(id||'')+' '+String(name||'')).toLowerCase();
@@ -231,6 +236,17 @@
           (travelParameters.note?'<p class="param-note">'+safe(travelParameters.note)+'</p>':'')+
         '</article>'+
         '<article class="param-card"><h3>'+safe(auto.title||'Авторазведка')+'</h3><p class="param-note">'+safe(auto.text||'')+'</p></article>';
+    }
+
+    if(document.getElementById('strategy-notes')){
+      document.getElementById('strategy-notes').innerHTML=strategyNotes.map(v=>
+        '<article class="strategy-card">'+
+          '<div class="strategy-head">'+(v.icon?'<img src="'+safe(v.icon)+'" alt="">':'')+'<h3>'+safe(v.title)+'</h3></div>'+
+          '<p class="strategy-summary">'+safe(v.summary||'')+'</p>'+
+          ((Array.isArray(v.math)&&v.math.length)?'<div class="strategy-math">'+v.math.map(x=>'<div class="strategy-line">'+safe(x)+'</div>').join('')+'</div>':'')+
+          '<div class="strategy-conclusion">'+safe(v.conclusion||'')+'</div>'+
+        '</article>'
+      ).join('');
     }
 
     document.getElementById('quests').innerHTML=quests.map((q,index)=>{
