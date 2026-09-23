@@ -1,0 +1,4 @@
+userscript_update_metadata=1.17.81
+source=1.17.80
+marker=userscript-update-metadata-20260924-r1
+stamp=2026-09-24T00:26+09:00
