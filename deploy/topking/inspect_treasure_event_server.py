@@ -3,43 +3,34 @@ server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
-
 with server.db_session() as db:
     rows=[dict(r) for r in db.execute("""SELECT id,page_text,assets_json,captured_at
                                         FROM treasure_guide_captures
                                         WHERE source='dom' AND page_text LIKE '%Охота за сундуками%'
                                         ORDER BY id""")]
 
-out=[];seen=set()
+room=[];modal=[];seenr=set();seenm=set()
 for r in rows:
     text=re.sub(r"\s+"," ",str(r["page_text"] or "")).strip()
-    if "МОЖНО ОТЫСКАТЬ" not in text:continue
-    # modal tail beginning with account count immediately before title
-    pos=text.rfind("Охота за сундуками")
-    tail=text[max(0,pos-30):pos+2600]
-    if tail in seen:continue
-    seen.add(tail)
-    try:assets=json.loads(r["assets_json"] or "[]")
-    except:assets=[]
-    chest_assets=[a for a in assets if re.search(r"chest|digging|treasure_minigame_chest",str(a),re.I)]
-    out.append({"id":r["id"],"captured_at":r["captured_at"],"text":tail,"assets":chest_assets})
-print("CHEST_CARDS",json.dumps(out,ensure_ascii=False))
+    if "Правила Охота за сундуками" in text:
+        key=text[:3000]
+        if key not in seenr:
+            seenr.add(key);room.append({"id":r["id"],"captured_at":r["captured_at"],"text":text[:5000]})
+    if "СОДЕРЖИТ" in text or ("МОЖНО ОТЫСКАТЬ" in text and "Правила Охота за сундуками" in text):
+        key=text[-2600:]
+        if key not in seenm:
+            seenm.add(key);modal.append({"id":r["id"],"captured_at":r["captured_at"],"text":text[-4000:]})
+print("ROOM",json.dumps(room[-100:],ensure_ascii=False))
+print("MODALS",json.dumps(modal[-100:],ensure_ascii=False))
 
-# exact-id string occurrence in all payloads
-targets=["mf_treasurelot_chest_type_01","mf_treasurelot_chest_type_015","mf_treasurelot_chest_type_02","mf_treasurelot_chest_type_03","mf_fair_treasury_room_choose_way_2"]
-with server.db_session() as db:
-    prows=[dict(r) for r in db.execute("SELECT id,path,payload_json FROM treasure_guide_captures WHERE payload_json<>'' ORDER BY id")]
-for t in targets:
-    needle='"id":"'+t+'"'
-    hits=[]
-    for r in prows:
-        raw=str(r["payload_json"] or "")
-        start=0
-        while True:
-            pos=raw.find(needle,start)
-            if pos<0:break
-            hits.append({"id":r["id"],"path":r["path"],"snippet":raw[max(0,pos-1200):pos+6000]})
-            start=pos+len(needle)
-            if len(hits)>=20:break
-        if len(hits)>=20:break
-    print("IDOBJ",t,json.dumps(hits,ensure_ascii=False))
+# Asset deltas around key chest modal transitions.
+byid={r["id"]:r for r in rows}
+for a,b in [(424,425),(929,930),(990,991),(1017,1018),(558,559)]:
+    ra=byid.get(a); rb=byid.get(b)
+    if not rb:continue
+    try:aa=set(json.loads((ra or {}).get("assets_json") or "[]"))
+    except:aa=set()
+    try:bb=list(json.loads(rb.get("assets_json") or "[]"))
+    except:bb=[]
+    delta=[x for x in bb if x not in aa]
+    print("DELTA",a,b,json.dumps(delta,ensure_ascii=False))
