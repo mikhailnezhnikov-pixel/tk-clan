@@ -1,1 +1,0 @@
-2026-09-20 Pits reward-only r16 retry after syntax repair

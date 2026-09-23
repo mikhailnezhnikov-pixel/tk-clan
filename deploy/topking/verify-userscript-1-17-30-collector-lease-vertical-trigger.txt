@@ -1,2 +1,0 @@
-verify=1.17.30-collector-lease-vertical
-requested=2026-09-22

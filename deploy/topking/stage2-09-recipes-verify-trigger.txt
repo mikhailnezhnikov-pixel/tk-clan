@@ -1,3 +1,0 @@
-verify=stage2-09-recipes
-version=1.17.30
-requested=2026-09-22

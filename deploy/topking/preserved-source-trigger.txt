@@ -1,2 +1,0 @@
-inspect=2026-09-19T14:58:00Z
-purpose=war-rumor-boss-building-realtime
