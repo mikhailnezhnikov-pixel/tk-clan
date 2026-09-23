@@ -272,8 +272,12 @@
     .clanshop-access-badge{display:inline-flex;align-items:center;padding:3px 7px;border:1px solid rgba(117,216,156,.30);border-radius:999px;color:#a8e9bf;background:rgba(65,177,103,.08);font-size:10px;font-weight:900;white-space:nowrap}
     .clanshop-access-badge.no-access{border-color:rgba(255,255,255,.10);color:#8f98a5;background:rgba(255,255,255,.035)}
     .clanshop-player small{display:block;margin-top:2px;color:var(--muted)}
-    .clanshop-player .clanshop-inline-history{margin-top:5px;color:#aeb7c3;font-size:11px;line-height:1.35}
-    .clanshop-player .clanshop-inline-history b{display:inline;color:#ffe0a0;font-size:11px}
+    .clanshop-history-lines{display:grid;gap:7px;margin-top:8px}
+    .clanshop-history-line{display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;min-height:24px}
+    .clanshop-history-label{min-width:145px;color:#cfd6de;font-size:11px;font-weight:850;line-height:1.2}
+    .clanshop-history-label small{display:inline;margin:0 0 0 5px;color:#7f8996;font-size:10px;font-weight:700}
+    .clanshop-history-stat{display:inline-flex;align-items:baseline;gap:6px;min-width:74px;color:#9ea8b5;font-size:11px;font-weight:800;white-space:nowrap}
+    .clanshop-history-stat b{color:#ffe0a0;font-size:15px;line-height:1;font-weight:950;font-variant-numeric:tabular-nums}
     .clanshop-select{min-width:76px;padding:7px 9px;border:1px solid rgba(232,182,84,.25);border-radius:9px;background:#0b1017;color:#fff;font-weight:850;text-align:center}
     .clanshop-qty{display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.045);font-weight:850}
     .clanshop-note{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
@@ -332,6 +336,9 @@
       .clanshop-meta,.clanshop-limits{grid-template-columns:1fr}
       .clanshop-tools{align-items:stretch;flex-direction:column}
       .clanshop-tools input,.clanshop-sort{width:100%;min-width:0}
+      .clanshop-history-line{display:grid;grid-template-columns:minmax(120px,1fr) auto auto;gap:7px 12px}
+      .clanshop-history-label{min-width:0}
+      .clanshop-history-stat{min-width:62px}
       .clanshop-actions{justify-content:space-between}
       .clanshop-request-controls{grid-template-columns:1fr}
       .clanshop-requests-head{display:block}
@@ -1740,13 +1747,22 @@
       ? '<span class="clanshop-access-badge'+(row.cabinet_access?'':' no-access')+'">'+(row.cabinet_access?'ЛК':'без ЛК')+'</span>'
       : '';
     const previousLabel=previousWeek?clanShopWeekLabel(previousWeek):'предыдущая неделя';
-    const currentLabel=currentWeek?clanShopWeekLabel(currentWeek):'текущая неделя';
     return '<div class="clanshop-player">'+
       '<div class="clanshop-player-head"><strong>'+safe(row.nickname||'—')+'</strong>'+accessBadge+
       '<span class="clanshop-actual-badge'+factClass+'">Всего: <b>'+cumulative.total+'</b> '+clanShopLotWord(cumulative.total)+'</span></div>'+
-      '<small class="clanshop-inline-history"><b>Накопительно</b>: S+ <b>'+cumulative.splus_businesses+'</b> · Шары <b>'+cumulative.idol_orbs+'</b>'+
-      ' · Эта неделя ('+safe(currentLabel)+'): S+ <b>'+current.splus_businesses+'</b> · Шары <b>'+current.idol_orbs+'</b>'+
-      ' · Прошлая ('+safe(previousLabel)+'): S+ <b>'+previous.splus_businesses+'</b> · Шары <b>'+previous.idol_orbs+'</b></small></div>';
+      '<div class="clanshop-history-lines">'+
+        '<div class="clanshop-history-line">'+
+          '<span class="clanshop-history-label">Накопительно</span>'+
+          '<span class="clanshop-history-stat">S+ <b>'+cumulative.splus_businesses+'</b></span>'+
+          '<span class="clanshop-history-stat">Шары <b>'+cumulative.idol_orbs+'</b></span>'+
+        '</div>'+
+        '<div class="clanshop-history-line">'+
+          '<span class="clanshop-history-label">Прошлая неделя <small>'+safe(previousLabel)+'</small></span>'+
+          '<span class="clanshop-history-stat">S+ <b>'+previous.splus_businesses+'</b></span>'+
+          '<span class="clanshop-history-stat">Шары <b>'+previous.idol_orbs+'</b></span>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
   }
 
   function renderClanShop(){
