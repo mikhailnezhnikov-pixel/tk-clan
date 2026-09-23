@@ -32,19 +32,16 @@ if start>=0:
                         i=j+1; break
             j+=1
         else: break
-
-out=[]
+print("LOTS",len(lots))
+ids=[]
 for o in lots:
     oid=str(o.get("id") or "")
-    if re.search(r"^mf_pm_.*_r4(?:_|$)",oid,re.I):
-        out.append({
+    if "r4" in oid.lower() and ("pet" in oid.lower() or "mission" in oid.lower() or "pm_" in oid.lower()):
+        ids.append({
           "id":oid,
           "cost":o.get("cost"),
-          "content_view":(o.get("lot_view") or {}).get("content_view"),
+          "content":(o.get("lot_view") or {}).get("content_view"),
           "name":(o.get("lot_view") or {}).get("name"),
-          "desc":(o.get("lot_view") or {}).get("desc"),
-          "quantity":(o.get("lot_view") or {}).get("quantity"),
-          "ribbon_text":(o.get("lot_view") or {}).get("ribbon_text")
+          "desc":(o.get("lot_view") or {}).get("desc")
         })
-print("R4_PARSED",len(out))
-print("R4_MISSIONS",json.dumps(out,ensure_ascii=False))
+print("R4_ALL",json.dumps(ids,ensure_ascii=False))
