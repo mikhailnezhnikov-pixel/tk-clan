@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.80
+// @version      1.17.81
+// @release-note Обновление userscript: добавлены штатные update/download URL на текущий panel.js; после ручного перехода на эту версию менеджер userscript сможет проверять и загружать новые версии автоматически.
 // @release-note Smoke-test: Rat Hunt / War / Районы показывают покрытие контрольных точек старт → мутация → завершение; это индикатор полноты доказательств, а не автоматический runtime PASS.
 // @release-note Карта Сокровищ: пассивный DOM-захват теперь сохраняет структуру каждой из четырёх ограниченных карточек набора отдельно — текст, порядок узлов и игровые иконки; новых запросов к игре нет.
 // @release-note Smoke-test: каждый Rat Hunt / War / Районы автоматически начинает чистую историю своего модуля; добавлен отдельный экспорт Smoke JSON без игровых запросов.
@@ -81,13 +82,16 @@
 // @release-note Улучшена стабильность запуска скрипта после авторизации.
 // @description  Mobile panel for Pit battles, businesses, fairs, shops and community recipes.
 // @match        https://app.hamsterking.games/*
+// @updateURL    https://hk-license.89.125.1.71.sslip.io/panel.js
+// @downloadURL  https://hk-license.89.125.1.71.sslip.io/panel.js
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.80';
+  const BUILD_VERSION = '1.17.81';
+  const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';

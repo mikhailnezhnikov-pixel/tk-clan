@@ -1,0 +1,10 @@
+USERSCRIPT_1_17_81_UPDATE_METADATA=PASS
+source_version=1.17.80
+target_version=1.17.81
+mode=METADATA_ONLY
+new_game_requests=NONE
+update_url=ENABLED
+download_url=ENABLED
+runtime_smoke_coverage=PRESERVED
+treasure_bundle_card_capture=PRESERVED
+public_exact_match=PASS
