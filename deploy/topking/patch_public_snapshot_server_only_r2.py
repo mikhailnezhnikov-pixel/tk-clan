@@ -1,51 +1,63 @@
 from pathlib import Path
-p=Path("/tmp/HamsterKingMobile.user.js")
-s=p.read_text()
+import hashlib
 
-old_rev="const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-snapshot-3h-20260920-r1';"
-new_rev="const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2';"
-if new_rev in s:
-    assert s.count("collectPublicSnapshot(")==1
-    assert "setInterval(() => collectPublicSnapshot()" not in s
-    assert "HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" in s
-    assert "const HK_MAP_READ_CONCURRENCY = 5;" in s
-    p.write_text(s)
-    raise SystemExit(0)
-assert s.count(old_rev)==1, s.count(old_rev)
-s=s.replace(old_rev,new_rev,1)
+LIVE = Path("/tmp/HamsterKingMobile.user.js")
+BASELINE = Path("baseline/topking/HamsterKingMobile.current.user.js")
+CANDIDATE = Path("deploy/topking/HamsterKingMobile.1.17.44.generals-kokkaras-cost-parity.candidate.user.js")
 
-old="""  async function collectPublicSnapshot(force = false) {
-    if (publicSnapshotPromise || !licenseState.allowed || !licenseState.token || !apiHeaders.Authorization) return publicSnapshotPromise;
-    if (!force && Date.now() - lastPublicSnapshot < PUBLIC_SNAPSHOT_INTERVAL_MS) return null;
-    publicSnapshotPromise = (async () => {
-      try {
-        const [warResult, ratings] = await Promise.all([readPublicWarV4(), readPublicRatingsV4()]);
-        const payload = {ratings}; if (warResult.read) payload.war = warResult.war;
-        if (!warResult.read && !Object.keys(ratings).length) return;
-        await publicSnapshotServerJson(payload); lastPublicSnapshot = Date.now();
-      } catch (error) { console.warn('[HK] public snapshot failed', error); }
-      finally { publicSnapshotPromise = null; }
-    })();
-    return publicSnapshotPromise;
-  }
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
-"""
-new="""  async function collectPublicSnapshot(force = false) {
-    recordDiagnostic('public-snapshot-server-only',{force:!!force,revision:HK_PUBLIC_SNAPSHOT_CLIENT_REV});
-    return null;
-  }
+live = LIVE.read_bytes()
+baseline = BASELINE.read_bytes()
+candidate = CANDIDATE.read_bytes()
 
-"""
-assert s.count(old)==1, s.count(old)
-s=s.replace(old,new,1)
+if live != baseline:
+    raise SystemExit(
+        f"GENERALS_1_17_44_SOURCE_MISMATCH live={sha256(live)} baseline={sha256(baseline)}"
+    )
 
-call="    setInterval(() => collectPublicSnapshot(), PUBLIC_SNAPSHOT_INTERVAL_MS);\n"
-assert s.count(call)==1, s.count(call)
-s=s.replace(call,"",1)
+live_text = live.decode("utf-8")
+candidate_text = candidate.decode("utf-8")
 
-assert s.count("collectPublicSnapshot(")==1
-assert "Promise.all([readPublicWarV4(), readPublicRatingsV4()])" not in s[s.index("  async function collectPublicSnapshot"):s.index("  async function loadFair")]
-assert "HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'" in s
-assert "const HK_MAP_READ_CONCURRENCY = 5;" in s
+required_source = [
+    "// @version      1.17.43",
+    "const BUILD_VERSION = '1.17.43';",
+    "hamsters-kokkaras-auth-state-20260923-r3",
+    "treasure-guide-selective-extract-20260923-r2",
+    "maps-manual-scan-only-20260923-r1",
+    "public-collector-activity-lease-20260922-r1",
+]
+for marker in required_source:
+    if marker not in live_text:
+        raise SystemExit("GENERALS_1_17_44_SOURCE_MARKER_MISSING: " + marker)
 
-p.write_text(s)
+required_candidate = [
+    "// @version      1.17.44",
+    "const BUILD_VERSION = '1.17.44';",
+    "generals-kokkaras-cost-parity-20260923-r1",
+    "hamsters-kokkaras-auth-state-20260923-r3",
+    "treasure-guide-selective-extract-20260923-r2",
+    "maps-manual-scan-only-20260923-r1",
+    "public-collector-activity-lease-20260922-r1",
+    "HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2'",
+    "HK_EXPLORE_CANON_REV='explore-e3-single-20260920-r9-runner'",
+    "const HK_MAP_READ_CONCURRENCY = 5;",
+    "function growthGeneralCostSafe(cost){ return growthSafeCost(cost)&&growthPitCost(cost)>0&&growthNutCost(cost)>0; }",
+    "box.classList.toggle('generals-run',generalsRun)",
+]
+for marker in required_candidate:
+    if marker not in candidate_text:
+        raise SystemExit("GENERALS_1_17_44_CANDIDATE_MARKER_MISSING: " + marker)
+
+if candidate_text.count("submitOwnedMapAreas(true)") != 1:
+    raise SystemExit("GENERALS_1_17_44_MAPS_INVARIANT_FAILED")
+if candidate_text.count("collectPublicSnapshot(") != 1:
+    raise SystemExit("GENERALS_1_17_44_PUBLIC_SNAPSHOT_INVARIANT_FAILED")
+if "setInterval(() => collectPublicSnapshot()" in candidate_text:
+    raise SystemExit("GENERALS_1_17_44_CLIENT_COLLECTOR_REGRESSION")
+
+LIVE.write_bytes(candidate)
+print("GENERALS_1_17_44_TRANSPORT_PATCH=PASS")
+print("source_sha256=" + sha256(live))
+print("candidate_sha256=" + sha256(candidate))
