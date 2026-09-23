@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.77
+// @version      1.17.78
+// @release-note Smoke-test: каждый Rat Hunt / War / Районы автоматически начинает чистую историю своего модуля; добавлен отдельный экспорт Smoke JSON без игровых запросов.
 // @release-note Smoke-test: статус теперь отражает именно последний запуск, а отдельная кнопка очищает только smoke-историю перед новым прогоном.
 // @release-note Smoke-test: в шапке панели появился локальный статус Rat Hunt / War / Районов; сводка также попадает в Diagnostics JSON без новых запросов к игре.
 // @release-note Диагностика smoke-test: события Rat Hunt / War / Районов теперь переживают перезагрузку текущей вкладки через sessionStorage; сохраняются только обезличенные runtime-smoke события.
@@ -84,7 +85,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.77';
+  const BUILD_VERSION = '1.17.78';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -110,6 +111,7 @@
   const HK_RUNTIME_SMOKE_SESSION_REV = 'runtime-smoke-session-20260923-r1';
   const HK_RUNTIME_SMOKE_STATUS_REV = 'runtime-smoke-status-20260923-r1';
   const HK_RUNTIME_SMOKE_FRESH_RUN_REV = 'runtime-smoke-fresh-run-20260923-r1';
+  const HK_RUNTIME_SMOKE_AUTOSTART_REV = 'runtime-smoke-autostart-20260923-r1';
   function hkSmokeObjectKeys(value){
     return value&&typeof value==='object'&&!Array.isArray(value)?Object.keys(value).slice(0,24):[];
   }
@@ -326,9 +328,22 @@
     else if(type.endsWith('-complete')){state='complete';label=either('завершено','completed');}
     return {state,label,events:rows.length,lastAt:last?.at||null};
   }
+  function runtimeSmokeRewriteSession() {
+    try{
+      const rows=diagnostic.events.filter(row=>String(row?.type||'').startsWith('runtime-smoke-')).slice(-160);
+      if(rows.length)sessionStorage.setItem(HK_RUNTIME_SMOKE_SESSION_KEY,JSON.stringify(rows));
+      else sessionStorage.removeItem(HK_RUNTIME_SMOKE_SESSION_KEY);
+    }catch(_){}
+  }
+  function runtimeSmokeResetModule(prefix) {
+    const marker='runtime-smoke-'+String(prefix||'');
+    diagnostic.events=diagnostic.events.filter(row=>!String(row?.type||'').startsWith(marker));
+    runtimeSmokeRewriteSession();
+    renderRuntimeSmokeStatus();
+  }
   function runtimeSmokeReset() {
     diagnostic.events=diagnostic.events.filter(row=>!String(row?.type||'').startsWith('runtime-smoke-'));
-    try{sessionStorage.removeItem(HK_RUNTIME_SMOKE_SESSION_KEY);}catch(_){}
+    runtimeSmokeRewriteSession();
     renderRuntimeSmokeStatus();
   }
   function runtimeSmokeSummary() {
@@ -349,10 +364,12 @@
       [either('Районы','Neighborhoods'),summary.neighborhoods]
     ];
     const tone=state=>state==='complete'?'#6ee7a8':state==='error'?'#ff7b7b':state==='data'?'#ffd166':'#9aa8bc';
-    host.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"><b>'+either('Smoke-test','Smoke test')+'</b><div style="display:flex;align-items:center;gap:7px"><small style="color:#9aa8bc">'+escapeHtml(BUILD_VERSION)+'</small><button id="hk-smoke-reset" type="button" class="hk-secondary" style="padding:4px 7px;font-size:11px">'+either('Сбросить','Reset')+'</button></div></div>'+
+    host.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"><b>'+either('Smoke-test','Smoke test')+'</b><div style="display:flex;align-items:center;gap:7px"><small style="color:#9aa8bc">'+escapeHtml(BUILD_VERSION)+'</small><button id="hk-smoke-export" type="button" class="hk-secondary" style="padding:4px 7px;font-size:11px">JSON</button><button id="hk-smoke-reset" type="button" class="hk-secondary" style="padding:4px 7px;font-size:11px">'+either('Сбросить','Reset')+'</button></div></div>'+
       '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">'+rows.map(([name,row])=>
         '<div style="padding:7px 8px;border:1px solid #304057;border-radius:9px;background:#101927;min-width:0"><small style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escapeHtml(name)+'</small><b style="display:block;color:'+tone(row.state)+'">'+escapeHtml(row.label)+'</b><small style="color:#7f8da3">'+row.events+' '+either('событ.','events')+'</small></div>'
       ).join('')+'</div>';
+    const exportButton=host.querySelector('#hk-smoke-export');
+    if(exportButton)exportButton.onclick=downloadRuntimeSmokeReport;
     const reset=host.querySelector('#hk-smoke-reset');
     if(reset)reset.onclick=runtimeSmokeReset;
   }
@@ -394,6 +411,24 @@
       timezone:Intl.DateTimeFormat().resolvedOptions().timeZone || '',
       connection:connection ? {effectiveType:connection.effectiveType || '', downlink:connection.downlink ?? null, rtt:connection.rtt ?? null, saveData:!!connection.saveData} : null
     };
+  }
+  function downloadRuntimeSmokeReport() {
+    const report={
+      schema:'topking-hk-runtime-smoke-v1',
+      version:VERSION,
+      revision:HK_RUNTIME_SMOKE_AUTOSTART_REV,
+      exportedAt:new Date().toISOString(),
+      summary:runtimeSmokeSummary(),
+      runner:{...hkRunner.state},
+      events:diagnostic.events.filter(row=>String(row?.type||'').startsWith('runtime-smoke-'))
+    };
+    const blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;
+    link.download='HK_smoke_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1200);
   }
   function downloadDiagnosticReport() {
     const currentBearer = String(apiHeaders?.Authorization || '').replace(/^Bearer\s+/i,'');
@@ -7209,6 +7244,13 @@
       'Start clan war combat?\\n\\nPlan: '+warPlanLabel(plan)+'\\nThe weakest opponent by effective power will be selected before every attack.\\nCurrent candidate: '+String(weak.nickname||weak.id)
     )))return;
 
+    runtimeSmokeResetModule('war');
+    hkRuntimeSmokeRecord('war-start',{
+      steps:steps.length,
+      paymentMode:String(plan?.paymentMode||''),
+      warId:String(activeWar?.id||'').slice(0,100),
+      freePasses:pitCanonWhole(warCombat.available)
+    });
     hkRunner.start({title:either('Войны','Wars'),total:steps.length,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
     let completed=0;
     try{
@@ -7660,6 +7702,13 @@
       'Start Rat Hunt?\\n\\nPreset: '+ratHuntPresetLabel(selectedPreset)+'\\nRounds: '+steps.map(step=>'×'+pitCanonWhole(step.chunk)).join(' + ')+(switchCost?'\\nPreset switch: '+switchCost+' Clan Gold':'')+(costs.crystalCost?'\\nCrystals: '+costs.crystalCost:'')+(costs.itemCost?'\\nRefill tickets: '+costs.itemCost:'')+'\\nRestoration Paws: up to '+totalPaws
     )))return;
 
+    runtimeSmokeResetModule('rat-hunt');
+    hkRuntimeSmokeRecord('rat-hunt-start',{
+      rounds,
+      paymentMode:String(selectedPlan?.paymentMode||''),
+      presetId:String(ratHuntCombat.presetId||'').slice(0,100),
+      maxRestoration:pitCanonWhole(ratHuntCombat.maxRestoration)
+    });
     hkRunner.start({title:either('Охота на крыс','Rat Hunt'),total:rounds,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
     let completed=0;
     try{
@@ -8129,10 +8178,22 @@
       'Запустить выбранные Районы: '+enemies.length+'?\n\n'+confirmPreview+'\n\nСила тапа: '+Math.max(0,Number(neighborhoodIdler?.player_tap_power)||0).toLocaleString(locale())+'\n\nСкрипт будет собирать накопленный прогресс, переключать открытые уровни и выполнять боевые тапы.',
       'Run selected Neighborhoods: '+enemies.length+'?\n\n'+confirmPreview+'\n\nTap power: '+Math.max(0,Number(neighborhoodIdler?.player_tap_power)||0).toLocaleString(locale())+'\n\nThe script will claim accumulated progress, switch unlocked levels and perform battle taps.'
     )))return;
+    runtimeSmokeResetModule('neighborhood');
+    hkRuntimeSmokeRecord('neighborhood-start',{
+      selected:enemies.length,
+      totalLevels:total,
+      tapPower:Number(neighborhoodIdler?.player_tap_power??0)
+    });
     try{
       const liveView=await apiJson('/idler/view','GET',null,true,1);
       neighborhoodApplyIdler(liveView,'neighborhood:run-preflight');
     }catch(error){
+      hkRuntimeSmokeRecord('neighborhood-error',{
+        stage:'run-preflight',
+        name:String(error?.name||''),
+        status:Number(error?.httpStatus||0),
+        message:String(error?.message||error||'').slice(0,500)
+      });
       log(either('Не удалось повторно проверить Районы перед запуском','Could not revalidate Neighborhoods before start')+': '+(error?.message||error),'warn');
       return;
     }
