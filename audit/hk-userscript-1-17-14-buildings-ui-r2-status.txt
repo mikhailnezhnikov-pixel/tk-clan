@@ -1,7 +1,0 @@
-USERSCRIPT_1_17_14_BUILDINGS_UI_R2=PASS
-version=1.17.14
-core=core-20260921-r16-buildings-ui
-buildings_ui=buildings-ui-20260921-r2
-buildings_action_logic=UNCHANGED
-maps_safe5=PASS
-explore_e3_r9=PASS

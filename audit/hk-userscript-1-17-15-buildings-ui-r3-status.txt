@@ -1,9 +1,0 @@
-USERSCRIPT_1_17_15_BUILDINGS_UI_R3=PASS
-version=1.17.15
-core=core-20260921-r17-buildings-ui-compact
-buildings_ui=buildings-ui-20260921-r3
-active_building_list=REMOVED
-active_count=KEPT
-buildings_action_logic=UNCHANGED
-maps_safe5=PASS
-explore_e3_r9=PASS

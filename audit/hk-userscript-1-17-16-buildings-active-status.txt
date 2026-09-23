@@ -1,9 +1,0 @@
-USERSCRIPT_1_17_16_BUILDINGS_ACTIVE_SEMANTICS_R1=PASS
-version=1.17.16
-core=core-20260921-r18-buildings-active-fix
-buildings_ui=buildings-ui-20260921-r3
-active_building_list=REMOVED
-active_count=KEPT
-buildings_action_logic=UNCHANGED
-maps_safe5=PASS
-explore_e3_r9=PASS

@@ -1,8 +1,0 @@
-USERSCRIPT_1_17_76_RUNTIME_SMOKE_STATUS=PASS
-source_version=1.17.75
-target_version=1.17.76
-mode=PASSIVE_LOCAL_STATUS
-new_game_requests=NONE
-ui_status=ENABLED
-diagnostic_summary=ENABLED
-public_exact_match=PASS

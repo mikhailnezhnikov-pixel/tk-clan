@@ -1,9 +1,0 @@
-USERSCRIPT_1_17_26_BUSINESS_REARRANGE_RECOVERY=PASS
-version=1.17.26
-base=1.17.25
-timeout_reconciliation=PASS
-state_aware_rollback=PASS
-business_names_visible=PASS
-monotonic_progress=PASS
-business_runner_canon=PRESERVED
-clan_shop_1_17_25=PRESERVED

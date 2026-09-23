@@ -1,9 +1,0 @@
-USERSCRIPT_1_17_78_RUNTIME_SMOKE_AUTOSTART=PASS
-source_version=1.17.77
-target_version=1.17.78
-mode=PASSIVE_SMOKE_AUTOSTART
-new_game_requests=NONE
-module_auto_reset=ENABLED
-module_start_events=ENABLED
-smoke_json_export=ENABLED
-public_exact_match=PASS
