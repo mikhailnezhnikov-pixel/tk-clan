@@ -655,8 +655,8 @@ window.TK_PAGE_TRANSLATIONS={
 <script src="../assets/war/battle/Fighter.js?v=20260923-2"></script>
 <script src="../assets/war/battle/EffectsManager.js?v=20260923-1"></script>
 <script src="../assets/war/battle/BattleAnimator.js?v=20260923-1"></script>
-<script src="../assets/war/battle/BattleScene.js?v=20260923-1"></script>
-<script src="../assets/war/battle/battle-runtime-v4.js?v=20260923-1"></script>
+<script src="../assets/war/battle/BattleScene.js?v=20260923-3"></script>
+<script src="../assets/war/battle/battle-runtime-v4.js?v=20260923-3"></script>
 <script>
 const API='https://hk-license.89.125.1.71.sslip.io/api/v1/public/clan-war';
 let currentWar=null;
@@ -702,6 +702,7 @@ function themeFor(name){
 function opponentKind(war){
   const explicit=normalizeOpponent(war?.opponent_type||war?.enemy_type||war?.kind||'');
   if(explicit.includes('bot')||explicit.includes('boss')||explicit.includes('npc'))return 'bot';
+  if(explicit.includes('clan')||explicit.includes('human'))return 'clan';
   const name=normalizeOpponent(war?.opponent||'');
   return /(\bбот\b|\bbot\b|\bboss\b|\bnpc\b|рейд|raid|страж|guardian|robot|drone)/i.test(name)?'bot':'clan';
 }
@@ -821,6 +822,6 @@ document.addEventListener('tk-language-change',render);
 if(!new URLSearchParams(location.search).has('battlePreview')){load();setInterval(load,60000)}
 </script>
 <script src="../assets/site-nav.js?v=20260920-11"></script>
-<script src="../assets/war/battle/battle-preview.js?v=20260923-1"></script>
+<script src="../assets/war/battle/battle-preview.js?v=20260923-3"></script>
 </body>
 </html>

@@ -55,7 +55,8 @@
     sync(war){
       if(!this.ready)return;
       const type=String(war?.opponent_type||war?.enemy_type||war?.kind||'')+' '+String(war?.opponent||'');
-      const kind=/bot|boss|npc|бот|рейд|raid|страж|guardian|robot|drone/i.test(type)?'bot':'clan';
+      const explicit=String(war?.opponent_type||war?.enemy_type||war?.kind||'').toLowerCase();
+      const kind=/bot|boss|npc/i.test(explicit)?'bot':/clan|human/i.test(explicit)?'clan':/bot|boss|npc|бот|рейд|raid|страж|guardian|robot|drone/i.test(type)?'bot':'clan';
       if(kind!==this.kind){this.animator.cancel();this.kind=kind;this.enemy.setTextures(kind==='bot'?this.textureSets.bot:this.textureSets.raider)}
       this.host.dataset.opponentKind=war?kind:'none';
     }
@@ -65,7 +66,7 @@
       // Preserve an in-flight snapshot event through resize: complete its HP contact
       // exactly once and settle the pose, then let the queue continue.
       this.animator?.cancel(true);this.width=W;this.height=H;this.app.renderer.resize(W,H);
-      const mobile=W<600,h=mobile?Math.min(H*.50,W*.32):Math.min(350,H*.67),y=mobile?Math.min(H-108,H*.73):Math.min(H-104,H*.76);
+      const mobile=W<600,h=mobile?Math.min(H*.58,W*.43):Math.min(350,H*.67),y=mobile?Math.min(H-108,H*.73):Math.min(H-104,H*.76);
       this.ours.height=h;this.enemy.height=h;
       this.ours.setBase(W*(mobile?.24:.27),y);this.enemy.setBase(W*(mobile?.76:.73),y);
       this.ours.resize();this.enemy.resize();this.ours.reset();this.enemy.reset();
