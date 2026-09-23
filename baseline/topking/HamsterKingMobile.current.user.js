@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.39
+// @version      1.17.40
+// @release-note Hamsters: выровнен cost-parity с закреплённым Kokkaras donor — бюджет по-прежнему считается по Орехам, но допустимые дополнительные non-premium/non-hard компоненты стоимости больше не отбрасываются.
 // @release-note Добавлен пассивный сбор нового события «Карта Сокровищ»: скрипт сохраняет только уже загруженные игрой API-ответы, текст экрана и ссылки на ассеты для построения гайда; дополнительных запросов к игре не делает.
 // @release-note Карты: исследование районов больше не запускается автоматически при открытии вкладки или по 24-часовому таймеру; полный проход запускается только явной кнопкой «Считать карты аккаунта».
 // @release-note Growth: бюджет Хомяков восстановлен по канону Kokkaras — cur_nut (Орехи) вместо cur_cap (Крышки); сохранённый процент автоматически мигрирует capsPercent → nutsPercent.
@@ -47,7 +48,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.39';
+  const BUILD_VERSION = '1.17.40';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -908,6 +909,7 @@
   const GROWTH_GENERAL_BALL_PREFIX = 'item_hball_hgen_';
   const GROWTH_HAMSTER_BASE_MAX_LEVEL = 150;
   const HK_GROWTH_NUTS_CANON_REV = 'growth-hamster-nuts-canon-20260923-r1';
+  const HK_HAMSTERS_COST_PARITY_REV = 'hamsters-kokkaras-cost-parity-20260923-r1';
   const GROWTH_HAMSTER_BUDGET_ID = 'cur_nut';
   const GROWTH_GENERAL_BUDGET_ID = 'item_pit_token';
   const GROWTH_COPY_PRIORITY_DEFAULT = [[19,20],[18,20],[4,5],[11,12],[1,2],[7,8],[3,5],[17,20],[10,12],[2,5],[9,12],[6,8]];
@@ -12024,7 +12026,7 @@
   function growthPitCost(cost){ return costParts(cost).filter(row=>row.kind==='items'&&row.id===GROWTH_GENERAL_BUDGET_ID).reduce((sum,row)=>sum+Math.max(0,row.quantity),0); }
   function growthSafeCost(cost){ return costParts(cost).every(row=>row.id&&row.quantity>0&&!['cur_prem','cur_hard'].includes(row.id)); }
   function growthCostOnlyUses(cost,allowed){const ids=new Set((allowed||[]).map(String)),parts=costParts(cost).filter(row=>row.id&&row.quantity>0);return parts.length>0&&parts.every(row=>ids.has(String(row.id)));}
-  function growthHamsterCostSafe(cost){ return growthSafeCost(cost)&&growthCostOnlyUses(cost,[GROWTH_HAMSTER_BUDGET_ID]); }
+  function growthHamsterCostSafe(cost){ const parts=costParts(cost).filter(row=>row.id&&row.quantity>0); return parts.length>0&&growthSafeCost(cost); }
   function growthHamsterLevelCostSafe(cost){ return growthHamsterCostSafe(cost)&&growthNutCost(cost)>0; }
   function growthGeneralCostSafe(cost){ return growthSafeCost(cost)&&growthCostOnlyUses(cost,[GROWTH_GENERAL_BUDGET_ID])&&growthPitCost(cost)>0; }
   function growthCanAfford(cost,state=growthState||hkStateStore.snapshot||playerDocument){ return growthSafeCost(cost)&&costParts(cost).every(row=>growthResource(row.id,state)>=row.quantity); }

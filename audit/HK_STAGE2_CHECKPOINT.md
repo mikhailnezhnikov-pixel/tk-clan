@@ -17,10 +17,10 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.39
+- userscript: 1.17.40
 - current module: Hamsters / Хомяки — Stage 2.12 verification
 - current module file: audit/hk-stage2-12-hamsters.md
-- current module status: SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · CANDIDATE_1_17_40_STATIC_CI_PASS · LIVE_DEPLOY_PENDING
+- current module status: SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING
 - Maps / Карты: W1–W8 shared knowledge COMPLETE; Unified Maps Runtime U1 PASS
 - Buildings / Здания: LIVE PASS
 - Explore E4 multi-building: LIVE PASS
@@ -1897,7 +1897,7 @@ Current behavior:
 
 ## Stage 2.12 Hamsters candidate
 
-- current live userscript remains **1.17.39**;
+- current live userscript: **1.17.40**;
 - candidate: **1.17.40**;
 - marker: `hamsters-kokkaras-cost-parity-20260923-r1`;
 - source preflight against pinned Kokkaras donor: PASS;
@@ -1907,5 +1907,5 @@ Current behavior:
 - premium/hard safety block: preserved;
 - static CI run `35812191033`: PASS;
 - destructive/gameplay CI mutations: NONE;
-- production deploy: PENDING;
+- production deploy: PASS;
 - user browser/live check: PENDING.

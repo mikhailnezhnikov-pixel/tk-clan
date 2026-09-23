@@ -2,7 +2,7 @@
 
 ## Status
 
-**SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · CANDIDATE_1_17_40_READY · STATIC_CI_PASS · LIVE_DEPLOY_PENDING**
+**SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · STATIC_CI_PASS · USER_BROWSER_CHECK_PENDING**
 
 ## Pinned donor
 
@@ -62,7 +62,7 @@ Built from exact live-synced baseline 1.17.39 and preserves:
 
 - destructive game mutations from CI: **NONE**;
 - gameplay requests from validation CI: **NONE**;
-- production deploy: **PENDING**;
+- production deploy: **PASS**;
 - baseline must remain 1.17.39 until a race-safe 1.17.40 deploy succeeds;
 - user browser/live gate: **PENDING**.
 
