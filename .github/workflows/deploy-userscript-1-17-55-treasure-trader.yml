@@ -1,0 +1,103 @@
+name: Deploy Userscript 1.17.55 Treasure Trader Priority
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/userscript-1-17-55-treasure-trader-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Fetch exact live
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.user.js
+          node --check /tmp/live.user.js
+          grep -Fq "// @version      1.17.54" /tmp/live.user.js
+          grep -Fq "treasure-guide-priority-lots-20260923-r1" /tmp/live.user.js
+          sha256sum /tmp/live.user.js | awk '{print $1}' > /tmp/source.sha
+          cp /tmp/live.user.js /tmp/HamsterKingMobile.user.js
+
+      - name: Patch candidate
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/patch_treasure_priority_trader_1_17_55.py
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.55" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-guide-priority-trader-lots-20260923-r1" /tmp/HamsterKingMobile.user.js
+
+      - name: Race-safe deploy
+        run: |
+          set -euo pipefail
+          source_sha="$(cat /tmp/source.sha)"
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.55.user.js
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "SOURCE_SHA='$source_sha' bash -s" <<'REMOTE'
+          set -euo pipefail
+          test "$(sha256sum /opt/hamsterking-license/HamsterKingMobile.user.js | awk '{print $1}')" = "$SOURCE_SHA"
+          node --check /tmp/HamsterKingMobile.1.17.55.user.js
+          stamp="$(date +%Y%m%d-%H%M%S)"
+          cp -a /opt/hamsterking-license/HamsterKingMobile.user.js "/opt/hamsterking-license/HamsterKingMobile.user.js.bak.1.17.55.$stamp"
+          install -m 0644 /tmp/HamsterKingMobile.1.17.55.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
+          printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.55\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+          systemctl daemon-reload
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+          REMOTE
+
+      - name: Verify public exact match
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?treasure-trader=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
+          grep -Fq "// @version      1.17.55" /tmp/public.js
+          grep -Fq "treasure-guide-priority-trader-lots-20260923-r1" /tmp/public.js
+          echo "PUBLIC_1_17_55_TREASURE_TRADER=PASS"
+
+      - name: Sync baseline and audit
+        run: |
+          set -euo pipefail
+          cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
+          printf "%s\n" \
+            "USERSCRIPT_1_17_55_TREASURE_TRADER=PASS" \
+            "version=1.17.55" \
+            "base=1.17.54" \
+            "mode=PASSIVE_ONLY" \
+            "new_game_requests=NONE" \
+            "priority_lots=TREASURE_TRADER" \
+            > audit/hk-userscript-1-17-55-treasure-trader-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "4189824+github-actions[bot]@users.noreply.github.com"
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-55-treasure-trader-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: prioritize Treasure trader lot capture in userscript 1.17.55"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.user.js /tmp/HamsterKingMobile.user.js /tmp/public.js /tmp/source.sha
