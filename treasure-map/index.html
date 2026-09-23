@@ -35,6 +35,19 @@
     .mini-card{padding:15px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel));min-height:100%}
     .mini-card>img{width:58px;height:58px;object-fit:contain;display:block;margin-bottom:10px}.mini-card h3{margin:0 0 7px;font-size:16px}.mini-card p{margin:0;color:#b9c1cb;font-size:12px;line-height:1.5}
     .tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.tag{padding:6px 8px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.025);color:#cfd5dc;font-size:10px}
+    .mechanics-hub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}
+    .mechanic-card{display:grid;grid-template-columns:76px minmax(0,1fr);gap:14px;padding:15px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,var(--panel2),var(--panel))}
+    .mechanic-icon{width:76px;height:76px;display:grid;place-items:center;border-radius:15px;background:#0b0f14;border:1px solid var(--line);overflow:hidden}.mechanic-icon img{width:100%;height:100%;object-fit:contain;padding:7px}
+    .mechanic-card h3{margin:0 0 6px;font-size:17px}.mechanic-summary{margin:0;color:#c4cbd4;font-size:12px;line-height:1.5}
+    .mechanic-facts{display:grid;gap:5px;margin-top:10px}.mechanic-fact{position:relative;padding-left:13px;color:#aeb7c3;font-size:10px;line-height:1.45}.mechanic-fact:before{content:'•';position:absolute;left:0;color:var(--gold)}
+    .mechanic-seq{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.mechanic-step{width:29px;height:29px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(232,182,84,.45);background:rgba(232,182,84,.10);color:var(--gold2);font-size:11px;font-weight:950}
+    .mechanic-hint{grid-column:1/-1;margin-top:2px;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.025);color:#8f99a6;font-size:10px;line-height:1.45}
+    .skill-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}
+    .skill-group{padding:14px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,var(--panel2),var(--panel))}
+    .skill-head{display:flex;align-items:center;gap:11px;margin-bottom:10px}.skill-head img{width:54px;height:54px;object-fit:contain;flex:0 0 54px}.skill-head h3{margin:0;font-size:16px}
+    .skill-grade-list{display:grid;gap:7px}.skill-grade{display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px;padding:8px;border:1px solid rgba(255,255,255,.06);border-radius:11px;background:rgba(255,255,255,.02)}
+    .skill-rank{display:grid;place-items:center;min-height:30px;border-radius:9px;background:rgba(232,182,84,.10);color:var(--gold2);font-size:11px;font-weight:950}
+    .skill-copy{min-width:0}.skill-value{color:var(--gold2);font-size:11px;font-weight:900}.skill-effect{margin-top:2px;color:#aeb7c3;font-size:10px;line-height:1.4}
 
     .facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:42px}.fact{padding:14px 15px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}.fact>b{color:var(--gold2);font-size:14px}.fact p{margin:7px 0 0;color:#b9c1cb;line-height:1.5;font-size:12px}
     .economy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:42px}.economy-card{padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}.economy-card h3{margin:0 0 10px;font-size:14px}
@@ -57,7 +70,7 @@
     .empty{padding:28px;border:1px dashed rgba(232,182,84,.28);border-radius:18px;text-align:center;color:var(--muted);background:rgba(232,182,84,.035)}
     footer{padding:28px 0 40px;border-top:1px solid var(--line);color:#7f8996;font-size:12px}
 
-    @media(max-width:980px){.achievement-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.economy-grid,.shop-grid,.trader-offers{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:980px){.achievement-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.economy-grid,.shop-grid,.trader-offers{grid-template-columns:repeat(2,minmax(0,1fr))}.mechanics-hub,.skill-groups{grid-template-columns:1fr}}
     @media(max-width:760px){.quests,.loot-grid,.facts{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.quest{grid-template-columns:68px minmax(0,1fr)}.quest-media{width:68px;height:68px}.loot-items{grid-template-columns:repeat(2,minmax(0,1fr))}.section-head{align-items:flex-start;flex-direction:column}}
     @media(max-width:520px){.grid,.economy-grid,.shop-grid,.trader-offers,.value-grid{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.achievement,.achievement-series-card{padding:10px}.resource{min-width:98px}}
   </style>
@@ -74,17 +87,14 @@
   <div class="section-head"><div><h2>Квесты</h2><p>Что нужно отдать и что получаем — сразу на карточке.</p></div></div>
   <section class="quests" id="quests"></section>
 
-  <div class="section-head"><div><h2>Что встречается на карте</h2><p>Основные точки и мини-игры события.</p></div></div>
-  <section class="grid" id="mechanics"></section>
-
-  <div class="section-head"><div><h2>Как устроены мини-игры</h2><p>Коротко о правилах каждого типа точки.</p></div></div>
-  <section class="grid" id="minigame-details"></section>
+  <div class="section-head"><div><h2>Механики события</h2><p>Как работают основные комнаты и мини-игры: что тратится, что означают клетки и как читать поле.</p></div></div>
+  <section class="mechanics-hub" id="event-mechanics"></section>
 
   <div class="section-head"><div><h2>Питомцы и поручения</h2><p>Расходы, отдача и особые эффекты питомцев.</p></div></div>
   <section class="facts" id="pets"></section>
 
-  <div class="section-head"><div><h2>Навыки питомцев</h2><p>Подтверждённые эффекты по редкости питомца.</p></div></div>
-  <section class="grid" id="pet-skills"></section>
+  <div class="section-head"><div><h2>Навыки питомцев</h2><p>Один навык — одна карточка. Разные грейды и их эффекты собраны внутри.</p></div></div>
+  <section class="skill-groups" id="pet-skills"></section>
 
   <div class="section-head"><div><h2>Полезные стоимости</h2><p>Расходы и обмены, которые важно видеть до выбора.</p></div></div>
   <section class="economy-grid" id="verified-economy"></section>
@@ -123,14 +133,13 @@
     const safe=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const icons=data.icon_catalog||{};
     const quests=Array.isArray(data.quests)?data.quests:[];
-    const mechanics=Array.isArray(data.mechanics)?data.mechanics:[];
+    const eventMechanics=Array.isArray(data.event_mechanics)?data.event_mechanics:[];
     const shop=Array.isArray(data.shop)?data.shop:[];
     const examples=Array.isArray(data.achievement_examples)?data.achievement_examples:[];
-    const minigameDetails=Array.isArray(data.minigame_details)?data.minigame_details:[];
+    const petSkillGroups=Array.isArray(data.pet_skill_groups)?data.pet_skill_groups:[];
     const achievementSeries=Array.isArray(data.achievement_series)?data.achievement_series:[];
     const verifiedEconomy=data.verified_economy||{};
     const verifiedChests=Array.isArray(data.verified_chests)?data.verified_chests:[];
-    const petSkills=Array.isArray(data.pet_skills_confirmed)?data.pet_skills_confirmed:[];
     const traderVariants=Array.isArray(data.trader_variants)?data.trader_variants:[];
     const traderExact=Array.isArray(data.trader_exact_offers)?data.trader_exact_offers:[];
     const traderValue=Array.isArray(data.trader_value_notes)?data.trader_value_notes:[];
@@ -174,12 +183,16 @@
         (q.condition?'<p class="quest-condition">'+safe(q.condition)+'</p>':'')+reqHtml+rewardHtml+'</div>'+recommendation+'</article>';
     }).join('')||'<div class="empty">Квесты будут добавляться по мере заполнения гайда.</div>';
 
-    document.getElementById('mechanics').innerHTML=mechanics.map(m=>'<article class="mini-card">'+
-      (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+'<h3>'+safe(m.title)+'</h3><p>'+safe(m.note||'')+'</p></article>').join('');
-
-    document.getElementById('minigame-details').innerHTML=minigameDetails.map(m=>'<article class="mini-card">'+
-      (m.image?'<img src="'+safe(m.image)+'" alt="">':'')+'<h3>'+safe(m.title)+'</h3>'+
-      '<div class="tag-list">'+(Array.isArray(m.facts)?m.facts:[]).map(v=>'<span class="tag">'+safe(v)+'</span>').join('')+'</div></article>').join('');
+    document.getElementById('event-mechanics').innerHTML=eventMechanics.map(m=>
+      '<article class="mechanic-card">'+
+        '<div class="mechanic-icon">'+(m.image?'<img src="'+safe(m.image)+'" alt="">':'')+'</div>'+
+        '<div><h3>'+safe(m.title)+'</h3><p class="mechanic-summary">'+safe(m.summary||'')+'</p>'+
+          '<div class="mechanic-facts">'+(Array.isArray(m.facts)?m.facts:[]).map(v=>'<div class="mechanic-fact">'+safe(v)+'</div>').join('')+'</div>'+
+          (Array.isArray(m.sequence)&&m.sequence.length?'<div class="mechanic-seq">'+m.sequence.map(v=>'<span class="mechanic-step">'+safe(v)+'</span>').join('')+'</div>':'')+
+        '</div>'+
+        (m.hint?'<div class="mechanic-hint">'+safe(m.hint)+'</div>':'')+
+      '</article>'
+    ).join('');
 
     const petFacts=[];
     if(data?.pets?.overview)petFacts.push('<div class="fact"><b>Питомцы</b><p>'+safe(data.pets.overview)+'</p></div>');
@@ -193,12 +206,23 @@
     }
     document.getElementById('pets').innerHTML=petFacts.join('');
 
-    document.getElementById('pet-skills').innerHTML=petSkills.map(v=>'<article class="mini-card">'+
-      (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
-      '<div class="quest-top"><h3>'+safe(v.title)+'</h3><span class="badge">'+safe(v.rank)+'</span></div>'+
-      '<p>'+safe(v.effect)+'</p>'+
-      (v.value?'<div class="tag-list"><span class="tag">'+safe(v.value)+'</span></div>':'')+
-      '</article>').join('');
+    document.getElementById('pet-skills').innerHTML=petSkillGroups.map(v=>
+      '<article class="skill-group">'+
+        '<div class="skill-head">'+
+          (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
+          '<h3>'+safe(v.title)+'</h3>'+
+        '</div>'+
+        '<div class="skill-grade-list">'+(Array.isArray(v.grades)?v.grades:[]).map(g=>
+          '<div class="skill-grade">'+
+            '<div class="skill-rank">'+safe(g.rank)+'</div>'+
+            '<div class="skill-copy">'+
+              (g.value?'<div class="skill-value">'+safe(g.value)+'</div>':'')+
+              '<div class="skill-effect">'+safe(g.effect||'')+'</div>'+
+            '</div>'+
+          '</div>'
+        ).join('')+'</div>'+
+      '</article>'
+    ).join('');
 
     const economy=[];
     if(verifiedEconomy.event_map){
