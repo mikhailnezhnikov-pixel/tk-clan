@@ -1,3 +1,3 @@
-inspect=runtime-smoke-db-path
-stamp=2026-09-24T01:10+09:00
-snapshot=17
+inspect=runtime-smoke-adoption
+stamp=2026-09-24T01:24+09:00
+snapshot=18
