@@ -1,0 +1,8 @@
+USERSCRIPT_1_17_79_TREASURE_BUNDLE_CARD_CAPTURE=PASS
+source_version=1.17.78
+target_version=1.17.79
+mode=PASSIVE_DOM_ONLY
+new_game_requests=NONE
+bundle_card_payload=ENABLED
+runtime_smoke_autostart=PRESERVED
+public_exact_match=PASS
