@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.62
+// @version      1.17.63
+// @release-note Ярмарка: «Всего покупок» уточнено как цель основных покупок. В режиме 3/6/9 цель автоматически приводится к целым тройкам без округления вверх, а бонусные нижние ячейки считаются отдельно и доступны только когда достижимы текущей целью.
 // @release-note Карта Сокровищ: определения трёх линеек наград приоритетно сохраняются из уже загруженных данных события без дополнительных запросов к игре.
 // @release-note Ярмарка: числовой лимит прокруток убран. Поиск теперь крутит ярмарку, пока хватает фактической валюты прокрутки с учётом разрешённых алмазов и бюджетных ограничений.
 // @release-note Войны: если активная война отдаёт HP, но не отдаёт счёт, интерфейс больше не подставляет фиктивные 0:0 — неизвестные очки показываются как «—».
@@ -69,7 +70,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.62';
+  const BUILD_VERSION = '1.17.63';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -82,6 +83,7 @@
   const HK_FAIR_TIERED_COMBO_REV = 'fair-tiered-combo-20260923-r1';
   const HK_FAIR_BONUS_THRESHOLD_STATE_REV = 'fair-bonus-threshold-state-20260923-r1';
   const HK_FAIR_BALANCE_REROLLS_REV = 'fair-balance-rerolls-20260923-r1';
+  const HK_FAIR_PURCHASE_TARGET_REV = 'fair-purchase-target-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
   function hkRuntimeVersionTuple(value) {
@@ -359,7 +361,7 @@
       savedSets:'Сохранённые наборы', saveNew:'Сохранить новый', delete:'Удалить', removeAll:'Достать: T1–T3',
       emptySlots:'Пустые слоты', removeTier:'Достать: T{n}', selectAll:'Выбрать все', insertAll:'Вставить: все тиры',
       insertTier:'Вставить: T{n}', loadFair:'Обновить ярмарку', chooseFair:'Выберите ярмарку', readFirst:'Сначала считайте данные',
-      searchLot:'Поиск лота', choosePurchases:'Выберите покупки', selectedLots:'Выбрано лотов: {n}', totalPurchases:'Всего покупок',
+      searchLot:'Поиск лота', choosePurchases:'Выберите покупки', selectedLots:'Выбрано лотов: {n}', totalPurchases:'Цель основных покупок',
       maxRerolls:'Макс. прокруток', allowDiamonds:'Разрешить алмазы на прокрутки и покупки', findBuy:'Найти и выкупить',
       fairWarning:'Лоты за кристаллы отмечены 💎. Перед запуском показывается максимальный расход.', version:'Версия {v}',
       connectedSlots:'Подключено · слотов {n}', chooseBuildingSlots:'Выбрать слоты в зданиях', insertFromStock:'Вставить со склада',
@@ -398,7 +400,7 @@
       removeAll:'Remove: T1–T3', emptySlots:'Empty slots', removeTier:'Remove: T{n}', selectAll:'Select all',
       insertAll:'Insert: all tiers', insertTier:'Insert: T{n}', loadFair:'Refresh fair', chooseFair:'Choose a fair',
       readFirst:'Read the data first', searchLot:'Search lots', choosePurchases:'Choose purchases', selectedLots:'Selected lots: {n}',
-      totalPurchases:'Total purchases', maxRerolls:'Max rerolls', allowDiamonds:'Allow diamonds for rerolls and purchases',
+      totalPurchases:'Main-purchase target', maxRerolls:'Max rerolls', allowDiamonds:'Allow diamonds for rerolls and purchases',
       findBuy:'Find and buy', fairWarning:'Crystal lots are marked 💎. The maximum cost is shown before starting.',
       version:'Version {v}', connectedSlots:'Connected · slots {n}', chooseBuildingSlots:'Choose building slots', insertFromStock:'Insert from stock',
       emptySlot:'Empty slot', influence:'Influence {n}', inStock:'In stock {n}', noBusinesses:'No businesses of this tier',
@@ -7581,12 +7583,36 @@
     return either(`Прокрутки недоступны${plan.problems.length ? ': ' + plan.problems.join('; ') : ''}`, `Rerolls unavailable${plan.problems.length ? ': ' + plan.problems.join('; ') : ''}`);
   }
 
+  function fairBuyTargetValue(rawValue = root?.querySelector('#hk-fair-buy-limit')?.value, exactLots = fairComboSettings().exactLots) {
+    const raw = Math.min(999, Math.max(1, Math.trunc(Number(rawValue || 1))));
+    if (!exactLots) return raw;
+    return Math.min(999, Math.max(3, Math.floor(raw / 3) * 3));
+  }
+
+  function syncFairBuyTarget(normalize = false) {
+    const input = root?.querySelector('#hk-fair-buy-limit');
+    const exactLots = fairComboSettings().exactLots;
+    const target = fairBuyTargetValue(input?.value, exactLots);
+    if (input) {
+      input.min = exactLots ? '3' : '1';
+      input.step = exactLots ? '3' : '1';
+      if (normalize) input.value = String(target);
+    }
+    const hint = root?.querySelector('#hk-fair-buy-limit-hint');
+    if (hint) hint.textContent = exactLots
+      ? either(`Основные покупки: ${target}. В режиме 3/6/9 цель идёт целыми тройками; бонусные нижние ячейки в это число не входят.`,
+          `Main purchases: ${target}. In 3/6/9 mode the target uses complete groups of three; lower bonus cells are counted separately.`)
+      : either(`Основные покупки: ${target}. Бонусные нижние ячейки считаются отдельно.`,
+          `Main purchases: ${target}. Lower bonus cells are counted separately.`);
+    return target;
+  }
+
   function fairProjectedCosts() {
     const totals = new Map();
     const state = fairState(selectedFairId);
     const rows = fairRowsForState(state);
     const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
-    const buyLimit = Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1));
+    const buyLimit = fairBuyTargetValue(root?.querySelector('#hk-fair-buy-limit')?.value);
     const allowPremium = Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked);
     const rerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
     const relevantRows = selectedRows.length ? selectedRows : rows;
@@ -7693,6 +7719,7 @@
   }
 
   function updateFairControls() {
+    syncFairBuyTarget(false);
     const selected = root?.querySelector('#hk-fair-selected');
     if (selected) selected.innerHTML = `<b>${tr('selectedLots', {n:selectedFairLots.size})}</b>${walletForecastHtml(fairProjectedCosts())}`;
     const rerollAuto = root?.querySelector('#hk-fair-reroll-auto');
@@ -7712,15 +7739,16 @@
     };
   }
 
-  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
-    return exactLots >= 9 ? [5, 10, 30] : exactLots >= 6 ? [5, 10] : exactLots >= 3 ? [5] : [];
+  function availableFairBonusLots(exactLots = fairComboSettings().exactLots, buyLimit = fairBuyTargetValue(root?.querySelector('#hk-fair-buy-limit')?.value, exactLots)) {
+    const reachable = Math.min(9, Math.max(0, exactLots), Math.max(0, buyLimit));
+    return reachable >= 9 ? [5, 10, 30] : reachable >= 6 ? [5, 10] : reachable >= 3 ? [5] : [];
   }
 
   function renderFairBonusChoices() {
     const box = root?.querySelector('#hk-fair-bonus-lots'); if (!box) return;
     const available = new Set(availableFairBonusLots());
     box.innerHTML = `<span>${tr('fairBonusLots')}</span><div>${[5,10,30].map(quantity =>
-      `<label class="hk-check ${available.has(quantity) ? 'available' : 'unavailable'}"><input type="checkbox" data-fair-bonus="${quantity}" ${selectedFairBonusLots.has(quantity) ? 'checked' : ''} ${available.has(quantity) ? '' : 'disabled'}><b>×${quantity}</b></label>`).join('')}</div>`;
+      `<label class="hk-check ${available.has(quantity) ? 'available' : 'unavailable'}"><input type="checkbox" data-fair-bonus="${quantity}" ${available.has(quantity) && selectedFairBonusLots.has(quantity) ? 'checked' : ''} ${available.has(quantity) ? '' : 'disabled'}><b>×${quantity}</b></label>`).join('')}</div>`;
     box.querySelectorAll('[data-fair-bonus]').forEach(input => input.onchange = () => {
       const quantity = Number(input.dataset.fairBonus);
       if (input.checked) selectedFairBonusLots.add(quantity); else selectedFairBonusLots.delete(quantity);
@@ -7746,7 +7774,7 @@
       slotGroups:Object.fromEntries([...selectedFairSlotRules].map(([lotId, groups]) => [lotId, {regular:Boolean(groups.regular), vip:Boolean(groups.vip)}])),
       currency:selectedFairCurrency,
       exactLots:fairComboSettings().exactLots, bonusLots:[...selectedFairBonusLots],
-      buyLimit:Math.max(1, Number(root?.querySelector('#hk-fair-buy-limit')?.value || 1)),
+      buyLimit:fairBuyTargetValue(root?.querySelector('#hk-fair-buy-limit')?.value),
       premiumReroll:Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)
     };
   }
@@ -7795,7 +7823,9 @@
     selectedFairBonusLots = new Set(Array.isArray(preset.bonusLots) ? preset.bonusLots.map(Number).filter(value => [5,10,30].includes(value)) : [5,10,30]);
     renderFair();
     const exact=root?.querySelector('#hk-fair-exact-lots'); if(exact) exact.value=['0','3','6','9'].includes(String(preset.exactLots)) ? String(preset.exactLots) : '0';
+    syncFairBuyTarget(true);
     renderFairBonusChoices();
+    updateFairControls();
     refreshFairPresets(name);
     log(tr('settingLoaded', {name}), 'ok');
   }
@@ -7851,9 +7881,10 @@
       log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
       return;
     }
-    const buyLimit = Math.max(1, Number(root.querySelector('#hk-fair-buy-limit').value || 1));
+    const buyLimit = syncFairBuyTarget(true);
     const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
     const combo = fairComboSettings();
+    const allowedBonusLots = new Set(availableFairBonusLots(combo.exactLots, buyLimit));
     let state = fairState(selectedFairId);
     if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
     const initialRerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
@@ -7867,8 +7898,8 @@
       ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`)
       : '';
     if (!confirm(language === 'en'
-      ? `Start searching for selected lots?\n\nTotal purchases: ${buyLimit}\nRerolls: by available currency (now: ${initialRerollText})${crystalNotice}`
-      : `Запустить поиск выбранных лотов?\n\nВсего покупок: ${buyLimit}\nПрокрутки: по доступной валюте (сейчас: ${initialRerollText})${crystalNotice}`)) return;
+      ? `Start searching for selected lots?\n\nMain purchases: ${buyLimit}${combo.exactLots ? `\nCombination mode: up to ${combo.exactLots}; groups of three; bonuses are separate` : ''}\nRerolls: by available currency (now: ${initialRerollText})${crystalNotice}`
+      : `Запустить поиск выбранных лотов?\n\nОсновных покупок: ${buyLimit}${combo.exactLots ? `\nРежим комбинаций: до ${combo.exactLots}; покупки тройками; бонусы отдельно` : ''}\nПрокрутки: по доступной валюте (сейчас: ${initialRerollText})${crystalNotice}`)) return;
     if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
     hkRunner.start({title:either('Ярмарка','Fair'),total:buyLimit,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
     fairRunning = true; fairStop = false; updateFairControls();
@@ -7938,7 +7969,8 @@
             const collars = refreshedOptions.filter(({slot,index}) => {
               if (index < 9 || index >= 9 + openedBonusSlots || slot.is_bought) return false;
               const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
-              return selectedFairBonusLots.has(Number(row?.rewardQuantity || 0));
+              const quantity = Number(row?.rewardQuantity || 0);
+              return allowedBonusLots.has(quantity) && selectedFairBonusLots.has(quantity);
             });
             for (const {slot} of collars) {
               const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
@@ -13460,7 +13492,8 @@
           <div id="hk-fair-slot-rules" style="display:none"></div>
           <div class="hk-fair-controls"><label data-i18n="fairExactLots">${tr('fairExactLots')}</label><select id="hk-fair-exact-lots"><option value="0">${tr('no')}</option><option value="3">3</option><option value="6">6</option><option value="9">9</option></select></div>
           <div id="hk-fair-bonus-lots" class="hk-fair-bonus-lots"></div>
-          <div class="hk-fair-controls"><label data-i18n="totalPurchases">${tr('totalPurchases')}</label><input id="hk-fair-buy-limit" type="number" min="1" max="999" value="1"></div>
+          <div class="hk-fair-controls"><label data-i18n="totalPurchases">${tr('totalPurchases')}</label><input id="hk-fair-buy-limit" type="number" min="1" max="999" step="1" value="1"></div>
+          <div id="hk-fair-buy-limit-hint" class="hk-muted">${either('Бонусные нижние ячейки считаются отдельно.','Lower bonus cells are counted separately.')}</div>
           <div id="hk-fair-reroll-auto" class="hk-live">${either('Прокрутки: по доступной валюте','Rerolls: by available currency')}</div>
           <label class="hk-check"><input id="hk-fair-premium-reroll" type="checkbox"><span data-i18n="allowDiamonds">${tr('allowDiamonds')}</span></label>
           <button id="hk-fair-start" class="hk-primary" data-i18n="findBuy" disabled>${tr('findBuy')}</button><button id="hk-fair-stop" class="hk-danger" data-i18n="stop" disabled>${tr('stop')}</button>
@@ -13741,11 +13774,14 @@
     fairPresetSelect.onchange = () => loadFairPreset(fairPresetSelect.value);
     root.querySelector('#hk-fair-search').oninput = renderFair;
     const exactFairLots = root.querySelector('#hk-fair-exact-lots');
-    exactFairLots.oninput = exactFairLots.onchange = () => { renderFairBonusChoices(); updateFairControls(); };
-    root.querySelector('#hk-fair-buy-limit').oninput = updateFairControls;
+    exactFairLots.oninput = exactFairLots.onchange = () => { syncFairBuyTarget(true); renderFairBonusChoices(); updateFairControls(); };
+    const fairBuyLimit = root.querySelector('#hk-fair-buy-limit');
+    fairBuyLimit.oninput = () => { syncFairBuyTarget(false); renderFairBonusChoices(); updateFairControls(); };
+    fairBuyLimit.onchange = () => { syncFairBuyTarget(true); renderFairBonusChoices(); updateFairControls(); };
     root.querySelector('#hk-fair-premium-reroll').onchange = updateFairControls;
     root.querySelector('#hk-fair-start').onclick = runFair;
     root.querySelector('#hk-fair-stop').onclick = () => { fairStop = true; hkRunner.stop('fair'); log(either('Останавливаю ярмарку…','Stopping fair…'), 'warn'); };
+    syncFairBuyTarget(true);
     renderFairBonusChoices();
     root.querySelector('#hk-shop-load').onclick = () => refreshModuleLive('shop',{force:true});
     root.querySelector('#hk-shop-buy').onclick = buyRegularShop;
