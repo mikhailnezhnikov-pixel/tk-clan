@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.71
+target_version=1.17.72
+marker=stage7-combat-confirm-20260923-r1
+source_sha256=9231673242a228996cda70e40976e48afc6a709e60ff39bb2d924de6170e59ec
+candidate_sha256=44d0ee28e5ac795b83267a16b6449df771b29c8543bed76b29fcba9f009b036c
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

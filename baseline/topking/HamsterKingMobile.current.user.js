@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.71
+// @version      1.17.72
+// @release-note Безопасность боёв: Ямы, Боссы и Районы теперь требуют явное подтверждение перед запуском; Районы дополнительно всегда перечитывают свежий idler/view перед формированием и непосредственно перед стартом плана.
 // @release-note Безопасность Growth: Развитие / Хомяки / Генералы теперь всегда делают fresh /player/me перед необратимым запуском, требуют явное подтверждение по live-балансам и перечитывают authoritative state после завершения.
 // @release-note Безопасность: Game Bridge больше не считает read-only POST запросы мутациями и не запускает лишний refresh React; особый claim /player/building сохраняет явный mutation signal.
 // @release-note Клан: «Войны» дополнены каноническим боевым runner по закреплённому Kokkaras-донору — free-план, один premium refill, выбор слабейшего противника по эффективной силе с усталостью и alliance_war/fight.
@@ -78,7 +79,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.71';
+  const BUILD_VERSION = '1.17.72';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -99,6 +100,7 @@
   const HK_WAR_COMBAT_REV = 'war-combat-20260923-r1';
   const HK_MUTATION_BRIDGE_READONLY_REV = 'mutation-bridge-readonly-20260923-r1';
   const HK_GROWTH_FRESH_PREFLIGHT_REV = 'growth-fresh-preflight-20260923-r1';
+  const HK_STAGE7_COMBAT_CONFIRM_REV = 'stage7-combat-confirm-20260923-r1';
   const HK_NEIGHBORHOOD_BATTLES_REV = 'neighborhood-battles-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
@@ -5592,6 +5594,14 @@
     const configs=pitCanonReadRunConfigs();
     if(!configs.length){alert(either('Выберите хотя бы одну Яму','Select at least one Pit'));return;}
     const total=configs.reduce((sum,row)=>sum+row.steps.length,0),progress={done:0,total};
+    const confirmCrystals=configs.reduce((sum,row)=>sum+pitCanonWhole(row.crystalBudget),0);
+    const confirmPasses=configs.reduce((sum,row)=>sum+pitCanonWhole(row.itemPassBudget),0);
+    const confirmPaws=configs.reduce((sum,row)=>sum+(pitCanonWhole(row.maxRestoration)*(row.steps?.length||0)),0);
+    const confirmRows=configs.map((row,index)=>(index+1)+'. '+pitCanonDefinitionName(row.definition)+' · '+either('раунды','rounds')+': '+(row.steps||[]).map(step=>'×'+pitCanonWhole(step.chunk)).join(' + ')).join('\n');
+    if(!confirm(either(
+      'Запустить выбранные Ямы?\n\n'+confirmRows+'\n\nМаксимальный плановый расход: 💎 '+confirmCrystals+' · 🎟 '+confirmPasses+' · 🐾 '+confirmPaws+'\n\nПеред каждым раундом баланс и цена будут перечитаны заново.',
+      'Start selected Pits?\n\n'+confirmRows+'\n\nMaximum planned spend: 💎 '+confirmCrystals+' · 🎟 '+confirmPasses+' · 🐾 '+confirmPaws+'\n\nBalance and price will be re-read before every round.'
+    )))return;
     hkRunner.start({title:either('Ямы','Pits'),step:either('Подготовка','Preparing'),total,pausable:true,stoppable:true});
     pitCanonDecisionBudgetReset();
     pitCanonResetRuntimePreview();
@@ -6896,7 +6906,26 @@
     return result;
   }
   async function runBossesCanonical(){
-    if(!requireLicense())return;if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}const configs=bossCanonReadRunConfigs();if(!configs.length){alert(either('Выберите хотя бы одного босса','Select at least one boss'));return;}const progress={done:0,total:configs.reduce((sum,row)=>sum+Math.max(1,bossCanonWhole(row.executionTotal??row.total)),0)};hkRunner.start({title:either('Боссы','Bosses'),step:either('Подготовка','Preparing'),total:progress.total,pausable:true,stoppable:true});bossCanonDecisionReset();log(either('Боссы — запуск выбранного плана','Bosses — starting selected plan'),'info');recordDiagnostic('bosses-run-config-snapshot',{revision:HK_BOSSES_CANON_REV,configs});
+    if(!requireLicense())return;
+    if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
+    const configs=bossCanonReadRunConfigs();
+    if(!configs.length){alert(either('Выберите хотя бы одного босса','Select at least one boss'));return;}
+    const progress={done:0,total:configs.reduce((sum,row)=>sum+Math.max(1,bossCanonWhole(row.executionTotal??row.total)),0)};
+    const crystals=configs.reduce((sum,row)=>sum+bossCanonWhole(row.crystalBudget),0);
+    const items=configs.reduce((sum,row)=>sum+bossCanonWhole(row.itemPassBudget),0);
+    const paws=configs.reduce((sum,row)=>sum+(bossCanonWhole(row.maxRestoration)*Math.max(1,bossCanonWhole(row.executionTotal??row.total))),0);
+    const preview=configs.map((row,index)=>{
+      const label=row.kind==='area'
+        ? either('Босс района','Area Boss')+' · Lv '+bossCanonWhole(row.bossLevel)
+        : either('Региональный босс','Regional Boss')+' · '+String(row.bossId||'');
+      return (index+1)+'. '+label+' · '+either('план','plan')+': '+String(row.planId||'')+' · '+either('проходов','runs')+': '+Math.max(1,bossCanonWhole(row.executionTotal??row.total));
+    }).join('\n');
+    if(!confirm(either(
+      'Запустить выбранных Боссов?\n\n'+preview+'\n\nМаксимальный плановый расход: 💎 '+crystals+' · 🎟 '+items+' · 🐾 '+paws+'\n\nПеред расходом план и live-цены будут проверены повторно.',
+      'Start selected Bosses?\n\n'+preview+'\n\nMaximum planned spend: 💎 '+crystals+' · 🎟 '+items+' · 🐾 '+paws+'\n\nThe plan and live prices will be revalidated before spending.'
+    )))return;
+    hkRunner.start({title:either('Боссы','Bosses'),step:either('Подготовка','Preparing'),total:progress.total,pausable:true,stoppable:true});
+    bossCanonDecisionReset();log(either('Боссы — запуск выбранного плана','Bosses — starting selected plan'),'info');recordDiagnostic('bosses-run-config-snapshot',{revision:HK_BOSSES_CANON_REV,configs});
     try{for(const config of configs){if(config.kind==='area')await bossCanonRunArea(config,progress);else await bossCanonRunRegional(config,progress);}playerDocument=await hkAuthoritativePlayerRead('bosses:complete');await bossCanonLoadData();renderBosses();hkRunner.finish(either('Боссы завершены','Bosses completed'));log(either('Выбранные бои боссов завершены','Selected boss battles completed'),'ok');}
     catch(error){if(error?.name==='AbortError'){hkRunner.reset();log(either('Боссы остановлены пользователем','Bosses stopped by user'),'warn');}else{hkRunner.fail(error);log(`${either('Ошибка Боссов','Bosses error')}: ${error?.message||error}`,'bad');}try{await bossCanonLoadData();renderBosses();}catch(_){}}
     finally{bossCanonDecisionReset();}
@@ -7863,7 +7892,8 @@
   async function runNeighborhoodBattles() {
     if(!requireLicense())return;
     if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
-    if(!neighborhoodEnemies.length)await refreshNeighborhoodBattles(false);
+    const freshNeighborhoods=await refreshNeighborhoodBattles(false);
+    if(!Array.isArray(freshNeighborhoods)||!freshNeighborhoods.length){log(either('Свежие данные Районов недоступны','Fresh Neighborhood data is unavailable'),'warn');return;}
     const saved=neighborhoodSavedIds();
     const selected=new Set(saved===null?neighborhoodEnemies.map(row=>String(row?.building_id||'')):saved);
     const enemies=neighborhoodEnemies.filter(row=>selected.has(String(row?.building_id||'')));
@@ -7952,6 +7982,22 @@
       }
     };
 
+    const confirmPreview=enemies.map(enemy=>{
+      const id=String(enemy?.building_id||''),row=live(id),finalLevel=finals.get(id)||0;
+      const current=Math.max(0,Number(row?.level)||0),unlocked=Math.max(0,Number(row?.max_level??row?.level)||0);
+      return '• '+names.get(id)+' · '+Math.max(current,unlocked)+'/'+finalLevel;
+    }).join('\n');
+    if(!confirm(either(
+      'Запустить выбранные Районы: '+enemies.length+'?\n\n'+confirmPreview+'\n\nСила тапа: '+Math.max(0,Number(neighborhoodIdler?.player_tap_power)||0).toLocaleString(locale())+'\n\nСкрипт будет собирать накопленный прогресс, переключать открытые уровни и выполнять боевые тапы.',
+      'Run selected Neighborhoods: '+enemies.length+'?\n\n'+confirmPreview+'\n\nTap power: '+Math.max(0,Number(neighborhoodIdler?.player_tap_power)||0).toLocaleString(locale())+'\n\nThe script will claim accumulated progress, switch unlocked levels and perform battle taps.'
+    )))return;
+    try{
+      const liveView=await apiJson('/idler/view','GET',null,true,1);
+      neighborhoodApplyIdler(liveView,'neighborhood:run-preflight');
+    }catch(error){
+      log(either('Не удалось повторно проверить Районы перед запуском','Could not revalidate Neighborhoods before start')+': '+(error?.message||error),'warn');
+      return;
+    }
     hkRunner.start({title:either('Районы','Neighborhoods'),total,step:either('Синхронизация угроз','Syncing threats'),pausable:true,stoppable:true});
     try{
       progress();
