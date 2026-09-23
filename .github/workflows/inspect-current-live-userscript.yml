@@ -1,0 +1,42 @@
+name: Inspect Current Live Userscript
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-current-live-userscript.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect live
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.user.js
+          echo "LIVE_HEAD"
+          head -n 12 /tmp/live.user.js
+          echo "LIVE_SHA256"
+          sha256sum /tmp/live.user.js
+          echo "BASE_SHA256"
+          sha256sum baseline/topking/HamsterKingMobile.current.user.js
+          echo "MARKERS"
+          grep -F "shop-cap-balance-mode-20260923-r1" /tmp/live.user.js | head -n 1 || true
+          grep -F "treasure-guide-priority-lots-20260923-r1" /tmp/live.user.js | head -n 1 || true
+          grep -F "fair-exact-combo-20260923-r1" /tmp/live.user.js | head -n 1 || true
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/live.user.js
