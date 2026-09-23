@@ -1,0 +1,34 @@
+name: Validate Userscript 1.17.61 Fair Balance Rerolls
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/HamsterKingMobile.1.17.61.fair-balance-rerolls.candidate.user.js'
+      - '.github/workflows/validate-userscript-1-17-61-fair.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.61.fair-balance-rerolls.candidate.user.js
+          node --check "$candidate"
+          grep -Fq "// @version      1.17.61" "$candidate"
+          grep -Fq "const BUILD_VERSION = '1.17.61';" "$candidate"
+          grep -Fq "fair-balance-rerolls-20260923-r1" "$candidate"
+          grep -Fq "function fairRerollCapacity(" "$candidate"
+          grep -Fq "function fairRerollCapacityLabel(" "$candidate"
+          grep -Fq 'id="hk-fair-reroll-auto"' "$candidate"
+          grep -Fq "fair-tiered-combo-20260923-r1" "$candidate"
+          grep -Fq "fair-bonus-threshold-state-20260923-r1" "$candidate"
+          ! grep -Fq 'id="hk-fair-reroll-limit"' "$candidate"
+          ! grep -Fq "rerolls >= rerollLimit" "$candidate"
+          sha256sum "$candidate"
