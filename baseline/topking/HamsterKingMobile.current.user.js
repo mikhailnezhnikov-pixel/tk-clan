@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.68
+// @version      1.17.69
+// @release-note Клан: «Войны» дополнены каноническим боевым runner по закреплённому Kokkaras-донору — free-план, один premium refill, выбор слабейшего противника по эффективной силе с усталостью и alliance_war/fight.
 // @release-note Клан: «Охота на крыс» восстановлена как полноценный Rat Hunt runner по закреплённому Kokkaras-донору — пресеты, free/item/premium планы, лапы восстановления, battle/respawn/finish; месячные рейтинги сохранены отдельным блоком.
 // @release-note Бои: добавлены канонические «Районы / Neighborhood Battles» по закреплённому Kokkaras-донору: idler/view, claim, level, update и безопасные human-like tap-пакеты без принудительного /player/me во время боя.
 // @release-note Клан: добавлен отдельный экран «Охота на крыс» для трёх подтверждённых месячных рейтингов Cat / Dog / Pigeon с текущим местом/очками и отдельным сбором только крысиных рейтинговых наград.
@@ -75,7 +76,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.68';
+  const BUILD_VERSION = '1.17.69';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -93,6 +94,7 @@
   const HK_FAIR_FINAL_CLEANUP_REV = 'fair-final-cleanup-20260923-r1';
   const HK_RAT_HUNT_REV = 'rat-hunt-leaderboards-20260923-r1';
   const HK_RAT_HUNT_COMBAT_REV = 'rat-hunt-combat-20260923-r1';
+  const HK_WAR_COMBAT_REV = 'war-combat-20260923-r1';
   const HK_NEIGHBORHOOD_BATTLES_REV = 'neighborhood-battles-20260923-r1';
   const HK_SHOP_CAP_BALANCE_MODE_REV = 'shop-cap-balance-mode-20260923-r1';
   const HK_SHOP_COMPACT_CARDS_REV = 'shop-compact-cards-20260923-r1';
@@ -6556,6 +6558,9 @@
   let bossLastReadAt = 0;
   let warSnapshot = null;
   let warLastReadAt = 0;
+  const WAR_FREE_PASS_ID='cur_clan_war_attack_pass';
+  const WAR_PASS_ITEM_ID='item_clan_war_attack_pass_ticket';
+  const warCombat={loaded:false,activeBattles:null,activeWar:null,attackCost:null,opponents:[],available:0,maxPasses:0,plans:[],planId:'',lastReadAt:0};
   const RAT_HUNT_LEADERBOARDS = Object.freeze([
     {id:'beast_boss_cat_monthly_lb',ru:'Кот',en:'Cat'},
     {id:'beast_boss_dog_monthly_lb',ru:'Собака',en:'Dog'},
@@ -6580,9 +6585,15 @@
     try{return new Date(ms).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(_){return '';}
   }
 
-  async function readPublicWar() {
+  async function readPublicWar(activeBattlesHint=null) {
     let endpointRead = false;
-    for (const path of ['/clan/active_battles','/clan/active_defense_wars']) {
+    if(activeBattlesHint&&typeof activeBattlesHint==='object'){
+      endpointRead=true;
+      const war=normalizePublicWar(activeBattlesHint);
+      if(war)return {read:true,war};
+    }
+    const paths=activeBattlesHint?['/clan/active_defense_wars']:['/clan/active_battles','/clan/active_defense_wars'];
+    for (const path of paths) {
       try { const value = await apiJson(path, 'GET', null, true, 1); endpointRead = true; const war = normalizePublicWar(value); if (war) return {read:true,war}; }
       catch (_) {}
     }
@@ -6924,34 +6935,254 @@
       (hasMaximum?'<span><i style="width:'+percent+'%"></i></span>':'')+'</div>';
   }
 
+
+  function warCombatSaved() {
+    const value=load().warCombat;
+    return value&&typeof value==='object'?value:{};
+  }
+
+  function warCombatSave() {
+    save({warCombat:{planId:String(warCombat.planId||'')}});
+  }
+
+  async function warFetchActiveBattles() {
+    return apiJson('/clan/active_battles','GET',null,true,1);
+  }
+
+  async function warFetchAttackCost() {
+    return apiJson('/alliance_war/attack_cost','GET',null,true,1);
+  }
+
+  async function warFetchOpponents() {
+    const data=await apiJson('/alliance_war/get_opponents','GET',null,true,1);
+    return Array.isArray(data?.opponents)?data.opponents.filter(row=>String(row?.id||'')):[];
+  }
+
+  function warOpponentPower(row) { return Math.max(0,pitCanonWhole(row?.power)); }
+  function warOpponentFatigue(row) { return Math.max(0,Math.min(99,Number(row?.fatigue)||0)); }
+  function warOpponentEffectivePower(row) {
+    return Math.max(0,Math.round(warOpponentPower(row)*((100-warOpponentFatigue(row))/100)));
+  }
+  function warWeakestOpponent(rows) {
+    return [...(rows||[])].sort((a,b)=>{
+      const effective=warOpponentEffectivePower(a)-warOpponentEffectivePower(b);if(effective)return effective;
+      const fatigue=warOpponentFatigue(b)-warOpponentFatigue(a);if(fatigue)return fatigue;
+      const power=warOpponentPower(a)-warOpponentPower(b);if(power)return power;
+      return String(a?.id||'').localeCompare(String(b?.id||''));
+    })[0]||null;
+  }
+
+  function warCrystalRefillCost(data) {
+    const value=pitCanonCostQuantity(data?.attack_pass_buy_costs?.prem_costs,'cur_prem','currency');
+    return value===null?0:pitCanonWhole(value);
+  }
+
+  function warItemRefillCost(data) {
+    const value=pitCanonCostQuantity(data?.attack_pass_buy_costs?.item_costs,WAR_PASS_ITEM_ID,'item');
+    return value===null?0:pitCanonWhole(value);
+  }
+
+  function warBuildPlans(available,attackCost) {
+    available=pitCanonWhole(available);
+    const freeSteps=Array.from({length:available},()=>({chunk:1,payment:'FREE',cost:0}));
+    const plans=[];
+    if(available>0)plans.push({id:'free-exact',kind:'exact',total:available,freePasses:available,paidPasses:0,paymentMode:'FREE',steps:freeSteps.map(step=>({...step})),crystalCost:0,itemCost:0});
+    const crystalCost=warCrystalRefillCost(attackCost);
+    if(crystalCost>0)plans.push({id:'free-plus-prem-1',kind:'direct',total:available+1,freePasses:available,paidPasses:1,paymentMode:'PREM',steps:[...freeSteps.map(step=>({...step})),{chunk:1,payment:'PREM',cost:crystalCost}],crystalCost,itemCost:0});
+    return plans;
+  }
+
+  function warPlanLabel(plan) {
+    if(!plan)return either('Нет доступного плана','No available plan');
+    if(plan.paymentMode==='PREM'){
+      const parts=[];
+      if(pitCanonWhole(plan.freePasses)>0)parts.push(either('бесплатно','free')+' '+pitCanonWhole(plan.freePasses));
+      parts.push(either('платный','paid')+' '+pitCanonWhole(plan.paidPasses));
+      return parts.join(' + ')+' — 💎 '+pitCanonWhole(plan.crystalCost).toLocaleString(locale());
+    }
+    return either('Точно по бесплатным пропускам','Exact free passes')+' — '+pitCanonWhole(plan.total).toLocaleString(locale());
+  }
+
+  function warSelectedPlan() {
+    return warCombat.plans.find(plan=>plan.id===warCombat.planId)||null;
+  }
+
+  function warAcceptResponse(response,reason='war-combat') {
+    if(response&&typeof response==='object'){
+      try{hkStateStore.merge(response,reason);}catch(_){}
+      playerDocument=hkStateStore.snapshot||playerDocument;
+      if(response?.alliance_attack_war&&typeof response.alliance_attack_war==='object')warCombat.activeWar=response.alliance_attack_war;
+    }
+    return response;
+  }
+
+  function warWinrateSummary(response) {
+    const rates=(response?.pvp_preview?.rounds||[]).map(row=>Number(row?.winrate)).filter(Number.isFinite);
+    if(!rates.length)return '';
+    const min=Math.min(...rates),max=Math.max(...rates),avg=rates.reduce((sum,value)=>sum+value,0)/rates.length;
+    return min===max?Math.round(avg)+'%':Math.round(min)+'–'+Math.round(max)+'% · '+either('ср.','avg')+' '+avg.toFixed(1)+'%';
+  }
+
+  async function loadWarCombat(force=false) {
+    if(!requireLicense())return null;
+    playerDocument=await hkAuthoritativePlayerRead(force?'wars:refresh':'wars:load');
+    const activeBattles=await warFetchActiveBattles();
+    const activeWar=activeBattles?.alliance_attack_war&&typeof activeBattles.alliance_attack_war==='object'?activeBattles.alliance_attack_war:null;
+    let attackCost=null,opponents=[];
+    if(activeWar){
+      const result=await Promise.allSettled([warFetchAttackCost(),warFetchOpponents()]);
+      if(result[0].status==='fulfilled')attackCost=result[0].value;
+      if(result[1].status==='fulfilled')opponents=result[1].value;
+    }
+    const available=pitCanonResourceQuantity(playerDocument,WAR_FREE_PASS_ID,'currency');
+    const maxPasses=pitCanonCurrencyMax(playerDocument,WAR_FREE_PASS_ID);
+    const plans=activeWar?warBuildPlans(available,attackCost):[];
+    const saved=warCombatSaved();
+    const selected=plans.find(plan=>plan.id===String(saved?.planId||''))||plans.find(plan=>plan.paymentMode==='FREE')||plans[0]||null;
+    Object.assign(warCombat,{loaded:true,activeBattles,activeWar,attackCost,opponents,available,maxPasses,plans,planId:selected?.id||'',lastReadAt:Date.now()});
+    warCombatSave();
+    return warCombat;
+  }
+
+  function warCombatHtml() {
+    if(!warCombat.loaded)return '<section style="padding:12px;margin-top:12px;border:1px solid #304057;border-radius:12px;background:#101927"><p class="hk-muted">'+either('Загрузка боевого режима…','Loading combat mode…')+'</p></section>';
+    const war=warCombat.activeWar,plan=warSelectedPlan();
+    if(!war)return '<section style="padding:12px;margin-top:12px;border:1px solid #304057;border-radius:12px;background:#101927"><b>'+either('Боевой режим','Combat mode')+'</b><p class="hk-muted">'+either('Активной атакующей войны сейчас нет.','There is no active attack war.')+'</p></section>';
+    const weak=warWeakestOpponent(warCombat.opponents);
+    const opponentHtml=warCombat.opponents.length?warCombat.opponents.map(row=>{
+      const weakest=weak&&String(weak.id)===String(row.id);
+      return '<div style="padding:7px 8px;border:1px solid '+(weakest?'#58779f':'#27364b')+';border-radius:9px">'+
+        '<b>'+escapeHtml(String(row?.nickname||row?.id||'—'))+(weakest?' · '+either('выбран','selected'):'')+'</b>'+
+        '<small style="display:block;margin-top:3px">'+either('Сила','Power')+': '+warOpponentPower(row).toLocaleString(locale())+
+        ' · '+either('Усталость','Fatigue')+': '+warOpponentFatigue(row).toFixed(0)+'% · '+either('Эффективная','Effective')+': '+warOpponentEffectivePower(row).toLocaleString(locale())+'</small></div>';
+    }).join(''):'<p class="hk-muted">'+either('Список противников недоступен.','Opponent list unavailable.')+'</p>';
+    const plans=warCombat.plans.map(row=>'<option value="'+escapeHtml(row.id)+'" '+(row.id===warCombat.planId?'selected':'')+'>'+escapeHtml(warPlanLabel(row))+'</option>').join('');
+    const crystalCost=warCrystalRefillCost(warCombat.attackCost),itemCost=warItemRefillCost(warCombat.attackCost);
+    return '<section style="padding:12px;margin-top:12px;border:1px solid #304057;border-radius:12px;background:#101927">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px"><div><b>'+either('Боевая война','War combat')+'</b><small style="display:block;margin-top:3px">'+HK_WAR_COMBAT_REV+'</small></div>'+
+      '<span class="hk-free">'+either('АКТИВНА','ACTIVE')+'</span></div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:7px;margin:10px 0">'+
+        '<span style="padding:5px 8px;border:1px solid #304057;border-radius:9px">🎟 <b>'+warCombat.available.toLocaleString(locale())+(warCombat.maxPasses?' / '+warCombat.maxPasses.toLocaleString(locale()):'')+'</b></span>'+
+        '<span style="padding:5px 8px;border:1px solid #304057;border-radius:9px">💎 <b>'+pitCanonResourceQuantity(playerDocument,'cur_prem','currency').toLocaleString(locale())+'</b></span>'+
+        (itemCost?'<span style="padding:5px 8px;border:1px solid #304057;border-radius:9px">🎟️+ <b>'+pitCanonResourceQuantity(playerDocument,WAR_PASS_ITEM_ID,'item').toLocaleString(locale())+'</b></span>':'')+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><span><small>'+either('Оборона войны','War defense')+'</small><b style="display:block">'+pitCanonWhole(war.health).toLocaleString(locale())+' / '+pitCanonWhole(war.initial_health).toLocaleString(locale())+'</b></span>'+
+      '<span><small>'+either('Урон атаки','Attack value')+'</small><b style="display:block">'+pitCanonWhole(warCombat.attackCost?.attack_value).toLocaleString(locale())+'</b></span></div>'+
+      '<div class="hk-grid" style="margin-top:10px"><span>'+either('План пропусков','Pass plan')+'</span><select id="hk-war-plan">'+plans+'</select></div>'+
+      '<div style="margin:8px 0"><small>'+either('Дополнительный пропуск','Extra pass')+': '+(crystalCost?'💎 '+crystalCost.toLocaleString(locale()):'—')+(itemCost?' · '+either('предмет','item')+' '+itemCost.toLocaleString(locale())+' '+either('(donor не использует автоматически)','(donor does not auto-use)'):'')+'</small></div>'+
+      '<div style="display:grid;gap:6px;margin:10px 0">'+opponentHtml+'</div>'+
+      '<button id="hk-war-run" class="hk-primary" '+(plan&&weak?'':'disabled')+'>'+either('Запустить выбранный план','Run selected plan')+'</button>'+
+    '</section>';
+  }
+
+  async function runWarCombat() {
+    if(!requireLicense())return;
+    if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
+    if(!warCombat.loaded)await loadWarCombat(false);
+    const plan=warSelectedPlan(),activeWar=warCombat.activeWar,weak=warWeakestOpponent(warCombat.opponents);
+    if(!plan||!activeWar||!weak){log(either('Боевой план войны недоступен','War combat plan unavailable'),'warn');return;}
+    const steps=(plan.steps||[]).map(step=>({...step}));
+    if(!confirm(either(
+      'Запустить бой клана?\\n\\nПлан: '+warPlanLabel(plan)+'\\nСейчас будет выбран самый слабый противник по эффективной силе перед каждой атакой.\\nТекущий кандидат: '+String(weak.nickname||weak.id),
+      'Start clan war combat?\\n\\nPlan: '+warPlanLabel(plan)+'\\nThe weakest opponent by effective power will be selected before every attack.\\nCurrent candidate: '+String(weak.nickname||weak.id)
+    )))return;
+
+    hkRunner.start({title:either('Войны','Wars'),total:steps.length,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    let completed=0;
+    try{
+      playerDocument=await hkAuthoritativePlayerRead('wars:preflight');
+      const liveAvailable=pitCanonResourceQuantity(playerDocument,WAR_FREE_PASS_ID,'currency');
+      if(liveAvailable!==pitCanonWhole(warCombat.available))throw new Error(either('Баланс пропусков изменился — обновите данные','War pass balance changed — refresh data'));
+      let activeData=await warFetchActiveBattles(),war=activeData?.alliance_attack_war||null;
+      if(!war||String(war.id||'')!==String(activeWar.id||''))throw new Error(either('Активная война изменилась','Active war changed'));
+
+      for(const step of steps){
+        await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+        if(pitCanonWhole(war?.health)<=0)break;
+        let currentPasses=pitCanonResourceQuantity(playerDocument,WAR_FREE_PASS_ID,'currency');
+        if(step.payment==='PREM'&&currentPasses<=0){
+          const liveAttackCost=await warFetchAttackCost(),liveCost=warCrystalRefillCost(liveAttackCost);
+          if(liveCost<=0||liveCost!==pitCanonWhole(step.cost))throw new Error(either('Цена дополнительного пропуска изменилась','Extra pass price changed'));
+          if(pitCanonResourceQuantity(playerDocument,'cur_prem','currency')<liveCost)throw new Error(either('Недостаточно кристаллов','Not enough crystals'));
+          hkRunner.setStep(either('Покупка дополнительного пропуска','Buying extra pass')+' · 💎 '+liveCost,completed,steps.length);
+          const bought=await apiJson('/alliance_war/buy_pass','POST',{war_id:String(war.id||activeWar.id),payment_type:'PREM'},true,0);
+          warAcceptResponse(bought,'war-combat:buy-pass');
+          currentPasses=pitCanonResourceQuantity(playerDocument,WAR_FREE_PASS_ID,'currency');
+          if(currentPasses<=0)throw new Error(either('Дополнительный пропуск не появился','Extra pass was not added'));
+        }
+        if(currentPasses<=0)throw new Error(either('Нет пропусков для атаки','No attack passes available'));
+
+        const opponents=await warFetchOpponents();
+        if(opponents.length!==3)throw new Error(either('Список противников изменился — обновите данные','Opponent list changed — refresh data'));
+        const selected=warWeakestOpponent(opponents);
+        if(!selected)throw new Error(either('Не удалось выбрать противника','Could not select opponent'));
+        const beforeHealth=pitCanonWhole(war?.health);
+        hkRunner.setStep(either('Атака','Attack')+': '+String(selected.nickname||selected.id)+' · '+either('эфф. сила','effective power')+' '+warOpponentEffectivePower(selected).toLocaleString(locale()),completed,steps.length);
+        await gameRetryDelay(1000);
+        const battle=await apiJson('/alliance_war/fight','POST',{defender_id:String(selected.id)},true,0);
+        warAcceptResponse(battle,'war-combat:fight');
+        war=battle?.alliance_attack_war||warCombat.activeWar||war;
+        warCombat.activeWar=war;
+        const afterHealth=pitCanonWhole(war?.health),damage=Math.max(0,beforeHealth-afterHealth),won=battle?.battle_result?.is_win===true,winrate=warWinrateSummary(battle);
+        log((won?'✓ ':'✗ ')+String(selected.nickname||selected.id)+' · '+either('урон обороне','defense damage')+': '+damage.toLocaleString(locale())+' · '+either('оборона','defense')+': '+afterHealth.toLocaleString(locale())+' / '+pitCanonWhole(war?.initial_health).toLocaleString(locale())+(winrate?' · '+either('винрейт','winrate')+': '+winrate:''),won?'ok':'warn');
+        completed++;hkRunner.setStep(either('Атака завершена','Attack completed'),completed,steps.length);
+        if(afterHealth<=0)break;
+      }
+
+      playerDocument=await hkAuthoritativePlayerRead('wars:complete');
+      await loadWarCombat(false);
+      const publicResult=await readPublicWar(warCombat.activeBattles);
+      warSnapshot=publicResult?.war||null;warLastReadAt=Date.now();
+      renderWars();
+      hkRunner.finish(either('План войны завершён','War plan completed'));
+      log(either('План войны завершён','War plan completed'),'ok');
+    }catch(error){
+      try{
+        playerDocument=await hkAuthoritativePlayerRead('wars:error');
+        await loadWarCombat(false);
+        const publicResult=await readPublicWar(warCombat.activeBattles);
+        warSnapshot=publicResult?.war||null;warLastReadAt=Date.now();
+      }catch(_){}
+      renderWars();
+      if(error?.name==='AbortError'){hkRunner.reset();log(either('Война остановлена','War stopped'),'warn');}
+      else{hkRunner.fail(error);log(either('Ошибка Войны','War error')+': '+(error?.message||error),'bad');}
+    }
+  }
+
             function renderWars() {
     const box=root?.querySelector('#hk-war-content');
     if(!box)return;
     const war=warSnapshot;
+    let top='';
     if(!war){
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Активная война не найдена.','No active war found.')+'</p>';
+      top='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+either('Данные читаются из активных войн клана','Data is read from active clan wars')+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div><p class="hk-muted">'+either('Сводная активная война не найдена.','No aggregate active war found.')+'</p>';
     }else{
       const ourScore=war.our_score==null?'—':Number(war.our_score).toLocaleString(locale());
       const enemyScore=war.opponent_score==null?'—':Number(war.opponent_score).toLocaleString(locale());
       const ourHp=warHpHtml(war.our_hp,war.our_hp_max,'our');
       const enemyHp=warHpHtml(war.opponent_hp,war.opponent_hp_max,'enemy');
       const started=warTimestamp(war.started_at),ends=warTimestamp(war.ends_at);
-      box.innerHTML='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
+      top='<div class="hk-clan-head"><div><h3>'+either('Войны','Wars')+'</h3><small>'+escapeHtml(String(war.status||either('активна','active')))+'</small></div><button id="hk-war-refresh" class="hk-secondary">'+either('Обновить','Refresh')+'</button></div>'+
         '<div class="hk-war-score"><div><small>'+either('Наш клан','Our clan')+'</small><b>'+escapeHtml(war.our_clan||'—')+'</b><strong>'+ourScore+'</strong>'+ourHp+'</div><span>VS</span><div><small>'+either('Соперник','Opponent')+'</small><b>'+escapeHtml(war.opponent||'—')+'</b><strong>'+enemyScore+'</strong>'+enemyHp+'</div></div>'+
         '<p class="hk-muted">'+[started?either('Начало','Started')+': '+started:'',ends?either('Окончание','Ends')+': '+ends:'',warLastReadAt?either('Обновлено','Updated')+': '+new Date(warLastReadAt).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · ')+'</p>';
     }
-    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshWars(true));
+    box.innerHTML=top+warCombatHtml();
+    box.querySelector('#hk-war-refresh')?.addEventListener('click',()=>void refreshModuleLive('wars',{force:true}));
+    box.querySelector('#hk-war-plan')?.addEventListener('change',event=>{warCombat.planId=String(event.target.value||'');warCombatSave();renderWars();});
+    box.querySelector('#hk-war-run')?.addEventListener('click',()=>void runWarCombat());
   }
 
   async function refreshWars(force=false) {
     if(!requireLicense())return null;
     try{
-      const result=await readPublicWar();
+      let combat=null;
+      try{combat=await loadWarCombat(force);}catch(error){log(either('Ошибка боевого режима Войны','War combat read error')+': '+(error?.message||error),'warn');}
+      const result=await readPublicWar(combat?.activeBattles||null);
       warSnapshot=result?.war||null;
       warLastReadAt=Date.now();
       renderWars();
-      if(force)log(warSnapshot?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot?'ok':'warn');
-      return warSnapshot;
+      if(force)log(warSnapshot||warCombat.activeWar?either('Данные войны обновлены','War data refreshed'):either('Активная война не найдена','No active war found'),warSnapshot||warCombat.activeWar?'ok':'warn');
+      return warSnapshot||warCombat.activeWar;
     }catch(error){
       log(either('Ошибка чтения войны','War read error')+': '+(error?.message||error),'warn');
       renderWars();

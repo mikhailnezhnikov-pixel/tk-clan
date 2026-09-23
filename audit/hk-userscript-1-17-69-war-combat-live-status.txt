@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.68
+target_version=1.17.69
+marker=war-combat-20260923-r1
+source_sha256=4b813e039272a261fc6865d2afc711f979230318ee4f45704fad1397e4af0a6c
+candidate_sha256=7ab1f3ee9280b932d9217fb2ec2d936189ae6ec113085e25e22be6fdfa144901
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
