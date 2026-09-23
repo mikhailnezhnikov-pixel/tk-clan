@@ -1,2 +1,2 @@
-inspect=treasure-direct-shop-targets
-stamp=2026-09-23T13:38+09:00
+inspect=treasure-minigame-screen-text
+stamp=2026-09-23T13:42+09:00
