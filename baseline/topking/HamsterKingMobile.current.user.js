@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.45
+// @version      1.17.46
+// @release-note Магазин: карточки показывают название товара; выбор, MAX и количества ограничиваются реальным балансом и единым бюджетом; сводка показывает Баланс → Расход → Останется.
 // @release-note Generals: отображение прокачки переведено на live-state канон Hamsters; перед показом и запуском проверяются Generals, Орехи и Pit Tokens, а Runner показывает обе части стоимости.
 // @release-note Generals: стоимость выровнена с Kokkaras — бюджет ограничивается Pit Tokens, но допустимая полная стоимость Орехи + Pit Tokens больше не отбрасывается. Runner Генералов вертикальный.
 // @release-note Hamsters: запуск теперь использует валидный общий live-state по модели Kokkaras и не блокируется обязательным повторным /player/me; реальная ошибка загрузки показывается в Runner.
@@ -53,9 +54,10 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.45';
+  const BUILD_VERSION = '1.17.46';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
+  const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -8085,7 +8087,8 @@
       selectedShopLots = new Set([...selectedShopLots].filter(id => shopRows.some(row => row.lotId === id && row.safe && row.remaining > 0)));
       selectedShopCounts = new Map([...selectedShopCounts].flatMap(([id, count]) => {
         const row = shopRows.find(value => value.lotId === id && value.safe && value.remaining > 0);
-        return row ? [[id, Math.min(row.remaining, Math.max(0, Number(count || 0)))]] : [];
+        const maximum = row ? shopPurchasableCount(row) : 0;
+        return row && maximum > 0 ? [[id, Math.min(maximum, Math.max(0, Number(count || 0)))]] : [];
       }));
       renderShop();
       log(either(`Магазин считан: ${shopRows.length} лотов`, `Shop loaded: ${shopRows.length} lots`), 'ok');
@@ -8111,8 +8114,57 @@
     return Math.floor(Math.max(0, Number(count || 0)) / renovationBatchMultiplier(row));
   }
 
+  function shopBudgetSection(row) {
+    return row?.section === 'clan' ? 'clan' : 'shop';
+  }
+
+  function shopPurchasableCount(row, documentValue = playerDocument) {
+    if (!row?.safe) return 0;
+    const hardLimit = Math.min(SHOP_UNLIMITED_RUN_MAX, Math.max(0, Math.trunc(Number(row?.remaining || 0))));
+    if (!hardLimit) return 0;
+    let low = 0, high = hardLimit;
+    while (low < high) {
+      const middle = Math.ceil((low + high + 1) / 2);
+      if (budgetDecision(row.cost, shopBudgetSection(row), middle, documentValue).allowed) low = middle;
+      else high = middle - 1;
+    }
+    return low;
+  }
+
+  function shopDisplayName(row) {
+    const value = gameText(row?.name || '') || gameText(row?.rewardId || '') || String(row?.name || row?.rewardId || row?.lotId || '');
+    return clean(value) || paymentLabel(row?.rewardId || row?.lotId || '');
+  }
+
+  function shopAvailabilityText(row, maxCount = shopPurchasableCount(row)) {
+    if (!row?.safe) return either('Заблокировано: неизвестная валюта или стоимость','Blocked: unknown currency or cost');
+    if (Number(row?.remaining || 0) <= 0) return tr('boughtOut');
+    if (maxCount <= 0) {
+      const problem = budgetDecision(row.cost, shopBudgetSection(row), 1, playerDocument).problems[0];
+      return problem || either('Недостаточно доступного баланса','Insufficient available balance');
+    }
+    if (row.unlimited) return either('Можно купить сейчас: '+maxCount,'Can buy now: '+maxCount);
+    if (maxCount < Number(row.remaining || 0)) return either('Можно купить: '+maxCount+' · осталось в лоте: '+row.remaining,'Can buy: '+maxCount+' · lot remaining: '+row.remaining);
+    return tr('remaining',{n:row.remaining});
+  }
+
   function renovationBatchMaximum(row) {
-    return Math.floor(Math.min(SHOP_UNLIMITED_RUN_MAX, Math.max(0, Number(row?.remaining || 0))) / renovationBatchMultiplier(row));
+    return Math.floor(shopPurchasableCount(row) / renovationBatchMultiplier(row));
+  }
+
+  function shopWalletForecastHtml(parts) {
+    const values = [...parts.values()].filter(part => part?.id).sort((a,b) => a.id.localeCompare(b.id));
+    if (!values.length) return '';
+    return '<div class="hk-wallet-forecast">' + values.map(part => {
+      const balance = walletAmount(part.id);
+      const spend = Math.max(0, Number(part.quantity || 0));
+      const known = balance !== null;
+      const after = known ? balance - spend : null;
+      return '<div class="hk-wallet-row '+(known && after < 0 ? 'shortage' : '')+'">' +
+        '<span class="hk-wallet-currency">'+fairIconHtml(paymentIcon(part), 'hk-price-icon')+'<b>'+escapeHtml(paymentLabel(part.id))+'</b></span>' +
+        '<span>'+tr('balance')+': <b>'+(known ? balance.toLocaleString(locale()) : '—')+'</b> · '+tr('willSpend')+': <b>'+spend.toLocaleString(locale())+'</b> · '+tr('balanceAfter')+': <b>'+(known ? after.toLocaleString(locale()) : '—')+'</b></span>' +
+      '</div>';
+    }).join('') + '</div>';
   }
 
   function renderShop() {
@@ -8140,31 +8192,33 @@
       (selectedShopSection === 'ordinary' ? row.group === selectedShopGroup :
         selectedShopSection === 'clan' ? row.clanGroup === selectedShopGroup : true));
     shopCards.innerHTML = visibleRows.map(row => {
-      const selectable = row.safe && row.remaining > 0 && (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0);
-      const count = selectable ? Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0))) : 0;
+      const maximumCount = shopPurchasableCount(row);
+      const selectable = maximumCount > 0 && (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0);
+      const count = selectable ? Math.min(maximumCount, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0))) : 0;
       const shownRewardQuantity = count && row.group === 'renovation' ? row.rewardQuantity * count : row.rewardQuantity;
       const selectedBatches = isRenovationBatch(row) ? renovationBatchCount(row, count) : 0;
       const maximumBatches = isRenovationBatch(row) ? renovationBatchMaximum(row) : 0;
       return `<div class="hk-shop-lot ${count ? 'selected' : ''} ${row.premium ? 'premium' : ''} ${selectable ? '' : 'locked'}">
         ${row.premium ? '<i class="hk-premium-mark">💎</i>' : ''}<label class="hk-shop-pick"><input type="checkbox" data-shop-lot="${escapeHtml(row.lotId)}" ${count ? 'checked' : ''} ${selectable ? '' : 'disabled'}>
-        ${fairIconHtml(row.icon)}<b>×${shownRewardQuantity.toLocaleString(locale())}</b><span>${costVisual(row.cost, count && row.group === 'renovation' ? count : 1)}</span></label>
-        <small>${row.unlimited ? tr('unlimited') : row.remaining > 0 ? tr('remaining',{n:row.remaining}) : tr('boughtOut')}</small>
+        ${fairIconHtml(row.icon)}<span class="hk-shop-name">${escapeHtml(shopDisplayName(row))}</span><b>×${shownRewardQuantity.toLocaleString(locale())}</b><span class="hk-shop-cost">${costVisual(row.cost, count && row.group === 'renovation' ? count : 1)}</span></label>
+        <small class="hk-shop-availability">${escapeHtml(shopAvailabilityText(row, maximumCount))}</small>
         ${isRenovationBatch(row)
           ? `<label class="hk-shop-quantity"><span>${either('Пакетов ×500','×500 packages')}</span><select data-shop-batches="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>${Array.from({length:maximumBatches + 1}, (_, n) => `<option value="${n}" ${n === selectedBatches ? 'selected' : ''}>${n} × 500</option>`).join('')}</select></label>`
-          : `<label class="hk-shop-quantity"><span>${tr('quantity')}</span><input data-shop-qty="${escapeHtml(row.lotId)}" type="number" inputmode="numeric" min="0" max="${row.remaining}" value="${count}" ${selectable ? '' : 'disabled'}><button type="button" data-shop-max="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>MAX</button></label>`}</div>`;
+          : `<label class="hk-shop-quantity"><span>${tr('quantity')}</span><input data-shop-qty="${escapeHtml(row.lotId)}" type="number" inputmode="numeric" min="0" max="${maximumCount}" value="${count}" ${selectable ? '' : 'disabled'}><button type="button" data-shop-max="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>MAX</button></label>`}</div>`;
     }).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
     shopCards.querySelectorAll('[data-shop-lot]').forEach(input => input.onchange = () => {
       const id = input.dataset.shopLot;
       const row = visibleRows.find(value => value.lotId === id);
       const count = input.checked ? Math.max(defaultShopPurchaseCount(row), Number(selectedShopCounts.get(id) || 0)) : 0;
-      if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, Math.min(row?.remaining || 0, count)); }
+      const maximum = shopPurchasableCount(row);
+      if (count && maximum > 0) { selectedShopLots.add(id); selectedShopCounts.set(id, Math.min(maximum, count)); }
       else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
       renderShop();
     });
     shopCards.querySelectorAll('[data-shop-qty]').forEach(input => input.onchange = () => {
       const id = input.dataset.shopQty;
       const row = visibleRows.find(value => value.lotId === id);
-      const count = Math.min(row?.remaining || 0, Math.max(0, Math.trunc(Number(input.value || 0))));
+      const count = Math.min(shopPurchasableCount(row), Math.max(0, Math.trunc(Number(input.value || 0))));
       if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
       else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
       renderShop();
@@ -8181,20 +8235,20 @@
     shopCards.querySelectorAll('[data-shop-max]').forEach(button => button.onclick = () => {
       const id = button.dataset.shopMax;
       const row = visibleRows.find(value => value.lotId === id);
-      const count = Math.min(SHOP_UNLIMITED_RUN_MAX, Math.max(0, Math.trunc(Number(row?.remaining || 0))));
+      const count = shopPurchasableCount(row);
       if (count) { selectedShopLots.add(id); selectedShopCounts.set(id, count); }
       else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
       renderShop();
     });
-    const selected = visibleRows.filter(row => selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
-      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+    const selected = visibleRows.filter(row => selectedShopLots.has(row.lotId) && shopPurchasableCount(row) > 0)
+      .map(row => ({row, count:Math.min(shopPurchasableCount(row), Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
     const purchaseCount = selected.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
     const totals = new Map();
     for (const row of visibleRows) for (const part of costParts(row.cost)) addProjectedCost(totals, part, 0);
     for (const {row, count} of selected) for (const part of costParts(row.cost)) addProjectedCost(totals, part, count);
     const spending = [...totals.values()].filter(part => part.quantity > 0);
     const totalVisual = spending.length ? spending.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${part.quantity.toLocaleString(locale())}</b>`).join(' ') : '0';
-    shopSummary.innerHTML = `<b>${tr('selectedPurchases',{n:purchaseCount})}</b><br><small>${tr('maxCost')}: ${totalVisual}</small>${walletForecastHtml(totals)}`;
+    shopSummary.innerHTML = `<b>${tr('selectedPurchases',{n:purchaseCount})}</b><br><small>${tr('maxCost')}: ${totalVisual}</small>${shopWalletForecastHtml(totals)}`;
     const buy = root?.querySelector('#hk-shop-buy'); if (buy) buy.disabled = shopRunning || !purchaseCount;
   }
 
@@ -8210,7 +8264,7 @@
     }
     const plan = shopRows.filter(row => row.section === selectedShopSection &&
       (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
-      .map(row => ({row, count:Math.min(row.remaining, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+      .map(row => ({row, count:Math.min(shopPurchasableCount(row, playerDocument), Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
     if (!plan.length) return;
     const count = plan.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
     const budgetSection = selectedShopSection === 'clan' ? 'clan' : 'shop';
@@ -13147,7 +13201,7 @@
       .hk-fair-types{display:flex;gap:9px;overflow-x:auto;padding:3px 1px 10px}.hk-fair-type{min-width:92px;border:1px solid #304057;background:#121a26;color:white;border-radius:14px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-fair-type.selected{border-color:#ffad1f;background:#2a2418}.hk-fair-icon{width:58px;height:58px;object-fit:contain}.hk-fair-type span,.hk-lot span{display:flex;align-items:center;justify-content:center;gap:4px}.hk-price-icon{width:22px;height:22px;object-fit:contain}.hk-fair-lots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hk-lot{position:relative;border:1px solid #2d3b50;background:#121a26;color:white;border-radius:15px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px}.hk-lot.selected{border:2px solid #3ee0a4;background:#173128}.hk-lot.locked{opacity:.48}.hk-lot small{color:#ff8792}.hk-fair-controls{display:grid;grid-template-columns:1fr 90px;gap:9px;align-items:center}.hk-fair-controls input[type=number],.hk-fair-controls select{background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px;min-width:0}.hk-check{display:flex;gap:8px;align-items:center;margin:12px 0}.hk-check input{width:22px;height:22px}
       .hk-fair-currencies{display:flex;gap:7px;overflow-x:auto;padding:0 0 11px}.hk-fair-currencies button{border:1px solid #304057;background:#121a26;color:white;border-radius:11px;padding:7px 9px;display:flex;align-items:center;gap:5px;white-space:nowrap}.hk-fair-currencies button.selected{border-color:#ffad1f;background:#2a2418}.hk-fair-currencies span{font-size:12px}.hk-fair-bonus-lots{margin:9px 0;padding:10px;border:1px solid #304057;border-radius:11px;background:#101a28;display:grid;grid-template-columns:minmax(150px,1fr) auto;align-items:center;gap:8px}.hk-fair-bonus-lots>div{display:flex;gap:8px;flex-wrap:wrap}.hk-fair-bonus-lots .hk-check{margin:0;padding:7px 10px;border:1px solid #ffad1f;border-radius:9px;background:#3a2b14;color:#ffe083}.hk-fair-bonus-lots .hk-check.unavailable{opacity:.38;border-color:#4a5668;background:#192331;color:#9ba8ba}
       #hk-fair-slot-rules{margin:10px 0;padding:11px;background:#0d1520;border:1px solid #2a374a;border-radius:13px}#hk-fair-slot-rules h3{margin-top:0}.hk-slot-rule{display:grid;grid-template-columns:74px 1fr;gap:9px;align-items:center;padding:9px 0;border-top:1px solid #223046}.hk-slot-product{display:flex;align-items:center;gap:5px}.hk-slot-buttons{display:grid;grid-template-columns:repeat(2,minmax(80px,1fr));gap:7px}.hk-slot-buttons button{border:1px solid #3a4a61;border-radius:10px;background:#172130;color:#9eacc0;padding:10px 5px;font-weight:800}.hk-slot-buttons button.selected{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-slot-buttons button.vip{border-color:#9e7bff;color:#dbcfff}.hk-slot-buttons button.vip.selected{background:#34255b;border-color:#c3a7ff;color:#fff}.hk-slot-buttons button:disabled{opacity:.35}
-      .hk-shop-tabs,.hk-shop-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.hk-shop-tabs button,.hk-shop-groups button{border:1px solid #34445b;border-radius:10px;background:#182230;color:#aebbd0;padding:10px 4px;font-size:12px;font-weight:800}.hk-shop-tabs button.active,.hk-shop-groups button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-shop-lots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hk-shop-lot{position:relative;border:1px solid #2d3b50;background:#121a26;color:white;border-radius:15px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-shop-lot.selected{border:2px solid #3ee0a4;background:#173128}.hk-shop-lot.locked{opacity:.45}.hk-shop-lot span{display:flex;align-items:center;gap:4px}.hk-shop-lot small{color:#aab7ca}.hk-shop-lot.locked small{color:#ff8792}.hk-shop-pick{width:100%;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-shop-pick>input{position:absolute;top:8px;left:8px;width:21px;height:21px}.hk-shop-quantity{display:grid;grid-template-columns:1fr minmax(72px,100px) 48px;align-items:center;gap:5px;width:100%;font-size:11px}.hk-shop-quantity input{min-width:0;width:100%;box-sizing:border-box;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:8px;padding:7px 4px;text-align:center}.hk-shop-quantity button{padding:7px 3px;border:1px solid #b67b12;border-radius:8px;background:#3a2b14;color:#ffd76b;font-weight:900}.hk-premium-mark{position:absolute;right:7px;top:7px;font-style:normal;font-size:17px}.hk-lot.premium,.hk-shop-lot.premium{border-color:#9e7bff;box-shadow:inset 0 0 0 1px #9e7bff55}.hk-lot.premium.selected,.hk-shop-lot.premium.selected{border-color:#d2b7ff;background:#302453}#hk-shop-summary img{vertical-align:middle}
+      .hk-shop-tabs,.hk-shop-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.hk-shop-tabs button,.hk-shop-groups button{border:1px solid #34445b;border-radius:10px;background:#182230;color:#aebbd0;padding:10px 4px;font-size:12px;font-weight:800}.hk-shop-tabs button.active,.hk-shop-groups button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-shop-lots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.hk-shop-lot{position:relative;border:1px solid #2d3b50;background:#121a26;color:white;border-radius:15px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-shop-lot.selected{border:2px solid #3ee0a4;background:#173128}.hk-shop-lot.locked{opacity:.45}.hk-shop-lot span{display:flex;align-items:center;gap:4px}.hk-shop-lot small{color:#aab7ca}.hk-shop-lot.locked small{color:#ff8792}.hk-shop-pick{width:100%;display:flex;flex-direction:column;align-items:center;gap:5px}.hk-shop-pick>input{position:absolute;top:8px;left:8px;width:21px;height:21px}.hk-shop-name{display:block!important;max-width:100%;min-height:28px;text-align:center;font-size:12px;font-weight:800;line-height:1.2;color:#f4f7fb;overflow-wrap:anywhere}.hk-shop-cost{justify-content:center;min-height:24px}.hk-shop-availability{min-height:28px;text-align:center;line-height:1.25}.hk-shop-quantity{display:grid;grid-template-columns:1fr minmax(72px,100px) 48px;align-items:center;gap:5px;width:100%;font-size:11px}.hk-shop-quantity input{min-width:0;width:100%;box-sizing:border-box;background:#0b111b;color:#fff;border:1px solid #43536d;border-radius:8px;padding:7px 4px;text-align:center}.hk-shop-quantity button{padding:7px 3px;border:1px solid #b67b12;border-radius:8px;background:#3a2b14;color:#ffd76b;font-weight:900}.hk-premium-mark{position:absolute;right:7px;top:7px;font-style:normal;font-size:17px}.hk-lot.premium,.hk-shop-lot.premium{border-color:#9e7bff;box-shadow:inset 0 0 0 1px #9e7bff55}.hk-lot.premium.selected,.hk-shop-lot.premium.selected{border-color:#d2b7ff;background:#302453}#hk-shop-summary img{vertical-align:middle}
       .hk-recipe-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}.hk-recipe-tabs button{border:1px solid #34445b;border-radius:11px;background:#182230;color:#aebbd0;padding:11px 4px;font-size:12px;font-weight:800}.hk-recipe-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-recipe-pane{display:none}.hk-recipe-pane.active{display:block}.hk-recipe-plans{display:grid;gap:9px;margin:10px 0}.hk-recipe-row{width:100%;display:grid;grid-template-columns:minmax(115px,1.15fr) 82px minmax(150px,1.25fr) minmax(135px,1fr);gap:10px;align-items:center;text-align:left;color:#f6f8fc;background:#111a27;border:1px solid #35445a;border-left:4px solid var(--recipe-rank);border-radius:14px;padding:10px}.hk-recipe-row:active{transform:scale(.995)}.hk-recipe-id{font-size:10px;color:#93a4bd;overflow-wrap:anywhere}.hk-recipe-result{position:relative;display:grid;justify-items:center;gap:2px}.hk-recipe-result .hk-icon{width:58px;height:58px}.hk-recipe-result small{color:#aebbd0}.hk-rank-badge{position:absolute;left:2px;bottom:18px;background:var(--recipe-rank);color:#111;padding:1px 5px;border-radius:5px;font-size:11px}.hk-recipe-bonuses,.hk-recipe-components,.hk-detail-bonuses{display:grid;gap:6px}.hk-recipe-bonuses span,.hk-detail-bonuses span{display:flex;align-items:center;gap:4px;font-size:11px}.hk-bonus-icon{width:20px;height:20px;object-fit:contain}.hk-component-group{display:flex;align-items:center;gap:5px;font-size:10px}.hk-component-group b{background:var(--rank);color:#111;border-radius:4px;padding:2px 5px}.hk-detail-backdrop{position:fixed;inset:0;z-index:2147483647;background:#02060dcc;display:flex;align-items:center;justify-content:center;padding:20px}.hk-detail-card{position:relative;width:min(480px,100%);max-height:80vh;overflow:auto;background:#111a27;border:1px solid #35445a;border-top:4px solid var(--recipe-rank);border-radius:18px;padding:18px;color:white}.hk-detail-close{position:absolute;right:10px;top:8px;background:#26364d;color:white;border:0;border-radius:9px;font-size:24px;width:38px;height:38px}.hk-detail-title{display:flex;align-items:center;gap:12px;padding-right:42px}.hk-detail-title .hk-icon{width:72px;height:72px}.hk-detail-title span{display:grid;gap:5px}.hk-detail-title small,.hk-recipe-row small{color:#aebbd0}.hk-bureau-sizes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.hk-bureau-sizes button{border:1px solid #35445a;border-radius:11px;background:#111a27;color:white;padding:9px;display:flex;align-items:center;justify-content:center;gap:7px}.hk-bureau-sizes button.active{border-color:#ffad1f;background:#3a2b14}.hk-bureau-sizes span{display:flex;align-items:center;gap:4px}.hk-bureau-list{display:grid;gap:8px;margin:10px 0}.hk-bureau-item{display:grid;grid-template-columns:48px 1fr 64px;align-items:center;gap:9px;border:1px solid #2d3b50;border-radius:13px;background:#111a27;padding:8px}.hk-bureau-item.selected{border-color:#ffad1f;background:#2a2418}.hk-bureau-item span{display:flex;flex-direction:column}.hk-bureau-item small{color:#aebbd0}.hk-bureau-item input{min-width:0;width:100%;background:#0b111b;color:white;border:1px solid #43536d;border-radius:9px;padding:8px;text-align:center}
       .hk-recipe-ways{display:grid;gap:9px;padding:10px}.hk-recipe-way{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;border:1px solid #29394f;border-radius:12px;background:#0c1420;padding:8px}.hk-recipe-way-number{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:var(--recipe-rank);color:#10151d}.hk-recipe-way-flow{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:2px 0}.hk-recipe-step{position:relative;flex:0 0 78px;display:grid;place-items:center;border:1px solid #35445a;border-bottom:3px solid var(--rank);border-radius:10px;background:#111a27;color:white;padding:6px}.hk-recipe-step .hk-icon{width:48px;height:48px}.hk-recipe-step .hk-rank-badge{bottom:16px;left:1px}.hk-recipe-step .hk-component-order{position:absolute;right:3px;top:3px;z-index:2;background:#25344a;border-radius:5px;padding:1px 4px;font-size:9px}.hk-recipe-plus{flex:0 0 auto;color:#ffbd3f;font-size:22px}.hk-recipe-result-group>.hk-recipe-row{grid-template-columns:82px minmax(150px,1fr) minmax(150px,.8fr)}
       .hk-recipe-step .hk-rank-badge{background:var(--rank)}
@@ -13519,8 +13573,13 @@
       selectedShopLots.clear();
       selectedShopCounts.clear();
       shopRows.filter(row => row.section === selectedShopSection &&
-        (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && row.safe && row.remaining > 0)
-        .forEach(row => { selectedShopLots.add(row.lotId); selectedShopCounts.set(row.lotId, defaultShopPurchaseCount(row)); });
+        (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && shopPurchasableCount(row) > 0 &&
+        (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0))
+        .forEach(row => {
+          const maximum = shopPurchasableCount(row);
+          const count = Math.min(maximum, defaultShopPurchaseCount(row));
+          if (count > 0) { selectedShopLots.add(row.lotId); selectedShopCounts.set(row.lotId, count); }
+        });
       renderShop();
     };
     root.querySelectorAll('[data-shop-section]').forEach(button => button.onclick = () => {

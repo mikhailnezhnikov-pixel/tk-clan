@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.45
+target_version=1.17.46
+marker=shop-purchase-plan-canon-20260923-r1
+source_sha256=f294842cbb93e95f45082ba6b9b9a6336aa00d5104d291dc09b8f57e087b8959
+candidate_sha256=60064f907ee12b2b25aa0da0ed73b1cc23d3d620f153eff0856f6d6dc9c605d3
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
