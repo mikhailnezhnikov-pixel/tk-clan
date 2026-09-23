@@ -1,9 +1,9 @@
-name: Deploy Userscript 1.17.41 Hamsters Kokkaras Live State
+name: Deploy Userscript 1.17.42 Hamsters Kokkaras Live State
 
 on:
   push:
     paths:
-      - 'deploy/topking/userscript-1-17-41-hamsters-kokkaras-trigger.txt'
+      - 'deploy/topking/userscript-1-17-42-hamsters-kokkaras-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -34,13 +34,14 @@ jobs:
       - name: Validate candidate
         run: |
           set -euo pipefail
-          cp deploy/topking/HamsterKingMobile.1.17.41.hamsters-kokkaras-live-state.candidate.user.js /tmp/HamsterKingMobile.user.js
+          cp deploy/topking/HamsterKingMobile.1.17.42.hamsters-kokkaras-live-state.candidate.user.js /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.17.41" /tmp/HamsterKingMobile.user.js
-          grep -Fq "const BUILD_VERSION = '1.17.41';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.42" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.42';" /tmp/HamsterKingMobile.user.js
           grep -Fq "hamsters-kokkaras-cost-parity-20260923-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "hamsters-kokkaras-live-state-20260923-r2" /tmp/HamsterKingMobile.user.js
           grep -Fq "treasure-guide-passive-capture-20260923-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-guide-selective-extract-20260923-r2" /tmp/HamsterKingMobile.user.js
           grep -Fq "maps-manual-scan-only-20260923-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "growth-hamster-nuts-canon-20260923-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "clan-snapshot-numeric-player-id-20260923-r1" /tmp/HamsterKingMobile.user.js
@@ -63,7 +64,8 @@ jobs:
           assert "GROWTH_DONOR_STATE_ROWS" in s
           assert "growthNormalizeDonorState(growthState,value,{full})" in s
           assert "box.classList.toggle('hamsters-run',hamstersRun)" in s
-          print("HAMSTERS_1_17_41_KOKKARAS_CANDIDATE=PASS")
+          assert "treasure-guide-selective-extract-20260923-r2" in s
+          print("HAMSTERS_1_17_42_KOKKARAS_CANDIDATE=PASS")
           PY
 
       - name: Fetch exact current live
@@ -71,8 +73,9 @@ jobs:
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/live.user.js
           node --check /tmp/live.user.js
-          grep -Fq "// @version      1.17.40" /tmp/live.user.js
+          grep -Fq "// @version      1.17.41" /tmp/live.user.js
           grep -Fq "treasure-guide-passive-capture-20260923-r1" /tmp/live.user.js
+          grep -Fq "treasure-guide-selective-extract-20260923-r2" /tmp/live.user.js
           grep -Fq "maps-manual-scan-only-20260923-r1" /tmp/live.user.js
           grep -Fq "growth-hamster-nuts-canon-20260923-r1" /tmp/live.user.js
           grep -Fq "hamsters-kokkaras-cost-parity-20260923-r1" /tmp/live.user.js
@@ -84,12 +87,12 @@ jobs:
           set -euo pipefail
           source_sha="$(cat /tmp/source.sha)"
           candidate_sha="$(cat /tmp/candidate.sha)"
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.41.user.js
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/HamsterKingMobile.user.js root@89.125.1.71:/tmp/HamsterKingMobile.1.17.42.user.js
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "SOURCE_SHA='$source_sha' CANDIDATE_SHA='$candidate_sha' bash -s" <<'REMOTE'
           set -euo pipefail
           live=/opt/hamsterking-license/HamsterKingMobile.user.js
-          candidate=/tmp/HamsterKingMobile.1.17.41.user.js
-          backup=/opt/hamsterking-license/HamsterKingMobile.user.js.rollback.1.17.41
+          candidate=/tmp/HamsterKingMobile.1.17.42.user.js
+          backup=/opt/hamsterking-license/HamsterKingMobile.user.js.rollback.1.17.42
           minconf=/etc/systemd/system/hamsterking-license.service.d/min-version.conf
           test "$(sha256sum "$live" | awk '{print $1}')" = "$SOURCE_SHA"
           test "$(sha256sum "$candidate" | awk '{print $1}')" = "$CANDIDATE_SHA"
@@ -105,51 +108,52 @@ jobs:
           }
           trap rollback ERR
           install -m 0644 "$candidate" "$live"
-          printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.40\"" > "$minconf"
+          printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.42\"" > "$minconf"
           systemctl daemon-reload
           systemctl restart hamsterking-license.service
           systemctl is-active --quiet hamsterking-license.service
           node --check "$live"
           test "$(sha256sum "$live" | awk '{print $1}')" = "$CANDIDATE_SHA"
-          grep -Fq "// @version      1.17.41" "$live"
+          grep -Fq "// @version      1.17.42" "$live"
           grep -Fq "hamsters-kokkaras-cost-parity-20260923-r1" "$live"
           grep -Fq "hamsters-kokkaras-live-state-20260923-r2" "$live"
           trap - ERR
           REMOTE
-          touch /tmp/hk-1.17.41-deployed
+          touch /tmp/hk-1.17.42-deployed
 
       - name: Verify public exact match
         id: public_verify
         continue-on-error: true
         run: |
           set -euo pipefail
-          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?hamsters-kokkaras-r2=$(date +%s)" -o /tmp/public.js
+          curl -fsSL --retry 5 --retry-delay 2 "https://hk-license.89.125.1.71.sslip.io/panel.js?hamsters-kokkaras-r2-11742=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
           cmp -s /tmp/HamsterKingMobile.user.js /tmp/public.js
-          grep -Fq "// @version      1.17.41" /tmp/public.js
+          grep -Fq "// @version      1.17.42" /tmp/public.js
           grep -Fq "hamsters-kokkaras-cost-parity-20260923-r1" /tmp/public.js
           grep -Fq "hamsters-kokkaras-live-state-20260923-r2" /tmp/public.js
           grep -Fq "treasure-guide-passive-capture-20260923-r1" /tmp/public.js
+          grep -Fq "treasure-guide-selective-extract-20260923-r2" /tmp/public.js
           grep -Fq "maps-manual-scan-only-20260923-r1" /tmp/public.js
-          echo "PUBLIC_1_17_41_HAMSTERS_KOKKARAS=PASS"
+          echo "PUBLIC_1_17_42_HAMSTERS_KOKKARAS=PASS"
 
       - name: Roll back if public verification failed
         if: steps.public_verify.outcome == 'failure'
         run: |
           set -euo pipefail
-          test -f /tmp/hk-1.17.41-deployed
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js.rollback.1.17.41 /tmp/rollback.user.js
+          test -f /tmp/hk-1.17.42-deployed
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js.rollback.1.17.42 /tmp/rollback.user.js
           node --check /tmp/rollback.user.js
-          grep -Fq "// @version      1.17.40" /tmp/rollback.user.js
+          grep -Fq "// @version      1.17.41" /tmp/rollback.user.js
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new /tmp/rollback.user.js root@89.125.1.71:/tmp/HamsterKingMobile.rollback.user.js
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'set -euo pipefail
             install -m 0644 /tmp/HamsterKingMobile.rollback.user.js /opt/hamsterking-license/HamsterKingMobile.user.js
-            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.40\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+            printf "%s\n" "[Service]" "Environment=\"HK_MIN_SCRIPT_VERSION=1.17.41\"" > /etc/systemd/system/hamsterking-license.service.d/min-version.conf
             systemctl daemon-reload
             systemctl restart hamsterking-license.service
             systemctl is-active --quiet hamsterking-license.service
             node --check /opt/hamsterking-license/HamsterKingMobile.user.js
-            grep -Fq "// @version      1.17.40" /opt/hamsterking-license/HamsterKingMobile.user.js'
+            grep -Fq "// @version      1.17.41" /opt/hamsterking-license/HamsterKingMobile.user.js'
           exit 1
 
       - name: Sync baseline and audit
@@ -159,9 +163,9 @@ jobs:
           git pull --rebase origin main
           cp /tmp/HamsterKingMobile.user.js baseline/topking/HamsterKingMobile.current.user.js
           printf "%s\n" \
-            "USERSCRIPT_1_17_41_HAMSTERS_KOKKARAS_LIVE_STATE=PASS" \
-            "version=1.17.41" \
-            "base=1.17.40" \
+            "USERSCRIPT_1_17_42_HAMSTERS_KOKKARAS_LIVE_STATE=PASS" \
+            "version=1.17.42" \
+            "base=1.17.41" \
             "marker=hamsters-kokkaras-live-state-20260923-r2" \
             "source_sha256=$(cat /tmp/source.sha)" \
             "candidate_sha256=$(cat /tmp/candidate.sha)" \
@@ -170,31 +174,31 @@ jobs:
             "public_verify_rollback=ENABLED" \
             "ci_game_mutations=NONE" \
             "user_browser_check=PENDING" \
-            > audit/hk-userscript-1-17-41-hamsters-kokkaras-live-state-status.txt
+            > audit/hk-userscript-1-17-42-hamsters-kokkaras-live-state-status.txt
           python3 - <<'PY'
           from pathlib import Path
           p=Path('audit/hk-stage2-12-hamsters.md')
           s=p.read_text(encoding='utf-8')
           if 'hamsters-kokkaras-live-state-20260923-r2' not in s:
-              s += '\n\n## Kokkaras live-state correction 1.17.41\n\n- marker: `hamsters-kokkaras-live-state-20260923-r2`;\n- wrapped data/result account arrays are normalized into donor-style live state before Hamsters calculations;\n- Hamsters Runner uses the approved vertical progress layout;\n- runner exposes Hamsters count / level-data count / Nuts / budget for live diagnosis.\n'
+              s += '\n\n## Kokkaras live-state correction 1.17.42\n\n- marker: `hamsters-kokkaras-live-state-20260923-r2`;\n- wrapped data/result account arrays are normalized into donor-style live state before Hamsters calculations;\n- Hamsters Runner uses the approved vertical progress layout;\n- runner exposes Hamsters count / level-data count / Nuts / budget for live diagnosis.\n'
           p.write_text(s,encoding='utf-8')
 
           p=Path('audit/HK_STAGE2_CHECKPOINT.md')
           s=p.read_text(encoding='utf-8')
-          s=s.replace('- userscript: 1.17.40','- userscript: 1.17.41',1)
-          if 'Hamsters Kokkaras live-state 1.17.41' not in s:
+          s=s.replace('- userscript: 1.17.41','- userscript: 1.17.42',1)
+          if 'Hamsters Kokkaras live-state 1.17.42' not in s:
               s += '\n\n## Hamsters Kokkaras live-state 1.17.41\n\n- `hamsters-kokkaras-live-state-20260923-r2`: TECHNICAL LIVE PASS; user browser check pending.\n- Hamsters Runner vertical layout restored.\n'
           p.write_text(s,encoding='utf-8')
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-41-hamsters-kokkaras-live-state-status.txt audit/hk-stage2-12-hamsters.md audit/HK_STAGE2_CHECKPOINT.md
+          git add baseline/topking/HamsterKingMobile.current.user.js audit/hk-userscript-1-17-42-hamsters-kokkaras-live-state-status.txt audit/hk-stage2-12-hamsters.md audit/HK_STAGE2_CHECKPOINT.md
           if ! git diff --cached --quiet; then
-            git commit -m "fix: deploy Kokkaras Hamsters live-state in userscript 1.17.41"
+            git commit -m "fix: deploy Kokkaras Hamsters live-state in userscript 1.17.42"
             git push origin HEAD:main
           fi
 
       - name: Cleanup
         if: always()
         run: |
-          rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/live.user.js /tmp/public.js /tmp/rollback.user.js /tmp/source.sha /tmp/candidate.sha /tmp/hk-1.17.41-deployed
+          rm -f "$HOME/.ssh/topking" /tmp/HamsterKingMobile.user.js /tmp/live.user.js /tmp/public.js /tmp/rollback.user.js /tmp/source.sha /tmp/candidate.sha /tmp/hk-1.17.42-deployed
