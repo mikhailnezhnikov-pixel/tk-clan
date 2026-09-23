@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.46
+// @version      1.17.47
+// @release-note Магазин: активная подгруппа теперь едина для отображения, «Выбрать доступные» и финального плана покупки; личные и общие лоты Кланового магазина больше не смешиваются.
 // @release-note Магазин: карточки показывают название товара; выбор, MAX и количества ограничиваются реальным балансом и единым бюджетом; сводка показывает Баланс → Расход → Останется.
 // @release-note Generals: отображение прокачки переведено на live-state канон Hamsters; перед показом и запуском проверяются Generals, Орехи и Pit Tokens, а Runner показывает обе части стоимости.
 // @release-note Generals: стоимость выровнена с Kokkaras — бюджет ограничивается Pit Tokens, но допустимая полная стоимость Орехи + Pit Tokens больше не отбрасывается. Runner Генералов вертикальный.
@@ -54,10 +55,11 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.46';
+  const BUILD_VERSION = '1.17.47';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
+  const HK_SHOP_ACTIVE_VIEW_REV = 'shop-active-view-canon-20260923-r1';
   function hkRuntimeVersionTuple(value) {
     const match = String(value || '').match(/^\s*(\d+(?:\.\d+)*)/);
     return match ? match[1].split('.').map(Number) : [];
@@ -8136,6 +8138,13 @@
     return clean(value) || paymentLabel(row?.rewardId || row?.lotId || '');
   }
 
+  function shopRowInActiveView(row) {
+    if (row?.section !== selectedShopSection) return false;
+    if (selectedShopSection === 'ordinary') return row.group === selectedShopGroup;
+    if (selectedShopSection === 'clan') return row.clanGroup === selectedShopGroup;
+    return true;
+  }
+
   function shopAvailabilityText(row, maxCount = shopPurchasableCount(row)) {
     if (!row?.safe) return either('Заблокировано: неизвестная валюта или стоимость','Blocked: unknown currency or cost');
     if (Number(row?.remaining || 0) <= 0) return tr('boughtOut');
@@ -8188,9 +8197,7 @@
         selectedShopGroup = button.dataset.shopGroup; selectedShopLots.clear(); selectedShopCounts.clear(); renderShop();
       });
     }
-    const visibleRows = shopRows.filter(row => row.section === selectedShopSection &&
-      (selectedShopSection === 'ordinary' ? row.group === selectedShopGroup :
-        selectedShopSection === 'clan' ? row.clanGroup === selectedShopGroup : true));
+    const visibleRows = shopRows.filter(shopRowInActiveView);
     shopCards.innerHTML = visibleRows.map(row => {
       const maximumCount = shopPurchasableCount(row);
       const selectable = maximumCount > 0 && (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0);
@@ -8262,8 +8269,8 @@
       log(either('Не удалось обновить магазин перед покупкой','Could not refresh the shop before purchase') + ': ' + (error?.message || error),'bad');
       return;
     }
-    const plan = shopRows.filter(row => row.section === selectedShopSection &&
-      (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
+    const plan = shopRows.filter(row => shopRowInActiveView(row) &&
+      selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
       .map(row => ({row, count:Math.min(shopPurchasableCount(row, playerDocument), Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
     if (!plan.length) return;
     const count = plan.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
@@ -13572,8 +13579,7 @@
     root.querySelector('#hk-shop-select').onclick = () => {
       selectedShopLots.clear();
       selectedShopCounts.clear();
-      shopRows.filter(row => row.section === selectedShopSection &&
-        (selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && shopPurchasableCount(row) > 0 &&
+      shopRows.filter(row => shopRowInActiveView(row) && shopPurchasableCount(row) > 0 &&
         (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0))
         .forEach(row => {
           const maximum = shopPurchasableCount(row);
