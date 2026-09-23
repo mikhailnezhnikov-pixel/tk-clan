@@ -4,23 +4,27 @@ spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
+terms=[
+ "treasure_minigame_rod_r1","treasure_minigame_rod_r2","treasure_minigame_rod_r3","treasure_minigame_rod_r4",
+ "treasure_minigame_sword_r1","treasure_minigame_sword_r2","treasure_minigame_sword_r3","treasure_minigame_sword_r4",
+ "chainmail","armor"
+]
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("""SELECT id,page_text,captured_at
-                                        FROM treasure_guide_captures
-                                        WHERE source='dom'
-                                          AND page_text LIKE '%Линейки наград%'
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,page_text FROM treasure_guide_captures
+                                        WHERE payload_json<>'' OR page_text<>''
                                         ORDER BY id""")]
 
-out=[];seen=set()
-for r in rows:
-    text=re.sub(r"\s+"," ",str(r["page_text"] or "")).strip()
-    pos=text.find("Линейки наград")
-    if pos<0:continue
-    frag=text[pos:pos+1800]
-    # Keep only snapshots that look different from the ordinary map view.
-    if re.search(r"Получить|Открыть|уров|награ|бесплат|преми|купить|очки|\b1\b.*\b2\b.*\b3\b",frag,re.I):
-        key=frag[:900]
-        if key in seen:continue
-        seen.add(key)
-        out.append({"id":r["id"],"captured_at":r["captured_at"],"fragment":frag})
-print("ACTIVE_BP_DOM",json.dumps(out[-60:],ensure_ascii=False))
+for term in terms:
+    hits=[]
+    for r in rows:
+        for field in ("payload_json","page_text"):
+            raw=str(r.get(field) or "")
+            pos=raw.lower().find(term.lower())
+            if pos<0: continue
+            hits.append({
+              "id":r["id"],"path":r["path"],"field":field,
+              "snippet":raw[max(0,pos-1000):pos+3200]
+            })
+            if len(hits)>=12: break
+        if len(hits)>=12: break
+    print("EQ",term,json.dumps(hits,ensure_ascii=False))
