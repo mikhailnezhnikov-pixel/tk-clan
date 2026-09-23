@@ -2,46 +2,38 @@ import json,subprocess,shlex
 from pathlib import Path
 
 service="hamsterking-license.service"
-cat=subprocess.check_output(["systemctl","cat",service],text=True,stderr=subprocess.STDOUT)
-unit_lines=[]
-current_source=""
-for line in cat.splitlines():
-    if line.startswith("# "):
-        current_source=line[2:].strip()
-    if "HK_MIN_SCRIPT_VERSION" in line:
-        unit_lines.append({"source":current_source,"line":line.strip()})
 
-env_value=subprocess.check_output(
+unit_env=subprocess.check_output(
     ["systemctl","show",service,"-p","Environment","--value"],text=True
 ).strip()
-show_min=[]
+unit_min=[]
 try:
-    for token in shlex.split(env_value):
-        if token.startswith("HK_MIN_SCRIPT_VERSION="):
-            show_min.append(token.split("=",1)[1])
+    unit_min=[token.split("=",1)[1] for token in shlex.split(unit_env)
+              if token.startswith("HK_MIN_SCRIPT_VERSION=")]
 except Exception:
     pass
 
-dropins=subprocess.check_output(
-    ["systemctl","show",service,"-p","DropInPaths","--value"],text=True
-).strip()
-execstart=subprocess.check_output(
-    ["systemctl","show",service,"-p","ExecStart","--value"],text=True
+env_files=subprocess.check_output(
+    ["systemctl","show",service,"-p","EnvironmentFiles","--value"],text=True
 ).strip()
 
-main_pid=int(subprocess.check_output(
+manager_text=subprocess.check_output(["systemctl","show-environment"],text=True)
+manager_min=[]
+for line in manager_text.splitlines():
+    if line.startswith("HK_MIN_SCRIPT_VERSION="):
+        manager_min.append(line.split("=",1)[1])
+
+pid=int(subprocess.check_output(
     ["systemctl","show",service,"-p","MainPID","--value"],text=True
 ).strip() or "0")
-proc_min=""
-if main_pid>0:
-    raw=Path(f"/proc/{main_pid}/environ").read_bytes().split(b"\0")
-    for entry in raw:
+proc_min=[]
+if pid>0:
+    for entry in Path(f"/proc/{pid}/environ").read_bytes().split(b"\0"):
         if entry.startswith(b"HK_MIN_SCRIPT_VERSION="):
-            proc_min=entry.split(b"=",1)[1].decode("utf-8","replace")
-            break
+            proc_min.append(entry.split(b"=",1)[1].decode("utf-8","replace"))
 
-print("UNIT_MIN_LINES",json.dumps(unit_lines,ensure_ascii=False))
-print("SYSTEMD_SHOW_MIN_VALUES",json.dumps(show_min,ensure_ascii=False))
-print("DROPIN_PATHS",dropins)
-print("EXECSTART",execstart[:2000])
-print("PROCESS_MIN_VALUE",proc_min)
+print("UNIT_MIN_VALUES",json.dumps(unit_min,ensure_ascii=False))
+print("ENVIRONMENT_FILES",env_files)
+print("MANAGER_MIN_VALUES",json.dumps(manager_min,ensure_ascii=False))
+print("PROCESS_MIN_VALUES",json.dumps(proc_min,ensure_ascii=False))
+print("PROCESS_MIN_ENTRY_COUNT",len(proc_min))
