@@ -1,4 +1,4 @@
-import importlib.util,json
+import importlib.util,json,subprocess
 from pathlib import Path
 
 server_path="/opt/hamsterking-license/server.py"
@@ -17,6 +17,22 @@ if dropin.exists():
             if "HK_MIN_SCRIPT_VERSION" in line:
                 matches.append({"file":path.name,"line":line.strip()})
 
+pid_text=subprocess.check_output(
+    ["systemctl","show","hamsterking-license.service","-p","MainPID","--value"],
+    text=True
+).strip()
+pid=int(pid_text or "0")
+service_min=""
+if pid>0:
+    raw=Path(f"/proc/{pid}/environ").read_bytes().split(b"\0")
+    for entry in raw:
+        if entry.startswith(b"HK_MIN_SCRIPT_VERSION="):
+            service_min=entry.split(b"=",1)[1].decode("utf-8","replace")
+            break
+
 print("SERVER_RELEASE_VERSION",server.release_version())
-print("SERVER_MIN_SCRIPT_VERSION",server.MIN_SCRIPT_VERSION)
+print("INSPECTOR_PROCESS_MIN_SCRIPT_VERSION",server.MIN_SCRIPT_VERSION)
 print("MIN_VERSION_DROPINS",json.dumps(matches,ensure_ascii=False))
+print("SERVICE_MAIN_PID_OK",pid>0)
+print("SERVICE_MIN_SCRIPT_VERSION",service_min)
+print("SERVICE_MIN_MATCHES_LATEST",service_min==server.release_version())
