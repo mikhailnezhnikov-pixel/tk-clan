@@ -1,2 +1,0 @@
-deploy=userscript-1.17.33-clan-shop-dom-history
-stamp=2026-09-22T22:48+09:00

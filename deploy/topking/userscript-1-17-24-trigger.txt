@@ -1,3 +1,0 @@
-trigger=businesses-rearrange-safe-t123
-version=1.17.24
-timestamp=2026-09-21
