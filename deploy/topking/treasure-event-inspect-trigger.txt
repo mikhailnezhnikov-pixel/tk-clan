@@ -1,0 +1,2 @@
+inspect=treasure-event-server
+stamp=2026-09-23T11:48+09:00
