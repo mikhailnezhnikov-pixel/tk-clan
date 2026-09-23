@@ -2,7 +2,7 @@
 
 ## Status
 
-**SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · STATIC_CI_PASS · USER_BROWSER_CHECK_PENDING**
+**LIVE PASS**
 
 ## Pinned donor
 
@@ -111,3 +111,19 @@ Built from exact live-synced baseline 1.17.39 and preserves:
 - Treasure selective capture r2: **PRESERVED**;
 - Maps manual-only scan: **PRESERVED**;
 - gameplay mutations from CI: **NONE**.
+
+
+## User live confirmation
+
+**PASS**
+
+Observed in the authenticated game on userscript 1.17.43:
+- copy progression executed;
+- rarity progression executed;
+- level progression executed;
+- Nuts were actually spent;
+- real Power gain was reported;
+- sample final result: `Power +37 463`;
+- Hamsters Runner completed successfully.
+
+Stage 2.12 is closed as **LIVE PASS**.
