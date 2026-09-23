@@ -1,0 +1,8 @@
+USERSCRIPT_1_17_75_RUNTIME_SMOKE_SESSION=PASS
+source_version=1.17.74
+target_version=1.17.75
+mode=PASSIVE_SESSION_PERSISTENCE
+new_game_requests=NONE
+storage=sessionStorage
+scope=runtime-smoke-events-only
+public_exact_match=PASS

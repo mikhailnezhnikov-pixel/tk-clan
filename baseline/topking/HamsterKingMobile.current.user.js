@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.74
+// @version      1.17.75
+// @release-note Диагностика smoke-test: события Rat Hunt / War / Районов теперь переживают перезагрузку текущей вкладки через sessionStorage; сохраняются только обезличенные runtime-smoke события.
 // @release-note Диагностика smoke-test: Rat Hunt, War и Районы теперь пассивно записывают форму ответов и подтверждённое состояние после мутаций без дополнительных запросов к игре.
 // @release-note Карта Сокровищ: четыре ограниченных набора магазина приоритетно сохраняются из уже загруженного /shop/view без дополнительных запросов к игре.
 // @release-note Безопасность боёв: Ямы, Боссы и Районы теперь требуют явное подтверждение перед запуском; Районы дополнительно всегда перечитывают свежий idler/view перед формированием и непосредственно перед стартом плана.
@@ -81,7 +82,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.74';
+  const BUILD_VERSION = '1.17.75';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
@@ -104,6 +105,7 @@
   const HK_GROWTH_FRESH_PREFLIGHT_REV = 'growth-fresh-preflight-20260923-r1';
   const HK_STAGE7_COMBAT_CONFIRM_REV = 'stage7-combat-confirm-20260923-r1';
   const HK_RUNTIME_SMOKE_OBSERVABILITY_REV = 'runtime-smoke-observability-20260923-r1';
+  const HK_RUNTIME_SMOKE_SESSION_REV = 'runtime-smoke-session-20260923-r1';
   function hkSmokeObjectKeys(value){
     return value&&typeof value==='object'&&!Array.isArray(value)?Object.keys(value).slice(0,24):[];
   }
@@ -268,7 +270,23 @@
   const visible = element => !!(element && (element.offsetWidth || element.offsetHeight || element.getClientRects().length));
   const number = value => Number.isFinite(Number(value)) ? Number(value) : null;
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const diagnostic = {startedAt:new Date().toISOString(), events:[]};
+  const HK_RUNTIME_SMOKE_SESSION_KEY='hk_runtime_smoke_events_v1';
+  function diagnosticLoadRuntimeSmokeEvents(){
+    try{
+      const value=JSON.parse(sessionStorage.getItem(HK_RUNTIME_SMOKE_SESSION_KEY)||'[]');
+      return Array.isArray(value)?value.filter(row=>String(row?.type||'').startsWith('runtime-smoke-')).slice(-160):[];
+    }catch(_){return[];}
+  }
+  function diagnosticPersistRuntimeSmokeEvent(event){
+    if(!event||!String(event.type||'').startsWith('runtime-smoke-'))return;
+    try{
+      const current=JSON.parse(sessionStorage.getItem(HK_RUNTIME_SMOKE_SESSION_KEY)||'[]');
+      const rows=Array.isArray(current)?current.filter(row=>String(row?.type||'').startsWith('runtime-smoke-')):[];
+      rows.push(event);
+      sessionStorage.setItem(HK_RUNTIME_SMOKE_SESSION_KEY,JSON.stringify(rows.slice(-160)));
+    }catch(_){}
+  }
+  const diagnostic = {startedAt:new Date().toISOString(), events:diagnosticLoadRuntimeSmokeEvents()};
   const healthState = {
     game:{ok:false, detail:'ожидание'}, auth:{ok:false, detail:'ожидание'},
     license:{ok:false, detail:'ожидание'}, server:{ok:false, detail:'ожидание'}
@@ -288,7 +306,9 @@
     let safe = {};
     try { safe = JSON.parse(JSON.stringify(data, (_key, value) => typeof value === 'string' ? diagnosticRedact(value) : value)); }
     catch (_) { safe = {value:diagnosticRedact(data)}; }
-    diagnostic.events.push({at:new Date().toISOString(), type:String(type || 'event'), data:safe});
+    const event={at:new Date().toISOString(), type:String(type || 'event'), data:safe};
+    diagnostic.events.push(event);
+    diagnosticPersistRuntimeSmokeEvent(event);
     if (diagnostic.events.length > DIAGNOSTIC_MAX_EVENTS) diagnostic.events.splice(0, diagnostic.events.length - DIAGNOSTIC_MAX_EVENTS);
   }
   function setHealth(name, ok, detail = '') {
@@ -333,6 +353,7 @@
     const currentBearer = String(apiHeaders?.Authorization || '').replace(/^Bearer\s+/i,'');
     const report = {
       schema:'topking-hk-diagnostic-v1', version:VERSION, startedAt:diagnostic.startedAt, exportedAt:new Date().toISOString(),
+      runtimeSmoke:{revision:HK_RUNTIME_SMOKE_SESSION_REV,persisted:true,sessionKeyVersion:1},
       environment:diagnosticEnvironment(), health:healthState,
       gameAuth:{present:!!currentBearer, fingerprint:currentBearer ? diagnosticFingerprint(currentBearer) : '', expiresAt:jwtExpiration(currentBearer) || null},
       license:{checked:!!licenseState.checked, allowed:!!licenseState.allowed, playerId:clean(licenseState.playerId || ''), tokenPresent:!!licenseState.token},
