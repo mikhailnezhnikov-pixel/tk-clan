@@ -1,2 +1,2 @@
-inspect=treasure-parse-shop-lots
-stamp=2026-09-23T12:55+09:00
+inspect=treasure-exact-shop-and-pet-text
+stamp=2026-09-23T13:00+09:00
