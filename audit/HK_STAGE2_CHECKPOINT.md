@@ -17,7 +17,7 @@ Each module:
 
 - stage: 2
 - status: IN_PROGRESS
-- userscript: 1.17.38
+- userscript: 1.17.39
 - current module: Growth / Развитие — Stage 2.11 verification
 - current module file: audit/hk-stage2-11-growth.md
 - current module status: SOURCE_PREFLIGHT_PASS · CANONICAL_CURRENCY_BUG_CONFIRMED · TECHNICAL_LIVE_PASS · USER_BROWSER_CHECK_PENDING
@@ -1888,3 +1888,8 @@ Current behavior:
 
 - Maps auto-research regression hotfix 1.17.38: TECHNICAL LIVE PASS; user check pending.
 - Opening Maps is read-only; full district scan is manual-only via scan button.
+
+
+## Treasure Map guide capture
+
+- Treasure Map guide capture 1.17.39: TECHNICAL LIVE PASS; passive-only event/API/DOM/asset collector; guide population pending captured event data.

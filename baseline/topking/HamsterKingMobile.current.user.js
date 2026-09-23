@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.38
+// @version      1.17.39
+// @release-note Добавлен пассивный сбор нового события «Карта Сокровищ»: скрипт сохраняет только уже загруженные игрой API-ответы, текст экрана и ссылки на ассеты для построения гайда; дополнительных запросов к игре не делает.
 // @release-note Карты: исследование районов больше не запускается автоматически при открытии вкладки или по 24-часовому таймеру; полный проход запускается только явной кнопкой «Считать карты аккаунта».
 // @release-note Growth: бюджет Хомяков восстановлен по канону Kokkaras — cur_nut (Орехи) вместо cur_cap (Крышки); сохранённый процент автоматически мигрирует capsPercent → nutsPercent.
 // @release-note Clan Shop и статистика клана теперь сохраняют настоящий числовой player_id участника; внутренний opaque member.id больше не подменяет игровой ID.
@@ -46,7 +47,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.38';
+  const BUILD_VERSION = '1.17.39';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   function hkRuntimeVersionTuple(value) {
@@ -3333,6 +3334,150 @@
     start();
   }
 
+  const HK_TREASURE_GUIDE_CAPTURE_REV='treasure-guide-passive-capture-20260923-r1';
+  let treasureGuideDomTimer=null;
+  let treasureGuideLastDomFingerprint='';
+  const treasureGuideSentKeys=new Set();
+
+  function treasureGuideHash(text) {
+    let hash=2166136261;
+    for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}
+    return (hash>>>0).toString(16).padStart(8,'0');
+  }
+
+  function treasureGuideScreenVisible() {
+    const text=String(document.body?.innerText||'');
+    return /Карта\s+Сокровищ|Treasure\s+Map|نقشه\s+گنج/i.test(text);
+  }
+
+  function treasureGuideAssetUrls() {
+    const urls=new Set();
+    const add=value=>{
+      const url=String(value||'').trim();
+      if(/^https?:\/\//i.test(url))urls.add(url);
+    };
+    try{
+      document.querySelectorAll('img').forEach(node=>add(node.currentSrc||node.src));
+      document.querySelectorAll('[style*="background"]').forEach(node=>{
+        const value=String(node.style?.backgroundImage||node.style?.background||'');
+        for(const match of value.matchAll(/url\(["']?([^"')]+)["']?\)/g))add(match[1]);
+      });
+      performance.getEntriesByType('resource').slice(-500).forEach(entry=>{
+        const url=String(entry?.name||'');
+        if(!/hwgame\.cloud/i.test(url))return;
+        if(/\.(?:png|jpe?g|webp|svg)(?:\?|$)/i.test(url)||/assets\/images|items\//i.test(url))add(url);
+      });
+    }catch(_){}
+    return [...urls].slice(0,220);
+  }
+
+  function treasureGuidePayloadText(body) {
+    try{
+      const value=JSON.stringify(body);
+      return value.length<=250000?value:value.slice(0,250000);
+    }catch(_){return '';}
+  }
+
+  function treasureGuideApiRelevant(path, payloadText) {
+    if(!path||path==='/player/me'||path.startsWith('/auth/'))return false;
+    const visibleNow=treasureGuideScreenVisible();
+    if(/treasure|quest|mission|task|event|adventure/i.test(path))return true;
+    if(visibleNow && (
+      path==='/events' ||
+      path==='/client_config' ||
+      path==='/items' ||
+      path==='/shop/view' ||
+      path.startsWith('/localization/')
+    ))return true;
+    const sample=String(payloadText||'').slice(0,180000);
+    return /treasure[_ -]?map|treasure|карта.{0,20}сокровищ|сокровищ/i.test(sample);
+  }
+
+  async function treasureGuideSubmit(documentValue) {
+    if(!licenseState.allowed)return;
+    const captureKey=String(documentValue?.capture_key||'');
+    if(!captureKey||treasureGuideSentKeys.has(captureKey))return;
+    treasureGuideSentKeys.add(captureKey);
+    if(treasureGuideSentKeys.size>180){
+      const first=treasureGuideSentKeys.values().next().value;
+      treasureGuideSentKeys.delete(first);
+    }
+    try{
+      await licensedServerJson(
+        CLAN_SHOP_FACT_API_BASE,
+        '/treasure-guide/capture',
+        documentValue,
+        false,
+        'treasure-guide'
+      );
+      recordDiagnostic('treasure-guide-capture',{
+        source:documentValue.source,
+        path:documentValue.path||'',
+        assets:Array.isArray(documentValue.assets)?documentValue.assets.length:0
+      });
+    }catch(error){
+      treasureGuideSentKeys.delete(captureKey);
+      console.warn('[HK] Treasure guide capture failed',error);
+    }
+  }
+
+  function acceptTreasureGuideApi(url,body) {
+    if(!body||typeof body!=='object')return;
+    let path='';
+    try{path=new URL(String(url||''),location.href).pathname;}catch(_){return;}
+    const payloadJson=treasureGuidePayloadText(body);
+    if(!treasureGuideApiRelevant(path,payloadJson))return;
+    const key='api:'+path+':'+treasureGuideHash(payloadJson);
+    void treasureGuideSubmit({
+      capture_key:key,
+      source:'api',
+      path,
+      payload_json:payloadJson,
+      page_text:'',
+      assets:treasureGuideScreenVisible()?treasureGuideAssetUrls():[]
+    });
+  }
+
+  function scanTreasureGuideDom() {
+    if(!licenseState.allowed||!treasureGuideScreenVisible())return;
+    const pageText=String(document.body?.innerText||'').replace(/\u00a0/g,' ').trim().slice(0,35000);
+    const assets=treasureGuideAssetUrls();
+    const fingerprint=treasureGuideHash(pageText+'\n'+assets.join('\n'));
+    if(fingerprint===treasureGuideLastDomFingerprint)return;
+    treasureGuideLastDomFingerprint=fingerprint;
+    void treasureGuideSubmit({
+      capture_key:'dom:'+fingerprint,
+      source:'dom',
+      path:location.pathname,
+      payload_json:'',
+      page_text:pageText,
+      assets
+    });
+  }
+
+  function scheduleTreasureGuideDomScan(delay=900) {
+    if(treasureGuideDomTimer)clearTimeout(treasureGuideDomTimer);
+    treasureGuideDomTimer=setTimeout(()=>{
+      treasureGuideDomTimer=null;
+      scanTreasureGuideDom();
+    },delay);
+  }
+
+  function installTreasureGuideCapture() {
+    if(window.__HK_TREASURE_GUIDE_CAPTURE__)return;
+    window.__HK_TREASURE_GUIDE_CAPTURE__=true;
+    const start=()=>{
+      if(!document.body){setTimeout(start,300);return;}
+      const observer=new MutationObserver(()=>scheduleTreasureGuideDomScan(1000));
+      observer.observe(document.body,{childList:true,subtree:true,characterData:true});
+      scheduleTreasureGuideDomScan(1200);
+      setInterval(()=>{
+        if(document.visibilityState==='visible'&&treasureGuideScreenVisible())scheduleTreasureGuideDomScan(250);
+      },5000);
+    };
+    start();
+  }
+
   function installNetworkCapture() {
     if (networkCaptureInstalled) return;
     if (typeof window.fetch !== 'function' || !window.XMLHttpRequest) throw new Error('Игровая сеть ещё не готова');
@@ -3354,7 +3499,7 @@
       // Native game traffic is observation-only. Never schedule HK's React
       // refresh bridge from the game's own request; doing so creates a second
       // player-state request while the server may still hold its lock.
-      if(response.ok && isGameApiRequest(url) && path!=='/player/me') response.clone().json().then(body=>{acceptSharedGameResponse(url,body);void acceptClanShopPurchaseHistory(url,body);}).catch(()=>{});
+      if(response.ok && isGameApiRequest(url) && path!=='/player/me') response.clone().json().then(body=>{acceptSharedGameResponse(url,body);void acceptClanShopPurchaseHistory(url,body);acceptTreasureGuideApi(url,body);}).catch(()=>{});
       if (path === '/player/me' && response.ok) {
         let partial = false;
         try { partial = Array.isArray(JSON.parse(String(init?.body || '{}'))?.arguments); } catch (_) {}
@@ -3397,7 +3542,7 @@
               if (path === '/auth/create') captureNativeGameAuthToken(body);
               // XHR from the native game is passive input for HK only.
               // Do not trigger an HK-side player refresh after native mutations.
-              if(path!=='/player/me'){acceptSharedGameResponse(this.__hkUrl,body);void acceptClanShopPurchaseHistory(this.__hkUrl,body);}
+              if(path!=='/player/me'){acceptSharedGameResponse(this.__hkUrl,body);void acceptClanShopPurchaseHistory(this.__hkUrl,body);acceptTreasureGuideApi(this.__hkUrl,body);}
                if (path === '/player/me') {
                  let partial = false;
                  try { partial = Array.isArray(JSON.parse(String(args[0] || '{}'))?.arguments); } catch (_) {}
@@ -3415,6 +3560,7 @@
     };
     networkCaptureInstalled = true;
     installClanShopDomHistoryCapture();
+    installTreasureGuideCapture();
   }
 
   function pitState() {

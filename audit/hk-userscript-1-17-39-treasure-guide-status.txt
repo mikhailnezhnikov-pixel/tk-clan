@@ -1,0 +1,7 @@
+USERSCRIPT_1_17_39_TREASURE_GUIDE_CAPTURE=PASS
+version=1.17.39
+base=1.17.38
+mode=PASSIVE_ONLY
+game_requests_added=NONE
+captures=API_ALREADY_LOADED+VISIBLE_DOM+ASSET_URLS
+ci_game_mutations=NONE
