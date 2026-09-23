@@ -1,0 +1,5 @@
+treasure_bundle_card_capture=1.17.79
+source=1.17.78
+marker=treasure-guide-bundle-card-dom-20260923-r1
+preserve=runtime-smoke-autostart-20260923-r1
+stamp=2026-09-23T23:45+09:00
