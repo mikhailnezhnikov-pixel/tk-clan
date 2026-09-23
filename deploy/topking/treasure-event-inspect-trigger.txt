@@ -1,2 +1,2 @@
-inspect=treasure-all-pet-mission-cards
-stamp=2026-09-23T14:39+09:00
+inspect=treasure-confirm-splus-card
+stamp=2026-09-23T14:41+09:00
