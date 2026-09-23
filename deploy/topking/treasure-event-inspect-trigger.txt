@@ -1,2 +1,2 @@
-inspect=treasure-minigame-modal-screens
-stamp=2026-09-23T13:56+09:00
+inspect=treasure-fair-reroll-costs
+stamp=2026-09-23T14:00+09:00
