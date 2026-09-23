@@ -4,24 +4,31 @@ spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec);spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 
+terms=["bp_event_minigame","bp_event_minigame_line_free","bp_event_minigame_line_paid_01","bp_event_minigame_line_paid_02"]
 with server.db_session() as db:
-    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json,page_text,assets_json,captured_at
-                                        FROM treasure_guide_captures ORDER BY id""")]
+    rows=[dict(r) for r in db.execute("""SELECT id,path,payload_json FROM treasure_guide_captures
+                                        WHERE payload_json<>'' ORDER BY id""")]
 
-bp=[{"id":r["id"],"path":r["path"],"captured_at":r["captured_at"],"payload":str(r["payload_json"] or "")[:22000]}
-    for r in rows if str(r["path"]).startswith("/battlepass")]
-print("BATTLEPASS_ROWS",json.dumps(bp[-80:],ensure_ascii=False))
-
-dom=[];seen=set()
-for r in rows:
-    text=re.sub(r"\s+"," ",str(r["page_text"] or "")).strip()
-    if "Линейки наград" not in text:continue
-    if "Достижения" in text and len(text)>8000:continue
-    key=text[:5000]
-    if key in seen:continue
-    seen.add(key)
-    try:assets=json.loads(r["assets_json"] or "[]")
-    except:assets=[]
-    rel=[a for a in assets if re.search(r"battle_pass|reward|treasurehunt_|egg_|key_|map_|skill_change",str(a),re.I)]
-    dom.append({"id":r["id"],"captured_at":r["captured_at"],"text":text[:7000],"assets":rel[-160:]})
-print("BATTLEPASS_DOM",json.dumps(dom[-80:],ensure_ascii=False))
+for term in terms:
+    out=[]
+    for r in rows:
+        raw=str(r["payload_json"] or "")
+        if term not in raw:continue
+        try:obj=json.loads(raw)
+        except:continue
+        stack=[("$",obj,0)]
+        while stack and len(out)<80:
+            path,v,depth=stack.pop()
+            if depth>18:continue
+            if isinstance(v,dict):
+                blob=json.dumps(v,ensure_ascii=False,separators=(",",":"))
+                if term in blob and len(blob)<30000:
+                    if any(k in v for k in ("levels","rewards","line_id","score_step","lot_view","id")):
+                        out.append({"capture":r["id"],"capture_path":r["path"],"json_path":path,"obj":v})
+                        continue
+                for k,val in v.items():
+                    if isinstance(val,(dict,list)):stack.append((path+"."+str(k),val,depth+1))
+            elif isinstance(v,list):
+                for i,val in enumerate(v[:5000]):
+                    if isinstance(val,(dict,list)):stack.append((path+f"[{i}]",val,depth+1))
+    print("BPTERM",term,json.dumps(out[-50:],ensure_ascii=False)[:90000])
