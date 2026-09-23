@@ -4025,7 +4025,25 @@
         "Состояния воды: спокойная, штормовая, проклятая и штормовая проклятая.",
         "В рыбалке можно находить ключи; отдельные навыки питомцев повышают шанс ключей и карт."
       ],
-      "hint": "Число под клеткой — сколько забросов потребуется на неё."
+      "hint": "Число под клеткой — сколько забросов потребуется на неё.",
+      "visuals": [
+        {
+          "title": "Удочка",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/treasure_minigame_rod_r4_icon.png"
+        },
+        {
+          "title": "Обычная вода",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_calm_water_icon.png"
+        },
+        {
+          "title": "Вихрь",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_water_icon.png"
+        },
+        {
+          "title": "Особая находка",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png"
+        }
+      ]
     },
     {
       "id": "trader",
@@ -4038,7 +4056,21 @@
         "Навык «Любимчик торговцев» на S+ увеличивает репутацию с 10 до 14.",
         "Навык «Карты на прилавке» добавляет шанс специальных лотов с картами."
       ],
-      "hint": "Точные предложения и цены находятся ниже в блоке «Тайный торговец»."
+      "hint": "Точные предложения и цены находятся ниже в блоке «Тайный торговец».",
+      "visuals": [
+        {
+          "title": "Торговец I",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/trader/icons/minigame_trader_type_01_rep_5_s_icon.png"
+        },
+        {
+          "title": "Торговец II",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/trader/icons/minigame_trader_type_02_rep_5_s_icon.png"
+        },
+        {
+          "title": "Торговец III",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/trader/icons/minigame_trader_type_03_rep_5_s_icon.png"
+        }
+      ]
     },
     {
       "id": "chests",
@@ -4051,7 +4083,25 @@
         "Найденный сундук открывается за 5 Провизии.",
         "Сундук I — Обычный ключ, II — Необычный ключ, III — Ценный ключ."
       ],
-      "hint": "Пул возможного дропа каждого сундука показан ниже отдельными иконками."
+      "hint": "Пул возможного дропа каждого сундука показан ниже отдельными иконками.",
+      "visuals": [
+        {
+          "title": "Сундук I",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_015_icon.png"
+        },
+        {
+          "title": "Сундук II",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_02_icon.png"
+        },
+        {
+          "title": "Сундук III",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_03_icon.png"
+        },
+        {
+          "title": "Раскопка",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png"
+        }
+      ]
     },
     {
       "id": "lights",
@@ -4069,7 +4119,17 @@
         "3",
         "4"
       ],
-      "hint": "Нумерация — пример решения конкретного поля, а не универсальная комбинация."
+      "hint": "Нумерация — пример решения конкретного поля, а не универсальная комбинация.",
+      "visuals": [
+        {
+          "title": "Выключена",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/lights/icons/treasure_minigame_light_false_icon.png"
+        },
+        {
+          "title": "Включена",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/lights/icons/treasure_minigame_light_true_icon.png"
+        }
+      ]
     },
     {
       "id": "fight",
@@ -4090,7 +4150,25 @@
         "5",
         "6"
       ],
-      "hint": "Достижения дополнительно учитывают цвет врагов, суммарное HP, зачистки и число боёв."
+      "hint": "Достижения дополнительно учитывают цвет врагов, суммарное HP, зачистки и число боёв.",
+      "visuals": [
+        {
+          "title": "Оружие",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png"
+        },
+        {
+          "title": "Враг 2 HP",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_01_icon.png"
+        },
+        {
+          "title": "Враг 3 HP",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_02_icon.png"
+        },
+        {
+          "title": "Враг 4 HP",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_03_icon.png"
+        }
+      ]
     },
     {
       "id": "pets",
@@ -4103,7 +4181,17 @@
         "S: 12 корма → 3 Золотые монеты + 5% шанс яйца на питомца.",
         "S+: 20 корма → 4 Золотые монеты; специальные награды существуют, точный процент отдельно не подтверждён."
       ],
-      "hint": "Навыки питомцев ниже теперь объединены: один навык — одна карточка, а грейды находятся внутри неё."
+      "hint": "Навыки питомцев ниже теперь объединены: один навык — одна карточка, а грейды находятся внутри неё.",
+      "visuals": [
+        {
+          "title": "Питомцы",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_pets_icon.png"
+        },
+        {
+          "title": "Поручения",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_pet_missions_icon.png"
+        }
+      ]
     },
     {
       "id": "treasury",
@@ -4116,7 +4204,21 @@
         "Путь 3 — 5 Провизии.",
         "Стоимость одинакова; без подтверждённых вероятностей наград нельзя обоснованно выделить лучший путь."
       ],
-      "hint": "Большой сундук сокровищницы может содержать Монеты, Провизию, ключи, Золотую ягоду, золото и специальные карты."
+      "hint": "Большой сундук сокровищницы может содержать Монеты, Провизию, ключи, Золотую ягоду, золото и специальные карты.",
+      "visuals": [
+        {
+          "title": "Путь 1",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_1_icon.png"
+        },
+        {
+          "title": "Путь 2",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_2_icon.png"
+        },
+        {
+          "title": "Путь 3",
+          "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_3_icon.png"
+        }
+      ]
     }
   ],
   "pet_skill_groups": [
