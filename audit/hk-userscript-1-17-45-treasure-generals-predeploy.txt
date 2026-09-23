@@ -1,0 +1,10 @@
+USERSCRIPT_1_17_45_TREASURE_GENERALS_PREDEPLOY=PASS
+source_version=1.17.44
+target_version=1.17.45
+base_sha256=62384664ad827e14f160aec8b8346f9e884a42a9f7406b108448068d5f85c373
+candidate_sha256=f294842cbb93e95f45082ba6b9b9a6336aa00d5104d291dc09b8f57e087b8959
+treasure_pet_skill_marker=PASS
+generals_live_display_marker=PASS
+generals_scoped_cache_guard=PASS
+generals_nuts_and_pit_display=PASS
+syntax=PASS
