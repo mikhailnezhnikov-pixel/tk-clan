@@ -63,7 +63,9 @@ Built from exact live-synced baseline 1.17.39 and preserves:
 - destructive game mutations from CI: **NONE**;
 - gameplay requests from validation CI: **NONE**;
 - production deploy: **PASS**;
-- baseline must remain 1.17.39 until a race-safe 1.17.40 deploy succeeds;
+- server-side rollback trap: **ENABLED**;
+- public verification rollback: **ENABLED**;
+- baseline synchronized to live 1.17.40 only after successful public exact-match verification;
 - user browser/live gate: **PENDING**.
 
 ## Browser/live gate after deploy
