@@ -478,28 +478,52 @@
       "limit": "Осталось 3",
       "price": "490",
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_pets_collection_10_icon.png",
-      "composition_note": "Состав на карточке подтверждён визуально, но названия отдельных предметов пока не связываются без догадки."
+      "composition_note": "Количество предметов на карточке подтверждено по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
+      "observed_quantities": [
+        1,
+        250,
+        225
+      ],
+      "composition_status": "quantities_confirmed_names_pending"
     },
     {
       "title": "Запас на удачу",
       "limit": "Осталось 3",
       "price": "490",
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_energy_collection_10_icon.png",
-      "composition_note": "Состав на карточке подтверждён визуально, но названия отдельных предметов пока не связываются без догадки."
+      "composition_note": "Количество предметов на карточке подтверждено по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
+      "observed_quantities": [
+        10,
+        1500,
+        225
+      ],
+      "composition_status": "quantities_confirmed_names_pending"
     },
     {
       "title": "Секреты под замком",
       "limit": "Осталось 3",
       "price": "490",
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_keys_collection_10_icon.png",
-      "composition_note": "Состав на карточке подтверждён визуально, но названия отдельных предметов пока не связываются без догадки."
+      "composition_note": "Количество предметов на карточке подтверждено по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
+      "observed_quantities": [
+        2,
+        5,
+        225
+      ],
+      "composition_status": "quantities_confirmed_names_pending"
     },
     {
       "title": "Золотой урожай",
       "limit": "Остался 1",
       "price": "490",
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_maps_golden_berries_10_icon.png",
-      "composition_note": "Состав на карточке подтверждён визуально, но названия отдельных предметов пока не связываются без догадки."
+      "composition_note": "Количество предметов на карточке подтверждено по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
+      "observed_quantities": [
+        1,
+        1,
+        225
+      ],
+      "composition_status": "quantities_confirmed_names_pending"
     }
   ],
   "achievement_examples": [
