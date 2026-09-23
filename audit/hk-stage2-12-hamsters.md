@@ -2,7 +2,7 @@
 
 ## Status
 
-**SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · CANDIDATE_1_17_40_READY · STATIC_CI_PENDING · LIVE_DEPLOY_PENDING**
+**SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · CANDIDATE_1_17_40_READY · STATIC_CI_PASS · LIVE_DEPLOY_PENDING**
 
 ## Pinned donor
 
@@ -74,3 +74,16 @@ Built from exact live-synced baseline 1.17.39 and preserves:
 4. Inspect the execution plan before starting.
 5. Observe the first real run for candidate ordering, Nut budget accounting and state refresh.
 6. Stop immediately if a premium/hard cost is ever proposed.
+
+
+## Static CI
+
+- workflow: `Check Userscript 1.17.40 Hamsters Cost Parity`;
+- run: `35812191033`;
+- result: **SUCCESS**;
+- `node --check`: PASS;
+- version/build marker: PASS;
+- donor cost-parity marker: PASS;
+- Treasure / Maps / Growth / Clan Shop / Auto Routines / 429 / collector lease / Businesses preserved markers: PASS;
+- Maps manual-only invariant: PASS;
+- gameplay/network mutation from CI: NONE.
