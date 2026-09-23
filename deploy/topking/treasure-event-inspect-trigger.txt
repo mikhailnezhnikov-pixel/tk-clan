@@ -1,2 +1,2 @@
-inspect=treasure-b2-effects-and-splus
-stamp=2026-09-23T14:34+09:00
+inspect=treasure-b2-ranked-skills-mission
+stamp=2026-09-23T14:37+09:00
