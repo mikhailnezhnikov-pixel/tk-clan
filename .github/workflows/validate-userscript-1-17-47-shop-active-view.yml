@@ -1,0 +1,34 @@
+name: Validate Userscript 1.17.47 Shop Active View
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/HamsterKingMobile.1.17.47.shop-active-view.candidate.user.js'
+      - '.github/workflows/validate-userscript-1-17-47-shop-active-view.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.47.shop-active-view.candidate.user.js
+          node --check "$candidate"
+          grep -Fq "// @version      1.17.47" "$candidate"
+          grep -Fq "const BUILD_VERSION = '1.17.47';" "$candidate"
+          grep -Fq "shop-active-view-canon-20260923-r1" "$candidate"
+          grep -Fq "shop-purchase-plan-canon-20260923-r1" "$candidate"
+          grep -Fq "function shopRowInActiveView(row)" "$candidate"
+          grep -Fq "if (selectedShopSection === 'clan') return row.clanGroup === selectedShopGroup;" "$candidate"
+          grep -Fq "const visibleRows = shopRows.filter(shopRowInActiveView);" "$candidate"
+          grep -Fq "const plan = shopRows.filter(row => shopRowInActiveView(row) &&" "$candidate"
+          grep -Fq "shopRows.filter(row => shopRowInActiveView(row) && shopPurchasableCount(row) > 0" "$candidate"
+          ! grep -Fq "(selectedShopSection !== 'ordinary' || row.group === selectedShopGroup) && selectedShopLots.has" "$candidate"
+          sha256sum "$candidate"
