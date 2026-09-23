@@ -6,11 +6,18 @@ spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
 with server.db_session() as db:
     rows=[dict(r) for r in db.execute("SELECT id,path,page_text FROM treasure_guide_captures WHERE page_text<>'' ORDER BY id")]
-out=[]
+
+splus=[]
+modals=[]
 for r in rows:
     text=re.sub(r"\\s+"," ",str(r.get("page_text") or "")).strip()
-    if len(text)>3000:
-        continue
-    if any(x.lower() in text.lower() for x in ["питом","корм","навык","s+","ключ","рыбал","hp"]):
-        out.append({"id":r["id"],"path":r["path"],"text":text})
-print("DOM_PET",json.dumps(out[-120:],ensure_ascii=False))
+    if "СОДЕРЖИТ" in text and re.search(r"·\\s*S\\+",text):
+        pos=text.rfind("HK")
+        splus.append({"id":r["id"],"text":text[pos+2:] if pos>=0 else text})
+    if "Понятно" in text and len(text)<2200:
+        pos=text.rfind("HK")
+        tail=text[pos+2:] if pos>=0 else text
+        if len(tail)<1400:
+            modals.append({"id":r["id"],"text":tail})
+print("SPLUS",json.dumps(splus[-40:],ensure_ascii=False))
+print("MODALS",json.dumps(modals[-120:],ensure_ascii=False))
