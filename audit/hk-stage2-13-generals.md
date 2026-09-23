@@ -2,7 +2,7 @@
 
 ## Status
 
-**SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · CANDIDATE_1_17_44_READY · STATIC_CI_PENDING · LIVE_DEPLOY_PENDING**
+**SOURCE_PREFLIGHT_PASS · DONOR_COST_PARITY_BUG_CONFIRMED · CANDIDATE_1_17_44_READY · STATIC_CI_PASS · LIVE_DEPLOY_PENDING**
 
 ## Pinned donor
 
@@ -74,3 +74,15 @@ No gameplay mutation is executed by CI.
 4. Run Generals.
 5. Confirm actual level increases and Pit Token spending.
 6. Confirm no premium/hard cost is proposed.
+
+
+## Static CI
+
+- workflow: Check Userscript 1.17.44 Generals Kokkaras Cost Parity;
+- run: 35815746692;
+- result: SUCCESS;
+- node --check: PASS;
+- donor cost-parity invariant: PASS;
+- vertical Generals Runner invariant: PASS;
+- preserved Hamsters / Treasure / Maps markers: PASS;
+- gameplay mutations from CI: NONE.
