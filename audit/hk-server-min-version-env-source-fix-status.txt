@@ -1,0 +1,9 @@
+SERVER_MIN_VERSION_ENV_SOURCE_FIX=PASS
+target_version=1.17.83
+server_source=ENV_DRIVEN
+environment_file=/etc/hamsterking-license.env
+effective_min=1.17.83
+old_clients_required_update=PASS
+current_client_required_update=NO
+service_active=PASS
+health=PASS
