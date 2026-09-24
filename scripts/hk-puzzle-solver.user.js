@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HK Puzzle Solver — Top King
 // @namespace    hk-puzzle
-// @version      3.2.0
+// @version      3.3.0
 // @description  Подсказчик порядка ходов + локальный журнал действий Рыбалки/Сокровищницы для Hamster King
 // @match        https://*.hamsterking.games/*
 // @match        https://hamsterking.games/*
@@ -58,10 +58,26 @@
     }
 
     function collectVisibleLots() {
-        return [...document.querySelectorAll('[data-lot-id]')].slice(0, 120).map(function (el) {
+        return [...document.querySelectorAll('[data-lot-id]')].slice(0, 120).map(function (el, index) {
+            const rect = el.getBoundingClientRect();
+            const img = el.matches('img') ? el : el.querySelector('img');
+            let backgroundImage = '';
+            try {
+                backgroundImage = window.getComputedStyle(el).backgroundImage || '';
+            } catch (_) {}
             return {
+                index: index,
                 id: el.getAttribute('data-lot-id') || '',
-                text: String(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120)
+                text: String(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120),
+                className: String(el.className || '').slice(0, 160),
+                img: img ? String(img.currentSrc || img.src || '').slice(0, 500) : '',
+                backgroundImage: backgroundImage && backgroundImage !== 'none' ? backgroundImage.slice(0, 500) : '',
+                rect: {
+                    x: Math.round(rect.x),
+                    y: Math.round(rect.y),
+                    w: Math.round(rect.width),
+                    h: Math.round(rect.height)
+                }
             };
         }).filter(function (row) { return row.id; });
     }
@@ -730,7 +746,7 @@
     captureScreenState('helper_started');
 
     window.__HK_PUZZLE_SOLVER__ = {
-        version: '3.2.0',
+        version: '3.3.0',
         check: checkPuzzle,
         getHistory: function () {
             return readHistory();
