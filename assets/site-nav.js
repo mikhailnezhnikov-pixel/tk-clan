@@ -410,11 +410,28 @@
       body:JSON.stringify(payload)
     }).catch(()=>{});
   }
+  function wireBackdropMotion(){
+    if(document.documentElement.dataset.tkBackdropMotion==='1')return;
+    document.documentElement.dataset.tkBackdropMotion='1';
+    const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+    let pending=false;
+    function update(){
+      pending=false;
+      const max=Math.max(1,document.documentElement.scrollHeight-innerHeight);
+      const shift=reduced.matches?0:Math.round(14*Math.min(1,Math.max(0,scrollY)/max));
+      document.documentElement.style.setProperty('--tk-backdrop-drift',shift+'px');
+    }
+    function queue(){if(!pending){pending=true;requestAnimationFrame(update)}}
+    window.addEventListener('scroll',queue,{passive:true});
+    window.addEventListener('resize',queue,{passive:true});
+    reduced.addEventListener('change',queue);
+    queue();
+  }
   // TK_SITE_ANALYTICS_V1
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',()=>{render();sendSiteAnalytics()},{once:true});
+    document.addEventListener('DOMContentLoaded',()=>{render();wireBackdropMotion();sendSiteAnalytics()},{once:true});
   }else{
-    render();sendSiteAnalytics();
+    render();wireBackdropMotion();sendSiteAnalytics();
   }
   document.addEventListener('tk-language-change',render);
   window.addEventListener('tk-language-change',render);

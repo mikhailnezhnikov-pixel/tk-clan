@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Рецепты бизнесов — Top King</title>
   <meta name="description" content="Автоматически обновляемая база рецептов бизнесов Hamster King">
-  <link rel="stylesheet" href="../assets/public.css">
+  <link rel="stylesheet" href="../assets/public.css?v=20260924-backdrop1">
   <style>
     .recipe-shell{padding-bottom:70px}.recipe-toolbar{display:grid;gap:12px;padding:16px;border:1px solid #ffffff18;border-radius:18px;background:#111b29e8}.search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.search-row .input{min-width:230px}.filters{display:flex;gap:8px;flex-wrap:wrap}.filter{padding:9px 12px;border:1px solid #40516a;border-radius:999px;background:#101927;color:#c9d3e2;cursor:pointer;font-weight:800}.filter.active{border-color:var(--gold);background:#3a2b14;color:#ffe4a1}.recipe-status{margin:14px 0;color:var(--muted)}.groups{display:grid;gap:12px}.recipe{background:linear-gradient(135deg,color-mix(in srgb,var(--rank) 10%,#172438),#172438);border:1px solid #34475e;border-inline-start:5px solid var(--rank);border-radius:16px;overflow:hidden}.recipe summary{cursor:pointer;list-style:none;padding:12px;display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:12px;align-items:center}.recipe summary::-webkit-details-marker{display:none}.result-icon,.component img{width:60px;height:60px;object-fit:contain;border:2px solid var(--rank);border-radius:50%;background:#0b1421}.recipe-name{font-size:17px;font-weight:850;overflow-wrap:anywhere}.recipe-meta,.recipe-bonuses{color:var(--muted);font-size:12px;line-height:1.45}.ways-count{color:#ffe09b;text-align:end;font-weight:800}.ways{display:grid;gap:9px;padding:0 12px 12px}.way{background:#0c1625;border:1px solid #2c3d55;border-radius:12px;padding:10px}.way-title{color:#ffe09b;font-weight:800;margin-bottom:8px}.flow{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:2px}.component{flex:0 0 92px;text-align:center}.component img{width:54px;height:54px;border-color:var(--component-rank)}.component span{display:block;font-size:10px;color:#c3d0e1;overflow-wrap:anywhere}.plus{color:var(--gold);font-size:24px;font-weight:900}.error{padding:24px;border:1px solid #74414b;border-radius:16px;color:#ffb6bd;background:#172438}.result-empty{padding:24px;border:1px dashed #ffffff25;border-radius:16px;color:var(--muted);text-align:center}
     @media(max-width:680px){.recipe summary{grid-template-columns:60px minmax(0,1fr)}.ways-count{grid-column:1/3;text-align:start;border-top:1px solid #ffffff18;padding-top:8px}.result-icon{width:54px;height:54px}.search-row .button,.search-row .input{width:100%}.filter{font-size:13px}}
@@ -41,7 +41,7 @@
     fa:{pageTitle:'دستورهای کسب‌وکار — Top King',eyebrow:'پایگاه زنده بازی',title:'دستورهای کسب‌وکار',intro:'دستورهای جدید خودکار ظاهر می‌شوند. کارت‌های باز پس از به‌روزرسانی باز می‌مانند.',search:'جستجو بر اساس نام یا ویژگی',refresh:'به‌روزرسانی',reset:'پاک کردن',nuts:'فندق',toolsFilter:'ابزار',energy:'انرژی و نیرو',buildings:'ساختمان',caps:'درپوش',invest:'سکه سرمایه‌گذاری',permits:'مجوز',pit:'توکن گودال',balls:'توپ',special:'جلوه ویژه',noResults:'هنوز دستور مطابقی وجود ندارد.',loadError:'بارگذاری پایگاه دستورها ممکن نشد. بعداً تلاش کنید.',updating:'در حال به‌روزرسانی…',propertiesMissing:'ویژگی‌ها هنوز خوانده نشده‌اند',componentsMissing:'اجزا هنوز خوانده نشده‌اند',variant:'روش',variants:'روش‌ها',count:'دستورها',results:'نتیجه',business:'کسب‌وکار'}
   };
   </script>
-  <script src="../assets/site-i18n.js"></script>
+  <script src="../assets/site-i18n.js?v=20260924-backdrop1"></script>
   <script>
   const API='https://hk-license.89.125.1.71.sslip.io/api/v1/recipes/public';
   const groupsBox=document.getElementById('groups'),statusBox=document.getElementById('status'),searchBox=document.getElementById('search'),filtersBox=document.getElementById('filters');
@@ -66,5 +66,5 @@
   document.getElementById('reset').onclick=()=>{activeFilters.clear();searchBox.value='';filtersBox.querySelectorAll('.filter').forEach(button=>button.classList.remove('active'));render()};
   document.getElementById('refresh').onclick=load;searchBox.oninput=render;document.addEventListener('tk-language-change',render);load();setInterval(load,60000);
   </script>
-<script src="../assets/site-nav.js?v=20260920-11"></script>
+<script src="../assets/site-nav.js?v=20260924-backdrop1"></script>
 </body></html>

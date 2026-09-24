@@ -183,6 +183,7 @@
   }
   function configureHomepage(){
     const hero=document.querySelector('main .hero');if(!hero)return;
+    document.body.classList.add('tk-home-backdrop');
     hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');
 
     // Homepage fallback: even if an older cached HTML shell is served,
@@ -205,6 +206,14 @@
       const style=document.createElement('style');
       style.id='tk-home-responsive';
       style.textContent=`
+        body.tk-home-backdrop{
+          background-color:#07080b!important;
+          background-image:linear-gradient(90deg,rgba(7,8,11,.72),rgba(7,8,11,.60)),url("assets/home/top-king-clan-hero-approved.jpg")!important;
+          background-size:cover,cover!important;
+          background-position:center,58% calc(50% + var(--tk-backdrop-drift,0px))!important;
+          background-repeat:no-repeat!important;
+          background-attachment:fixed!important;
+        }
         .hero{
           background-image:url("assets/home/top-king-clan-hero-approved.jpg")!important;
           background-position:58% center!important;
@@ -216,7 +225,7 @@
         .hero-actions .button{min-width:190px}
         @media(min-width:981px){
           .hero{
-            background-attachment:fixed!important;
+            background-attachment:scroll!important;
           }
           .hero::before{
             background:
@@ -230,21 +239,10 @@
           }
           #sections{
             overflow:hidden!important;
-            background:
-              radial-gradient(ellipse at 50% 0%,rgba(232,182,84,.055),transparent 28%),
-              #07080b!important;
+            background:transparent!important;
           }
           #sections::before{
-            content:""!important;
-            position:absolute!important;
-            inset:0 0 auto 0!important;
-            height:230px!important;
-            z-index:0!important;
-            pointer-events:none!important;
-            background:
-              linear-gradient(180deg,rgba(7,8,11,.18) 0%,rgba(7,8,11,.55) 38%,rgba(7,8,11,.90) 74%,#07080b 100%),
-              url("assets/home/top-king-clan-hero-approved.jpg") 58% center / cover fixed no-repeat!important;
-            opacity:.82!important;
+            display:none!important;
           }
           #sections>.shell{position:relative!important;z-index:1!important}
           #sections .section-head{margin-bottom:34px!important}
@@ -254,20 +252,14 @@
           .hero-copy{width:min(540px,54%)!important}
         }
         @media(max-width:680px){
-          body{
-            background:
-              radial-gradient(ellipse at 55% 7%,rgba(232,182,84,.08),transparent 30%),
-              linear-gradient(180deg,#08090d 0%,#07080b 54%,#07080b 100%)!important;
-          }
+          body.tk-home-backdrop{background-position:center,56% calc(50% + var(--tk-backdrop-drift,0px))!important}
           .hero{
             min-height:900px!important;
             align-items:flex-start!important;
             overflow:hidden!important;
             isolation:isolate!important;
             background-image:none!important;
-            background:
-              radial-gradient(ellipse at 52% 26%,rgba(232,182,84,.09),transparent 36%),
-              linear-gradient(180deg,#090b0f 0%,#07080b 72%)!important;
+            background:transparent!important;
           }
           .hero::before{
             content:""!important;
@@ -290,7 +282,7 @@
             pointer-events:none!important;
             background:
               radial-gradient(ellipse at 52% 30%,rgba(226,160,48,.12),transparent 30%),
-              linear-gradient(180deg,transparent 0%,rgba(7,8,11,.02) 28%,rgba(7,8,11,.32) 43%,rgba(7,8,11,.82) 57%,#07080b 75%,#07080b 100%)!important;
+              linear-gradient(180deg,transparent 0%,rgba(7,8,11,.02) 28%,rgba(7,8,11,.32) 43%,rgba(7,8,11,.72) 68%,rgba(7,8,11,.45) 100%)!important;
             animation:none!important;
           }
           .hero-inner{
@@ -343,9 +335,7 @@
           #sections{
             margin-top:-1px!important;
             padding-top:62px!important;
-            background:
-              radial-gradient(ellipse at 50% 0%,rgba(232,182,84,.055),transparent 28%),
-              linear-gradient(180deg,#07080b 0%,rgba(7,8,11,.98) 100%)!important;
+            background:transparent!important;
           }
           .portal-card{
             border-color:rgba(255,255,255,.10)!important;
