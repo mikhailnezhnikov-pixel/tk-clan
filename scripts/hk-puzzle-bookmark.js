@@ -53,10 +53,26 @@
     }
 
     function collectVisibleLots() {
-        return [...document.querySelectorAll('[data-lot-id]')].slice(0, 120).map(function (el) {
+        return [...document.querySelectorAll('[data-lot-id]')].slice(0, 120).map(function (el, index) {
+            const rect = el.getBoundingClientRect();
+            const img = el.matches('img') ? el : el.querySelector('img');
+            let backgroundImage = '';
+            try {
+                backgroundImage = window.getComputedStyle(el).backgroundImage || '';
+            } catch (_) {}
             return {
+                index: index,
                 id: el.getAttribute('data-lot-id') || '',
-                text: String(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120)
+                text: String(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120),
+                className: String(el.className || '').slice(0, 160),
+                img: img ? String(img.currentSrc || img.src || '').slice(0, 500) : '',
+                backgroundImage: backgroundImage && backgroundImage !== 'none' ? backgroundImage.slice(0, 500) : '',
+                rect: {
+                    x: Math.round(rect.x),
+                    y: Math.round(rect.y),
+                    w: Math.round(rect.width),
+                    h: Math.round(rect.height)
+                }
             };
         }).filter(function (row) { return row.id; });
     }
@@ -723,7 +739,7 @@
 
     const timer = setInterval(checkPuzzle, 500);
     window.__HK_PUZZLE_SOLVER__ = {
-        version: '3.2.0-bookmark',
+        version: '3.3.0-bookmark',
         check: checkPuzzle,
         getHistory: function () {
             return readHistory();
