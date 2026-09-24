@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Карта Сокровищ — гайд Top King</title>
   <meta name="description" content="Гайд по событию Карта Сокровищ в Hamster King: квесты, покупки, сундуки, награды, достижения и лучшие варианты прохождения.">
   <style>
@@ -453,6 +456,13 @@
     }
 
   
+    .guide-live-version{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:6px 9px;border:1px solid rgba(232,182,84,.28);border-radius:999px;background:rgba(232,182,84,.07);color:#ffd894;font-size:9px;font-weight:900}
+    .confirmed-results-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}
+    .confirmed-result{padding:13px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.025)}
+    .confirmed-result b{display:block;margin-bottom:6px;font-size:11px;color:#f4f6f8}
+    .confirmed-result p{margin:0;color:#a7b0bc;font-size:9px;line-height:1.5}
+    .confirmed-result strong{color:#ffd38b}
+    @media(max-width:760px){.confirmed-results-grid{grid-template-columns:1fr}}
     .resource-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}
     .resource-overview-card{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;align-items:center;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.025)}
     .resource-overview-card img{width:48px;height:48px;object-fit:contain}
@@ -606,6 +616,7 @@
     <div class="eyebrow" data-i18n="eyebrow">Событие · Hamster King</div>
     <h1 data-i18n="title">Карта Сокровищ</h1>
     <p data-i18n="lead">Квесты, покупки, сундуки, питомцы, достижения и механики события — в компактном виде с игровыми иконками и понятными наградами.</p>
+    <div class="guide-live-version">Версия гайда 24.09.2026 · подтверждённые результаты Лабиринта и Сражения</div>
   </section>
 
 
@@ -666,6 +677,13 @@
   <div class="section-head"><div><h2>Квесты</h2><p>Что нужно отдать и что получаем — сразу на карточке.</p></div></div>
   <section class="quests" id="quests"></section>
 
+
+  <div class="section-head" id="confirmed-results"><div><h2>Подтверждённые результаты мини-игр</h2><p>Последние данные со скринов — отдельным блоком, чтобы их не приходилось искать внутри гайда.</p></div></div>
+  <section class="confirmed-results-grid">
+    <article class="confirmed-result"><b>Лабиринт → Активированное хранилище</b><p>«Можно отыскать»: два яйца ×1, <strong>Провизия ×28</strong>, корм питомца ×2, <strong>Монеты сокровищ ×11</strong>.</p></article>
+    <article class="confirmed-result"><b>Сражение → Сундук победителя</b><p>После полной зачистки: <strong>Провизия ×14</strong>, Монеты ×11, Обычный ключ ×1, два яйца Молекота ×1, Золото ×1.</p></article>
+    <article class="confirmed-result"><b>Рыбалка → финал ещё не закрыт</b><p>Розовые вихри подтверждены как визуал Штормовой воды: по 2 заброса. Щупальце на присланном поле — 3 заброса.</p></article>
+  </section>
 
   <div class="section-head" id="fishing-guide"><div><h2>Рыбалка — пошаговый гайд</h2><p>Что делать после входа в Необычный Водоём, как читать клетки и что влияет на находки.</p></div></div>
   <section class="deep-guide" id="fishing-guide-content"></section>
@@ -834,7 +852,7 @@
   const chapterByAnchor={
     'newbie-guide':0,'travel-flow':0,
     'room-cheatsheet':1,'event-mechanics':1,'map-rooms':1,
-    'fishing-guide':2,'labyrinth-guide':2,'battle-guide':2,
+    'confirmed-results':2,'fishing-guide':2,'labyrinth-guide':2,'battle-guide':2,
     'chests-guide':3,'chest-hunt':3,'verified-chests':3,'treasury-guide':3,
     'resources-guide':4,'navigation-items':4,'equipment-progression':4,'special-items':4,
     'pets-guide':5,'pets':5,'pet-skills':5,
@@ -1684,7 +1702,7 @@ window.TK_PAGE_TRANSLATIONS={
 })();
 </script>
 
-<script src="./i18n.js?v=20260924-6"></script>
-<script src="../assets/site-nav.js?v=20260924-canon1"></script>
+<script src="./i18n.js?v=20260924-7"></script>
+<script src="../assets/site-nav.js?v=20260924-treasure7"></script>
 </body>
 </html>
