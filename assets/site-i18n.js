@@ -226,6 +226,10 @@
           .hero{
             background:transparent!important;
           }
+          .hero::before,.hero::after{
+            -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 52%,transparent 100%)!important;
+            mask-image:linear-gradient(to bottom,#000 0%,#000 52%,transparent 100%)!important;
+          }
           .hero::before{
             background:
               linear-gradient(90deg,rgba(4,6,9,.99) 0%,rgba(4,6,9,.92) 30%,rgba(4,6,9,.58) 47%,rgba(4,6,9,.16) 67%,rgba(4,6,9,.05) 100%),
