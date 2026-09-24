@@ -1,6 +1,6 @@
 {
   "status": "captured",
-  "status_text": "Событие считано из игры и гайд прошёл повторный аудит. Подтверждённые данные отделены от незакрытых пунктов; оставшиеся пробелы перечислены в data_gaps.",
+  "status_text": "Событие считано из игры и гайд прошёл повторный аудит. Журнал Рыбалки 24.09 добавил точные технические типы клеток, цены и переходы состояний; незакрытые пункты перечислены в data_gaps.",
   "captured": {
     "snapshots": 67,
     "assets_found": 106,
@@ -4922,14 +4922,14 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png",
       "summary": "Исследуем клетки воды за забросы. Тип воды влияет на сложность и возможные находки.",
       "facts": [
-        "На показанном поле запас — 12 забросов.",
-        "Обычная волна требует 1 заброс, более сложная клетка/вихрь — 2.",
-        "Состояния воды: спокойная, штормовая, проклятая и штормовая проклятая.",
-        "В рыбалке можно находить ключи; отдельные навыки питомцев повышают шанс ключей и карт.",
-        "После успешного завершения Рыбалки появляется наградной сундук; точный вид и содержимое ещё нужно подтвердить скрином результата.",
-        "На присланном поле три розовых вихря стоили по 2 заброса; это визуал Штормовой воды, а не отдельный тип воды."
+        "На проходе 24.09 с удочкой R3 стартовый запас был 12 забросов.",
+        "Подтверждённые цены: calm_water — 1, tornado_water — 2, cursed_water — 3, tornado_cursed_water — 2.",
+        "После активации cursed_water три tornado_cursed_water изменили состояние: 2 → lamp_fish_water_uncursed и 1 → calm_water_uncursed.",
+        "Две клетки lamp_fish_water_uncursed стоили по 2 заброса, calm_water_uncursed — 1.",
+        "Клетка fishing_water подтверждена стоимостью 2 заброса; точное игровое название ещё уточняется.",
+        "Финальный сундук Рыбалки и его содержимое всё ещё не зафиксированы."
       ],
-      "hint": "Число под клеткой — сколько забросов потребуется на неё.",
+      "hint": "Число под клеткой — фактическая стоимость действия. Журнал 3.2 подтвердил технические ID состояний воды.",
       "visuals": [
         {
           "title": "Удочка",
@@ -5581,8 +5581,8 @@
         "quantity": 40,
         "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
       },
-      "summary": "Мини-игра с клетками воды: число под клеткой показывает стоимость исследования в забросах.",
-      "note": "Финальный сундук Рыбалки и его содержимое пока не подтверждены."
+      "summary": "Мини-игра 3×3 с запасом забросов. Журнал 24.09 подтвердил calm / tornado / cursed / tornado_cursed и состояния после снятия проклятия.",
+      "note": "Финальный сундук Рыбалки ещё не зафиксирован. Следующий лог 3.3 будет сохранять координаты и арт каждой клетки."
     },
     {
       "id": "trader",
@@ -6035,13 +6035,13 @@
       {
         "n": 3,
         "title": "Считайте стоимость до нажатия",
-        "text": "На подтверждённом поле обычная волна стоила 1 заброс, более сложная клетка или вихрь — 2. Значения конкретного поля важнее общего примера.",
+        "text": "По журналу 24.09 подтверждены цены: спокойная — 1, штормовая — 2, проклятая — 3, штормовая проклятая — 2. Число на текущей клетке остаётся главным источником цены.",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_water_icon.png"
       },
       {
         "n": 4,
         "title": "Ищите особые находки",
-        "text": "На Рыбалке можно находить ключи и специальные карты. В игре также есть встреча со Щупальцем; отдельное достижение подтверждает, что после победы над ним вода может успокоиться.",
+        "text": "Особые клетки могут менять состояние поля. В подтверждённом проходе активация Проклятой воды преобразовала три Штормовые проклятые клетки в две клетки с Рыбой-фонарём и одну спокойную очищенную клетку.",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png"
       },
       {
@@ -6054,23 +6054,53 @@
     "water": [
       {
         "title": "Спокойная вода",
+        "lot_id": "mf_treasurelot_is_fishing_calm_water",
+        "cost": 1,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_calm_water_icon.png",
-        "text": "Один из подтверждённых типов клеток воды."
+        "text": "На проходе 24.09 подтверждена стоимость 1 заброс."
       },
       {
         "title": "Штормовая вода",
+        "lot_id": "mf_treasurelot_is_fishing_tornado_water",
+        "cost": 2,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_water_icon.png",
-        "text": "Более сложное состояние воды. В достижениях отдельно считаются Ураганные воды."
+        "text": "На проходе 24.09 подтверждена стоимость 2 заброса."
       },
       {
         "title": "Проклятая вода",
+        "lot_id": "mf_treasurelot_is_fishing_cursed_water",
+        "cost": 3,
         "image": null,
-        "text": "Подтверждённое состояние воды. Отдельная точная иконка этого состояния в текущем захвате ассетов не подтверждена, поэтому общий значок Рыбалки здесь не подставляется."
+        "text": "На проходе 24.09 клетка стоила 3 заброса. После её активации три клетки Штормовой проклятой воды изменили состояние."
       },
       {
         "title": "Штормовая проклятая",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_water_icon.png",
-        "text": "Комбинированное состояние воды. Точная универсальная цена клетки не закрепляется — смотрите число на текущем поле."
+        "lot_id": "mf_treasurelot_is_fishing_tornado_cursed_water",
+        "cost": 2,
+        "image": null,
+        "text": "На стартовом поле было 3 такие клетки по 2 заброса. После активации Проклятой воды они превратились в две клетки lamp_fish_water_uncursed и одну calm_water_uncursed."
+      },
+      {
+        "title": "Рыба-фонарь после снятия проклятия",
+        "lot_id": "mf_treasurelot_is_fishing_lamp_fish_water_uncursed",
+        "cost": 2,
+        "image": null,
+        "text": "Подтверждено две клетки по 2 заброса после активации Проклятой воды."
+      },
+      {
+        "title": "Спокойная вода после снятия проклятия",
+        "lot_id": "mf_treasurelot_is_fishing_calm_water_uncursed",
+        "cost": 1,
+        "image": null,
+        "text": "Подтверждена одна клетка стоимостью 1 заброс после активации Проклятой воды."
+      },
+      {
+        "title": "Особая клетка fishing_water",
+        "lot_id": "mf_treasurelot_is_fishing_fishing_water",
+        "cost": 2,
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
+        "exact_art": false,
+        "text": "Технический ID и стоимость 2 заброса подтверждены журналом. Точное игровое название и привязка арта ещё уточняются."
       }
     ],
     "pet_skills": [
@@ -6139,17 +6169,105 @@
       }
     ],
     "notes": [
-      "Запас 12 забросов был зафиксирован на одном конкретном поле и не закрепляется как универсальный лимит.",
-      "Точный эффект уровней удочки R3/R4 интерфейс не подписывает, поэтому в гайде показывается только подтверждённая стоимость улучшений.",
+      "Запас 12 забросов подтверждён для прохода 24.09 с удочкой R3; универсальным лимитом для всех уровней удочки пока не считаем.",
+      "Точный численный эффект уровней удочки R3/R4 интерфейс не подписывает, поэтому в гайде показывается только подтверждённая стоимость улучшений.",
       "Вероятности обычных находок не добавляются, пока они не подтверждены данными игры.",
-      "На присланном поле три розовых вихря стоили по 2 заброса. Это визуал Штормовой воды, поэтому отдельный тип «Розовая вода» в гайд не добавляем.",
-      "Зафиксированное поле: верхний ряд — 2 / 1 / 2 заброса; средний — 1 / 2 / 2; нижний — 1 / 2 / 3. Клетка со Щупальцем стоила 3 заброса."
+      "Журнал 24.09 уточнил прежнее визуальное определение: розовые вихри в этом проходе имеют ID tornado_cursed_water и относятся к Штормовой проклятой воде.",
+      "После активации cursed_water за 3 заброса три tornado_cursed_water сменили состояние: появились 2 lamp_fish_water_uncursed по 2 заброса и 1 calm_water_uncursed за 1."
     ],
     "completion_reward": {
       "title": "После успешного прохождения",
       "text": "После завершения Рыбалки появляется наградной сундук. Точный вид сундука и его содержимое пока не закреплены в текущем захвате.",
       "image": null,
       "status": "нужен финальный скрин Рыбалки"
+    },
+    "observed_run_2026_09_24": {
+      "source": "HK Puzzle Solver 3.2 local history",
+      "rod": "R3",
+      "start_casts": 12,
+      "initial_board": [
+        {
+          "lot_id": "mf_treasurelot_is_fishing_cursed_water",
+          "count": 1,
+          "cost": 3
+        },
+        {
+          "lot_id": "mf_treasurelot_is_fishing_tornado_cursed_water",
+          "count": 3,
+          "cost": 2
+        },
+        {
+          "lot_id": "mf_treasurelot_is_fishing_calm_water",
+          "count": 2,
+          "cost": 1
+        },
+        {
+          "lot_id": "mf_treasurelot_is_fishing_tornado_water",
+          "count": 1,
+          "cost": 2
+        },
+        {
+          "lot_id": "mf_treasurelot_is_fishing_fishing_water",
+          "count": 2,
+          "cost": 2
+        }
+      ],
+      "actions": [
+        {
+          "n": 1,
+          "lot_id": "mf_treasurelot_is_fishing_cursed_water",
+          "cost": 3,
+          "casts_before": 12,
+          "casts_after": 9,
+          "result": "Проклятая вода активирована; 3 tornado_cursed_water исчезли и появились 2 lamp_fish_water_uncursed + 1 calm_water_uncursed."
+        },
+        {
+          "n": 2,
+          "lot_id": "mf_treasurelot_is_fishing_lamp_fish_water_uncursed",
+          "cost": 2,
+          "casts_before": 9,
+          "casts_after": 7
+        },
+        {
+          "n": 3,
+          "lot_id": "mf_treasurelot_is_fishing_lamp_fish_water_uncursed",
+          "cost": 2,
+          "casts_before": 7,
+          "casts_after": 5
+        },
+        {
+          "n": 4,
+          "lot_id": "mf_treasurelot_is_fishing_calm_water_uncursed",
+          "cost": 1,
+          "casts_before": 5,
+          "casts_after": 4
+        },
+        {
+          "n": 5,
+          "lot_id": "mf_treasurelot_is_fishing_fishing_water",
+          "cost": 2,
+          "casts_before": 4,
+          "casts_after": null,
+          "note": "Снимок через ~120 мс ещё показывал 4 заброса; следующий полный снимок уже был новым полем с 12 забросами."
+        }
+      ],
+      "next_captured_board": {
+        "casts": 12,
+        "cells": [
+          {
+            "lot_id": "mf_treasurelot_is_fishing_tornado_cursed_water",
+            "count": 8,
+            "cost": 2
+          },
+          {
+            "lot_id": "mf_treasurelot_is_fishing_cursed_water",
+            "count": 1,
+            "cost": 3
+          }
+        ],
+        "note": "Это следующий зафиксированный экран. Журнал 3.2 не сохранял координаты клеток, поэтому порядок 3×3 не восстанавливаем."
+      },
+      "conclusion": "Журнал подтвердил точные технические типы клеток и их стоимость. Розовые вихри из этого прохода — tornado_cursed_water, то есть Штормовая проклятая вода, а не обычная Штормовая вода."
     }
   },
   "beginner_event_guide": {
@@ -6836,10 +6954,10 @@
       "need": "Финальный экран после успешного прохождения: арт сундука и список «Можно отыскать»."
     },
     {
-      "id": "fishing_cursed_water_art",
+      "id": "fishing_cell_art_mapping",
       "area": "Рыбалка",
       "status": "needs_asset",
-      "need": "Точный игровой арт Проклятой воды."
+      "need": "Привязать точные арты к cursed_water, tornado_cursed_water, lamp_fish_water_uncursed и fishing_water. Лог 3.3 теперь сохраняет img/background/координаты."
     },
     {
       "id": "labyrinth_storage_art",
