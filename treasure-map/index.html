@@ -197,6 +197,45 @@
       }
     }
 
+  
+    /* Visual walkthrough examples reconstructed from confirmed in-game screens. */
+    .play-example{margin:-28px 0 42px;padding:14px;border:1px solid rgba(232,182,84,.22);border-radius:18px;background:linear-gradient(145deg,rgba(18,23,31,.98),rgba(9,13,18,.98))}
+    .play-example-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .play-example-head h3{margin:0 0 4px;font-size:16px}.play-example-head p{margin:0;max-width:720px;color:#9ea8b4;font-size:10px;line-height:1.45}
+    .play-example-badge{flex:0 0 auto;padding:6px 9px;border:1px solid rgba(232,182,84,.35);border-radius:999px;background:rgba(232,182,84,.07);color:var(--gold2);font-size:9px;font-weight:900}
+    .game-example-board{width:min(100%,620px);margin:0 auto;padding:8px;border-radius:16px;background:#080b10;box-shadow:inset 0 0 0 1px rgba(255,255,255,.045),0 14px 36px rgba(0,0,0,.28)}
+    .game-example-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .game-example-cell{position:relative;min-width:0;aspect-ratio:1/1.12;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(255,255,255,.22);border-radius:10px;background:linear-gradient(160deg,#121820,#080c12)}
+    .game-example-cell img.example-main{display:block;width:72%;height:72%;object-fit:contain;filter:drop-shadow(0 7px 12px rgba(0,0,0,.35))}
+    .game-example-cell .example-cost{position:absolute;left:0;right:0;bottom:0;min-height:23px;display:flex;align-items:center;justify-content:center;gap:4px;padding:3px 5px;background:rgba(242,236,210,.94);color:#222;font-size:10px;font-weight:900}
+    .game-example-cell .example-cost img{width:16px;height:16px;object-fit:contain}
+    .game-example-cell .example-qty{position:absolute;right:7px;bottom:28px;color:#f7d77f;font-size:10px;font-weight:950;text-shadow:0 1px 3px #000}
+    .example-seq{position:absolute;z-index:3;top:6px;right:6px;width:30px;height:30px;display:grid;place-items:center;border:2px solid #fff;border-radius:50%;background:#ffd64f;color:#17130a;font-size:13px;font-weight:950;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+    .example-seq.green{background:#53ef72}
+    .example-fishing .game-example-cell{background:linear-gradient(180deg,#1592bd,#0d6d94 72%,#eef5f7 73%)}
+    .example-fishing .game-example-cell img.example-main{width:76%;height:68%}
+    .example-chests .game-example-cell{background:linear-gradient(160deg,#f3ead2,#d5bd88)}
+    .example-chests .game-example-cell img.example-main{width:68%;height:68%}
+    .example-lights{background:#080604}
+    .example-lights .game-example-cell{background:linear-gradient(150deg,#1a2740,#0a1220)}
+    .example-lights .game-example-cell.on{background:linear-gradient(150deg,#6b4c11,#c28b24)}
+    .example-battle{background:#080910}
+    .example-battle .game-example-cell{background:linear-gradient(160deg,#1a1217,#08090d)}
+    .example-battle .game-example-cell img.example-main{width:84%;height:78%}
+    .example-trader{background:linear-gradient(160deg,#25190d,#0b0906)}
+    .example-trader .game-example-cell{background:linear-gradient(160deg,#2a1b0f,#0e0b08)}
+    .example-note{margin:10px auto 0;max-width:620px;padding:8px 10px;border-left:2px solid rgba(232,182,84,.55);border-radius:8px;background:rgba(232,182,84,.035);color:#929ca8;font-size:9px;line-height:1.45}
+    @media(max-width:620px){
+      .play-example{margin-top:-20px;padding:11px;border-radius:15px}
+      .play-example-head{flex-direction:column}
+      .game-example-board{padding:5px;border-radius:12px}
+      .game-example-grid{gap:4px}
+      .game-example-cell{border-radius:8px}
+      .example-seq{top:4px;right:4px;width:27px;height:27px;font-size:12px}
+      .game-example-cell .example-cost{min-height:21px;font-size:9px}
+      .game-example-cell .example-cost img{width:14px;height:14px}
+    }
+
   </style>
   <link rel="stylesheet" href="../assets/public.css">
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
@@ -272,12 +311,15 @@
 
   <div class="section-head" id="fishing-guide"><div><h2>Рыбалка — пошаговый гайд</h2><p>Что делать после входа в Необычный Водоём, как читать клетки и что влияет на находки.</p></div></div>
   <section class="deep-guide" id="fishing-guide-content"></section>
+  <section class="play-example" id="fishing-example"></section>
 
   <div class="section-head" id="labyrinth-guide"><div><h2>Лабиринт — пошаговый гайд</h2><p>Как работает поле 3×3 и как пользоваться закладкой-помощником.</p></div></div>
   <section class="walkthrough" id="labyrinth-guide-content"></section>
+  <section class="play-example" id="labyrinth-example"></section>
 
   <div class="section-head" id="battle-guide"><div><h2>Сражение — пошаговый гайд</h2><p>HP, цепные эффекты врагов и порядок целей.</p></div></div>
   <section class="walkthrough" id="battle-guide-content"></section>
+  <section class="play-example" id="battle-example"></section>
 
   <div class="section-head" id="treasury-guide"><div><h2>Сокровищница — завершение карты</h2><p>Три пути, стоимость и что действительно подтверждено.</p></div></div>
   <section class="walkthrough" id="treasury-guide-content"></section>
@@ -314,6 +356,7 @@
 
   <div class="section-head" id="chests-guide"><div><h2>Сундуки — пошаговый гайд</h2><p>От раскопки до выбора ключа и чтения возможного дропа.</p></div></div>
   <section class="walkthrough" id="chests-guide-content"></section>
+  <section class="play-example" id="chests-example"></section>
 
   <div class="section-head"><div><h2>Охота за сундуками</h2><p>Три основных сундука и шесть точек раскопки.</p></div></div>
   <section class="grid" id="chest-hunt"></section>
@@ -323,6 +366,7 @@
 
   <div class="section-head" id="trader-guide"><div><h2>Торговец — пошаговый гайд</h2><p>Как читать наборы, сравнивать предложения и учитывать навыки питомцев.</p></div></div>
   <section class="walkthrough" id="trader-guide-content"></section>
+  <section class="play-example" id="trader-example"></section>
 
   <div class="section-head"><div><h2>Тайный торговец</h2><p>Три набора с точными товарами, количеством и стоимостью.</p></div></div>
   <section id="trader-variants"></section>
@@ -453,6 +497,145 @@ window.TK_PAGE_TRANSLATIONS={
     };
 
 
+
+
+
+    const exampleIcons={
+      coins:'https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png',
+      energy:'https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png',
+      petFood:'https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png',
+      skill:'https://cdn-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png',
+      gold:'https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png',
+      map:'https://cdn-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png',
+      fishEgg:'https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_icon.png',
+      mothEgg:'https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_icon.png',
+      keyCommon:'https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_common_icon.png',
+      keyUncommon:'https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_uncommon_icon.png',
+      keyEpic:'https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_epic_icon.png',
+      water:'https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_calm_water_icon.png',
+      tornado:'https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_water_icon.png',
+      rod:'https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/treasure_minigame_rod_r4_icon.png',
+      dig:'https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png',
+      chest1:'https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_015_icon.png',
+      chest2:'https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_02_icon.png',
+      chest3:'https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_type_03_icon.png',
+      lightOn:'https://cdn-prod-art.hwgame.cloud/minigames/lights/icons/treasure_minigame_light_true_icon.png',
+      lightOff:'https://cdn-prod-art.hwgame.cloud/minigames/lights/icons/treasure_minigame_light_false_icon.png',
+      enemy2:'https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_01_icon.png',
+      enemy3:'https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_02_icon.png',
+      enemy4:'https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_03_icon.png'
+    };
+    const exampleCell=(img,cost='',costIcon='',seq='',cls='',qty='')=>
+      '<div class="game-example-cell '+safe(cls)+'">'+
+        (seq?'<span class="example-seq '+(seq==='1'?'green':'')+'">'+safe(seq)+'</span>':'')+
+        '<img class="example-main" src="'+safe(img)+'" alt="">'+
+        (qty?'<span class="example-qty">×'+safe(qty)+'</span>':'')+
+        (cost!==''?'<span class="example-cost">'+(costIcon?'<img src="'+safe(costIcon)+'" alt="">':'')+safe(cost)+'</span>':'')+
+      '</div>';
+    const exampleWrap=(target,title,lead,cls,cells,note)=>{
+      const el=document.getElementById(target); if(!el)return;
+      el.innerHTML='<div class="play-example-head"><div><h3>'+safe(title)+'</h3><p>'+safe(lead)+'</p></div><span class="play-example-badge">Пример прохождения</span></div>'+
+        '<div class="game-example-board '+safe(cls)+'"><div class="game-example-grid">'+cells.join('')+'</div></div>'+
+        (note?'<div class="example-note">'+safe(note)+'</div>':'');
+    };
+
+    exampleWrap(
+      'fishing-example',
+      'Пример поля Рыбалки',
+      'Как читать клетки: значок воды показывает тип точки, нижняя строка — сколько забросов требуется.',
+      'example-fishing',
+      [
+        exampleCell(exampleIcons.tornado,'2',exampleIcons.rod),
+        exampleCell(exampleIcons.water,'1',exampleIcons.rod),
+        exampleCell(exampleIcons.tornado,'2',exampleIcons.rod),
+        exampleCell(exampleIcons.water,'1',exampleIcons.rod),
+        exampleCell(exampleIcons.water,'1',exampleIcons.rod),
+        exampleCell(exampleIcons.water,'1',exampleIcons.rod),
+        exampleCell(exampleIcons.tornado,'2',exampleIcons.rod),
+        exampleCell(exampleIcons.water,'1',exampleIcons.rod),
+        exampleCell(exampleIcons.water,'1',exampleIcons.rod)
+      ],
+      'Это образец одного поля. Стоимость каждой клетки всегда смотрите прямо на текущем экране игры.'
+    );
+
+    exampleWrap(
+      'chests-example',
+      'Пример поля Сундуков',
+      'Сверху — три уровня сундуков и нужные ключи. Ниже — шесть точек раскопки по 5 Провизии.',
+      'example-chests',
+      [
+        exampleCell(exampleIcons.chest1,'1',exampleIcons.keyCommon),
+        exampleCell(exampleIcons.chest2,'1',exampleIcons.keyUncommon),
+        exampleCell(exampleIcons.chest3,'1',exampleIcons.keyEpic),
+        exampleCell(exampleIcons.dig,'5',exampleIcons.energy),
+        exampleCell(exampleIcons.dig,'5',exampleIcons.energy),
+        exampleCell(exampleIcons.dig,'5',exampleIcons.energy),
+        exampleCell(exampleIcons.dig,'5',exampleIcons.energy),
+        exampleCell(exampleIcons.dig,'5',exampleIcons.energy),
+        exampleCell(exampleIcons.dig,'5',exampleIcons.energy)
+      ],
+      'Сначала оплачивается раскопка. Если появляется сундук, его открытие оплачивается отдельно — Провизией или ключом нужного уровня.'
+    );
+
+    exampleWrap(
+      'labyrinth-example',
+      'Пример решения Лабиринта',
+      'Цифры показывают порядок нажатий для конкретного поля из примера.',
+      'example-lights',
+      [
+        exampleCell(exampleIcons.lightOff,'1',exampleIcons.energy),
+        exampleCell(exampleIcons.lightOn,'1',exampleIcons.energy,''),
+        exampleCell(exampleIcons.lightOn,'1',exampleIcons.energy,'1','on'),
+        exampleCell(exampleIcons.lightOn,'1',exampleIcons.energy,'2','on'),
+        exampleCell(exampleIcons.lightOff,'1',exampleIcons.energy,'3'),
+        exampleCell(exampleIcons.lightOff,'1',exampleIcons.energy,'4'),
+        exampleCell(exampleIcons.lightOff,'1',exampleIcons.energy),
+        exampleCell(exampleIcons.lightOff,'1',exampleIcons.energy),
+        exampleCell(exampleIcons.lightOff,'1',exampleIcons.energy)
+      ],
+      'Последовательность 1 → 2 → 3 → 4 относится только к этому примеру. Для другого расположения ламп порядок меняется.'
+    );
+
+    exampleWrap(
+      'battle-example',
+      'Пример порядка целей в Сражении',
+      'Номер поверх врага — очередность атаки. Нижняя цифра — HP/стоимость прямого добивания цели на показанном поле.',
+      'example-battle',
+      [
+        exampleCell(exampleIcons.enemy2,'2',''),
+        exampleCell(exampleIcons.enemy3,'3','', '3'),
+        exampleCell(exampleIcons.enemy2,'2',''),
+        exampleCell(exampleIcons.enemy4,'4','', '1'),
+        exampleCell(exampleIcons.enemy2,'2',''),
+        exampleCell(exampleIcons.enemy4,'4','', '2'),
+        exampleCell(exampleIcons.enemy2,'2',''),
+        exampleCell(exampleIcons.enemy2,'2',''),
+        exampleCell(exampleIcons.enemy4,'4','', '4'),
+        exampleCell(exampleIcons.enemy3,'3','', '5'),
+        exampleCell(exampleIcons.enemy2,'2',''),
+        exampleCell(exampleIcons.enemy4,'4','', '6')
+      ],
+      'Это пример одного рассчитанного поля. Закладка-помощник пересчитывает порядок для текущего расположения врагов.'
+    );
+
+    exampleWrap(
+      'trader-example',
+      'Пример витрины Тайного торговца',
+      'Состав витрины меняется. На карточке смотрим сам товар, количество и валюту оплаты.',
+      'example-trader',
+      [
+        exampleCell(exampleIcons.energy,'70',exampleIcons.coins,'','',47),
+        exampleCell(exampleIcons.petFood,'100',exampleIcons.coins,'','',10),
+        exampleCell(exampleIcons.skill,'300',exampleIcons.coins,'','',1),
+        exampleCell(exampleIcons.gold,'100',exampleIcons.coins,'','',1),
+        exampleCell(exampleIcons.map,'300',exampleIcons.coins,'','',1),
+        exampleCell(exampleIcons.keyUncommon,'5',exampleIcons.keyCommon,'','',1),
+        exampleCell(exampleIcons.fishEgg,'300',exampleIcons.coins,'','',1),
+        exampleCell(exampleIcons.mothEgg,'300',exampleIcons.coins,'','',1),
+        exampleCell(exampleIcons.gold,'300',exampleIcons.coins,'','',1)
+      ],
+      'Это не фиксированная витрина, а наглядный пример того, как читать предложения. Использованы только подтверждённые товары и цены.'
+    );
 
 
     const renderSteps=(steps)=>'<div class="walkthrough-steps">'+(Array.isArray(steps)?steps:[]).map(v=>
