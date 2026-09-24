@@ -166,42 +166,7 @@
       .start-step b,.start-step>span:not(.start-step-num){padding-left:0}
     }
 
-  
-    /* Room artwork must always remain fully visible. */
-    #map-rooms .room-card-media{
-      width:100%;
-      height:auto!important;
-      min-height:0!important;
-      aspect-ratio:1/1!important;
-      display:grid;
-      place-items:center;
-      padding:10px;
-      overflow:hidden;
-      background:#0b0f14;
-    }
-    #map-rooms .room-card-media img{
-      display:block!important;
-      width:100%!important;
-      height:100%!important;
-      max-width:100%!important;
-      max-height:100%!important;
-      object-fit:contain!important;
-      object-position:center!important;
-      margin:0!important;
-    }
-    @media(max-width:620px){
-      #map-rooms .room-card-media{
-        aspect-ratio:1/1!important;
-        padding:10px;
-      }
-      #map-rooms .room-card-media img{
-        width:100%!important;
-        height:100%!important;
-      }
-    }
-
-  
-    /* Visual walkthrough examples reconstructed from confirmed in-game screens. */
+    /* Visual walkthrough examples. */
     .play-example{margin:-28px 0 42px;padding:14px;border:1px solid rgba(232,182,84,.22);border-radius:18px;background:linear-gradient(145deg,rgba(18,23,31,.98),rgba(9,13,18,.98))}
     .play-example-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
     .play-example-head h3{margin:0 0 4px;font-size:16px}.play-example-head p{margin:0;max-width:720px;color:#9ea8b4;font-size:10px;line-height:1.45}
@@ -619,7 +584,7 @@
       color:#ffd58c;font-size:17px;font-weight:950;
     }
     .water-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
-    .water-cost,.water-tech{display:inline-flex;align-items:center;padding:3px 6px;border-radius:999px;font-size:8px;font-weight:900}
+    .water-cost{display:inline-flex;align-items:center;padding:3px 6px;border-radius:999px;font-size:8px;font-weight:900}
     .water-cost{background:rgba(232,182,84,.10);color:#ffd58c;border:1px solid rgba(232,182,84,.22)}
     @media(max-width:620px){
       .completion-reward{grid-template-columns:54px minmax(0,1fr);gap:9px}
@@ -720,7 +685,7 @@
   <section class="walkthrough" id="battle-guide-content"></section>
   <section class="play-example" id="battle-example"></section>
 
-  <div class="section-head" id="treasury-guide"><div><h2>Сокровищница — завершение карты</h2><p>Три пути, стоимость и подтверждённая развилка наград. Для Пути 2 уже известен дополнительный выбор 1 из 3.</p></div></div>
+  <div class="section-head" id="treasury-guide"><div><h2>Сокровищница — завершение карты</h2><p>Три пути, их стоимость и выбор награды. После Пути 2 нужно выбрать одну из трёх карт.</p></div></div>
   <section class="walkthrough" id="treasury-guide-content"></section>
 
 <div class="section-head" id="resources-guide"><div><h2>Ресурсы события</h2><p>Что это, где используется и что не стоит тратить вслепую.</p></div></div>
@@ -739,7 +704,7 @@
   <div class="section-head"><div><h2>Карты и ключи</h2><p>Какая карта ведёт в какую комнату и каким ключом открывается каждый сундук.</p></div></div>
   <section class="grid" id="navigation-items"></section>
 
-  <div class="section-head"><div><h2>Снаряжение мини-игр</h2><p>Подтверждённые уровни удочки и меча с точной стоимостью апгрейдов.</p></div></div>
+  <div class="section-head"><div><h2>Снаряжение мини-игр</h2><p>Уровни удочки и меча и стоимость их улучшения.</p></div></div>
   <section class="equipment-grid" id="equipment-progression"></section>
 
   <div class="section-head" id="pets-guide"><div><h2>Питомцы — пошаговый гайд</h2><p>Поручения, корм, редкости и как читать навыки.</p></div></div>
@@ -751,13 +716,13 @@
   <div class="section-head"><div><h2>Навыки питомцев</h2><p>Один навык — одна карточка. Разные грейды и их эффекты собраны внутри.</p></div></div>
   <section class="skill-groups" id="pet-skills"></section>
 
-  <div class="section-head" id="economy-guide"><div><h2>Экономика события</h2><p>Только сравнения, которые подтверждаются текущими данными.</p></div></div>
+  <div class="section-head" id="economy-guide"><div><h2>Экономика события</h2><p>Цены, обмены и основные расходы события.</p></div></div>
   <section class="walkthrough" id="economy-guide-content"></section>
 
   <div class="section-head"><div><h2>Полезные стоимости</h2><p>Расходы и обмены, которые важно видеть до выбора.</p></div></div>
   <section class="economy-grid" id="verified-economy"></section>
 
-  <div class="section-head"><div><h2>Что выгоднее</h2><p>Только сравнения, которые можно посчитать по подтверждённым ценам и наградам.</p></div></div>
+  <div class="section-head"><div><h2>Что выгоднее</h2><p>Сравнения цен и наград, которые помогают выбрать расход ресурсов.</p></div></div>
   <section class="strategy-grid" id="strategy-notes"></section>
 
   <div class="section-head" id="chests-guide"><div><h2>Сундуки — пошаговый гайд</h2><p>От раскопки до выбора ключа и чтения возможного дропа.</p></div></div>
@@ -767,7 +732,7 @@
   <div class="section-head"><div><h2>Охота за сундуками</h2><p>Три основных сундука и шесть точек раскопки.</p></div></div>
   <section class="grid" id="chest-hunt"></section>
 
-  <div class="section-head"><div><h2>Сундуки</h2><p>Подтверждённое содержимое показано игровыми иконками.</p></div></div>
+  <div class="section-head"><div><h2>Сундуки</h2><p>Что может находиться внутри каждого сундука.</p></div></div>
   <section class="loot-grid" id="verified-chests"></section>
 
   <div class="section-head" id="trader-guide"><div><h2>Торговец — пошаговый гайд</h2><p>Как читать наборы, сравнивать предложения и учитывать навыки питомцев.</p></div></div>
@@ -783,7 +748,7 @@
   <div class="section-head"><div><h2>Редкие предметы</h2><p>Особые предметы события и их содержимое.</p></div></div>
   <section class="loot-grid" id="special-items"></section>
 
-  <div class="section-head" id="shop-guide"><div><h2>Магазин события — как читать</h2><p>Что подтверждено по обычным товарам и что пока известно о лимитированных наборах.</p></div></div>
+  <div class="section-head" id="shop-guide"><div><h2>Магазин события — как читать</h2><p>Обычные товары, лимитированные наборы и их стоимость.</p></div></div>
   <section class="walkthrough" id="shop-guide-content"></section>
 
   <div class="section-head"><div><h2>Наборы магазина</h2><p>Лимитированные предложения события с игровыми обложками.</p></div></div>
@@ -798,7 +763,7 @@
   <div class="section-head"><div><h2>Серии достижений</h2><p>Пороговые этапы и известные награды.</p></div></div>
   <section class="achievement-grid" id="achievement-series"></section>
 
-  <div class="section-head"><div><h2>Линейки наград</h2><p>Бесплатная и две премиум-линии. Ниже — только подтверждённые уровни и фактические награды.</p></div></div>
+  <div class="section-head"><div><h2>Линейки наград</h2><p>Бесплатная и две премиум-линии с известными наградами уровней.</p></div></div>
   <section id="reward-tracks"></section>
 </main>
 
@@ -868,7 +833,7 @@
 
   const chapterByAnchor={
     'newbie-guide':0,'travel-flow':0,
-    'room-cheatsheet':1,'event-mechanics':1,
+    'room-cheatsheet':1,
     'fishing-guide':2,'labyrinth-guide':2,'battle-guide':2,
     'chests-guide':3,'chest-hunt':3,'verified-chests':3,'treasury-guide':3,
     'resources-guide':4,'navigation-items':4,'equipment-progression':4,'special-items':4,
@@ -1031,7 +996,7 @@ window.TK_PAGE_TRANSLATIONS={
       chests:'Раскопайте точки, затем открывайте найденные сундуки Провизией или подходящими ключами.',
       fight:'Выбирайте порядок противников. Для расчёта последовательности можно включить отдельный Помощник Top King.',
       lights:'Нужно привести поле 3×3 к состоянию, где включены все лампы. Помощник Top King может показать порядок нажатий.',
-      treasury:'Выберите один из трёх путей. Каждый подтверждённый путь стоит 5 Провизии.'
+      treasury:'Выберите один из трёх путей. Каждый путь стоит 5 Провизии.'
     };
     const roomDetailAnchors={
       fishing:'fishing-guide',
@@ -1199,7 +1164,7 @@ window.TK_PAGE_TRANSLATIONS={
         exampleCell(exampleIcons.enemy2,'2',''),
         exampleCell(exampleIcons.enemy4,'4','', '6')
       ],
-      'Это пример одного рассчитанного поля. Закладка-помощник пересчитывает порядок для текущего расположения врагов.'
+      'Пример одного поля. Порядок целей зависит от расположения и текущего HP врагов.'
     );
 
     exampleWrap(
@@ -1335,7 +1300,7 @@ window.TK_PAGE_TRANSLATIONS={
         renderSteps(g.steps)+
         '<div class="guide-info-grid">'+
           '<article class="guide-info"><h4>Навыки питомцев</h4>'+(Array.isArray(g.skills)?g.skills:[]).map(v=>'<div class="fishing-skill">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><p>'+safe(v.effect||'')+'</p><div class="grade-pills">'+(Array.isArray(v.grades)?v.grades:[]).map(x=>'<span class="grade-pill">'+safe(x[0])+' · '+safe(x[1])+'</span>').join('')+'</div></div></div>').join('')+'</article>'+
-          '<article class="guide-info"><h4>Подтверждённые улучшения</h4><div class="rod-row">'+(Array.isArray(g.upgrades)?g.upgrades:[]).map(v=>'<div class="rod-card">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><span>'+safe(v.price)+' · '+safe(v.where)+'</span></div></div>').join('')+'</div><div class="guide-warning">'+safe(g.note||'')+'</div></article>'+
+          '<article class="guide-info"><h4>Улучшения</h4><div class="rod-row">'+(Array.isArray(g.upgrades)?g.upgrades:[]).map(v=>'<div class="rod-card">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><span>'+safe(v.price)+' · '+safe(v.where)+'</span></div></div>').join('')+'</div><div class="guide-warning">'+safe(g.note||'')+'</div></article>'+
         '</div>';
     }
 
@@ -1470,37 +1435,6 @@ window.TK_PAGE_TRANSLATIONS={
       return '<article class="quest"><div class="quest-media">'+image+'</div><div><div class="quest-top"><h3>'+safe(q.title||('Квест '+(index+1)))+'</h3><span class="badge">'+safe(q.stage||'')+'</span></div>'+
         (q.condition?'<p class="quest-condition">'+safe(q.condition)+'</p>':'')+reqHtml+rewardHtml+'</div>'+recommendation+'</article>';
     }).join('')||'<div class="empty">Квесты будут добавляться по мере заполнения гайда.</div>';
-
-    const mechanicsEl=document.getElementById('event-mechanics');
-    if(mechanicsEl){
-      mechanicsEl.innerHTML=eventMechanics.map(m=>
-        '<article class="mechanic-card">'+
-          '<div class="mechanic-icon">'+(m.image?'<img src="'+safe(m.image)+'" alt="">':'')+'</div>'+
-          '<div><h3>'+safe(m.title)+'</h3><p class="mechanic-summary">'+safe(m.summary||'')+'</p>'+
-            '<div class="mechanic-facts">'+(Array.isArray(m.facts)?m.facts:[]).map(v=>'<div class="mechanic-fact">'+safe(v)+'</div>').join('')+'</div>'+
-            (Array.isArray(m.sequence)&&m.sequence.length?'<div class="mechanic-seq">'+m.sequence.map(v=>'<span class="mechanic-step">'+safe(v)+'</span>').join('')+'</div>':'')+
-          '</div>'+
-          (Array.isArray(m.visuals)&&m.visuals.length?'<div class="mechanic-visuals">'+m.visuals.map(v=>'<div class="mechanic-visual">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<span>'+safe(v.title)+'</span></div>').join('')+'</div>':'')+
-          (m.hint?'<div class="mechanic-hint">'+safe(m.hint)+'</div>':'')+
-          ((m.id==='lights'||m.id==='fight')?'<div class="solver-inline"><div><strong>Помощник Top King</strong><span>Покажет порядок действий цифрами прямо на игровом поле. Работает через обычную закладку.</span></div><button type="button" class="solver-button" data-solver-install>Добавить закладку-помощник</button></div>':'')+
-        '</article>'
-      ).join('');
-    }
-
-    document.getElementById('map-rooms').innerHTML=mapRooms.map(v=>
-      '<article class="room-card">'+
-        '<div class="room-card-media">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'</div>'+
-        '<h3>'+safe(v.title)+'</h3>'+
-        (v.summary?'<p>'+safe(v.summary)+'</p>':'')+
-        (v.entry_cost?'<div class="quest-block"><div class="quest-block-title">Вход</div><div class="resource-list">'+resource(v.entry_cost.title,v.entry_cost.quantity,v.entry_cost.image||'')+'</div></div>':'')+
-        (Array.isArray(v.possible_rewards)&&v.possible_rewards.length?'<div class="quest-block"><div class="quest-block-title">Можно найти</div><div class="resource-list">'+v.possible_rewards.map(x=>x.exact_art===false
-          ?'<span class="resource no-art"><span class="resource-fallback">?</span><span class="resource-copy"><span class="resource-name">'+safe(x.title||'Награда')+'</span><span class="resource-qty">×'+safe(x.quantity??'—')+'</span></span></span>'
-          :resource(x.title,x.quantity,x.image||'')).join('')+'</div></div>':'')+
-        (v.reward_note?'<div class="equipment-note">'+safe(v.reward_note)+'</div>':'')+
-        (v.note?'<p>'+safe(v.note)+'</p>':'')+
-        (roomDetailAnchors[v.id]?'<a class="room-detail-link" href="#'+safe(roomDetailAnchors[v.id])+'">Подробнее →</a>':'')+
-      '</article>'
-    ).join('');
 
     const navCards=[];
     (Array.isArray(navigationItems.maps)?navigationItems.maps:[]).forEach(v=>{
@@ -1765,7 +1699,7 @@ window.TK_PAGE_TRANSLATIONS={
 })();
 </script>
 
-<script src="./i18n.js?v=20260924-17"></script>
+<script src="./i18n.js?v=20260924-18"></script>
 <script src="../assets/site-nav.js?v=20260924-treasure7"></script>
 </body>
 </html>
