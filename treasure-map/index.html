@@ -339,6 +339,12 @@
 
   
     /* Book reader: nine logical chapters instead of dozens of tiny sheets. */
+    body.tk-treasure-map.tk-main-theme{
+      background-image:
+        linear-gradient(180deg,rgba(7,8,11,.36),rgba(7,8,11,.52) 63%,rgba(7,8,11,.77) 100%),
+        url("../assets/home/top-king-clan-hero-approved.jpg"),
+        url("../assets/home/top-king-clan-hero-approved.jpg")!important;
+    }
     .book-reader{margin:0 0 42px}
     .book-toolbar,.book-footer-nav{
       display:grid;
@@ -349,7 +355,7 @@
       padding:10px;
       border:1px solid rgba(232,182,84,.22);
       border-radius:16px;
-      background:rgba(13,17,23,.96);
+      background:rgba(13,17,23,.84);
       box-shadow:0 10px 28px rgba(0,0,0,.18);
     }
     .book-footer-nav{margin:14px 0 0}
@@ -359,7 +365,7 @@
       padding:20px;
       border:1px solid rgba(232,182,84,.24);
       border-radius:22px;
-      background:linear-gradient(145deg,rgba(19,24,32,.985),rgba(9,13,18,.99));
+      background:linear-gradient(145deg,rgba(19,24,32,.83),rgba(9,13,18,.87));
       box-shadow:0 18px 54px rgba(0,0,0,.28);
     }
     .book-page.is-active{display:block}
@@ -609,7 +615,7 @@
   <link rel="icon" type="image/jpeg" href="../assets/brand/topking-clan-crest-canon.jpg">
   <link rel="apple-touch-icon" href="../assets/brand/topking-clan-crest-canon.jpg">
 </head>
-<body>
+<body class="tk-treasure-map">
 <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="../" aria-label="Top King"><img class="tk-clan-crest" src="../assets/brand/topking-clan-crest-canon.jpg" alt="Top King"></a><nav class="nav" aria-label="Navigation"></nav><div class="languages"><button data-language="ru">RU</button><button data-language="en">EN</button><button data-language="fa">FA</button></div><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Menu">☰</button></div><nav class="mobile-nav" data-mobile-nav></nav></header>
 <main class="shell">
   <section class="hero">
@@ -977,7 +983,7 @@ window.TK_PAGE_TRANSLATIONS={
   fa:{pageTitle:'راهنمای نقشه گنج — Top King',eyebrow:'رویداد · Hamster King',title:'نقشه گنج',lead:'ماموریت‌ها، خریدها، صندوق‌ها، حیوانات، دستاوردها و مکانیک‌های رویداد در یک راهنمای روشن با تصاویر داخل بازی و پاداش‌های تأییدشده.'}
 };
 </script>
-<script src="../assets/site-i18n.js?v=20260924-backdrop4"></script>
+<script src="../assets/site-i18n.js?v=20260924-map-bg1"></script>
 <script>
 (async()=>{
   try{
