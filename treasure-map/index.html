@@ -599,6 +599,135 @@
       .treasury-followup-head{flex-direction:column}
     }
 
+  
+    /* Mobile book hard-stop: legacy multi-column sections must never overflow the sheet. */
+    @media(max-width:760px){
+      html,body{max-width:100%;overflow-x:hidden}
+      .book-reader,.book-pages,.book-page,.book-page>*{max-width:100%;min-width:0;box-sizing:border-box}
+      .book-page{
+        width:100%;
+        overflow:hidden;
+      }
+      .book-page .grid,
+      .book-page .quests,
+      .book-page .room-grid,
+      .book-page .travel-steps,
+      .book-page .travel-room-list,
+      .book-page .travel-params,
+      .book-page .strategy-grid,
+      .book-page .equipment-grid,
+      .book-page .facts,
+      .book-page .skill-groups,
+      .book-page .economy-grid,
+      .book-page .loot-grid,
+      .book-page .bundle-grid,
+      .book-page .shop-grid,
+      .book-page .achievement-grid,
+      .book-page .mechanics-hub,
+      .book-page .guide-info-grid,
+      .book-page .priority-grid,
+      .book-page .mission-table,
+      .book-page .deep-columns,
+      .book-page .value-grid,
+      .book-page .reward-lines,
+      .book-page .trader-offers,
+      .book-page .treasury-choice-grid,
+      .book-page .treasury-followup-grid,
+      .book-page .room-cheatsheet{
+        grid-template-columns:minmax(0,1fr)!important;
+        width:100%!important;
+        max-width:100%!important;
+      }
+      .book-page .quest,
+      .book-page .mechanic-card,
+      .book-page .resource-overview-card,
+      .book-page .fishing-skill,
+      .book-page .shop-item{
+        max-width:100%;
+        min-width:0;
+      }
+      .book-page .quest{grid-template-columns:64px minmax(0,1fr)!important}
+      .book-page .quest-media{width:64px;height:64px}
+      .book-page .resource-list{max-width:100%;min-width:0}
+      .book-page .resource{min-width:0;max-width:100%}
+      .book-page .mini-card,
+      .book-page .room-card,
+      .book-page .equipment-card,
+      .book-page .loot-card,
+      .book-page .bundle-card,
+      .book-page .shop-item,
+      .book-page .achievement-card,
+      .book-page .fact,
+      .book-page .skill-card,
+      .book-page .strategy-card,
+      .book-page .trader-offer{
+        width:100%;
+        max-width:100%;
+        min-width:0;
+      }
+      .book-page img{max-width:100%}
+      .book-page h1,.book-page h2,.book-page h3,.book-page h4,
+      .book-page p,.book-page span,.book-page div{
+        overflow-wrap:anywhere;
+      }
+    }
+
+    .book-sheet-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .book-helper-btn{
+      min-height:40px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:9px 12px;
+      border:1px solid rgba(232,182,84,.38);
+      border-radius:11px;
+      background:rgba(232,182,84,.09);
+      color:#ffe0a0;
+      font:900 10px/1 inherit;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .book-helper-btn:hover{border-color:rgba(232,182,84,.65);color:#fff}
+
+    .helper-modal{
+      position:fixed;inset:0;z-index:10050;
+      display:none;place-items:center;
+      padding:16px;
+      background:rgba(0,0,0,.72);
+      backdrop-filter:blur(8px);
+    }
+    .helper-modal.is-open{display:grid}
+    .helper-dialog{
+      width:min(620px,100%);
+      max-height:min(86vh,760px);
+      overflow:auto;
+      padding:18px;
+      border:1px solid rgba(232,182,84,.30);
+      border-radius:18px;
+      background:#111720;
+      box-shadow:0 28px 80px rgba(0,0,0,.55);
+    }
+    .helper-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .helper-head h2{margin:0;font-size:20px}
+    .helper-close{width:38px;height:38px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.04);color:#fff;font-size:22px;cursor:pointer}
+    .helper-lead{margin:8px 0 12px;color:#aeb7c3;font-size:11px;line-height:1.55}
+    .helper-warning{margin:0 0 12px;padding:10px 11px;border-left:3px solid #e8b654;border-radius:9px;background:rgba(232,182,84,.06);color:#d6dce4;font-size:10px;line-height:1.5}
+    .helper-steps{display:grid;gap:8px;margin:12px 0}
+    .helper-step{display:grid;grid-template-columns:30px minmax(0,1fr);gap:9px;padding:9px;border:1px solid rgba(255,255,255,.07);border-radius:11px;background:rgba(255,255,255,.025)}
+    .helper-step b:first-child{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:rgba(232,182,84,.12);color:#ffe0a0}
+    .helper-step strong{display:block;margin-bottom:3px;font-size:10px}
+    .helper-step span{display:block;color:#99a4b1;font-size:9px;line-height:1.45}
+    .helper-code{display:block;width:100%;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:#090d12;color:#cdd6df;font-size:9px;line-height:1.45;word-break:break-all;user-select:all}
+    .helper-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .helper-action{min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding:9px 13px;border:1px solid rgba(232,182,84,.35);border-radius:11px;background:rgba(232,182,84,.10);color:#ffe0a0;font-weight:900;font-size:10px;cursor:pointer}
+    .helper-action.secondary{border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.035);color:#e7ebef}
+    @media(max-width:520px){
+      .book-sheet-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+      .book-index-btn,.book-helper-btn{width:100%}
+      .helper-dialog{padding:14px}
+    }
+
   </style>
   <link rel="stylesheet" href="../assets/public.css?v=20260924-backdrop4">
   <link rel="icon" type="image/jpeg" href="../assets/brand/topking-clan-crest-canon.jpg">
@@ -766,6 +895,22 @@
   <section id="reward-tracks"></section>
 </main>
 
+<div class="helper-modal" id="puzzleHelperModal" aria-hidden="true">
+  <div class="helper-dialog" role="dialog" aria-modal="true" aria-labelledby="puzzleHelperTitle">
+    <div class="helper-head"><div><h2 id="puzzleHelperTitle">🧩 Помощник Лабиринта и Сражения</h2><p class="helper-lead">Помощник не кликает за игрока. Он показывает порядок действий цифрами прямо поверх игрового поля.</p></div><button type="button" class="helper-close" data-helper-close aria-label="Закрыть">×</button></div>
+    <div class="helper-warning"><b>На iPhone из Telegram:</b> сначала откройте эту страницу в Safari. Во встроенном браузере Telegram обычные закладки недоступны, поэтому установить помощник там неудобно.</div>
+    <div class="helper-steps">
+      <div class="helper-step"><b>1</b><div><strong>Откройте сайт в Safari / Chrome</strong><span>На iPhone в Telegram нажмите «…» → открыть во внешнем браузере.</span></div></div>
+      <div class="helper-step"><b>2</b><div><strong>Создайте обычную закладку</strong><span>Назовите её, например, «HK Помощник».</span></div></div>
+      <div class="helper-step"><b>3</b><div><strong>Скопируйте код ниже</strong><span>Отредактируйте закладку и вставьте этот код вместо её URL.</span></div></div>
+      <div class="helper-step"><b>4</b><div><strong>Откройте Hamster King и нажмите закладку</strong><span>В Лабиринте или Сражении появятся номера 1 → 2 → 3…</span></div></div>
+    </div>
+    <code class="helper-code" id="puzzleBookmarkCode">javascript:(()=&gt;{if(window.__HK_PUZZLE_SOLVER__)return window.__HK_PUZZLE_SOLVER__.check();let s=document.createElement('script');s.src='https://tk-clan.ru/scripts/hk-puzzle-bookmark.js?'+Date.now();document.documentElement.appendChild(s)})()</code>
+    <div class="helper-actions"><button type="button" class="helper-action" data-helper-copy>Скопировать код</button><button type="button" class="helper-action secondary" data-helper-close>Закрыть</button></div>
+  </div>
+</div>
+
+
 <script>
 (()=>{
   const main=document.querySelector('main.shell');
@@ -810,7 +955,7 @@
     page.dataset.bookTitle=chapter.title;
     const head=document.createElement('div');
     head.className='book-sheet-head';
-    head.innerHTML='<div><div class="book-sheet-number">Глава '+(index+1)+' из '+chapters.length+'</div><div class="book-sheet-title">'+escapeHtml(chapter.title)+'</div></div><button type="button" class="book-index-btn" data-book-toc>Оглавление</button>';
+    head.innerHTML='<div><div class="book-sheet-number">Глава '+(index+1)+' из '+chapters.length+'</div><div class="book-sheet-title">'+escapeHtml(chapter.title)+'</div></div><div class="book-sheet-actions"><button type="button" class="book-helper-btn" data-helper-open>🧩 Помощник</button><button type="button" class="book-index-btn" data-book-toc>Оглавление</button></div>';
     const lead=document.createElement('p');
     lead.className='book-chapter-lead';
     lead.textContent=chapter.lead;
@@ -826,7 +971,7 @@
   if(hero)pages[0].appendChild(hero);
   const entryActions=document.createElement('div');
   entryActions.className='book-entry-actions';
-  entryActions.innerHTML='<a class="book-entry-button" href="#newbie-guide">Я впервые здесь</a><button type="button" class="book-entry-button secondary" data-book-toc>Открыть справочник</button>';
+  entryActions.innerHTML='<a class="book-entry-button" href="#newbie-guide">Я впервые здесь</a><button type="button" class="book-entry-button secondary" data-helper-open>🧩 Установить помощник</button>';
   pages[0].appendChild(entryActions);
   if(start)pages[0].appendChild(start);
 
@@ -1669,5 +1814,28 @@ window.TK_PAGE_TRANSLATIONS={
 
 <script src="./i18n.js?v=20260924-20"></script>
 <script src="../assets/site-nav.js?v=20260924-treasure7"></script>
+
+<script>
+(()=>{
+  const modal=document.getElementById('puzzleHelperModal');
+  if(!modal)return;
+  const open=()=>{modal.classList.add('is-open');modal.setAttribute('aria-hidden','false')};
+  const close=()=>{modal.classList.remove('is-open');modal.setAttribute('aria-hidden','true')};
+  document.addEventListener('click',async event=>{
+    if(event.target.closest('[data-helper-open]')){open();return}
+    if(event.target.closest('[data-helper-close]')||event.target===modal){close();return}
+    const copy=event.target.closest('[data-helper-copy]');
+    if(copy){
+      const code=document.getElementById('puzzleBookmarkCode')?.textContent||'';
+      try{
+        await navigator.clipboard.writeText(code);
+        const old=copy.textContent;copy.textContent='Скопировано ✓';setTimeout(()=>copy.textContent=old,1600);
+      }catch(_){window.prompt('Скопируйте код закладки:',code)}
+    }
+  });
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')close()});
+})();
+</script>
+
 </body>
 </html>
