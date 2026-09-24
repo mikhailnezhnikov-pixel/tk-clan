@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Мини-игра — Top King</title>
+  <meta name="description" content="Мини-игра Top King: гексагональная головоломка.">
+  <link rel="icon" type="image/jpeg" href="../assets/brand/topking-clan-crest-canon.jpg">
+  <style>
+    :root{color-scheme:dark}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:#090d13;color:#f5f7fb;font:16px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+    main{width:min(980px,calc(100% - 28px));margin:0 auto;padding:34px 0 70px}
+    .hero{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:8px 0 24px}
+    .hero h1{margin:0;font-size:clamp(32px,6vw,54px);line-height:1}
+    .hero p{margin:9px 0 0;color:#9faaba;max-width:650px}
+    .badge{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid #343b46;border-radius:999px;background:#111720;color:#cfd5df;font-weight:800;font-size:12px;white-space:nowrap}
+    .game{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:18px}
+    .panel{border:1px solid #2a303a;border-radius:22px;background:rgba(16,21,29,.92);box-shadow:0 18px 60px rgba(0,0,0,.24)}
+    .board-panel{padding:20px;overflow:hidden}
+    .board-wrap{display:flex;justify-content:center;align-items:center;min-height:520px}
+    .board{--hex:72px;position:relative;width:calc(var(--hex)*5.8);height:calc(var(--hex)*5.45);touch-action:manipulation}
+    .hex{position:absolute;width:var(--hex);height:calc(var(--hex)*.86);border:0;background:transparent;padding:0;cursor:pointer;filter:drop-shadow(0 5px 6px rgba(0,0,0,.28))}
+    .hex-inner{position:absolute;inset:0;display:grid;place-items:center;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);background:#2d333d;transition:transform .14s ease,background .14s ease,filter .14s ease}
+    .hex:hover .hex-inner,.hex:focus-visible .hex-inner{transform:translateY(-2px);filter:brightness(1.12)}
+    .hex.selected-target .hex-inner{outline:2px solid #f4c95d;outline-offset:-4px}
+    .token{width:76%;height:76%;display:grid;place-items:center;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);font-size:23px;font-weight:950;color:#fff;text-shadow:0 2px 5px rgba(0,0,0,.45)}
+    .lv1{background:#8b3fc7}.lv2{background:#2380df}.lv3{background:#f0c21d;color:#332b05;text-shadow:none}.lv4{background:#20a94f}.lv5{background:#d8303f}.lv6{background:#ef8f21}
+    .side{padding:18px;display:flex;flex-direction:column;gap:14px}
+    .score{padding:16px;border-radius:16px;background:#0c1118;border:1px solid #272e38}
+    .score small{display:block;color:#8e9aab;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+    .score strong{display:block;margin-top:3px;font-size:32px}
+    .next-title{font-weight:900;margin:2px 0 0}
+    .queue{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .piece{border:1px solid #303744;border-radius:14px;background:#0d131c;padding:10px 7px;cursor:pointer;min-height:86px;display:grid;place-items:center}
+    .piece.active{border-color:#f1c85a;background:#18170f}
+    .piece .token{width:56px;height:50px}
+    .help{font-size:13px;color:#94a0b1;margin:0}
+    .actions{display:grid;gap:9px;margin-top:auto}
+    button.action{min-height:44px;border-radius:12px;border:1px solid #343b46;background:#151c26;color:#fff;font-weight:850;cursor:pointer}
+    button.action:hover{background:#1b2430}
+    .status{min-height:46px;padding:11px 12px;border-radius:12px;background:#0d131b;color:#b8c1ce;font-size:13px}
+    @media(max-width:780px){
+      main{width:min(100% - 18px,700px);padding-top:18px}
+      .hero{align-items:start;flex-direction:column}
+      .game{grid-template-columns:1fr}
+      .side{display:grid;grid-template-columns:1fr 1fr;align-items:start}
+      .score,.next-block,.status,.actions{min-width:0}
+      .actions{margin-top:0}
+      .board-wrap{min-height:440px}
+      .board{--hex:60px}
+    }
+    @media(max-width:520px){
+      .board-panel{padding:10px 4px}
+      .board-wrap{min-height:380px}
+      .board{--hex:51px}
+      .side{grid-template-columns:1fr}
+      .queue{max-width:300px}
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <div>
+      <h1>Мини-игра</h1>
+      <p>Отдельная игровая вкладка. Сейчас здесь первый рабочий прототип гексагональной головоломки — механику будем доводить под оригинальную игру.</p>
+    </div>
+    <span class="badge">Прототип v1</span>
+  </section>
+
+  <section class="game">
+    <div class="panel board-panel">
+      <div class="board-wrap"><div class="board" id="board" aria-label="Игровое поле"></div></div>
+    </div>
+
+    <aside class="panel side">
+      <div class="score"><small>Очки</small><strong id="score">0</strong></div>
+
+      <div class="next-block">
+        <div class="next-title">Следующие фишки</div>
+        <div class="queue" id="queue"></div>
+      </div>
+
+      <p class="help">Выбери фишку снизу, затем свободную клетку. Три и более соседних одинаковых фишки объединяются в следующий уровень.</p>
+
+      <div class="status" id="status">Выбери фишку.</div>
+
+      <div class="actions">
+        <button class="action" type="button" id="restart">Начать заново</button>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script>
+(()=>{
+  const boardEl=document.getElementById('board');
+  const queueEl=document.getElementById('queue');
+  const scoreEl=document.getElementById('score');
+  const statusEl=document.getElementById('status');
+  const restartBtn=document.getElementById('restart');
+
+  const cells=[];
+  const rows=[4,5,6,5,4];
+  const offsets=[1,0.5,0,0.5,1];
+  let queue=[];
+  let selected=0;
+  let score=0;
+
+  const makeQueue=()=>Array.from({length:3},()=>1+Math.floor(Math.random()*3));
+  const key=(r,c)=>r+':'+c;
+  const byKey=new Map();
+
+  function neighbors(cell){
+    const candidates=[];
+    const r=cell.r,c=cell.c;
+    for(const other of cells){
+      if(other===cell)continue;
+      const dx=Math.abs(other.x-cell.x),dy=Math.abs(other.y-cell.y);
+      if(dx<1.05&&dy<.9&&Math.hypot(dx,dy)<1.25)candidates.push(other);
+    }
+    return candidates;
+  }
+
+  function cluster(start,level){
+    const seen=new Set([start.id]),out=[start],todo=[start];
+    while(todo.length){
+      const cur=todo.pop();
+      for(const n of neighbors(cur)){
+        if(n.level===level&&!seen.has(n.id)){
+          seen.add(n.id);out.push(n);todo.push(n);
+        }
+      }
+    }
+    return out;
+  }
+
+  function mergeFrom(cell){
+    let current=cell;
+    let chain=0;
+    while(current&&current.level<6){
+      const group=cluster(current,current.level);
+      if(group.length<3)break;
+      const old=current.level;
+      for(const g of group){if(g!==current)g.level=0}
+      current.level=old+1;
+      score+=group.length*old*100;
+      chain++;
+      renderBoard();
+    }
+    if(chain)statusEl.textContent=chain>1?'Цепочка объединений ×'+chain:'Фишки объединены.';
+  }
+
+  function place(cell){
+    if(!selected){statusEl.textContent='Сначала выбери фишку.';return}
+    if(cell.level){statusEl.textContent='Эта клетка уже занята.';return}
+    cell.level=queue[selected-1];
+    score+=cell.level*10;
+    queue[selected-1]=1+Math.floor(Math.random()*3);
+    selected=0;
+    mergeFrom(cell);
+    render();
+    if(cells.every(x=>x.level))statusEl.textContent='Поле заполнено. Нажми «Начать заново».';
+    else if(!statusEl.textContent.includes('объедин'))statusEl.textContent='Выбери следующую фишку.';
+  }
+
+  function renderBoard(){
+    boardEl.innerHTML='';
+    const size=72;
+    cells.forEach(cell=>{
+      const b=document.createElement('button');
+      b.type='button';
+      b.className='hex';
+      b.style.left=(cell.x*17.25)+'%';
+      b.style.top=(cell.y*17.2)+'%';
+      b.setAttribute('aria-label',cell.level?'Уровень '+cell.level:'Свободная клетка');
+      const inner=document.createElement('span');
+      inner.className='hex-inner';
+      if(cell.level){
+        const token=document.createElement('span');
+        token.className='token lv'+cell.level;
+        token.textContent=cell.level;
+        inner.appendChild(token);
+      }
+      b.appendChild(inner);
+      b.addEventListener('click',()=>place(cell));
+      boardEl.appendChild(b);
+    });
+  }
+
+  function renderQueue(){
+    queueEl.innerHTML='';
+    queue.forEach((level,i)=>{
+      const b=document.createElement('button');
+      b.type='button';
+      b.className='piece'+(selected===i+1?' active':'');
+      b.setAttribute('aria-label','Фишка уровня '+level);
+      b.innerHTML='<span class="token lv'+level+'">'+level+'</span>';
+      b.addEventListener('click',()=>{
+        selected=i+1;
+        statusEl.textContent='Теперь выбери свободную клетку.';
+        renderQueue();
+      });
+      queueEl.appendChild(b);
+    });
+  }
+
+  function render(){
+    scoreEl.textContent=new Intl.NumberFormat('ru-RU').format(score);
+    renderBoard();renderQueue();
+  }
+
+  function reset(){
+    cells.forEach(c=>c.level=0);
+    queue=makeQueue();
+    selected=0;score=0;
+    statusEl.textContent='Выбери фишку.';
+    render();
+  }
+
+  let id=0;
+  rows.forEach((count,r)=>{
+    for(let c=0;c<count;c++){
+      const cell={id:id++,r,c,x:offsets[r]+c*.9,y:r*.76,level:0};
+      cells.push(cell);byKey.set(key(r,c),cell);
+    }
+  });
+
+  restartBtn.addEventListener('click',reset);
+  reset();
+})();
+</script>
+<script src="../assets/site-nav.js?v=20260924-1"></script>
+</body>
+</html>
