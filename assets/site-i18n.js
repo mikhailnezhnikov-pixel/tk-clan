@@ -208,9 +208,9 @@
       style.textContent=`
         body.tk-home-backdrop{
           background-color:#07080b!important;
-          background-image:linear-gradient(90deg,rgba(7,8,11,.72),rgba(7,8,11,.60)),url("assets/home/top-king-clan-hero-approved.jpg")!important;
-          background-size:cover,cover!important;
-          background-position:center,58% calc(50% + var(--tk-backdrop-drift,0px))!important;
+          background-image:linear-gradient(180deg,rgba(7,8,11,.66),rgba(7,8,11,.68) 68%,#07080b 100%),url("assets/home/top-king-clan-hero-approved.jpg")!important;
+          background-size:cover,100% auto!important;
+          background-position:center,center calc(0px + var(--tk-backdrop-drift,0px))!important;
           background-repeat:no-repeat!important;
           background-attachment:fixed!important;
         }
@@ -226,16 +226,18 @@
         @media(min-width:981px){
           .hero{
             background-attachment:scroll!important;
+            background-size:100% auto!important;
+            background-position:center top!important;
           }
           .hero::before{
             background:
               linear-gradient(90deg,rgba(4,6,9,.99) 0%,rgba(4,6,9,.92) 30%,rgba(4,6,9,.58) 47%,rgba(4,6,9,.16) 67%,rgba(4,6,9,.05) 100%),
-              linear-gradient(180deg,rgba(7,8,11,0) 48%,rgba(7,8,11,.10) 60%,rgba(7,8,11,.38) 74%,rgba(7,8,11,.78) 89%,#07080b 100%)!important;
+              linear-gradient(180deg,rgba(7,8,11,0) 48%,rgba(7,8,11,.10) 60%,rgba(7,8,11,.70) 76%,#07080b 86%)!important;
           }
           .hero::after{
             background:
               radial-gradient(circle at 77% 25%,rgba(255,193,71,.19),transparent 24%),
-              linear-gradient(180deg,transparent 48%,rgba(7,8,11,.04) 60%,rgba(7,8,11,.28) 78%,rgba(7,8,11,.78) 94%,#07080b 100%)!important;
+              linear-gradient(180deg,transparent 48%,rgba(7,8,11,.04) 60%,rgba(7,8,11,.48) 76%,#07080b 88%)!important;
           }
           #sections{
             overflow:hidden!important;
@@ -252,7 +254,7 @@
           .hero-copy{width:min(540px,54%)!important}
         }
         @media(max-width:680px){
-          body.tk-home-backdrop{background-position:center,56% calc(50% + var(--tk-backdrop-drift,0px))!important}
+          body.tk-home-backdrop{background-size:cover,auto 100%!important;background-position:center,56% calc(50% + var(--tk-backdrop-drift,0px))!important}
           .hero{
             min-height:900px!important;
             align-items:flex-start!important;
