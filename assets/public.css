@@ -18,7 +18,7 @@ body.tk-main-theme{
   position:relative;
   background-color:#07080b!important;
   background-image:
-    linear-gradient(180deg,rgba(7,8,11,.66),rgba(7,8,11,.70) 68%,rgba(7,8,11,.84) 100%),
+    linear-gradient(180deg,rgba(7,8,11,.66),rgba(7,8,11,.70) 63%,rgba(7,8,11,.98) 82%,rgba(7,8,11,.84) 100%),
     url("home/top-king-clan-hero-approved.jpg"),
     url("home/top-king-clan-hero-approved.jpg")!important;
   background-size:cover,100% auto,cover!important;
