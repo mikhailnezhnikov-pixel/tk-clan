@@ -334,6 +334,119 @@
       .trade-random-options{grid-template-columns:repeat(3,minmax(0,1fr))}
     }
 
+  
+    /* Book reader: one guide block per sheet. */
+    .book-reader{margin:0 0 42px}
+    .book-toolbar,.book-footer-nav{
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr) auto;
+      align-items:center;
+      gap:10px;
+      margin:0 0 12px;
+      padding:10px;
+      border:1px solid rgba(232,182,84,.22);
+      border-radius:16px;
+      background:rgba(13,17,23,.96);
+      box-shadow:0 10px 28px rgba(0,0,0,.18);
+    }
+    .book-footer-nav{margin:14px 0 0}
+    .book-page{
+      display:none;
+      min-height:540px;
+      padding:20px;
+      border:1px solid rgba(232,182,84,.24);
+      border-radius:22px;
+      background:linear-gradient(145deg,rgba(19,24,32,.985),rgba(9,13,18,.99));
+      box-shadow:0 18px 54px rgba(0,0,0,.28);
+    }
+    .book-page.is-active{display:block}
+    .book-page>.hero:first-child{margin-top:0}
+    .book-sheet-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin:0 0 16px;
+      padding:0 0 12px;
+      border-bottom:1px solid rgba(255,255,255,.065);
+    }
+    .book-sheet-number{color:var(--gold2);font-size:10px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+    .book-sheet-title{margin-top:3px;color:#dfe4ea;font-size:13px;font-weight:900}
+    .book-nav-btn,.book-index-btn{
+      min-height:40px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:9px 12px;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:11px;
+      background:rgba(255,255,255,.035);
+      color:#eef1f4;
+      font:900 10px/1 inherit;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .book-nav-btn:hover,.book-index-btn:hover,.book-page-number:hover{border-color:rgba(232,182,84,.42);color:var(--gold2)}
+    .book-nav-btn:disabled{opacity:.35;cursor:default}
+    .book-page-strip{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;padding:2px 1px 5px;scrollbar-width:thin}
+    .book-page-number{
+      flex:0 0 34px;
+      width:34px;height:34px;
+      display:grid;place-items:center;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:9px;
+      background:rgba(255,255,255,.025);
+      color:#aeb7c3;
+      font:900 10px/1 inherit;
+      cursor:pointer;
+    }
+    .book-page-number.is-active{border-color:rgba(232,182,84,.56);background:rgba(232,182,84,.14);color:var(--gold2)}
+    .book-toc{
+      display:none;
+      margin:0 0 12px;
+      padding:13px;
+      border:1px solid rgba(232,182,84,.20);
+      border-radius:16px;
+      background:rgba(12,16,22,.985);
+    }
+    .book-toc.is-open{display:block}
+    .book-toc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+    .book-toc-head h2{margin:0;font-size:16px}
+    .book-toc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+    .book-toc-item{
+      display:grid;
+      grid-template-columns:30px minmax(0,1fr);
+      gap:8px;
+      align-items:center;
+      min-width:0;
+      padding:8px;
+      border:1px solid rgba(255,255,255,.07);
+      border-radius:10px;
+      background:rgba(255,255,255,.025);
+      color:#dfe4ea;
+      text-align:left;
+      cursor:pointer;
+    }
+    .book-toc-item b{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:rgba(232,182,84,.10);color:var(--gold2);font-size:10px}
+    .book-toc-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;font-weight:800}
+    .book-toc-item.is-active{border-color:rgba(232,182,84,.38)}
+    .book-toolbar-center{display:flex;align-items:center;gap:8px;min-width:0}
+    .book-current{flex:0 0 auto;color:#98a2ae;font-size:9px;font-weight:900;white-space:nowrap}
+    @media(max-width:760px){
+      .book-page{min-height:0;padding:14px;border-radius:17px}
+      .book-toolbar,.book-footer-nav{grid-template-columns:1fr auto;gap:8px}
+      .book-toolbar-center{grid-column:1/-1;grid-row:2}
+      .book-page-strip{width:100%}
+      .book-toc-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:520px){
+      .book-page{padding:11px}
+      .book-nav-btn,.book-index-btn{min-height:38px;padding:8px 10px}
+      .book-sheet-head{align-items:flex-start;flex-direction:column}
+      .book-page-number{flex-basis:32px;width:32px;height:32px}
+    }
+
   </style>
   <link rel="stylesheet" href="../assets/public.css">
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
@@ -493,6 +606,153 @@
   <div class="section-head"><div><h2>Линейки наград</h2><p>Бесплатная и две премиум-линии. Ниже — только подтверждённые уровни и фактические награды.</p></div></div>
   <section id="reward-tracks"></section>
 </main>
+
+<script>
+(()=>{
+  const main=document.querySelector('main.shell');
+  if(!main||main.dataset.bookReady==='1')return;
+  main.dataset.bookReady='1';
+
+  const children=Array.from(main.children);
+  const reader=document.createElement('div');
+  reader.className='book-reader';
+  const toolbar=document.createElement('div');
+  toolbar.className='book-toolbar';
+  const toc=document.createElement('section');
+  toc.className='book-toc';
+  toc.setAttribute('aria-label','Оглавление');
+  const pagesWrap=document.createElement('div');
+  pagesWrap.className='book-pages';
+  const footerNav=document.createElement('div');
+  footerNav.className='book-footer-nav';
+
+  main.insertBefore(reader,children[0]||null);
+  reader.append(toolbar,toc,pagesWrap,footerNav);
+
+  const pages=[];
+  let currentPage=null;
+  let pageIndex=0;
+
+  const startPage=(title)=>{
+    pageIndex+=1;
+    const page=document.createElement('section');
+    page.className='book-page';
+    page.id='page-'+pageIndex;
+    page.dataset.bookPage=String(pageIndex);
+    page.dataset.bookTitle=title||('Лист '+pageIndex);
+    const head=document.createElement('div');
+    head.className='book-sheet-head';
+    head.innerHTML='<div><div class="book-sheet-number">Лист '+pageIndex+'</div><div class="book-sheet-title">'+escapeHtml(title||'')+'</div></div><button type="button" class="book-index-btn" data-book-toc>Оглавление</button>';
+    page.appendChild(head);
+    pagesWrap.appendChild(page);
+    pages.push(page);
+    currentPage=page;
+    return page;
+  };
+  const escapeHtml=(value)=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+  // First sheet: cover + quick start.
+  const first=startPage('С чего начать');
+  const hero=children.find(x=>x.classList?.contains('hero'));
+  const start=children.find(x=>x.id==='start');
+  if(hero)first.appendChild(hero);
+  if(start)first.appendChild(start);
+
+  // Every visible section-head starts a new sheet; following content stays on it until the next head.
+  for(const node of children){
+    if(node===hero||node===start||node===reader)continue;
+    if(node.classList?.contains('section-head')){
+      const title=node.querySelector('h2')?.textContent?.trim()||'Раздел';
+      currentPage=startPage(title);
+      currentPage.appendChild(node);
+    }else{
+      if(!currentPage)currentPage=startPage('Раздел');
+      currentPage.appendChild(node);
+    }
+  }
+
+  const makeStrip=()=>pages.map((p,i)=>'<button type="button" class="book-page-number" data-book-go="'+(i+1)+'" title="'+escapeHtml(p.dataset.bookTitle)+'">'+(i+1)+'</button>').join('');
+  const navMarkup=(footer=false)=>
+    '<button type="button" class="book-nav-btn" data-book-prev>← <span>Назад</span></button>'+
+    '<div class="book-toolbar-center"><span class="book-current"></span><div class="book-page-strip">'+makeStrip()+'</div></div>'+
+    '<button type="button" class="book-nav-btn" data-book-next><span>Далее</span> →</button>';
+  toolbar.innerHTML=navMarkup();
+  footerNav.innerHTML=navMarkup(true);
+
+  toc.innerHTML='<div class="book-toc-head"><h2>Оглавление</h2><button type="button" class="book-index-btn" data-book-toc>Закрыть</button></div>'+
+    '<div class="book-toc-grid">'+pages.map((p,i)=>
+      '<button type="button" class="book-toc-item" data-book-go="'+(i+1)+'"><b>'+(i+1)+'</b><span>'+escapeHtml(p.dataset.bookTitle)+'</span></button>'
+    ).join('')+'</div>';
+
+  const findPageForAnchor=(hash)=>{
+    if(!hash)return 0;
+    const raw=decodeURIComponent(hash.replace(/^#/,''));
+    const m=raw.match(/^page-(\d+)$/);
+    if(m)return Math.max(0,Math.min(pages.length-1,Number(m[1])-1));
+    const target=document.getElementById(raw);
+    const page=target?.closest('.book-page');
+    return page?pages.indexOf(page):0;
+  };
+
+  let active=0;
+  let changingHash=false;
+  const showPage=(index,{updateHash=true,scroll=true}={})=>{
+    index=Math.max(0,Math.min(pages.length-1,index));
+    active=index;
+    pages.forEach((p,i)=>p.classList.toggle('is-active',i===active));
+    document.querySelectorAll('[data-book-go]').forEach(btn=>{
+      const on=Number(btn.dataset.bookGo)===active+1;
+      btn.classList.toggle('is-active',on);
+      if(on)btn.setAttribute('aria-current','page'); else btn.removeAttribute('aria-current');
+    });
+    document.querySelectorAll('.book-current').forEach(el=>el.textContent='Лист '+(active+1)+' / '+pages.length);
+    document.querySelectorAll('[data-book-prev]').forEach(btn=>btn.disabled=active===0);
+    document.querySelectorAll('[data-book-next]').forEach(btn=>btn.disabled=active===pages.length-1);
+    document.title=(pages[active]?.dataset.bookTitle||'Карта Сокровищ')+' — Top King';
+    if(updateHash){
+      changingHash=true;
+      history.replaceState(null,'','#page-'+(active+1));
+      setTimeout(()=>{changingHash=false},0);
+    }
+    if(scroll){
+      reader.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+    const activeNum=document.querySelector('.book-page-number.is-active');
+    activeNum?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  };
+
+  reader.addEventListener('click',event=>{
+    const go=event.target.closest('[data-book-go]');
+    if(go){showPage(Number(go.dataset.bookGo)-1);toc.classList.remove('is-open');return}
+    if(event.target.closest('[data-book-prev]')){showPage(active-1);return}
+    if(event.target.closest('[data-book-next]')){showPage(active+1);return}
+    if(event.target.closest('[data-book-toc]')){toc.classList.toggle('is-open');return}
+  });
+
+  document.addEventListener('click',event=>{
+    const a=event.target.closest('a[href^="#"]');
+    if(!a||a.closest('.book-reader')?.classList.contains('book-reader')===false)return;
+    const href=a.getAttribute('href');
+    if(!href||href==='#')return;
+    const target=document.getElementById(decodeURIComponent(href.slice(1)));
+    const page=target?.closest('.book-page');
+    if(!page)return;
+    event.preventDefault();
+    showPage(pages.indexOf(page),{updateHash:false,scroll:false});
+    history.replaceState(null,'',href);
+    requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'start'}));
+  });
+
+  window.addEventListener('hashchange',()=>{
+    if(changingHash)return;
+    showPage(findPageForAnchor(location.hash),{updateHash:false,scroll:true});
+  });
+
+  showPage(findPageForAnchor(location.hash),{updateHash:!location.hash,scroll:false});
+  window.TopKingBook={pages,showPage:(n)=>showPage(Number(n)-1),get current(){return active+1}};
+})();
+</script>
+
 
 <div class="solver-modal" id="solverInstallModal" aria-hidden="true">
   <div class="solver-dialog" role="dialog" aria-modal="true" aria-labelledby="solverInstallTitle">
