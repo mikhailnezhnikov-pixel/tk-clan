@@ -184,7 +184,6 @@
   function configureHomepage(){
     const hero=document.querySelector('main .hero');if(!hero)return;
     document.body.classList.add('tk-home-backdrop');
-    hero.style.setProperty('background-image','url("assets/home/top-king-clan-hero-approved.jpg")','important');
 
     // Homepage fallback: even if an older cached HTML shell is served,
     // the third quick card must be public Game news, not Member area.
