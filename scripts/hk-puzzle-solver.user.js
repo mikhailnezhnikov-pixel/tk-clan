@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HK Puzzle Solver — Top King
 // @namespace    hk-puzzle
-// @version      3.0.1
-// @description  Подсказчик порядка ходов: Сражение + Lights Out для Hamster King
+// @version      3.1.0
+// @description  Подсказчик порядка ходов + локальный журнал действий Рыбалки/Сокровищницы для Hamster King
 // @match        https://*.hamsterking.games/*
 // @match        https://hamsterking.games/*
 // @homepageURL  https://tk-clan.ru/information/
@@ -25,6 +25,69 @@
     const GREEN = '03';
 
     let lastSignature = '';
+
+    const HISTORY_KEY = 'hkPuzzleSolverHistoryV1';
+    const HISTORY_LIMIT = 250;
+
+    function readHistory() {
+        try {
+            const raw = localStorage.getItem(HISTORY_KEY);
+            const parsed = raw ? JSON.parse(raw) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function writeHistory(rows) {
+        try {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(rows.slice(-HISTORY_LIMIT)));
+        } catch (_) {}
+    }
+
+    function recordHistory(type, payload) {
+        const rows = readHistory();
+        rows.push({
+            ts: new Date().toISOString(),
+            type: type,
+            path: location.pathname,
+            payload: payload || {}
+        });
+        writeHistory(rows);
+    }
+
+    function findLotElement(target) {
+        if (!target || typeof target.closest !== 'function') return null;
+        return target.closest('[data-lot-id]');
+    }
+
+    function classifyLotId(id) {
+        id = String(id || '');
+        if (/fish/i.test(id)) return 'fishing_click';
+        if (/treasury|treasure.*way|way_[123]/i.test(id)) return 'treasury_click';
+        if (/lights_out/i.test(id)) return 'labyrinth_click';
+        if (/enemy_type_|treasurelot_sword/i.test(id)) return 'battle_click';
+        return '';
+    }
+
+    function installHistoryCapture() {
+        if (window.__HK_PUZZLE_HISTORY_CAPTURE__) return;
+        window.__HK_PUZZLE_HISTORY_CAPTURE__ = true;
+
+        document.addEventListener('click', function (event) {
+            const el = findLotElement(event.target);
+            if (!el) return;
+
+            const id = el.getAttribute('data-lot-id') || '';
+            const type = classifyLotId(id);
+            if (!type) return;
+
+            recordHistory(type, {
+                lotId: id,
+                text: String(el.textContent || '').trim().slice(0, 160)
+            });
+        }, true);
+    }
 
     function clearNumbers() {
         const numbers = [...document.querySelectorAll('.hkSolverNumber')];
@@ -535,6 +598,10 @@
         lastSignature = signature;
         clearNumbers();
 
+        if (signature !== 'NONE') {
+            recordHistory('board_state', { signature: signature });
+        }
+
         if (signature.indexOf('LIGHTS|') === 0) {
             runLights();
             return;
@@ -545,6 +612,23 @@
             return;
         }
     }
+
+    installHistoryCapture();
+
+    window.__HK_PUZZLE_SOLVER__ = {
+        version: '3.1.0',
+        check: checkPuzzle,
+        getHistory: function () {
+            return readHistory();
+        },
+        clearHistory: function () {
+            writeHistory([]);
+            return true;
+        },
+        exportHistory: function () {
+            return JSON.stringify(readHistory(), null, 2);
+        }
+    };
 
     setInterval(checkPuzzle, 500);
     setTimeout(checkPuzzle, 300);
