@@ -335,7 +335,7 @@
     }
 
   
-    /* Book reader: one guide block per sheet. */
+    /* Book reader: nine logical chapters instead of dozens of tiny sheets. */
     .book-reader{margin:0 0 42px}
     .book-toolbar,.book-footer-nav{
       display:grid;
@@ -372,6 +372,11 @@
     }
     .book-sheet-number{color:var(--gold2);font-size:10px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
     .book-sheet-title{margin-top:3px;color:#dfe4ea;font-size:13px;font-weight:900}
+    .book-chapter-lead{margin:0 0 17px;padding:11px 13px;border-left:3px solid rgba(232,182,84,.72);border-radius:10px;background:rgba(232,182,84,.045);color:#aeb8c5;font-size:10px;line-height:1.55}
+    .book-entry-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 17px}
+    .book-entry-button{min-height:48px;display:flex;align-items:center;justify-content:center;padding:11px 14px;border:1px solid rgba(232,182,84,.34);border-radius:14px;background:linear-gradient(145deg,rgba(232,182,84,.12),rgba(255,255,255,.025));color:#ffe1a0;font-size:11px;font-weight:950;text-decoration:none;cursor:pointer}
+    .book-entry-button.secondary{border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.035);color:#e3e8ef}
+    .book-entry-button:hover{border-color:rgba(232,182,84,.62);color:#fff}
     .book-nav-btn,.book-index-btn{
       min-height:40px;
       display:inline-flex;
@@ -448,6 +453,14 @@
     }
 
   
+    .resource-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}
+    .resource-overview-card{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;align-items:center;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.025)}
+    .resource-overview-card img{width:48px;height:48px;object-fit:contain}
+    .resource-overview-card b{display:block;margin-bottom:4px;font-size:11px;color:#f0f3f7}
+    .resource-overview-card span{display:block;color:#9ca7b4;font-size:9px;line-height:1.45}
+    @media(max-width:760px){.resource-overview{grid-template-columns:1fr 1fr}}
+    @media(max-width:520px){.resource-overview{grid-template-columns:1fr}.book-entry-actions{grid-template-columns:1fr}}
+
     /* Collection quests: show the five required eggs, not one misleading cover. */
     .quest-collection-collage{
       width:100%;
@@ -675,6 +688,19 @@
   <div class="section-head"><div><h2>Комнаты на карте</h2><p>Сколько Провизии показывает карточка каждой комнаты перед входом.</p></div></div>
   <section class="room-grid" id="map-rooms"></section>
 
+  <div class="section-head" id="resources-guide"><div><h2>Ресурсы события</h2><p>Что это, где используется и что не стоит тратить вслепую.</p></div></div>
+  <section class="resource-overview" id="resources-overview">
+    <article class="resource-overview-card"><img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png" alt=""><div><b>Провизия</b><span>Главный расходник путешествия: вход в комнаты и часть действий внутри события.</span></div></article>
+    <article class="resource-overview-card"><img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png" alt=""><div><b>Монеты сокровищ</b><span>Валюта Тайного торговца и подтверждённых улучшений удочки и меча.</span></div></article>
+    <article class="resource-overview-card"><img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_key_common_icon.png" alt=""><div><b>Ключи</b><span>Обычные, Необычные и Ценные ключи открывают разные типы найденных сундуков.</span></div></article>
+    <article class="resource-overview-card"><img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png" alt=""><div><b>Карты</b><span>Карта сокровищ начинает путешествие; отдельные карты ведут к Торговцу, Рыбалке и Сражению.</span></div></article>
+    <article class="resource-overview-card"><img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_food_icon.png" alt=""><div><b>Корм питомца</b><span>Расходуется на поручения питомцев. Стоимость зависит от ранга B / A / S / S+.</span></div></article>
+    <article class="resource-overview-card"><img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_pet_skill_change_icon.png" alt=""><div><b>Смена навыка</b><span>Используется для смены навыков питомцев; не тратьте без понимания нужной механики.</span></div></article>
+    <article class="resource-overview-card"><img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_golden_berry.png" alt=""><div><b>Золотая ягода</b><span>Редкий предмет для особых линий события; её можно потратить и другим способом, поэтому сначала проверьте цель.</span></div></article>
+    <article class="resource-overview-card"><img src="https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png" alt=""><div><b>Яйца</b><span>Используются для питомцев и коллекционных заданий, включая S+ коллекции.</span></div></article>
+    <article class="resource-overview-card"><img src="https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png" alt=""><div><b>Золото</b><span>Обычная игровая валюта, встречается среди наград и обменов события.</span></div></article>
+  </section>
+
   <div class="section-head"><div><h2>Карты и ключи</h2><p>Какая карта ведёт в какую комнату и каким ключом открывается каждый сундук.</p></div></div>
   <section class="grid" id="navigation-items"></section>
 
@@ -763,55 +789,79 @@
   main.insertBefore(reader,children[0]||null);
   reader.append(toolbar,toc,pagesWrap,footerNav);
 
-  const pages=[];
-  let currentPage=null;
-  let pageIndex=0;
+  const escapeHtml=(value)=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const chapters=[
+    {title:'С чего начать',lead:'Старт события, первое путешествие, Провизия, Карта сокровищ и порядок действий.'},
+    {title:'Комнаты и маршрут',lead:'Все комнаты одним взглядом: стоимость входа, задача комнаты и что можно получить.'},
+    {title:'Рыбалка, Лабиринт и Сражение',lead:'Подробные механики трёх мини-игр, стоимость действий и работа помощника Top King.'},
+    {title:'Сундуки и Сокровищница',lead:'Раскопки, ключи, наградные сундуки и подтверждённые развилки финальной Сокровищницы.'},
+    {title:'Ресурсы и снаряжение',lead:'Что означают ресурсы события, где они используются и как работают удочка и меч.'},
+    {title:'Питомцы',lead:'Поручения, корм, ранги B / A / S / S+, навыки и коллекционные задания.'},
+    {title:'Торговец и экономика',lead:'Обмены, цены, улучшения и сравнения только по подтверждённым данным игры.'},
+    {title:'Квесты и достижения',lead:'Ежедневные задания, коллекции, достижения и подтверждённые линии наград.'},
+    {title:'Магазин события',lead:'Обычные товары и лимитированные наборы: цена, количество и что уже подтверждено.'}
+  ];
 
-  const startPage=(title)=>{
-    pageIndex+=1;
+  const pages=[];
+  const startPage=(chapter,index)=>{
     const page=document.createElement('section');
     page.className='book-page';
-    page.id='page-'+pageIndex;
-    page.dataset.bookPage=String(pageIndex);
-    page.dataset.bookTitle=title||('Лист '+pageIndex);
+    page.id='page-'+(index+1);
+    page.dataset.bookPage=String(index+1);
+    page.dataset.bookTitle=chapter.title;
     const head=document.createElement('div');
     head.className='book-sheet-head';
-    head.innerHTML='<div><div class="book-sheet-number">Лист '+pageIndex+'</div><div class="book-sheet-title">'+escapeHtml(title||'')+'</div></div><button type="button" class="book-index-btn" data-book-toc>Оглавление</button>';
-    page.appendChild(head);
+    head.innerHTML='<div><div class="book-sheet-number">Глава '+(index+1)+' из '+chapters.length+'</div><div class="book-sheet-title">'+escapeHtml(chapter.title)+'</div></div><button type="button" class="book-index-btn" data-book-toc>Оглавление</button>';
+    const lead=document.createElement('p');
+    lead.className='book-chapter-lead';
+    lead.textContent=chapter.lead;
+    page.append(head,lead);
     pagesWrap.appendChild(page);
     pages.push(page);
-    currentPage=page;
     return page;
   };
-  const escapeHtml=(value)=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  chapters.forEach(startPage);
 
-  // First sheet: cover + quick start.
-  const first=startPage('С чего начать');
   const hero=children.find(x=>x.classList?.contains('hero'));
   const start=children.find(x=>x.id==='start');
-  if(hero)first.appendChild(hero);
-  if(start)first.appendChild(start);
+  if(hero)pages[0].appendChild(hero);
+  const entryActions=document.createElement('div');
+  entryActions.className='book-entry-actions';
+  entryActions.innerHTML='<a class="book-entry-button" href="#newbie-guide">Я впервые здесь</a><button type="button" class="book-entry-button secondary" data-book-toc>Открыть справочник</button>';
+  pages[0].appendChild(entryActions);
+  if(start)pages[0].appendChild(start);
 
-  // Every visible section-head starts a new sheet; following content stays on it until the next head.
+  const chapterByAnchor={
+    'newbie-guide':0,'travel-flow':0,
+    'room-cheatsheet':1,'event-mechanics':1,'map-rooms':1,
+    'fishing-guide':2,'labyrinth-guide':2,'battle-guide':2,
+    'chests-guide':3,'chest-hunt':3,'verified-chests':3,'treasury-guide':3,
+    'resources-guide':4,'navigation-items':4,'equipment-progression':4,'special-items':4,
+    'pets-guide':5,'pets':5,'pet-skills':5,
+    'trader-guide':6,'trader-variants':6,'trader-value':6,'economy-guide':6,'verified-economy':6,'strategy-notes':6,
+    'quests':7,'achievement-examples':7,'achievement-series':7,'reward-tracks':7,
+    'shop-guide':8,'bundles':8,'shop':8
+  };
+
+  let activeChapter=0;
   for(const node of children){
     if(node===hero||node===start||node===reader)continue;
     if(node.classList?.contains('section-head')){
-      const title=node.querySelector('h2')?.textContent?.trim()||'Раздел';
-      currentPage=startPage(title);
-      currentPage.appendChild(node);
+      const anchor=node.id||node.nextElementSibling?.id||'';
+      if(Object.prototype.hasOwnProperty.call(chapterByAnchor,anchor))activeChapter=chapterByAnchor[anchor];
+      pages[activeChapter].appendChild(node);
     }else{
-      if(!currentPage)currentPage=startPage('Раздел');
-      currentPage.appendChild(node);
+      pages[activeChapter].appendChild(node);
     }
   }
 
   const makeStrip=()=>pages.map((p,i)=>'<button type="button" class="book-page-number" data-book-go="'+(i+1)+'" title="'+escapeHtml(p.dataset.bookTitle)+'">'+(i+1)+'</button>').join('');
-  const navMarkup=(footer=false)=>
+  const navMarkup=()=>
     '<button type="button" class="book-nav-btn" data-book-prev>← <span>Назад</span></button>'+
     '<div class="book-toolbar-center"><span class="book-current"></span><div class="book-page-strip">'+makeStrip()+'</div></div>'+
     '<button type="button" class="book-nav-btn" data-book-next><span>Далее</span> →</button>';
   toolbar.innerHTML=navMarkup();
-  footerNav.innerHTML=navMarkup(true);
+  footerNav.innerHTML=navMarkup();
 
   toc.innerHTML='<div class="book-toc-head"><h2>Оглавление</h2><button type="button" class="book-index-btn" data-book-toc>Закрыть</button></div>'+
     '<div class="book-toc-grid">'+pages.map((p,i)=>
@@ -839,7 +889,7 @@
       btn.classList.toggle('is-active',on);
       if(on)btn.setAttribute('aria-current','page'); else btn.removeAttribute('aria-current');
     });
-    document.querySelectorAll('.book-current').forEach(el=>el.textContent='Лист '+(active+1)+' / '+pages.length);
+    document.querySelectorAll('.book-current').forEach(el=>el.textContent='Глава '+(active+1)+' / '+pages.length);
     document.querySelectorAll('[data-book-prev]').forEach(btn=>btn.disabled=active===0);
     document.querySelectorAll('[data-book-next]').forEach(btn=>btn.disabled=active===pages.length-1);
     document.title=(pages[active]?.dataset.bookTitle||'Карта Сокровищ')+' — Top King';
@@ -848,9 +898,7 @@
       history.replaceState(null,'','#page-'+(active+1));
       setTimeout(()=>{changingHash=false},0);
     }
-    if(scroll){
-      reader.scrollIntoView({behavior:'smooth',block:'start'});
-    }
+    if(scroll)reader.scrollIntoView({behavior:'smooth',block:'start'});
     const activeNum=document.querySelector('.book-page-number.is-active');
     activeNum?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
   };
@@ -865,7 +913,7 @@
 
   document.addEventListener('click',event=>{
     const a=event.target.closest('a[href^="#"]');
-    if(!a||a.closest('.book-reader')?.classList.contains('book-reader')===false)return;
+    if(!a)return;
     const href=a.getAttribute('href');
     if(!href||href==='#')return;
     const target=document.getElementById(decodeURIComponent(href.slice(1)));
@@ -883,7 +931,7 @@
   });
 
   showPage(findPageForAnchor(location.hash),{updateHash:!location.hash,scroll:false});
-  window.TopKingBook={pages,showPage:(n)=>showPage(Number(n)-1),get current(){return active+1}};
+  window.TopKingBook={pages,chapters,showPage:(n)=>showPage(Number(n)-1),get current(){return active+1}};
 })();
 </script>
 
@@ -1636,7 +1684,7 @@ window.TK_PAGE_TRANSLATIONS={
 })();
 </script>
 
-<script src="./i18n.js?v=20260924-5"></script>
+<script src="./i18n.js?v=20260924-6"></script>
 <script src="../assets/site-nav.js?v=20260924-canon1"></script>
 </body>
 </html>
