@@ -16,12 +16,12 @@
   function root(){const p=parts();if(!p.length)return './';return '../'.repeat(p.length)}
   function href(path){return root()+path}
   function ensureBranding(){
-    const crest=href('assets/brand/topking-clan-crest.png');
+    const crest=href('assets/brand/topking-clan-crest-canon.jpg');
     let favicon=document.querySelector('link[data-tk-favicon]');
     if(!favicon){
       favicon=document.createElement('link');
       favicon.rel='icon';
-      favicon.type='image/png';
+      favicon.type='image/jpeg';
       favicon.dataset.tkFavicon='1';
       document.head.appendChild(favicon);
     }
@@ -255,7 +255,7 @@
       document.querySelectorAll('body>header:not(.topbar):not(.site-header)').forEach(node=>node.remove());
     }
     const header=document.createElement('header');header.className='topbar tk-generated-header';
-    header.innerHTML=`<div class="shell topbar-inner"><a class="brand" href="${href('')}" aria-label="Top King"><img class="tk-clan-crest" src="${href('assets/brand/topking-clan-crest.png')}" alt="Top King"></a><nav class="nav" aria-label="Navigation"></nav><div class="languages"><button data-language="ru">RU</button><button data-language="en">EN</button><button data-language="fa">FA</button></div><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Menu">☰</button></div><nav class="mobile-nav" data-mobile-nav></nav>`;
+    header.innerHTML=`<div class="shell topbar-inner"><a class="brand" href="${href('')}" aria-label="Top King"><img class="tk-clan-crest" src="${href('assets/brand/topking-clan-crest-canon.jpg')}" alt="Top King"></a><nav class="nav" aria-label="Navigation"></nav><div class="languages"><button data-language="ru">RU</button><button data-language="en">EN</button><button data-language="fa">FA</button></div><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Menu">☰</button></div><nav class="mobile-nav" data-mobile-nav></nav>`;
     header.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>window.TopKingI18n?.apply(button.dataset.language)));
     document.body.prepend(header);document.body.classList.add('tk-synthetic-header');
     if(window.TopKingI18n)window.TopKingI18n.apply(window.TopKingI18n.language);
