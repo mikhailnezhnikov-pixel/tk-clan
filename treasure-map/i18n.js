@@ -324,11 +324,43 @@
     'Возможные количества · вероятности неизвестны':'مقادیر ممکن · احتمال‌ها مشخص نیست'
   });
 
+
+  Object.assign(EN,{
+    'Оглавление':'Contents',
+    'Закрыть':'Close',
+    'Назад':'Back',
+    'Далее':'Next',
+    'Что делать в каждой комнате':'What to do in each room',
+    'Квесты':'Quests',
+    'Карты и ключи':'Maps and keys',
+    'Снаряжение мини-игр':'Mini-game equipment',
+    'Полезные стоимости':'Useful costs',
+    'Сравнение предложений':'Offer comparison',
+    'Редкие предметы':'Rare items',
+    'Достижения':'Achievements'
+  });
+  Object.assign(FA,{
+    'Оглавление':'فهرست',
+    'Закрыть':'بستن',
+    'Назад':'قبلی',
+    'Далее':'بعدی',
+    'Что делать в каждой комнате':'در هر اتاق چه کنیم',
+    'Квесты':'ماموریت‌ها',
+    'Карты и ключи':'نقشه‌ها و کلیدها',
+    'Снаряжение мини-игр':'تجهیزات مینی‌گیم',
+    'Полезные стоимости':'هزینه‌های مهم',
+    'Сравнение предложений':'مقایسه پیشنهادها',
+    'Редкие предметы':'آیتم‌های کمیاب',
+    'Достижения':'دستاوردها'
+  });
+
   const maps={en:EN,fa:FA};
   const original=new WeakMap();
   function patternTranslate(key,lang){
     if(lang==='en'){
       let m;
+      if((m=key.match(/^Лист\s+(\d+)\s*\/\s*(\d+)$/)))return 'Page '+m[1]+' / '+m[2];
+      if((m=key.match(/^Лист\s+(\d+)$/)))return 'Page '+m[1];
       if((m=key.match(/^Вход:\s*(\d+)\s*Провизии$/)))return 'Entry: '+m[1]+' Provisions';
       if((m=key.match(/^(\d+)\s*Провизии$/)))return m[1]+' Provisions';
       if((m=key.match(/^(\d+)\s*Монет сокровищ$/)))return m[1]+' Treasure Coins';
@@ -340,6 +372,8 @@
     }
     if(lang==='fa'){
       let m;
+      if((m=key.match(/^Лист\s+(\d+)\s*\/\s*(\d+)$/)))return 'صفحه '+m[1]+' / '+m[2];
+      if((m=key.match(/^Лист\s+(\d+)$/)))return 'صفحه '+m[1];
       if((m=key.match(/^Вход:\s*(\d+)\s*Провизии$/)))return 'ورود: '+m[1]+' آذوقه';
       if((m=key.match(/^(\d+)\s*Провизии$/)))return m[1]+' آذوقه';
       if((m=key.match(/^(\d+)\s*Монет сокровищ$/)))return m[1]+' سکه گنج';
