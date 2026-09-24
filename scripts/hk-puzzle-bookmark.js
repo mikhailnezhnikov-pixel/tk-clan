@@ -62,6 +62,7 @@
         if (/treasury|treasure.*way|way_[123]/i.test(id)) return 'treasury_click';
         if (/lights_out/i.test(id)) return 'labyrinth_click';
         if (/enemy_type_|treasurelot_sword/i.test(id)) return 'battle_click';
+        if (/treasure|fairlot|minigame/i.test(id)) return 'event_click';
         return '';
     }
 
