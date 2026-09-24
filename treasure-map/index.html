@@ -722,8 +722,8 @@
   <div class="section-head" id="confirmed-results"><div><h2>Подтверждённые результаты мини-игр</h2><p>Последние данные со скринов — отдельным блоком, чтобы их не приходилось искать внутри гайда.</p></div></div>
   <section class="confirmed-results-grid">
     <article class="confirmed-result"><b>Лабиринт → Активированное хранилище + Сундук победителя</b><p>Внутри Лабиринта подтверждено «Активированное хранилище». За успешное прохождение комнаты используется <strong>Сундук победителя</strong>.</p></article>
-    <article class="confirmed-result"><b>Лабиринт / Сражение → Сундук победителя</b><p>Возможное содержимое: <strong>Провизия ×14</strong>, Монеты ×11, Обычный ключ ×1, два яйца Молекота ×1, Золото ×1.</p></article>
-    <article class="confirmed-result"><b>Рыбалка → финал ещё не закрыт</b><p>Розовые вихри подтверждены как визуал Штормовой воды: по 2 заброса. Щупальце на присланном поле — 3 заброса.</p></article>
+    <article class="confirmed-result"><b>Сражение → цепная зачистка подтверждена</b><p>Поле 24.09: 12 врагов, старт <strong>28 атаки</strong>. Нажатия <strong>7 → 8 → 12 → 16</strong> очистили всё поле и оставили 14 атаки, после чего появился Сундук победителя.</p></article>
+    <article class="confirmed-result"><b>Рыбалка → полностью проклятое поле</b><p>Подтверждено: <strong>8 × tornado_cursed_water</strong> по 2 заброса + <strong>1 × cursed_water</strong> за 3. После активации cursed_water раскрываются специальные очищенные клетки.</p></article>
   </section>
 
   <div class="section-head" id="fishing-guide"><div><h2>Рыбалка — пошаговый гайд</h2><p>Что делать после входа в Необычный Водоём, как читать клетки и что влияет на находки.</p></div></div>
@@ -1003,7 +1003,7 @@
       <div class="solver-step"><i>3</i><div><b>Откройте Hamster King и нажмите закладку.</b><br>На поле появятся номера 1 → 2 → 3…</div></div>
     </div>
     <p><b>Переустанавливать ничего не нужно:</b> при каждом запуске загружается актуальная версия помощника.</p>
-    <p><b>Начиная с версии 3.3:</b> помощник локально в браузере запоминает нажатия Рыбалки и Сокровищницы, состояния Лабиринта и Сражения, а также координаты и доступные изображения игровых клеток. Внизу экрана появляется панель <b>«HK журнал»</b>. Перед прохождением нажмите «Очистить», а после результата — «Копировать» и пришлите журнал сюда. Ничего никуда автоматически не отправляется.</p>
+
     <div class="solver-actions"><button class="solver-cancel" type="button" data-solver-close>Готово</button></div>
   </div>
 </div>
@@ -1283,9 +1283,17 @@ window.TK_PAGE_TRANSLATIONS={
       const completion=g.completion_reward
         ?'<div class="room-storage-block"><div class="room-reward-label">Награда за прохождение</div>'+renderCompletionReward(g.completion_reward)+'</div>'
         :'';
+      const observed=g.observed_run_2026_09_24||null;
+      const observedClicks=Array.isArray(observed?.clicks)?observed.clicks:[];
+      const observedBlock=observed
+        ?'<div class="fishing-run"><h4>Подтверждённый проход 24.09</h4><p>'+safe(observed.result||'')+'</p>'+
+          (observedClicks.length?'<div class="fishing-run-seq">'+observedClicks.map(v=>'<span class="fishing-run-step">'+safe(v.n)+'. слот '+safe(v.slot)+' · '+safe(v.hp_at_click)+' HP</span>').join('')+'</div>':'')+
+        '</div>'
+        :'';
       el.innerHTML='<div class="walkthrough-head"><div><h3>'+safe(g.title||'')+'</h3><p>'+safe(g.intro||'')+'</p></div>'+
         (g.entry?'<div class="walkthrough-cost">'+(g.entry.image?'<img src="'+safe(g.entry.image)+'" alt="">':'')+safe(g.entry.value||'')+'</div>':'')+'</div>'+
         renderSteps(g.steps)+
+        observedBlock+
         storage+
         completion+
         (g.note?'<div class="guide-warning">'+safe(g.note)+'</div>':'');
@@ -1391,12 +1399,17 @@ window.TK_PAGE_TRANSLATIONS={
       const notes=Array.isArray(fg.notes)?fg.notes:[];
       const observed=fg.observed_run_2026_09_24||null;
       const observedActions=Array.isArray(observed?.actions)?observed.actions:[];
+      const allPink=fg.observed_run_2026_09_24_all_pink||null;
+      const allPinkActions=Array.isArray(allPink?.remaining_actions)?allPink.remaining_actions:[];
       document.getElementById('fishing-guide-content').innerHTML=
         '<div class="deep-guide-intro"><div><h3>'+safe(fg.title||'Рыбалка')+'</h3><p>'+safe(fg.intro||'')+'</p></div>'+
         (fg.entry?'<div class="deep-guide-entry">'+(fg.entry.image?'<img src="'+safe(fg.entry.image)+'" alt="">':'')+'<span>'+safe(fg.entry.value||'')+'</span></div>':'')+'</div>'+
         '<div class="deep-steps">'+steps.map(v=>'<article class="deep-step"><span class="deep-step-num">'+safe(v.n)+'</span>'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<h4>'+safe(v.title)+'</h4><p>'+safe(v.text)+'</p></article>').join('')+'</div>'+
-        (observed?'<div class="fishing-run"><h4>Подтверждённый проход 24.09 · журнал помощника</h4><p>'+safe(observed.conclusion||'')+'</p>'+
+        (observed?'<div class="fishing-run"><h4>Подтверждённый проход 24.09 · смешанное поле</h4><p>'+safe(observed.conclusion||'')+'</p>'+
           '<div class="fishing-run-seq">'+observedActions.map(v=>'<span class="fishing-run-step">'+safe(v.n)+'. '+safe(v.lot_id||'')+' · '+safe(v.cost||'—')+' забр.</span>').join('')+'</div></div>':'')+
+        (allPink?'<div class="fishing-run"><h4>Второй проход 24.09 · полностью розовое поле</h4><p>'+safe(allPink.conclusion||'')+'</p>'+
+          '<div class="fishing-run-seq"><span class="fishing-run-step">1. cursed_water · 3 забр.</span>'+
+          allPinkActions.map(v=>'<span class="fishing-run-step">'+safe(v.n)+'. '+safe(v.lot_id||'')+' · '+safe(v.cost||'—')+' забр.</span>').join('')+'</div></div>':'')+
         '<div class="deep-columns">'+
           '<div class="deep-panel"><h4>Типы воды</h4><div class="water-grid">'+water.map(v=>'<div class="water-card '+(!v.image?'no-exact-art':'')+'">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><span>'+safe(v.text)+'</span><div class="water-meta">'+(v.cost!=null?'<span class="water-cost">'+safe(v.cost)+' забр.</span>':'')+(v.lot_id?'<span class="water-tech">'+safe(v.lot_id.replace(/^mf_treasurelot_is_fishing_/,''))+'</span>':'')+'</div></div></div>').join('')+'</div></div>'+
           '<div class="deep-panel"><h4>Навыки питомцев, влияющие на Рыбалку</h4>'+skills.map(v=>'<div class="fishing-skill">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><p>'+safe(v.effect)+'</p><div class="grade-pills">'+(Array.isArray(v.grades)?v.grades:[]).map(g=>'<span class="grade-pill">'+safe(g[0])+' · '+safe(g[1])+'</span>').join('')+'</div></div></div>').join('')+'</div>'+
@@ -1780,7 +1793,7 @@ window.TK_PAGE_TRANSLATIONS={
 })();
 </script>
 
-<script src="./i18n.js?v=20260924-14"></script>
+<script src="./i18n.js?v=20260924-15"></script>
 <script src="../assets/site-nav.js?v=20260924-treasure7"></script>
 </body>
 </html>
