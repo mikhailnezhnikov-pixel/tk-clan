@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         HK Puzzle Solver — Top King
 // @namespace    hk-puzzle
-// @version      3.3.0
-// @description  Подсказчик порядка ходов + локальный журнал действий Рыбалки/Сокровищницы для Hamster King
+// @version      3.4.0
+// @description  Подсказчик порядка ходов: Сражение + Lights Out для Hamster King
 // @match        https://*.hamsterking.games/*
 // @match        https://hamsterking.games/*
 // @homepageURL  https://tk-clan.ru/information/
@@ -26,196 +26,12 @@
 
     let lastSignature = '';
 
-    const HISTORY_KEY = 'hkPuzzleSolverHistoryV1';
-    const HISTORY_LIMIT = 250;
-
-    function readHistory() {
-        try {
-            const raw = localStorage.getItem(HISTORY_KEY);
-            const parsed = raw ? JSON.parse(raw) : [];
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (_) {
-            return [];
-        }
-    }
-
-    function writeHistory(rows) {
-        try {
-            localStorage.setItem(HISTORY_KEY, JSON.stringify(rows.slice(-HISTORY_LIMIT)));
-        } catch (_) {}
-    }
-
-    function recordHistory(type, payload) {
-        const rows = readHistory();
-        rows.push({
-            ts: new Date().toISOString(),
-            type: type,
-            path: location.pathname,
-            payload: payload || {}
-        });
-        writeHistory(rows);
-        updateHistoryPanel();
-    }
-
-    function collectVisibleLots() {
-        return [...document.querySelectorAll('[data-lot-id]')].slice(0, 120).map(function (el, index) {
-            const rect = el.getBoundingClientRect();
-            const img = el.matches('img') ? el : el.querySelector('img');
-            let backgroundImage = '';
-            try {
-                backgroundImage = window.getComputedStyle(el).backgroundImage || '';
-            } catch (_) {}
-            return {
-                index: index,
-                id: el.getAttribute('data-lot-id') || '',
-                text: String(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120),
-                className: String(el.className || '').slice(0, 160),
-                img: img ? String(img.currentSrc || img.src || '').slice(0, 500) : '',
-                backgroundImage: backgroundImage && backgroundImage !== 'none' ? backgroundImage.slice(0, 500) : '',
-                rect: {
-                    x: Math.round(rect.x),
-                    y: Math.round(rect.y),
-                    w: Math.round(rect.width),
-                    h: Math.round(rect.height)
-                }
-            };
-        }).filter(function (row) { return row.id; });
-    }
-
-    function captureScreenState(reason) {
-        recordHistory('screen_state', {
-            reason: reason || 'manual',
-            title: document.title,
-            lots: collectVisibleLots()
-        });
-    }
-
-    function copyHistoryToClipboard() {
-        const text = JSON.stringify(readHistory(), null, 2);
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(text).then(function () {
-                flashHistoryPanel('Журнал скопирован');
-                return text;
-            }).catch(function () {
-                window.prompt('Скопируйте журнал:', text);
-                return text;
-            });
-        }
-        window.prompt('Скопируйте журнал:', text);
-        return Promise.resolve(text);
-    }
-
-    function flashHistoryPanel(message) {
-        const status = document.getElementById('hkHistoryStatus');
-        if (!status) return;
-        const old = status.textContent;
-        status.textContent = message;
-        setTimeout(function () {
-            if (status) status.textContent = old;
-        }, 1400);
-    }
-
-    function updateHistoryPanel() {
-        const count = document.getElementById('hkHistoryCount');
-        if (count) count.textContent = String(readHistory().length);
-    }
-
-    function installHistoryPanel() {
-        if (document.getElementById('hkHistoryPanel')) {
-            updateHistoryPanel();
-            return;
-        }
-
-        const panel = document.createElement('div');
-        panel.id = 'hkHistoryPanel';
-        Object.assign(panel.style, {
-            position: 'fixed',
-            left: '10px',
-            bottom: '10px',
-            zIndex: '99999999',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '7px',
-            padding: '7px 8px',
-            borderRadius: '12px',
-            background: 'rgba(9,12,18,.92)',
-            color: '#fff',
-            border: '1px solid rgba(255,215,64,.55)',
-            boxShadow: '0 5px 18px rgba(0,0,0,.45)',
-            font: '700 12px/1.2 Arial,sans-serif'
-        });
-
-        panel.innerHTML =
-            '<span id="hkHistoryStatus">HK журнал: <b id="hkHistoryCount">0</b></span>' +
-            '<button type="button" data-hk-history-copy>Копировать</button>' +
-            '<button type="button" data-hk-history-clear>Очистить</button>';
-
-        [...panel.querySelectorAll('button')].forEach(function (button) {
-            Object.assign(button.style, {
-                border: '1px solid rgba(255,255,255,.2)',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,.08)',
-                color: '#fff',
-                padding: '5px 7px',
-                cursor: 'pointer',
-                font: '700 11px/1 Arial,sans-serif'
-            });
-        });
-
-        panel.addEventListener('click', function (event) {
-            if (event.target.closest('[data-hk-history-copy]')) {
-                captureScreenState('manual_export');
-                copyHistoryToClipboard();
-            }
-            if (event.target.closest('[data-hk-history-clear]')) {
-                writeHistory([]);
-                updateHistoryPanel();
-                flashHistoryPanel('Журнал очищен');
-            }
-        });
-
-        document.documentElement.appendChild(panel);
-        updateHistoryPanel();
-    }
-
-    function findLotElement(target) {
-        if (!target || typeof target.closest !== 'function') return null;
-        return target.closest('[data-lot-id]');
-    }
-
-    function classifyLotId(id) {
-        id = String(id || '');
-        if (/fish/i.test(id)) return 'fishing_click';
-        if (/treasury|treasure.*way|way_[123]/i.test(id)) return 'treasury_click';
-        if (/lights_out/i.test(id)) return 'labyrinth_click';
-        if (/enemy_type_|treasurelot_sword/i.test(id)) return 'battle_click';
-        if (/treasure|fairlot|minigame/i.test(id)) return 'event_click';
-        return '';
-    }
-
-    function installHistoryCapture() {
-        if (window.__HK_PUZZLE_HISTORY_CAPTURE__) return;
-        window.__HK_PUZZLE_HISTORY_CAPTURE__ = true;
-
-        document.addEventListener('click', function (event) {
-            const el = findLotElement(event.target);
-            if (!el) return;
-
-            const id = el.getAttribute('data-lot-id') || '';
-            const type = classifyLotId(id);
-            if (!type) return;
-
-            recordHistory(type, {
-                lotId: id,
-                text: String(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 160),
-                nearby: collectVisibleLots().slice(0, 80)
-            });
-
-            setTimeout(function () {
-                captureScreenState(type + '_after_click');
-            }, 120);
-        }, true);
-    }
+    try {
+        const oldPanel = document.getElementById('hkHistoryPanel');
+        if (oldPanel) oldPanel.remove();
+        localStorage.removeItem('hkPuzzleSolverHistoryV1');
+        delete window.__HK_PUZZLE_HISTORY_CAPTURE__;
+    } catch (_) {}
 
     function clearNumbers() {
         const numbers = [...document.querySelectorAll('.hkSolverNumber')];
@@ -726,10 +542,6 @@
         lastSignature = signature;
         clearNumbers();
 
-        if (signature !== 'NONE') {
-            recordHistory('board_state', { signature: signature });
-        }
-
         if (signature.indexOf('LIGHTS|') === 0) {
             runLights();
             return;
@@ -741,31 +553,9 @@
         }
     }
 
-    installHistoryCapture();
-    installHistoryPanel();
-    captureScreenState('helper_started');
-
     window.__HK_PUZZLE_SOLVER__ = {
-        version: '3.3.0',
-        check: checkPuzzle,
-        getHistory: function () {
-            return readHistory();
-        },
-        clearHistory: function () {
-            writeHistory([]);
-            return true;
-        },
-        exportHistory: function () {
-            return JSON.stringify(readHistory(), null, 2);
-        },
-        copyHistory: function () {
-            captureScreenState('api_export');
-            return copyHistoryToClipboard();
-        },
-        captureScreen: function (reason) {
-            captureScreenState(reason || 'api');
-            return readHistory().length;
-        }
+        version: '3.4.0',
+        check: checkPuzzle
     };
 
     setInterval(checkPuzzle, 500);
