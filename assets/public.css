@@ -16,34 +16,16 @@
 /* TK FLOWING BACKGROUND 2026-09 */
 body.tk-main-theme{
   position:relative;
-  background:#07080b!important;
+  background-color:#07080b!important;
+  background-image:
+    linear-gradient(90deg,rgba(7,8,11,.70),rgba(7,8,11,.63)),
+    url("home/top-king-clan-hero-approved.jpg")!important;
+  background-size:cover,cover!important;
+  background-position:center,58% calc(50% + var(--tk-backdrop-drift,0px))!important;
+  background-repeat:no-repeat!important;
   background-attachment:fixed!important;
 }
-body.tk-main-theme:before{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:-3;
-  pointer-events:none;
-  background:
-    linear-gradient(180deg,rgba(5,7,10,.18) 0%,rgba(5,7,10,.46) 22%,rgba(7,8,11,.82) 48%,#07080b 78%),
-    radial-gradient(ellipse at 72% 8%,rgba(232,182,84,.20),transparent 34%),
-    url("home/top-king-clan-hero-approved.jpg") 58% top / min(1500px,118vw) auto no-repeat,
-    #07080b;
-  opacity:.72;
-  transform:translateZ(0);
-}
-body.tk-main-theme:after{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:-2;
-  pointer-events:none;
-  background:
-    radial-gradient(ellipse at 12% 28%,rgba(232,182,84,.07),transparent 30%),
-    radial-gradient(ellipse at 88% 62%,rgba(255,227,160,.035),transparent 34%),
-    linear-gradient(180deg,transparent 0%,rgba(7,8,11,.14) 20%,rgba(7,8,11,.56) 46%,rgba(7,8,11,.94) 86%,#07080b 100%);
-}
+body.tk-main-theme:before,body.tk-main-theme:after{display:none}
 body.tk-main-theme main,
 body.tk-main-theme .content,
 body.tk-main-theme .section{
@@ -79,19 +61,7 @@ body.tk-main-theme .exact-card{
   -webkit-backdrop-filter:blur(18px) saturate(120%);
 }
 @media(max-width:680px){
-  body.tk-main-theme:before{
-    background:
-      linear-gradient(180deg,rgba(5,7,10,.16) 0%,rgba(5,7,10,.44) 24%,rgba(7,8,11,.80) 48%,#07080b 76%),
-      radial-gradient(ellipse at 65% 4%,rgba(232,182,84,.18),transparent 30%),
-      url("home/top-king-clan-hero-approved.jpg") 56% top / auto 360px no-repeat,
-      #07080b;
-    opacity:.68;
-  }
-  body.tk-main-theme:after{
-    background:
-      linear-gradient(180deg,rgba(7,8,11,.02) 0%,rgba(7,8,11,.18) 19%,rgba(7,8,11,.56) 38%,rgba(7,8,11,.90) 65%,#07080b 100%),
-      radial-gradient(ellipse at 50% 8%,rgba(232,182,84,.08),transparent 34%);
-  }
+  body.tk-main-theme{background-position:center,56% calc(50% + var(--tk-backdrop-drift,0px))!important}
   body.tk-main-theme .page-head{
     padding:calc(var(--header) + 34px) 0 22px;
   }
