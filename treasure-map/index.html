@@ -369,7 +369,25 @@
       box-shadow:0 18px 54px rgba(0,0,0,.28);
     }
     .book-page.is-active{display:block}
-    .book-page>.hero:first-child{margin-top:0}
+    .book-page>.hero:first-child{
+      min-height:340px;
+      margin:0 0 24px;
+      padding:52px 30px 38px;
+      border:1px solid rgba(232,182,84,.22);
+      border-radius:18px;
+      background:
+        linear-gradient(90deg,rgba(9,12,17,.95) 0%,rgba(9,12,17,.78) 39%,rgba(9,12,17,.16) 100%),
+        url("../assets/home/top-king-clan-hero-approved.jpg") center 35% / cover no-repeat;
+    }
+    @media(max-width:680px){
+      .book-page>.hero:first-child{
+        min-height:370px;
+        padding:145px 18px 22px;
+        background:
+          linear-gradient(180deg,rgba(9,12,17,.12) 0%,rgba(9,12,17,.56) 42%,rgba(9,12,17,.96) 90%),
+          url("../assets/home/top-king-clan-hero-approved.jpg") 58% center / cover no-repeat;
+      }
+    }
     .book-sheet-head{
       display:flex;
       align-items:center;
