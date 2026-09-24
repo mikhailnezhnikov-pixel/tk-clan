@@ -236,6 +236,104 @@
       .game-example-cell .example-cost img{width:14px;height:14px}
     }
 
+  
+    /* Stable trader economy layout: currencies must not wrap into each other. */
+    .trade-flow{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);
+      align-items:stretch;
+      gap:7px;
+      margin-top:9px;
+    }
+    .trade-side{
+      min-width:0;
+      display:flex;
+      align-items:stretch;
+    }
+    .trade-side .resource{
+      width:100%;
+      min-width:0;
+      flex:1 1 auto;
+    }
+    .trade-flow>.cost-arrow{
+      display:grid;
+      place-items:center;
+      align-self:center;
+      width:24px;
+      min-width:24px;
+    }
+    .trade-random-layout{
+      margin-top:9px;
+      display:grid;
+      gap:8px;
+    }
+    .trade-random-cost{
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
+      align-items:center;
+      gap:8px;
+      padding:7px 8px;
+      border:1px solid rgba(232,182,84,.16);
+      border-radius:10px;
+      background:rgba(232,182,84,.035);
+    }
+    .trade-random-label{
+      color:#7f8996;
+      font-size:8px;
+      font-weight:900;
+      letter-spacing:.07em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+    .trade-random-cost .resource{
+      width:100%;
+      min-width:0;
+      justify-self:stretch;
+    }
+    .trade-random-options{
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:5px;
+    }
+    .trade-random-option{
+      min-width:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      padding:6px 5px;
+      border:1px solid var(--line);
+      border-radius:9px;
+      background:rgba(255,255,255,.025);
+      color:var(--gold2);
+      font-size:10px;
+      font-weight:950;
+      font-variant-numeric:tabular-nums;
+      white-space:nowrap;
+    }
+    .trade-random-option img{
+      width:22px;
+      height:22px;
+      flex:0 0 22px;
+      object-fit:contain;
+    }
+    .trade-random-note{
+      color:#7f8996;
+      font-size:8px;
+      line-height:1.35;
+    }
+    @media(max-width:760px){
+      .trade-flow{grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);gap:5px}
+      .trade-flow>.cost-arrow{width:20px;min-width:20px}
+      .trade-random-options{grid-template-columns:repeat(5,minmax(44px,1fr))}
+    }
+    @media(max-width:520px){
+      .trade-flow{grid-template-columns:1fr}
+      .trade-flow>.cost-arrow{width:100%;min-width:0;transform:rotate(-90deg);height:18px}
+      .trade-random-cost{grid-template-columns:1fr}
+      .trade-random-options{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+
   </style>
   <link rel="stylesheet" href="../assets/public.css">
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
@@ -977,14 +1075,27 @@ window.TK_PAGE_TRANSLATIONS={
           const rewardHtml=v.technical_effect
             ? '<span class="resource"><img src="'+safe(v.image||'')+'" alt=""><span class="resource-copy"><span class="resource-name">'+safe(v.title)+'</span><span class="resource-qty">улучшение</span></span></span>'
             : rewards.map(x=>resource(x.title,x.quantity,x.image||'',x.id)).join('');
+          const costHtml=costs.map(x=>resource(x.title,x.quantity,x.image||'',x.id)).join('');
+          const flowHtml=v.random
+            ? '<div class="trade-random-layout">'+
+                '<div class="trade-random-cost"><span class="trade-random-label">Стоимость</span><div>'+costHtml+'</div></div>'+
+                '<div class="trade-random-options">'+rewards.map(x=>
+                  '<span class="trade-random-option">'+
+                    (x.image?'<img src="'+safe(x.image)+'" alt="">':'')+
+                    '<span>×'+safe(x.quantity)+'</span>'+
+                  '</span>'
+                ).join('')+'</div>'+
+                '<div class="trade-random-note">Возможные количества · вероятности неизвестны</div>'+
+              '</div>'
+            : '<div class="trade-flow">'+
+                '<div class="trade-side">'+rewardHtml+'</div>'+
+                '<span class="cost-arrow">←</span>'+
+                '<div class="trade-side">'+costHtml+'</div>'+
+              '</div>';
           return '<article class="trader-offer"><div class="trader-offer-top">'+
             (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
             '<div><h4>'+safe(v.title)+'</h4>'+(v.tier?'<div class="trade-tier">'+safe(v.tier)+'</div>':'')+'</div></div>'+
-            '<div class="trade-flow">'+rewardHtml+
-              '<span class="cost-arrow">←</span>'+
-              costs.map(x=>resource(x.title,x.quantity,x.image||'',x.id)).join('')+
-            '</div>'+
-            (randomText?'<div class="trade-random">'+randomText+' · вероятности неизвестны</div>':'')+
+            flowHtml+
           '</article>';
         }).join('')+'</div></div>';
     }).join('');
