@@ -208,9 +208,9 @@
       style.textContent=`
         body.tk-home-backdrop{
           background-color:#07080b!important;
-          background-image:linear-gradient(180deg,rgba(7,8,11,.66),rgba(7,8,11,.68) 68%,#07080b 100%),url("assets/home/top-king-clan-hero-approved.jpg")!important;
-          background-size:cover,100% auto!important;
-          background-position:center,center calc(0px + var(--tk-backdrop-drift,0px))!important;
+          background-image:linear-gradient(180deg,rgba(7,8,11,.66),rgba(7,8,11,.68) 68%,rgba(7,8,11,.84) 100%),url("assets/home/top-king-clan-hero-approved.jpg"),url("assets/home/top-king-clan-hero-approved.jpg")!important;
+          background-size:cover,100% auto,cover!important;
+          background-position:center,center calc(0px + var(--tk-backdrop-drift,0px)),center!important;
           background-repeat:no-repeat!important;
           background-attachment:fixed!important;
         }
@@ -254,7 +254,7 @@
           .hero-copy{width:min(540px,54%)!important}
         }
         @media(max-width:680px){
-          body.tk-home-backdrop{background-size:cover,auto 100%!important;background-position:center,56% calc(50% + var(--tk-backdrop-drift,0px))!important}
+          body.tk-home-backdrop{background-size:cover,auto 100%,cover!important;background-position:center,56% calc(50% + var(--tk-backdrop-drift,0px)),56% center!important}
           .hero{
             min-height:900px!important;
             align-items:flex-start!important;
