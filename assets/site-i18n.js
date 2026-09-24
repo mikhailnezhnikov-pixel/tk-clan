@@ -182,7 +182,7 @@
     observer.observe(guide,{childList:true,subtree:true});
   }
   function configureHomepage(){
-    const hero=document.querySelector('main .hero');if(!hero)return;
+    const hero=document.querySelector('main .hero');if(!hero||!hero.querySelector('.hero-copy,.quick-panel'))return;
     document.body.classList.add('tk-home-backdrop');
 
     // Homepage fallback: even if an older cached HTML shell is served,
