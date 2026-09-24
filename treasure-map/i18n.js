@@ -692,6 +692,43 @@
     'После активации cursed_water за 3 заброса три tornado_cursed_water сменили состояние: появились 2 lamp_fish_water_uncursed по 2 заброса и 1 calm_water_uncursed за 1.':'پس از فعال‌سازی cursed_water با ۳ پرتاب، سه خانه tornado_cursed_water تغییر وضعیت دادند: دو lamp_fish_water_uncursed با ۲ پرتاب و یک calm_water_uncursed با ۱ پرتاب ظاهر شدند.'
   });
 
+  Object.assign(EN,{
+    'Сражение → цепная зачистка подтверждена':'Battle → chain clear confirmed',
+    'Поле 24.09: 12 врагов, старт 28 атаки. Нажатия 7 → 8 → 12 → 16 очистили всё поле и оставили 14 атаки, после чего появился Сундук победителя.':"24.09 board: 12 enemies, 28 starting attack. Clicks 7 → 8 → 12 → 16 cleared the whole board and left 14 attack, then the Winner's Chest appeared.",
+    'Рыбалка → полностью проклятое поле':'Fishing → fully cursed board',
+    'Подтверждено: 8 × tornado_cursed_water по 2 заброса + 1 × cursed_water за 3. После активации cursed_water раскрываются специальные очищенные клетки.':'Confirmed: 8 × tornado_cursed_water at 2 casts each + 1 × cursed_water at 3. Activating cursed_water reveals special cleansed cells.',
+    'Подтверждённый проход 24.09':'Confirmed run 24.09',
+    'Подтверждённый проход 24.09 · смешанное поле':'Confirmed run 24.09 · mixed board',
+    'Второй проход 24.09 · полностью розовое поле':'Second run 24.09 · fully pink board',
+    'Все 12 врагов уничтожены за 4 прямых нажатия. Потрачено 14 атаки из 28; остальное поле добито цепными взрывами синих врагов.':'All 12 enemies were destroyed with 4 direct clicks. 14 of 28 attack was spent; the rest of the board was cleared by chained blue-enemy explosions.',
+    'Полностью розовое/проклятое поле подтверждено как 8 tornado_cursed_water + 1 cursed_water. Активация cursed_water раскрыла четыре типа очищенных клеток.':'The fully pink/cursed board is confirmed as 8 tornado_cursed_water + 1 cursed_water. Activating cursed_water revealed four types of cleansed cells.',
+    'HP не привязываем жёстко к цвету: на проходе 24.09 синие враги начинали с 4 HP, красный — с 2 HP.':'HP is not hard-linked to color: on the 24.09 run blue enemies started at 4 HP and the red enemy at 2 HP.',
+    'После гибели синий враг наносит −2 HP соседним живым врагам; если сосед погибает, его эффект также может продолжить цепочку.':'When a blue enemy dies it deals −2 HP to adjacent living enemies; if a neighbor dies, its effect can continue the chain.',
+    'На подтверждённом поле стартовый запас меча был 28 атаки. Последовательность 7 → 8 → 12 → 16 очистила 12 врагов, потратив 14 атаки.':'On the confirmed board the sword started with 28 attack. Sequence 7 → 8 → 12 → 16 cleared 12 enemies while spending 14 attack.',
+    'После полной зачистки появился mf_fairlot_minigame_fight_room_big_chest — подтверждённый Сундук победителя.':"After the full clear, mf_fairlot_minigame_fight_room_big_chest appeared — the confirmed Winner's Chest.",
+    'Красный враг':'Red enemy',
+    'Синий враг':'Blue enemy',
+    'Зелёный враг':'Green enemy'
+  });
+  Object.assign(FA,{
+    'Сражение → цепная зачистка подтверждена':'نبرد ← پاک‌سازی زنجیره‌ای تأیید شد',
+    'Поле 24.09: 12 врагов, старт 28 атаки. Нажатия 7 → 8 → 12 → 16 очистили всё поле и оставили 14 атаки, после чего появился Сундук победителя.':'میدان 24.09: ۱۲ دشمن و ۲۸ حمله در شروع. کلیک‌های ۷ ← ۸ ← ۱۲ ← ۱۶ کل میدان را پاک کردند و ۱۴ حمله باقی ماند؛ سپس صندوق برنده ظاهر شد.',
+    'Рыбалка → полностью проклятое поле':'ماهیگیری ← میدان کاملاً نفرین‌شده',
+    'Подтверждено: 8 × tornado_cursed_water по 2 заброса + 1 × cursed_water за 3. После активации cursed_water раскрываются специальные очищенные клетки.':'تأیید شد: ۸ × tornado_cursed_water هرکدام با ۲ پرتاب + ۱ × cursed_water با ۳ پرتاب. با فعال‌سازی cursed_water خانه‌های ویژه پاک‌شده نمایان می‌شوند.',
+    'Подтверждённый проход 24.09':'اجرای تأییدشده 24.09',
+    'Подтверждённый проход 24.09 · смешанное поле':'اجرای تأییدشده 24.09 · میدان ترکیبی',
+    'Второй проход 24.09 · полностью розовое поле':'اجرای دوم 24.09 · میدان کاملاً صورتی',
+    'Все 12 врагов уничтожены за 4 прямых нажатия. Потрачено 14 атаки из 28; остальное поле добито цепными взрывами синих врагов.':'هر ۱۲ دشمن با ۴ کلیک مستقیم از بین رفتند. ۱۴ حمله از ۲۸ مصرف شد و بقیه میدان با انفجارهای زنجیره‌ای دشمنان آبی پاک شد.',
+    'Полностью розовое/проклятое поле подтверждено как 8 tornado_cursed_water + 1 cursed_water. Активация cursed_water раскрыла четыре типа очищенных клеток.':'میدان کاملاً صورتی/نفرین‌شده به‌صورت ۸ tornado_cursed_water + ۱ cursed_water تأیید شد. فعال‌سازی cursed_water چهار نوع خانه پاک‌شده را آشکار کرد.',
+    'HP не привязываем жёстко к цвету: на проходе 24.09 синие враги начинали с 4 HP, красный — с 2 HP.':'HP را ثابت به رنگ وابسته نمی‌کنیم: در اجرای 24.09 دشمنان آبی با ۴ HP و دشمن قرمز با ۲ HP شروع کردند.',
+    'После гибели синий враг наносит −2 HP соседним живым врагам; если сосед погибает, его эффект также может продолжить цепочку.':'با مرگ دشمن آبی، ۲ HP از دشمنان زنده مجاور کم می‌شود؛ اگر همسایه بمیرد، اثر او نیز می‌تواند زنجیره را ادامه دهد.',
+    'На подтверждённом поле стартовый запас меча был 28 атаки. Последовательность 7 → 8 → 12 → 16 очистила 12 врагов, потратив 14 атаки.':'در میدان تأییدشده، شمشیر با ۲۸ حمله شروع شد. توالی ۷ ← ۸ ← ۱۲ ← ۱۶ هر ۱۲ دشمن را با مصرف ۱۴ حمله پاک کرد.',
+    'После полной зачистки появился mf_fairlot_minigame_fight_room_big_chest — подтверждённый Сундук победителя.':'پس از پاک‌سازی کامل، mf_fairlot_minigame_fight_room_big_chest ظاهر شد — همان صندوق برنده تأییدشده.',
+    'Красный враг':'دشمن قرمز',
+    'Синий враг':'دشمن آبی',
+    'Зелёный враг':'دشمن سبز'
+  });
+
   const maps={en:EN,fa:FA};
   const original=new WeakMap();
   function patternTranslate(key,lang){
