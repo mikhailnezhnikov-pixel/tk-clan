@@ -97,7 +97,7 @@
       "id": "mothcat_splus_collection",
       "title": "Коллекция молекотов S+",
       "stage": "Однократно",
-      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_r3_icon.png",
+      "image": null,
       "condition": "Сдать по одному S+ яйцу обычного, тёмного, зловещего, светлого и сияющего вида. Награда — таинственное S+ яйцо молекота. Квест выполняется один раз на аккаунт.",
       "requirements": [
         "[S+] Обычное яйцо Молекота ×1",
@@ -138,15 +138,22 @@
         [
           "Таинственное S+ яйцо Молекота",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          null
         ]
+      ],
+      "collection_header_images": [
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_01_r3_icon.png",
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_02_r3_icon.png",
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_03_upd_r3_icon.png",
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_05_r3_icon.png",
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_mothcat_egg_06_r3_icon.png"
       ]
     },
     {
       "id": "fish_splus_collection",
       "title": "Коллекция рыб S+",
       "stage": "Однократно",
-      "image": "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_r3_icon.png",
+      "image": null,
       "condition": "Сдать по одному S+ яйцу обычного, тёмного, зловещего, светлого и сияющего вида. Награда — таинственное S+ яйцо рыбы. Квест выполняется один раз на аккаунт.",
       "requirements": [
         "[S+] Обычное яйцо Рыбы ×1",
@@ -187,8 +194,15 @@
         [
           "Таинственное S+ яйцо Рыбы",
           1,
-          "https://cdn-ru-prod-art.hwgame.cloud/minigames/chests/icons/item_event_treasure_egg_cradle_icon.png"
+          null
         ]
+      ],
+      "collection_header_images": [
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_01_r3_icon.png",
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_02_r3_icon.png",
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_03_r3_icon.png",
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_05_r3_icon.png",
+        "https://cdn-prod-art.hwgame.cloud/items/pets/item_pet_fish_egg_06_r3_icon.png"
       ]
     },
     {
@@ -5934,6 +5948,11 @@
         "title": "Штормовая проклятая",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_water_icon.png",
         "text": "Комбинированное состояние воды. Точная универсальная цена клетки не закрепляется — смотрите число на текущем поле."
+      },
+      {
+        "title": "Розовая вода",
+        "image": null,
+        "text": "Отдельный тип воды, встречающийся на Рыбалке. Точный эффект, стоимость клетки и отдельный игровой арт ещё нужно закрепить по скрину."
       }
     ],
     "pet_skills": [
@@ -6005,7 +6024,13 @@
       "Запас 12 забросов был зафиксирован на одном конкретном поле и не закрепляется как универсальный лимит.",
       "Точный эффект уровней удочки R3/R4 интерфейс не подписывает, поэтому в гайде показывается только подтверждённая стоимость улучшений.",
       "Вероятности обычных находок не добавляются, пока они не подтверждены данными игры."
-    ]
+    ],
+    "completion_reward": {
+      "title": "После успешного прохождения",
+      "text": "После завершения Рыбалки появляется наградной сундук. Точный вид сундука и его содержимое пока не закреплены в текущем захвате.",
+      "image": null,
+      "status": "нужен скрин результата"
+    }
   },
   "beginner_event_guide": {
     "title": "Если открыли событие впервые",
@@ -6372,7 +6397,13 @@
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/lights/icons/treasure_minigame_light_true_icon.png"
       }
     ],
-    "note": "Пример 1 → 2 → 3 → 4 относится только к одному сохранённому полю и не является универсальной комбинацией."
+    "note": "Пример 1 → 2 → 3 → 4 относится только к одному сохранённому полю и не является универсальной комбинацией.",
+    "completion_reward": {
+      "title": "После успешного прохождения",
+      "text": "После решения Лабиринта появляется наградной сундук. Точный вид сундука и содержимое пока нужно подтвердить скрином результата.",
+      "image": null,
+      "status": "нужен скрин результата"
+    }
   },
   "battle_guide": {
     "title": "Сражение — как проходить",
@@ -6413,7 +6444,13 @@
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png"
       }
     ],
-    "note": "Помощник только рисует номера целей. Все нажатия остаются за игроком."
+    "note": "Помощник только рисует номера целей. Все нажатия остаются за игроком.",
+    "completion_reward": {
+      "title": "После успешного прохождения",
+      "text": "После завершения Сражения появляется наградной сундук. Точный вид сундука и содержимое пока нужно подтвердить скрином результата.",
+      "image": null,
+      "status": "нужен скрин результата"
+    }
   },
   "treasury_guide": {
     "title": "Сокровищница — завершение карты",
@@ -6432,28 +6469,28 @@
       {
         "n": 2,
         "title": "Откройте выбор пути",
-        "text": "Внутри доступны три направления.",
-        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_1_icon.png"
-      },
+        "text": "Дальше нужно выбрать только один из трёх путей.",
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png"
+      }
+    ],
+    "note": "Вероятности наград по трём направлениям не подтверждены, поэтому гайд не рекомендует конкретный путь.",
+    "choices": [
       {
-        "n": 3,
         "title": "Путь 1",
-        "text": "Подтверждённая стоимость — 5 Провизии.",
+        "cost": "5 Провизии",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_1_icon.png"
       },
       {
-        "n": 4,
         "title": "Путь 2",
-        "text": "Подтверждённая стоимость — 5 Провизии.",
+        "cost": "5 Провизии",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_2_icon.png"
       },
       {
-        "n": 5,
         "title": "Путь 3",
-        "text": "Подтверждённая стоимость — 5 Провизии.",
+        "cost": "5 Провизии",
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/minigame_treasury_way_3_icon.png"
       }
     ],
-    "note": "Вероятности наград по трём направлениям не подтверждены, поэтому гайд не рекомендует конкретный путь."
+    "choice_note": "Выбирается только один путь. Это не последовательность 1 → 2 → 3."
   }
 }
