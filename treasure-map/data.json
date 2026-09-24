@@ -1,6 +1,6 @@
 {
   "status": "captured",
-  "status_text": "Событие считано из игры и гайд прошёл повторный аудит. Журнал Рыбалки 24.09 добавил точные технические типы клеток, цены и переходы состояний; незакрытые пункты перечислены в data_gaps.",
+  "status_text": "Гайд обновлён по двум журналам 24.09: подтверждён полный цепной бой и второй проход Рыбалки с полностью проклятым полем. Публичный журнал помощника отключается отдельным обновлением скрипта.",
   "captured": {
     "snapshots": 67,
     "assets_found": 106,
@@ -4922,11 +4922,11 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png",
       "summary": "Исследуем клетки воды за забросы. Тип воды влияет на сложность и возможные находки.",
       "facts": [
-        "На проходе 24.09 с удочкой R3 стартовый запас был 12 забросов.",
-        "Подтверждённые цены: calm_water — 1, tornado_water — 2, cursed_water — 3, tornado_cursed_water — 2.",
-        "После активации cursed_water три tornado_cursed_water изменили состояние: 2 → lamp_fish_water_uncursed и 1 → calm_water_uncursed.",
-        "Две клетки lamp_fish_water_uncursed стоили по 2 заброса, calm_water_uncursed — 1.",
-        "Клетка fishing_water подтверждена стоимостью 2 заброса; точное игровое название ещё уточняется.",
+        "На проходах 24.09 с удочкой R3 подтверждён стартовый запас 12 забросов.",
+        "Полностью розовое поле: 8 × tornado_cursed_water по 2 заброса + 1 × cursed_water за 3.",
+        "Активация cursed_water раскрыла: magic_pet_water_uncursed ×1 (3), lamp_fish_water_uncursed ×2 (2), creatures_water_uncursed ×1 (2), calm_water_uncursed ×4 (1).",
+        "Обычные состояния также подтверждены: calm_water — 1, tornado_water — 2, fishing_water — 2.",
+        "После расходования 12 забросов следующий зафиксированный экран уже показал новое поле 3 tornado_water + 5 calm_water + 1 fishing_water.",
         "Финальный сундук Рыбалки и его содержимое всё ещё не зафиксированы."
       ],
       "hint": "Число под клеткой — фактическая стоимость действия. Журнал 3.2 подтвердил технические ID состояний воды.",
@@ -5062,19 +5062,17 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fight_icon.png",
       "summary": "На поле выбираем врагов и расходуем боевой ресурс. Карточка врага показывает его HP и стоимость действия.",
       "facts": [
-        "На подтверждённом поле красные враги имеют 2 HP, синие — 3 HP, зелёные — 4 HP.",
-        "После гибели синий враг наносит −2 HP соседним живым врагам.",
+        "HP не привязываем жёстко к цвету: на проходе 24.09 синие враги начинали с 4 HP, красный — с 2 HP.",
+        "После гибели синий враг наносит −2 HP соседним живым врагам; если сосед погибает, его эффект также может продолжить цепочку.",
         "После гибели зелёный враг добавляет +3 HP соседним живым врагам.",
-        "Верхняя панель содержит состояние оружия и доступный боевой ресурс; порядок целей зависит от текущего поля.",
-        "После успешного прохождения Сражения подтверждён «Сундук победителя»."
+        "На подтверждённом поле стартовый запас меча был 28 атаки. Последовательность 7 → 8 → 12 → 16 очистила 12 врагов, потратив 14 атаки.",
+        "После полной зачистки появился mf_fairlot_minigame_fight_room_big_chest — подтверждённый Сундук победителя."
       ],
       "sequence": [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6"
+        "7",
+        "8",
+        "12",
+        "16"
       ],
       "hint": "Для этой комнаты можно использовать закладку-помощник Top King: она рассчитывает порядок целей и ставит цифры 1 → 2 → 3… прямо на поле.",
       "visuals": [
@@ -5083,15 +5081,15 @@
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png"
         },
         {
-          "title": "Враг 2 HP",
+          "title": "Красный враг",
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_01_icon.png"
         },
         {
-          "title": "Враг 3 HP",
+          "title": "Синий враг",
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_02_icon.png"
         },
         {
-          "title": "Враг 4 HP",
+          "title": "Зелёный враг",
           "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_enemy_type_03_icon.png"
         }
       ],
@@ -5581,8 +5579,8 @@
         "quantity": 40,
         "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
       },
-      "summary": "Мини-игра 3×3 с запасом забросов. Журнал 24.09 подтвердил calm / tornado / cursed / tornado_cursed и состояния после снятия проклятия.",
-      "note": "Финальный сундук Рыбалки ещё не зафиксирован. Следующий лог 3.3 будет сохранять координаты и арт каждой клетки."
+      "summary": "Мини-игра 3×3. Подтверждены обычные и проклятые поля; полностью розовое поле состоит из 8 tornado_cursed_water + 1 cursed_water.",
+      "note": "Активация cursed_water раскрывает специальные очищенные клетки. Финальный сундук Рыбалки пока не зафиксирован."
     },
     {
       "id": "trader",
@@ -5617,7 +5615,7 @@
         "quantity": 40,
         "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png"
       },
-      "summary": "Боевая мини-игра: порядок целей важен из-за взрыва синих и лечения зелёных врагов.",
+      "summary": "Боевая мини-игра с цепными эффектами. На подтверждённом поле 24.09 четыре прямых удара очистили 12 врагов благодаря взрывам синих.",
       "possible_rewards": [
         {
           "title": "Провизия",
@@ -5650,7 +5648,8 @@
           "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
         }
       ],
-      "reward_note": "Подтверждён пул «Сундука победителя» за успешное прохождение."
+      "reward_note": "Подтверждён пул «Сундука победителя» за успешное прохождение.",
+      "note": "Подтверждённый пример: слоты 7 → 8 → 12 → 16, атака 28 → 14, затем появился Сундук победителя."
     },
     {
       "id": "lights",
@@ -6081,18 +6080,20 @@
         "text": "На стартовом поле было 3 такие клетки по 2 заброса. После активации Проклятой воды они превратились в две клетки lamp_fish_water_uncursed и одну calm_water_uncursed."
       },
       {
-        "title": "Рыба-фонарь после снятия проклятия",
+        "title": "lamp_fish_water_uncursed",
         "lot_id": "mf_treasurelot_is_fishing_lamp_fish_water_uncursed",
         "cost": 2,
         "image": null,
-        "text": "Подтверждено две клетки по 2 заброса после активации Проклятой воды."
+        "text": "На полностью проклятом поле появились 2 такие клетки по 2 заброса.",
+        "exact_name": false
       },
       {
-        "title": "Спокойная вода после снятия проклятия",
+        "title": "calm_water_uncursed",
         "lot_id": "mf_treasurelot_is_fishing_calm_water_uncursed",
         "cost": 1,
         "image": null,
-        "text": "Подтверждена одна клетка стоимостью 1 заброс после активации Проклятой воды."
+        "text": "На полностью проклятом поле появились 4 такие клетки по 1 забросу.",
+        "exact_name": false
       },
       {
         "title": "Особая клетка fishing_water",
@@ -6101,6 +6102,22 @@
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
         "exact_art": false,
         "text": "Технический ID и стоимость 2 заброса подтверждены журналом. Точное игровое название и привязка арта ещё уточняются."
+      },
+      {
+        "title": "magic_pet_water_uncursed",
+        "lot_id": "mf_treasurelot_is_fishing_magic_pet_water_uncursed",
+        "cost": 3,
+        "image": null,
+        "exact_name": false,
+        "text": "Особая очищенная клетка. На полностью проклятом поле появилась 1 такая клетка стоимостью 3 заброса."
+      },
+      {
+        "title": "creatures_water_uncursed",
+        "lot_id": "mf_treasurelot_is_fishing_creatures_water_uncursed",
+        "cost": 2,
+        "image": null,
+        "exact_name": false,
+        "text": "На полностью проклятом поле появилась 1 такая клетка стоимостью 2 заброса."
       }
     ],
     "pet_skills": [
@@ -6173,7 +6190,8 @@
       "Точный численный эффект уровней удочки R3/R4 интерфейс не подписывает, поэтому в гайде показывается только подтверждённая стоимость улучшений.",
       "Вероятности обычных находок не добавляются, пока они не подтверждены данными игры.",
       "Журнал 24.09 уточнил прежнее визуальное определение: розовые вихри в этом проходе имеют ID tornado_cursed_water и относятся к Штормовой проклятой воде.",
-      "После активации cursed_water за 3 заброса три tornado_cursed_water сменили состояние: появились 2 lamp_fish_water_uncursed по 2 заброса и 1 calm_water_uncursed за 1."
+      "Второй проход 24.09 дал полностью проклятое поле: 8 × tornado_cursed_water по 2 заброса и 1 × cursed_water за 3.",
+      "После активации cursed_water восемь розовых клеток раскрылись как: 1 × magic_pet_water_uncursed (3), 2 × lamp_fish_water_uncursed (2), 1 × creatures_water_uncursed (2), 4 × calm_water_uncursed (1)."
     ],
     "completion_reward": {
       "title": "После успешного прохождения",
@@ -6268,6 +6286,108 @@
         "note": "Это следующий зафиксированный экран. Журнал 3.2 не сохранял координаты клеток, поэтому порядок 3×3 не восстанавливаем."
       },
       "conclusion": "Журнал подтвердил точные технические типы клеток и их стоимость. Розовые вихри из этого прохода — tornado_cursed_water, то есть Штормовая проклятая вода, а не обычная Штормовая вода."
+    },
+    "observed_run_2026_09_24_all_pink": {
+      "source": "HK Puzzle Solver local history",
+      "rod": "R3",
+      "start_casts": 12,
+      "initial_board": [
+        {
+          "lot_id": "mf_treasurelot_is_fishing_tornado_cursed_water",
+          "count": 8,
+          "cost": 2
+        },
+        {
+          "lot_id": "mf_treasurelot_is_fishing_cursed_water",
+          "count": 1,
+          "cost": 3
+        }
+      ],
+      "action_1": {
+        "lot_id": "mf_treasurelot_is_fishing_cursed_water",
+        "cost": 3,
+        "casts_before": 12,
+        "casts_after": 9,
+        "result_board": [
+          {
+            "lot_id": "mf_treasurelot_is_fishing_magic_pet_water_uncursed",
+            "count": 1,
+            "cost": 3
+          },
+          {
+            "lot_id": "mf_treasurelot_is_fishing_lamp_fish_water_uncursed",
+            "count": 2,
+            "cost": 2
+          },
+          {
+            "lot_id": "mf_treasurelot_is_fishing_creatures_water_uncursed",
+            "count": 1,
+            "cost": 2
+          },
+          {
+            "lot_id": "mf_treasurelot_is_fishing_calm_water_uncursed",
+            "count": 4,
+            "cost": 1
+          },
+          {
+            "lot_id": "mf_treasurelot_is_fishing_cursed_water",
+            "count": 1,
+            "state": "Активировано"
+          }
+        ]
+      },
+      "remaining_actions": [
+        {
+          "n": 2,
+          "lot_id": "mf_treasurelot_is_fishing_magic_pet_water_uncursed",
+          "cost": 3,
+          "casts_before": 9,
+          "casts_after": 6
+        },
+        {
+          "n": 3,
+          "lot_id": "mf_treasurelot_is_fishing_lamp_fish_water_uncursed",
+          "cost": 2,
+          "casts_before": 6,
+          "casts_after": 4
+        },
+        {
+          "n": 4,
+          "lot_id": "mf_treasurelot_is_fishing_lamp_fish_water_uncursed",
+          "cost": 2,
+          "casts_before": 4,
+          "casts_after": 2
+        },
+        {
+          "n": 5,
+          "lot_id": "mf_treasurelot_is_fishing_creatures_water_uncursed",
+          "cost": 2,
+          "casts_before": 2,
+          "casts_after": 0
+        }
+      ],
+      "next_captured_board": {
+        "casts": 12,
+        "cells": [
+          {
+            "lot_id": "mf_treasurelot_is_fishing_tornado_water",
+            "count": 3,
+            "cost": 2
+          },
+          {
+            "lot_id": "mf_treasurelot_is_fishing_calm_water",
+            "count": 5,
+            "cost": 1
+          },
+          {
+            "lot_id": "mf_treasurelot_is_fishing_fishing_water",
+            "count": 1,
+            "cost": 2
+          }
+        ],
+        "note": "Следующий зафиксированный экран уже был новым полем с 12 забросами. Причину перехода не подписываем без отдельного подтверждения."
+      },
+      "conclusion": "Полностью розовое/проклятое поле подтверждено как 8 tornado_cursed_water + 1 cursed_water. Активация cursed_water раскрыла четыре типа очищенных клеток."
     }
   },
   "beginner_event_guide": {
@@ -6763,7 +6883,7 @@
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png"
       }
     ],
-    "note": "Помощник только рисует номера целей. Все нажатия остаются за игроком.",
+    "note": "На подтверждённом проходе 24.09 поле из 12 врагов было полностью очищено четырьмя прямыми атаками по слотам 7 → 8 → 12 → 16 благодаря цепным взрывам синих врагов. Помощник только показывает порядок; нажатия остаются за игроком.",
     "completion_reward": {
       "title": "Сундук победителя",
       "text": "После успешного прохождения Сражения выдаётся «Сундук победителя».",
@@ -6808,6 +6928,65 @@
         }
       ],
       "loot_note": "Карточка показывает список «Можно отыскать»; это не гарантия одновременной выдачи всех позиций."
+    },
+    "observed_run_2026_09_24": {
+      "source": "HK Puzzle Solver local history",
+      "weapon_lot_id": "mf_treasurelot_sword_03_28",
+      "start_attack": 28,
+      "initial_board": {
+        "enemies": 12,
+        "composition": [
+          {
+            "type_id": "02",
+            "count": 11,
+            "start_hp": 4,
+            "note": "Синие враги на этом поле."
+          },
+          {
+            "type_id": "01",
+            "count": 1,
+            "start_hp": 2,
+            "note": "Красный враг на этом поле."
+          }
+        ]
+      },
+      "clicks": [
+        {
+          "n": 1,
+          "slot": 7,
+          "type_id": "02",
+          "hp_at_click": 4,
+          "attack_before": 28,
+          "attack_after": 24
+        },
+        {
+          "n": 2,
+          "slot": 8,
+          "type_id": "02",
+          "hp_at_click": 2,
+          "attack_before": 24,
+          "attack_after": 22
+        },
+        {
+          "n": 3,
+          "slot": 12,
+          "type_id": "02",
+          "hp_at_click": 4,
+          "attack_before": 22,
+          "attack_after": 18
+        },
+        {
+          "n": 4,
+          "slot": 16,
+          "type_id": "02",
+          "hp_at_click": 4,
+          "attack_before": 18,
+          "attack_after": 14
+        }
+      ],
+      "result": "Все 12 врагов уничтожены за 4 прямых нажатия. Потрачено 14 атаки из 28; остальное поле добито цепными взрывами синих врагов.",
+      "completion_lot_id": "mf_fairlot_minigame_fight_room_big_chest",
+      "completion_state": "Активировано"
     }
   },
   "treasury_guide": {
