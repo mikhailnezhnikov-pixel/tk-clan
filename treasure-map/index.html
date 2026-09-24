@@ -447,6 +447,114 @@
       .book-page-number{flex-basis:32px;width:32px;height:32px}
     }
 
+  
+    /* Collection quests: show the five required eggs, not one misleading cover. */
+    .quest-collection-collage{
+      width:100%;
+      height:100%;
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:3px;
+      padding:6px;
+      place-content:center;
+      background:rgba(255,255,255,.015);
+    }
+    .quest-collection-collage img{
+      width:100%!important;
+      height:auto!important;
+      aspect-ratio:1/1;
+      object-fit:contain!important;
+      margin:0!important;
+    }
+    .resource.no-art{
+      min-width:180px;
+      border-style:dashed;
+    }
+    .resource.no-art .resource-fallback{
+      background:rgba(232,182,84,.08);
+      color:var(--gold2);
+    }
+
+    /* Completion reward shown after mini-games. */
+    .completion-reward{
+      display:grid;
+      grid-template-columns:68px minmax(0,1fr) auto;
+      align-items:center;
+      gap:12px;
+      margin-top:12px;
+      padding:12px;
+      border:1px solid rgba(232,182,84,.28);
+      border-radius:14px;
+      background:linear-gradient(145deg,rgba(232,182,84,.07),rgba(255,255,255,.02));
+    }
+    .completion-reward-icon{
+      width:68px;height:68px;
+      display:grid;place-items:center;
+      border:1px dashed rgba(232,182,84,.30);
+      border-radius:13px;
+      background:#0b0f14;
+    }
+    .completion-reward-icon img{width:58px;height:58px;object-fit:contain}
+    .completion-reward h4{margin:0 0 4px;font-size:12px}
+    .completion-reward p{margin:0;color:#aab3bf;font-size:9px;line-height:1.45}
+    .completion-status{
+      padding:5px 7px;
+      border:1px solid rgba(232,182,84,.24);
+      border-radius:999px;
+      color:var(--gold2);
+      font-size:8px;
+      font-weight:900;
+      white-space:nowrap;
+    }
+
+    /* Treasury is a branch: choose one of three, never a sequence. */
+    .treasury-branch{margin-top:12px;padding:13px;border:1px solid rgba(232,182,84,.20);border-radius:15px;background:rgba(255,255,255,.018)}
+    .treasury-branch-label{text-align:center;color:#dfe4ea;font-size:12px;font-weight:950}
+    .treasury-branch-arrow{height:34px;display:grid;place-items:center;color:var(--gold2);font-size:22px;font-weight:950}
+    .treasury-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;position:relative}
+    .treasury-choice-grid:before{
+      content:"";
+      position:absolute;
+      top:-17px;left:16.66%;right:16.66%;
+      border-top:2px solid rgba(232,182,84,.32);
+    }
+    .treasury-choice{
+      position:relative;
+      padding:12px 10px;
+      border:1px solid rgba(232,182,84,.26);
+      border-radius:13px;
+      background:rgba(232,182,84,.035);
+      text-align:center;
+    }
+    .treasury-choice:before{
+      content:"";
+      position:absolute;
+      top:-18px;left:50%;
+      height:18px;
+      border-left:2px solid rgba(232,182,84,.32);
+    }
+    .treasury-choice img{display:block;width:82px;height:82px;object-fit:contain;margin:0 auto 6px}
+    .treasury-choice b{display:block;font-size:11px}
+    .treasury-choice span{display:block;margin-top:4px;color:var(--gold2);font-size:9px;font-weight:900}
+    .treasury-choice-note{margin-top:10px;text-align:center;color:#9da7b3;font-size:9px;line-height:1.4}
+    .water-card.no-exact-art:before{
+      content:"";
+      width:38px;height:38px;flex:0 0 38px;
+      border-radius:50%;
+      background:radial-gradient(circle at 35% 30%,#ffd4ef,#e57ab9 48%,#9a3f7d);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
+    }
+    @media(max-width:620px){
+      .completion-reward{grid-template-columns:54px minmax(0,1fr);gap:9px}
+      .completion-reward-icon{width:54px;height:54px}
+      .completion-reward-icon img{width:46px;height:46px}
+      .completion-status{grid-column:1/-1;justify-self:start}
+      .treasury-choice-grid{grid-template-columns:1fr}
+      .treasury-choice-grid:before{display:none}
+      .treasury-choice:before{display:none}
+      .treasury-choice img{width:72px;height:72px}
+    }
+
   </style>
   <link rel="stylesheet" href="../assets/public.css?v=20260924-backdrop1">
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
@@ -1005,15 +1113,39 @@ window.TK_PAGE_TRANSLATIONS={
     ).join('')+'</div>';
 
 
+    const renderCompletionReward=(r)=>{
+      if(!r)return '';
+      const genericChest='https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png';
+      return '<div class="completion-reward">'+
+        '<div class="completion-reward-icon"><img src="'+safe(r.image||genericChest)+'" alt=""></div>'+
+        '<div><h4>'+safe(r.title||'После успешного прохождения')+'</h4><p>'+safe(r.text||'')+'</p></div>'+
+        (r.status?'<span class="completion-status">'+safe(r.status)+'</span>':'')+
+      '</div>';
+    };
+
     const renderSimpleWalkthrough=(target,g)=>{
       const el=document.getElementById(target); if(!el)return;
       el.innerHTML='<div class="walkthrough-head"><div><h3>'+safe(g.title||'')+'</h3><p>'+safe(g.intro||'')+'</p></div>'+
         (g.entry?'<div class="walkthrough-cost">'+(g.entry.image?'<img src="'+safe(g.entry.image)+'" alt="">':'')+safe(g.entry.value||'')+'</div>':'')+'</div>'+
-        renderSteps(g.steps)+(g.note?'<div class="guide-warning">'+safe(g.note)+'</div>':'');
+        renderSteps(g.steps)+
+        renderCompletionReward(g.completion_reward)+
+        (g.note?'<div class="guide-warning">'+safe(g.note)+'</div>':'');
     };
     renderSimpleWalkthrough('labyrinth-guide-content',labyrinthGuide);
     renderSimpleWalkthrough('battle-guide-content',battleGuide);
-    renderSimpleWalkthrough('treasury-guide-content',treasuryGuide);
+
+    if(document.getElementById('treasury-guide-content')){
+      const g=treasuryGuide||{};
+      const choices=Array.isArray(g.choices)?g.choices:[];
+      document.getElementById('treasury-guide-content').innerHTML=
+        '<div class="walkthrough-head"><div><h3>'+safe(g.title||'Сокровищница')+'</h3><p>'+safe(g.intro||'')+'</p></div>'+
+        (g.entry?'<div class="walkthrough-cost">'+(g.entry.image?'<img src="'+safe(g.entry.image)+'" alt="">':'')+safe(g.entry.value||'')+'</div>':'')+'</div>'+
+        renderSteps(g.steps)+
+        (choices.length?'<div class="treasury-branch"><div class="treasury-branch-label">Выберите 1 из 3 путей</div><div class="treasury-branch-arrow">↓</div><div class="treasury-choice-grid">'+
+          choices.map(v=>'<article class="treasury-choice">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<b>'+safe(v.title)+'</b><span>'+safe(v.cost||'')+'</span></article>').join('')+
+          '</div>'+(g.choice_note?'<div class="treasury-choice-note">'+safe(g.choice_note)+'</div>':'')+'</div>':'')+
+        (g.note?'<div class="guide-warning">'+safe(g.note)+'</div>':'');
+    }
 
     if(document.getElementById('newbie-guide-content')){
       const g=beginnerGuide||{};
@@ -1085,14 +1217,15 @@ window.TK_PAGE_TRANSLATIONS={
         (fg.entry?'<div class="deep-guide-entry">'+(fg.entry.image?'<img src="'+safe(fg.entry.image)+'" alt="">':'')+'<span>'+safe(fg.entry.value||'')+'</span></div>':'')+'</div>'+
         '<div class="deep-steps">'+steps.map(v=>'<article class="deep-step"><span class="deep-step-num">'+safe(v.n)+'</span>'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<h4>'+safe(v.title)+'</h4><p>'+safe(v.text)+'</p></article>').join('')+'</div>'+
         '<div class="deep-columns">'+
-          '<div class="deep-panel"><h4>Типы воды</h4><div class="water-grid">'+water.map(v=>'<div class="water-card">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><span>'+safe(v.text)+'</span></div></div>').join('')+'</div></div>'+
+          '<div class="deep-panel"><h4>Типы воды</h4><div class="water-grid">'+water.map(v=>'<div class="water-card '+(!v.image&&/розов/i.test(v.title||'')?'no-exact-art':'')+'">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><span>'+safe(v.text)+'</span></div></div>').join('')+'</div></div>'+
           '<div class="deep-panel"><h4>Навыки питомцев, влияющие на Рыбалку</h4>'+skills.map(v=>'<div class="fishing-skill">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.title)+'</b><p>'+safe(v.effect)+'</p><div class="grade-pills">'+(Array.isArray(v.grades)?v.grades:[]).map(g=>'<span class="grade-pill">'+safe(g[0])+' · '+safe(g[1])+'</span>').join('')+'</div></div></div>').join('')+'</div>'+
         '</div>'+
         '<div class="deep-columns">'+
           '<div class="deep-panel"><h4>Удочка</h4><div class="rod-row">'+rod.map(v=>'<div class="rod-card">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<div><b>'+safe(v.rank)+'</b><span>'+safe(v.cost)+'</span></div></div>').join('')+'</div></div>'+
           '<div class="deep-panel"><h4>Подтверждённые достижения Рыбалки</h4>'+ach.map(v=>'<div class="achievement-mini"><b>'+safe(v.title)+'</b><span>'+safe(v.text)+'</span><em>'+safe(v.rewards)+'</em></div>').join('')+'</div>'+
         '</div>'+
-        (notes.length?'<div class="guide-notes">'+notes.map(v=>'<div class="guide-note">'+safe(v)+'</div>').join('')+'</div>':'');
+        (notes.length?'<div class="guide-notes">'+notes.map(v=>'<div class="guide-note">'+safe(v)+'</div>').join('')+'</div>':'')+
+        renderCompletionReward(fg.completion_reward);
     }
 
     if(document.getElementById('room-cheatsheet-grid')){
@@ -1153,11 +1286,18 @@ window.TK_PAGE_TRANSLATIONS={
     }
 
     document.getElementById('quests').innerHTML=quests.map((q,index)=>{
-      const image=q.image?'<img src="'+safe(q.image)+'" alt="">':'<span class="quest-placeholder">🗺️</span>';
+      const collectionImages=Array.isArray(q.collection_header_images)?q.collection_header_images.filter(Boolean):[];
+      const image=collectionImages.length
+        ?'<div class="quest-collection-collage">'+collectionImages.map(src=>'<img src="'+safe(src)+'" alt="">').join('')+'</div>'
+        :(q.image?'<img src="'+safe(q.image)+'" alt="">':'<span class="quest-placeholder">🗺️</span>');
       const vr=Array.isArray(q.visual_requirements)?q.visual_requirements:[];
       const vw=Array.isArray(q.visual_rewards)?q.visual_rewards:[];
       const reqHtml=vr.length?'<div class="quest-block"><div class="quest-block-title">Нужно</div><div class="resource-list">'+vr.map(v=>resource(v[0],v[1],v[2]||'')).join('')+'</div></div>':'';
-      const rewardHtml=vw.length?'<div class="quest-block"><div class="quest-block-title">Награда</div><div class="resource-list">'+vw.map(v=>resource(v[0],v[1],v[2]||'')).join('')+'</div></div>':
+      const rewardHtml=vw.length?'<div class="quest-block"><div class="quest-block-title">Награда</div><div class="resource-list">'+vw.map(v=>
+        collectionImages.length
+          ?'<span class="resource no-art"><span class="resource-fallback">?</span><span class="resource-copy"><span class="resource-name">'+safe(v[0])+'</span><span class="resource-qty">×'+safe(v[1]??'—')+'</span></span></span>'
+          :resource(v[0],v[1],v[2]||'')
+      ).join('')+'</div></div>':
         (q.reward?'<div class="quest-block"><div class="quest-block-title">Награда</div><div class="resource-list">'+resource(q.reward,'',q.image||'')+'</div></div>':'');
       const recommendation=q.recommendation?'<div class="recommend"><b>Лучший вариант:</b> '+safe(q.recommendation)+'</div>':'';
       return '<article class="quest"><div class="quest-media">'+image+'</div><div><div class="quest-top"><h3>'+safe(q.title||('Квест '+(index+1)))+'</h3><span class="badge">'+safe(q.stage||'')+'</span></div>'+
