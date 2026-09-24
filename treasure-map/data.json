@@ -492,7 +492,7 @@
       "limit": "Осталось 3",
       "price": "490",
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_pets_collection_10_icon.png",
-      "composition_note": "Количество предметов на карточке подтверждено по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
+      "composition_note": "Количество предметов на карточке  по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
       "observed_quantities": [
         1,
         250,
@@ -505,7 +505,7 @@
       "limit": "Осталось 3",
       "price": "490",
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_energy_collection_10_icon.png",
-      "composition_note": "Количество предметов на карточке подтверждено по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
+      "composition_note": "Количество предметов на карточке  по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
       "observed_quantities": [
         10,
         1500,
@@ -518,7 +518,7 @@
       "limit": "Осталось 3",
       "price": "490",
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_keys_collection_10_icon.png",
-      "composition_note": "Количество предметов на карточке подтверждено по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
+      "composition_note": "Количество предметов на карточке  по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
       "observed_quantities": [
         2,
         5,
@@ -531,7 +531,7 @@
       "limit": "Остался 1",
       "price": "490",
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/shop/mf_shoplot_treasure_offer_maps_golden_berries_10_icon.png",
-      "composition_note": "Количество предметов на карточке подтверждено по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
+      "composition_note": "Количество предметов на карточке  по игровому экрану; точные названия отдельных позиций пока не назначаются без прямой привязки DOM/API.",
       "observed_quantities": [
         1,
         1,
@@ -5062,18 +5062,13 @@
       "image": "https://cdn-ru-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fight_icon.png",
       "summary": "На поле выбираем врагов и расходуем боевой ресурс. Карточка врага показывает его HP и стоимость действия.",
       "facts": [
-        "HP не привязываем жёстко к цвету: на проходе 24.09 синие враги начинали с 4 HP, красный — с 2 HP.",
-        "После гибели синий враг наносит −2 HP соседним живым врагам; если сосед погибает, его эффект также может продолжить цепочку.",
+        "Красный враг не даёт цепного эффекта.",
+        "После гибели синий враг наносит −2 HP соседним живым врагам и может запустить цепочку.",
         "После гибели зелёный враг добавляет +3 HP соседним живым врагам.",
-        "На подтверждённом поле стартовый запас меча был 28 атаки. Последовательность 7 → 8 → 12 → 16 очистила 12 врагов, потратив 14 атаки.",
-        "После полной зачистки появился mf_fairlot_minigame_fight_room_big_chest — подтверждённый Сундук победителя."
+        "Чем больше врагов получится добить цепочкой, тем меньше атаки придётся потратить напрямую.",
+        "После полной зачистки появляется «Сундук победителя»."
       ],
-      "sequence": [
-        "7",
-        "8",
-        "12",
-        "16"
-      ],
+      "sequence": [],
       "hint": "Для этой комнаты можно использовать закладку-помощник Top King: она рассчитывает порядок целей и ставит цифры 1 → 2 → 3… прямо на поле.",
       "visuals": [
         {
@@ -5385,7 +5380,7 @@
         "kind": "paid"
       }
     ],
-    "levels_note": "Подтверждено как минимум 28 уровней: в сохранённом состоянии все три линии были получены до 28-го уровня включительно.",
+    "levels_note": "Ниже показаны известные награды отдельных уровней.",
     "claim_note": "Игра забирает награды трёх доступных линий одним действием, поэтому в истории подтверждена суммарная выдача уровня, а не разбивка по отдельным линиям.",
     "observed_levels": [
       {
@@ -6056,87 +6051,80 @@
         "lot_id": "mf_treasurelot_is_fishing_calm_water",
         "cost": 1,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_calm_water_icon.png",
-        "text": "На проходе 24.09 подтверждена стоимость 1 заброс."
+        "text": "Обычная клетка воды. Стоимость — 1 заброс."
       },
       {
         "title": "Штормовая вода",
         "lot_id": "mf_treasurelot_is_fishing_tornado_water",
         "cost": 2,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_water_icon.png",
-        "text": "На проходе 24.09 подтверждена стоимость 2 заброса."
+        "text": "Штормовая клетка. Стоимость — 2 заброса."
       },
       {
         "title": "Проклятая вода",
         "lot_id": "mf_treasurelot_is_fishing_cursed_water",
         "cost": 3,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_cursed_water_icon.png",
-        "text": "На проходе 24.09 клетка стоила 3 заброса. После её активации три клетки Штормовой проклятой воды изменили состояние.",
+        "text": "Проклятая клетка. Стоимость — 3 заброса. После активации раскрывает остальные проклятые клетки.",
         "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png",
-        "exact_art": false,
-        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
+        "exact_art": false
       },
       {
         "title": "Штормовая проклятая вода",
         "lot_id": "mf_treasurelot_is_fishing_tornado_cursed_water",
         "cost": 2,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_cursed_water_icon.png",
-        "text": "На стартовом поле было 3 такие клетки по 2 заброса. После активации Проклятой воды они превратились в две клетки lamp_fish_water_uncursed и одну calm_water_uncursed.",
+        "text": "Розовая проклятая клетка. Стоимость — 2 заброса до снятия проклятия.",
         "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_water_icon.png",
-        "exact_art": false,
-        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
+        "exact_art": false
       },
       {
-        "title": "Рыба-фонарь · очищенная",
+        "title": "Рыба-фонарь",
         "lot_id": "mf_treasurelot_is_fishing_lamp_fish_water_uncursed",
         "cost": 2,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_lamp_fish_water_icon.png",
-        "text": "На полностью проклятом поле появились 2 такие клетки по 2 заброса.",
+        "text": "Очищенная клетка с Рыбой-фонарём. Стоимость — 2 заброса.",
         "exact_name": false,
         "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
-        "exact_art": false,
-        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
+        "exact_art": false
       },
       {
-        "title": "Спокойная вода · очищенная",
+        "title": "Спокойная очищенная вода",
         "lot_id": "mf_treasurelot_is_fishing_calm_water_uncursed",
         "cost": 1,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_calm_water_icon.png",
-        "text": "На полностью проклятом поле появились 4 такие клетки по 1 забросу.",
+        "text": "Очищенная спокойная клетка. Стоимость — 1 заброс.",
         "exact_name": false,
         "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_calm_water_icon.png",
-        "exact_art": false,
-        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
+        "exact_art": false
       },
       {
-        "title": "Особая клетка fishing_water",
+        "title": "Особая вода",
         "lot_id": "mf_treasurelot_is_fishing_fishing_water",
         "cost": 2,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
         "exact_art": false,
-        "text": "Технический ID и стоимость 2 заброса подтверждены журналом. Точное игровое название и привязка арта ещё уточняются.",
-        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
+        "text": "Особая клетка Рыбалки. Стоимость — 2 заброса."
       },
       {
-        "title": "Магический питомец · очищенная",
+        "title": "Магический питомец",
         "lot_id": "mf_treasurelot_is_fishing_magic_pet_water_uncursed",
         "cost": 3,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_magic_pet_water_icon.png",
         "exact_name": false,
-        "text": "Особая очищенная клетка. На полностью проклятом поле появилась 1 такая клетка стоимостью 3 заброса.",
+        "text": "Особая очищенная клетка. Стоимость — 3 заброса.",
         "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png",
-        "exact_art": false,
-        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
+        "exact_art": false
       },
       {
-        "title": "Существа · очищенная",
+        "title": "Существа",
         "lot_id": "mf_treasurelot_is_fishing_creatures_water_uncursed",
         "cost": 2,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
         "exact_name": false,
-        "text": "На полностью проклятом поле появилась 1 такая клетка стоимостью 2 заброса.",
+        "text": "Очищенная клетка с существами. Стоимость — 2 заброса.",
         "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
-        "exact_art": false,
-        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
+        "exact_art": false
       }
     ],
     "pet_skills": [
@@ -6205,18 +6193,17 @@
       }
     ],
     "notes": [
-      "Запас 12 забросов подтверждён для прохода 24.09 с удочкой R3; универсальным лимитом для всех уровней удочки пока не считаем.",
-      "Точный численный эффект уровней удочки R3/R4 интерфейс не подписывает, поэтому в гайде показывается только подтверждённая стоимость улучшений.",
-      "Вероятности обычных находок не добавляются, пока они не подтверждены данными игры.",
-      "Журнал 24.09 уточнил прежнее визуальное определение: розовые вихри в этом проходе имеют ID tornado_cursed_water и относятся к Штормовой проклятой воде.",
-      "Второй проход 24.09 дал полностью проклятое поле: 8 × tornado_cursed_water по 2 заброса и 1 × cursed_water за 3.",
-      "После активации cursed_water восемь розовых клеток раскрылись как: 1 × magic_pet_water_uncursed (3), 2 × lamp_fish_water_uncursed (2), 1 × creatures_water_uncursed (2), 4 × calm_water_uncursed (1)."
+      "На поле с удочкой R3 доступно 12 забросов.",
+      "Если на поле есть Проклятая вода, сначала выгодно открыть её: после этого проклятые клетки меняются на обычные и специальные.",
+      "Полностью розовое поле состоит из 8 проклятых штормовых клеток по 2 заброса и одной Проклятой воды за 3.",
+      "После снятия проклятия могут появиться: Рыба-фонарь, Существа, Магический питомец и спокойная вода.",
+      "Число под клеткой всегда показывает фактическую стоимость действия."
     ],
     "completion_reward": {
       "title": "После успешного прохождения",
-      "text": "После завершения Рыбалки появляется наградной сундук. Точный вид сундука и его содержимое пока не закреплены в текущем захвате.",
+      "text": "После завершения Рыбалки появляется награда. Финальный состав награды пока не зафиксирован.",
       "image": null,
-      "status": "нужен финальный скрин Рыбалки"
+      "status": ""
     },
     "observed_run_2026_09_24": {
       "source": "HK Puzzle Solver 3.2 local history",
@@ -6779,7 +6766,7 @@
       "title": "Сундук победителя",
       "text": "После успешного прохождения Лабиринта выдаётся «Сундук победителя».",
       "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_big_icon.png",
-      "status": "награда за Лабиринт",
+      "status": "",
       "contents": [
         {
           "id": "item_treasurehunt_energy",
@@ -6818,14 +6805,15 @@
           "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
         }
       ],
-      "loot_note": "Карточка показывает список «Можно отыскать»; это не гарантия одновременной выдачи всех позиций."
+      "loot_note": "Возможное содержимое сундука: Провизия ×14, Монеты сокровищ ×11, Обычный ключ ×1, два яйца ×1 и Золото ×1.",
+      "screenshot_image": "./assets/battle-final-reward.svg"
     },
     "storage_reward": {
       "title": "Активированное хранилище",
-      "text": "После решения Лабиринта открывается «Активированное хранилище». На карточке «Можно отыскать» показаны два яйца ×1, Провизия ×28, Корм питомца ×2 и Монеты сокровищ ×11.",
+      "text": "После решения Лабиринта открывается «Активированное хранилище».",
       "image": null,
       "exact_art": false,
-      "status": "результат подтверждён скрином",
+      "status": "",
       "contents": [
         {
           "id": "observed_labyrinth_egg_1",
@@ -6860,7 +6848,8 @@
           "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_cur_coins_icon.png"
         }
       ],
-      "loot_note": "Это список «Можно отыскать», а не гарантия одновременной выдачи всех позиций. Точные ID двух яиц пока не привязаны."
+      "loot_note": "В окне «Можно отыскать» показаны две разные награды-яйца ×1, Провизия ×28, Корм питомца ×2 и Монеты сокровищ ×11.",
+      "screenshot_image": "./assets/labyrinth-final-reward.svg"
     }
   },
   "battle_guide": {
@@ -6902,12 +6891,12 @@
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fight/icons/treasure_minigame_sword_r4_icon.png"
       }
     ],
-    "note": "На подтверждённом проходе 24.09 поле из 12 врагов было полностью очищено четырьмя прямыми атаками по слотам 7 → 8 → 12 → 16 благодаря цепным взрывам синих врагов. Помощник только показывает порядок; нажатия остаются за игроком.",
+    "note": "Синие враги могут запускать цепные взрывы, поэтому правильный порядок целей позволяет заметно экономить атаку.",
     "completion_reward": {
       "title": "Сундук победителя",
       "text": "После успешного прохождения Сражения выдаётся «Сундук победителя».",
       "image": "https://cdn-prod-art.hwgame.cloud/minigames/chests/icons/treasure_minigame_chest_big_icon.png",
-      "status": "награда за Сражение",
+      "status": "",
       "contents": [
         {
           "id": "item_treasurehunt_energy",
@@ -6946,7 +6935,8 @@
           "image": "https://cdn-prod-art.hwgame.cloud/currencies/cur_gold_icon.png"
         }
       ],
-      "loot_note": "Карточка показывает список «Можно отыскать»; это не гарантия одновременной выдачи всех позиций."
+      "loot_note": "Возможное содержимое сундука: Провизия ×14, Монеты сокровищ ×11, Обычный ключ ×1, два яйца ×1 и Золото ×1.",
+      "screenshot_image": "./assets/battle-final-reward.svg"
     },
     "observed_run_2026_09_24": {
       "source": "HK Puzzle Solver local history",
@@ -7029,7 +7019,7 @@
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png"
       }
     ],
-    "note": "Большой сундук привязан к первой комнате Сокровищницы. Для Пути 2 подтверждён выбор одной из трёх карт. Результат Пути 3 и вероятности исходов пока не подтверждены.",
+    "note": "Большой сундук относится к первой комнате Сокровищницы. После Пути 2 выбирается одна из трёх карт.",
     "choices": [
       {
         "title": "Путь 1",
@@ -7051,7 +7041,7 @@
     "path_2_followup": {
       "title": "После выбора Пути 2",
       "intro": "Открывается отдельный экран выбора награды: нужно выбрать 1 из 3 карточек. На каждой карточке указано ×1.",
-      "status": "подтверждено скрином",
+      "status": "",
       "choices": [
         {
           "title": "Карта сражения",
@@ -7072,7 +7062,7 @@
           "image": "https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_trader_icon.png"
         }
       ],
-      "note": "На подтверждённом экране после Пути 2 предлагается выбрать 1 из 3 карт: Сражения, Рыбалки или Торговца. Каждая — ×1."
+      "note": "После Пути 2 нужно выбрать одну из трёх карт: Сражения, Рыбалки или Торговца. Каждая — ×1."
     },
     "first_room_reward": {
       "title": "Большой сундук сокровищницы",
