@@ -163,6 +163,40 @@
       .start-step b,.start-step>span:not(.start-step-num){padding-left:0}
     }
 
+  
+    /* Room artwork must always remain fully visible. */
+    #map-rooms .room-card-media{
+      width:100%;
+      height:auto!important;
+      min-height:0!important;
+      aspect-ratio:16/9;
+      display:grid;
+      place-items:center;
+      padding:10px;
+      overflow:hidden;
+      background:#0b0f14;
+    }
+    #map-rooms .room-card-media img{
+      display:block!important;
+      width:auto!important;
+      height:auto!important;
+      max-width:100%!important;
+      max-height:100%!important;
+      object-fit:contain!important;
+      object-position:center!important;
+      margin:auto!important;
+    }
+    @media(max-width:620px){
+      #map-rooms .room-card-media{
+        aspect-ratio:4/3;
+        padding:12px;
+      }
+      #map-rooms .room-card-media img{
+        max-width:92%!important;
+        max-height:92%!important;
+      }
+    }
+
   </style>
   <link rel="stylesheet" href="../assets/public.css">
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
