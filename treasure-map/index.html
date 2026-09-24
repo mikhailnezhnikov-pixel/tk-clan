@@ -497,6 +497,11 @@
     .completion-reward-icon img{width:58px;height:58px;object-fit:contain}
     .completion-reward h4{margin:0 0 4px;font-size:12px}
     .completion-reward p{margin:0;color:#aab3bf;font-size:9px;line-height:1.45}
+    .completion-reward-icon.no-art{border-style:dashed;background:rgba(255,255,255,.018)}
+    .completion-reward-icon.no-art:after{content:"—";color:#6f7884;font-size:24px;font-weight:900}
+    .completion-loot{margin-top:9px}
+    .completion-loot .resource{min-width:132px}
+    .completion-loot-note{margin-top:7px!important;color:#8893a0!important;font-size:8px!important}
     .completion-status{
       padding:5px 7px;
       border:1px solid rgba(232,182,84,.24);
@@ -549,6 +554,7 @@
       .completion-reward-icon{width:54px;height:54px}
       .completion-reward-icon img{width:46px;height:46px}
       .completion-status{grid-column:1/-1;justify-self:start}
+      .completion-loot .resource{min-width:118px}
       .treasury-choice-grid{grid-template-columns:1fr}
       .treasury-choice-grid:before{display:none}
       .treasury-choice:before{display:none}
@@ -1115,10 +1121,23 @@ window.TK_PAGE_TRANSLATIONS={
 
     const renderCompletionReward=(r)=>{
       if(!r)return '';
-      const genericChest='https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_chest_g_icon.png';
+      const contents=Array.isArray(r.contents)?r.contents:[];
+      const art=r.image
+        ?'<div class="completion-reward-icon"><img src="'+safe(r.image)+'" alt=""></div>'
+        :'<div class="completion-reward-icon no-art" aria-hidden="true"></div>';
+      const loot=contents.length
+        ?'<div class="resource-list completion-loot">'+contents.map(v=>{
+            if(v&&v.exact_art===false){
+              return '<span class="resource no-art"><span class="resource-fallback">?</span><span class="resource-copy"><span class="resource-name">'+safe(v.name||v.id||'Награда')+'</span><span class="resource-qty">×'+safe(v.quantity??'—')+'</span></span></span>';
+            }
+            return resource(v?.name,v?.quantity,v?.image,v?.id);
+          }).join('')+'</div>'
+        :'';
       return '<div class="completion-reward">'+
-        '<div class="completion-reward-icon"><img src="'+safe(r.image||genericChest)+'" alt=""></div>'+
-        '<div><h4>'+safe(r.title||'После успешного прохождения')+'</h4><p>'+safe(r.text||'')+'</p></div>'+
+        art+
+        '<div><h4>'+safe(r.title||'После успешного прохождения')+'</h4><p>'+safe(r.text||'')+'</p>'+loot+
+          (r.loot_note?'<p class="completion-loot-note">'+safe(r.loot_note)+'</p>':'')+
+        '</div>'+
         (r.status?'<span class="completion-status">'+safe(r.status)+'</span>':'')+
       '</div>';
     };
