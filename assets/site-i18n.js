@@ -208,7 +208,7 @@
       style.textContent=`
         body.tk-home-backdrop{
           background-color:#07080b!important;
-          background-image:linear-gradient(180deg,rgba(7,8,11,.66),rgba(7,8,11,.68) 63%,rgba(7,8,11,.98) 82%,rgba(7,8,11,.84) 100%),url("assets/home/top-king-clan-hero-approved.jpg"),url("assets/home/top-king-clan-hero-approved.jpg")!important;
+          background-image:linear-gradient(180deg,rgba(7,8,11,.32),rgba(7,8,11,.53) 63%,rgba(7,8,11,.96) 82%,rgba(7,8,11,.76) 100%),url("assets/home/top-king-clan-hero-approved.jpg"),url("assets/home/top-king-clan-hero-approved.jpg")!important;
           background-size:cover,100% auto,cover!important;
           background-position:center,center calc(0px + var(--tk-backdrop-drift,0px)),center!important;
           background-repeat:no-repeat!important;
@@ -225,19 +225,17 @@
         .hero-actions .button{min-width:190px}
         @media(min-width:981px){
           .hero{
-            background-attachment:scroll!important;
-            background-size:100% auto!important;
-            background-position:center top!important;
+            background:transparent!important;
           }
           .hero::before{
             background:
               linear-gradient(90deg,rgba(4,6,9,.99) 0%,rgba(4,6,9,.92) 30%,rgba(4,6,9,.58) 47%,rgba(4,6,9,.16) 67%,rgba(4,6,9,.05) 100%),
-              linear-gradient(180deg,rgba(7,8,11,0) 48%,rgba(7,8,11,.10) 60%,rgba(7,8,11,.70) 76%,#07080b 86%)!important;
+              linear-gradient(180deg,rgba(7,8,11,0) 48%,rgba(7,8,11,.08) 72%,rgba(7,8,11,.18) 100%)!important;
           }
           .hero::after{
             background:
               radial-gradient(circle at 77% 25%,rgba(255,193,71,.19),transparent 24%),
-              linear-gradient(180deg,transparent 48%,rgba(7,8,11,.04) 60%,rgba(7,8,11,.48) 76%,#07080b 88%)!important;
+              linear-gradient(180deg,transparent 48%,rgba(7,8,11,.04) 72%,rgba(7,8,11,.16) 100%)!important;
           }
           #sections{
             overflow:hidden!important;
