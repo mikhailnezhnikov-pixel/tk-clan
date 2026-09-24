@@ -822,6 +822,40 @@
     'Бесплатная и две премиум-линии с известными наградами уровней.':'یک مسیر رایگان و دو مسیر پریمیوم با پاداش‌های شناخته‌شده سطوح.'
   });
 
+
+  Object.assign(EN,{
+    '🧩 Помощник':'🧩 Helper',
+    '🧩 Установить помощник':'🧩 Install helper',
+    '🧩 Помощник Лабиринта и Сражения':'🧩 Labyrinth & Battle helper',
+    'Помощник не кликает за игрока. Он показывает порядок действий цифрами прямо поверх игрового поля.':'The helper does not click for you. It shows the action order as numbers directly over the game board.',
+    'На iPhone из Telegram:':'On iPhone from Telegram:',
+    'сначала откройте эту страницу в Safari. Во встроенном браузере Telegram обычные закладки недоступны, поэтому установить помощник там неудобно.':'first open this page in Safari. Telegram’s in-app browser does not provide normal bookmark management, so installing the helper there is impractical.',
+    'Откройте сайт в Safari / Chrome':'Open the site in Safari / Chrome',
+    'На iPhone в Telegram нажмите «…» → открыть во внешнем браузере.':'On iPhone in Telegram, tap “…” → open in an external browser.',
+    'Создайте обычную закладку':'Create a normal bookmark',
+    'Назовите её, например, «HK Помощник».':'Name it, for example, “HK Helper”.',
+    'Скопируйте код ниже':'Copy the code below',
+    'Отредактируйте закладку и вставьте этот код вместо её URL.':'Edit the bookmark and paste this code in place of its URL.',
+    'Откройте Hamster King и нажмите закладку':'Open Hamster King and tap the bookmark',
+    'В Лабиринте или Сражении появятся номера 1 → 2 → 3…':'Numbers 1 → 2 → 3… will appear in Labyrinth or Battle.',
+    'Скопировать код':'Copy code',
+    'Скопировано ✓':'Copied ✓'
+  });
+  Object.assign(FA,{
+    '🧩 Помощник':'🧩 ابزار کمکی',
+    '🧩 Установить помощник':'🧩 نصب ابزار کمکی',
+    '🧩 Помощник Лабиринта и Сражения':'🧩 ابزار هزارتو و نبرد',
+    'Помощник не кликает за игрока. Он показывает порядок действий цифрами прямо поверх игрового поля.':'ابزار به‌جای بازیکن کلیک نمی‌کند؛ فقط ترتیب حرکت‌ها را با عدد روی میدان بازی نشان می‌دهد.',
+    'На iPhone из Telegram:':'در iPhone از داخل Telegram:',
+    'Откройте сайт в Safari / Chrome':'سایت را در Safari / Chrome باز کنید',
+    'Создайте обычную закладку':'یک نشانک معمولی بسازید',
+    'Скопируйте код ниже':'کد زیر را کپی کنید',
+    'Откройте Hamster King и нажмите закладку':'Hamster King را باز کنید و روی نشانک بزنید',
+    'В Лабиринте или Сражении появятся номера 1 → 2 → 3…':'در هزارتو یا نبرد اعداد ۱ ← ۲ ← ۳… نمایش داده می‌شوند.',
+    'Скопировать код':'کپی کد',
+    'Скопировано ✓':'کپی شد ✓'
+  });
+
   const maps={en:EN,fa:FA};
   const original=new WeakMap();
   function patternTranslate(key,lang){
