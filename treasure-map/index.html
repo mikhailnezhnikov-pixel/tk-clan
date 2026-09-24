@@ -145,6 +145,24 @@
     .step-icon-cluster img{width:30px!important;height:30px!important;margin:0!important;object-fit:contain}
     @media(max-width:620px){.step-icon-cluster{grid-template-columns:repeat(5,34px)}.step-icon-cluster img{width:34px!important;height:34px!important}}
 
+  
+    .start-step-visual{min-height:72px;display:flex;align-items:center;justify-content:center;margin:0 0 10px}
+    .start-step-visual img{display:block;width:68px;height:68px;object-fit:contain;object-position:center;filter:drop-shadow(0 8px 14px rgba(0,0,0,.34))}
+    .start-step-visual-pair{gap:4px}
+    .start-step-visual-pair img{width:58px;height:58px}
+    .start-step-visual-cluster{display:grid;grid-template-columns:repeat(5,34px);gap:3px;min-height:72px}
+    .start-step-visual-cluster img{width:34px;height:34px}
+    @media(max-width:520px){
+      .start-step{padding:15px 14px}
+      .start-step-num{position:absolute;top:14px;left:14px;margin:0;z-index:2}
+      .start-step-visual{min-height:92px;margin:0 0 8px;padding-top:4px}
+      .start-step-visual img{width:82px;height:82px}
+      .start-step-visual-pair img{width:70px;height:70px}
+      .start-step-visual-cluster{grid-template-columns:repeat(5,46px);gap:5px;min-height:92px}
+      .start-step-visual-cluster img{width:46px;height:46px}
+      .start-step b,.start-step>span:not(.start-step-num){padding-left:0}
+    }
+
   </style>
   <link rel="stylesheet" href="../assets/public.css">
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
@@ -163,11 +181,40 @@
   <section class="start-here" id="start">
     <div class="start-here-head"><div><h2>С чего начать</h2><p>Короткий маршрут для первого захода. Сначала подготовьте Провизию и Карту сокровищ, затем проходите комнаты по их типу и закончите путешествие в Сокровищнице.</p></div><span class="start-badge">первый заход</span></div>
     <div class="start-route">
-      <article class="start-step"><span class="start-step-num">1</span><b>Проверьте ежедневные квесты</b><span>Ежедневно доступны Карты сокровищ и задания готовки на Провизию.</span></article>
-      <article class="start-step"><span class="start-step-num">2</span><b>Запустите карту</b><span>На новое путешествие используется 1 Карта сокровищ.</span></article>
-      <article class="start-step"><span class="start-step-num">3</span><b>Смотрите стоимость комнаты</b><span>Перед входом видно, сколько Провизии потребует выбранная точка маршрута.</span></article>
-      <article class="start-step"><span class="start-step-num">4</span><b>Пройдите механику комнаты</b><span>Лес/Шахта — поиск; Рыбалка — забросы; Сражение — бой; Лабиринт — лампочки.</span></article>
-      <article class="start-step"><span class="start-step-num">5</span><b>Дойдите до Сокровищницы</b><span>Вход в Сокровищницу завершает текущую Карту сокровищ.</span></article>
+      <article class="start-step">
+        <span class="start-step-num">1</span>
+        <div class="start-step-visual start-step-visual-pair">
+          <img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png" alt="">
+          <img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png" alt="">
+        </div>
+        <b>Проверьте ежедневные квесты</b><span>Ежедневно доступны Карты сокровищ и задания готовки на Провизию.</span>
+      </article>
+      <article class="start-step">
+        <span class="start-step-num">2</span>
+        <div class="start-step-visual"><img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_event_treasure_map_path_icon.png" alt=""></div>
+        <b>Запустите карту</b><span>На новое путешествие используется 1 Карта сокровищ.</span>
+      </article>
+      <article class="start-step">
+        <span class="start-step-num">3</span>
+        <div class="start-step-visual"><img src="https://cdn-ru-prod-art.hwgame.cloud/items/item_treasurehunt_energy_icon.png" alt=""></div>
+        <b>Смотрите стоимость комнаты</b><span>Перед входом видно, сколько Провизии потребует выбранная точка маршрута.</span>
+      </article>
+      <article class="start-step">
+        <span class="start-step-num">4</span>
+        <div class="start-step-visual start-step-visual-cluster">
+          <img src="https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_forest_g_icon.png" alt="">
+          <img src="https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_mine_g_icon.png" alt="">
+          <img src="https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png" alt="">
+          <img src="https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fight_icon.png" alt="">
+          <img src="https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_riddle_icon.png" alt="">
+        </div>
+        <b>Пройдите механику комнаты</b><span>Лес/Шахта — поиск; Рыбалка — забросы; Сражение — бой; Лабиринт — лампочки.</span>
+      </article>
+      <article class="start-step">
+        <span class="start-step-num">5</span>
+        <div class="start-step-visual"><img src="https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_treasury_g_icon.png" alt=""></div>
+        <b>Дойдите до Сокровищницы</b><span>Вход в Сокровищницу завершает текущую Карту сокровищ.</span>
+      </article>
     </div>
     <nav class="quick-links" aria-label="Быстрый переход по гайду">
       <a href="#room-cheatsheet">Что делать в комнатах</a><a href="#newbie-guide">Первый заход</a><a href="#fishing-guide">Рыбалка</a><a href="#labyrinth-guide">Лабиринт</a><a href="#battle-guide">Сражение</a><a href="#chests-guide">Сундуки</a><a href="#trader-guide">Торговец</a><a href="#pets-guide">Питомцы</a><a href="#treasury-guide">Сокровищница</a><a href="#economy-guide">Экономика</a><a href="#shop-guide">Магазин</a>
