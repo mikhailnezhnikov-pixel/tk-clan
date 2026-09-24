@@ -487,6 +487,8 @@
     .confirmed-result p{margin:0;color:#a7b0bc;font-size:9px;line-height:1.5}
     .confirmed-result strong{color:#ffd38b}
     @media(max-width:760px){.confirmed-results-grid{grid-template-columns:1fr}}
+    .room-detail-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:7px 10px;border:1px solid rgba(232,182,84,.28);border-radius:999px;color:#ffd58c;text-decoration:none;font-size:9px;font-weight:900}
+    .room-detail-link:hover{border-color:rgba(232,182,84,.6);color:#fff}
     .resource-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}
     .resource-overview-card{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;align-items:center;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.025)}
     .resource-overview-card img{width:48px;height:48px;object-fit:contain}
@@ -1041,6 +1043,14 @@ window.TK_PAGE_TRANSLATIONS={
       lights:'Нужно привести поле 3×3 к состоянию, где включены все лампы. Помощник Top King может показать порядок нажатий.',
       treasury:'Выберите один из трёх путей. Каждый подтверждённый путь стоит 5 Провизии.'
     };
+    const roomDetailAnchors={
+      fishing:'fishing-guide',
+      trader:'trader-guide',
+      chests:'chests-guide',
+      fight:'battle-guide',
+      lights:'labyrinth-guide',
+      treasury:'treasury-guide'
+    };
     const labyrinthGuide=data.labyrinth_guide||{};
     const battleGuide=data.battle_guide||{};
     const treasuryGuide=data.treasury_guide||{};
@@ -1393,7 +1403,9 @@ window.TK_PAGE_TRANSLATIONS={
         return '<article class="room-do"><div class="room-do-top">'+
           (v.image?'<img src="'+safe(v.image)+'" alt="">':'')+
           '<div><h3>'+safe(v.title)+'</h3><div class="room-do-cost">'+(cost?('Вход: '+safe(cost)+' Провизии'):'Стоимость смотрите на карточке')+'</div></div></div>'+
-          '<p>'+safe(roomActions[v.id]||v.role||'')+'</p></article>';
+          '<p>'+safe(roomActions[v.id]||v.role||'')+'</p>'+
+          (roomDetailAnchors[v.id]?'<a class="room-detail-link" href="#'+safe(roomDetailAnchors[v.id])+'">Подробнее →</a>':'')+
+          '</article>';
       }).join('');
     }
 
@@ -1486,6 +1498,7 @@ window.TK_PAGE_TRANSLATIONS={
           :resource(x.title,x.quantity,x.image||'')).join('')+'</div></div>':'')+
         (v.reward_note?'<div class="equipment-note">'+safe(v.reward_note)+'</div>':'')+
         (v.note?'<p>'+safe(v.note)+'</p>':'')+
+        (roomDetailAnchors[v.id]?'<a class="room-detail-link" href="#'+safe(roomDetailAnchors[v.id])+'">Подробнее →</a>':'')+
       '</article>'
     ).join('');
 
@@ -1752,7 +1765,7 @@ window.TK_PAGE_TRANSLATIONS={
 })();
 </script>
 
-<script src="./i18n.js?v=20260924-10"></script>
+<script src="./i18n.js?v=20260924-11"></script>
 <script src="../assets/site-nav.js?v=20260924-treasure7"></script>
 </body>
 </html>
