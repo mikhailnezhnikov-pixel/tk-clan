@@ -49,6 +49,112 @@
             payload: payload || {}
         });
         writeHistory(rows);
+        updateHistoryPanel();
+    }
+
+    function collectVisibleLots() {
+        return [...document.querySelectorAll('[data-lot-id]')].slice(0, 120).map(function (el) {
+            return {
+                id: el.getAttribute('data-lot-id') || '',
+                text: String(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120)
+            };
+        }).filter(function (row) { return row.id; });
+    }
+
+    function captureScreenState(reason) {
+        recordHistory('screen_state', {
+            reason: reason || 'manual',
+            title: document.title,
+            lots: collectVisibleLots()
+        });
+    }
+
+    function copyHistoryToClipboard() {
+        const text = JSON.stringify(readHistory(), null, 2);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text).then(function () {
+                flashHistoryPanel('Журнал скопирован');
+                return text;
+            }).catch(function () {
+                window.prompt('Скопируйте журнал:', text);
+                return text;
+            });
+        }
+        window.prompt('Скопируйте журнал:', text);
+        return Promise.resolve(text);
+    }
+
+    function flashHistoryPanel(message) {
+        const status = document.getElementById('hkHistoryStatus');
+        if (!status) return;
+        const old = status.textContent;
+        status.textContent = message;
+        setTimeout(function () {
+            if (status) status.textContent = old;
+        }, 1400);
+    }
+
+    function updateHistoryPanel() {
+        const count = document.getElementById('hkHistoryCount');
+        if (count) count.textContent = String(readHistory().length);
+    }
+
+    function installHistoryPanel() {
+        if (document.getElementById('hkHistoryPanel')) {
+            updateHistoryPanel();
+            return;
+        }
+
+        const panel = document.createElement('div');
+        panel.id = 'hkHistoryPanel';
+        Object.assign(panel.style, {
+            position: 'fixed',
+            left: '10px',
+            bottom: '10px',
+            zIndex: '99999999',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '7px',
+            padding: '7px 8px',
+            borderRadius: '12px',
+            background: 'rgba(9,12,18,.92)',
+            color: '#fff',
+            border: '1px solid rgba(255,215,64,.55)',
+            boxShadow: '0 5px 18px rgba(0,0,0,.45)',
+            font: '700 12px/1.2 Arial,sans-serif'
+        });
+
+        panel.innerHTML =
+            '<span id="hkHistoryStatus">HK журнал: <b id="hkHistoryCount">0</b></span>' +
+            '<button type="button" data-hk-history-copy>Копировать</button>' +
+            '<button type="button" data-hk-history-clear>Очистить</button>';
+
+        [...panel.querySelectorAll('button')].forEach(function (button) {
+            Object.assign(button.style, {
+                border: '1px solid rgba(255,255,255,.2)',
+                borderRadius: '8px',
+                background: 'rgba(255,255,255,.08)',
+                color: '#fff',
+                padding: '5px 7px',
+                cursor: 'pointer',
+                font: '700 11px/1 Arial,sans-serif'
+            });
+        });
+
+        panel.addEventListener('click', function (event) {
+            if (event.target.closest('[data-hk-history-copy]')) {
+                captureScreenState('manual_export');
+                copyHistoryToClipboard();
+            }
+            if (event.target.closest('[data-hk-history-clear]')) {
+                writeHistory([]);
+                updateHistoryPanel();
+                flashHistoryPanel('Журнал очищен');
+            }
+        });
+
+        document.documentElement.appendChild(panel);
+        updateHistoryPanel();
     }
 
     function findLotElement(target) {
@@ -77,8 +183,13 @@
             if (!type) return;
             recordHistory(type, {
                 lotId: id,
-                text: String(el.textContent || '').trim().slice(0, 160)
+                text: String(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 160),
+                nearby: collectVisibleLots().slice(0, 80)
             });
+
+            setTimeout(function () {
+                captureScreenState(type + '_after_click');
+            }, 120);
         }, true);
     }
 
@@ -607,10 +718,12 @@
     }
 
     installHistoryCapture();
+    installHistoryPanel();
+    captureScreenState('helper_started');
 
     const timer = setInterval(checkPuzzle, 500);
     window.__HK_PUZZLE_SOLVER__ = {
-        version: '3.1.0-bookmark',
+        version: '3.2.0-bookmark',
         check: checkPuzzle,
         getHistory: function () {
             return readHistory();
@@ -621,6 +734,14 @@
         },
         exportHistory: function () {
             return JSON.stringify(readHistory(), null, 2);
+        },
+        copyHistory: function () {
+            captureScreenState('api_export');
+            return copyHistoryToClipboard();
+        },
+        captureScreen: function (reason) {
+            captureScreenState(reason || 'api');
+            return readHistory().length;
         },
         stop: function () {
             clearInterval(timer);
