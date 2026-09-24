@@ -18,10 +18,10 @@ body.tk-main-theme{
   position:relative;
   background-color:#07080b!important;
   background-image:
-    linear-gradient(90deg,rgba(7,8,11,.70),rgba(7,8,11,.63)),
+    linear-gradient(180deg,rgba(7,8,11,.66),rgba(7,8,11,.70) 68%,#07080b 100%),
     url("home/top-king-clan-hero-approved.jpg")!important;
-  background-size:cover,cover!important;
-  background-position:center,58% calc(50% + var(--tk-backdrop-drift,0px))!important;
+  background-size:cover,100% auto!important;
+  background-position:center,center calc(0px + var(--tk-backdrop-drift,0px))!important;
   background-repeat:no-repeat!important;
   background-attachment:fixed!important;
 }
@@ -61,7 +61,7 @@ body.tk-main-theme .exact-card{
   -webkit-backdrop-filter:blur(18px) saturate(120%);
 }
 @media(max-width:680px){
-  body.tk-main-theme{background-position:center,56% calc(50% + var(--tk-backdrop-drift,0px))!important}
+  body.tk-main-theme{background-size:cover,auto 100%!important;background-position:center,56% calc(50% + var(--tk-backdrop-drift,0px))!important}
   body.tk-main-theme .page-head{
     padding:calc(var(--header) + 34px) 0 22px;
   }
