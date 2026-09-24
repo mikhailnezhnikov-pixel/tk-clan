@@ -644,7 +644,7 @@
     <div class="eyebrow" data-i18n="eyebrow">Событие · Hamster King</div>
     <h1 data-i18n="title">Карта Сокровищ</h1>
     <p data-i18n="lead">Квесты, покупки, сундуки, питомцы, достижения и механики события — в компактном виде с игровыми иконками и понятными наградами.</p>
-    <div class="guide-live-version">Версия гайда 24.09.2026 · подтверждённые результаты Лабиринта и Сражения</div>
+    <div class="guide-live-version">Актуальная версия гайда · подтверждённые данные из игры</div>
   </section>
 
 
@@ -1277,9 +1277,9 @@ window.TK_PAGE_TRANSLATIONS={
     if(document.getElementById('treasury-guide-content')){
       const g=treasuryGuide||{};
       const choices=Array.isArray(g.choices)?g.choices:[];
-      const path1=g.path_1_reward||null;
-      const path1Block=path1
-        ?'<div class="treasury-path-result"><div class="treasury-path-result-label">Путь 1 → награда</div>'+renderCompletionReward(path1)+'</div>'
+      const firstRoomReward=g.first_room_reward||null;
+      const firstRoomBlock=firstRoomReward
+        ?'<div class="treasury-path-result"><div class="treasury-path-result-label">Первая комната → награда</div>'+renderCompletionReward(firstRoomReward)+'</div>'
         :'';
       const path2=g.path_2_followup||{};
       const path2Choices=Array.isArray(path2.choices)?path2.choices:[];
@@ -1300,7 +1300,7 @@ window.TK_PAGE_TRANSLATIONS={
         (choices.length?'<div class="treasury-branch"><div class="treasury-branch-label">Выберите 1 из 3 путей</div><div class="treasury-branch-arrow">↓</div><div class="treasury-choice-grid">'+
           choices.map(v=>'<article class="treasury-choice">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<b>'+safe(v.title)+'</b><span>'+safe(v.cost||'')+'</span></article>').join('')+
           '</div>'+(g.choice_note?'<div class="treasury-choice-note">'+safe(g.choice_note)+'</div>':'')+'</div>':'')+
-        path1Block+
+        firstRoomBlock+
         path2Block+
         (g.note?'<div class="guide-warning">'+safe(g.note)+'</div>':'');
     }
@@ -1471,7 +1471,7 @@ window.TK_PAGE_TRANSLATIONS={
         '</div>'+
         (Array.isArray(m.visuals)&&m.visuals.length?'<div class="mechanic-visuals">'+m.visuals.map(v=>'<div class="mechanic-visual">'+(v.image?'<img src="'+safe(v.image)+'" alt="">':'')+'<span>'+safe(v.title)+'</span></div>').join('')+'</div>':'')+
         (m.hint?'<div class="mechanic-hint">'+safe(m.hint)+'</div>':'')+
-        ((m.id==='lights'||m.id==='fight')?'<div class="solver-inline"><div><strong>Помощник Top King</strong><span>Покажет порядок действий цифрами прямо на игровом поле. Работает через обычную закладку. Работает через обычную закладку.</span></div><button type="button" class="solver-button" data-solver-install>Добавить закладку-помощник</button></div>':'')+
+        ((m.id==='lights'||m.id==='fight')?'<div class="solver-inline"><div><strong>Помощник Top King</strong><span>Покажет порядок действий цифрами прямо на игровом поле. Работает через обычную закладку.</span></div><button type="button" class="solver-button" data-solver-install>Добавить закладку-помощник</button></div>':'')+
       '</article>'
     ).join('');
 
@@ -1481,7 +1481,9 @@ window.TK_PAGE_TRANSLATIONS={
         '<h3>'+safe(v.title)+'</h3>'+
         (v.summary?'<p>'+safe(v.summary)+'</p>':'')+
         (v.entry_cost?'<div class="quest-block"><div class="quest-block-title">Вход</div><div class="resource-list">'+resource(v.entry_cost.title,v.entry_cost.quantity,v.entry_cost.image||'')+'</div></div>':'')+
-        (Array.isArray(v.possible_rewards)&&v.possible_rewards.length?'<div class="quest-block"><div class="quest-block-title">Можно найти</div><div class="resource-list">'+v.possible_rewards.map(x=>resource(x.title,x.quantity,x.image||'')).join('')+'</div></div>':'')+
+        (Array.isArray(v.possible_rewards)&&v.possible_rewards.length?'<div class="quest-block"><div class="quest-block-title">Можно найти</div><div class="resource-list">'+v.possible_rewards.map(x=>x.exact_art===false
+          ?'<span class="resource no-art"><span class="resource-fallback">?</span><span class="resource-copy"><span class="resource-name">'+safe(x.title||'Награда')+'</span><span class="resource-qty">×'+safe(x.quantity??'—')+'</span></span></span>'
+          :resource(x.title,x.quantity,x.image||'')).join('')+'</div></div>':'')+
         (v.reward_note?'<div class="equipment-note">'+safe(v.reward_note)+'</div>':'')+
         (v.note?'<p>'+safe(v.note)+'</p>':'')+
       '</article>'
@@ -1750,7 +1752,7 @@ window.TK_PAGE_TRANSLATIONS={
 })();
 </script>
 
-<script src="./i18n.js?v=20260924-8"></script>
+<script src="./i18n.js?v=20260924-9"></script>
 <script src="../assets/site-nav.js?v=20260924-treasure7"></script>
 </body>
 </html>
