@@ -208,7 +208,7 @@
       style.textContent=`
         body.tk-home-backdrop{
           background-color:#07080b!important;
-          background-image:linear-gradient(180deg,rgba(7,8,11,.66),rgba(7,8,11,.68) 68%,rgba(7,8,11,.84) 100%),url("assets/home/top-king-clan-hero-approved.jpg"),url("assets/home/top-king-clan-hero-approved.jpg")!important;
+          background-image:linear-gradient(180deg,rgba(7,8,11,.66),rgba(7,8,11,.68) 63%,rgba(7,8,11,.98) 82%,rgba(7,8,11,.84) 100%),url("assets/home/top-king-clan-hero-approved.jpg"),url("assets/home/top-king-clan-hero-approved.jpg")!important;
           background-size:cover,100% auto,cover!important;
           background-position:center,center calc(0px + var(--tk-backdrop-drift,0px)),center!important;
           background-repeat:no-repeat!important;
