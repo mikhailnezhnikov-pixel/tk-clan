@@ -6069,31 +6069,43 @@
         "title": "Проклятая вода",
         "lot_id": "mf_treasurelot_is_fishing_cursed_water",
         "cost": 3,
-        "image": null,
-        "text": "На проходе 24.09 клетка стоила 3 заброса. После её активации три клетки Штормовой проклятой воды изменили состояние."
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_cursed_water_icon.png",
+        "text": "На проходе 24.09 клетка стоила 3 заброса. После её активации три клетки Штормовой проклятой воды изменили состояние.",
+        "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png",
+        "exact_art": false,
+        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
       },
       {
-        "title": "Штормовая проклятая",
+        "title": "Штормовая проклятая вода",
         "lot_id": "mf_treasurelot_is_fishing_tornado_cursed_water",
         "cost": 2,
-        "image": null,
-        "text": "На стартовом поле было 3 такие клетки по 2 заброса. После активации Проклятой воды они превратились в две клетки lamp_fish_water_uncursed и одну calm_water_uncursed."
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_cursed_water_icon.png",
+        "text": "На стартовом поле было 3 такие клетки по 2 заброса. После активации Проклятой воды они превратились в две клетки lamp_fish_water_uncursed и одну calm_water_uncursed.",
+        "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_tornado_water_icon.png",
+        "exact_art": false,
+        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
       },
       {
-        "title": "lamp_fish_water_uncursed",
+        "title": "Рыба-фонарь · очищенная",
         "lot_id": "mf_treasurelot_is_fishing_lamp_fish_water_uncursed",
         "cost": 2,
-        "image": null,
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_lamp_fish_water_icon.png",
         "text": "На полностью проклятом поле появились 2 такие клетки по 2 заброса.",
-        "exact_name": false
+        "exact_name": false,
+        "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
+        "exact_art": false,
+        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
       },
       {
-        "title": "calm_water_uncursed",
+        "title": "Спокойная вода · очищенная",
         "lot_id": "mf_treasurelot_is_fishing_calm_water_uncursed",
         "cost": 1,
-        "image": null,
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_calm_water_icon.png",
         "text": "На полностью проклятом поле появились 4 такие клетки по 1 забросу.",
-        "exact_name": false
+        "exact_name": false,
+        "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_calm_water_icon.png",
+        "exact_art": false,
+        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
       },
       {
         "title": "Особая клетка fishing_water",
@@ -6101,23 +6113,30 @@
         "cost": 2,
         "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
         "exact_art": false,
-        "text": "Технический ID и стоимость 2 заброса подтверждены журналом. Точное игровое название и привязка арта ещё уточняются."
+        "text": "Технический ID и стоимость 2 заброса подтверждены журналом. Точное игровое название и привязка арта ещё уточняются.",
+        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
       },
       {
-        "title": "magic_pet_water_uncursed",
+        "title": "Магический питомец · очищенная",
         "lot_id": "mf_treasurelot_is_fishing_magic_pet_water_uncursed",
         "cost": 3,
-        "image": null,
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_magic_pet_water_icon.png",
         "exact_name": false,
-        "text": "Особая очищенная клетка. На полностью проклятом поле появилась 1 такая клетка стоимостью 3 заброса."
+        "text": "Особая очищенная клетка. На полностью проклятом поле появилась 1 такая клетка стоимостью 3 заброса.",
+        "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/ui/treasure_minigame_fishing_icon.png",
+        "exact_art": false,
+        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
       },
       {
-        "title": "creatures_water_uncursed",
+        "title": "Существа · очищенная",
         "lot_id": "mf_treasurelot_is_fishing_creatures_water_uncursed",
         "cost": 2,
-        "image": null,
+        "image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
         "exact_name": false,
-        "text": "На полностью проклятом поле появилась 1 такая клетка стоимостью 2 заброса."
+        "text": "На полностью проклятом поле появилась 1 такая клетка стоимостью 2 заброса.",
+        "fallback_image": "https://cdn-prod-art.hwgame.cloud/minigames/fishing/icons/fishing_minigame_creatures_water_icon.png",
+        "exact_art": false,
+        "art_note": "Если отдельный арт состояния недоступен в CDN, показывается подтверждённая резервная игровая иконка вместо пустого «?»."
       }
     ],
     "pet_skills": [
@@ -7135,8 +7154,8 @@
     {
       "id": "fishing_cell_art_mapping",
       "area": "Рыбалка",
-      "status": "needs_asset",
-      "need": "Привязать точные арты к cursed_water, tornado_cursed_water, lamp_fish_water_uncursed и fishing_water. Лог 3.3 теперь сохраняет img/background/координаты."
+      "status": "fallback_added",
+      "need": "Проверить точные CDN-арты для cursed_water, tornado_cursed_water, lamp_fish_water_uncursed и magic_pet_water_uncursed. На сайте уже стоят игровые резервные иконки, поэтому пустых карточек нет."
     },
     {
       "id": "labyrinth_storage_art",
