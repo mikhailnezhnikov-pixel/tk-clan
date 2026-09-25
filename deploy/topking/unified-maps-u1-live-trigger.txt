@@ -5,3 +5,4 @@ maps-visibility-access-v2 deploy retry shellsafe
 game-geometry-r1 deploy 20260925
 game-geometry-r1 retry current-server
 game-geometry-r1 verify live
+localized-map-dedupe-r1 deploy 20260925
