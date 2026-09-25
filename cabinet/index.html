@@ -1458,7 +1458,8 @@
           ? '<label class="hkmap-toggle"><input type="checkbox" data-hkmap-publish="'+safe(map.website_key||map.key)+'" '+(map.published?'checked ':'')+(!openUrl?'disabled ':'')+'>'+(!openUrl?'нет карты':'на сайте')+'</label>'
           : (map.published?'<span class="hkmap-published">На сайте</span>':'<span class="hkmap-private">Закрыта</span>'));
       const progressClass=Number(map.progress)===100?' ready':'';
-      const sourceBadge='<small style="display:block;margin-top:3px;opacity:.7">'+safe(sourceLabel)+'</small>';
+      const mergedVariants=Math.max(1,Number(map.localized_variant_count||1));
+      const sourceBadge='<small style="display:block;margin-top:3px;opacity:.7">'+safe(sourceLabel)+(mergedVariants>1?' · объединено источников: '+mergedVariants:'')+'</small>';
       return '<tr class="hkmap-row access-'+safe(accessState)+(opened?' is-open':'')+'" data-hkmap-key="'+safe(map.key)+'">'+
         '<td><strong>'+safe(map.city)+'</strong>'+sourceBadge+'</td>'+
         '<td>'+safe(map.grid)+(map.canonical_grid&&map.canonical_grid!==map.grid?'<small style="display:block;opacity:.65">X:Y '+safe(map.canonical_grid)+'</small>':'')+'</td>'+
