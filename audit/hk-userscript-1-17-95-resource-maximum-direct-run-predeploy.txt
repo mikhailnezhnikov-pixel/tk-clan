@@ -1,0 +1,9 @@
+USERSCRIPT_1_17_95_RESOURCE_MAXIMUM_DIRECT_RUN_PREDEPLOY=PASS
+source_version=1.17.94
+target_version=1.17.95
+maximum_mode_second_confirm=REMOVED
+manual_limited_mode_confirm=PRESERVED
+resource_event_endpoint=/player/event
+syntax=PASS
+base_sha256=fe00595ac064d18f3f6d0434844f26a1039b4b38e0b657a1e0fedbecf2912836
+candidate_sha256=8af7d4afc4c79482a87d41cb7223c1de25ec790ad9bf2f1d778272b9f769f948

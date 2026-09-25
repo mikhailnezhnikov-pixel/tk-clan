@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.93",
-  "target_version": "1.17.94",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.94.rumors-hunter.candidate.user.js",
-  "primary_marker": "rumors-hunter-kokkaras-public-feed-20260925-r1",
+  "source_version": "1.17.94",
+  "target_version": "1.17.95",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.95.resource-maximum-direct-run.candidate.user.js",
+  "primary_marker": "resource-maximum-direct-run-20260925-r1",
   "preserve_markers": [
+    "rumors-hunter-kokkaras-public-feed-20260925-r1",
     "resources-kokkaras-5.3.22-20260925-r1",
     "resource-maximum-run-stable-20260925-r1",
     "buildings-run-cached-plan-20260925-r1",
@@ -58,7 +59,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-94-rumors-hunter-live-status.txt",
-  "commit_message": "feat: deploy Rumors Hunter and Kokkaras Today feed in userscript 1.17.94",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-17-95-resource-maximum-direct-run-live-status.txt",
+  "commit_message": "fix: deploy direct Resource maximum run in userscript 1.17.95"
 }
