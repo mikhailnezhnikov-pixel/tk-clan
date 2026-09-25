@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.88",
-  "target_version": "1.17.89",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.89.fair-reroll-timeout.candidate.user.js",
-  "primary_marker": "fair-reroll-timeout-reconcile-20260925-r1",
+  "source_version": "1.17.89",
+  "target_version": "1.17.90",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.90.shop-rate-limit-resume.candidate.user.js",
+  "primary_marker": "shop-rate-limit-resume-20260925-r1",
   "preserve_markers": [
+    "fair-reroll-timeout-reconcile-20260925-r1",
     "pits-paw-limited-battles-20260925-r1",
     "fair-runner-canon-20260925-r1",
     "fair-bonus-selection-20260925-r1",
@@ -53,7 +54,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-89-fair-reroll-timeout-live-status.txt",
-  "commit_message": "fix: deploy Fair reroll timeout reconciliation in userscript 1.17.89",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-17-90-shop-rate-limit-resume-live-status.txt",
+  "commit_message": "fix: deploy Shop 429 auto-resume in userscript 1.17.90"
 }
