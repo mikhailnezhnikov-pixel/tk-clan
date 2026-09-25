@@ -1,0 +1,7 @@
+USERSCRIPT_1_17_92_RESOURCE_MAXIMUM_RUN_PREDEPLOY=PASS
+source_version=1.17.91
+target_version=1.17.92
+resource_plan_preserved=PASS
+fresh_balance_preflight=PASS
+silent_return_reasons=VISIBLE
+button_type=PASS
