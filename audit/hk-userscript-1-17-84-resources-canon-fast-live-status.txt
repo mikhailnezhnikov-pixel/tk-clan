@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.83
+target_version=1.17.84
+marker=resources-canon-fast-20260925-r1
+source_sha256=048683968bafaf8164340dd2aa7c2fcb622306ad0f048fd2c2f4fdfad1f3bcb3
+candidate_sha256=a1259e2aec08069ca25c07c7d51a5fe4ecc91fd55b84961cdf1bec5da5d0b9c2
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
