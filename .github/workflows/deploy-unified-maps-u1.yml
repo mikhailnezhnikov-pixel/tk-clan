@@ -164,19 +164,21 @@ jobs:
           grep -Fq "def load_live_game_geometry_hk_map" /tmp/server.live.py
           grep -Fq "HK_MAP_LOCALIZED_DEDUPE_R1" /tmp/server.live.py
           ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/maps-v2-prod-check.py' | tee /tmp/maps-v2-after.json
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 - <<'"'"'PY'"'"'
-import importlib.util
-spec=importlib.util.spec_from_file_location("s","/opt/hamsterking-license/server.py")
-s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-with s.db_session() as db:
-    row=db.execute("SELECT telegram_id FROM clan_members WHERE active=1 AND maps_manage=1 ORDER BY updated_at DESC LIMIT 1").fetchone()
-assert row
-payload=s.cabinet_maps({"telegram_id":str(row["telegram_id"]),"maps_manage":1,"maps_access":1})
-assert payload.get("localized_dedupe") is True,payload
-assert int(payload.get("localized_rows_before") or 0) >= int(payload.get("localized_rows_after") or 0),payload
-assert int(payload.get("localized_rows_merged") or 0) >= 1,payload
-print("LOCALIZED_MAP_DEDUPE_PASS",payload["localized_rows_before"],payload["localized_rows_after"],payload["localized_rows_merged"])
-PY'
+          cat > /tmp/maps-locale-verify.py <<'PY'
+          import importlib.util
+          spec=importlib.util.spec_from_file_location("s","/opt/hamsterking-license/server.py")
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          with s.db_session() as db:
+              row=db.execute("SELECT telegram_id FROM clan_members WHERE active=1 AND maps_manage=1 ORDER BY updated_at DESC LIMIT 1").fetchone()
+          assert row
+          payload=s.cabinet_maps({"telegram_id":str(row["telegram_id"]),"maps_manage":1,"maps_access":1})
+          assert payload.get("localized_dedupe") is True,payload
+          assert int(payload.get("localized_rows_before") or 0) >= int(payload.get("localized_rows_after") or 0),payload
+          assert int(payload.get("localized_rows_merged") or 0) >= 1,payload
+          print("LOCALIZED_MAP_DEDUPE_PASS",payload["localized_rows_before"],payload["localized_rows_after"],payload["localized_rows_merged"])
+          PY
+          scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/maps-locale-verify.py root@89.125.1.71:/tmp/maps-locale-verify.py
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/maps-locale-verify.py'
           diff -u /tmp/maps-v2-before.json /tmp/maps-v2-after.json
           echo "PRODUCTION_MAP_COUNTS_UNCHANGED=PASS"
           echo "MAPS_VISIBILITY_ACCESS_V2_LIVE=PASS"
@@ -208,5 +210,5 @@ PY'
       - name: Cleanup
         if: always()
         run: |
-          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/server.maps-access-v2.py /tmp/maps-v2-prod-check.py' || true
-          rm -f ~/.ssh/topking /tmp/server.py /tmp/server.live.py /tmp/server-source.sha /tmp/server-candidate.sha /tmp/maps-access-v2-test.py /tmp/maps-v2-before.json /tmp/maps-v2-after.json
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/server.maps-access-v2.py /tmp/maps-v2-prod-check.py /tmp/maps-locale-verify.py' || true
+          rm -f ~/.ssh/topking /tmp/server.py /tmp/server.live.py /tmp/server-source.sha /tmp/server-candidate.sha /tmp/maps-access-v2-test.py /tmp/maps-v2-before.json /tmp/maps-v2-after.json /tmp/maps-locale-verify.py
