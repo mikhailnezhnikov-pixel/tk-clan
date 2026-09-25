@@ -1,0 +1,92 @@
+name: Diagnose Maps Crystal Priority V2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-crystal-priority-diagnostic-v2-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Capture live Maps crystal state
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/server.py').read_text(encoding='utf-8')
+          terms=['def submit_map_area','def import_hk_map_room_knowledge','def hk_map_data','def map_detail']
+          out=[]
+          for term in terms:
+              i=s.find(term)
+              if i>=0:
+                  out.append(f"\n===== {term} @ {i} =====\n{s[max(0,i-2500):min(len(s),i+18000)]}\n")
+          Path('/tmp/maps-crystal-priority-live-context.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "python3 - <<'PY'
+          import sqlite3, json
+          db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db')
+          db.row_factory=sqlite3.Row
+          q=lambda sql,args=(): [dict(r) for r in db.execute(sql,args)]
+          out={
+            'catalog_total': db.execute('SELECT COUNT(*) FROM hk_maps_catalog').fetchone()[0],
+            'area_links': db.execute('SELECT COUNT(*) FROM hk_map_area_links').fetchone()[0],
+            'point_links': db.execute('SELECT COUNT(*) FROM hk_map_point_links').fetchone()[0],
+            'provenance': q('SELECT knowledge_source,COUNT(*) n FROM map_buildings GROUP BY knowledge_source ORDER BY knowledge_source'),
+            'linked_room_sources': q('''
+              SELECT mb.knowledge_source, mb.room_count, COUNT(*) n
+              FROM hk_map_point_links pl
+              JOIN hk_map_area_links al ON al.map_key=pl.map_key
+              JOIN map_buildings mb ON mb.area_id=al.canonical_area_id AND mb.building_id=pl.building_id
+              GROUP BY mb.knowledge_source, mb.room_count
+              ORDER BY mb.knowledge_source, mb.room_count
+            '''),
+            'lagos_catalog': q("SELECT map_key,city,grid,unknown,c0,c1,c2,c3,c4,c5 FROM hk_maps_catalog WHERE lower(city)='lagos' AND grid='33:22'"),
+            'lagos_linked': q('''
+              SELECT pl.point_index,pl.building_id,mb.room_count,mb.knowledge_source
+              FROM hk_map_point_links pl
+              JOIN hk_map_area_links al ON al.map_key=pl.map_key
+              JOIN map_buildings mb ON mb.area_id=al.canonical_area_id AND mb.building_id=pl.building_id
+              WHERE pl.map_key IN (SELECT map_key FROM hk_maps_catalog WHERE lower(city)='lagos' AND grid='33:22')
+              ORDER BY pl.point_index
+            ''')
+          }
+          print(json.dumps(out,ensure_ascii=False,sort_keys=True))
+          db.close()
+          PY" > /tmp/maps-crystal-priority-db.json
+
+          cp /tmp/maps-crystal-priority-live-context.txt audit/hk-maps-crystal-priority-live-context.txt
+          cp /tmp/maps-crystal-priority-db.json audit/hk-maps-crystal-priority-db.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-maps-crystal-priority-live-context.txt audit/hk-maps-crystal-priority-db.json
+          git commit -m "audit: capture Maps crystal priority state"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/maps-crystal-priority-live-context.txt /tmp/maps-crystal-priority-db.json
