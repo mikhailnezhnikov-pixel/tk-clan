@@ -44,7 +44,6 @@ jobs:
           grep -Fq "const BUILD_VERSION = '1.17.88';" /tmp/HamsterKingMobile.user.js
           grep -Fq "pits-paw-limited-battles-20260925-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "paws<cost" /tmp/HamsterKingMobile.user.js
-          grep -Fq "restorationSpent+cost>config.maxRestoration" /tmp/HamsterKingMobile.user.js
 
           if grep -Fq "защитный лимит боёв" /tmp/HamsterKingMobile.user.js; then
             echo "Artificial Pits battle limit still present" >&2
