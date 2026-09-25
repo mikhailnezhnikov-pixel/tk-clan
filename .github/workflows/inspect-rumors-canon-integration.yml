@@ -1,0 +1,71 @@
+name: Inspect Rumors Canon Integration
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/rumors-canon-inspect-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Capture live rumor backend context and Kokkaras feed
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/server.py').read_text(encoding='utf-8')
+          terms=['def active_rumor_route_date','def parse_rumor_route','def enrich_rumor_routes','/api/v1/rumors/today','CREATE TABLE IF NOT EXISTS rumor_routes','def licensed_json']
+          out=[]
+          for term in terms:
+              start=0;n=0
+              while True:
+                  i=s.find(term,start)
+                  if i<0: break
+                  n+=1
+                  out.append(f"\n===== {term} #{n} @ {i} =====\n{s[max(0,i-2600):min(len(s),i+18000)]}\n")
+                  start=i+len(term)
+                  if n>=4: break
+          Path('audit/hk-rumors-live-server-context.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "python3 - <<'PY'
+          import urllib.request
+          url='https://kokkaras.com/hk_maps/rumors.php'
+          req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 HK-Rumor-Sync/1.0'})
+          try:
+              with urllib.request.urlopen(req,timeout=15) as r:
+                  data=r.read(300000).decode('utf-8','replace')
+                  print('STATUS',getattr(r,'status',200))
+                  print(data)
+          except Exception as e:
+              print('ERROR',repr(e))
+          PY" > audit/hk-kokkaras-rumors-sample.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-rumors-live-server-context.txt audit/hk-kokkaras-rumors-sample.txt
+          git commit -m "audit: capture Rumors canon integration context"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py
