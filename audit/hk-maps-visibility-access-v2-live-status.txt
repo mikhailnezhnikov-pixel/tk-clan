@@ -1,5 +1,5 @@
 MAPS_VISIBILITY_ACCESS_V2_LIVE=PASS
-server_sha256=e4bdfd7e31adf5f78c51af58572e5398216133363842ce3acf93bcd412aadef7
+server_sha256=2639baaf9be4d490e0ec0e70d7f41e0ee9c8c38ddfda902bdfb1b4d3a51d0c38
 catalogue_visible_to_all_members=PASS
 private_map_data_gate=PASS
 single_map_grant=PASS
@@ -7,5 +7,6 @@ userscript_changed=NO
 game_geometry_capture=ENABLED
 website_full_render_from_game_geometry=ENABLED
 localized_map_dedupe=ENABLED
+cabinet_city_display_language=RU
 localized_house_data_policy=PRESERVE_VARIANTS_NO_DESTRUCTIVE_UNION
 production_counts={"access_rules": 15, "area_links": 235, "areas": 394, "buildings": 229971, "catalog": 235}
