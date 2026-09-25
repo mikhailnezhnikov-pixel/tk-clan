@@ -61,5 +61,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-17-96-game-api-429-cooldown-20s-live-status.txt",
-  "commit_message": "fix: deploy 20s Game API 429 cooldown in userscript 1.17.96"
+  "commit_message": "fix: deploy 20s Game API 429 cooldown in userscript 1.17.96",
+  "trigger_revision": 1
 }
