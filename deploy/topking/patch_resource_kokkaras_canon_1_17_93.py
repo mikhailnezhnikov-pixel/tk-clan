@@ -40,9 +40,9 @@ tier_new=tier_fn+"""
 rep(tier_fn,tier_new,"canonical tier helper")
 
 rep(
-"    const tierButtons = activeBuilding ? Array.from({length:maximumTier + 1},(_,tier)=>`<button data-resource-tier="${tier}" class="${tier===activeTier?'active':''}" ${resourceBusy?'disabled':''}>${resourceTierLabel(tier)}</button>`).join('') : '';",
-"    const tierButtons = activeBuilding ? RESOURCE_CANONICAL_TIERS.filter(tier=>tier<=maximumTier).map(tier=>`<button data-resource-tier="${tier}" class="${tier===resourceCanonicalTier(activeTier)?'active':''}" ${resourceBusy?'disabled':''}>${resourceTierLabel(tier)}</button>`).join('') : '';",
-"canonical resource tier buttons")
+    """    const tierButtons = activeBuilding ? Array.from({length:maximumTier + 1},(_,tier)=>`<button data-resource-tier="${tier}" class="${tier===activeTier?'active':''}" ${resourceBusy?'disabled':''}>${resourceTierLabel(tier)}</button>`).join('') : '';""",
+    """    const tierButtons = activeBuilding ? RESOURCE_CANONICAL_TIERS.filter(tier=>tier<=maximumTier).map(tier=>`<button data-resource-tier="${tier}" class="${tier===resourceCanonicalTier(activeTier)?'active':''}" ${resourceBusy?'disabled':''}>${resourceTierLabel(tier)}</button>`).join('') : '';""",
+    "canonical resource tier buttons")
 
 rep(
 "      const storedTier=Number(savedResourceTiers()[resourceSelectedKind]);\n      const requestedTier=Number.isSafeInteger(Number(resourceBuildings[0]?.tier)) ? Number(resourceBuildings[0].tier) : Number.isSafeInteger(storedTier) ? storedTier : null;",
