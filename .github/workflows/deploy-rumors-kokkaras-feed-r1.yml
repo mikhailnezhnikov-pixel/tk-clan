@@ -1,0 +1,116 @@
+name: Deploy Rumors Kokkaras Feed R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/rumors-kokkaras-feed-r1-deploy-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-rumors-kokkaras-feed-r1
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' >/tmp/server-before.sha
+          python3 deploy/topking/patch_server_rumors_kokkaras_feed_r1.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq "HK_RUMORS_KOKKARAS_FEED_R1" /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' >/tmp/server-after.sha
+      - name: Deploy backend
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.rumors-kokkaras-r1.py
+          before="$(cat /tmp/server-before.sha)"
+          after="$(cat /tmp/server-after.sha)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "BEFORE='$before' AFTER='$after' bash -s" <<'REMOTE'
+          set -euo pipefail
+          live=/opt/hamsterking-license/server.py
+          candidate=/tmp/server.rumors-kokkaras-r1.py
+          backup="/opt/hamsterking-license/server.py.bak.rumors-kokkaras-r1.$(date -u +%Y%m%d-%H%M%S)"
+          test "$(sha256sum "$live" | awk '{print $1}')" = "$BEFORE"
+          test "$(sha256sum "$candidate" | awk '{print $1}')" = "$AFTER"
+          cp -a "$live" "$backup"
+          install -m 0644 "$candidate" "$live"
+          python3 -m py_compile "$live"
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+          echo "BACKUP=$backup"
+          REMOTE
+      - name: Verify live feed sync
+        run: |
+          set -euo pipefail
+          sleep 2
+          curl -fsS --retry 5 --retry-delay 2 https://hk-license.89.125.1.71.sslip.io/health >/tmp/health.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True,d
+          print('HEALTH=PASS')
+          PY
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "python3 - <<'PY'
+          import importlib.util,sqlite3,json
+          spec=importlib.util.spec_from_file_location('srv','/opt/hamsterking-license/server.py')
+          srv=importlib.util.module_from_spec(spec);spec.loader.exec_module(srv)
+          value=srv.fetch_kokkaras_rumors(force=True)
+          assert value and value['date']==srv.active_rumor_route_date(),(value or {}).get('date')
+          assert len(value['routes'])==17,len(value['routes'])
+          assert sum(len(r['points']) for r in value['routes'])==51
+          srv.store_kokkaras_rumors(value)
+          db=sqlite3.connect('/var/lib/hamsterking-license/licenses.db');db.row_factory=sqlite3.Row
+          row=db.execute('SELECT route_date,routes_json,published_at FROM rumor_routes WHERE route_date=?',(value['date'],)).fetchone()
+          assert row,row
+          routes=json.loads(row['routes_json'])
+          assert len(routes)==17
+          assert sum(len(r.get('points') or []) for r in routes)==51
+          print('RUMORS_KOKKARAS_LIVE=PASS')
+          print('date='+value['date'])
+          print('updated_at='+str(value.get('updated_at') or ''))
+          print('cities=17 points=51')
+          db.close()
+          PY" | tee /tmp/rumors-live.txt
+          grep -Fq "RUMORS_KOKKARAS_LIVE=PASS" /tmp/rumors-live.txt
+
+          {
+            echo "RUMORS_KOKKARAS_FEED_R1_LIVE=PASS"
+            echo "source=https://kokkaras.com/hk_maps/rumors.php"
+            echo "cities=17"
+            echo "points=51"
+            echo "cache_ttl_seconds=20"
+            echo "health=PASS"
+          } > audit/hk-rumors-kokkaras-feed-r1-live-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-rumors-kokkaras-feed-r1-live-status.txt
+          git commit -m "rumors: deploy Kokkaras public feed sync"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/server-before.sha /tmp/server-after.sha /tmp/health.json /tmp/rumors-live.txt
