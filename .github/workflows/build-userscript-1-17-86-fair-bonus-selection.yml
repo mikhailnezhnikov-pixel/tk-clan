@@ -1,4 +1,5 @@
 name: Build Userscript 1.17.86 Fair Bonus Selection
+# retry: regex selector escape fixed
 
 on:
   push:
