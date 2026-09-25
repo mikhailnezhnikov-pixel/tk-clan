@@ -37,8 +37,11 @@ jobs:
             exit 1
           fi
           python3 deploy/topking/patch_server_maps_visibility_access_v2.py
+          python3 deploy/topking/patch_server_game_geometry_r1.py
           python3 -m py_compile /tmp/server.py
           grep -Fq "HK_MAP_VISIBILITY_ACCESS_V2" /tmp/server.py
+          grep -Fq "HK_MAP_GAME_GEOMETRY_R1" /tmp/server.py
+          grep -Fq "def load_live_game_geometry_hk_map" /tmp/server.py
           candidate_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
           echo "$candidate_sha" > /tmp/server-candidate.sha
           echo "SERVER_SHA_CANDIDATE=$candidate_sha"
@@ -150,6 +153,8 @@ jobs:
           python3 -m py_compile /tmp/server.live.py
           test "$(sha256sum /tmp/server.live.py | awk '{print $1}')" = "$candidate_sha"
           grep -Fq "HK_MAP_VISIBILITY_ACCESS_V2" /tmp/server.live.py
+          grep -Fq "HK_MAP_GAME_GEOMETRY_R1" /tmp/server.live.py
+          grep -Fq "def load_live_game_geometry_hk_map" /tmp/server.live.py
           ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/maps-v2-prod-check.py' | tee /tmp/maps-v2-after.json
           diff -u /tmp/maps-v2-before.json /tmp/maps-v2-after.json
           echo "PRODUCTION_MAP_COUNTS_UNCHANGED=PASS"
@@ -166,6 +171,8 @@ jobs:
             echo "private_map_data_gate=PASS"
             echo "single_map_grant=PASS"
             echo "userscript_changed=NO"
+            echo "game_geometry_capture=ENABLED"
+            echo "website_full_render_from_game_geometry=ENABLED"
             echo "production_counts=$(cat /tmp/maps-v2-after.json)"
           } > audit/hk-maps-visibility-access-v2-live-status.txt
           git config user.name "github-actions[bot]"
