@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.91
+// @version      1.17.92
+// @release-note Ресурсы: «Выполнить рассчитанный максимум» больше не теряет рассчитанный план при повторном чтении здания. Перед запуском обновляется только баланс игрока, доступный объём пересчитывается по свежему балансу, а причины остановки теперь видны в журнале.
 // @release-note Здания: запуск больше не пересчитывает заново все карты районов перед открытием. Используется уже рассчитанный план, выполняется только свежая проверка аккаунта и свободных слотов; запуск реагирует сразу и показывает подготовку в журнале.
 // @release-note Магазин: массовый выкуп больше не штурмует /shop/buy без пауз. Добавлен безопасный темп запросов, автоматическое ожидание 429 и продолжение покупки после cooldown без двойного списания; Runner показывает ожидание и текущий лот.
 // @release-note Ярмарка: прокрутка больше не падает сразу при сетевом тайм-ауте. Для /fair/reroll увеличено окно ожидания, а неоднозначный тайм-аут сверяется с live-состоянием Ярмарки и балансом; если прокрутка уже прошла — работа продолжается без повторной траты, если нет — повтор выполняется только после подтверждения неизменившегося состояния.
@@ -102,7 +103,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.91';
+  const BUILD_VERSION = '1.17.92';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -1161,6 +1162,7 @@
   let resourceBusy = false;
   let resourceEventCatalogPromise = null;
   let resourceRepeatCount = Math.max(1, Math.min(10, Math.trunc(Number(load().resourceRepeatCount || 1))));
+  const HK_RESOURCE_MAXIMUM_RUN_REV='resource-maximum-run-stable-20260925-r1';
   let resourceMaximumMode = false;
   let resourceSelectedKind = String(load().resourceSelectedKind || 'nut');
   const RESOURCE_BUILDING_TYPES = {
@@ -11092,10 +11094,10 @@
       return `<section class="hk-resource-building"><h4>${escapeHtml(building.buildingName || resourceTypeName(building.kind,true))} · ${escapeHtml(building.name || building.id)} <small>${resourceTierLabel(building.tier)}</small></h4>${content}</section>`;
     }).join('') : `<p class="hk-muted">${either(`Скрипт автоматически найдёт «${resourceTypeName(resourceSelectedKind,true)}» в ваших районах и загрузит задания.`,`The script will automatically find “${resourceTypeName(resourceSelectedKind,true)}” in your districts and load its tasks.`)}</p>`;
     const repeatOptions = Array.from({length:10},(_,index)=>index + 1).map(value=>`<option value="${value}" ${value===resourceRepeatCount?'selected':''}>${value}</option>`).join('');
-    resourceBox.innerHTML = `<div class="hk-resource-type-tabs">${buildingButtons}</div><div class="hk-resource-head"><div><h3>${escapeHtml(resourceTypeName(resourceSelectedKind))}</h3><small>${resourceBuildings.length ? `${either('Заданий','Tasks')}: ${events.length} · ${either('можно выполнить','runnable')}: ${available.length}` : either('Множитель заданий: только ×1000','Task multiplier: ×1000 only')}</small></div><div class="hk-resource-tiers">${tierButtons}</div><button id="hk-resource-read" class="hk-secondary" ${resourceBusy?'disabled':''}>${resourceBusy?either('Считываю…','Reading…'):either(`Обновить ${resourceTypeName(resourceSelectedKind)}`,`Refresh ${resourceTypeName(resourceSelectedKind)}`)}</button></div><label class="hk-resource-repeat"><span>${either('Количество повторов ×1000','Number of ×1000 repeats')}</span><select id="hk-resource-repeat" ${resourceBusy || resourceMaximumMode?'disabled':''}>${repeatOptions}</select></label><button id="hk-resource-maximum" class="hk-secondary hk-resource-maximum" ${resourceBusy || !events.length?'disabled':''}>${resourceMaximumMode?either('Вернуться к выбранному количеству','Return to selected amount'):either('Рассчитать максимально возможный обмен','Calculate maximum possible exchange')}</button><div class="hk-resource-buildings">${buildings}</div><button id="hk-resource-run-all" class="hk-primary" ${resourceBusy || !available.length?'disabled':''}>${resourceMaximumMode?either('Выполнить рассчитанный максимум','Run calculated maximum'):either(`Выполнить доступные — до ×${totalCompletions}`,`Run available — up to ×${totalCompletions}`)}</button><p class="hk-muted">${either('Здания находятся автоматически. Выберите нужное — его задания загрузятся без предварительного открытия в игре. Переключатели 1–MAX меняют тир.','Buildings are found automatically. Select one to load its tasks without opening it in the game first. The 1–MAX controls change the tier.')}</p>`;
+    resourceBox.innerHTML = `<div class="hk-resource-type-tabs">${buildingButtons}</div><div class="hk-resource-head"><div><h3>${escapeHtml(resourceTypeName(resourceSelectedKind))}</h3><small>${resourceBuildings.length ? `${either('Заданий','Tasks')}: ${events.length} · ${either('можно выполнить','runnable')}: ${available.length}` : either('Множитель заданий: только ×1000','Task multiplier: ×1000 only')}</small></div><div class="hk-resource-tiers">${tierButtons}</div><button id="hk-resource-read" class="hk-secondary" ${resourceBusy?'disabled':''}>${resourceBusy?either('Считываю…','Reading…'):either(`Обновить ${resourceTypeName(resourceSelectedKind)}`,`Refresh ${resourceTypeName(resourceSelectedKind)}`)}</button></div><label class="hk-resource-repeat"><span>${either('Количество повторов ×1000','Number of ×1000 repeats')}</span><select id="hk-resource-repeat" ${resourceBusy || resourceMaximumMode?'disabled':''}>${repeatOptions}</select></label><button type="button" id="hk-resource-maximum" class="hk-secondary hk-resource-maximum" ${resourceBusy || !events.length?'disabled':''}>${resourceMaximumMode?either('Вернуться к выбранному количеству','Return to selected amount'):either('Рассчитать максимально возможный обмен','Calculate maximum possible exchange')}</button><div class="hk-resource-buildings">${buildings}</div><button type="button" id="hk-resource-run-all" class="hk-primary" ${resourceBusy || !available.length?'disabled':''}>${resourceMaximumMode?either('Выполнить рассчитанный максимум','Run calculated maximum'):either(`Выполнить доступные — до ×${totalCompletions}`,`Run available — up to ×${totalCompletions}`)}</button><p class="hk-muted">${either('Здания находятся автоматически. Выберите нужное — его задания загрузятся без предварительного открытия в игре. Переключатели 1–MAX меняют тир.','Buildings are found automatically. Select one to load its tasks without opening it in the game first. The 1–MAX controls change the tier.')}</p>`;
     installIconFallbacks(resourceBox);
     resourceBox.querySelector('#hk-resource-read').onclick = () => loadResources();
-    resourceBox.querySelector('#hk-resource-run-all').onclick = () => runResourceEvents(available);
+    resourceBox.querySelector('#hk-resource-run-all').onclick = event => { event?.preventDefault?.(); event?.stopPropagation?.(); void runResourceEvents(available); };
     resourceBox.querySelectorAll('[data-resource-kind]').forEach(button => button.onclick = () => selectResourceBuilding(button.dataset.resourceKind));
     resourceBox.querySelectorAll('[data-resource-tier]').forEach(button => button.onclick = () => loadResourceTier(Number(button.dataset.resourceTier)));
     resourceBox.querySelector('#hk-resource-maximum').onclick = async () => {
@@ -11219,20 +11221,54 @@
   }
 
   async function runResourceEvents(rows) {
-    if (!requireLicense() || resourceBusy) return;
-    const wanted = (rows || []).map(row => ({buildingId:String(row?.buildingId || ''), roomId:String(row?.roomId || ''), sideEventId:String(row?.sideEventId || ''), eventId:String(row?.eventId || '')}));
-    if (!wanted.length) return;
-    const refreshed = await loadResources(false);
-    if (!refreshed) return;
-    const freshEvents = allResourceEvents();
-    const sourceRows = wanted.map(key => freshEvents.find(row => String(row?.buildingId || '') === key.buildingId && String(row?.roomId || '') === key.roomId && String(row?.sideEventId || '') === key.sideEventId && String(row?.eventId || '') === key.eventId)).filter(Boolean);
-    const totalCompletions = 1000 * resourceRepeatCount;
-    const maximumMode = resourceMaximumMode;
-    const ready = sourceRows.filter(row => row?.atMax && row?.affordable > 0 && !resourceEventIsExcluded(row)).map(row => {
-      const maximum = Math.max(0, Math.trunc(row.affordable));
-      return {...row,plannedCompletions:maximumMode ? maximum : Math.min(totalCompletions,maximum)};
-    });
-    if (!ready.length) return;
+    if (!requireLicense()) {
+      log(either('Ресурсы: лицензия не активна.','Resources: license is not active.'),'warn');
+      return;
+    }
+    if (resourceBusy) {
+      log(either('Ресурсы: уже выполняется чтение или обмен.','Resources: a read or exchange is already running.'),'warn');
+      return;
+    }
+    if (hkRunner.running) {
+      alert(either('Сначала завершите текущую задачу','Finish the current task first'));
+      return;
+    }
+    const sourceRows=(rows||[]).filter(Boolean);
+    if(!sourceRows.length){
+      log(either('Ресурсы: нет рассчитанных заданий для запуска.','Resources: there are no calculated tasks to run.'),'warn');
+      return;
+    }
+    const totalCompletions=1000*resourceRepeatCount;
+    const maximumMode=resourceMaximumMode;
+    log(either(
+      resourceTypeName(resourceSelectedKind)+': проверяю свежий баланс перед обменом…',
+      resourceTypeName(resourceSelectedKind)+': checking the current balance before exchange…'
+    ));
+    try{
+      playerDocument=await hkAuthoritativePlayerRead('resources:run-preflight');
+    }catch(error){
+      log(either('Не удалось обновить баланс перед обменом','Could not refresh balance before exchange')+': '+(error?.message||error),'bad');
+      return;
+    }
+    const ready=sourceRows
+      .filter(row=>row?.atMax&&!resourceEventIsExcluded(row))
+      .map(row=>{
+        const parts=costParts(row.cost);
+        const affordable=parts.length?Math.max(0,Math.floor(Math.min(...parts.map(part=>{
+          const balance=walletAmount(part.id,playerDocument);
+          return balance==null||part.quantity<=0?0:balance/part.quantity;
+        })))):0;
+        const maximum=Math.max(0,Math.trunc(affordable));
+        return {...row,affordable,plannedCompletions:maximumMode?maximum:Math.min(totalCompletions,maximum)};
+      })
+      .filter(row=>row.plannedCompletions>0);
+    if(!ready.length){
+      log(either(
+        'Ресурсы: по свежему балансу нет доступного обмена для выбранного тира.',
+        'Resources: the current balance has no available exchange for the selected tier.'
+      ),'warn');
+      return;
+    }
     const projectedProblems = ready.flatMap(row => budgetDecision(row.cost, 'resources', row.plannedCompletions, playerDocument).problems);
     if (projectedProblems.length) {
       alert(`${either('Ресурсный обмен заблокирован единым бюджетом','Resource exchange blocked by unified budget')}:\n\n${[...new Set(projectedProblems)].join('\n')}`);
