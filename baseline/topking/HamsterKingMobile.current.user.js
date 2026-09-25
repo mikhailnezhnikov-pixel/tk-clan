@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.94
+// @version      1.17.95
+// @release-note Ресурсы: «Выполнить рассчитанный максимум» теперь запускает уже рассчитанный обмен сразу, без второго системного confirm. Сообщение «Ресурсный обмен отменён пользователем» остаётся только для ручного режима с лимитом, если пользователь действительно отменил подтверждение.
 // @release-note Слухи: добавлен отдельный экран «Охота за слухами» по канону Kokkaras, а на главной «Сегодня» — автоматический блок «Слухи сегодня». Маршрут берётся с HK backend, который синхронизирует публичный rumors.php Kokkaras; прямые gamearea_id используются без повторного перебора карт.
 // @release-note Ресурсы: механика обмена выровнена по закреплённому Kokkaras 5.3.22-ui-icons-pit-dim. Для событий используются канонические API-тиры 1/2/3/4/5 (0/1/2/3/5), POST /player/event с event_building_id + side_event_id + number_of_completions; уровни 4+/5+ больше не отправляются как event tier. Убрано зависание на /player/me перед обменом.
 // @release-note Ресурсы: «Выполнить рассчитанный максимум» больше не теряет рассчитанный план при повторном чтении здания. Перед запуском обновляется только баланс игрока, доступный объём пересчитывается по свежему балансу, а причины остановки теперь видны в журнале.
@@ -105,7 +106,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.94';
+  const BUILD_VERSION = '1.17.95';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -1168,6 +1169,7 @@
   let resourceRepeatCount = Math.max(1, Math.min(10, Math.trunc(Number(load().resourceRepeatCount || 1))));
   const HK_RESOURCE_MAXIMUM_RUN_REV='resource-maximum-run-stable-20260925-r1';
   const HK_RESOURCE_KOKKARAS_CANON_REV='resources-kokkaras-5.3.22-20260925-r1';
+  const HK_RESOURCE_MAXIMUM_DIRECT_RUN_REV='resource-maximum-direct-run-20260925-r1';
   const RESOURCE_CANONICAL_TIERS=[0,1,2,3,5];
   let resourceMaximumMode = false;
   let resourceSelectedKind = String(load().resourceSelectedKind || 'nut');
@@ -11432,14 +11434,19 @@
         `Tier ${resourceTierLabel(requestedTier)} has no MAX tasks with available materials.`
       ));
 
-      const lines=options.map((row,index)=>`${index+1}. ${resourceDisplayName(row)} ×${row.plannedCompletions.toLocaleString(locale())}`);
-      const heading=maximumMode
-        ? either('Выполнить рассчитанный максимальный обмен?','Run the calculated maximum exchange?')
-        : either(`Выполнить ресурсные задания? Лимит ×${totalCompletions}.`,`Run resource tasks? Limit ×${totalCompletions}.`);
-      if(!confirm(`${heading}\n\n${lines.join('\n')}`)){
-        hkRunner.reset();
-        log(either('Ресурсный обмен отменён пользователем.','Resource exchange cancelled by the user.'),'warn');
-        return;
+      if(!maximumMode){
+        const lines=options.map((row,index)=>`${index+1}. ${resourceDisplayName(row)} ×${row.plannedCompletions.toLocaleString(locale())}`);
+        const heading=either(`Выполнить ресурсные задания? Лимит ×${totalCompletions}.`,`Run resource tasks? Limit ×${totalCompletions}.`);
+        if(!confirm(`${heading}\n\n${lines.join('\n')}`)){
+          hkRunner.reset();
+          log(either('Ресурсный обмен отменён пользователем.','Resource exchange cancelled by the user.'),'warn');
+          return;
+        }
+      }else{
+        log(either(
+          'Ресурсы: рассчитанный максимум подтверждён кнопкой — запускаю обмен сразу.',
+          'Resources: calculated maximum was confirmed by the button — starting exchange immediately.'
+        ));
       }
 
       hkRunner.state.total=options.length;
