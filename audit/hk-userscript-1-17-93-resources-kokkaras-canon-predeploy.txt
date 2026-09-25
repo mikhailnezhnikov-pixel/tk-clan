@@ -1,0 +1,11 @@
+USERSCRIPT_1_17_93_RESOURCES_KOKKARAS_CANON_PREDEPLOY=PASS
+source_version=1.17.92
+target_version=1.17.93
+kokkaras_version=5.3.22-ui-icons-pit-dim
+kokkaras_sha256=28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1
+canonical_resource_tiers=0,1,2,3,5
+event_endpoint=/player/event
+player_me_preflight=REMOVED
+syntax=PASS
+base_sha256=066edf45ff3048dd30e7a11eeb3d9cb847f2645ee1cead45ce3bd5182b630396
+candidate_sha256=5336095d2175a76b20c81ebf27ca791de5171d1a4890194f691dbe1de673bced

@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.91",
-  "target_version": "1.17.92",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.92.resource-maximum-run.candidate.user.js",
-  "primary_marker": "resource-maximum-run-stable-20260925-r1",
+  "source_version": "1.17.92",
+  "target_version": "1.17.93",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.93.resources-kokkaras-canon.candidate.user.js",
+  "primary_marker": "resources-kokkaras-5.3.22-20260925-r1",
   "preserve_markers": [
+    "resource-maximum-run-stable-20260925-r1",
     "buildings-run-cached-plan-20260925-r1",
     "shop-rate-limit-resume-20260925-r1",
     "fair-reroll-timeout-reconcile-20260925-r1",
@@ -56,6 +57,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-92-resource-maximum-run-live-status.txt",
-  "commit_message": "fix: deploy stable Resource maximum run in userscript 1.17.92"
+  "audit_status_path": "audit/hk-userscript-1-17-93-resources-kokkaras-canon-live-status.txt",
+  "commit_message": "fix: deploy Resources Kokkaras canon in userscript 1.17.93"
 }
