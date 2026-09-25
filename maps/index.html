@@ -57,6 +57,16 @@ const toggle=document.querySelector('[data-menu-toggle]'),menu=document.querySel
 const MAPS_API='https://hk-license.89.125.1.71.sslip.io/api/v1/public/maps';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=value=>Number(value||0).toLocaleString('ru-RU');
+const HK_MAP_VIEW_REV='20260925-r3';
+function versionedMapUrl(value){
+  const raw=String(value||'');
+  if(!raw)return '';
+  try{
+    const url=new URL(raw,location.href);
+    if(url.pathname.includes('/maps/view/'))url.searchParams.set('view',HK_MAP_VIEW_REV);
+    return url.origin===location.origin?url.pathname+url.search+url.hash:url.href;
+  }catch(_){return raw}
+}
 
 async function loadPublishedMaps(){
   try{
@@ -77,7 +87,7 @@ async function loadPublishedMaps(){
       '<article class="card map-card">'+
         '<h2 class="map-title"><img src="https://cdn-prod-front-dist.hwgame.cloud/assets/images/menu/city-1.png" alt="">'+esc(city)+' <span class="interactive-badge">ИНТЕРАКТИВНАЯ</span></h2>'+
         '<div class="map-links">'+items.map(map=>
-          '<a class="map-link" href="'+esc(map.open_url)+'">'+
+          '<a class="map-link" href="'+esc(versionedMapUrl(map.open_url))+'">'+
             '<span><span class="map-time">'+esc(map.grid)+'</span>'+
             '<span class="published-map-meta"><span>Score '+fmt(map.score)+'</span><span>'+Number(map.progress||0).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%</span><span>до '+fmt(map.reward?.max||0)+' крист.</span></span></span>'+
             '<span class="map-open">Открыть →</span>'+
