@@ -1,9 +1,11 @@
 MAPS_VISIBILITY_ACCESS_V2_LIVE=PASS
-server_sha256=f61c393d9e36ed3128eefbf939fd40ea0211ce43b27268085f37f5cc904e2975
+server_sha256=e4bdfd7e31adf5f78c51af58572e5398216133363842ce3acf93bcd412aadef7
 catalogue_visible_to_all_members=PASS
 private_map_data_gate=PASS
 single_map_grant=PASS
 userscript_changed=NO
 game_geometry_capture=ENABLED
 website_full_render_from_game_geometry=ENABLED
+localized_map_dedupe=ENABLED
+localized_house_data_policy=PRESERVE_VARIANTS_NO_DESTRUCTIVE_UNION
 production_counts={"access_rules": 15, "area_links": 235, "areas": 394, "buildings": 229971, "catalog": 235}
