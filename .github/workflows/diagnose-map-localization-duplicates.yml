@@ -161,7 +161,23 @@ jobs:
           print('HIGH_OVERLAP_DUPES',len(overlaps))
           for p in overlaps[:120]:
               print('OVERLAP_PAIR',p)
+
+          print('AREA_CITY_NAMES',json.dumps(db.execute("SELECT city_name,COUNT(*) c FROM map_areas GROUP BY city_name ORDER BY city_name").fetchall(),ensure_ascii=False,default=lambda o:list(o)))
+          print('CATALOG_CITY_NAMES',json.dumps(db.execute("SELECT city,COUNT(*) c FROM hk_maps_catalog GROUP BY city ORDER BY city").fetchall(),ensure_ascii=False,default=lambda o:list(o)))
           db.close()
+
+          # Ask the live backend for the exact Personal Cabinet rows.
+          import importlib.util,sys
+          spec=importlib.util.spec_from_file_location('live_server','/opt/hamsterking-license/server.py')
+          srv=importlib.util.module_from_spec(spec); spec.loader.exec_module(srv)
+          with srv.db_session() as live:
+              mgr=live.execute("SELECT telegram_id FROM clan_members WHERE active=1 AND maps_manage=1 ORDER BY updated_at DESC LIMIT 1").fetchone()
+          if mgr:
+              payload=srv.cabinet_maps({'telegram_id':str(mgr['telegram_id']),'maps_manage':1,'maps_access':1})
+              rows=payload.get('maps') or []
+              slim=[{k:r.get(k) for k in ('key','website_key','website_keys','area_id','canonical_area_id','source_kind','source_label','city','grid','canonical_grid','buildings','unknown','shared_known','progress','open_url')} for r in rows]
+              print('CABINET_MAP_ROWS_JSON='+json.dumps(slim,ensure_ascii=False,separators=(',',':')))
+              print('CABINET_MAP_ROWS',len(slim))
           PY
           scp -q -i "$HOME/.ssh/topking" -o StrictHostKeyChecking=accept-new /tmp/audit-map-dupes.py root@89.125.1.71:/tmp/audit-map-dupes.py
           ssh -i "$HOME/.ssh/topking" -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/audit-map-dupes.py; rm -f /tmp/audit-map-dupes.py'
