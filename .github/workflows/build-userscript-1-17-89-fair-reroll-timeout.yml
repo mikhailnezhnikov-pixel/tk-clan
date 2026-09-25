@@ -1,0 +1,116 @@
+name: Build Userscript 1.17.89 Fair Reroll Timeout
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_fair_reroll_timeout_1_17_89.py'
+      - '.github/workflows/build-userscript-1-17-89-fair-reroll-timeout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-17-89-fair-reroll-timeout
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate from exact live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.17.88" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.88';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "fair-runner-canon-20260925-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "pits-paw-limited-battles-20260925-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_fair_reroll_timeout_1_17_89.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.89" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.89';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "fair-reroll-timeout-reconcile-20260925-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "timeoutMs = 35000" /tmp/HamsterKingMobile.user.js
+          grep -Fq "rerolled-timeout-reconciled" /tmp/HamsterKingMobile.user.js
+          grep -Fq "Повторяю прокрутку безопасно" /tmp/HamsterKingMobile.user.js
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.89.fair-reroll-timeout.candidate.user.js
+          audit=audit/hk-userscript-1-17-89-fair-reroll-timeout-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.17.88':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+
+          out={
+              'schema':1,
+              'source_version':'1.17.88',
+              'target_version':'1.17.89',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.17.89.fair-reroll-timeout.candidate.user.js',
+              'primary_marker':'fair-reroll-timeout-reconcile-20260925-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-17-89-fair-reroll-timeout-live-status.txt',
+              'commit_message':'fix: deploy Fair reroll timeout reconciliation in userscript 1.17.89',
+          }
+          path.write_text(json.dumps(out, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_17_89_FAIR_REROLL_TIMEOUT_PREDEPLOY=PASS"
+              echo "source_version=1.17.88"
+              echo "target_version=1.17.89"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+              echo "fair_reroll_timeout_window=35000"
+              echo "timeout_reconciliation=PASS"
+              echo "blind_mutation_retry=DISABLED"
+              echo "syntax=PASS"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.17.89 Fair reroll timeout"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
