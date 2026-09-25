@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.95
+// @version      1.17.96
+// @release-note Game API: базовый cooldown после HTTP 429 сокращён с 60 до 20 секунд. Магазин больше не добавляет сверху ещё 1,2 секунды перед повтором; если сервер явно прислал больший Retry-After, он по-прежнему уважается.
 // @release-note Ресурсы: «Выполнить рассчитанный максимум» теперь запускает уже рассчитанный обмен сразу, без второго системного confirm. Сообщение «Ресурсный обмен отменён пользователем» остаётся только для ручного режима с лимитом, если пользователь действительно отменил подтверждение.
 // @release-note Слухи: добавлен отдельный экран «Охота за слухами» по канону Kokkaras, а на главной «Сегодня» — автоматический блок «Слухи сегодня». Маршрут берётся с HK backend, который синхронизирует публичный rumors.php Kokkaras; прямые gamearea_id используются без повторного перебора карт.
 // @release-note Ресурсы: механика обмена выровнена по закреплённому Kokkaras 5.3.22-ui-icons-pit-dim. Для событий используются канонические API-тиры 1/2/3/4/5 (0/1/2/3/5), POST /player/event с event_building_id + side_event_id + number_of_completions; уровни 4+/5+ больше не отправляются как event tier. Убрано зависание на /player/me перед обменом.
@@ -106,7 +107,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.95';
+  const BUILD_VERSION = '1.17.96';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -294,10 +295,11 @@
   const GAME_AUTH_REFRESH_EARLY_MS = 60 * 1000;
   const GAME_REQUEST_RETRY_DELAYS_MS = [900, 2500, 6000];
   const HK_GAME_API_RATE_GUARD_REV = 'game-api-rate-guard-20260922-r1';
+  const HK_GAME_API_429_COOLDOWN_20S_REV = 'game-api-429-cooldown-20s-20260925-r1';
   const GAME_API_MIN_REQUEST_GAP_MS = 2500;
   const GAME_API_429_SLOW_GAP_MS = 5000;
   const GAME_API_429_SLOW_WINDOW_MS = 15 * 60 * 1000;
-  const GAME_API_429_FALLBACK_COOLDOWN_MS = 60 * 1000;
+  const GAME_API_429_FALLBACK_COOLDOWN_MS = 20 * 1000;
   let gameApiNextRequestAt = 0;
   let gameApiRateLimitUntil = 0;
   let gameApiSlowUntil = 0;
@@ -10259,7 +10261,7 @@
           Number(error?.retryAfterMs || 0),
           gameApiCooldownRemainingMs(),
           GAME_API_429_FALLBACK_COOLDOWN_MS
-        ) + 1200;
+        );
         const seconds = Math.ceil(waitMs / 1000);
         hkRunner.setStep(either(
           'Лимит игры · жду ' + seconds + ' сек.' + (label ? ' · ' + label : ''),

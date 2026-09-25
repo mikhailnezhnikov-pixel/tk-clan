@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.95
+target_version=1.17.96
+marker=game-api-429-cooldown-20s-20260925-r1
+source_sha256=8af7d4afc4c79482a87d41cb7223c1de25ec790ad9bf2f1d778272b9f769f948
+candidate_sha256=c391a2dfa3d1b89143c9e0009754ae3c81c12d7d9664c4f516bef46d5bc3a6b7
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
