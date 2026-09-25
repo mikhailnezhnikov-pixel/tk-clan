@@ -1,1 +1,2 @@
 diagnose localized map duplicates 20260925
+exact building fingerprint pass
