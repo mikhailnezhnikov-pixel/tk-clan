@@ -1,0 +1,6 @@
+RUMORS_KOKKARAS_FEED_R1_LIVE=PASS
+source=https://kokkaras.com/hk_maps/rumors.php
+cities=17
+points=51
+cache_ttl_seconds=20
+health=PASS
