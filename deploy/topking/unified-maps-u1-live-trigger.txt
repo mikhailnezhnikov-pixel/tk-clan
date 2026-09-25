@@ -7,3 +7,4 @@ game-geometry-r1 retry current-server
 game-geometry-r1 verify live
 localized-map-dedupe-r1 deploy 20260925
 localized-map-dedupe-r1 retry yamlfix
+cabinet-city-language-r2 deploy 20260925
