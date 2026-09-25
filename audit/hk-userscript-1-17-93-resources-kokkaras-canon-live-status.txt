@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.92
+target_version=1.17.93
+marker=resources-kokkaras-5.3.22-20260925-r1
+source_sha256=066edf45ff3048dd30e7a11eeb3d9cb847f2645ee1cead45ce3bd5182b630396
+candidate_sha256=5336095d2175a76b20c81ebf27ca791de5171d1a4890194f691dbe1de673bced
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

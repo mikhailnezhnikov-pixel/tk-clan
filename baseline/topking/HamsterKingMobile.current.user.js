@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.92
+// @version      1.17.93
+// @release-note Ресурсы: механика обмена выровнена по закреплённому Kokkaras 5.3.22-ui-icons-pit-dim. Для событий используются канонические API-тиры 1/2/3/4/5 (0/1/2/3/5), POST /player/event с event_building_id + side_event_id + number_of_completions; уровни 4+/5+ больше не отправляются как event tier. Убрано зависание на /player/me перед обменом.
 // @release-note Ресурсы: «Выполнить рассчитанный максимум» больше не теряет рассчитанный план при повторном чтении здания. Перед запуском обновляется только баланс игрока, доступный объём пересчитывается по свежему балансу, а причины остановки теперь видны в журнале.
 // @release-note Здания: запуск больше не пересчитывает заново все карты районов перед открытием. Используется уже рассчитанный план, выполняется только свежая проверка аккаунта и свободных слотов; запуск реагирует сразу и показывает подготовку в журнале.
 // @release-note Магазин: массовый выкуп больше не штурмует /shop/buy без пауз. Добавлен безопасный темп запросов, автоматическое ожидание 429 и продолжение покупки после cooldown без двойного списания; Runner показывает ожидание и текущий лот.
@@ -103,7 +104,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.92';
+  const BUILD_VERSION = '1.17.93';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -1163,6 +1164,8 @@
   let resourceEventCatalogPromise = null;
   let resourceRepeatCount = Math.max(1, Math.min(10, Math.trunc(Number(load().resourceRepeatCount || 1))));
   const HK_RESOURCE_MAXIMUM_RUN_REV='resource-maximum-run-stable-20260925-r1';
+  const HK_RESOURCE_KOKKARAS_CANON_REV='resources-kokkaras-5.3.22-20260925-r1';
+  const RESOURCE_CANONICAL_TIERS=[0,1,2,3,5];
   let resourceMaximumMode = false;
   let resourceSelectedKind = String(load().resourceSelectedKind || 'nut');
   const RESOURCE_BUILDING_TYPES = {
@@ -11049,6 +11052,15 @@
     return ['1','2','3','4','4+','5','5+','MAX'][Math.max(0,Math.trunc(Number(tier)))] || `T${Math.max(0,Math.trunc(Number(tier))) + 1}`;
   }
 
+  function resourceCanonicalTier(tier) {
+    const value=Math.max(0,Math.trunc(Number(tier)||0));
+    if(value>=5)return 5;
+    if(value>=3)return 3;
+    if(value>=2)return 2;
+    if(value>=1)return 1;
+    return 0;
+  }
+
   function resourceDisplayName(row) {
     const raw=clean(row?.name);
     const placeholder=!raw || /^event[\s_-]*name(?:[\s_-]*side)?$/i.test(raw) || /^side[\s_-]*event(?:[\s_-]*name)?$/i.test(raw);
@@ -11080,7 +11092,7 @@
     const buildingButtons = Object.keys(RESOURCE_BUILDING_TYPES).map(kind => `<button data-resource-kind="${kind}" class="${kind===resourceSelectedKind?'active':''}" ${resourceBusy?'disabled':''}><b>${escapeHtml(resourceTypeName(kind,true))}</b><small>${escapeHtml(resourceTypeName(kind))}${savedIds[kind]?' ✓':''}</small></button>`).join('');
     const activeTier = Math.max(0, Math.trunc(Number(activeBuilding?.tier || 0)));
     const maximumTier = Math.max(activeTier, Math.trunc(Number(activeBuilding?.maxTier ?? activeTier)));
-    const tierButtons = activeBuilding ? Array.from({length:maximumTier + 1},(_,tier)=>`<button data-resource-tier="${tier}" class="${tier===activeTier?'active':''}" ${resourceBusy?'disabled':''}>${resourceTierLabel(tier)}</button>`).join('') : '';
+    const tierButtons = activeBuilding ? RESOURCE_CANONICAL_TIERS.filter(tier=>tier<=maximumTier).map(tier=>`<button data-resource-tier="${tier}" class="${tier===resourceCanonicalTier(activeTier)?'active':''}" ${resourceBusy?'disabled':''}>${resourceTierLabel(tier)}</button>`).join('') : '';
     const buildings = resourceBuildings.length ? resourceBuildings.map(building => {
       const rows = resourceEvents(building);
       const content = rows.length ? rows.map((row,index) => {
@@ -11146,7 +11158,7 @@
         return false;
       }
       const storedTier=Number(savedResourceTiers()[resourceSelectedKind]);
-      const requestedTier=Number.isSafeInteger(Number(resourceBuildings[0]?.tier)) ? Number(resourceBuildings[0].tier) : Number.isSafeInteger(storedTier) ? storedTier : null;
+      const requestedTier=Number.isSafeInteger(Number(resourceBuildings[0]?.tier)) ? resourceCanonicalTier(resourceBuildings[0].tier) : Number.isSafeInteger(storedTier) ? resourceCanonicalTier(storedTier) : null;
       const tierQuery=requestedTier == null ? '' : `&tier=${encodeURIComponent(requestedTier)}`;
       let documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}${tierQuery}`, 'POST');
       let proofs=savedResourceBuildingProofs();
@@ -11195,7 +11207,7 @@
 
   async function loadResourceTier(tier) {
     const row=resourceBuildings[0];
-    const selectedTier=Math.max(0,Math.trunc(Number(tier)));
+    const selectedTier=resourceCanonicalTier(tier);
     if (!requireLicense() || resourceBusy || !row || !Number.isSafeInteger(selectedTier) || selectedTier > Number(row.maxTier ?? row.tier ?? 0)) return false;
     resourceBusy=true; renderResources();
     try {
@@ -11233,113 +11245,161 @@
       alert(either('Сначала завершите текущую задачу','Finish the current task first'));
       return;
     }
-    const sourceRows=(rows||[]).filter(Boolean);
-    if(!sourceRows.length){
-      log(either('Ресурсы: нет рассчитанных заданий для запуска.','Resources: there are no calculated tasks to run.'),'warn');
+
+    const selected=resourceBuildings[0];
+    if(!selected?.id){
+      log(either('Ресурсы: ресурсное здание не выбрано.','Resources: no resource building is selected.'),'warn');
       return;
     }
-    const totalCompletions=1000*resourceRepeatCount;
+
+    const requestedTier=resourceCanonicalTier(selected.tier);
     const maximumMode=resourceMaximumMode;
-    log(either(
-      resourceTypeName(resourceSelectedKind)+': проверяю свежий баланс перед обменом…',
-      resourceTypeName(resourceSelectedKind)+': checking the current balance before exchange…'
-    ));
+    const totalCompletions=1000*resourceRepeatCount;
+
+    hkRunner.start({
+      title:resourceTypeName(resourceSelectedKind),
+      total:1,
+      step:either('Читаю канонический тир Kokkaras','Reading Kokkaras canonical tier'),
+      pausable:true,
+      stoppable:true
+    });
+    resourceBusy=true;
+    renderResources();
+
+    let completedTasks=0,totalRuns=0;
     try{
-      playerDocument=await hkAuthoritativePlayerRead('resources:run-preflight');
-    }catch(error){
-      log(either('Не удалось обновить баланс перед обменом','Could not refresh balance before exchange')+': '+(error?.message||error),'bad');
-      return;
-    }
-    const ready=sourceRows
-      .filter(row=>row?.atMax&&!resourceEventIsExcluded(row))
-      .map(row=>{
-        const parts=costParts(row.cost);
-        const affordable=parts.length?Math.max(0,Math.floor(Math.min(...parts.map(part=>{
+      // Kokkaras canon: read the exact event tier from /player/building.
+      // Plus-levels (4+/5+) are building progression levels, not /player/event tiers.
+      const tierDoc=await apiJson(
+        `/player/building?building_id=${encodeURIComponent(selected.id)}&tier=${encodeURIComponent(requestedTier)}`,
+        'POST'
+      );
+      const proof=savedResourceBuildingProofs();
+      const parsed=exactResourceBuildingData(tierDoc,selected.kind,String(proof[selected.kind]||'')===String(selected.id));
+      if(!parsed?.building)throw new Error(either('Игра не вернула данные выбранного тира.','The game did not return the selected tier data.'));
+
+      const canonicalRow={...selected,tier:requestedTier,document:tierDoc};
+      const options=resourceEvents(canonicalRow)
+        .filter(row=>row?.atMax&&!resourceEventIsExcluded(row)&&costParts(row.cost).length===1)
+        .map(row=>{
+          const part=costParts(row.cost)[0];
           const balance=walletAmount(part.id,playerDocument);
-          return balance==null||part.quantity<=0?0:balance/part.quantity;
-        })))):0;
-        const maximum=Math.max(0,Math.trunc(affordable));
-        return {...row,affordable,plannedCompletions:maximumMode?maximum:Math.min(totalCompletions,maximum)};
-      })
-      .filter(row=>row.plannedCompletions>0);
-    if(!ready.length){
-      log(either(
-        'Ресурсы: по свежему балансу нет доступного обмена для выбранного тира.',
-        'Resources: the current balance has no available exchange for the selected tier.'
-      ),'warn');
-      return;
-    }
-    const projectedProblems = ready.flatMap(row => budgetDecision(row.cost, 'resources', row.plannedCompletions, playerDocument).problems);
-    if (projectedProblems.length) {
-      alert(`${either('Ресурсный обмен заблокирован единым бюджетом','Resource exchange blocked by unified budget')}:\n\n${[...new Set(projectedProblems)].join('\n')}`);
-      return;
-    }
-    const lines = ready.map((row,index) => `${index + 1}. ${row.buildingName} — ${resourceDisplayName(row)} ×${row.plannedCompletions}`);
-    const heading = maximumMode ? either('Выполнить рассчитанный максимальный обмен?','Run the calculated maximum exchange?') : either(`Выполнить ресурсные задания? Выбранный предел: ×${totalCompletions}.`,`Run resource tasks? Selected limit: ×${totalCompletions}.`);
-    if (!confirm(`${heading}\n\n${lines.join('\n')}`)) return;
-    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
-    hkRunner.start({title:resourceTypeName(resourceSelectedKind),total:ready.length,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
-    resourceBusy = true; renderResources();
-    let completed = 0, completions = 0;
-    try {
-      for (const row of ready) {
-        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
-        await hkRunner.waitIfPaused();
-        const displayName=resourceDisplayName(row);
-        hkRunner.setStep(`${resourceTierLabel(row.tier)} · ${displayName} · ×${row.plannedCompletions}`, completed, ready.length);
-        log(either(`Выполняю: ${displayName} ×${row.plannedCompletions}…`,`Running: ${displayName} ×${row.plannedCompletions}…`));
-        const request = async numberOfCompletions => {
-          const quantity = Math.max(1, Math.trunc(Number(numberOfCompletions || 0)));
-          const decision = budgetDecision(row.cost, 'resources', quantity, playerDocument);
-          if (!decision.allowed) throw new Error(decision.problems.join('; '));
-          const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
-          const value = await apiJson('/player/event','POST',{
-            event_building_id:row.roomId,
-            tier:row.tier,
-            side_event_id:row.sideEventId || undefined,
-            number_of_completions:quantity
-          },true,0);
-          for (const part of costParts(row.cost)) appendExpense({section:'resources', lotId:`resource:${row.buildingId}:${row.roomId}:${row.sideEventId || row.eventId}`, name:displayName || either('Ресурсный обмен','Resource exchange'), currencyId:part.id, amount:part.quantity * quantity, balanceBefore:before.get(part.id), balanceAfter:null, status:'ok', result:`completed ${quantity}`});
-          return value;
-        };
-        if (row.plannedCompletions <= 1000) {
-          await request(row.plannedCompletions);
-        } else {
-          try {
-            await request(row.plannedCompletions);
-          } catch (error) {
-            if (!/HTTP (400|422)|invalid|not allowed/i.test(String(error?.message || error))) throw error;
-            const requestCount=Math.ceil(row.plannedCompletions / 1000);
-            if (requestCount > 10 && !confirm(either(`Игра не приняла объединённый обмен ×${row.plannedCompletions}. Для задания «${displayName}» потребуется ${requestCount.toLocaleString(locale())} отдельных запросов. Продолжить?`,`The game rejected the combined ×${row.plannedCompletions} exchange. Task “${displayName}” requires ${requestCount.toLocaleString(locale())} separate requests. Continue?`))) throw new Error(either('Выполнение большого обмена отменено пользователем.','Large exchange cancelled by the user.'));
-            log(either('Сервер не принял объединённый обмен — разбиваю его на части без паузы.','The server rejected the combined exchange — splitting it into chunks without delay.'),'warn');
-            let remaining = row.plannedCompletions;
-            let processedRequests = 0;
-            while (remaining > 0) {
-              if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
-              await hkRunner.waitIfPaused();
-              const chunk = Math.min(1000, remaining);
-              await request(chunk);
-              remaining -= chunk;
-              processedRequests += 1;
-              if (requestCount > 10 && (processedRequests % 25 === 0 || remaining === 0)) log(either(`Обмен «${displayName}»: запросов ${processedRequests.toLocaleString(locale())}/${requestCount.toLocaleString(locale())}`,`Exchange “${displayName}”: requests ${processedRequests.toLocaleString(locale())}/${requestCount.toLocaleString(locale())}`));
-            }
-          }
-        }
-        completions += row.plannedCompletions;
-        completed += 1;
+          const affordable=balance==null||part.quantity<=0?0:Math.max(0,Math.floor(balance/part.quantity));
+          return {...row,tier:requestedTier,affordable,plannedCompletions:maximumMode?affordable:Math.min(totalCompletions,affordable)};
+        })
+        .filter(row=>row.plannedCompletions>0);
+
+      if(!options.length)throw new Error(either(
+        `Для тира ${resourceTierLabel(requestedTier)} нет MAX-заданий с доступными материалами.`,
+        `Tier ${resourceTierLabel(requestedTier)} has no MAX tasks with available materials.`
+      ));
+
+      const lines=options.map((row,index)=>`${index+1}. ${resourceDisplayName(row)} ×${row.plannedCompletions.toLocaleString(locale())}`);
+      const heading=maximumMode
+        ? either('Выполнить рассчитанный максимальный обмен?','Run the calculated maximum exchange?')
+        : either(`Выполнить ресурсные задания? Лимит ×${totalCompletions}.`,`Run resource tasks? Limit ×${totalCompletions}.`);
+      if(!confirm(`${heading}\n\n${lines.join('\n')}`)){
+        hkRunner.reset();
+        log(either('Ресурсный обмен отменён пользователем.','Resource exchange cancelled by the user.'),'warn');
+        return;
       }
-      log(either(`Ресурсные задания выполнены: ${completed}, всего выполнений: ${completions}`,`Resource tasks completed: ${completed}, total completions: ${completions}`),'ok');
-      resourceBusy = false;
-      await hkAuthoritativePlayerRead('resources-complete');
-      await loadResources(false,{refreshPlayer:false});
-      const resourceLive=moduleLiveState.get('resources')||{};
-      moduleLiveState.set('resources',{...resourceLive,at:Date.now(),blockedUntil:0});
-      hkRunner.finish(either('Ресурсные задания завершены','Resource tasks completed'));
-    } catch (error) {
-      if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Ресурсные задания остановлены','Resource tasks stopped'),'warn'); }
-      else { hkRunner.fail(error); log(either('Ошибка выполнения ресурсного задания','Resource task error') + ': ' + (error?.message || error),'bad'); }
-    } finally {
-      resourceBusy = false; renderResources();
+
+      hkRunner.state.total=options.length;
+      hkRunner.setStep(either('Запускаю обмен','Starting exchange'),0,options.length);
+
+      // Kokkaras ranks resource options by how many completions the current
+      // inventory can afford and sends the whole allowed amount in one request.
+      const pending=[...options];
+      while(pending.length){
+        if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+
+        pending.sort((a,b)=>Number(b.plannedCompletions||0)-Number(a.plannedCompletions||0));
+        const row=pending.shift();
+        const part=costParts(row.cost)[0];
+        const liveBalance=walletAmount(part.id,playerDocument);
+        const liveAffordable=liveBalance==null||part.quantity<=0?0:Math.max(0,Math.floor(liveBalance/part.quantity));
+        const quantity=Math.max(0,Math.min(row.plannedCompletions,maximumMode?liveAffordable:Math.min(totalCompletions,liveAffordable)));
+        if(quantity<=0)continue;
+
+        const name=resourceDisplayName(row);
+        hkRunner.setStep(`${resourceTierLabel(requestedTier)} · ${name} · ×${quantity.toLocaleString(locale())}`,completedTasks,options.length);
+        log(either(
+          `${resourceTypeName(resourceSelectedKind)} · T${resourceTierLabel(requestedTier)} · ${name}: обмен ×${quantity.toLocaleString(locale())}…`,
+          `${resourceTypeName(resourceSelectedKind)} · T${resourceTierLabel(requestedTier)} · ${name}: exchange ×${quantity.toLocaleString(locale())}…`
+        ));
+
+        const decision=budgetDecision(row.cost,'resources',quantity,playerDocument);
+        if(!decision.allowed)throw new Error(decision.problems.join('; '));
+        const before=walletAmount(part.id,playerDocument);
+
+        let response;
+        try{
+          response=await apiJson('/player/event','POST',{
+            event_building_id:row.roomId,
+            tier:Number(requestedTier),
+            side_event_id:row.sideEventId,
+            number_of_completions:Number(quantity)
+          },true,0);
+        }catch(error){
+          const message=String(error?.apiData?.description||error?.message||error||'').toLowerCase();
+          if(Number(error?.httpStatus||0)===409&&message.includes('event is locked')){
+            log(either(`${name}: событие заблокировано игрой, пропускаю.`,`${name}: event is locked by the game, skipping.`),'warn');
+            continue;
+          }
+          throw error;
+        }
+
+        hkStateStore.merge(response,'resources-event');
+        playerDocument=hkStateStore.snapshot||playerDocument;
+        const after=walletAmount(part.id,playerDocument);
+        if(before!=null && (after==null || Number(after)>=Number(before))){
+          debitWallet(row.cost,quantity,playerDocument);
+        }
+
+        appendExpense({
+          section:'resources',
+          lotId:`resource:${row.buildingId}:${row.roomId}:${row.sideEventId||row.eventId}`,
+          name,
+          currencyId:part.id,
+          amount:part.quantity*quantity,
+          balanceBefore:before,
+          balanceAfter:walletAmount(part.id,playerDocument),
+          status:'ok',
+          result:`completed ${quantity}`
+        });
+
+        totalRuns+=quantity;
+        completedTasks+=1;
+        hkRunner.setStep(`${name} · ${either('готово','done')} ×${quantity.toLocaleString(locale())}`,completedTasks,options.length);
+        log(either(
+          `✓ ${name}: выполнено ×${quantity.toLocaleString(locale())}`,
+          `✓ ${name}: completed ×${quantity.toLocaleString(locale())}`
+        ),'ok');
+      }
+
+      if(!totalRuns)throw new Error(either('Игра не выполнила ни одного доступного обмена.','The game did not complete any available exchange.'));
+
+      log(either(
+        `${resourceTypeName(resourceSelectedKind)}: обмен завершён · заданий ${completedTasks} · выполнений ${totalRuns.toLocaleString(locale())}`,
+        `${resourceTypeName(resourceSelectedKind)}: exchange complete · tasks ${completedTasks} · completions ${totalRuns.toLocaleString(locale())}`
+      ),'ok');
+
+      hkGameBridge.noteMutation?.();
+      hkRunner.finish(either('Ресурсный обмен завершён','Resource exchange completed'));
+      resourceBusy=false;
+      await loadResources(false,{playerMaxAgeMs:RESOURCE_PLAYER_CACHE_MS});
+    }catch(error){
+      if(error?.name==='AbortError'){
+        hkRunner.reset();
+        log(either('Ресурсный обмен остановлен','Resource exchange stopped'),'warn');
+      }else{
+        hkRunner.fail(error);
+        log(either('Ошибка ресурсного обмена','Resource exchange error')+': '+(error?.message||error),'bad');
+      }
+    }finally{
+      resourceBusy=false;
+      renderResources();
     }
   }
 
