@@ -1145,6 +1145,17 @@
     return /^hk_[a-z0-9]+$/i.test(key)?key:'';
   }
 
+  const HK_MAP_VIEW_REV='20260925-r3';
+  function hkMapVersionedUrl(value){
+    const raw=String(value||'');
+    if(!raw)return '';
+    try{
+      const url=new URL(raw,location.href);
+      if(url.pathname.includes('/maps/view/'))url.searchParams.set('view',HK_MAP_VIEW_REV);
+      return url.origin===location.origin ? url.pathname+url.search+url.hash : url.href;
+    }catch(_){return raw}
+  }
+
   function hkMemberRuleState(member,map){
     const accessKey=hkMapAccessKey(map);
     if(!accessKey||!map?.open_url)return false;
@@ -1431,7 +1442,7 @@
       const sourceKind=String(map.source_kind||'website');
       const sourceLabel=String(map.source_label||'Сайт');
       const hasWebsite=sourceKind==='website'||sourceKind==='combined'||!!map.website_key;
-      const openUrl=String(map.open_url||'');
+      const openUrl=hkMapVersionedUrl(map.open_url);
       const accessState=hkMapsCanManage
         ? (openUrl?'granted':'unavailable')
         : String(map.access_state||(openUrl?(map.access_allowed?'granted':'locked'):'unavailable'));
