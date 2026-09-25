@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.87
+// @version      1.17.88
+// @release-note Ямы: удалён искусственный защитный лимит количества боёв. Яма продолжает бой, пока позволяет фактический запас Лап восстановления и выбранный лимит Лап; отдельного лимита на число боёв больше нет.
 // @release-note Ярмарка: Runner приведён к канону панели — текущие проходы и действия показываются в самом Runner, счётчик прогресса виден рядом со статусом, кнопки компактные; в общий журнал пишется итог запуска, а не поток проходов.
 // @release-note Ярмарка: выбор бонусных лотов ×5/×10/×30 снова определяется выбранным максимумом групп 3/6/9, а не полем «Цель основных покупок». При 9 доступны все три флажка; фактический выкуп по-прежнему происходит только после открытия соответствующего порога.
 // @release-note Обновление панели: повторный запуск закладки теперь заменяет старую активную сборку, если на странице осталась предыдущая версия; старая панель больше не блокирует свежий код только из-за одинакового core revision.
@@ -98,7 +99,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.87';
+  const BUILD_VERSION = '1.17.88';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -4287,10 +4288,9 @@
     let result = documentValue;
     let state = pitRaceState(typeId, result);
     if (!state) return result;
-    let battles = 0;
     while (!pitRaceFinished(state)) {
       if (hkRunner.running) await hkRunner.waitIfPaused();
-      if (++battles > 1000) throw new Error(either('превышен безопасный предел боёв Ямы','Pit battle safety limit exceeded'));
+      
       try {
         result = await apiJson(config.battle, 'POST');
       } catch (error) {
@@ -5815,7 +5815,7 @@
       }
       let restorationSpent=0,battles=0,forceFinish=false,leaveManual=false;
       while(state&&state.is_finish===false){
-        await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');if(++battles>1000)throw new Error(`${pitCanonDefinitionName(def)}: ${either('защитный лимит боёв','battle safety limit')}`);
+        await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');
         const level=pitCanonWhole(state.level),targetReached=config.target>0&&level>=config.target;
         if(targetReached){pitCanonRunnerLog(`✓ ${pitCanonDefinitionName(def)}: ${either('цель достигнута','target reached')} ${level}`,'ok');break;}
         if(pitCanonWhole(state.health)<=0){
@@ -10789,6 +10789,7 @@
   const HK_TODAY_CANON_FILTER_REV = 'today-kokkaras-filter-20260920-r2';
   const HK_TODAY_TOOLBAR_REV = 'today-toolbar-clean-20260920-r3';
   const HK_PITS_CANON_REV = 'pits-canon-core-20260920-r1';
+  const HK_PITS_PAW_LIMIT_REV = 'pits-paw-limited-battles-20260925-r1';
   const HK_PITS_UI_REV = 'pits-ui-align-20260920-r2';
   const HK_PITS_SNIPER_REV = 'pits-passplan-sniper-20260920-r3';
   const HK_PITS_TOOLBAR_REV = 'pits-toolbar-clean-20260920-r4';
