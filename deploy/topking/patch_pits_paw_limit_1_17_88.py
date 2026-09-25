@@ -45,15 +45,27 @@ elif "pits-paw-limited-battles-20260925-r1" not in s:
         1,
     )
 
-replace(
-    "      let restorationSpent=0,battles=0;",
-    "      let restorationSpent=0;",
-    "Pits artificial battle counter",
-)
+guard_patterns = [
+    r"if\s*\(\s*\+\+battles\s*>\s*1000\s*\)\s*throw\s+new\s+Error\s*\(\s*`\$\{pitCanonDefinitionName\(def\)\}:\s*\$\{either\('защитный лимит боёв','battle safety limit'\)\}`\s*\)\s*;",
+    r"if\s*\(\s*\+\+battles\s*>\s*1000\s*\)\s*throw\s+new\s+Error\([^\n;]*защитный лимит боёв[^\n;]*\);",
+]
+guard_count = 0
+for pattern in guard_patterns:
+    s, count = re.subn(pattern, "", s, count=1)
+    guard_count += count
+    if count:
+        break
+if guard_count != 1:
+    pos = s.find("защитный лимит боёв")
+    if pos >= 0:
+        print("PITS_BATTLE_LIMIT_CONTEXT_BEGIN")
+        print(s[max(0,pos-900):pos+1400])
+        print("PITS_BATTLE_LIMIT_CONTEXT_END")
+    raise SystemExit(f"Pits artificial battle limit: expected 1 replacement, got {guard_count}")
 
-old_guard = """        await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');if(++battles>1000)throw new Error(`${pitCanonDefinitionName(def)}: ${either('защитный лимит боёв','battle safety limit')}`);"""
-new_guard = """        await hkRunner.waitIfPaused();if(hkRunner.signal?.aborted)throw new DOMException('Aborted','AbortError');"""
-replace(old_guard, new_guard, "Pits artificial battle limit")
+# Remove the now-unused local counter if present, without depending on its exact formatting.
+s = re.sub(r"let\s+restorationSpent\s*=\s*0\s*,\s*battles\s*=\s*0\s*;", "let restorationSpent=0;", s, count=1)
+s = re.sub(r"\s*let\s+battles\s*=\s*0\s*;", "", s, count=1)
 
 for marker in [
     "// @version      1.17.88",
