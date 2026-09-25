@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.90
+// @version      1.17.91
+// @release-note Здания: запуск больше не пересчитывает заново все карты районов перед открытием. Используется уже рассчитанный план, выполняется только свежая проверка аккаунта и свободных слотов; запуск реагирует сразу и показывает подготовку в журнале.
 // @release-note Магазин: массовый выкуп больше не штурмует /shop/buy без пауз. Добавлен безопасный темп запросов, автоматическое ожидание 429 и продолжение покупки после cooldown без двойного списания; Runner показывает ожидание и текущий лот.
 // @release-note Ярмарка: прокрутка больше не падает сразу при сетевом тайм-ауте. Для /fair/reroll увеличено окно ожидания, а неоднозначный тайм-аут сверяется с live-состоянием Ярмарки и балансом; если прокрутка уже прошла — работа продолжается без повторной траты, если нет — повтор выполняется только после подтверждения неизменившегося состояния.
 // @release-note Ямы: удалён искусственный защитный лимит количества боёв. Яма продолжает бой, пока позволяет фактический запас Лап восстановления и выбранный лимит Лап; отдельного лимита на число боёв больше нет.
@@ -101,7 +102,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.90';
+  const BUILD_VERSION = '1.17.91';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -1947,6 +1948,7 @@
     return ids;
   }
 
+  const HK_BUILDINGS_RUN_CACHED_PLAN_REV='buildings-run-cached-plan-20260925-r1';
   let buildingCanonPlan = null;
   let buildingCanonBusy = false;
 
@@ -2160,14 +2162,46 @@
   }
 
   async function runBuildingsCanonical() {
-    if(!requireLicense()||buildingCanonBusy)return;
+    if(!requireLicense()){
+      log(either('Здания: лицензия не активна.','Buildings: license is not active.'),'warn');
+      return;
+    }
+    if(buildingCanonBusy){
+      log(either('Здания: уже выполняется подготовка или открытие.','Buildings: preparation or opening is already running.'),'warn');
+      return;
+    }
     if(hkRunner.running){alert(either('Сначала завершите текущую задачу','Finish the current task first'));return;}
-    buildingCanonSaveSettings(buildingCanonReadSettingsFromDom());
+
+    const runSettings=buildingCanonReadSettingsFromDom();
+    buildingCanonSaveSettings(runSettings);
+    log(either('Здания: проверяю рассчитанный план перед запуском…','Buildings: validating the calculated plan before start…'),'info');
     buildingCanonBusy=true;renderBuildings();
+
     let opened=0,favorites=0,errors=0,capacityStopped=false,favoriteEnabled=true;
     const openedIds=[],favoriteIds=[];
     try{
-      buildingCanonPlan=await buildingCanonBuildPlan(true);
+      const cachedPlan=buildingCanonPlan;
+      if(cachedPlan?.candidates?.length){
+        playerDocument=await hkAuthoritativePlayerRead('buildings:run-preflight');
+        const ownedNow=buildingCanonOwnedIds(playerDocument);
+        const filtered=cachedPlan.candidates.filter(row=>!ownedNow.has(String(row?.buildingId||'')));
+        buildingCanonPlan={
+          ...cachedPlan,
+          at:Date.now(),
+          settings:{...cachedPlan.settings,...runSettings},
+          candidates:filtered,
+          capacity:buildingCanonCapacity(playerDocument)
+        };
+        recordDiagnostic('buildings-run-cached-plan',{
+          revision:HK_BUILDINGS_RUN_CACHED_PLAN_REV,
+          cached:Array.isArray(cachedPlan?.candidates)?cachedPlan.candidates.length:0,
+          remaining:filtered.length,
+          mappedAreas:Number(cachedPlan?.mappedAreas||0)
+        });
+      }else{
+        log(either('Здания: готового плана нет, пересчитываю кандидатов…','Buildings: no prepared plan, recalculating candidates…'),'info');
+        buildingCanonPlan=await buildingCanonBuildPlan(true);
+      }
       const capacity=buildingCanonPlan.capacity;
       const source=buildingCanonPlan.candidates;
       if(!source.length){log(either('Подходящих неоткрытых зданий нет.','No eligible unowned buildings.'),'warn');return;}
@@ -2350,7 +2384,7 @@
       '<div class="hk-cardbox hk-building-plan"><div class="hk-building-empty">'+either('Нажмите «Рассчитать кандидатов», чтобы увидеть план открытия.','Press “Calculate candidates” to see the opening plan.')+'</div></div>';
 
     box.innerHTML=
-      '<div class="hk-buildings-head"><div><h3>'+either('Здания','Buildings')+'</h3><small>'+either('Подбор и открытие зданий по известным кристальным комнатам','Select and open buildings by known crystal rooms')+'</small></div><button id="hk-buildings-refresh" class="hk-secondary" '+(buildingCanonBusy?'disabled':'')+'>'+either('Обновить','Refresh')+'</button></div>'+
+      '<div class="hk-buildings-head"><div><h3>'+either('Здания','Buildings')+'</h3><small>'+either('Подбор и открытие зданий по известным кристальным комнатам','Select and open buildings by known crystal rooms')+'</small></div><button type="button" id="hk-buildings-refresh" class="hk-secondary" '+(buildingCanonBusy?'disabled':'')+'>'+either('Обновить','Refresh')+'</button></div>'+
       '<div class="hk-cardbox hk-building-settings">'+
         '<div class="hk-building-controls">'+
           '<label class="hk-building-field"><span>'+either('Минимум кристаллов','Minimum crystals')+'</span><input id="hk-building-min-crystals" type="number" min="0" step="1" value="'+settings.minCrystals+'"></label>'+
@@ -2358,14 +2392,14 @@
           '<label class="hk-building-field"><span>'+either('Тип здания','Building type')+'</span><select id="hk-building-type"><option value="normal" '+(settings.buildingType==='normal'?'selected':'')+'>'+either('Обычные','Normal')+'</option><option value="investment" '+(settings.buildingType==='investment'?'selected':'')+'>'+either('Инвестиционные','Investment')+'</option><option value="all" '+(settings.buildingType==='all'?'selected':'')+'>'+either('Все','All')+'</option></select></label>'+
           '<label class="hk-building-field"><span>'+either('Лимит открытия','Open limit')+'</span><select id="hk-building-open-limit"><option value="1" '+(settings.openLimit===1?'selected':'')+'>1</option><option value="10" '+(settings.openLimit===10?'selected':'')+'>10</option><option value="15" '+(settings.openLimit===15?'selected':'')+'>15</option><option value="20" '+(settings.openLimit===20?'selected':'')+'>20</option><option value="all" '+(settings.openLimit===0?'selected':'')+'>'+either('Все доступные','All available')+'</option></select></label>'+
         '</div>'+
-        '<div class="hk-building-actions"><button id="hk-building-plan" class="hk-secondary" '+(buildingCanonBusy?'disabled':'')+'>'+either('Рассчитать кандидатов','Calculate candidates')+'</button><button id="hk-building-run" class="hk-primary" '+(buildingCanonBusy||!plan?.candidates?.length?'disabled':'')+'>'+(settings.openLimit===0?either('Открыть все доступные','Open all available'):either('Открыть до '+settings.openLimit,'Open up to '+settings.openLimit))+'</button></div>'+
+        '<div class="hk-building-actions"><button type="button" id="hk-building-plan" class="hk-secondary" '+(buildingCanonBusy?'disabled':'')+'>'+either('Рассчитать кандидатов','Calculate candidates')+'</button><button type="button" id="hk-building-run" class="hk-primary" '+(buildingCanonBusy||!plan?.candidates?.length?'disabled':'')+'>'+(settings.openLimit===0?either('Открыть все доступные','Open all available'):either('Открыть до '+settings.openLimit,'Open up to '+settings.openLimit))+'</button></div>'+
       '</div>'+
       planSummary;
 
     const saveControls=()=>{buildingCanonSaveSettings(buildingCanonReadSettingsFromDom());buildingCanonPlan=null;renderBuildings();};
     box.querySelector('#hk-buildings-refresh')?.addEventListener('click',()=>void refreshBuildings(true));
     box.querySelector('#hk-building-plan')?.addEventListener('click',()=>{buildingCanonSaveSettings(buildingCanonReadSettingsFromDom());buildingCanonPlan=null;void buildingCanonPreparePlan(true);});
-    box.querySelector('#hk-building-run')?.addEventListener('click',()=>void runBuildingsCanonical());
+    box.querySelector('#hk-building-run')?.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();void runBuildingsCanonical();});
     box.querySelector('#hk-building-min-crystals')?.addEventListener('change',saveControls);
     box.querySelector('#hk-building-favorite-from')?.addEventListener('change',saveControls);
     box.querySelector('#hk-building-type')?.addEventListener('change',saveControls);

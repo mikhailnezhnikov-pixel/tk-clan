@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.90
+target_version=1.17.91
+marker=buildings-run-cached-plan-20260925-r1
+source_sha256=19c8a4cb05df5316f965d717e4fbaa916170bb0169d96f9361b9d9bddc4fb126
+candidate_sha256=c06ce36fbb64b17efbf4e6ac6e7f77ba427fc78159d8760a4cc52136f8c7519a
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
