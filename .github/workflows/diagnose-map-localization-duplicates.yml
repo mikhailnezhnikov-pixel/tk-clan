@@ -95,6 +95,32 @@ jobs:
               print('GROUP',[(a['area_id'],a['city_id'],a['city_name'],a['x'],a['y']) for a in c['areas']])
               print('STATS',c['stats'])
               print('PAIRS',c['pairs'])
+          # Exact building-set fingerprints reveal the same district even when
+          # locale-specific city labels/ids caused separate canonical rows.
+          import hashlib
+          fps=collections.defaultdict(list)
+          for a in areas:
+              ids=[r[0] for r in db.execute("SELECT building_id FROM map_buildings WHERE area_id=? ORDER BY building_id",(a['area_id'],))]
+              if len(ids)<20: continue
+              fp=hashlib.sha256(("\\n".join(ids)).encode()).hexdigest()
+              fps[fp].append((a,ids))
+          exact=[]
+          for fp,rows in fps.items():
+              if len(rows)<2: continue
+              # Do not treat FTUE sentinel -1:-1 rows from unrelated cities as a map duplicate.
+              real=[r for r in rows if not (r[0]['x']==-1 and r[0]['y']==-1)]
+              if len(real)<2: continue
+              group=[]
+              for a,ids in real:
+                  known=db.execute("SELECT COUNT(*) FROM map_buildings WHERE area_id=? AND room_count IS NOT NULL",(a['area_id'],)).fetchone()[0]
+                  links=[dict(r) for r in db.execute("SELECT map_key FROM hk_map_area_links WHERE canonical_area_id=?",(a['area_id'],))]
+                  aliases=[dict(r) for r in db.execute("SELECT source_area_id FROM map_area_aliases WHERE canonical_area_id=?",(a['area_id'],))]
+                  group.append({'area':a,'buildings':len(ids),'known':known,'links':links,'aliases':aliases})
+              exact.append({'fingerprint':fp[:12],'rows':group})
+          print('EXACT_BUILDING_SET_DUPES_JSON='+json.dumps(exact,ensure_ascii=False,separators=(',',':')))
+          print('EXACT_BUILDING_SET_DUPES',len(exact))
+          for g in exact:
+              print('EXACT_GROUP',[(r['area']['area_id'],r['area']['city_id'],r['area']['city_name'],r['area']['x'],r['area']['y'],r['buildings'],r['known'],r['links']) for r in g['rows']])
           db.close()
           PY
           scp -q -i "$HOME/.ssh/topking" -o StrictHostKeyChecking=accept-new /tmp/audit-map-dupes.py root@89.125.1.71:/tmp/audit-map-dupes.py
