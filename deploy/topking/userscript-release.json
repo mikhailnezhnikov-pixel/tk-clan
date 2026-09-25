@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.87",
-  "target_version": "1.17.88",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.88.pits-paw-limit.candidate.user.js",
-  "primary_marker": "pits-paw-limited-battles-20260925-r1",
+  "source_version": "1.17.88",
+  "target_version": "1.17.89",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.89.fair-reroll-timeout.candidate.user.js",
+  "primary_marker": "fair-reroll-timeout-reconcile-20260925-r1",
   "preserve_markers": [
+    "pits-paw-limited-battles-20260925-r1",
     "fair-runner-canon-20260925-r1",
     "fair-bonus-selection-20260925-r1",
     "runtime-takeover-20260925-r6-version-aware",
@@ -52,7 +53,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-88-pits-paw-limit-live-status.txt",
-  "commit_message": "fix: deploy Pits paw-limited battles in userscript 1.17.88",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-17-89-fair-reroll-timeout-live-status.txt",
+  "commit_message": "fix: deploy Fair reroll timeout reconciliation in userscript 1.17.89"
 }

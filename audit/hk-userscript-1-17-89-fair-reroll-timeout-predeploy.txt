@@ -1,0 +1,9 @@
+USERSCRIPT_1_17_89_FAIR_REROLL_TIMEOUT_PREDEPLOY=PASS
+source_version=1.17.88
+target_version=1.17.89
+base_sha256=5bcecdb40b3c3f281052208028101ef4f15cb9f886bfaa741b5ac7f009f6770c
+candidate_sha256=3c6121f75b9224786b3f2bb7303603d18cdfc64e7a8d601d2cf5a5eb7609e69c
+fair_reroll_timeout_window=35000
+timeout_reconciliation=PASS
+blind_mutation_retry=DISABLED
+syntax=PASS
