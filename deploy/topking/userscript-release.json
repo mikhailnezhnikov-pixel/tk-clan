@@ -60,5 +60,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-17-95-resource-maximum-direct-run-live-status.txt",
-  "commit_message": "fix: deploy direct Resource maximum run in userscript 1.17.95"
+  "commit_message": "fix: deploy direct Resource maximum run in userscript 1.17.95",
+  "trigger_revision": 1
 }
