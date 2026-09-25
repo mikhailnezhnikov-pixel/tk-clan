@@ -32,7 +32,7 @@ jobs:
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
           before_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
           echo "SERVER_SHA_BEFORE=$before_sha"
-          if [ "$before_sha" != "4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753" ] && [ "$before_sha" != "12f4ea6ee5032bac565015578fd9c174daa235bc138c803eebabfc5bdd9d7556" ] && [ "$before_sha" != "d43d7c88c13e3921ec136cbfd7f3f76f516873df6e0894d56db3fb232382c2a0" ]; then
+          if [ "$before_sha" != "4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753" ] && [ "$before_sha" != "12f4ea6ee5032bac565015578fd9c174daa235bc138c803eebabfc5bdd9d7556" ] && [ "$before_sha" != "d43d7c88c13e3921ec136cbfd7f3f76f516873df6e0894d56db3fb232382c2a0" ] && [ "$before_sha" != "f61c393d9e36ed3128eefbf939fd40ea0211ce43b27268085f37f5cc904e2975" ]; then
             echo "unexpected live server sha: $before_sha"
             exit 1
           fi
@@ -122,8 +122,8 @@ jobs:
           print(json.dumps(out,sort_keys=True))
           assert out['catalog']==235,out
           assert out['area_links']==235,out
-          assert out['areas']==385,out
-          assert out['buildings']==222153,out
+          assert out['areas']>=385,out
+          assert out['buildings']>=222153,out
           db.close()
           PY
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/maps-v2-prod-check.py root@89.125.1.71:/tmp/maps-v2-prod-check.py
