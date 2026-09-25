@@ -1,0 +1,2648 @@
+
+===== def submit_map_area( #1 @ 121371 =====
+utes, ensure_ascii=False))
+    for route in result:
+        wanted_city = rumor_city_key(route.get("city", ""))
+        for point in route.get("points", []):
+            matches = []
+            for area in areas:
+                city_keys = (rumor_city_key(area["city_name"]), rumor_city_key(area["city_id"]))
+                if int(area["x"]) == int(point.get("x", -1)) and int(area["y"]) == int(point.get("y", -1)) and any(
+                    wanted_city and (wanted_city in key or key in wanted_city) for key in city_keys if key
+                ):
+                    canonical = str(area["area_id"])
+                    matches.extend(aliases.get(canonical, []))
+                    matches.append(canonical)
+            point["area_ids"] = list(dict.fromkeys(matches))
+    return result
+
+
+def canonical_map_area(db: sqlite3.Connection, area: dict) -> str:
+    alias = db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",
+                       (area["area_id"],)).fetchone()
+    if alias:
+        return str(alias[0])
+    if area["x"] is None or area["y"] is None:
+        return area["area_id"]
+    candidates = db.execute("SELECT area_id,city_id,city_name FROM map_areas WHERE x=? AND y=?",
+                            (area["x"], area["y"])).fetchall()
+    incoming_name = map_city_key(area["city_name"])
+    for row in candidates:
+        if str(row["city_id"]) == area["city_id"] or (incoming_name and map_city_key(row["city_name"]) == incoming_name):
+            return str(row["area_id"])
+    return area["area_id"]
+
+
+def map_completion(db: sqlite3.Connection, area_id: str) -> tuple[int, int, float]:
+    area = db.execute("SELECT expected_buildings FROM map_areas WHERE area_id=?", (area_id,)).fetchone()
+    counts = db.execute("""SELECT COUNT(*) total,SUM(CASE WHEN room_count IS NOT NULL THEN 1 ELSE 0 END) known
+                           FROM map_buildings WHERE area_id=?""", (area_id,)).fetchone()
+    total = max(int((area or {"expected_buildings": 0})["expected_buildings"] or 0), int(counts["total"] or 0))
+    known = int(counts["known"] or 0)
+    return known, total, round(100 * known / total, 1) if total else 0.0
+
+
+# HK_MAP_PROVENANCE_W5_V1
+def map_knowledge_source(player_id: str) -> str:
+    raw = str(player_id or "").strip()
+    if raw == "source-hk-maps-import":
+        return "hk_maps_import"
+    if raw == "kokkaras-import" or raw == "historical-har" or raw.startswith("source-"):
+        return "legacy"
+    return "game_live"
+
+
+def submit_map_area(player_id: str, value: object) -> dict:
+    raw_game_geometry = value.get('_website_geometry') if isinstance(value,dict) else None
+    area, now = normalize_map_area(value), utc_now()
+    knowledge_source = map_knowledge_source(player_id)
+    player_id = contributor_id(player_id)
+    with db_session() as db:
+        overlap_canonical = _canonical_area_from_exact_buildings(db, area) if knowledge_source == "game_live" else ""
+        canonical_id = overlap_canonical or canonical_map_area(db, area)
+        if knowledge_source == 'game_live' and raw_game_geometry is not None:
+            _hk_store_game_geometry(db,canonical_id,raw_game_geometry,now)
+        existing = db.execute("SELECT 1 FROM map_areas WHERE area_id=?", (canonical_id,)).fetchone()
+        trusted_coords = area.get("coord_revision") == "column-row-v1"
+        if existing:
+            # Coordinates in older rows were stored in raw API row:column order.
+            # Only the explicitly versioned column:row payload may replace them.
+            # Do this before the completed-map early return.
+            if trusted_coords and area["x"] is not None and area["y"] is not None:
+                db.execute("""UPDATE map_areas
+                              SET x=?,y=?,last_player_id=?,last_seen=?
+                              WHERE area_id=?""",
+                           (area["x"],area["y"],player_id,now,canonical_id))
+            known, total, progress = map_completion(db, canonical_id)
+            db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                          VALUES(?,?,?,?) ON CONFLICT(source_area_id) DO UPDATE SET
+                          canonical_area_id=excluded.canonical_area_id,last_seen=excluded.last_seen""",
+                       (area["area_id"], canonical_id, now, now))
+            if total and known >= total and knowledge_source != "game_live":
+                return {"ok":True,"area_id":canonical_id,"source_area_id":area["area_id"],"ignored_complete":True,
+                        "progress":progress,"buildings":total,"added_buildings":0,"enriched_buildings":0}
+        db.execute("""INSERT INTO map_areas(area_id,city_id,city_name,x,y,invest_count,expected_buildings,last_player_id,last_seen)
+                    VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(area_id) DO UPDATE SET
+                    city_name=CASE WHEN map_areas.city_name='' AND excluded.city_name<>'' THEN excluded.city_name ELSE map_areas.city_name END,
+                    x=COALESCE(map_areas.x,excluded.x),y=COALESCE(map_areas.y,excluded.y),invest_count=MAX(map_areas.invest_count,excluded.invest_count),
+                    expected_buildings=MAX(map_areas.expected_buildings,excluded.expected_buildings),last_player_id=excluded.last_player_id,last_seen=excluded.last_seen""",
+                   (canonical_id,area["city_id"],area["city_name"],area["x"],area["y"],area["invest_count"],area["expected_buildings"],player_id,now))
+        db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                      VALUES(?,?,?,?) ON CONFLICT(source_area_id) DO UPDATE SET
+                      canonical_area_id=excluded.canonical_area_id,last_seen=excluded.last_seen""",
+                   (area["area_id"], canonical_id, now, now))
+        db.execute("""INSERT OR IGNORE INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                      VALUES(?,?,?,?)""", (canonical_id, canonical_id, now, now))
+        added = enriched = 0
+        for row in area["buildings"]:
+            before = db.execute("""SELECT opened,room_count,has_events,is_invest,tier,faction,building_type,
+                                         knowledge_source,knowledge_observed_at
+                                  FROM map_buildings WHERE area_id=? AND building_id=?""",
+                                (canonical_id, row["building_id"])).fetchone()
+            if not before:
+                added += 1
+            elif ((before["room_count"] is None and row["room_count"] is not None) or
+                  (knowledge_source == "game_live" and row["room_count"] is not None and before["room_count"] != row["room_count"]) or
+                  (not before["opened"] and row["opened"]) or (before["tier"] is None and row["tier"] is not None) or
+                  (not before["faction"] and row["faction"]) or (not before["building_type"] and row["building_type"])):
+                enriched += 1
+            db.execute("""INSERT INTO map_buildings(
+                            area_id,building_id,opened,room_count,has_events,is_invest,tier,faction,building_type,
+                            last_player_id,last_seen,knowledge_source,knowledge_observed_at)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(area_id,building_id) DO UPDATE SET
+                        opened=MAX(map_buildings.opened,excluded.opened),
+                        room_count=CASE
+                          WHEN excluded.room_count IS NULL THEN map_buildings.room_count
+                          WHEN excluded.knowledge_source='game_live' THEN excluded.room_count
+                          WHEN map_buildings.room_count IS NULL THEN excluded.room_count
+                          ELSE map_buildings.room_count END,
+                        has_events=CASE
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.has_events
+                          ELSE MAX(map_buildings.has_events,excluded.has_events) END,
+                        is_invest=MAX(map_buildings.is_invest,excluded.is_invest),
+                        tier=COALESCE(map_buildings.tier,excluded.tier),
+                        faction=CASE WHEN map_buildings.faction='' THEN excluded.faction ELSE map_buildings.faction END,
+                        building_type=CASE WHEN map_buildings.building_type='' THEN excluded.building_type ELSE map_buildings.building_type END,
+                        last_player_id=CASE
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.last_player_id ELSE map_buildings.last_player_id END,
+                        last_seen=MAX(map_buildings.last_seen,excluded.last_seen),
+                        knowledge_source=CASE
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.knowledge_source ELSE map_buildings.knowledge_source END,
+                        knowledge_observed_at=CASE
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.knowledge_observed_at ELSE map_buildings.knowledge_observed_at END""",
+                       (canonical_id,row["building_id"],int(row["opened"]),row["room_count"],int(row["has_events"]),int(row["is_invest"]),
+                        row["tier"],row["faction"],row["building_type"],player_id,now,knowledge_source,now))
+        known, total, progress = map_completion(db, canonical_id)
+    result = {"ok":True,"area_id":canonical_id,"source_area_id":area["area_id"],"ignored_complete":False,
+              "progress":progress,"buildings":total,"known_buildings":known,"added_buildings":added,"enriched_buildings":enriched}
+    if knowledge_source == "game_live" and isinstance(value, dict) and value.get("_website_hydrate"):
+        try:
+            result["website_hydration"] = hydrate_hk_website_map_for_area(
+                canonical_id, area, value.get("_website_geometry")
+            )
+        except Exception as error:
+            result["website_hydration"] = {
+                "ok": False,
+                "status": "hydrate_error",
+                "error": str(error)[:240],
+            }
+    return result
+
+
+def anonymize_existing_contributors() -> dict:
+    changed = 0
+    with db_session() as db:
+        player_ids = [row[0] for row in db.execute("SELECT player_id FROM licenses")]
+        for player_id in player_ids:
+            anonymous = contributor_id(player_id)
+            for table, column in (("business_plan_catalog", "first_player_id"),
+                                  ("map_areas", "last_player_id"), ("map_buildings", "last_player_id")):
+                changed += db.execute(f"UPDATE {table} SET {column}=? WHERE {column}=?", (anonymous, player_id)).rowcount
+    return {"players": len(player_ids), "changed": changed}
+
+
+def import_kokkaras_map(value: object) -> dict:
+    """Import one authorized HK Maps export without storing login/session data."""
+    if not isinstance(value, dict) or not isinstance(value.get("meta"), dict):
+        raise ValueError("invalid Kokkaras map export")
+    meta = value["meta"]
+    collection = value.get("buildingsGeoJSON")
+    features = collection.get("features") if isinstance(collection, dict) else None
+    if not isinstance(features, list):
+        raise ValueError("missing buildings GeoJSON")
+    buildings = []
+    for feature in features:
+        properties = feature.get("properties") if isinstance(feature, dict) else None
+        if not isinstance(properties, dict) or not properties.get("is_game") or not properties.get("building_id"):
+            continue
+        crystals = properties.get("crystals")
+        buildings.append({
+            "building_id": str(properties["building_id"]),
+            "opened": crystals is not None,
+            "room_count": crystals,
+            "has_events": crystals is not None and int(crystals) > 0,
+            "is_invest": bool(properties.get("is_investment")),
+            "tier": None,
+            "faction": str(properties.get("faction") or ""),
+            "building_type": str(properties.get("building_generator") or ""),
+        })
+    # HK Maps labels coordinates as Y:X, while the mobile UI displays x:y.
+    area = {
+        "area_id": str(meta.get("area_id") or ""),
+        "city_id": str(meta.get("city_id") or f"kokkaras:{meta.get('city_name', '')}"),
+        "city_name": str(meta.get("city_name") or ""),
+        "x": meta.get("y"),
+        "y": meta.get("x"),
+        "invest_count": int(meta.get("invest_count") or 0),
+        "expected_buildings": int(meta.get("expected_buildings") or len(buildings)),
+        "buildings": buildings,
+    }
+    result = submit_map_area("kokkaras-import", area)
+    result.update({"source": "kokkaras", "known": sum(row["room_count"] is not None for row in buildings)})
+    return result
+
+
+# HK_FULL235_IMPORT_V1
+# HK_FULL235_ORIGINAL75_V2
+FULL235_ORIGINAL_AREA_IDS_75 = {
+  "hk_riodejaneiro3430": "9b97ee80-1026-4a3c-a9c6-ef4a9ed40f2f",
+  "hk_dubai6808": "e7907b87-1b18-4f2b-81ad-4c927118694f",
+  "hk_dubai4433": "35c80ab3-3173-48e5-9356-ad7a0400f8d2",
+  "hk_dubai6409": "9a2a6b3f-a935-45a2-a8c1-93c127670871",
+  "hk_paris3122": "6856318b-28c1-4090-904d-e4e0ebf03287",
+  "hk_dubai4329": "40273907-c157-48c3-b5a6-8385dee8aff4",
+  "hk_riodejaneiro3530": "eba83f40-dc9f-4278-ba1d-8048c64f40a0",
+  "hk_dubai5216": "9d5ce193-1ca2-4b80-9403-07abbd1f4b5d",
+  "hk_dubai5315": "2593c04d-f3d1-4477-899c-e3ea7c89059c",
+  "hk_london3424": "5af04afd-bdab-40d3-b283-d4a98aac848c",
+  "hk_newyork3208": "0869b1b1-51d6-4c58-829f-dd0777d2f692",
+  "hk_dubai4229": "b6977834-bfed-4519-bfb2-5f9c87fc1f4c",
+  "hk_dubai6210": "031a4440-6c08-4e6f-b4ba-209fa8d58f74",
+  "hk_dubai6308": "fbe4f037-df7b-425f-8d25-e902da6b792b",
+  "hk_dubai5316": "a21e02e6-7273-4627-9093-90e9ac53588e",
+  "hk_dubai6212": "fdcdea06-8cd6-468e-937a-3ed249bae21a",
+  "hk_dubai5414": "ee25687a-495b-45d6-a540-119e96942290",
+  "hk_newyork2521": "5bd75ffb-bf25-4f0b-a56d-81be89ac76f3",
+  "hk_newyork2421": "8e45b719-d07a-48d8-8808-c39ab2588403",
+  "hk_dubai7003": "906c807d-1306-48ff-adf1-3037045d75d3",
+  "hk_riodejaneiro5441": "f4135d17-0348-4a86-8811-c38f531ef618",
+  "hk_saintpetersburg2219": "bc5a6599-3ddb-4dfd-855e-38c3ceda3165",
+  "hk_london3025": "12e6f3ce-9b68-4c61-86db-44662dbb0064",
+  "hk_newyork2620": "914199bc-0946-419d-ba8d-a43fedfa9742",
+  "hk_paris3022": "ec0ffc0e-41b2-437e-b9b7-e5605ce53c9b",
+  "hk_newyork3210": "7e6b1875-f390-4b25-93ab-74ee473b9615",
+  "hk_paris3223": "cf17aca2-b6a3-4c35-a62e-c15cf0d9b988",
+  "hk_london3125": "0f0c1217-7401-46d6-ad11-2f1668234ad1",
+  "hk_newyork2522": "411dde71-adc6-47a2-979a-476b8c818f6e",
+  "hk_paris3222": "10510846-4330-49c7-8d4e-e4d5e3c4d215",
+  "hk_newyork2518": "e66a6a1d-24ec-48d4-8b36-44cf8643f03d",
+  "hk_london3124": "0a7573ac-8deb-424f-8939-c7434a31283b",
+  "hk_paris2822": "8877f108-79d9-4742-821a-dcb180f8f384",
+  "hk_newyork2422": "8a82f8b2-f2cc-4d62-a707-2b22c8e931d7",
+  "hk_london3324": "7f0b22e3-18d5-4ecd-a914-e9dcb18801ad",
+  "hk_losangeles4137": "0af366c8-006d-4e70-ad41-de0631ee829a",
+  "hk_lagos2256": "ce5c6284-67ea-4b10-bdf8-6497a1d54bbc",
+  "hk_saintpetersburg2121": "e4aef74e-40da-498f-afa2-3188125c0041",
+  "hk_paris3324": "d19eb338-3a37-4177-afef-344628aed571",
+  "hk_paris3322": "0ec685ad-7b75-47f1-a1d7-fecb24174f9e",
+  "hk_saintpetersburg2220": "b33978d5-feaa-46a7-a664-acf7623d77ab",
+  "hk_losangeles4136": "87728349-7188-4fd3-93db-edbaadaa122b",
+  "hk_paris3323": "6dd774e4-c042-4d94-b6e6-57d6273c5254",
+  "hk_singapore3818": "e2a49d73-0931-4161-9257-b9c475f695ae",
+  "hk_moscow1918": "3fddb622-111f-488f-a70e-b31b563ce145",
+  "hk_moscow2118": "23d4c221-b89a-459a-af5e-dceaa8fda578",
+  "hk_losangeles3031": "898a4ce2-3ebc-4797-8ba7-7651a15742fe",
+  "hk_auckland1515": "6ddb2d6f-7dcf-4e1b-81aa-1685cff88803",
+  "hk_moscow2218": "a58cca24-528a-4a8e-ab7d-aade55aaad69",
+  "hk_losangeles1839": "8fe5bc49-04f3-4a1c-9a6d-5ecbe4bc9236",
+  "hk_lagos3141": "2071a3a8-2543-44cc-83b8-0e94c475c8be",
+  "hk_lagos2750": "8b14b348-0cf8-413f-82d6-8e8aa66d90a1",
+  "hk_berlin1818": "0c9eab48-2d54-4883-8e1b-0836cb2c8520",
+  "hk_saintpetersburg1917": "090d4543-e438-4998-afbf-978028187f83",
+  "hk_lagos4822": "40a6a980-b5ef-4ae3-b1cd-4007588ffcfe",
+  "hk_newyork1608": "788379db-eeee-4f08-9b85-d9b05070cafd",
+  "hk_berlin2620": "4f4a7107-2704-4ca4-9c34-1901e92d1e90",
+  "hk_berlin1717": "e0b4bd6b-a3cb-4938-b098-1acb1ccbbff4",
+  "hk_lagos4815": "4fa16b33-f928-4c22-9974-21f9ee10eb60",
+  "hk_losangeles3734": "39c0a369-9b47-49d5-8470-cce86b827a5f",
+  "hk_london3423": "92023e2b-baef-4e8f-8838-b9d6f98660e0",
+  "hk_berlin2514": "bb513dfb-24e7-4f16-9f9c-4cd2b4e3fe99",
+  "hk_losangeles4037": "7aec1fff-1603-4e30-928f-d1195e0190d4",
+  "hk_berlin2513": "8da59791-4c63-4153-9c83-16b0440b6fba",
+  "hk_newyork3832": "274095c4-1a42-490e-a495-008091844d23",
+  "hk_losangeles3638": "8cdc3165-c7c7-484f-8f74-6d0add7e1e59",
+  "hk_riodejaneiro4326": "fc27729c-7b46-4e70-9dde-d4f75fb49cff",
+  "hk_berlin1718": "8562176f-4ef0-47cf-9865-0ec75d28c0f3",
+  "hk_minsk1306": "d20f2e38-5593-4451-94b9-6d2d337f34c3",
+  "hk_berlin2412": "c0008d01-89b9-4476-8959-5eb13f127a0b",
+  "hk_newyork0332": "e54c5820-d79f-4f47-b19f-49a0775ca30b",
+  "hk_losangeles3524": "9bc14c89-38ed-4e87-8dd6-ef9c4aeb24cd",
+  "hk_newyork2440": "2faf617c-35d0-4cbc-a7b6-98bc0eebdc4d",
+  "hk_lagos3228": "0eb39a03-c3b2-4cab-ad01-49b67b9ed9e0",
+  "hk_saintpetersburg1921": "0c2194e3-2fe1-445e-9094-4526e32ee5bd"
+}
+
+def ensure_full235_import_schema() -> None:
+    with db_session() as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS hk_full_import_batches(
+            batch_id TEXT PRIMARY KEY,
+            telegram_id TEXT NOT NULL,
+            archive_sha256 TEXT NOT NULL,
+            exported_at TEXT NOT NULL DEFAULT '',
+            expected_maps INTEGER NOT NULL,
+            created_at INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'uploading',
+            resolved_json TEXT NOT NULL DEFAULT ''
+        )""")
+        db.execute("""CREATE TABLE IF NOT EXISTS hk_full_import_stage(
+            batch_id TEXT NOT NULL,
+            map_key TEXT NOT NULL,
+            city TEXT NOT NULL,
+            grid TEXT NOT NULL,
+            buildings_json TEXT NOT NULL,
+            building_count INTEGER NOT NULL,
+            PRIMARY KEY(batch_id,map_key)
+        )""")
+        db.execute("""CREATE TABLE IF NOT EXISTS hk_full_map_import_links(
+            map_key TEXT PRIMARY KEY,
+            canonical_area_id TEXT NOT NULL,
+            resolution_method TEXT NOT NULL,
+            overlap_count INTEGER NOT NULL DEFAULT 0,
+            source_buildings INTEGER NOT NULL DEFAULT 0,
+            archive_sha256 TEXT NOT NULL DEFAULT '',
+            imported_at INTEGER NOT NULL
+        )""")
+
+
+def _full235_manager(member: dict) -> str:
+    if not member or not member.get("maps_manage"):
+        raise PermissionError("maps manage denied")
+    telegram_id = str(member.get("telegram_id") or "").strip()
+    if not telegram_id:
+        raise PermissionError("maps manage denied")
+    return telegram_id
+
+
+def _full235_batch(db: sqlite3.Connection, member: dict, batch_id: str) -> sqlite3.Row:
+    telegram_id = _full235_manager(member)
+    row = db.execute(
+        "SELECT * FROM hk_full_import_batches WHERE batch_id=? AND telegram_id=?",
+        (str(batch_id or ""), telegram_id),
+    ).fetchone()
+    if not row:
+        raise LookupError("full import batch not found")
+    return row
+
+
+def _full235_normalize_map(value: object) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("invalid full map")
+    key = str(value.get("key") or "").strip()
+    city = str(value.get("city") or "").strip()[:120]
+    grid = str(value.get("grid") or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key) or not city:
+        raise ValueError("invalid full map identity")
+    if not re.fullmatch(r"\d{1,3}:\d{1,3}", grid):
+        raise ValueError("invalid full map grid")
+    buildings = value.get("buildings")
+    if not isinstance(buildings, list) or not 1 <= len(buildings) <= 5000:
+        raise ValueError("invalid full map buildings")
+    clean = []
+    seen = set()
+    for raw in buildings:
+        if not isinstance(raw, list) or len(raw) < 3:
+            raise ValueError("invalid full building")
+        building_id = str(raw[0] or "").strip()
+        if not ID_RE.fullmatch(building_id) or building_id in seen:
+            raise ValueError("invalid or duplicate full building id")
+        seen.add(building_id)
+        room = raw[1]
+        if room is not None:
+            if isinstance(room, bool):
+                raise ValueError("invalid room count")
+            room = int(room)
+            if not 0 <= room <= 20:
+                raise ValueError("invalid room count")
+        invest = bool(raw[2])
+        faction = str(raw[3] if len(raw) > 3 else "")[:40]
+        generator = str(raw[4] if len(raw) > 4 else "")[:100]
+        clean.append([building_id, room, invest, faction, generator])
+    return {"key": key, "city": city, "grid": grid, "buildings": clean}
+
+
+def full235_import_start(member: dict, value: dict) -> dict:
+    ensure_full235_import_schema()
+    telegram_id = _full235_manager(member)
+    if str(value.get("format") or "") != "HK Maps Full Export":
+        raise ValueError("invalid archive format")
+    if int(value.get("version") or 0) != 3:
+        raise ValueError("invalid archive version")
+    found = int(value.get("maps_found") or 0)
+    exported = int(value.get("maps_exported") or 0)
+    errors = int(value.get("errors_count") or 0)
+    if found != 235 or exported != 235 or errors != 0:
+        raise ValueError("archive must contain 235 successful maps")
+    archive_sha = str(value.get("archive_sha256") or "").lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", archive_sha):
+        raise ValueError("invalid archive sha")
+    exported_at = str(value.get("exported_at") or "")[:64]
+    now = utc_now()
+    batch_id = hashlib.sha256(
+        f"{telegram_id}:{archive_sha}:{time.time_ns()}".encode()
+    ).hexdigest()[:24]
+    with db_session() as db:
+        db.execute("DELETE FROM hk_full_import_stage WHERE batch_id IN (SELECT batch_id FROM hk_full_import_batches WHERE created_at<?)",
+                   (now - 172800,))
+        db.execute("DELETE FROM hk_full_import_batches WHERE created_at<?", (now - 172800,))
+        db.execute("""INSERT INTO hk_full_import_batches(
+            batch_id,telegram_id,archive_sha256,exported_at,expected_maps,created_at,status,resolved_json)
+            VALUES(?,?,?,?,?,?,?,?)""",
+            (batch_id,telegram_id,archive_sha,exported_at,235,now,"uploading",""))
+    return {"ok": True, "batch_id": batch_id, "expected_maps": 235}
+
+
+def full235_import_chunk(member: dict, value: dict) -> dict:
+    ensure_full235_import_schema()
+    batch_id = str(value.get("batch_id") or "")
+    maps = value.get("maps")
+    if not isinstance(maps, list) or not 1 <= len(maps) <= 10:
+        raise ValueError("invalid full import chunk")
+    normalized = [_full235_normalize_map(item) for item in maps]
+    with db_session() as db:
+        batch = _full235_batch(db, member, batch_id)
+        if str(batch["status"]) not in ("uploading","resolved"):
+            raise RuntimeError("batch not writable")
+        catalog = {
+            str(row["map_key"]): (str(row["city"]), str(row["grid"]))
+            for row in db.execute(
+                "SELECT map_key,city,grid FROM hk_maps_catalog WHERE map_key IN (%s)"
+                % ",".join("?" for _ in normalized),
+                tuple(row["key"] for row in normalized),
+            )
+        }
+        if len(catalog) != len(normalized):
+            raise LookupError("archive map is not in website catalog")
+        for row in normalized:
+            cat = catalog.get(row["key"])
+            if not cat or map_city_key(cat[0]) != map_city_key(row["city"]) or str(cat[1]) != row["grid"]:
+                raise ValueError("archive map metadata differs from website catalog")
+            db.execute("""INSERT INTO hk_full_import_stage(
+        
+
+===== def import_hk_map_room_knowledge( #1 @ 81913 =====
+        VALUES(?,?,?,?,?)
+                   ON CONFLICT(map_key,point_index) DO UPDATE SET
+                     building_id=excluded.building_id,
+                     match_method=excluded.match_method,
+                     linked_at=excluded.linked_at""",
+                (key, point_index, building_id, match_method, now),
+            )
+        total = db.execute(
+            "SELECT COUNT(*) FROM hk_map_point_links WHERE map_key=?",
+            (key,),
+        ).fetchone()[0]
+    return {"ok": True, "map_key": key, "area_id": area_id,
+            "linked": len(normalized), "total": int(total), "match_method": match_method}
+
+
+def hk_map_points_with_canonical(map_key: str, flat: object) -> tuple[list, dict]:
+    points = list(flat) if isinstance(flat, list) else []
+    point_count = len(points) // 3
+    meta = {"enabled": False, "linked_points": 0, "applied_points": 0,
+            "fallback_points": point_count, "canonical_area_id": ""}
+    if not points or len(points) % 3:
+        return points, meta
+    with db_session() as db:
+        bridge = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (map_key,),
+        ).fetchone()
+        if not bridge:
+            return points, meta
+        area_id = str(bridge["canonical_area_id"])
+        rows = db.execute(
+            """SELECT p.point_index,p.building_id,b.room_count
+               FROM hk_map_point_links p
+               LEFT JOIN map_buildings b
+                 ON b.area_id=? AND b.building_id=p.building_id
+               WHERE p.map_key=? ORDER BY p.point_index""",
+            (area_id, map_key),
+        ).fetchall()
+    meta["enabled"] = bool(rows)
+    meta["canonical_area_id"] = area_id
+    meta["linked_points"] = len(rows)
+    applied = 0
+    for row in rows:
+        point_index = int(row["point_index"])
+        slot = point_index * 3 + 2
+        if not 0 <= slot < len(points):
+            continue
+        room_count = row["room_count"]
+        if room_count is None:
+            continue
+        try:
+            rooms = int(room_count)
+            old_flag = int(points[slot])
+        except (TypeError, ValueError):
+            continue
+        if not 0 <= rooms <= 7:
+            continue
+        investment_bit = old_flag & 0x08
+        points[slot] = investment_bit | rooms
+        applied += 1
+    meta["applied_points"] = applied
+    meta["fallback_points"] = max(0, point_count - applied)
+    return points, meta
+
+
+# HK_MAP_ROOM_KNOWLEDGE_W3_V1
+def import_hk_map_room_knowledge(map_key: str, value: object) -> dict:
+    """Fill only previously unknown canonical room counts for one linked website map.
+
+    W3 intentionally does not overwrite any existing non-NULL room_count.
+    Source priority/provenance normalization is handled in W5.
+    """
+    key = str(map_key or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key):
+        raise ValueError("invalid map key")
+    if not isinstance(value, list) or len(value) > 5000:
+        raise ValueError("invalid room knowledge")
+    normalized = []
+    seen = set()
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        building_id = str(raw.get("building_id", "")).strip()
+        if not ID_RE.fullmatch(building_id) or building_id in seen:
+            continue
+        try:
+            room_count = int(raw.get("room_count"))
+        except (TypeError, ValueError):
+            continue
+        if not 0 <= room_count <= 20:
+            continue
+        seen.add(building_id)
+        normalized.append({"building_id": building_id, "room_count": room_count})
+    if not normalized:
+        raise ValueError("no valid room knowledge")
+
+    now = utc_now()
+    source = "source-hk-maps-import"
+    filled = preserved = missing = 0
+    filled_ids = []
+    preserved_ids = []
+    missing_ids = []
+    with db_session() as db:
+        link = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not link:
+            raise LookupError("map is not linked to canonical area")
+        area_id = str(link["canonical_area_id"])
+        if not db.execute("SELECT 1 FROM map_areas WHERE area_id=?", (area_id,)).fetchone():
+            raise LookupError("canonical area not found")
+
+        for item in normalized:
+            row = db.execute(
+                """SELECT room_count,knowledge_source,knowledge_observed_at FROM map_buildings
+                   WHERE area_id=? AND building_id=?""",
+                (area_id, item["building_id"]),
+            ).fetchone()
+            if not row:
+                missing += 1
+                missing_ids.append(item["building_id"])
+                continue
+            if row["room_count"] is not None:
+                preserved += 1
+                preserved_ids.append(item["building_id"])
+                continue
+            cursor = db.execute(
+                """UPDATE map_buildings
+                   SET room_count=?,
+                       has_events=MAX(has_events,?),
+                       last_player_id=?,
+                       last_seen=?,
+                       knowledge_source='hk_maps_import',
+                       knowledge_observed_at=?
+                   WHERE area_id=? AND building_id=? AND room_count IS NULL""",
+                (item["room_count"], int(item["room_count"] > 0), source, now, now,
+                 area_id, item["building_id"]),
+            )
+            if cursor.rowcount:
+                filled += 1
+                filled_ids.append(item["building_id"])
+
+        known, total, progress = map_completion(db, area_id)
+
+    return {
+        "ok": True,
+        "map_key": key,
+        "area_id": area_id,
+        "requested": len(normalized),
+        "filled": filled,
+        "preserved_nonnull": preserved,
+        "missing_buildings": missing,
+        "filled_ids": filled_ids,
+        "preserved_ids": preserved_ids,
+        "missing_ids": missing_ids,
+        "known_buildings": known,
+        "buildings": total,
+        "progress": progress,
+        "source": source,
+        "knowledge_source": "hk_maps_import",
+    }
+
+
+
+# SCOPED_HK_MAP_ACCESS_V1
+
+def ensure_scoped_hk_map_access_schema() -> None:
+    now = utc_now()
+    with db_session() as db:
+        db.executescript("""
+            CREATE TABLE IF NOT EXISTS hk_map_access_rules (
+                telegram_id TEXT NOT NULL,
+                scope_type TEXT NOT NULL CHECK(scope_type IN ('city','map')),
+                scope_value TEXT NOT NULL,
+                allowed INTEGER NOT NULL DEFAULT 1,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (telegram_id, scope_type, scope_value),
+                FOREIGN KEY (telegram_id) REFERENCES clan_members(telegram_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_hk_map_access_rules_member
+                ON hk_map_access_rules(telegram_id, scope_type, allowed);
+            CREATE TABLE IF NOT EXISTS hk_map_access_meta (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+        """)
+        migrated = db.execute("SELECT 1 FROM hk_map_access_meta WHERE key='legacy_full_access_v1'").fetchone()
+        if not migrated:
+            cities = [row[0] for row in db.execute("SELECT DISTINCT city FROM hk_maps_catalog ORDER BY city").fetchall()]
+            legacy = [row[0] for row in db.execute(
+                "SELECT telegram_id FROM clan_members WHERE active=1 AND maps_access=1 AND maps_manage=0"
+            ).fetchall()]
+            for telegram_id in legacy:
+                for city in cities:
+                    db.execute("""INSERT OR IGNORE INTO hk_map_access_rules
+                                  (telegram_id,scope_type,scope_value,allowed,created_at,updated_at)
+                                  VALUES(?,?,?,?,?,?)""",
+                               (telegram_id, 'city', city, 1, now, now))
+            db.execute("INSERT INTO hk_map_access_meta(key,value,updated_at) VALUES('legacy_full_access_v1','1',?)", (now,))
+        db.execute("""UPDATE clan_members
+                      SET maps_access=CASE
+                          WHEN maps_manage=1 THEN 1
+                          WHEN EXISTS(SELECT 1 FROM hk_map_access_rules r
+                                      WHERE r.telegram_id=clan_members.telegram_id AND r.allowed=1) THEN 1
+                          ELSE 0 END""")
+
+
+def _hk_member_rules(db: sqlite3.Connection, telegram_id: str) -> tuple[set[str], dict[str, bool]]:
+    rows = db.execute("""SELECT scope_type,scope_value,allowed FROM hk_map_access_rules
+                         WHERE telegram_id=?""", (telegram_id,)).fetchall()
+    cities: set[str] = set()
+    maps: dict[str, bool] = {}
+    for row in rows:
+        if row['scope_type'] == 'city' and row['allowed']:
+            cities.add(row['scope_value'])
+        elif row['scope_type'] == 'map':
+            maps[row['scope_value']] = bool(row['allowed'])
+    return cities, maps
+
+
+def member_can_access_hk_map(member: dict | None, map_key: str, city: str | None = None) -> bool:
+    if not member:
+        return False
+    if member.get('maps_manage'):
+        return True
+    telegram_id = str(member.get('telegram_id') or '')
+    if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+        return False
+    ensure_scoped_hk_map_access_schema()
+    with db_session() as db:
+        if city is None:
+            row = db.execute("SELECT city FROM hk_maps_catalog WHERE map_key=?", (map_key,)).fetchone()
+            if not row:
+                return False
+            city = row['city']
+        cities, maps = _hk_member_rules(db, telegram_id)
+    if map_key in maps:
+        return maps[map_key]
+    return city in cities
+
+
+def set_member_map_scope(member: dict, telegram_id: str, scope_type: str, scope_value: str, allowed: bool) -> dict:
+    if not member.get('maps_manage'):
+        raise PermissionError('maps manage denied')
+    if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+        raise ValueError('invalid telegram id')
+    scope_type = str(scope_type or '').strip().lower()
+    scope_value = str(scope_value or '').strip()
+    if scope_type not in ('city','map') or not scope_value:
+        raise ValueError('invalid map scope')
+    ensure_scoped_hk_map_access_schema()
+    now = utc_now()
+    with db_session() as db:
+        target = db.execute("SELECT maps_manage FROM clan_members WHERE telegram_id=? AND active=1", (telegram_id,)).fetchone()
+        if not target:
+            raise LookupError('member not found')
+        if target['maps_manage']:
+            raise PermissionError('manager access is implicit')
+        if scope_type == 'city':
+            exists = db.execute("SELECT 1 FROM hk_maps_catalog WHERE city=? LIMIT 1", (scope_value,)).fetchone()
+            if not exists:
+                raise LookupError('city not found')
+            city_maps = [row[0] for row in db.execute("SELECT map_key FROM hk_maps_catalog WHERE city=?", (scope_value,)).fetchall()]
+            if city_maps:
+                placeholders = ','.join('?' for _ in city_maps)
+                db.execute(f"DELETE FROM hk_map_access_rules WHERE telegram_id=? AND scope_type='map' AND scope_value IN ({placeholders})",
+                           (telegram_id, *city_maps))
+            if allowed:
+                db.execute("""INSERT INTO hk_map_access_rules(telegram_id,scope_type,scope_value,allowed,created_at,updated_at)
+                              VALUES(?,?,?,?,?,?)
+                              ON CONFLICT(telegram_id,scope_type,scope_value)
+                              DO UPDATE SET allowed=excluded.allowed,updated_at=excluded.updated_at""",
+                           (telegram_id,'city',scope_value,1,now,now))
+            else:
+                db.execute("DELETE FROM hk_map_access_rules WHERE telegram_id=? AND scope_type='city' AND scope_value=?",
+                           (telegram_id,scope_value))
+        else:
+            map_row = db.execute("SELECT city FROM hk_maps_catalog WHERE map_key=?", (scope_value,)).fetchone()
+            if not map_row:
+                raise LookupError('map not found')
+            city_rule = db.execute("""SELECT allowed FROM hk_map_access_rules
+                                      WHERE telegram_id=? AND scope_type='city' AND scope_value=?""",
+                                   (telegram_id,map_row['city'])).fetchone()
+            city_allowed = bool(city_rule and city_rule['allowed'])
+            if allowed and city_allowed:
+                db.execute("DELETE FROM hk_map_access_rules WHERE telegram_id=? AND scope_type='map' AND scope_value=?",
+                           (telegram_id,scope_value))
+            elif allowed:
+                db.execute("""INSERT INTO hk_map_access_rules(telegram_id,scope_type,scope_value,allowed,created_at,updated_at)
+                              VALUES(?,?,?,?,?,?)
+                              ON CONFLICT(telegram_id,scope_type,scope_value)
+                              DO UPDATE SET allowed=excluded.allowed,updated_at=excluded.updated_at""",
+                           (telegram_id,'map',scope_value,1,now,now))
+            elif city_allowed:
+                db.execute("""INSERT INTO hk_map_access_rules(telegram_id,scope_type,scope_value,allowed,created_at,updated_at)
+                              VALUES(?,?,?,?,?,?)
+                              ON CONFLICT(telegram_id,scope_type,scope_value)
+                              DO UPDATE SET allowed=excluded.allowed,updated_at=excluded.updated_at""",
+                           (telegram_id,'map',scope_value,0,now,now))
+            else:
+                db.execute("DELETE FROM hk_map_access_rules WHERE telegram_id=? AND scope_type='map' AND scope_value=?",
+                           (telegram_id,scope_value))
+        has_allow = db.execute("SELECT 1 FROM hk_map_access_rules WHERE telegram_id=? AND allowed=1 LIMIT 1", (telegram_id,)).fetchone()
+        db.execute("UPDATE clan_members SET maps_access=?,updated_at=? WHERE telegram_id=?",
+                   (1 if has_allow else 0, now, telegram_id))
+    return {'ok': True, 'telegram_id': telegram_id, 'scope_type': scope_type,
+            'scope_value': scope_value, 'allowed': bool(allowed)}
+
+def cabinet_maps(member: dict) -> dict:
+    ensure_scoped_hk_map_access_schema()
+    with db_session() as db:
+        rows = db.execute("SELECT * FROM hk_maps_catalog ORDER BY score DESC,city,grid").fetchall()
+        if not member.get('maps_manage'):
+            telegram_id = str(member.get('telegram_id') or '')
+            cities, map_rules = _hk_member_rules(db, telegram_id)
+            rows = [row for row in rows if map_rules.get(row['map_key'], row['city'] in cities)]
+            if not rows:
+                raise PermissionError('maps access denied')
+        members = []
+        if member.get('maps_manage'):
+            raw_members = [dict(row) for row in db.execute(
+                """SELECT telegram_id,note,first_name,username,linked_player_id,active,maps_access,maps_manage
+                   FROM clan_members WHERE active=1 ORDER BY first_name,username,note,telegram_id""").fetchall()]
+            rule_rows = db.execute("SELECT telegram_id,scope_type,scope_value,allowed FROM hk_map_access_rules").fetchall()
+            by_member: dict[str, dict] = {}
+            for rule in rule_rows:
+                bucket = by_member.setdefault(rule['telegram_id'], {'cities': [], 'maps': {}})
+                if rule['scope_type'] == 'city' and rule['allowed']:
+                    bucket['cities'].append(rule['scope_value'])
+                elif rule['scope_type'] == 'map':
+                    bucket['maps'][rule['scope_value']] = bool(rule['allowed'])
+            for item in raw_members:
+                rules = by_member.get(item['telegram_id'], {'cities': [], 'maps': {}})
+                rules['cities'] = sorted(set(rules['cities']))
+                item['map_rules'] = rules
+                members.append(item)
+    return {'ok': True, 'can_manage': bool(member.get('maps_manage')),
+            'maps': [hk_map_row(row) for row in rows], 'members': members}
+
+
+def public_maps() -> dict:
+    with db_session() as db:
+        rows = db.execute("""SELECT * FROM hk_maps_catalog
+                             WHERE published=1 AND open_url<>''
+                             ORDER BY score DESC,city,grid""").fetchall()
+    maps = [hk_map_row(row) for row in rows]
+    return {"ok": True, "total": len(maps), "maps": maps}
+
+
+def set_map_published(member: dict, map_key: str, published: bool) -> dict:
+    if not member.get("maps_manage"):
+        raise PermissionError("maps manage denied")
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    now = utc_now()
+    with db_session() as db:
+        row = db.execute("SELECT open_url FROM hk_maps_catalog WHERE map_key=?", (map_key,)).fetchone()
+        if not row:
+            raise LookupError("map not found")
+        if published and not row["open_url"]:
+            raise RuntimeError("map has no open url")
+        db.execute("UPDATE hk_maps_catalog SET published=?,updated_at=? WHERE map_key=?",
+                   (1 if published else 0, now, map_key))
+    return {"ok": True, "key": map_key, "published": bool(published)}
+
+
+def set_map_open_url(member: dict, map_key: str, open_url: str) -> dict:
+    if not member.get("maps_manage"):
+        raise PermissionError("maps manage denied")
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    value = str(open_url or "").strip()[:500]
+    if value and not (value.startswith("/maps/") or value.startswith("https://tk-clan.ru/maps/")):
+        raise ValueError("invalid map url")
+    now = utc_now()
+    with db_session() as db:
+        updated = db.execute("UPDATE hk_maps_catalog SET open_url=?,published=CASE WHEN ?='' THEN 0 ELSE published END,updated_at=? WHERE map_key=?",
+                             (value, value, now, map_key)).rowcount
+    if not updated:
+        raise LookupError("map not found")
+    return {"ok": True, "key": map_key, "open_url": value}
+
+
+def set_member_maps_access(member: dict, telegram_id: str, allowed: bool) -> dict:
+    if not member.get("maps_manage"):
+        raise PermissionError("maps manage denied")
+    if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+        raise ValueError("invalid telegram id")
+    now = utc_now()
+    with db_session() as db:
+        updated = db.execute("UPDATE clan_members SET maps_access=?,updated_at=? WHERE telegram_id=? AND active=1",
+                             (1 if allowed else 0, now, telegram_id)).rowcount
+    if not updated:
+        raise LookupError("member not found")
+    return {"ok": True, "telegram_id": telegram_id, "maps_access": bool(allowed)}
+
+def _read_exact(source, size: int) -> bytes:
+    data = source.read(size)
+    if len(data) != size:
+        raise ValueError("truncated private maps payload")
+    return data
+
+
+def _load_private_hk_maps() -> dict[str, dict]:
+    try:
+        mtime = os.path.getmtime(PRIVATE_HK_MAPS_PATH)
+    except OSError:
+        return {}
+    with PRIVATE_HK_MAPS_LOCK:
+        if PRIVATE_HK_MAPS_CACHE.get("mtime") == mtime:
+            cached = PRIVATE_HK_MAPS_CACHE.get("maps")
+            return cached if isinstance(cached, dict) else {}
+        maps: dict[str, dict] = {}
+        with gzip.open(PRIVATE_HK_MAPS_PATH, "rb") as source:
+            magic = _read_exact(source, 5)
+            if magic not in (b"HKMP1", b"HKMP3"):
+                raise ValueError("invalid private maps payload")
+            map_count = struct.unpack("<H", _read_exact(source, 2))[0]
+            if map_count > 1000:
+                raise ValueError("invalid private maps count")
+
+            def read_varint() -> int:
+                value = 0
+                shift = 0
+                while shift <= 35:
+                    byte = _read_exact(source, 1)[0]
+                    value |= (byte & 0x7f) << shift
+                    if not (byte & 0x80):
+                        return value
+                    shift += 7
+                raise ValueError("invalid private maps varint")
+
+            def unzig(value: int) -> int:
+                return (value >> 1) ^ -(value & 1)
+
+            for _ in range(map_count):
+                key_len = _read_exact(source, 1)[0]
+                key = _read_exact(source, key_len).decode("utf-8")
+                title_len = _read_exact(source, 1)[0]
+                title = _read_exact(source, title_len).decode("utf-8")
+                point_count = struct.unpack("<I", _read_exact(source, 4))[0]
+                if point_count > 200_000:
+                    raise ValueError("invalid private map point count")
+                points = []
+                if magic == b"HKMP1":
+                    for _ in range(point_count):
+                        lon_i, lat_i, investment, crystals = struct.unpack("<iiBb", _read_exact(source, 10))
+                        points.append([lon_i / 1_000_000.0, lat_i / 1_000_000.0, int(crystals), bool(investment)])
+                else:
+                    lon_i = 0
+                    lat_i = 0
+                    for _ in range(point_count):
+                        lon_i += unzig(read_varint())
+                        lat_i += unzig(read_varint())
+                        meta = _read_exact(source, 1)[0]
+                        crystals = meta & 0x07
+                        investment = bool(meta & 0x08)
+                        points.append([lon_i / 100_000.0, lat_i / 100_000.0, int(crystals), investment])
+                maps[key] = {"key": key, "title": title, "points": points}
+        PRIVATE_HK_MAPS_CACHE["mtime"] = mtime
+        PRIVATE_HK_MAPS_CACHE["maps"] = maps
+        return maps
+
+
+def private_hk_map_data(map_key: str) -> dict:
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    item = _load_private_hk_maps().get(map_key)
+    if not item:
+        raise LookupError("map data not found")
+    return {"ok": True, **item}
+
+
+def public_hk_map_data(map_key: str) -> dict:
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    with db_session() as db:
+        row = db.execute("SELECT published,open_url FROM hk_maps_catalog WHERE map_key=?", (map_key,)).fetchone()
+    if not row or not row["published"] or not row["open_url"]:
+        raise LookupError("map not published")
+    return private_hk_map_data(map_key)
+
+
+
+def _public_collector_identity_digest(player_id: str) -> str:
+    return hashlib.sha256(str(player_id or "").strip().encode("utf-8")).hexdigest()
+
+
+def public_collector_auth_sync_allowed(player_id: str) -> bool:
+    try:
+        with open(PUBLIC_COLLECTOR_IDENTITY_PATH, "r", encoding="ascii") as source:
+            expected = source.read(256).strip()
+    except OSError:
+        return False
+    actual = _public_collector_identity_digest(player_id)
+    return bool(expected and actual and hmac.compare_digest(expected, actual))
+
+
+def _public_collector_write_private(target: str, text: str) -> None:
+    directory = os.path.dirname(target)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    tmp = target + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as output:
+        output.write(text)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, target)
+
+
+def _public_collector_game_player(token: str) -> str:
+    token = str(token or "").strip()
+    if token.lower().startswith("bearer "):
+        token = token[7:].strip()
+    if not token or len(token) > 8192:
+        raise PermissionError("invalid game token")
+    request = urllib.request.Request(
+        PUBLIC_COLLECTOR_GAME_API + "/player/me",
+        data=b"{}",
+        headers={
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "TopKing-Public-Auth-Sync/1",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            document = json.loads(response.read(5_000_000).decode("utf-8-sig"))
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            raise PermissionError("game token rejected") from exc
+        raise OSError("game auth validation failed") from exc
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise OSError("game auth validation fai
+
+===== def hk_map_points_with_canonical( #1 @ 80048 =====
+ion() as db:
+        bridge = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not bridge:
+            raise LookupError("map is not linked to canonical area")
+        area_id = str(bridge["canonical_area_id"])
+        point_row = db.execute(
+            "SELECT point_count FROM hk_map_points WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not point_row:
+            raise LookupError("map points not found")
+        point_count = int(point_row["point_count"])
+        normalized = []
+        seen_points = set()
+        seen_buildings = set()
+        for raw in value:
+            if not isinstance(raw, dict):
+                continue
+            try:
+                point_index = int(raw.get("point_index"))
+            except (TypeError, ValueError):
+                continue
+            building_id = str(raw.get("building_id") or "").strip()
+            if not 0 <= point_index < point_count:
+                continue
+            if not ID_RE.fullmatch(building_id):
+                continue
+            if point_index in seen_points or building_id in seen_buildings:
+                continue
+            exists = db.execute(
+                "SELECT 1 FROM map_buildings WHERE area_id=? AND building_id=?",
+                (area_id, building_id),
+            ).fetchone()
+            if not exists:
+                continue
+            seen_points.add(point_index)
+            seen_buildings.add(building_id)
+            normalized.append((point_index, building_id))
+        if not normalized:
+            raise ValueError("no valid point links")
+        for point_index, building_id in normalized:
+            db.execute(
+                """INSERT INTO hk_map_point_links(map_key,point_index,building_id,match_method,linked_at)
+                   VALUES(?,?,?,?,?)
+                   ON CONFLICT(map_key,point_index) DO UPDATE SET
+                     building_id=excluded.building_id,
+                     match_method=excluded.match_method,
+                     linked_at=excluded.linked_at""",
+                (key, point_index, building_id, match_method, now),
+            )
+        total = db.execute(
+            "SELECT COUNT(*) FROM hk_map_point_links WHERE map_key=?",
+            (key,),
+        ).fetchone()[0]
+    return {"ok": True, "map_key": key, "area_id": area_id,
+            "linked": len(normalized), "total": int(total), "match_method": match_method}
+
+
+def hk_map_points_with_canonical(map_key: str, flat: object) -> tuple[list, dict]:
+    points = list(flat) if isinstance(flat, list) else []
+    point_count = len(points) // 3
+    meta = {"enabled": False, "linked_points": 0, "applied_points": 0,
+            "fallback_points": point_count, "canonical_area_id": ""}
+    if not points or len(points) % 3:
+        return points, meta
+    with db_session() as db:
+        bridge = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (map_key,),
+        ).fetchone()
+        if not bridge:
+            return points, meta
+        area_id = str(bridge["canonical_area_id"])
+        rows = db.execute(
+            """SELECT p.point_index,p.building_id,b.room_count
+               FROM hk_map_point_links p
+               LEFT JOIN map_buildings b
+                 ON b.area_id=? AND b.building_id=p.building_id
+               WHERE p.map_key=? ORDER BY p.point_index""",
+            (area_id, map_key),
+        ).fetchall()
+    meta["enabled"] = bool(rows)
+    meta["canonical_area_id"] = area_id
+    meta["linked_points"] = len(rows)
+    applied = 0
+    for row in rows:
+        point_index = int(row["point_index"])
+        slot = point_index * 3 + 2
+        if not 0 <= slot < len(points):
+            continue
+        room_count = row["room_count"]
+        if room_count is None:
+            continue
+        try:
+            rooms = int(room_count)
+            old_flag = int(points[slot])
+        except (TypeError, ValueError):
+            continue
+        if not 0 <= rooms <= 7:
+            continue
+        investment_bit = old_flag & 0x08
+        points[slot] = investment_bit | rooms
+        applied += 1
+    meta["applied_points"] = applied
+    meta["fallback_points"] = max(0, point_count - applied)
+    return points, meta
+
+
+# HK_MAP_ROOM_KNOWLEDGE_W3_V1
+def import_hk_map_room_knowledge(map_key: str, value: object) -> dict:
+    """Fill only previously unknown canonical room counts for one linked website map.
+
+    W3 intentionally does not overwrite any existing non-NULL room_count.
+    Source priority/provenance normalization is handled in W5.
+    """
+    key = str(map_key or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key):
+        raise ValueError("invalid map key")
+    if not isinstance(value, list) or len(value) > 5000:
+        raise ValueError("invalid room knowledge")
+    normalized = []
+    seen = set()
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        building_id = str(raw.get("building_id", "")).strip()
+        if not ID_RE.fullmatch(building_id) or building_id in seen:
+            continue
+        try:
+            room_count = int(raw.get("room_count"))
+        except (TypeError, ValueError):
+            continue
+        if not 0 <= room_count <= 20:
+            continue
+        seen.add(building_id)
+        normalized.append({"building_id": building_id, "room_count": room_count})
+    if not normalized:
+        raise ValueError("no valid room knowledge")
+
+    now = utc_now()
+    source = "source-hk-maps-import"
+    filled = preserved = missing = 0
+    filled_ids = []
+    preserved_ids = []
+    missing_ids = []
+    with db_session() as db:
+        link = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not link:
+            raise LookupError("map is not linked to canonical area")
+        area_id = str(link["canonical_area_id"])
+        if not db.execute("SELECT 1 FROM map_areas WHERE area_id=?", (area_id,)).fetchone():
+            raise LookupError("canonical area not found")
+
+        for item in normalized:
+            row = db.execute(
+                """SELECT room_count,knowledge_source,knowledge_observed_at FROM map_buildings
+                   WHERE area_id=? AND building_id=?""",
+                (area_id, item["building_id"]),
+            ).fetchone()
+            if not row:
+                missing += 1
+                missing_ids.append(item["building_id"])
+                continue
+            if row["room_count"] is not None:
+                preserved += 1
+                preserved_ids.append(item["building_id"])
+                continue
+            cursor = db.execute(
+                """UPDATE map_buildings
+                   SET room_count=?,
+                       has_events=MAX(has_events,?),
+                       last_player_id=?,
+                       last_seen=?,
+                       knowledge_source='hk_maps_import',
+                       knowledge_observed_at=?
+                   WHERE area_id=? AND building_id=? AND room_count IS NULL""",
+                (item["room_count"], int(item["room_count"] > 0), source, now, now,
+                 area_id, item["building_id"]),
+            )
+            if cursor.rowcount:
+                filled += 1
+                filled_ids.append(item["building_id"])
+
+        known, total, progress = map_completion(db, area_id)
+
+    return {
+        "ok": True,
+        "map_key": key,
+        "area_id": area_id,
+        "requested": len(normalized),
+        "filled": filled,
+        "preserved_nonnull": preserved,
+        "missing_buildings": missing,
+        "filled_ids": filled_ids,
+        "preserved_ids": preserved_ids,
+        "missing_ids": missing_ids,
+        "known_buildings": known,
+        "buildings": total,
+        "progress": progress,
+        "source": source,
+        "knowledge_source": "hk_maps_import",
+    }
+
+
+
+# SCOPED_HK_MAP_ACCESS_V1
+
+def ensure_scoped_hk_map_access_schema() -> None:
+    now = utc_now()
+    with db_session() as db:
+        db.executescript("""
+            CREATE TABLE IF NOT EXISTS hk_map_access_rules (
+                telegram_id TEXT NOT NULL,
+                scope_type TEXT NOT NULL CHECK(scope_type IN ('city','map')),
+                scope_value TEXT NOT NULL,
+                allowed INTEGER NOT NULL DEFAULT 1,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (telegram_id, scope_type, scope_value),
+                FOREIGN KEY (telegram_id) REFERENCES clan_members(telegram_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_hk_map_access_rules_member
+                ON hk_map_access_rules(telegram_id, scope_type, allowed);
+            CREATE TABLE IF NOT EXISTS hk_map_access_meta (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+        """)
+        migrated = db.execute("SELECT 1 FROM hk_map_access_meta WHERE key='legacy_full_access_v1'").fetchone()
+        if not migrated:
+            cities = [row[0] for row in db.execute("SELECT DISTINCT city FROM hk_maps_catalog ORDER BY city").fetchall()]
+            legacy = [row[0] for row in db.execute(
+                "SELECT telegram_id FROM clan_members WHERE active=1 AND maps_access=1 AND maps_manage=0"
+            ).fetchall()]
+            for telegram_id in legacy:
+                for city in cities:
+                    db.execute("""INSERT OR IGNORE INTO hk_map_access_rules
+                                  (telegram_id,scope_type,scope_value,allowed,created_at,updated_at)
+                                  VALUES(?,?,?,?,?,?)""",
+                               (telegram_id, 'city', city, 1, now, now))
+            db.execute("INSERT INTO hk_map_access_meta(key,value,updated_at) VALUES('legacy_full_access_v1','1',?)", (now,))
+        db.execute("""UPDATE clan_members
+                      SET maps_access=CASE
+                          WHEN maps_manage=1 THEN 1
+                          WHEN EXISTS(SELECT 1 FROM hk_map_access_rules r
+                                      WHERE r.telegram_id=clan_members.telegram_id AND r.allowed=1) THEN 1
+                          ELSE 0 END""")
+
+
+def _hk_member_rules(db: sqlite3.Connection, telegram_id: str) -> tuple[set[str], dict[str, bool]]:
+    rows = db.execute("""SELECT scope_type,scope_value,allowed FROM hk_map_access_rules
+                         WHERE telegram_id=?""", (telegram_id,)).fetchall()
+    cities: set[str] = set()
+    maps: dict[str, bool] = {}
+    for row in rows:
+        if row['scope_type'] == 'city' and row['allowed']:
+            cities.add(row['scope_value'])
+        elif row['scope_type'] == 'map':
+            maps[row['scope_value']] = bool(row['allowed'])
+    return cities, maps
+
+
+def member_can_access_hk_map(member: dict | None, map_key: str, city: str | None = None) -> bool:
+    if not member:
+        return False
+    if member.get('maps_manage'):
+        return True
+    telegram_id = str(member.get('telegram_id') or '')
+    if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+        return False
+    ensure_scoped_hk_map_access_schema()
+    with db_session() as db:
+        if city is None:
+            row = db.execute("SELECT city FROM hk_maps_catalog WHERE map_key=?", (map_key,)).fetchone()
+            if not row:
+                return False
+            city = row['city']
+        cities, maps = _hk_member_rules(db, telegram_id)
+    if map_key in maps:
+        return maps[map_key]
+    return city in cities
+
+
+def set_member_map_scope(member: dict, telegram_id: str, scope_type: str, scope_value: str, allowed: bool) -> dict:
+    if not member.get('maps_manage'):
+        raise PermissionError('maps manage denied')
+    if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+        raise ValueError('invalid telegram id')
+    scope_type = str(scope_type or '').strip().lower()
+    scope_value = str(scope_value or '').strip()
+    if scope_type not in ('city','map') or not scope_value:
+        raise ValueError('invalid map scope')
+    ensure_scoped_hk_map_access_schema()
+    now = utc_now()
+    with db_session() as db:
+        target = db.execute("SELECT maps_manage FROM clan_members WHERE telegram_id=? AND active=1", (telegram_id,)).fetchone()
+        if not target:
+            raise LookupError('member not found')
+        if target['maps_manage']:
+            raise PermissionError('manager access is implicit')
+        if scope_type == 'city':
+            exists = db.execute("SELECT 1 FROM hk_maps_catalog WHERE city=? LIMIT 1", (scope_value,)).fetchone()
+            if not exists:
+                raise LookupError('city not found')
+            city_maps = [row[0] for row in db.execute("SELECT map_key FROM hk_maps_catalog WHERE city=?", (scope_value,)).fetchall()]
+            if city_maps:
+                placeholders = ','.join('?' for _ in city_maps)
+                db.execute(f"DELETE FROM hk_map_access_rules WHERE telegram_id=? AND scope_type='map' AND scope_value IN ({placeholders})",
+                           (telegram_id, *city_maps))
+            if allowed:
+                db.execute("""INSERT INTO hk_map_access_rules(telegram_id,scope_type,scope_value,allowed,created_at,updated_at)
+                              VALUES(?,?,?,?,?,?)
+                              ON CONFLICT(telegram_id,scope_type,scope_value)
+                              DO UPDATE SET allowed=excluded.allowed,updated_at=excluded.updated_at""",
+                           (telegram_id,'city',scope_value,1,now,now))
+            else:
+                db.execute("DELETE FROM hk_map_access_rules WHERE telegram_id=? AND scope_type='city' AND scope_value=?",
+                           (telegram_id,scope_value))
+        else:
+            map_row = db.execute("SELECT city FROM hk_maps_catalog WHERE map_key=?", (scope_value,)).fetchone()
+            if not map_row:
+                raise LookupError('map not found')
+            city_rule = db.execute("""SELECT allowed FROM hk_map_access_rules
+                                      WHERE telegram_id=? AND scope_type='city' AND scope_value=?""",
+                                   (telegram_id,map_row['city'])).fetchone()
+            city_allowed = bool(city_rule and city_rule['allowed'])
+            if allowed and city_allowed:
+                db.execute("DELETE FROM hk_map_access_rules WHERE telegram_id=? AND scope_type='map' AND scope_value=?",
+                           (telegram_id,scope_value))
+            elif allowed:
+                db.execute("""INSERT INTO hk_map_access_rules(telegram_id,scope_type,scope_value,allowed,created_at,updated_at)
+                              VALUES(?,?,?,?,?,?)
+                              ON CONFLICT(telegram_id,scope_type,scope_value)
+                              DO UPDATE SET allowed=excluded.allowed,updated_at=excluded.updated_at""",
+                           (telegram_id,'map',scope_value,1,now,now))
+            elif city_allowed:
+                db.execute("""INSERT INTO hk_map_access_rules(telegram_id,scope_type,scope_value,allowed,created_at,updated_at)
+                              VALUES(?,?,?,?,?,?)
+                              ON CONFLICT(telegram_id,scope_type,scope_value)
+                              DO UPDATE SET allowed=excluded.allowed,updated_at=excluded.updated_at""",
+                           (telegram_id,'map',scope_value,0,now,now))
+            else:
+                db.execute("DELETE FROM hk_map_access_rules WHERE telegram_id=? AND scope_type='map' AND scope_value=?",
+                           (telegram_id,scope_value))
+        has_allow = db.execute("SELECT 1 FROM hk_map_access_rules WHERE telegram_id=? AND allowed=1 LIMIT 1", (telegram_id,)).fetchone()
+        db.execute("UPDATE clan_members SET maps_access=?,updated_at=? WHERE telegram_id=?",
+                   (1 if has_allow else 0, now, telegram_id))
+    return {'ok': True, 'telegram_id': telegram_id, 'scope_type': scope_type,
+            'scope_value': scope_value, 'allowed': bool(allowed)}
+
+def cabinet_maps(member: dict) -> dict:
+    ensure_scoped_hk_map_access_schema()
+    with db_session() as db:
+        rows = db.execute("SELECT * FROM hk_maps_catalog ORDER BY score DESC,city,grid").fetchall()
+        if not member.get('maps_manage'):
+            telegram_id = str(member.get('telegram_id') or '')
+            cities, map_rules = _hk_member_rules(db, telegram_id)
+            rows = [row for row in rows if map_rules.get(row['map_key'], row['city'] in cities)]
+            if not rows:
+                raise PermissionError('maps access denied')
+        members = []
+        if member.get('maps_manage'):
+            raw_members = [dict(row) for row in db.execute(
+                """SELECT telegram_id,note,first_name,username,linked_player_id,active,maps_access,maps_manage
+                   FROM clan_members WHERE active=1 ORDER BY first_name,username,note,telegram_id""").fetchall()]
+            rule_rows = db.execute("SELECT telegram_id,scope_type,scope_value,allowed FROM hk_map_access_rules").fetchall()
+            by_member: dict[str, dict] = {}
+            for rule in rule_rows:
+                bucket = by_member.setdefault(rule['telegram_id'], {'cities': [], 'maps': {}})
+                if rule['scope_type'] == 'city' and rule['allowed']:
+                    bucket['cities'].append(rule['scope_value'])
+                elif rule['scope_type'] == 'map':
+                    bucket['maps'][rule['scope_value']] = bool(rule['allowed'])
+            for item in raw_members:
+                rules = by_member.get(item['telegram_id'], {'cities': [], 'maps': {}})
+                rules['cities'] = sorted(set(rules['cities']))
+                item['map_rules'] = rules
+                members.append(item)
+    return {'ok': True, 'can_manage': bool(member.get('maps_manage')),
+            'maps': [hk_map_row(row) for row in rows], 'members': members}
+
+
+def public_maps() -> dict:
+    with db_session() as db:
+        rows = db.execute("""SELECT * FROM hk_maps_catalog
+                             WHERE published=1 AND open_url<>''
+                             ORDER BY score DESC,city,grid""").fetchall()
+    maps = [hk_map_row(row) for row in rows]
+    return {"ok": True, "total": len(maps), "maps": maps}
+
+
+def set_map_published(member: dict, map_key: str, published: bool) -> dict:
+    if not member.get("maps_manage"):
+        raise PermissionError("maps manage denied")
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    now = utc_now()
+    with db_session() as db:
+        row = db.execute("SELECT open_url FROM hk_maps_catalog WHERE map_key=?", (map_key,)).fetchone()
+        if not row:
+            raise LookupError("map not found")
+        if published and not row["open_url"]:
+            raise RuntimeError("map has no open url")
+        db.execute("UPDATE hk_maps_catalog SET published=?,updated_at=? WHERE map_key=?",
+                   (1 if published else 0, now, map_key))
+    return {"ok": True, "key": map_key, "published": bool(published)}
+
+
+def set_map_open_url(member: dict, map_key: str, open_url: str) -> dict:
+    if not member.get("maps_manage"):
+        raise PermissionError("maps manage denied")
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    value = str(open_url or "").strip()[:500]
+    if value and not (value.startswith("/maps/") or value.startswith("https://tk-clan.ru/maps/")):
+        raise ValueError("invalid map url")
+    now = utc_now()
+    with db_session() as db:
+        updated = db.execute("UPDATE hk_maps_catalog SET open_url=?,published=CASE WHEN ?='' THEN 0 ELSE published END,updated_at=? WHERE map_key=?",
+                             (value, value, now, map_key)).rowcount
+    if not updated:
+        raise LookupError("map not found")
+    return {"ok": True, "key": map_key, "open_url": value}
+
+
+def set_member_maps_access(member: dict, telegram_id: str, allowed: bool) -> dict:
+    if not member.get("maps_manage"):
+        raise PermissionError("maps manage denied")
+    if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+        raise ValueError("invalid telegram id")
+    now = utc_now()
+    with db_session() as db:
+        updated = db.execute("UPDATE clan_members SET maps_access=?,updated_at=? WHERE telegram_id=? AND active=1",
+                             (1 if allowed else 0, now, telegram_id)).rowcount
+    if not updated:
+        raise LookupError("member not found")
+    return {"ok": True, "telegram_id": telegram_id, "maps_access": bool(allowed)}
+
+def _read_exact(source, size: int) -> bytes:
+    data = source.read(size)
+    if len(data) != size:
+        raise ValueError("truncated private maps payload")
+    return data
+
+
+def _load_private_hk_maps() -> dict[str, dict]:
+    try:
+        mtime = os.path.getmtime(PRIVATE_HK_MAPS_PATH)
+    except OSError:
+        return {}
+    with PRIVATE_HK_MAPS_LOCK:
+        if PRIVATE_HK_MAPS_CACHE.get("mtime") == mtime:
+            cached = PRIVATE_HK_MAPS_CACHE.get("maps")
+            return cached if isinstance(cached, dict) else {}
+        maps: dict[str, dict] = {}
+        with gzip.open(PRIVATE_HK_MAPS_PATH, "rb") as source:
+            magic = _read_exact(source, 5)
+            if magic not in (b"HKMP1", b"HKMP3"):
+                raise ValueError("invalid private maps payload")
+            map_count = struct.unpack("<H", _read_exact(source, 2))[0]
+            if map_count > 1000:
+                raise ValueError("invalid private maps count")
+
+            def read_varint() -> int:
+                value = 0
+                shift = 0
+                while shift <= 35:
+                    byte = _read_exact(source, 1)[0]
+                    value |= (byte & 0x7f) << shift
+                    if not (byte & 0x80):
+                        return value
+                    shift += 7
+                raise ValueError("invalid private maps varint")
+
+            def unzig(value: int) -> int:
+                return (value >> 1) ^ -(value & 1)
+
+            for _ in range(map_count):
+                key_len = _read_exact(source, 1)[0]
+                key = _read_exact(source, key_len).decode("utf-8")
+                title_len = _read_exact(source, 1)[0]
+                title = _read_exact(source, title_len).decode("utf-8")
+                point_count = struct.unpack("<I", _read_exact(source, 4))[0]
+                if point_count > 200_000:
+                    raise ValueError("invalid private map point count")
+                points = []
+                if magic == b"HKMP1":
+                    for _ in range(point_count):
+                        lon_i, lat_i, investment, crystals = struct.unpack("<iiBb", _read_exact(source, 10))
+                        points.append([lon_i / 1_000_000.0, lat_i / 1_000_000.0, int(crystals), bool(investment)])
+                else:
+                    lon_i = 0
+                    lat_i = 0
+                    for _ in range(point_count):
+                        lon_i += unzig(read_varint())
+                        lat_i += unzig(read_varint())
+                        meta = _read_exact(source, 1)[0]
+                        crystals = meta & 0x07
+                        investment = bool(meta & 0x08)
+                        points.append([lon_i / 100_000.0, lat_i / 100_000.0, int(crystals), investment])
+                maps[key] = {"key": key, "title": title, "points": points}
+        PRIVATE_HK_MAPS_CACHE["mtime"] = mtime
+        PRIVATE_HK_MAPS_CACHE["maps"] = maps
+        return maps
+
+
+def private_hk_map_data(map_key: str) -> dict:
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    item = _load_private_hk_maps().get(map_key)
+    if not item:
+        raise LookupError("map data not found")
+    return {"ok": True, **item}
+
+
+def public_hk_map_data(map_key: str) -> dict:
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    with db_session() as db:
+        row = db.execute("SELECT published,open_url FROM hk_maps_catalog WHERE map_key=?", (map_key,)).fetchone()
+    if not row or not row["published"] or not row["open_url"]:
+        raise LookupError("map not published")
+    return private_hk_map_data(map_key)
+
+
+
+def _public_collector_identity_digest(player_id: str) -> str:
+    return hashlib.sha256(str(play
+
+===== def _full235_import_row_sql( #1 @ 153959 =====
+s_counts[status] = status_counts.get(status,0) + 1
+
+    target_maps: dict[str,list[str]] = {}
+    safe_statuses = {"matched_link","matched_building","matched_empty_coordinate","matched_original_id_empty","new_original","new"}
+    for item in plans:
+        if item["status"] in safe_statuses and item["target_area_id"]:
+            target_maps.setdefault(item["target_area_id"],[]).append(item["map_key"])
+    duplicate_targets = {
+        area_id:keys for area_id,keys in target_maps.items() if len(keys) > 1
+    }
+
+    metadata_mismatches = []
+    for row in staged:
+        cat = catalog.get(str(row["map_key"]))
+        if not cat or map_city_key(cat["city"]) != map_city_key(row["city"]) or str(cat["grid"]) != str(row["grid"]):
+            metadata_mismatches.append(str(row["map_key"]))
+
+    ready = (
+        len(staged) == int(batch["expected_maps"]) == 235
+        and stage_keys == catalog_keys
+        and not duplicate_source_ids
+        and not metadata_mismatches
+        and not duplicate_targets
+        and all(item["status"] in safe_statuses for item in plans)
+    )
+    return {
+        "ok": True,
+        "batch_id": batch_id,
+        "archive_sha256": str(batch["archive_sha256"]),
+        "maps_received": len(staged),
+        "catalog_maps": len(catalog),
+        "archive_total_buildings": archive_total_buildings,
+        "unique_archive_building_ids": len(global_owner),
+        "duplicate_source_building_ids": duplicate_source_ids,
+        "metadata_mismatches": metadata_mismatches,
+        "missing_catalog_maps": sorted(catalog_keys-stage_keys),
+        "extra_archive_maps": sorted(stage_keys-catalog_keys),
+        "status_counts": status_counts,
+        "original_area_id_catalog": len(FULL235_ORIGINAL_AREA_IDS_75),
+        "original_area_id_maps_seen": sum(1 for item in plans if item["map_key"] in FULL235_ORIGINAL_AREA_IDS_75),
+        "duplicate_targets": duplicate_targets,
+        "ready_to_apply": ready,
+        "maps": plans,
+    }
+
+
+def full235_import_resolve(member: dict, value: dict) -> dict:
+    ensure_full235_import_schema()
+    batch_id = str(value.get("batch_id") or "")
+    with db_session() as db:
+        report = _full235_resolution(db,batch_id,member)
+        db.execute("UPDATE hk_full_import_batches SET status=?,resolved_json=? WHERE batch_id=?",
+                   ("resolved" if report["ready_to_apply"] else "needs_review",
+                    json.dumps(report,ensure_ascii=False,separators=(",",":")),batch_id))
+    return report
+
+
+def _full235_import_row_sql(db: sqlite3.Connection, area_id: str, row: list, now: int, observed_at: int) -> None:
+    building_id,room,is_invest,faction,generator = row
+    opened = int(room is not None)
+    has_events = int(room is not None and int(room) > 0)
+    db.execute("""INSERT INTO map_buildings(
+        area_id,building_id,opened,room_count,has_events,is_invest,tier,faction,building_type,
+        last_player_id,last_seen,knowledge_source,knowledge_observed_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(area_id,building_id) DO UPDATE SET
+        opened=MAX(map_buildings.opened,excluded.opened),
+        room_count=CASE
+          WHEN excluded.room_count IS NULL THEN map_buildings.room_count
+          WHEN map_buildings.knowledge_source='game_live' AND map_buildings.room_count IS NOT NULL THEN map_buildings.room_count
+          ELSE excluded.room_count END,
+        has_events=CASE
+          WHEN excluded.room_count IS NULL THEN map_buildings.has_events
+          WHEN map_buildings.knowledge_source='game_live' AND map_buildings.room_count IS NOT NULL THEN map_buildings.has_events
+          ELSE excluded.has_events END,
+        is_invest=MAX(map_buildings.is_invest,excluded.is_invest),
+        faction=CASE WHEN map_buildings.faction='' THEN excluded.faction ELSE map_buildings.faction END,
+        building_type=CASE WHEN map_buildings.building_type='' THEN excluded.building_type ELSE map_buildings.building_type END,
+        last_player_id=CASE
+          WHEN excluded.room_count IS NULL THEN map_buildings.last_player_id
+          WHEN map_buildings.knowledge_source='game_live' AND map_buildings.room_count IS NOT NULL THEN map_buildings.last_player_id
+          ELSE excluded.last_player_id END,
+        last_seen=MAX(map_buildings.last_seen,excluded.last_seen),
+        knowledge_source=CASE
+          WHEN excluded.room_count IS NULL THEN map_buildings.knowledge_source
+          WHEN map_buildings.knowledge_source='game_live' AND map_buildings.room_count IS NOT NULL THEN map_buildings.knowledge_source
+          ELSE excluded.knowledge_source END,
+        knowledge_observed_at=CASE
+          WHEN excluded.room_count IS NULL THEN map_buildings.knowledge_observed_at
+          WHEN map_buildings.knowledge_source='game_live' AND map_buildings.room_count IS NOT NULL THEN map_buildings.knowledge_observed_at
+          ELSE excluded.knowledge_observed_at END""",
+        (area_id,building_id,opened,room,has_events,int(bool(is_invest)),None,
+         faction,generator,"source-hk-maps-import",now,"hk_maps_import",observed_at))
+
+
+def full235_import_apply(member: dict, value: dict) -> dict:
+    ensure_full235_import_schema()
+    _full235_manager(member)
+    batch_id = str(value.get("batch_id") or "")
+    if str(value.get("confirm") or "") != "IMPORT_235":
+        raise ValueError("confirmation required")
+
+    with db_session() as db:
+        report = _full235_resolution(db,batch_id,member)
+        if not report["ready_to_apply"]:
+            raise RuntimeError("full import is not safe to apply")
+        batch = _full235_batch(db,member,batch_id)
+        staged = {
+            str(row["map_key"]): row
+            for row in db.execute(
+                "SELECT map_key,city,grid,buildings_json,building_count FROM hk_full_import_stage WHERE batch_id=?",
+                (batch_id,),
+            )
+        }
+
+    stamp = time.strftime("%Y%m%d-%H%M%S",time.gmtime())
+    backup = DB_PATH + ".bak.full235." + stamp
+    source = sqlite3.connect(DB_PATH)
+    target = sqlite3.connect(backup)
+    source.backup(target)
+    target.close()
+    source.close()
+
+    try:
+        observed_at = int(datetime.fromisoformat(
+            str(batch["exported_at"] or "").replace("Z","+00:00")
+        ).timestamp())
+    except (ValueError,TypeError):
+        observed_at = utc_now()
+    now = utc_now()
+    plan_by_key = {item["map_key"]:item for item in report["maps"]}
+    created_areas = 0
+    imported_buildings = 0
+    with db_session() as db:
+        for key in sorted(staged):
+            row = staged[key]
+            plan = plan_by_key[key]
+            area_id = str(plan["target_area_id"])
+            buildings = json.loads(row["buildings_json"] or "[]")
+            match = re.fullmatch(r"(\d{1,3}):(\d{1,3})", str(row["grid"]))
+            first,second = int(match.group(1)),int(match.group(2))
+            invest_count = sum(1 for item in buildings if bool(item[2]))
+            existing = db.execute("SELECT * FROM map_areas WHERE area_id=?",(area_id,)).fetchone()
+            if not existing:
+                if plan["status"] not in ("new","new_original"):
+                    raise RuntimeError("resolved canonical area disappeared")
+                city_id = "hkfullcity" + hashlib.sha256(str(row["city"]).encode()).hexdigest()[:20]
+                db.execute("""INSERT INTO map_areas(
+                    area_id,city_id,city_name,x,y,invest_count,expected_buildings,last_player_id,last_seen)
+                    VALUES(?,?,?,?,?,?,?,?,?)""",
+                    (area_id,city_id,str(row["city"]),second,first,invest_count,len(buildings),
+                     "source-hk-maps-import",now))
+                created_areas += 1
+            else:
+                db.execute("""UPDATE map_areas SET
+                    invest_count=MAX(invest_count,?),
+                    expected_buildings=MAX(expected_buildings,?),
+                    last_seen=MAX(last_seen,?)
+                    WHERE area_id=?""",
+                    (invest_count,len(buildings),now,area_id))
+            db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                          VALUES(?,?,?,?)
+                          ON CONFLICT(source_area_id) DO UPDATE SET
+                          canonical_area_id=excluded.canonical_area_id,last_seen=excluded.last_seen""",
+                       (area_id,area_id,now,now))
+            for item in buildings:
+                _full235_import_row_sql(db,area_id,item,now,observed_at)
+                imported_buildings += 1
+            db.execute("""INSERT INTO hk_map_area_links(map_key,canonical_area_id,match_method,linked_at)
+                          VALUES(?,?,?,?)
+                          ON CONFLICT(map_key) DO UPDATE SET
+                          canonical_area_id=excluded.canonical_area_id,
+                          match_method=excluded.match_method,linked_at=excluded.linked_at""",
+                       (key,area_id,"exact_area_id",now))
+            db.execute("""INSERT INTO hk_full_map_import_links(
+                          map_key,canonical_area_id,resolution_method,overlap_count,source_buildings,archive_sha256,imported_at)
+                          VALUES(?,?,?,?,?,?,?)
+                          ON CONFLICT(map_key) DO UPDATE SET
+                          canonical_area_id=excluded.canonical_area_id,
+                          resolution_method=excluded.resolution_method,
+                          overlap_count=excluded.overlap_count,
+                          source_buildings=excluded.source_buildings,
+                          archive_sha256=excluded.archive_sha256,
+                          imported_at=excluded.imported_at""",
+                       (key,area_id,str(plan["method"]),int(plan["overlap_count"]),
+                        len(buildings),str(batch["archive_sha256"]),now))
+        db.execute("UPDATE hk_full_import_batches SET status='applied',resolved_json=? WHERE batch_id=?",
+                   (json.dumps(report,ensure_ascii=False,separators=(",",":")),batch_id))
+        # The private archive payload is needed only during resolve/apply.
+        # Keep the compact resolution report/provenance, but remove staged
+        # building rows after a successful import.
+        db.execute("DELETE FROM hk_full_import_stage WHERE batch_id=?", (batch_id,))
+
+    unified = cabinet_maps(member)
+    return {
+        "ok": True,
+        "batch_id": batch_id,
+        "backup": backup,
+        "maps_imported": len(staged),
+        "source_buildings_processed": imported_buildings,
+        "created_canonical_areas": created_areas,
+        "status_counts": report["status_counts"],
+        "unified_rows": len(unified.get("maps") or []),
+        "source_counts": unified.get("source_counts") or {},
+        "area_links": 235,
+    }
+
+
+def _canonical_area_from_exact_buildings(db: sqlite3.Connection, area: dict) -> str:
+    """Use exact building IDs to join a live game area to a full-archive canonical area."""
+    ids = sorted({str(row.get("building_id") or "") for row in area.get("buildings") or [] if row.get("building_id")})
+    if len(ids) < 3:
+        return ""
+    canonical = _full235_alias_resolver(db)
+    counts: dict[str,int] = {}
+    # A bounded deterministic sample is enough: building IDs are exact OSM/game IDs.
+    sample = ids[:96]
+    for start in range(0,len(sample),80):
+        chunk = sample[start:start+80]
+        sql = "SELECT area_id,building_id FROM map_buildings WHERE building_id IN (%s)" % ",".join("?" for _ in chunk)
+        for row in db.execute(sql,tuple(chunk)):
+            cid = canonical(str(row["area_id"]))
+            counts[cid] = counts.get(cid,0) + 1
+    if len(counts) == 1:
+        cid,hits = next(iter(counts.items()))
+        if hits >= 3:
+            return cid
+    return ""
+
+
+# HK_MAP_UNIFIED_RUNTIME_U1_V1
+_cabinet_maps_website_only = cabinet_maps
+
+
+def _cabinet_unified_canonical_row(row: dict, website: dict | None = None, website_keys: list[str] | None = None) -> dict:
+    website = dict(website or {})
+    keys = list(website_keys or ([] if not website.get("key") else [str(website["key"])]))
+    area_id = str(row.get("area_id") or "")
+    x, y = row.get("x"), row.get("y")
+    source_kind = "combined" if website else "script"
+    synthetic_key = str(website.get("key") or f"canonical:{area_id}")
+    crystals = [
+        int(row.get("room0") or 0),
+        int(row.get("room1") or 0),
+        int(row.get("room2") or 0),
+        int(row.get("room3") or 0),
+        int(row.get("room4") or 0),
+        int(row.get("room5") or 0),
+    ]
+    item = {
+        **website,
+        "key": synthetic_key,
+        "website_key": str(website.get("key") or ""),
+        "website_keys": keys,
+        "area_id": area_id,
+        "canonical_area_id": area_id,
+        "source_kind": source_kind,
+        "source_label": "Сайт + Скрипт" if source_kind == "combined" else "Скрипт",
+        "city": str(row.get("city_name") or row.get("city_id") or website.get("city") or ""),
+        "grid": str(website.get("grid") or (f"{x}:{y}" if x is not None and y is not None else "")),
+        "canonical_grid": f"{x}:{y}" if x is not None and y is not None else "",
+        "x": x,
+        "y": y,
+        "invest": int(row.get("invest_count") or 0),
+        "buildings": int(row.get("buildings") or 0),
+        "unknown": int(row.get("unexplored") or 0),
+        "crystals": crystals,
+        "progress": float(row.get("progress") or 0),
+        "score": int(row.get("rating") or 0),
+        "shared_known": int(row.get("known") or 0),
+        "total_rooms": int(row.get("total_rooms") or 0),
+        "open_url": str(website.get("open_url") or ""),
+        "published": int(website.get("published") or 0),
+        "reward": website.get("reward") or {"max":0,"normal":0,"investment":0},
+        "eventBuildings": int(website.get("eventBuildings") or 0),
+        "totalEvents": int(website.get("totalEvents") or 0),
+        "aliases": list(row.get("aliases") or [area_id]),
+    }
+    return item
+
+
+def cabinet_maps(member: dict) -> dict:
+    """One Personal Cabinet list: website geometry + canonical/script knowledge."""
+    try:
+        website = _cabinet_maps_website_only(member)
+    except PermissionError:
+        website = {"ok": True, "can_manage": bool(member.get("maps_manage")), "maps": [], "members": []}
+
+    website_rows = [dict(row) for row in website.get("maps") or []]
+    canonical_rows = map_index()
+    canonical_by_id = {str(row.get("area_id") or ""): row for row in canonical_rows}
+
+    with db_session() as db:
+        link_rows = db.execute(
+            "SELECT map_key,canonical_area_id FROM hk_map_area_links"
+        ).fetchall()
+        links = {str(row["map_key"]): str(row["canonical_area_id"]) for row in link_rows}
+        cities = set()
+        map_rules = {}
+        if not member.get("maps_manage"):
+            cities, map_rules = _hk_member_rules(db, str(member.get("telegram_id") or ""))
+
+    grouped: dict[str, list[dict]] = {}
+    unlinked: list[dict] = []
+    for row in website_rows:
+        key = str(row.get("key") or "")
+        area_id = links.get(key, "")
+        if area_id and area_id in canonical_by_id:
+            grouped.setdefault(area_id, []).append(row)
+        else:
+            unlinked.append({
+                **row,
+                "website_key": key,
+                "website_keys": [key] if key else [],
+                "area_id": "",
+                "canonical_area_id": "",
+                "source_kind": "website",
+                "source_label": "Сайт",
+                "canonical_grid": "",
+                "shared_known": 0,
+                "aliases": [],
+            })
+
+    result = []
+    used_canonical = set()
+    for area_id, rows in grouped.items():
+        # If several website visualizations ever point at one canonical district,
+        # keep one row and choose the richest website visualization as primary.
+        primary = max(
+            rows,
+            key=lambda row: (
+                int(bool(row.get("open_url"))),
+                float(row.get("progress") or 0),
+                int(row.get("score") or 0),
+            ),
+        )
+        keys = sorted({str(row.get("key") or "") for row in rows if row.get("key")})
+        result.append(_cabinet_unified_canonical_row(canonical_by_id[area_id], primary, keys))
+        used_canonical.add(area_id)
+
+    result.extend(unlinked)
+
+    for row in canonical_rows:
+        area_id = str(row.get("area_id") or "")
+        if not area_id or area_id in used_canonical:
+            continue
+        city = str(row.get("city_name") or row.get("city_id") or "")
+        synthetic_key = f"canonical:{area_id}"
+        if not member.get("maps_manage"):
+            allowed = bool(map_rules.get(synthetic_key, city in cities))
+            if not allowed:
+                continue
+        result.append(_cabinet_unified_canonical_row(row))
+
+    if not result:
+        raise PermissionError("maps access denied")
+
+    source_counts = {"website":0,"script":0,"combined":0}
+    for row in result:
+        kind = str(row.get("source_kind") or "website")
+        source_counts[kind] = source_counts.get(kind,0) + 1
+
+    result.sort(key=lambda row: (
+        -int(row.get("shared_known") or 0),
+        -float(row.get("progress") or 0),
+        str(row.get("city") or ""),
+        str(row.get("grid") or ""),
+    ))
+    return {
+        "ok": True,
+        "can_manage": bool(member.get("maps_manage")),
+        "maps": result,
+        "members": website.get("members") or [],
+        "unified": True,
+        "source_counts": source_counts,
+        "website_maps": len(website_rows),
+        "canonical_maps": len(canonical_rows),
+    }
+
+
+def _hk_parse_geometry_features(value: object) -> list[dict]:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+    if isinstance(value, list):
+        return [row for row in value if isinstance(row, dict)]
+    if isinstance(value, dict) and isinstance(value.get("features"), list):
+        return [row for row in value["features"] if isinstance(row, dict)]
+    return []
+
+
+def hydrate_hk_website_map_for_area(canonical_area_id: str, area: dict, geometry: object) -> dict:
+    """Safely activate one historical website map when a real game area is scanned.
+
+    Historical website grids are Y:X.  Matching is exact city + canonical X:Y and
+    only a single candidate is accepted.  Point links are then derived from the
+    game's own building geometry by strict point-in-polygon.
+    """
+    area_id = str(canonical_area_id or "")
+    x, y = area.get("x"), area.get("y")
+    city_key = hk_localized_city_key(area.get("city_name")) or hk_localized_city_key(area.get("city_id"))
+    if not area_id or x is None or y is None or not city_key:
+        return {"ok": True, "status": "insufficient_area_meta", "matched_maps": 0}
+
+    with db_session() as db:
+        catalog = db.execute("SELECT map_key,city,grid FROM hk_maps_catalog ORDER BY map_key").fetchall()
+        candidates = []
+        for row in catalog:
+            match = re.fullmatch(r"\s*(-?\d+)\s*:\s*(-?\d+)\s*", str(row["grid"] or ""))
+            if not match:
+                continue
+            historical_y, historical_x = int(match.group(1)), int(match.group(2))
+            row_city = hk_localized_city_key(row["city"])
+            if row_city == city_key and historical_x == int(x) and historical_y == int(y):
+                candidates.append(str(row["map_key"]))
+        if len(candidates) != 1:
+            return {
+                "ok": True,
+                "status": "no_unique_website_match" if not candidates else "ambiguous_website_match",
+                "matched_maps": len(candidates),
+                "map_keys": candidates,
+            }
+        map_key = candidates[0]
+        existing_link = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (map_key,),
+        ).fetchone()
+        if existing_link and str(existing_link["canonical_area_id"]) != area_id:
+            return {
+                "ok": False,
+                "status": "existing_link_conflict",
+                "map_key": map_key,
+                "canonical_area_id": str(existing_link["canonical_area_id"]),
+            }
+        point_row = db.execute(
+            "SELECT points_json,point_count FROM hk_map_points WHERE map_key=?",
+            (map_key,),
+        ).fetchone()
+        if not point_row:
+            return {"ok": True, "status": "website_points_missing", "map_key": map_key}
+        try:
+            flat = json.loads(point_row["points_json"] or "[]")
+        except json.JSONDecodeError:
+            flat = []
+        canonical_ids = {
+            str(row["building_id"])
+            for row in db.execute("SELECT building_id FROM map_buildings WHERE area_id=?", (area_id,))
+        }
+        existing_points = {
+            int(row["point_index"]): str(row["building_id"])
+            for row in db.execute(
+                "SELECT point_index,building_id FROM hk_map_point_links WHERE map_key=?",
+                (map_key,),
+            )
+        }
+
+    # The area relation itself is safe once the unique historical city/grid rule matched.
+    if not existing_link:
+        link_hk_map_area(map_key, area_id)
+
+    decoded = _hk_upload_decode_points(flat)
+    features = {}
+    for feature in _hk_parse_geometry_features(geometry):
+        props = feature.get("properties") if isinstance(feature.get("properties"), dict) else {}
+        building_id = str(
+            props.get("building_id")
+            or feature.get("id")
+            or props.get("id")
+            or props.get("buildingId")
+            or ""
+        ).strip()
+        if building_id not in canonical_ids:
+            continue
+        if not isinstance(feature.get("geometry"), dict):
+            continue
+        features[building_id] = feature["geometry"]
+
+    used_buildings = set(existing_points.values())
+    links = [{"point_index": index, "building_id": bid} for index,bid in sorted(existing_points.items())]
+    unmatched = 0
+    ambiguous = 0
+    for point in decoded:
+        index = int(point["point_index"])
+        if index in existing_points:
+            continue
+        hits = [
+            building_id
+            for building_id, feature_geometry in features.items()
+            if building_id not in used_buildings
+            and _hk_upload_geometry_contains(feature_geometry, float(point["lon"]), float(point["lat"]))
+        ]
+        if len(hits) == 1:
+            used_buildings.add(hits[0])
+            links.append({"point_index": index, "building_id": hits[0]})
+        elif not hits:
+            unmatched += 1
+        else:
+            ambiguous += 1
+
+    if links:
+        link_hk_map_points(map_key, links, "exact_building_id")
+
+    by_index = {int(row["point_index"]): str(row["building_id"]) for row in links}
+    knowledge = [
+        {"building_id": by_index[int(point["point_index"])], "room_count": int(point["room_count"])}
+        for point in decoded
+        if int(point["point_index"]) in by_index
+    ]
+    room_result = None
+    if knowledge:
+        room_result = import_hk_map_room_knowledge(map_key, knowledge)
+
+    return {
+        "ok": True,
+        "status": "hydrated",
+        "map_key": map_key,
+        "canonical_area_id": area_id,
+        "matched_maps": 1,
+        "point_links": len(links),
+        "new_point_links": max(0, len(links) - len(existing_points)),
+        "unmatched_points": unmatched,
+        "ambiguous_points": ambiguous,
+        "room_import": room_result,
+    }
+
+
+# HK_MAP_VISIBILITY_ACCESS_V2
+# All authenticated cabinet members may see the unified map catalogue.
+# Opening private map data remains protected by member_can_access_hk_map().
+_cabinet_maps_access_filtered_u1 = cabinet_maps
+
+
+def cabinet_maps(member: dict) -> dict:
+    actual_manager = bool(member.get("maps_manage"))
+
+    # U1 already knows how to construct the complete, deduplicated catalogue.
+    # Ask it for the manager view only to avoid filtering rows out of the list;
+    # do not expose manager permissions/members to an ordinary viewer.
+    if actual_manager:
+        result = _cabinet_maps_access_filtered_u1(member)
+    else:
+        catalogue_member = dict(member)
+        catalogue_member["maps_manage"] = 1
+        catalogue_member["maps_access"] = 1
+        result = _cabinet_maps_access_filtered_u1(catalogue_member)
+
+    maps = [dict(row) for row in result.get("maps") or []]
+
+  
+
+===== def load_live_game_geometry_hk_map( #1 @ 67414 =====
+building_generator","building_type"):
+            if key in props:
+                kept[key]=props[key]
+        feature={"type":"Feature","geometry":{"type":kind,"coordinates":coords},"properties":kept}
+        if raw.get("id") is not None:
+            feature["id"]=raw.get("id")
+        clean.append(feature)
+    if not clean:
+        return None
+    result={"type":"FeatureCollection","features":clean}
+    raw=json.dumps(result,separators=(",",":"),ensure_ascii=False)
+    if len(raw.encode("utf-8"))>20*1024*1024:
+        return None
+    return result
+
+
+def _hk_ensure_game_geometry_schema(db: sqlite3.Connection) -> None:
+    db.execute("""CREATE TABLE IF NOT EXISTS hk_map_area_geometry(
+        canonical_area_id TEXT PRIMARY KEY,
+        geometry_json TEXT NOT NULL,
+        feature_count INTEGER NOT NULL DEFAULT 0,
+        observed_at INTEGER NOT NULL DEFAULT 0,
+        source TEXT NOT NULL DEFAULT 'game_live'
+    )""")
+
+
+def _hk_store_game_geometry(db: sqlite3.Connection, area_id: str, value: object, observed_at: int) -> int:
+    collection=_hk_game_geometry_collection(value)
+    if not collection:
+        return 0
+    _hk_ensure_game_geometry_schema(db)
+    raw=json.dumps(collection,separators=(",",":"),ensure_ascii=False)
+    count=len(collection["features"])
+    db.execute("""INSERT INTO hk_map_area_geometry(canonical_area_id,geometry_json,feature_count,observed_at,source)
+                  VALUES(?,?,?,?,?)
+                  ON CONFLICT(canonical_area_id) DO UPDATE SET
+                    geometry_json=excluded.geometry_json,
+                    feature_count=excluded.feature_count,
+                    observed_at=excluded.observed_at,
+                    source=excluded.source""",
+               (str(area_id),raw,count,int(observed_at),"game_live"))
+    return count
+
+
+def _hk_feature_building_id(feature: dict) -> str:
+    props=feature.get("properties") if isinstance(feature.get("properties"),dict) else {}
+    return str(props.get("building_id") or props.get("buildingId") or feature.get("id") or props.get("id") or "").strip()
+
+
+def _hk_geometry_pairs(value: object, output: list | None = None) -> list:
+    if output is None:
+        output=[]
+    if isinstance(value,(list,tuple)):
+        if len(value)>=2 and isinstance(value[0],(int,float)) and isinstance(value[1],(int,float)):
+            output.append((float(value[0]),float(value[1])))
+        else:
+            for child in value:
+                _hk_geometry_pairs(child,output)
+    return output
+
+
+def load_live_game_geometry_hk_map(map_key: str) -> dict | None:
+    with db_session() as db:
+        link=db.execute("SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",(map_key,)).fetchone()
+        if not link:
+            return None
+        area_id=str(link["canonical_area_id"])
+        _hk_ensure_game_geometry_schema(db)
+        stored=db.execute("""SELECT geometry_json,feature_count,observed_at
+                             FROM hk_map_area_geometry WHERE canonical_area_id=?""",(area_id,)).fetchone()
+        if not stored:
+            return None
+        try:
+            collection=json.loads(stored["geometry_json"])
+        except Exception:
+            return None
+        rows=db.execute("""SELECT building_id,room_count,is_invest,faction,building_type
+                           FROM map_buildings WHERE area_id=?""",(area_id,)).fetchall()
+        known={str(row["building_id"]):dict(row) for row in rows}
+        catalog=db.execute("SELECT city,grid FROM hk_maps_catalog WHERE map_key=?",(map_key,)).fetchone()
+
+    palette={
+        "NULL":"#62656b","0":"#72494a","1":"#807140","2":"#895d3e",
+        "3":"#65446d","4":"#406d54","5":"#416978","6":"#426c68","7":"#707174"
+    }
+    features=[]
+    all_pairs=[]
+    for raw in collection.get("features") or []:
+        if not isinstance(raw,dict) or not isinstance(raw.get("geometry"),dict):
+            continue
+        feature={"type":"Feature","geometry":raw["geometry"],"properties":dict(raw.get("properties") or {})}
+        if raw.get("id") is not None:
+            feature["id"]=raw.get("id")
+        bid=_hk_feature_building_id(raw)
+        row=known.get(bid)
+        props=feature["properties"]
+        is_game=bool(row) or bool(props.get("is_game"))
+        props["is_game"]=is_game
+        if bid:
+            props["building_id"]=bid
+        if row:
+            room=row.get("room_count")
+            key="NULL" if room is None else str(max(0,min(7,int(room))))
+            props["crystals_key"]=key
+            props["crystals"]=None if room is None else int(room)
+            props["is_investment"]=bool(row.get("is_invest"))
+            if row.get("faction"):
+                props["faction"]=row.get("faction")
+            if row.get("building_type"):
+                props["building_generator"]=row.get("building_type")
+            props["base_color"]=palette.get(key,"#62656b")
+        else:
+            props["crystals_key"]="NULL"
+            props["base_color"]=str(props.get("base_color") or props.get("color") or "#4b4b50")
+        all_pairs.extend(_hk_geometry_pairs(feature["geometry"].get("coordinates")))
+        features.append(feature)
+
+    if not features or not all_pairs:
+        return None
+    xs=[p[0] for p in all_pairs]; ys=[p[1] for p in all_pairs]
+    bounds=[[min(xs),min(ys)],[max(xs),max(ys)]]
+    center=[(bounds[0][0]+bounds[1][0])/2,(bounds[0][1]+bounds[1][1])/2]
+    empty={"type":"FeatureCollection","features":[]}
+    title=" ".join([str(catalog["city"] or "") if catalog else "",str(catalog["grid"] or "") if catalog else ""]).strip()
+    return {
+        "title":title or map_key,
+        "source":"game_live_geometry",
+        "observed_at":int(stored["observed_at"] or 0),
+        "bounds":bounds,
+        "center":center,
+        "landuse":empty,
+        "water":empty,
+        "roads":empty,
+        "buildings":{"type":"FeatureCollection","features":features},
+    }
+
+
+def hk_map_data(map_key: str, member: dict | None = None, public: bool = False) -> dict:
+    if not re.fullmatch(r"hk_[a-z0-9]+", map_key):
+        raise ValueError("invalid map key")
+    if not public and not member:
+        raise PermissionError("maps access denied")
+    with db_session() as db:
+        if public:
+            row = db.execute("""SELECT c.*,p.points_json,p.point_count
+                                FROM hk_maps_catalog c JOIN hk_map_points p ON p.map_key=c.map_key
+                                WHERE c.map_key=? AND c.published=1 AND c.open_url<>''""", (map_key,)).fetchone()
+        else:
+            row = db.execute("""SELECT c.*,p.points_json,p.point_count
+                                FROM hk_maps_catalog c JOIN hk_map_points p ON p.map_key=c.map_key
+                                WHERE c.map_key=?""", (map_key,)).fetchone()
+    if not row:
+        raise LookupError("map not found")
+    if not public and not member_can_access_hk_map(member, map_key, row["city"]):
+        raise PermissionError("maps access denied")
+    full = load_full_hk_map(map_key)
+    if full is None:
+        full = load_live_game_geometry_hk_map(map_key)
+    if full is not None:
+        return {"ok": True, "map": hk_map_row(row), "point_count": row["point_count"],
+                "render": "full", "full": full}
+    try:
+        points = json.loads(row["points_json"])
+    except json.JSONDecodeError:
+        points = []
+    points, canonical = hk_map_points_with_canonical(map_key, points)
+    return {"ok": True, "map": hk_map_row(row), "point_count": row["point_count"],
+            "render": "points", "points": points, "canonical": canonical}
+
+
+def hk_map_row(row: sqlite3.Row) -> dict:
+    return {
+        "key": row["map_key"], "city": row["city"], "grid": row["grid"],
+        "invest": row["invest"], "buildings": row["buildings"], "unknown": row["unknown"],
+        "crystals": [row[f"c{i}"] for i in range(6)],
+        "eventBuildings": row["event_buildings"], "totalEvents": row["total_events"],
+        "progress": row["progress"], "score": row["score"],
+        "reward": {"max": row["reward_max"], "normal": row["reward_normal"],
+                   "investment": row["reward_investment"]},
+        "open_url": row["open_url"], "published": bool(row["published"]),
+    }
+
+
+# HK_MAP_AREA_LINKS_W2_V1
+def _canonical_area_id(db: sqlite3.Connection, area_id: str) -> str | None:
+    value = str(area_id or "").strip()
+    if not value:
+        return None
+    alias = db.execute(
+        "SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",
+        (value,),
+    ).fetchone()
+    canonical = str(alias["canonical_area_id"]) if alias else value
+    exists = db.execute("SELECT 1 FROM map_areas WHERE area_id=?", (canonical,)).fetchone()
+    return canonical if exists else None
+
+
+def discover_hk_map_area(db: sqlite3.Connection, map_key: str) -> dict:
+    key = str(map_key or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key):
+        raise ValueError("invalid map key")
+    row = db.execute("SELECT map_key,city,grid FROM hk_maps_catalog WHERE map_key=?", (key,)).fetchone()
+    if not row:
+        raise LookupError("map not found")
+    match = re.fullmatch(r"\s*(\d{1,3})\s*:\s*(\d{1,3})\s*", str(row["grid"] or ""))
+    if not match:
+        return {"map_key": key, "city": row["city"], "grid": row["grid"],
+                "match_method": "city_grid_yx", "candidates": []}
+    # Historical HK Maps labels grid as Y:X. Canonical TopKing stores X:Y.
+    y, x = int(match.group(1)), int(match.group(2))
+    city_key = map_city_key(row["city"])
+    candidates: set[str] = set()
+    for area in db.execute(
+        "SELECT area_id,city_id,city_name FROM map_areas WHERE x=? AND y=?",
+        (x, y),
+    ).fetchall():
+        area_city_keys = {map_city_key(area["city_name"]), map_city_key(area["city_id"])}
+        if city_key not in area_city_keys:
+            continue
+        canonical = _canonical_area_id(db, str(area["area_id"]))
+        if canonical:
+            candidates.add(canonical)
+    return {"map_key": key, "city": row["city"], "grid": row["grid"],
+            "x": x, "y": y, "match_method": "city_grid_yx",
+            "candidates": sorted(candidates)}
+
+
+def link_hk_map_area(map_key: str, area_id: str = "") -> dict:
+    key = str(map_key or "").strip()
+    with db_session() as db:
+        map_row = db.execute("SELECT 1 FROM hk_maps_catalog WHERE map_key=?", (key,)).fetchone()
+        if not map_row:
+            raise LookupError("map not found")
+        requested = str(area_id or "").strip()
+        if requested:
+            canonical = _canonical_area_id(db, requested)
+            if not canonical:
+                raise LookupError("canonical area not found")
+            method = "exact_area_id"
+            candidates = [canonical]
+        else:
+            discovered = discover_hk_map_area(db, key)
+            candidates = discovered["candidates"]
+            method = discovered["match_method"]
+            if len(candidates) != 1:
+                raise ValueError(f"map link requires exactly one canonical candidate, got {len(candidates)}")
+            canonical = candidates[0]
+        now = utc_now()
+        db.execute(
+            """INSERT INTO hk_map_area_links(map_key,canonical_area_id,match_method,linked_at)
+               VALUES(?,?,?,?)
+               ON CONFLICT(map_key) DO UPDATE SET
+               canonical_area_id=excluded.canonical_area_id,
+               match_method=excluded.match_method,
+               linked_at=excluded.linked_at""",
+            (key, canonical, method, now),
+        )
+        linked = db.execute(
+            "SELECT map_key,canonical_area_id,match_method,linked_at FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+    return {"ok": True, "link": dict(linked), "candidates": candidates}
+
+
+def hk_map_area_link(map_key: str) -> dict | None:
+    key = str(map_key or "").strip()
+    with db_session() as db:
+        row = db.execute(
+            "SELECT map_key,canonical_area_id,match_method,linked_at FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+# HK_MAP_WEBSITE_OVERLAY_W4_V1
+def link_hk_map_points(map_key: str, value: object, match_method: str = "osm_point_in_polygon") -> dict:
+    key = str(map_key or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key):
+        raise ValueError("invalid map key")
+    if match_method not in {"osm_point_in_polygon", "exact_building_id"}:
+        raise ValueError("invalid point link method")
+    if not isinstance(value, list) or len(value) > 5000:
+        raise ValueError("invalid point links")
+    now = utc_now()
+    with db_session() as db:
+        bridge = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not bridge:
+            raise LookupError("map is not linked to canonical area")
+        area_id = str(bridge["canonical_area_id"])
+        point_row = db.execute(
+            "SELECT point_count FROM hk_map_points WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not point_row:
+            raise LookupError("map points not found")
+        point_count = int(point_row["point_count"])
+        normalized = []
+        seen_points = set()
+        seen_buildings = set()
+        for raw in value:
+            if not isinstance(raw, dict):
+                continue
+            try:
+                point_index = int(raw.get("point_index"))
+            except (TypeError, ValueError):
+                continue
+            building_id = str(raw.get("building_id") or "").strip()
+            if not 0 <= point_index < point_count:
+                continue
+            if not ID_RE.fullmatch(building_id):
+                continue
+            if point_index in seen_points or building_id in seen_buildings:
+                continue
+            exists = db.execute(
+                "SELECT 1 FROM map_buildings WHERE area_id=? AND building_id=?",
+                (area_id, building_id),
+            ).fetchone()
+            if not exists:
+                continue
+            seen_points.add(point_index)
+            seen_buildings.add(building_id)
+            normalized.append((point_index, building_id))
+        if not normalized:
+            raise ValueError("no valid point links")
+        for point_index, building_id in normalized:
+            db.execute(
+                """INSERT INTO hk_map_point_links(map_key,point_index,building_id,match_method,linked_at)
+                   VALUES(?,?,?,?,?)
+                   ON CONFLICT(map_key,point_index) DO UPDATE SET
+                     building_id=excluded.building_id,
+                     match_method=excluded.match_method,
+                     linked_at=excluded.linked_at""",
+                (key, point_index, building_id, match_method, now),
+            )
+        total = db.execute(
+            "SELECT COUNT(*) FROM hk_map_point_links WHERE map_key=?",
+            (key,),
+        ).fetchone()[0]
+    return {"ok": True, "map_key": key, "area_id": area_id,
+            "linked": len(normalized), "total": int(total), "match_method": match_method}
+
+
+def hk_map_points_with_canonical(map_key: str, flat: object) -> tuple[list, dict]:
+    points = list(flat) if isinstance(flat, list) else []
+    point_count = len(points) // 3
+    meta = {"enabled": False, "linked_points": 0, "applied_points": 0,
+            "fallback_points": point_count, "canonical_area_id": ""}
+    if not points or len(points) % 3:
+        return points, meta
+    with db_session() as db:
+        bridge = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (map_key,),
+        ).fetchone()
+        if not bridge:
+            return points, meta
+        area_id = str(bridge["canonical_area_id"])
+        rows = db.execute(
+            """SELECT p.point_index,p.building_id,b.room_count
+               FROM hk_map_point_links p
+               LEFT JOIN map_buildings b
+                 ON b.area_id=? AND b.building_id=p.building_id
+               WHERE p.map_key=? ORDER BY p.point_index""",
+            (area_id, map_key),
+        ).fetchall()
+    meta["enabled"] = bool(rows)
+    meta["canonical_area_id"] = area_id
+    meta["linked_points"] = len(rows)
+    applied = 0
+    for row in rows:
+        point_index = int(row["point_index"])
+        slot = point_index * 3 + 2
+        if not 0 <= slot < len(points):
+            continue
+        room_count = row["room_count"]
+        if room_count is None:
+            continue
+        try:
+            rooms = int(room_count)
+            old_flag = int(points[slot])
+        except (TypeError, ValueError):
+            continue
+        if not 0 <= rooms <= 7:
+            continue
+        investment_bit = old_flag & 0x08
+        points[slot] = investment_bit | rooms
+        applied += 1
+    meta["applied_points"] = applied
+    meta["fallback_points"] = max(0, point_count - applied)
+    return points, meta
+
+
+# HK_MAP_ROOM_KNOWLEDGE_W3_V1
+def import_hk_map_room_knowledge(map_key: str, value: object) -> dict:
+    """Fill only previously unknown canonical room counts for one linked website map.
+
+    W3 intentionally does not overwrite any existing non-NULL room_count.
+    Source priority/provenance normalization is handled in W5.
+    """
+    key = str(map_key or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key):
+        raise ValueError("invalid map key")
+    if not isinstance(value, list) or len(value) > 5000:
+        raise ValueError("invalid room knowledge")
+    normalized = []
+    seen = set()
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        building_id = str(raw.get("building_id", "")).strip()
+        if not ID_RE.fullmatch(building_id) or building_id in seen:
+            continue
+        try:
+            room_count = int(raw.get("room_count"))
+        except (TypeError, ValueError):
+            continue
+        if not 0 <= room_count <= 20:
+            continue
+        seen.add(building_id)
+        normalized.append({"building_id": building_id, "room_count": room_count})
+    if not normalized:
+        raise ValueError("no valid room knowledge")
+
+    now = utc_now()
+    source = "source-hk-maps-import"
+    filled = preserved = missing = 0
+    filled_ids = []
+    preserved_ids = []
+    missing_ids = []
+    with db_session() as db:
+        link = db.execute(
+            "SELECT canonical_area_id FROM hk_map_area_links WHERE map_key=?",
+            (key,),
+        ).fetchone()
+        if not link:
+            raise LookupError("map is not linked to canonical area")
+        area_id = str(link["canonical_area_id"])
+        if not db.execute("SELECT 1 FROM map_areas WHERE area_id=?", (area_id,)).fetchone():
+            raise LookupError("canonical area not found")
+
+        for item in normalized:
+            row = db.execute(
+                """SELECT room_count,knowledge_source,knowledge_observed_at FROM map_buildings
+                   WHERE area_id=? AND building_id=?""",
+                (area_id, item["building_id"]),
+            ).fetchone()
+            if not row:
+                missing += 1
+                missing_ids.append(item["building_id"])
+                continue
+            if row["room_count"] is not None:
+                preserved += 1
+                preserved_ids.append(item["building_id"])
+                continue
+            cursor = db.execute(
+                """UPDATE map_buildings
+                   SET room_count=?,
+                       has_events=MAX(has_events,?),
+                       last_player_id=?,
+                       last_seen=?,
+                       knowledge_source='hk_maps_import',
+                       knowledge_observed_at=?
+                   WHERE area_id=? AND building_id=? AND room_count IS NULL""",
+                (item["room_count"], int(item["room_count"] > 0), source, now, now,
+                 area_id, item["building_id"]),
+            )
+            if cursor.rowcount:
+                filled += 1
+                filled_ids.append(item["building_id"])
+
+        known, total, progress = map_completion(db, area_id)
+
+    return {
+        "ok": True,
+        "map_key": key,
+        "area_id": area_id,
+        "requested": len(normalized),
+        "filled": filled,
+        "preserved_nonnull": preserved,
+        "missing_buildings": missing,
+        "filled_ids": filled_ids,
+        "preserved_ids": preserved_ids,
+        "missing_ids": missing_ids,
+        "known_buildings": known,
+        "buildings": total,
+        "progress": progress,
+        "source": source,
+        "knowledge_source": "hk_maps_import",
+    }
+
+
+
+# SCOPED_HK_MAP_ACCESS_V1
+
+def ensure_scoped_hk_map_access_schema() -> None:
+    now = utc_now()
+    with db_session() as db:
+        db.executescript("""
+            CREATE TABLE IF NOT EXISTS hk_map_access_rules (
+                telegram_id TEXT NOT NULL,
+                scope_type TEXT NOT NULL CHECK(scope_type IN ('city','map')),
+                scope_value TEXT NOT NULL,
+                allowed INTEGER NOT NULL DEFAULT 1,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (telegram_id, scope_type, scope_value),
+                FOREIGN KEY (telegram_id) REFERENCES clan_members(telegram_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_hk_map_access_rules_member
+                ON hk_map_access_rules(telegram_id, scope_type, allowed);
+            CREATE TABLE IF NOT EXISTS hk_map_access_meta (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+        """)
+        migrated = db.execute("SELECT 1 FROM hk_map_access_meta WHERE key='legacy_full_access_v1'").fetchone()
+        if not migrated:
+            cities = [row[0] for row in db.execute("SELECT DISTINCT city FROM hk_maps_catalog ORDER BY city").fetchall()]
+            legacy = [row[0] for row in db.execute(
+                "SELECT telegram_id FROM clan_members WHERE active=1 AND maps_access=1 AND maps_manage=0"
+            ).fetchall()]
+            for telegram_id in legacy:
+                for city in cities:
+                    db.execute("""INSERT OR IGNORE INTO hk_map_access_rules
+                                  (telegram_id,scope_type,scope_value,allowed,created_at,updated_at)
+                                  VALUES(?,?,?,?,?,?)""",
+                               (telegram_id, 'city', city, 1, now, now))
+            db.execute("INSERT INTO hk_map_access_meta(key,value,updated_at) VALUES('legacy_full_access_v1','1',?)", (now,))
+        db.execute("""UPDATE clan_members
+                      SET maps_access=CASE
+                          WHEN maps_manage=1 THEN 1
+                          WHEN EXISTS(SELECT 1 FROM hk_map_access_rules r
+                                      WHERE r.telegram_id=clan_members.telegram_id AND r.allowed=1) THEN 1
+                          ELSE 0 END""")
+
+
+def _hk_member_rules(db: sqlite3.Connection, telegram_id: str) -> tuple[set[str], dict[str, bool]]:
+    rows = db.execute("""SELECT scope_type,scope_value,allowed FROM hk_map_access_rules
+                         WHERE telegram_id=?""", (telegram_id,)).fetchall()
+    cities: set[str] = set()
+    maps: dict[str, bool] = {}
+    for row in rows:
+        if row['scope_type'] == 'city' and row['allowed']:
+            cities.add(row['scope_value'])
+        elif row['scope_type'] == 'map':
+            maps[row['scope_value']] = bool(row['allowed'])
+    return cities, maps
+
+
+def member_can_access_hk_map(member: dict | None, map_key: str, city: str | None = None) -> bool:
+    if not member:
+        return False
+    if member.get('maps_manage'):
+        return True
+    telegram_id = str(member.get('telegram_id') or '')
+    if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+        return False
+    ensure_scoped_hk_map_access_schema()
+    with db_session() as db:
+        if city is None:
+            row = db.execute("SELECT city FROM hk_maps_catalog WHERE map_key=?", (map_key,)).fetchone()
+            if not row:
+                return False
+            city = row['city']
+        cities, maps = _hk_member_rules(db, telegram_id)
+    if map_key in maps:
+        return maps[map_key]
+    return city in cities
+
+
+def set_member_map_scope(member: dict, telegram_id: str, scope_type: str, scope_value: str, allowed: bool) -> dict:
+    if not member.get('maps_manage'):
+        raise Permission
+
