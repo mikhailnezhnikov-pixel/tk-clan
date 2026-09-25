@@ -1,0 +1,48 @@
+name: Diagnose Maps Crystal Priority V3
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-crystal-priority-diagnostic-v3-trigger.txt'
+      - 'deploy/topking/inspect_maps_crystal_priority.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inspect live Maps crystal priority
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/inspect_maps_crystal_priority.py root@89.125.1.71:/tmp/inspect_maps_crystal_priority.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/inspect_maps_crystal_priority.py' > /tmp/maps-crystal-priority-db.json
+          cp /tmp/maps-crystal-priority-db.json audit/hk-maps-crystal-priority-db.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-maps-crystal-priority-db.json
+          git commit -m "audit: capture Maps crystal priority state"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/inspect_maps_crystal_priority.py /tmp/maps-crystal-priority-db.json
