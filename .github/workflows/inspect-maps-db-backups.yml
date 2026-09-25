@@ -1,0 +1,45 @@
+name: Inspect Maps DB Backups
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-db-backups-inspect-trigger.txt'
+      - 'deploy/topking/inspect_map_db_backups.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect backups
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/inspect_map_db_backups.py root@89.125.1.71:/tmp/inspect_map_db_backups.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/inspect_map_db_backups.py' > /tmp/maps-db-backups.json
+          cp /tmp/maps-db-backups.json audit/hk-maps-db-backups.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-maps-db-backups.json
+          git commit -m "audit: inspect Maps DB backups"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/inspect_map_db_backups.py /tmp/maps-db-backups.json
