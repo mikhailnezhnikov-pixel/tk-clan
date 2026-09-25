@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import re
 
 target = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/HamsterKingMobile.user.js")
 s = target.read_text(encoding="utf-8")
@@ -58,7 +59,6 @@ for marker in [
     "// @version      1.17.88",
     "const BUILD_VERSION = '1.17.88';",
     "pits-paw-limited-battles-20260925-r1",
-    "let restorationSpent=0;",
     "остановка по лимиту Лап восстановления",
 ]:
     if marker not in s:
