@@ -47,8 +47,7 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1",
     "userscript-update-metadata-20260924-r1",
-    "server-health-core-20260924-r1",
-    "resources-canon-fast-20260925-r1"
+    "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-17-85-runtime-resource-fast-live-status.txt",
   "commit_message": "fix: deploy runtime takeover and faster resources 1.17.85"
