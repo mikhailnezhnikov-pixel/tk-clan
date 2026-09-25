@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_version": "1.17.83",
-  "target_version": "1.17.84",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.84.resources-canon-fast.candidate.user.js",
-  "primary_marker": "resources-canon-fast-20260925-r1",
+  "source_version": "1.17.84",
+  "target_version": "1.17.85",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.85.runtime-resource-fast.candidate.user.js",
+  "primary_marker": "runtime-takeover-20260925-r6-version-aware",
   "preserve_markers": [
     "growth-fresh-preflight-20260923-r1",
     "mutation-bridge-readonly-20260923-r1",
@@ -47,8 +47,10 @@
     "businesses-kokkaras-donor-20260922-r1",
     "businesses-runner-vertical-20260922-r1",
     "userscript-update-metadata-20260924-r1",
-    "server-health-core-20260924-r1"
+    "server-health-core-20260924-r1",
+    "resources-canon-fast-20260925-r2",
+    "resources-event-catalog-async-20260925-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-84-resources-canon-fast-live-status.txt",
-  "commit_message": "fix: deploy resources canon and faster refresh 1.17.84"
+  "audit_status_path": "audit/hk-userscript-1-17-85-runtime-resource-fast-live-status.txt",
+  "commit_message": "fix: deploy runtime takeover and faster resources 1.17.85"
 }
