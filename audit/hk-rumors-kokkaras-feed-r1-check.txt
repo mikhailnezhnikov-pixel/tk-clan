@@ -1,0 +1,5 @@
+RUMORS_KOKKARAS_FEED_R1_CHECK=PASS
+kokkaras_public_feed=PASS
+cities=17
+points=51
+server_syntax=PASS
