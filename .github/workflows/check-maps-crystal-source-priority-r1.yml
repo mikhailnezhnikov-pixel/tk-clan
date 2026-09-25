@@ -1,0 +1,124 @@
+name: Check Maps Crystal Source Priority R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-crystal-source-priority-check-trigger.txt'
+      - 'deploy/topking/patch_server_maps_crystal_source_priority_r1.py'
+      - 'deploy/topking/repair_maps_crystals_from_full235_source.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Build patched server
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/source-server.sha
+          python3 deploy/topking/patch_server_maps_crystal_source_priority_r1.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq "HK_MAP_CRYSTAL_SOURCE_PRIORITY_R1" /tmp/server.py
+          grep -Fq '"crystal_source": "uploaded_map"' /tmp/server.py
+          grep -Fq "hk_map_source_crystals" /tmp/server.py
+
+      - name: Regression source beats live
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util, tempfile, os
+          spec=importlib.util.spec_from_file_location('s','/tmp/server.py')
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          fd,path=tempfile.mkstemp(prefix='crystal-priority-',suffix='.db');os.close(fd)
+          try:
+              s.DB_PATH=path;s.init_db()
+              source={
+                'area_id':'area-test','city_id':'city-test','city_name':'Test','coord_revision':'column-row-v1',
+                'x':1,'y':2,'invest_count':0,'expected_buildings':2,
+                'buildings':[
+                  {'building_id':'way1','opened':True,'room_count':2,'has_events':True,'is_invest':False,'tier':None,'faction':'','building_type':''},
+                  {'building_id':'way2','opened':False,'room_count':None,'has_events':False,'is_invest':False,'tier':None,'faction':'','building_type':''},
+                ]}
+              s.submit_map_area('source-hk-maps-import',source)
+              live={**source,'buildings':[
+                  {'building_id':'way1','opened':True,'room_count':0,'has_events':False,'is_invest':False,'tier':None,'faction':'','building_type':''},
+                  {'building_id':'way2','opened':True,'room_count':0,'has_events':False,'is_invest':False,'tier':None,'faction':'','building_type':''},
+              ]}
+              s.submit_map_area('player-live',live)
+              d=s.map_detail('area-test');by={x['building_id']:x for x in d['buildings']}
+              assert by['way1']['room_count']==2 and by['way1']['knowledge_source']=='hk_maps_import',by
+              assert by['way2']['room_count'] is None and by['way2']['knowledge_source']=='hk_maps_import',by
+              source2={**source,'buildings':[
+                  {'building_id':'way1','opened':True,'room_count':3,'has_events':True,'is_invest':False,'tier':None,'faction':'','building_type':''},
+                  {'building_id':'way2','opened':True,'room_count':1,'has_events':True,'is_invest':False,'tier':None,'faction':'','building_type':''},
+              ]}
+              s.submit_map_area('source-hk-maps-import',source2)
+              d=s.map_detail('area-test');by={x['building_id']:x for x in d['buildings']}
+              assert by['way1']['room_count']==3 and by['way2']['room_count']==1,by
+              print('MAP_CRYSTAL_SOURCE_BEATS_LIVE=PASS')
+              print('MAP_CRYSTAL_SOURCE_UNKNOWN_LOCK=PASS')
+              print('MAP_CRYSTAL_SOURCE_REIMPORT=PASS')
+          finally:
+              try: os.remove(path)
+              except OSError: pass
+          PY
+
+      - name: Read-only production repair preflight
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/preview_full235_source_restore.py root@89.125.1.71:/tmp/preview_full235_source_restore.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/preview_full235_source_restore.py' > /tmp/preflight.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/preflight.json'))
+          assert d['source']['maps']==235,d
+          assert d['source']['archive_sha256']=='a4b84c5239168182702090efe0b7241b54295942d63e5f020539092694e0a3e1',d
+          assert d['summary']['missing_source_ids']==0,d['summary']
+          assert d['summary']['source_buildings']==152593,d['summary']
+          lag=d['lagos'][0]
+          assert lag['source_hist']=={'0':1,'1':6,'2':101,'3':15,'NULL':955},lag
+          print('FULL235_SOURCE_REPAIR_PREFLIGHT=PASS')
+          PY
+
+      - name: Persist check
+        run: |
+          set -euo pipefail
+          {
+            echo "MAP_CRYSTAL_SOURCE_PRIORITY_R1_CHECK=PASS"
+            echo "source_archive_maps=235"
+            echo "source_buildings=152593"
+            echo "missing_source_ids=0"
+            echo "lagos_33_22=955_unknown_1x0_6x1_101x2_15x3"
+            echo "production_writes=NO"
+          } > audit/hk-maps-crystal-source-priority-r1-check.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-maps-crystal-source-priority-r1-check.txt
+          git commit -m "audit: verify Maps crystal source priority R1"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/preflight.json /tmp/preview_full235_source_restore.py /tmp/source-server.sha
