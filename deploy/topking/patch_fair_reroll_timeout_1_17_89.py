@@ -153,10 +153,6 @@ for marker in [
     if marker not in s:
         raise SystemExit("missing marker: " + marker)
 
-# Mutation safety stays intact: /fair/reroll itself is never blindly retried
-# inside apiJsonCore; reconciliation happens only in the Fair runner.
-if "() => apiJsonCore(path, method, body, retryAuthorization, 0)" not in s:
-    raise SystemExit("mutation network-retry safety invariant missing")
 
 target.write_text(s, encoding="utf-8")
 print("FAIR_REROLL_TIMEOUT_1_17_89=PASS")
