@@ -1,0 +1,53 @@
+name: Diagnose Fair Reroll Timeout
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diagnose-fair-reroll-timeout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract current Fair reroll context
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('baseline/topking/HamsterKingMobile.current.user.js')
+          s=p.read_text(encoding='utf-8')
+          terms=[
+            'async function apiJsonCore',
+            'async function apiJson',
+            'function fairState',
+            'function fairRerollCapacity',
+            'function safeReroll',
+            'async function runFair',
+            "/fair/reroll",
+          ]
+          out=[]
+          for term in terms:
+              start=0
+              n=0
+              while True:
+                  i=s.find(term,start)
+                  if i<0: break
+                  n+=1
+                  a=max(0,i-1800)
+                  b=min(len(s),i+7000)
+                  out.append(f"\n===== {term} #{n} @ {i} =====\n{s[a:b]}\n")
+                  start=i+len(term)
+                  if term != '/fair/reroll': break
+          Path('audit/fair-reroll-timeout-context.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/fair-reroll-timeout-context.txt
+          git commit -m "audit: capture Fair reroll timeout context" || exit 0
+          git push origin HEAD:main
