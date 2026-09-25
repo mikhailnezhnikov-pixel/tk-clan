@@ -1,0 +1,6 @@
+MAP_CRYSTAL_SOURCE_PRIORITY_R1_CHECK=PASS
+source_archive_maps=235
+source_buildings=152593
+missing_source_ids=0
+lagos_33_22=955_unknown_1x0_6x1_101x2_15x3
+production_writes=NO
