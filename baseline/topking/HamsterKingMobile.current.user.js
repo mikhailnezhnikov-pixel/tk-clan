@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.88
+// @version      1.17.89
+// @release-note Ярмарка: прокрутка больше не падает сразу при сетевом тайм-ауте. Для /fair/reroll увеличено окно ожидания, а неоднозначный тайм-аут сверяется с live-состоянием Ярмарки и балансом; если прокрутка уже прошла — работа продолжается без повторной траты, если нет — повтор выполняется только после подтверждения неизменившегося состояния.
 // @release-note Ямы: удалён искусственный защитный лимит количества боёв. Яма продолжает бой, пока позволяет фактический запас Лап восстановления и выбранный лимит Лап; отдельного лимита на число боёв больше нет.
 // @release-note Ярмарка: Runner приведён к канону панели — текущие проходы и действия показываются в самом Runner, счётчик прогресса виден рядом со статусом, кнопки компактные; в общий журнал пишется итог запуска, а не поток проходов.
 // @release-note Ярмарка: выбор бонусных лотов ×5/×10/×30 снова определяется выбранным максимумом групп 3/6/9, а не полем «Цель основных покупок». При 9 доступны все три флажка; фактический выкуп по-прежнему происходит только после открытия соответствующего порога.
@@ -99,7 +100,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.88';
+  const BUILD_VERSION = '1.17.89';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -117,6 +118,7 @@
   const HK_FAIR_BONUS_COST_FORECAST_REV = 'fair-bonus-cost-forecast-20260923-r1';
   const HK_FAIR_BONUS_SELECTION_REV = 'fair-bonus-selection-20260925-r1';
   const HK_FAIR_RUNNER_CANON_REV = 'fair-runner-canon-20260925-r1';
+  const HK_FAIR_REROLL_TIMEOUT_REV = 'fair-reroll-timeout-reconcile-20260925-r1';
   const HK_FAIR_FINAL_CLEANUP_REV = 'fair-final-cleanup-20260923-r1';
   const HK_RAT_HUNT_REV = 'rat-hunt-leaderboards-20260923-r1';
   const HK_RAT_HUNT_COMBAT_REV = 'rat-hunt-combat-20260923-r1';
@@ -6446,6 +6448,7 @@
   }
 
   async function apiJsonCore(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3, timeoutMs = 18000) {
+    if (hkNormalizedApiPath(path) === '/fair/reroll' && timeoutMs === 18000) timeoutMs = 35000;
     const maxRetries = retryNetwork === true ? GAME_REQUEST_RETRY_DELAYS_MS.length : retryNetwork === false ? 0 : Math.max(0, Math.trunc(Number(retryNetwork) || 0));
     let authRetryLeft = retryAuthorization ? 1 : 0;
     let attempt = 0, lockAttempt = 0;
@@ -9492,6 +9495,45 @@
 
   function fairRunnerNote(message,type='') { hkRunner.note(message,type); }
 
+  function fairRerollStateSignature(state) {
+    return JSON.stringify((state?.fair_slots || []).map((slot,index) => [
+      index,
+      String(slot?.id ?? ''),
+      String(slot?.shop_lot_id ?? ''),
+      slot?.is_bought === true ? 1 : 0
+    ]));
+  }
+
+  function fairRerollTimeoutError(error) {
+    const message=String(error?.message || error || '');
+    return /\/fair\/reroll/i.test(message) && /(тайм-аут|timeout|timed out|время ожидания)/i.test(message);
+  }
+
+  async function reconcileFairRerollTimeout(beforeSignature,beforeBalances,rerollCost) {
+    let lastDocument=playerDocument;
+    for (const delay of [1200,2500,5000]) {
+      await gameRetryDelay(delay);
+      try {
+        const documentValue=await hkAuthoritativePlayerRead('fair-reroll-timeout-reconcile');
+        lastDocument=documentValue || lastDocument;
+        fairDocument=lastDocument;
+        const currentState=fairState(selectedFairId,lastDocument);
+        if (!currentState) continue;
+        const stateChanged=fairRerollStateSignature(currentState)!==beforeSignature;
+        const charged=costParts(rerollCost).some(part => {
+          const before=beforeBalances.get(part.id);
+          const after=walletAmount(part.id,lastDocument);
+          return before!==null && before!==undefined && after!==null && after!==undefined &&
+            Number(after) <= Number(before) - Math.max(0,Number(part.quantity || 0));
+        });
+        if (stateChanged || charged) return {applied:true,documentValue:lastDocument,state:currentState};
+      } catch (probeError) {
+        recordDiagnostic('fair-reroll-timeout-probe-error',{error:probeError?.message || String(probeError)});
+      }
+    }
+    return {applied:false,documentValue:lastDocument,state:fairState(selectedFairId,lastDocument)};
+  }
+
   async function runFair() {
     if (!requireLicense() || fairRunning || !selectedFairLots.size) return;
     if ([...selectedFairLots].some(lotId => {
@@ -9642,22 +9684,40 @@
         fairRunnerNote(rerollPlan.free
           ? either(`Лота нет. Бесплатная прокрутка ${rerolls + 1}…`, `No matching lot. Free reroll ${rerolls + 1}…`)
           : either(`Лота нет. Прокрутка ${rerolls + 1} · доступно по балансу: ${rerollPlan.count}`, `No matching lot. Reroll ${rerolls + 1} · affordable now: ${rerollPlan.count}`));
+        if (!isEventFairState(state)) {
+          const rerollDecision = budgetDecision(state.fair_reroll_cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+          if (!rerollDecision.allowed) throw new Error(rerollDecision.problems.join('; '));
+        }
+        const rerollCost = state.fair_reroll_cost;
+        const before = new Map(costParts(rerollCost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+        const beforeSignature = fairRerollStateSignature(state);
         try {
-          if (!isEventFairState(state)) {
-            const rerollDecision = budgetDecision(state.fair_reroll_cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
-            if (!rerollDecision.allowed) throw new Error(rerollDecision.problems.join('; '));
-          }
-          const before = new Map(costParts(state.fair_reroll_cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
-          const rerollCost = state.fair_reroll_cost;
           fairDocument = await apiJson('/fair/reroll', 'POST', {fair_id:selectedFairId});
           updateWalletFromResponse(fairDocument, rerollCost);
-          for (const part of costParts(state.fair_reroll_cost)) appendExpense({section:'fair', lotId:`reroll:${selectedFairId}`, name:either('Прокрутка ярмарки','Fair reroll'),
+          for (const part of costParts(rerollCost)) appendExpense({section:'fair', lotId:`reroll:${selectedFairId}`, name:either('Прокрутка ярмарки','Fair reroll'),
             currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'rerolled'});
           rerolls++; authRetries = 0;
         }
         catch (error) {
           if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
-          throw error;
+          if (fairRerollTimeoutError(error)) {
+            fairRunnerNote(either('Прокрутка отвечает дольше обычного. Проверяю состояние без повторной траты…','Reroll is taking longer than usual. Verifying state without spending twice…'),'warn');
+            const reconciled=await reconcileFairRerollTimeout(beforeSignature,before,rerollCost);
+            playerDocument=reconciled.documentValue || playerDocument;
+            fairDocument=playerDocument;
+            if (reconciled.applied) {
+              for (const part of costParts(rerollCost)) appendExpense({section:'fair', lotId:`reroll:${selectedFairId}`, name:either('Прокрутка ярмарки','Fair reroll'),
+                currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'rerolled-timeout-reconciled'});
+              rerolls++; authRetries = 0;
+              fairRunnerNote(either('Прокрутка подтверждена по live-состоянию. Продолжаю.','Reroll confirmed from live state. Continuing.'),'ok');
+            } else {
+              authRetries = 0;
+              fairRunnerNote(either('После тайм-аута Ярмарка и баланс не изменились. Повторяю прокрутку безопасно.','After the timeout the Fair and balance are unchanged. Retrying the reroll safely.'),'warn');
+              continue;
+            }
+          } else {
+            throw error;
+          }
         }
         await gameRetryDelay(550);
       }

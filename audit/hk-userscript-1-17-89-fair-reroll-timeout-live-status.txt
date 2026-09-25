@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.88
+target_version=1.17.89
+marker=fair-reroll-timeout-reconcile-20260925-r1
+source_sha256=5bcecdb40b3c3f281052208028101ef4f15cb9f886bfaa741b5ac7f009f6770c
+candidate_sha256=3c6121f75b9224786b3f2bb7303603d18cdfc64e7a8d601d2cf5a5eb7609e69c
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
