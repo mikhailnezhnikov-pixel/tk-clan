@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 import sys
 
 target = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/HamsterKingMobile.user.js")
@@ -40,30 +39,15 @@ replace(
 # checkbox availability was tied to the current main-purchase target.
 # The 3/6/9 selector is the capability switch; the target only controls
 # how many main purchases the current run attempts.
-pattern = re.compile(
-    r"""  function availableFairBonusLots\(
-        exactLots\s*=\s*fairComboSettings\(\)\.exactLots,\s*
-        buyLimit\s*=\s*fairBuyTargetValue\(root\?\.querySelector\('#hk-fair-buy-limit'\)\?\.value,\s*exactLots\)
-        \)\s*\{\s*
-        const\s+reachable\s*=\s*Math\.min\(9,\s*Math\.max\(0,\s*exactLots\),\s*Math\.max\(0,\s*buyLimit\)\);\s*
-        return\s+reachable\s*>=\s*9\s*\?\s*\[5,\s*10,\s*30\]\s*:\s*
-               reachable\s*>=\s*6\s*\?\s*\[5,\s*10\]\s*:\s*
-               reachable\s*>=\s*3\s*\?\s*\[5\]\s*:\s*\[\];\s*
-    \}""",
-    re.X,
-)
-replacement = """  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
+old_bonus = """  function availableFairBonusLots(exactLots = fairComboSettings().exactLots, buyLimit = fairBuyTargetValue(root?.querySelector('#hk-fair-buy-limit')?.value, exactLots)) {
+    const reachable = Math.min(9, Math.max(0, exactLots), Math.max(0, buyLimit));
+    return reachable >= 9 ? [5, 10, 30] : reachable >= 6 ? [5, 10] : reachable >= 3 ? [5] : [];
+  }"""
+new_bonus = """  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
     const maximum = Math.max(0, Math.trunc(Number(exactLots || 0)));
     return maximum >= 9 ? [5, 10, 30] : maximum >= 6 ? [5, 10] : maximum >= 3 ? [5] : [];
   }"""
-s, count = pattern.subn(replacement, s, count=1)
-if count != 1:
-    pos = s.find("function availableFairBonusLots")
-    if pos >= 0:
-        print("FAIR_BONUS_FUNCTION_CONTEXT_BEGIN")
-        print(s[pos:pos+1200])
-        print("FAIR_BONUS_FUNCTION_CONTEXT_END")
-    raise SystemExit(f"fair bonus availability function: expected 1 replacement, got {count}")
+replace(old_bonus, new_bonus, "fair bonus availability function")
 
 # Make intent explicit at the two known callers. Extra main-purchase target
 # must not disable a checkbox; execution still checks which bonus slot is
