@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.84
+// @version      1.17.85
+// @release-note Обновление панели: повторный запуск закладки теперь заменяет старую активную сборку, если на странице осталась предыдущая версия; старая панель больше не блокирует свежий код только из-за одинакового core revision.
+// @release-note Ресурсы: справочник событий больше не блокирует первое открытие Ореховой/Инструментовой/Жетоновой; сначала показываются live-данные здания, а названия событий догружаются отдельно в фоне без ослабления защиты 429.
 // @release-note Ресурсы: Runner приведён к канону панели — выбранная Ореховая/Инструментовая/Жетоновая показывается в заголовке, а сырой placeholder «event name side» больше не попадает в интерфейс.
 // @release-note Ресурсы: убрано лишнее повторное чтение /player/me после обмена и разрешено переиспользовать совсем свежий player-state при обычном открытии/переключении вкладки; защита 429 и глобальный rate guard не ослаблены.
 // @release-note Диагностика: общий индикатор «Сервер» теперь отражает контрольную проверку основного HK-сервера; сбой отдельного фонового endpoint остаётся в диагностике и больше не создаёт ложный красный статус.
@@ -94,9 +96,9 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.84';
+  const BUILD_VERSION = '1.17.85';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
-  const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260920-r5';
+  const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
   const HK_SHOP_PURCHASE_PLAN_REV = 'shop-purchase-plan-canon-20260923-r1';
   const HK_SHOP_ACTIVE_VIEW_REV = 'shop-active-view-canon-20260923-r1';
@@ -152,7 +154,7 @@
     return true;
   }
   const previousRuntime = window.__HK_MOBILE_RUNTIME__;
-  if (previousRuntime?.active && previousRuntime.revision === HK_CORE_REVISION) {
+  if (previousRuntime?.active && previousRuntime.revision === HK_CORE_REVISION && hkRuntimeAtLeast(previousRuntime.version, BUILD_VERSION)) {
     try { previousRuntime.open?.(); } catch (_) {}
     return;
   }
@@ -1096,7 +1098,8 @@
   const HK_STAGE2B_RUNNER_REV = 'stage2b-20260919-r1';
   const HK_STAGE2_STATE_REV = 'stage2c-state-20260919-r1';
   const HK_STAGE2D_RUNNER_REV = 'stage2d-resource-business-20260919-r1';
-  const HK_RESOURCE_CANON_FAST_REV = 'resources-canon-fast-20260925-r1';
+  const HK_RESOURCE_CANON_FAST_REV = 'resources-canon-fast-20260925-r2';
+  const HK_RESOURCE_EVENT_CATALOG_ASYNC_REV = 'resources-event-catalog-async-20260925-r1';
   const RESOURCE_PLAYER_CACHE_MS = 12000;
   const HK_STAGE2E_RUNNER_REV = 'stage2e-maps-20260919-r1';
   const HK_MAP_SCANNER_REV = 'maps-shared-runtime-20260921-r7-safe5';
@@ -1144,6 +1147,7 @@
   let clanSkillRefreshing = false;
   let resourceBuildings = [];
   let resourceBusy = false;
+  let resourceEventCatalogPromise = null;
   let resourceRepeatCount = Math.max(1, Math.min(10, Math.trunc(Number(load().resourceRepeatCount || 1))));
   let resourceMaximumMode = false;
   let resourceSelectedKind = String(load().resourceSelectedKind || 'nut');
@@ -10829,6 +10833,21 @@
     return gameText(row?.name || row?.event?.name || row?.title || wanted || either('Ресурсное задание','Resource task'));
   }
 
+  function scheduleResourceEventCatalogRefresh() {
+    if (eventCatalogDocument || resourceEventCatalogPromise || gameApiCooldownRemainingMs() > 0 || hkRunner.running) return;
+    resourceEventCatalogPromise = apiJson('/events','GET')
+      .then(value => {
+        eventCatalogDocument = normalizeEventCatalog(value);
+        if (!resourceBusy) renderResources();
+        return eventCatalogDocument;
+      })
+      .catch(error => {
+        recordDiagnostic('resource-event-catalog-background-error',{error:error?.message||error});
+        return null;
+      })
+      .finally(() => { resourceEventCatalogPromise = null; });
+  }
+
   function resourceEvents(buildingRow) {
     const documentValue = buildingRow?.document || {};
     const building = documentValue?.building || documentValue?.data?.building || documentValue?.data || documentValue;
@@ -10959,7 +10978,6 @@
       if (refreshPlayer && !freshSnapshot) playerDocument = await apiJson('/player/me', 'POST');
       else if (hkStateStore.snapshot) playerDocument = hkStateStore.snapshot;
       else if (!playerDocument) playerDocument = await apiJson('/player/me', 'POST');
-      if (!eventCatalogDocument) eventCatalogDocument = normalizeEventCatalog(await apiJson('/events','GET'));
       const discoveredIds=await discoverResourceBuildingIds(showLog,resourceSelectedKind);
       let buildingId=String((resourceBuildings[0]?.kind===resourceSelectedKind ? resourceBuildings[0]?.id : '') || discoveredIds[resourceSelectedKind] || '');
       if (!buildingId) {
@@ -11011,6 +11029,7 @@
       return false;
     } finally {
       resourceBusy = false; renderResources();
+      if (!eventCatalogDocument) setTimeout(scheduleResourceEventCatalogRefresh, 0);
     }
   }
 
