@@ -32,7 +32,7 @@ jobs:
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
           before_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
           echo "SERVER_SHA_BEFORE=$before_sha"
-          if [ "$before_sha" != "4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753" ] && [ "$before_sha" != "12f4ea6ee5032bac565015578fd9c174daa235bc138c803eebabfc5bdd9d7556" ] && [ "$before_sha" != "d43d7c88c13e3921ec136cbfd7f3f76f516873df6e0894d56db3fb232382c2a0" ] && [ "$before_sha" != "f61c393d9e36ed3128eefbf939fd40ea0211ce43b27268085f37f5cc904e2975" ]; then
+          if [ "$before_sha" != "4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753" ] && [ "$before_sha" != "12f4ea6ee5032bac565015578fd9c174daa235bc138c803eebabfc5bdd9d7556" ] && [ "$before_sha" != "d43d7c88c13e3921ec136cbfd7f3f76f516873df6e0894d56db3fb232382c2a0" ] && [ "$before_sha" != "f61c393d9e36ed3128eefbf939fd40ea0211ce43b27268085f37f5cc904e2975" ] && [ "$before_sha" != "e4bdfd7e31adf5f78c51af58572e5398216133363842ce3acf93bcd412aadef7" ]; then
             echo "unexpected live server sha: $before_sha"
             exit 1
           fi
@@ -40,12 +40,15 @@ jobs:
           python3 deploy/topking/patch_server_maps_visibility_access_v2.py
           python3 deploy/topking/patch_server_game_geometry_r1.py
           python3 deploy/topking/patch_server_map_localized_dedupe_r1.py
+          python3 deploy/topking/patch_server_map_city_language_r2.py
           python3 -m py_compile /tmp/server.py
           grep -Fq "HK_MAP_VISIBILITY_ACCESS_V2" /tmp/server.py
           grep -Fq "HK_MAP_GAME_GEOMETRY_R1" /tmp/server.py
           grep -Fq "def load_live_game_geometry_hk_map" /tmp/server.py
           grep -Fq "HK_MAP_LOCALIZED_DEDUPE_R1" /tmp/server.py
           grep -Fq "def _hk_dedupe_localized_cabinet_rows" /tmp/server.py
+          grep -Fq "HK_MAP_CITY_LANGUAGE_R2" /tmp/server.py
+          grep -Fq "city_display_language" /tmp/server.py
           candidate_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
           echo "$candidate_sha" > /tmp/server-candidate.sha
           echo "SERVER_SHA_CANDIDATE=$candidate_sha"
@@ -163,6 +166,7 @@ jobs:
           grep -Fq "HK_MAP_GAME_GEOMETRY_R1" /tmp/server.live.py
           grep -Fq "def load_live_game_geometry_hk_map" /tmp/server.live.py
           grep -Fq "HK_MAP_LOCALIZED_DEDUPE_R1" /tmp/server.live.py
+          grep -Fq "HK_MAP_CITY_LANGUAGE_R2" /tmp/server.live.py
           ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/maps-v2-prod-check.py' | tee /tmp/maps-v2-after.json
           cat > /tmp/maps-locale-verify.py <<'PY'
           import importlib.util
@@ -175,7 +179,11 @@ jobs:
           assert payload.get("localized_dedupe") is True,payload
           assert int(payload.get("localized_rows_before") or 0) >= int(payload.get("localized_rows_after") or 0),payload
           assert int(payload.get("localized_rows_merged") or 0) >= 1,payload
+          assert payload.get("city_display_language")=="ru",payload
+          assert payload.get("city_names_normalized") is True,payload
+          assert not payload.get("city_latin_names_after"),payload.get("city_latin_names_after")
           print("LOCALIZED_MAP_DEDUPE_PASS",payload["localized_rows_before"],payload["localized_rows_after"],payload["localized_rows_merged"])
+          print("CABINET_CITY_LANGUAGE_RU_PASS",payload.get("city_latin_names_before"),payload.get("city_latin_names_after"))
           PY
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/maps-locale-verify.py root@89.125.1.71:/tmp/maps-locale-verify.py
           ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/maps-locale-verify.py'
@@ -197,6 +205,7 @@ jobs:
             echo "game_geometry_capture=ENABLED"
             echo "website_full_render_from_game_geometry=ENABLED"
             echo "localized_map_dedupe=ENABLED"
+            echo "cabinet_city_display_language=RU"
             echo "localized_house_data_policy=PRESERVE_VARIANTS_NO_DESTRUCTIVE_UNION"
             echo "production_counts=$(cat /tmp/maps-v2-after.json)"
           } > audit/hk-maps-visibility-access-v2-live-status.txt
