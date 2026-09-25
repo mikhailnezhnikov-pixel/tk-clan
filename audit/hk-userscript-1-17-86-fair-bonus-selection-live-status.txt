@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.85
+target_version=1.17.86
+marker=fair-bonus-selection-20260925-r1
+source_sha256=a3da7b70ed0a764963620c04b6d4d3667851aadbf18a04ece916a9dae6299e08
+candidate_sha256=90cc22c78b3ae221d8f95e3e8139d5769ae34ff8611ea838ad81d30e6b660d76
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

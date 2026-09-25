@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.85
+// @version      1.17.86
+// @release-note Ярмарка: выбор бонусных лотов ×5/×10/×30 снова определяется выбранным максимумом групп 3/6/9, а не полем «Цель основных покупок». При 9 доступны все три флажка; фактический выкуп по-прежнему происходит только после открытия соответствующего порога.
 // @release-note Обновление панели: повторный запуск закладки теперь заменяет старую активную сборку, если на странице осталась предыдущая версия; старая панель больше не блокирует свежий код только из-за одинакового core revision.
 // @release-note Ресурсы: справочник событий больше не блокирует первое открытие Ореховой/Инструментовой/Жетоновой; сначала показываются live-данные здания, а названия событий догружаются отдельно в фоне без ослабления защиты 429.
 // @release-note Ресурсы: Runner приведён к канону панели — выбранная Ореховая/Инструментовая/Жетоновая показывается в заголовке, а сырой placeholder «event name side» больше не попадает в интерфейс.
@@ -96,7 +97,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.85';
+  const BUILD_VERSION = '1.17.86';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -112,6 +113,7 @@
   const HK_FAIR_BALANCE_REROLLS_REV = 'fair-balance-rerolls-20260923-r1';
   const HK_FAIR_PURCHASE_TARGET_REV = 'fair-purchase-target-20260923-r1';
   const HK_FAIR_BONUS_COST_FORECAST_REV = 'fair-bonus-cost-forecast-20260923-r1';
+  const HK_FAIR_BONUS_SELECTION_REV = 'fair-bonus-selection-20260925-r1';
   const HK_FAIR_FINAL_CLEANUP_REV = 'fair-final-cleanup-20260923-r1';
   const HK_RAT_HUNT_REV = 'rat-hunt-leaderboards-20260923-r1';
   const HK_RAT_HUNT_COMBAT_REV = 'rat-hunt-combat-20260923-r1';
@@ -9225,7 +9227,7 @@
     for (const part of maximumMainLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
 
     if (exactLots) {
-      const availableBonus = new Set(availableFairBonusLots(exactLots, buyLimit));
+      const availableBonus = new Set(availableFairBonusLots(exactLots));
       for (const quantity of [5, 10, 30]) {
         if (!availableBonus.has(quantity) || !selectedFairBonusLots.has(quantity)) continue;
         const purchases = fairBonusMaximumPurchases(quantity, buyLimit);
@@ -9365,9 +9367,9 @@
     };
   }
 
-  function availableFairBonusLots(exactLots = fairComboSettings().exactLots, buyLimit = fairBuyTargetValue(root?.querySelector('#hk-fair-buy-limit')?.value, exactLots)) {
-    const reachable = Math.min(9, Math.max(0, exactLots), Math.max(0, buyLimit));
-    return reachable >= 9 ? [5, 10, 30] : reachable >= 6 ? [5, 10] : reachable >= 3 ? [5] : [];
+  function availableFairBonusLots(exactLots = fairComboSettings().exactLots) {
+    const maximum = Math.max(0, Math.trunc(Number(exactLots || 0)));
+    return maximum >= 9 ? [5, 10, 30] : maximum >= 6 ? [5, 10] : maximum >= 3 ? [5] : [];
   }
 
   function renderFairBonusChoices() {
@@ -9511,7 +9513,7 @@
     const buyLimit = syncFairBuyTarget(true);
     const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
     const combo = fairComboSettings();
-    const allowedBonusLots = new Set(availableFairBonusLots(combo.exactLots, buyLimit));
+    const allowedBonusLots = new Set(availableFairBonusLots(combo.exactLots));
     let state = fairState(selectedFairId);
     if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
     const initialRerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
