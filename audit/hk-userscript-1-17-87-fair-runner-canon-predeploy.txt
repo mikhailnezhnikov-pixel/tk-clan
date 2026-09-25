@@ -1,0 +1,10 @@
+USERSCRIPT_1_17_87_FAIR_RUNNER_CANON_PREDEPLOY=PASS
+source_version=1.17.86
+target_version=1.17.87
+base_sha256=90cc22c78b3ae221d8f95e3e8139d5769ae34ff8611ea838ad81d30e6b660d76
+candidate_sha256=c034a0e7d677157e74c251e496270c59938b1a489f4a724d23f4fea90cbbbe00
+fair_runner_counter=PASS
+fair_runner_compact_actions=PASS
+fair_passes_in_runner=PASS
+journal_final_summary=PASS
+syntax=PASS

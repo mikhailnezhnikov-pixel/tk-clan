@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.85",
-  "target_version": "1.17.86",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.86.fair-bonus-selection.candidate.user.js",
-  "primary_marker": "fair-bonus-selection-20260925-r1",
+  "source_version": "1.17.86",
+  "target_version": "1.17.87",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.87.fair-runner-canon.candidate.user.js",
+  "primary_marker": "fair-runner-canon-20260925-r1",
   "preserve_markers": [
+    "fair-bonus-selection-20260925-r1",
     "runtime-takeover-20260925-r6-version-aware",
     "growth-fresh-preflight-20260923-r1",
     "mutation-bridge-readonly-20260923-r1",
@@ -50,7 +51,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-86-fair-bonus-selection-live-status.txt",
-  "commit_message": "fix: deploy Fair bonus selection independence in userscript 1.17.86",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-17-87-fair-runner-canon-live-status.txt",
+  "commit_message": "fix: deploy Fair runner canon in userscript 1.17.87"
 }
