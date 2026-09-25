@@ -32,10 +32,11 @@ jobs:
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
           before_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
           echo "SERVER_SHA_BEFORE=$before_sha"
-          if [ "$before_sha" != "4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753" ] && [ "$before_sha" != "12f4ea6ee5032bac565015578fd9c174daa235bc138c803eebabfc5bdd9d7556" ]; then
+          if [ "$before_sha" != "4c98d3dee4f76dddbff073293688e665cc596171d05ae04d9e159849c7c4f753" ] && [ "$before_sha" != "12f4ea6ee5032bac565015578fd9c174daa235bc138c803eebabfc5bdd9d7556" ] && [ "$before_sha" != "d43d7c88c13e3921ec136cbfd7f3f76f516873df6e0894d56db3fb232382c2a0" ]; then
             echo "unexpected live server sha: $before_sha"
             exit 1
           fi
+          echo "$before_sha" > /tmp/server-source.sha
           python3 deploy/topking/patch_server_maps_visibility_access_v2.py
           python3 deploy/topking/patch_server_game_geometry_r1.py
           python3 -m py_compile /tmp/server.py
@@ -133,8 +134,11 @@ jobs:
           set -euo pipefail
           scp -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new /tmp/server.py root@89.125.1.71:/tmp/server.maps-access-v2.py
           candidate_sha="$(cat /tmp/server-candidate.sha)"
+          source_sha="$(cat /tmp/server-source.sha)"
           ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 "
             set -euo pipefail
+            live=/opt/hamsterking-license/server.py
+            test \"\$(sha256sum \$live | awk '{print \$1}')\" = \"$source_sha\"
             stamp=\$(date +%Y%m%d-%H%M%S)
             cp -a /opt/hamsterking-license/server.py /opt/hamsterking-license/server.py.bak.maps-access-v2.\$stamp
             install -m 0644 /tmp/server.maps-access-v2.py /opt/hamsterking-license/server.py
@@ -186,4 +190,4 @@ jobs:
         if: always()
         run: |
           ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'rm -f /tmp/server.maps-access-v2.py /tmp/maps-v2-prod-check.py' || true
-          rm -f ~/.ssh/topking /tmp/server.py /tmp/server.live.py /tmp/server-candidate.sha /tmp/maps-access-v2-test.py /tmp/maps-v2-before.json /tmp/maps-v2-after.json
+          rm -f ~/.ssh/topking /tmp/server.py /tmp/server.live.py /tmp/server-source.sha /tmp/server-candidate.sha /tmp/maps-access-v2-test.py /tmp/maps-v2-before.json /tmp/maps-v2-after.json
