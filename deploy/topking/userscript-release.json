@@ -52,5 +52,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-17-87-fair-runner-canon-live-status.txt",
-  "commit_message": "fix: deploy Fair runner canon in userscript 1.17.87"
+  "commit_message": "fix: deploy Fair runner canon in userscript 1.17.87",
+  "trigger_revision": 1
 }
