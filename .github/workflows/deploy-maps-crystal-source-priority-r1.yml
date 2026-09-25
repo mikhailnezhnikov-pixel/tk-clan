@@ -1,0 +1,207 @@
+name: Deploy Maps Crystal Source Priority R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/maps-crystal-source-priority-r1-trigger.txt'
+      - 'deploy/topking/patch_server_maps_crystal_source_priority_r1.py'
+      - 'deploy/topking/repair_maps_crystals_from_full235_source.py'
+      - '.github/workflows/deploy-maps-crystal-source-priority-r1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-maps-crystal-source-priority-r1
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Build server candidate
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-source.sha
+          python3 deploy/topking/patch_server_maps_crystal_source_priority_r1.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq "HK_MAP_CRYSTAL_SOURCE_PRIORITY_R1" /tmp/server.py
+          grep -Fq '"crystal_source": "uploaded_map"' /tmp/server.py
+          grep -Fq "WHEN excluded.knowledge_source='hk_maps_import' THEN excluded.room_count" /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/server-candidate.sha
+
+      - name: Deploy and repair all uploaded maps
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             /tmp/server.py root@89.125.1.71:/tmp/server.maps-crystal-priority-r1.py
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             deploy/topking/repair_maps_crystals_from_full235_source.py             root@89.125.1.71:/tmp/repair_maps_crystals_from_full235_source.py
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71 bash -s <<'REMOTE' | tee /tmp/maps-crystal-priority-r1-live.txt
+          set -euo pipefail
+
+          live_server=/opt/hamsterking-license/server.py
+          new_server=/tmp/server.maps-crystal-priority-r1.py
+          live_db=/var/lib/hamsterking-license/licenses.db
+          source_db=/var/lib/hamsterking-license/licenses.db.bak.full235.20260921-053021
+          stamp="$(date +%Y%m%d-%H%M%S)"
+          server_backup="/opt/hamsterking-license/server.py.rollback.maps-crystal-priority-r1.$stamp"
+          db_backup="/var/lib/hamsterking-license/licenses.db.rollback.maps-crystal-priority-r1.$stamp"
+
+          test -f "$live_server"
+          test -f "$live_db"
+          test -f "$source_db"
+          python3 -m py_compile "$new_server"
+          grep -Fq "HK_MAP_CRYSTAL_SOURCE_PRIORITY_R1" "$new_server"
+
+          cp -a "$live_server" "$server_backup"
+          systemctl stop hamsterking-license.service
+
+          python3 - "$live_db" "$db_backup" <<'PY'
+          import sqlite3,sys
+          src=sqlite3.connect(sys.argv[1])
+          dst=sqlite3.connect(sys.argv[2])
+          with dst:
+              src.backup(dst)
+          src.close();dst.close()
+          PY
+
+          rollback() {
+            set +e
+            systemctl stop hamsterking-license.service
+            install -m 0644 "$server_backup" "$live_server"
+            rm -f "$live_db-wal" "$live_db-shm"
+            cp -a "$db_backup" "$live_db"
+            systemctl start hamsterking-license.service
+            systemctl is-active --quiet hamsterking-license.service
+          }
+          trap rollback ERR
+
+          python3 /tmp/repair_maps_crystals_from_full235_source.py "$live_db" "$source_db" | tee /tmp/maps-crystal-repair.json
+
+          install -m 0644 "$new_server" "$live_server"
+          python3 -m py_compile "$live_server"
+          grep -Fq "HK_MAP_CRYSTAL_SOURCE_PRIORITY_R1" "$live_server"
+
+          systemctl start hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+
+          python3 - "$live_db" <<'PY'
+          import json,sqlite3,sys
+          db=sqlite3.connect(sys.argv[1]);db.row_factory=sqlite3.Row
+
+          maps=db.execute("SELECT COUNT(DISTINCT map_key) FROM hk_map_source_crystals").fetchone()[0]
+          source_rows=db.execute("SELECT COUNT(*) FROM hk_map_source_crystals").fetchone()[0]
+          links=db.execute("""SELECT COUNT(*) FROM hk_maps_catalog c
+                              WHERE EXISTS(SELECT 1 FROM hk_map_area_links l WHERE l.map_key=c.map_key)""").fetchone()[0]
+          if maps!=235:
+              raise SystemExit(f"expected 235 source maps, got {maps}")
+          if links<235:
+              raise SystemExit(f"expected all 235 catalog maps linked, got {links}")
+
+          mismatch=db.execute("""SELECT COUNT(*)
+              FROM hk_map_source_crystals s
+              JOIN map_buildings b
+                ON b.area_id=s.canonical_area_id AND b.building_id=s.building_id
+              WHERE NOT (b.room_count IS s.room_count)
+                 OR b.knowledge_source!='hk_maps_import'""").fetchone()[0]
+          missing=db.execute("""SELECT COUNT(*)
+              FROM hk_map_source_crystals s
+              LEFT JOIN map_buildings b
+                ON b.area_id=s.canonical_area_id AND b.building_id=s.building_id
+              WHERE b.building_id IS NULL""").fetchone()[0]
+          if mismatch or missing:
+              raise SystemExit(f"source priority mismatch={mismatch}, missing={missing}")
+
+          bad_catalog=[]
+          for row in db.execute("SELECT map_key,buildings,unknown,c0,c1,c2,c3,c4,c5 FROM hk_maps_catalog"):
+              key=row["map_key"]
+              src=db.execute("""SELECT
+                   COUNT(*) AS buildings,
+                   SUM(CASE WHEN room_count IS NULL THEN 1 ELSE 0 END) AS unknown,
+                   SUM(CASE WHEN room_count=0 THEN 1 ELSE 0 END) AS c0,
+                   SUM(CASE WHEN room_count=1 THEN 1 ELSE 0 END) AS c1,
+                   SUM(CASE WHEN room_count=2 THEN 1 ELSE 0 END) AS c2,
+                   SUM(CASE WHEN room_count=3 THEN 1 ELSE 0 END) AS c3,
+                   SUM(CASE WHEN room_count=4 THEN 1 ELSE 0 END) AS c4,
+                   SUM(CASE WHEN room_count=5 THEN 1 ELSE 0 END) AS c5
+                   FROM hk_map_source_crystals WHERE map_key=?""",(key,)).fetchone()
+              if src["buildings"]:
+                  actual=tuple(int(row[x] or 0) for x in ("buildings","unknown","c0","c1","c2","c3","c4","c5"))
+                  expected=tuple(int(src[x] or 0) for x in ("buildings","unknown","c0","c1","c2","c3","c4","c5"))
+                  if actual!=expected:
+                      bad_catalog.append((key,actual,expected))
+          if bad_catalog:
+              raise SystemExit("catalog/source mismatches: "+repr(bad_catalog[:10]))
+
+          lagos=db.execute("""SELECT buildings,unknown,c0,c1,c2,c3,c4,c5
+                              FROM hk_maps_catalog WHERE map_key='hk_lagos3322'""").fetchone()
+          got=tuple(int(lagos[x] or 0) for x in ("buildings","unknown","c0","c1","c2","c3","c4","c5"))
+          expected=(1078,955,1,6,101,15,0,0)
+          if got!=expected:
+              raise SystemExit(f"Lagos 33:22 mismatch: {got} != {expected}")
+
+          print("MAPS_CRYSTAL_SOURCE_PRIORITY_R1=PASS")
+          print("maps=235")
+          print("source_rows="+str(source_rows))
+          print("source_vs_canonical=PASS")
+          print("catalog_vs_source=PASS")
+          print("lagos_33_22="+json.dumps(dict(lagos),ensure_ascii=False,sort_keys=True))
+          db.close()
+          PY
+
+          curl -fsS --retry 5 --retry-delay 2 https://hk-license.89.125.1.71.sslip.io/health > /tmp/health.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True,d
+          print("service_health=PASS")
+          PY
+
+          trap - ERR
+          REMOTE
+
+      - name: Persist live verification
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          {
+            echo "MAPS_CRYSTAL_SOURCE_PRIORITY_R1=PASS"
+            echo "scope=ALL_235_UPLOADED_MAPS"
+            echo "source_priority=UPLOADED_MAP"
+            echo "live_unknown_overwrite=BLOCKED"
+            echo "explicit_zero=SOURCE_ONLY"
+            echo "canonical_repair=PASS"
+            echo "catalog_repair=PASS"
+            echo "lagos_33_22=PASS"
+            echo "server_source_sha256=$(cat /tmp/server-source.sha)"
+            echo "server_candidate_sha256=$(cat /tmp/server-candidate.sha)"
+            echo
+            cat /tmp/maps-crystal-priority-r1-live.txt
+          } > audit/hk-maps-crystal-source-priority-r1-live-status.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-maps-crystal-source-priority-r1-live-status.txt
+          git commit -m "audit: record Maps crystal source priority live PASS"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/server-source.sha /tmp/server-candidate.sha /tmp/maps-crystal-priority-r1-live.txt
