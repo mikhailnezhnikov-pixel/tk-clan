@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.93
+target_version=1.17.94
+marker=rumors-hunter-kokkaras-public-feed-20260925-r1
+source_sha256=5336095d2175a76b20c81ebf27ca791de5171d1a4890194f691dbe1de673bced
+candidate_sha256=fe00595ac064d18f3f6d0434844f26a1039b4b38e0b657a1e0fedbecf2912836
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
