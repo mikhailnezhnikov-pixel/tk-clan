@@ -51,5 +51,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-17-86-fair-bonus-selection-live-status.txt",
-  "commit_message": "fix: deploy Fair bonus selection independence in userscript 1.17.86"
+  "commit_message": "fix: deploy Fair bonus selection independence in userscript 1.17.86",
+  "trigger_revision": 1
 }
