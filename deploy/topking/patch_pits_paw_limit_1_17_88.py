@@ -71,7 +71,8 @@ for marker in [
     "// @version      1.17.88",
     "const BUILD_VERSION = '1.17.88';",
     "pits-paw-limited-battles-20260925-r1",
-    "остановка по лимиту Лап восстановления",
+    "paws<cost",
+    "restorationSpent+cost>config.maxRestoration",
 ]:
     if marker not in s:
         raise SystemExit("missing marker: " + marker)
