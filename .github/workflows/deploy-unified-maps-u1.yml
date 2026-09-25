@@ -39,10 +39,13 @@ jobs:
           echo "$before_sha" > /tmp/server-source.sha
           python3 deploy/topking/patch_server_maps_visibility_access_v2.py
           python3 deploy/topking/patch_server_game_geometry_r1.py
+          python3 deploy/topking/patch_server_map_localized_dedupe_r1.py
           python3 -m py_compile /tmp/server.py
           grep -Fq "HK_MAP_VISIBILITY_ACCESS_V2" /tmp/server.py
           grep -Fq "HK_MAP_GAME_GEOMETRY_R1" /tmp/server.py
           grep -Fq "def load_live_game_geometry_hk_map" /tmp/server.py
+          grep -Fq "HK_MAP_LOCALIZED_DEDUPE_R1" /tmp/server.py
+          grep -Fq "def _hk_dedupe_localized_cabinet_rows" /tmp/server.py
           candidate_sha="$(sha256sum /tmp/server.py | awk '{print $1}')"
           echo "$candidate_sha" > /tmp/server-candidate.sha
           echo "SERVER_SHA_CANDIDATE=$candidate_sha"
@@ -159,7 +162,21 @@ jobs:
           grep -Fq "HK_MAP_VISIBILITY_ACCESS_V2" /tmp/server.live.py
           grep -Fq "HK_MAP_GAME_GEOMETRY_R1" /tmp/server.live.py
           grep -Fq "def load_live_game_geometry_hk_map" /tmp/server.live.py
+          grep -Fq "HK_MAP_LOCALIZED_DEDUPE_R1" /tmp/server.live.py
           ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/maps-v2-prod-check.py' | tee /tmp/maps-v2-after.json
+          ssh -i ~/.ssh/topking -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 - <<'"'"'PY'"'"'
+import importlib.util
+spec=importlib.util.spec_from_file_location("s","/opt/hamsterking-license/server.py")
+s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+with s.db_session() as db:
+    row=db.execute("SELECT telegram_id FROM clan_members WHERE active=1 AND maps_manage=1 ORDER BY updated_at DESC LIMIT 1").fetchone()
+assert row
+payload=s.cabinet_maps({"telegram_id":str(row["telegram_id"]),"maps_manage":1,"maps_access":1})
+assert payload.get("localized_dedupe") is True,payload
+assert int(payload.get("localized_rows_before") or 0) >= int(payload.get("localized_rows_after") or 0),payload
+assert int(payload.get("localized_rows_merged") or 0) >= 1,payload
+print("LOCALIZED_MAP_DEDUPE_PASS",payload["localized_rows_before"],payload["localized_rows_after"],payload["localized_rows_merged"])
+PY'
           diff -u /tmp/maps-v2-before.json /tmp/maps-v2-after.json
           echo "PRODUCTION_MAP_COUNTS_UNCHANGED=PASS"
           echo "MAPS_VISIBILITY_ACCESS_V2_LIVE=PASS"
@@ -177,6 +194,8 @@ jobs:
             echo "userscript_changed=NO"
             echo "game_geometry_capture=ENABLED"
             echo "website_full_render_from_game_geometry=ENABLED"
+            echo "localized_map_dedupe=ENABLED"
+            echo "localized_house_data_policy=PRESERVE_VARIANTS_NO_DESTRUCTIVE_UNION"
             echo "production_counts=$(cat /tmp/maps-v2-after.json)"
           } > audit/hk-maps-visibility-access-v2-live-status.txt
           git config user.name "github-actions[bot]"
