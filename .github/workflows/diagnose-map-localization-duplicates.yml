@@ -1,0 +1,104 @@
+name: Diagnose map localization duplicates
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/map-localization-duplicates-diagnostic-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Read-only duplicate audit
+        run: |
+          set -euo pipefail
+          cat > /tmp/audit-map-dupes.py <<'PY'
+          import sqlite3,json,collections,re,unicodedata
+          DB='/var/lib/hamsterking-license/licenses.db'
+          db=sqlite3.connect('file:'+DB+'?mode=ro',uri=True); db.row_factory=sqlite3.Row
+
+          def norm(s):
+              s=unicodedata.normalize('NFKD',str(s or '')).encode('ascii','ignore').decode().lower()
+              return re.sub(r'[^a-z0-9]+','',s)
+
+          areas=[dict(r) for r in db.execute("""SELECT area_id,city_id,city_name,x,y,expected_buildings,invest_count,last_seen
+                                                FROM map_areas ORDER BY city_id,x,y,area_id""")]
+          by_exact=collections.defaultdict(list)
+          by_coords=collections.defaultdict(list)
+          for a in areas:
+              by_exact[(str(a['city_id']),a['x'],a['y'])].append(a)
+              by_coords[(a['x'],a['y'])].append(a)
+
+          candidates=[]
+          seen=set()
+          groups=[g for g in by_exact.values() if len(g)>1]
+          # Also include same coordinates with different labels if building overlap is strong.
+          for g in by_coords.values():
+              if len(g)>1:
+                  ids=tuple(sorted(a['area_id'] for a in g))
+                  if ids not in seen:
+                      groups.append(g); seen.add(ids)
+
+          for g in groups:
+              ids=tuple(sorted(a['area_id'] for a in g))
+              if ids in seen and len({a['city_id'] for a in g})==1:
+                  pass
+              seen.add(ids)
+              sets={}
+              stats={}
+              for a in g:
+                  aid=a['area_id']
+                  rows=[dict(r) for r in db.execute("""SELECT building_id,room_count,has_events,opened,is_invest,last_seen
+                                                       FROM map_buildings WHERE area_id=?""",(aid,))]
+                  sets[aid]={r['building_id'] for r in rows}
+                  stats[aid]={
+                    'total':len(rows),
+                    'known':sum(r['room_count'] is not None for r in rows),
+                    'opened':sum(bool(r['opened']) for r in rows),
+                    'event_known':sum(bool(r['has_events']) for r in rows),
+                    'known_ids':[r['building_id'] for r in rows if r['room_count'] is not None],
+                  }
+              pair=[]
+              for i,a in enumerate(g):
+                  for b in g[i+1:]:
+                      A=sets[a['area_id']]; B=sets[b['area_id']]
+                      inter=len(A&B); union=len(A|B)
+                      pair.append({
+                        'a':a['area_id'],'b':b['area_id'],
+                        'intersection':inter,'union':union,
+                        'jaccard':round(inter/union,4) if union else 0,
+                        'a_only':len(A-B),'b_only':len(B-A),
+                        'a_known_unique':len(set(stats[a['area_id']]['known_ids'])-set(stats[b['area_id']]['known_ids'])),
+                        'b_known_unique':len(set(stats[b['area_id']]['known_ids'])-set(stats[a['area_id']]['known_ids'])),
+                      })
+              # restrict output to plausible duplicates
+              plausible=(len({a['city_id'] for a in g})==1 and len({(a['x'],a['y']) for a in g})==1) or any(p['jaccard']>=0.75 for p in pair)
+              if plausible:
+                  candidates.append({'areas':g,'stats':stats,'pairs':pair})
+          print('DUPLICATE_AUDIT_JSON='+json.dumps(candidates,ensure_ascii=False,separators=(',',':')))
+          print('DUPLICATE_GROUPS',len(candidates))
+          for c in candidates:
+              print('GROUP',[(a['area_id'],a['city_id'],a['city_name'],a['x'],a['y']) for a in c['areas']])
+              print('STATS',c['stats'])
+              print('PAIRS',c['pairs'])
+          db.close()
+          PY
+          scp -q -i "$HOME/.ssh/topking" -o StrictHostKeyChecking=accept-new /tmp/audit-map-dupes.py root@89.125.1.71:/tmp/audit-map-dupes.py
+          ssh -i "$HOME/.ssh/topking" -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/audit-map-dupes.py; rm -f /tmp/audit-map-dupes.py'
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/audit-map-dupes.py
