@@ -1,0 +1,1847 @@
+
+===== def active_rumor_route_date #1 @ 4877 =====
+ctor-auth.json",
+)
+PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS_PATH = os.environ.get(
+    "HK_PUBLIC_COLLECTOR_AUTH_REFRESH_STATUS",
+    "/var/lib/hamsterking-license/public-collector-auth-refresh.json",
+)
+PUBLIC_COLLECTOR_GAME_API = os.environ.get(
+    "HK_PUBLIC_COLLECTOR_GAME_API",
+    "https://hk-game-api.hwgame.cloud",
+).rstrip("/")
+PUBLIC_COLLECTOR_AUTH_LOCK = threading.Lock()
+# PUBLIC_COLLECTOR_ACTIVITY_LEASE_R1
+PUBLIC_COLLECTOR_ACTIVITY_PATH = os.environ.get(
+    "HK_PUBLIC_COLLECTOR_ACTIVITY_FILE",
+    "/var/lib/hamsterking-license/public-collector-activity.json",
+)
+PUBLIC_COLLECTOR_ACTIVITY_LOCK = threading.Lock()
+RELEASE_NOTES = os.environ.get("HK_RELEASE_NOTES", "Исправления и улучшения Hamster King Mobile.")[:1000]
+HK_STAGE2G_RUMORS_SERVER_REV = 'stage2g-rumors-server-20260919-r1'
+RUMOR_UTC_OFFSET = int(os.environ.get("HK_RUMOR_UTC_OFFSET", "9"))
+RUMOR_TIMEZONE = timezone(timedelta(hours=RUMOR_UTC_OFFSET), name=f"UTC{RUMOR_UTC_OFFSET:+d}")
+ALLOWED_ORIGINS = {value.strip() for value in os.environ.get(
+    "HK_ALLOWED_ORIGINS", "https://app.hamsterking.games,https://app.hamsterking.ru"
+).split(",") if value.strip()}
+PUBLIC_RECIPE_ORIGINS = frozenset({"https://tk-clan.ru", "http://tk-clan.ru", "https://www.tk-clan.ru", "http://www.tk-clan.ru"})
+CABINET_ORIGINS = PUBLIC_RECIPE_ORIGINS
+PRIVATE_HK_MAPS_PATH = os.environ.get("HK_PRIVATE_MAPS_PATH", "/opt/hamsterking-license/private-maps/hk_maps_points.bin.gz")
+PRIVATE_HK_MAPS_LOCK = threading.Lock()
+PRIVATE_HK_MAPS_CACHE: dict[str, object] = {"mtime": None, "maps": {}}
+FULL_HK_MAPS_DIR = os.environ.get("HK_FULL_MAPS_DIR", "/opt/hamsterking-license/private-maps/full")
+FULL_HK_MAPS_LOCK = threading.Lock()
+FULL_HK_MAPS_CACHE: dict[str, tuple[float, dict]] = {}
+TELEGRAM_BOT_USERNAME = os.environ.get("HK_TELEGRAM_BOT_USERNAME", "").strip().lstrip("@")
+TELEGRAM_BOT_TOKEN = os.environ.get("HK_TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_WEBHOOK_SECRET = os.environ.get("HK_TELEGRAM_WEBHOOK_SECRET", "").strip()
+TELEGRAM_ADMIN_CHAT_ID = os.environ.get("HK_TELEGRAM_ADMIN_CHAT_ID", "").strip()
+CABINET_SESSION_TTL = int(os.environ.get("HK_CABINET_SESSION_TTL", str(30 * 86400)))
+ID_RE = re.compile(r"^[^\x00-\x1f\x7f]{1,128}$")
+DEVICE_RE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
+TELEGRAM_ID_RE = re.compile(r"^[1-9][0-9]{4,19}$")
+RATE_LOCK = threading.Lock()
+RATE_BUCKETS: dict[str, list[int]] = {}
+
+
+def utc_now() -> int:
+    return int(time.time())
+
+
+def iso_time(timestamp: int | None) -> str:
+    if not timestamp:
+        return "—"
+    return datetime.fromtimestamp(timestamp, timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+
+
+def active_rumor_route_date(now: datetime | None = None) -> str:
+    """Return the route date for the 21:00-20:59 game-day window."""
+    moment = now or datetime.now(timezone.utc)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    local = moment.astimezone(RUMOR_TIMEZONE)
+    if local.hour < 21:
+        local -= timedelta(days=1)
+    return local.strftime("%Y-%m-%d")
+
+
+def version_tuple(value: str) -> tuple[int, ...] | None:
+    """Parse a numeric dotted version and ignore harmless suffixes."""
+    match = re.match(r"^\s*(\d+(?:\.\d+)*)", value or "")
+    if not match:
+        return None
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def version_at_least(value: str, minimum: str) -> bool:
+    current = version_tuple(value)
+    required = version_tuple(minimum)
+    if current is None or required is None:
+        return False
+    width = max(len(current), len(required))
+    return current + (0,) * (width - len(current)) >= required + (0,) * (width - len(required))
+
+
+def release_version() -> str:
+    try:
+        with open(RELEASE_PATH, "r", encoding="utf-8-sig") as source:
+            head = source.read(4096)
+        match = re.search(r"^//\s*@version\s+([^\s]+)", head, re.MULTILINE)
+        return match.group(1).strip() if match else MIN_SCRIPT_VERSION
+    except OSError:
+        return MIN_SCRIPT_VERSION
+
+
+def release_sha256() -> str:
+    try:
+        digest = hashlib.sha256()
+        with open(RELEASE_PATH, "rb") as source:
+            for chunk in iter(lambda: source.read(131072), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    except OSError:
+        return ""
+
+
+def release_notes() -> str:
+    """Read version-specific notes embedded in the published userscript."""
+    try:
+        with open(RELEASE_PATH, "r", encoding="utf-8-sig") as source:
+            head = source.read(16384)
+        notes = [match.strip() for match in re.findall(
+            r"^//\s*@release-note\s+(.+?)\s*$", head, re.MULTILINE
+        ) if match.strip()]
+        if notes:
+            return "\n".join(f"• {note}" for note in notes)[:2000]
+    except OSError:
+        pass
+    return RELEASE_NOTES
+
+
+def release_filename() -> str:
+    version = re.sub(r"[^0-9A-Za-z._-]", "_", release_version())
+    return f"HamsterKingMobile_v{version}.user.js"
+
+
+def release_manifest(current_version: str, download_token: str = "") -> dict:
+    latest = release_version()
+    available = not version_at_least(current_version, latest)
+    required = not version_at_least(current_version, MIN_SCRIPT_VERSION)
+    result = {"current_version": current_version, "latest_version": latest,
+              "minimum_version": MIN_SCRIPT_VERSION, "available": available,
+              "required": required, "notes": release_notes() if available else "",
+              "sha256": ""}
+    if download_token and available:
+        result["download_url"] = f"{PUBLIC_BASE}/updates/{release_filename()}?token={download_token}"
+    return result
+
+
+def rate_allowed(key: str, limit: int, window: int) -> bool:
+    now = utc_now()
+    with RATE_LOCK:
+        recent = [stamp for stamp in RATE_BUCKETS.get(key, []) if stamp > now - window]
+        if len(recent) >= limit:
+            RATE_BUCKETS[key] = recent
+            return False
+        recent.append(now)
+        RATE_BUCKETS[key] = recent
+        if len(RATE_BUCKETS) > 10000:
+            for old_key in list(RATE_BUCKETS)[:2000]:
+                if not RATE_BUCKETS[old_key] or RATE_BUCKETS[old_key][-1] <= now - 3600:
+                    RATE_BUCKETS.pop(old_key, None)
+        return True
+
+
+def contributor_id(player_id: str) -> str:
+    if player_id in {"historical-har", "kokkaras-import"} or player_id.startswith("source-"):
+        return player_id
+    digest = hmac.new(SIGNING_SECRET.encode(), f"contributor:{player_id}".encode(), hashlib.sha256).hexdigest()
+    return f"anon-{digest[:24]}"
+
+
+def connect() -> sqlite3.Connection:
+    db = sqlite3.connect(DB_PATH, timeout=10)
+    db.row_factory = sqlite3.Row
+    db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA foreign_keys=ON")
+    return db
+
+
+@contextmanager
+def db_session():
+    db = connect()
+    try:
+        yield db
+        db.commit()
+    finally:
+        db.close()
+
+
+def init_db() -> None:
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    with db_session() as db:
+        db.executescript("""
+            CREATE TABLE IF NOT EXISTS licenses (
+                player_id TEXT PRIMARY KEY,
+                note TEXT NOT NULL DEFAULT '',
+                active INTEGER NOT NULL DEFAULT 1,
+                max_devices INTEGER NOT NULL DEFAULT 1,
+                expires_at INTEGER,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS devices (
+                player_id TEXT NOT NULL,
+                device_id TEXT NOT NULL,
+                first_seen INTEGER NOT NULL,
+                last_seen INTEGER NOT NULL,
+                script_version TEXT NOT NULL DEFAULT '',
+                PRIMARY KEY (player_id, device_id),
+                FOREIGN KEY (player_id) REFERENCES licenses(player_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_devices_player ON devices(player_id);
+            CREATE TABLE IF NOT EXISTS business_plan_catalog (
+                plan_id TEXT PRIMARY KEY,
+                item_id TEXT NOT NULL,
+                tier INTEGER,
+                rarity INTEGER,
+                first_player_id TEXT NOT NULL,
+                first_seen INTEGER NOT NULL,
+                name TEXT NOT NULL DEFAULT '',
+                description TEXT NOT NULL DEFAULT '',
+                icon TEXT NOT NULL DEFAULT '',
+                quality INTEGER,
+                color TEXT NOT NULL DEFAULT '',
+                pluses INTEGER NOT NULL DEFAULT 0,
+                bonuses_json TEXT NOT NULL DEFAULT '[]',
+                components_json TEXT NOT NULL DEFAULT '[]',
+                slot_order INTEGER NOT NULL DEFAULT 0,
+                last_seen INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS idx_business_plan_first_seen ON business_plan_catalog(first_seen DESC);
+            CREATE TABLE IF NOT EXISTS map_areas (
+                area_id TEXT PRIMARY KEY, city_id TEXT NOT NULL, city_name TEXT NOT NULL DEFAULT '',
+                x INTEGER, y INTEGER, invest_count INTEGER NOT NULL DEFAULT 0,
+                expected_buildings INTEGER NOT NULL DEFAULT 0, last_player_id TEXT NOT NULL, last_seen INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS map_buildings (
+                area_id TEXT NOT NULL, building_id TEXT NOT NULL, opened INTEGER NOT NULL DEFAULT 0,
+                room_count INTEGER, has_events INTEGER NOT NULL DEFAULT 0, is_invest INTEGER NOT NULL DEFAULT 0,
+                tier INTEGER, faction TEXT NOT NULL DEFAULT '', building_type TEXT NOT NULL DEFAULT '',
+                last_player_id TEXT NOT NULL, last_seen INTEGER NOT NULL,
+                PRIMARY KEY(area_id,building_id), FOREIGN KEY(area_id) REFERENCES map_areas(area_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_map_buildings_area ON map_buildings(area_id);
+            CREATE TABLE IF NOT EXISTS map_area_aliases (
+                source_area_id TEXT PRIMARY KEY, canonical_area_id TEXT NOT NULL,
+                first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
+                FOREIGN KEY(canonical_area_id) REFERENCES map_areas(area_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_map_alias_canonical ON map_area_aliases(canonical_area_id);
+            CREATE TABLE IF NOT EXISTS update_tokens (
+                token_hash TEXT PRIMARY KEY, player_id TEXT NOT NULL, device_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL, uses_left INTEGER NOT NULL DEFAULT 2, created_at INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_update_tokens_expiry ON update_tokens(expires_at);
+            CREATE TABLE IF NOT EXISTS admin_audit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL,
+                action TEXT NOT NULL, target TEXT NOT NULL DEFAULT '', ip TEXT NOT NULL DEFAULT '',
+                detail TEXT NOT NULL DEFAULT ''
+            );
+            CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit(created_at DESC);
+            CREATE TABLE IF NOT EXISTS access_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL,
+                player_id TEXT NOT NULL, device_id TEXT NOT NULL, script_version TEXT NOT NULL DEFAULT '',
+                ip TEXT NOT NULL DEFAULT '',
+                FOREIGN KEY (player_id) REFERENCES licenses(player_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_access_log_created ON access_log(created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_access_log_identity ON access_log(player_id,device_id,created_at DESC);
+            CREATE TABLE IF NOT EXISTS rumor_routes (
+                route_date TEXT PRIMARY KEY,
+                source_text TEXT NOT NULL,
+                routes_json TEXT NOT NULL,
+                published_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS user_settings (
+                player_id TEXT PRIMARY KEY,
+                settings_json TEXT NOT NULL DEFAULT '{}',
+                updated_at INTEGER NOT NULL,
+                FOREIGN KEY (player_id) REFERENCES licenses(player_id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS pit_power_observations (
+                pit_type TEXT NOT NULL, level INTEGER NOT NULL, enemy_power INTEGER NOT NULL,
+                player_power INTEGER, winrate REAL, contributor_id TEXT NOT NULL,
+                samples INTEGER NOT NULL DEFAULT 1, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
+                PRIMARY KEY (pit_type, level, enemy_power, contributor_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_pit_power_level
+                ON pit_power_observations(pit_type, level, last_seen DESC);
+            CREATE TABLE IF NOT EXISTS clan_skill_snapshots (
+                clan_key TEXT NOT NULL,
+                week_key TEXT NOT NULL,
+                player_id TEXT NOT NULL,
+                nickname TEXT NOT NULL DEFAULT '',
+                levels_json TEXT NOT NULL DEFAULT '{}',
+                scanned_at INTEGER NOT NULL,
+                PRIMARY KEY (clan_key, week_key, player_id),
+                FOREIGN KEY (player_id) REFERENCES licenses(player_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_clan_skill_week
+                ON clan_skill_snapshots(clan_key, week_key, scanned_at DESC);
+            CREATE TABLE IF NOT EXISTS clan_skill_full_snapshots (
+                clan_key TEXT NOT NULL,
+                week_key TEXT NOT NULL,
+                snapshot_json TEXT NOT NULL,
+                source_player_id TEXT NOT NULL,
+                captured_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (clan_key, week_key),
+                FOREIGN KEY (source_player_id) REFERENCES licenses(player_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_clan_skill_full_latest
+                ON clan_skill_full_snapshots(captured_at DESC);
+            CREATE TABLE IF NOT EXISTS clan_members (
+                telegram_id TEXT PRIMARY KEY,
+                note TEXT NOT NULL DEFAULT '',
+                first_name TEXT NOT NULL DEFAULT '',
+                username TEXT NOT NULL DEFAULT '',
+                linked_player_id TEXT UNIQUE,
+                active INTEGER NOT NULL DEFAULT 1,
+                maps_access INTEGER NOT NULL DEFAULT 0,
+                maps_manage INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                last_login INTEGER
+            );
+            CREATE INDEX IF NOT EXISTS idx_clan_members_active
+                ON clan_members(active, updated_at DESC);
+            CREATE TABLE IF NOT EXISTS hk_maps_catalog (
+                map_key TEXT PRIMARY KEY,
+                city TEXT NOT NULL,
+                grid TEXT NOT NULL,
+                invest INTEGER NOT NULL DEFAULT 0,
+                buildings INTEGER NOT NULL DEFAULT 0,
+                unknown INTEGER NOT NULL DEFAULT 0,
+                c0 INTEGER NOT NULL DEFAULT 0,
+                c1 INTEGER NOT NULL DEFAULT 0,
+                c2 INTEGER NOT NULL DEFAULT 0,
+                c3 INTEGER NOT NULL DEFAULT 0,
+                c4 INTEGER NOT NULL DEFAULT 0,
+                c5 INTEGER NOT NULL DEFAULT 0,
+                event_buildings INTEGER NOT NULL DEFAULT 0,
+                total_events INTEGER NOT NULL DEFAULT 0,
+                progress REAL NOT NULL DEFAULT 0,
+                score INTEGER NOT NULL DEFAULT 0,
+                reward_max INTEGER NOT NULL DEFAULT 0,
+                reward_normal INTEGER NOT NULL DEFAULT 0,
+                reward_investment INTEGER NOT NULL DEFAULT 0,
+                open_url TEXT NOT NULL DEFAULT '',
+                published INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS idx_hk_maps_public
+                ON hk_maps_catalog(published, score DESC);
+            CREATE TABLE IF NOT EXISTS hk_map_points (
+                map_key TEXT PRIMARY KEY,
+                points_json TEXT NOT NULL DEFAULT '[]',
+                point_count INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (map_key) REFERENCES hk_maps_catalog(map_key) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS hk_map_area_links (
+                map_key TEXT PRIMARY KEY,
+                canonical_area_id TEXT NOT NULL,
+                match_method TEXT NOT NULL CHECK(match_method IN ('exact_area_id','city_grid_yx')),
+                linked_at INTEGER NOT NULL,
+                FOREIGN KEY (map_key) REFERENCES hk_maps_catalog(map_key) ON DELETE CASCADE,
+                FOREIGN KEY (canonical_area_id) REFERENCES map_areas(area_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_hk_map_area_links_canonical_area
+                ON hk_map_area_links(canonical_area_id);
+            CREATE TABLE IF NOT EXISTS hk_map_point_links (
+                map_key TEXT NOT NULL,
+                point_index INTEGER NOT NULL CHECK(point_index >= 0),
+                building_id TEXT NOT NULL,
+                match_method TEXT NOT NULL CHECK(match_method IN ('osm_point_in_polygon','exact_building_id')),
+                linked_at INTEGER NOT NULL,
+                PRIMARY KEY(map_key,point_index),
+                FOREIGN KEY (map_key) REFERENCES hk_maps_catalog(map_key) ON DELETE CASCADE
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_hk_map_point_links_building
+                ON hk_map_point_links(map_key,building_id);
+            CREATE TABLE IF NOT EXISTS public_clan_war_snapshot (
+                singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+                snapshot_json TEXT NOT NULL,
+                source_player_id TEXT NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS public_rating_snapshots (
+                kind TEXT NOT NULL,
+                rank INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                value REAL NOT NULL,
+                source_player_id TEXT NOT NULL,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY(kind, rank)
+            );
+            CREATE INDEX IF NOT EXISTS idx_public_ratings_kind
+                ON public_rating_snapshots(kind, rank);
+            -- SITE_ANALYTICS_V1
+            CREATE TABLE IF NOT EXISTS site_pageviews (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at INTEGER NOT NULL,
+                day_key TEXT NOT NULL,
+                path TEXT NOT NULL,
+                title TEXT NOT NULL DEFAULT '',
+                referrer_host TEXT NOT NULL DEFAULT '',
+                source_group TEXT NOT NULL DEFAULT 'direct',
+                language TEXT NOT NULL DEFAULT '',
+                device TEXT NOT NULL DEFAULT '',
+                visitor_hash TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_site_pageviews_created
+                ON site_pageviews(created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_site_pageviews_path
+                ON site_pageviews(path, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_site_pageviews_visitor
+                ON site_pageviews(day_key, visitor_hash);
+            CREATE TABLE IF NOT EXISTS telegram_conversations (
+                telegram_id TEXT PRIMARY KEY,
+                chat_id TEXT NOT NULL,
+                scenario TEXT NOT NULL,
+                step INTEGER NOT NULL DEFAULT 0,
+                data_json TEXT NOT NULL DEFAULT '{}',
+                updated_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS telegram_updates (
+                update_id INTEGER PRIMARY KEY,
+                received_at INTEGER NOT NULL
+            );
+        """)
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(business_plan_catalog)")}
+        migrations = {
+            "name":"TEXT NOT NULL DEFAULT ''", "description":"TEXT NOT NULL DEFAULT ''", "icon":"TEXT NOT NULL DEFAULT ''",
+            "quality":"INTEGER", "color":"TEXT NOT NULL DEFAULT ''", "pluses":"INTEGER NOT NULL DEFAULT 0",
+            "bonuses_json":"TEXT NOT NULL DEFAULT '[]'", "components_json":"TEXT NOT NULL DEFAULT '[]'",
+            "slot_order":"INTEGER NOT NULL DEFAULT 0", "last_seen":"INTEGER NOT NULL DEFAULT 0"
+        }
+        for 
+
+===== def parse_rumor_route #1 @ 38008 =====
+                "participants_count": len(players), "players": players,
+            })
+        blocks.append({"id": block_id, "title": title, "icon": icon, "branches": branches})
+
+    normalized = {
+        "schema_version": 2, "clan_key": clan, "week_key": week,
+        "captured_at": captured_at, "participants_count": participants_count or len(overall),
+        "overall": overall, "blocks": blocks,
+    }
+    encoded = json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
+    if len(encoded.encode("utf-8")) > 1_200_000:
+        raise ValueError("snapshot too large")
+    return normalized
+
+
+def submit_clan_full_snapshot(player_id: str, value: object) -> dict:
+    snapshot = normalize_clan_full_snapshot(value)
+    encoded = json.dumps(snapshot, ensure_ascii=False, separators=(",", ":"))
+    now = utc_now()
+    with db_session() as db:
+        db.execute("""INSERT INTO clan_skill_full_snapshots(
+                        clan_key,week_key,snapshot_json,source_player_id,captured_at,updated_at)
+                      VALUES(?,?,?,?,?,?)
+                      ON CONFLICT(clan_key,week_key) DO UPDATE SET
+                        snapshot_json=excluded.snapshot_json,
+                        source_player_id=excluded.source_player_id,
+                        captured_at=excluded.captured_at,
+                        updated_at=excluded.updated_at
+                      WHERE excluded.captured_at >= clan_skill_full_snapshots.captured_at""",
+                   (snapshot["clan_key"], snapshot["week_key"], encoded, player_id,
+                    snapshot["captured_at"], now))
+    return {"ok": True, "clan_key": snapshot["clan_key"], "week_key": snapshot["week_key"],
+            "captured_at": snapshot["captured_at"], "blocks": len(snapshot["blocks"]),
+            "participants": snapshot["participants_count"]}
+
+
+def latest_clan_full_snapshot() -> dict | None:
+    with db_session() as db:
+        row = db.execute("""SELECT snapshot_json FROM clan_skill_full_snapshots
+                            ORDER BY captured_at DESC, updated_at DESC LIMIT 1""").fetchone()
+    if not row:
+        return None
+    try:
+        value = json.loads(row["snapshot_json"])
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def audit(action: str, target: str = "", ip: str = "", detail: str = "") -> None:
+    with db_session() as db:
+        db.execute("INSERT INTO admin_audit(created_at,action,target,ip,detail) VALUES(?,?,?,?,?)",
+                   (utc_now(), action[:80], target[:128], ip[:64], detail[:500]))
+
+
+def parse_rumor_route(source_text: str) -> tuple[str, list[dict]]:
+    """Parse the compact daily route format pasted by the owner."""
+    text = str(source_text or "").replace("\r", "")
+    date_match = re.search(r"\b(\d{2})\.(\d{2})\.(\d{4})\b", text)
+    if not date_match:
+        raise ValueError("route date is required")
+    day, month, year = date_match.groups()
+    route_date = f"{year}-{month}-{day}"
+    datetime.strptime(route_date, "%Y-%m-%d")
+    group = ""
+    rows: list[dict] = []
+    for raw_line in text.split("\n"):
+        line = raw_line.strip().replace("﹕", ":")
+        if not line or line == "᠎":
+            continue
+        first, *rest = line.split(maxsplit=1)
+        coords = re.findall(r"\b(\d{1,2}):(\d{2})\b", first)
+        if coords and rest:
+            city = rest[0].strip()
+            points = [{"x": int(x), "y": int(y)} for x, y in coords]
+            if city and points:
+                rows.append({"group": group, "city": city[:80], "points": points})
+            continue
+        if not re.search(r"\d{1,2}:\d{2}", line) and not re.fullmatch(r"[■\sRUMORSСЛУХИ]+", line, re.I):
+            group = line[:120]
+    if not rows:
+        raise ValueError("no rumor coordinates found")
+    return route_date, rows
+
+
+def record_access(db: sqlite3.Connection, player_id: str, device_id: str, version: str, ip: str) -> None:
+    """Keep a compact connection history: one successful entry per device/hour."""
+    now = utc_now()
+    recent = db.execute("""SELECT 1 FROM access_log
+                           WHERE player_id=? AND device_id=? AND created_at>?
+                           LIMIT 1""", (player_id, device_id, now - 3600)).fetchone()
+    if recent:
+        return
+    db.execute("INSERT INTO access_log(created_at,player_id,device_id,script_version,ip) VALUES(?,?,?,?,?)",
+               (now, player_id, device_id, version[:32], ip[:64]))
+    db.execute("""DELETE FROM access_log WHERE id NOT IN
+                  (SELECT id FROM access_log ORDER BY id DESC LIMIT 1000)""")
+
+
+def issue_update_token(player_id: str, device_id: str, db: sqlite3.Connection | None = None) -> str:
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    now = utc_now()
+    def write(target: sqlite3.Connection) -> None:
+        target.execute("DELETE FROM update_tokens WHERE expires_at<? OR uses_left<=0", (now,))
+        # Safari and Userscripts may both fetch the update URL while handing a
+        # script over to the extension. Keep this a short-lived, per-device
+        # link, but allow the normal install flow to retry without failing.
+        target.execute("INSERT INTO update_tokens(token_hash,player_id,device_id,expires_at,uses_left,created_at) VALUES(?,?,?,?,10,?)",
+                       (token_hash, player_id, device_id, now + 900, now))
+    if db is None:
+        with db_session() as session:
+            write(session)
+    else:
+        write(db)
+    return token
+
+
+def consume_update_token(token: str) -> bool:
+    if not token or len(token) > 128:
+        return False
+    token_hash, now = hashlib.sha256(token.encode()).hexdigest(), utc_now()
+    with db_session() as db:
+        row = db.execute("""SELECT u.player_id,u.device_id,u.expires_at,u.uses_left
+                            FROM update_tokens u JOIN licenses l ON l.player_id=u.player_id
+                            JOIN devices d ON d.player_id=u.player_id AND d.device_id=u.device_id
+                            WHERE u.token_hash=? AND u.expires_at>=? AND u.uses_left>0
+                            AND l.active=1 AND (l.expires_at IS NULL OR l.expires_at>=?)""",
+                         (token_hash, now, now)).fetchone()
+        if not row:
+            return False
+        db.execute("UPDATE update_tokens SET uses_left=uses_left-1 WHERE token_hash=?", (token_hash,))
+        return True
+
+
+def password_ok(password: str) -> bool:
+    try:
+        salt_hex, expected_hex = ADMIN_HASH.split(":", 1)
+        actual = hashlib.scrypt(password.encode("utf-8"), salt=bytes.fromhex(salt_hex),
+                                n=16384, r=8, p=1, dklen=32).hex()
+        return hmac.compare_digest(actual, expected_hex)
+    except (ValueError, TypeError):
+        return False
+
+
+def b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def sign_token(subject: str, ttl: int = 3600) -> str:
+    payload = b64url(json.dumps({"sub": subject, "exp": utc_now() + ttl}, separators=(",", ":")).encode())
+    signature = b64url(hmac.new(SIGNING_SECRET.encode(), payload.encode(), hashlib.sha256).digest())
+    return f"{payload}.{signature}"
+
+
+def verify_token(token: str, expected_subject: str | None = None) -> bool:
+    document = token_document(token)
+    return bool(document and (expected_subject is None or document.get("sub") == expected_subject))
+
+
+def token_document(token: str) -> dict | None:
+    try:
+        payload, signature = token.split(".", 1)
+        wanted = b64url(hmac.new(SIGNING_SECRET.encode(), payload.encode(), hashlib.sha256).digest())
+        if not hmac.compare_digest(signature, wanted):
+            return None
+        padded = payload + "=" * (-len(payload) % 4)
+        document = json.loads(base64.urlsafe_b64decode(padded))
+        return document if int(document.get("exp", 0)) >= utc_now() else None
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+def verify_telegram_login(value: object) -> dict | None:
+    """Verify Telegram's website-login payload server-side."""
+    if not TELEGRAM_BOT_TOKEN or not isinstance(value, dict):
+        return None
+    supplied_hash = str(value.get("hash", "")).strip().lower()
+    telegram_id = str(value.get("id", "")).strip()
+    try:
+        auth_date = int(value.get("auth_date", 0))
+    except (TypeError, ValueError):
+        return None
+    if not TELEGRAM_ID_RE.fullmatch(telegram_id) or not re.fullmatch(r"[0-9a-f]{64}", supplied_hash):
+        return None
+    now = utc_now()
+    if auth_date < now - 600 or auth_date > now + 60:
+        return None
+    fields = []
+    for key, raw in value.items():
+        if key == "hash" or raw is None or not re.fullmatch(r"[a-z_]+", str(key)):
+            continue
+        fields.append(f"{key}={raw}")
+    data_check = "\n".join(sorted(fields)).encode("utf-8")
+    secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode("utf-8")).digest()
+    expected = hmac.new(secret_key, data_check, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, supplied_hash):
+        return None
+    return {
+        "id": telegram_id,
+        "first_name": str(value.get("first_name", "")).strip()[:100],
+        "username": str(value.get("username", "")).strip().lstrip("@")[:64],
+    }
+
+
+def cabinet_token(telegram_id: str) -> str:
+    return sign_token(f"telegram:{telegram_id}", CABINET_SESSION_TTL)
+
+
+def cabinet_member_from_token(token: str) -> dict | None:
+    document = token_document(token)
+    subject = str((document or {}).get("sub", ""))
+    if not subject.startswith("telegram:"):
+        return None
+    telegram_id = subject.removeprefix("telegram:")
+    if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+        return None
+    with db_session() as db:
+        # The configured Telegram admin is the maps owner. Keep this server-side so
+        # the private Maps tab cannot be unlocked by editing browser-side state.
+        if TELEGRAM_ADMIN_CHAT_ID and telegram_id == TELEGRAM_ADMIN_CHAT_ID:
+            db.execute("""UPDATE clan_members
+                          SET maps_access=1,maps_manage=1,updated_at=?
+                          WHERE telegram_id=? AND active=1""", (utc_now(), telegram_id))
+        row = db.execute("""SELECT telegram_id,note,first_name,username,linked_player_id,active,last_login,
+                                   maps_access,maps_manage
+                            FROM clan_members WHERE telegram_id=?""", (telegram_id,)).fetchone()
+    if not row or not row["active"]:
+        return None
+    member = dict(row)
+    if member.get("maps_manage"):
+        member["maps_access"] = 1
+    return member
+
+
+def cabinet_dashboard(member: dict) -> dict:
+    full = latest_clan_full_snapshot()
+    if full:
+        overall = full.get("overall") if isinstance(full.get("overall"), list) else []
+        players = [{
+            "player_id": str(row.get("player_id") or ""),
+            "nickname": str(row.get("nickname") or ""),
+            "total": int(row.get("total") or 0),
+            "scanned_at": int(full.get("captured_at") or 0),
+        } for row in overall if isinstance(row, dict)]
+        return {
+            "member": member,
+            "script": {"version": release_version(), "sha256": release_sha256()},
+            "clan": {
+                "key": str(full.get("clan_key") or ""),
+                "week": str(full.get("week_key") or ""),
+                "scanned_at": int(full.get("captured_at") or 0),
+                "players": players,
+                "participants": int(full.get("participants_count") or len(players)),
+                "total_levels": sum(int(row.get("total") or 0) for row in players),
+                "snapshot": full,
+            },
+        }
+
+    linked_player_id = member.get("linked_player_id")
+    with db_session() as db:
+        latest = db.execute("""SELECT clan_key,week_key,MAX(scanned_at) AS scanned_at
+                               FROM clan_skill_snapshots WHERE player_id=?
+                               GROUP BY clan_key,week_key ORDER BY scanned_at DESC LIMIT 1""",
+                            (linked_player_id,)).fetchone() if linked_player_id else None
+        if not latest:
+            latest = db.execute("""SELECT clan_key,week_key,MAX(scanned_at) AS scanned_at
+                                   FROM clan_skill_snapshots
+                                   GROUP BY clan_key,week_key ORDER BY scanned_at DESC LIMIT 1""").fetchone()
+    players = clan_skill_players(latest["clan_key"], latest["week_key"]) if latest else []
+    return {
+        "member": member,
+        "script": {"version": release_version(), "sha256": release_sha256()},
+        "clan": {
+            "key": latest["clan_key"] if latest else "",
+            "week": latest["week_key"] if latest else "",
+            "scanned_at": latest["scanned_at"] if latest else 0,
+            "players": players,
+            "participants": len(players),
+            "total_levels": sum(row["total"] for row in players),
+        },
+    }
+
+
+
+def import_hk_maps_index(rows: object) -> dict:
+    if not isinstance(rows, list) or len(rows) > 1000:
+        raise ValueError("invalid maps index")
+    now = utc_now()
+    accepted = 0
+    with db_session() as db:
+        for raw in rows:
+            if not isinstance(raw, dict):
+                continue
+            key = str(raw.get("key") or "").strip()
+            city = str(raw.get("city") or "").strip()[:100]
+            grid = str(raw.get("grid") or "").strip()[:32]
+            crystals = raw.get("crystals") if isinstance(raw.get("crystals"), list) else []
+            reward = raw.get("reward") if isinstance(raw.get("reward"), dict) else {}
+            if not re.fullmatch(r"hk_[a-z0-9]+", key) or not city or not grid:
+                continue
+            def iv(value: object) -> int:
+                try:
+                    return max(0, int(value or 0))
+                except (TypeError, ValueError):
+                    return 0
+            try:
+                progress = max(0.0, min(100.0, float(raw.get("progress") or 0)))
+            except (TypeError, ValueError):
+                progress = 0.0
+            c = [iv(crystals[i] if i < len(crystals) else 0) for i in range(6)]
+            db.execute("""INSERT INTO hk_maps_catalog(
+                        map_key,city,grid,invest,buildings,unknown,c0,c1,c2,c3,c4,c5,
+                        event_buildings,total_events,progress,score,reward_max,reward_normal,reward_investment,updated_at)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        ON CONFLICT(map_key) DO UPDATE SET
+                        city=excluded.city,grid=excluded.grid,invest=excluded.invest,buildings=excluded.buildings,
+                        unknown=excluded.unknown,c0=excluded.c0,c1=excluded.c1,c2=excluded.c2,c3=excluded.c3,
+                        c4=excluded.c4,c5=excluded.c5,event_buildings=excluded.event_buildings,
+                        total_events=excluded.total_events,progress=excluded.progress,score=excluded.score,
+                        reward_max=excluded.reward_max,reward_normal=excluded.reward_normal,
+                        reward_investment=excluded.reward_investment,updated_at=excluded.updated_at""",
+                       (key, city, grid, iv(raw.get("invest")), iv(raw.get("buildings")), iv(raw.get("unknown")),
+                        *c, iv(raw.get("eventBuildings")), iv(raw.get("totalEvents")), progress, iv(raw.get("score")),
+                        iv(reward.get("max")), iv(reward.get("normal")), iv(reward.get("investment")), now))
+            accepted += 1
+    return {"ok": True, "received": len(rows), "accepted": accepted}
+
+
+def import_hk_map_points(rows: object) -> dict:
+    if not isinstance(rows, list) or len(rows) > 1000:
+        raise ValueError("invalid maps points")
+    now = utc_now()
+    accepted = 0
+    total_points = 0
+    with db_session() as db:
+        for raw in rows:
+            if not isinstance(raw, list) or len(raw) != 2:
+                continue
+            key = str(raw[0] or "").strip()
+            flat = raw[1]
+            if not re.fullmatch(r"hk_[a-z0-9]+", key) or not isinstance(flat, list) or len(flat) % 3:
+                continue
+            if len(flat) > 300000:
+                continue
+            clean = []
+            valid = True
+            for value in flat:
+                if isinstance(value, bool) or not isinstance(value, int):
+                    valid = False
+                    break
+                clean.append(value)
+            if not valid:
+                continue
+            point_count = len(clean) // 3
+            exists = db.execute("SELECT 1 FROM hk_maps_catalog WHERE map_key=?", (key,)).fetchone()
+            if not exists:
+                continue
+            db.execute("""INSERT INTO hk_map_points(map_key,points_json,point_count,updated_at)
+                          VALUES(?,?,?,?)
+                          ON CONFLICT(map_key) DO UPDATE SET
+                          points_json=excluded.points_json,point_count=excluded.point_count,updated_at=excluded.updated_at""",
+                       (key, json.dumps(clean, separators=(",", ":")), point_count, now))
+            db.execute("UPDATE hk_maps_catalog SET open_url=?,updated_at=? WHERE map_key=?",
+                       (f"/maps/view/?key={key}", now, key))
+            accepted += 1
+            total_points += point_count
+    return {"ok": True, "received": len(rows), "accepted": accepted, "points": total_points}
+
+
+# HK_MAP_AUTHORIZED_UPLOAD_W7_V1
+def _hk_upload_decode_points(flat: list[int]) -> list[dict]:
+    lng = lat = 0
+    rows = []
+    for offset in range(0, len(flat), 3):
+        lng += int(flat[offset])
+        lat += int(flat[offset + 1])
+        flag = int(flat[offset + 2])
+        rows.append({
+            "point_index": offset // 3,
+            "lon": lng / 100000.0,
+            "lat": lat / 100000.0,
+            "room_count": flag & 0x07,
+            "is_invest": bool(flag & 0x08),
+            "source_flag": flag,
+        })
+    return rows
+
+
+def _hk_upload_ring_contains(ring: object, x: float, y: float) -> bool:
+    if not isinstance(ring, list) or len(ring) < 3:
+        return False
+    inside = False
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        a, b = ring[i], ring[j]
+        if not (isinstance(a, list) and isinstance(b, list) and len(a) >= 2 and len(b) >= 2):
+            j = i
+            continue
+        xi, yi = float(a[0]), float(a[1])
+        xj, yj = float(b[0]), float(b[1])
+        if (yi > y) != (yj > y):
+            cross = (xj - xi) * (y - yi) / (yj - yi) + xi
+            if x < cross:
+                inside = not inside
+        j = i
+    return inside
+
+
+def _hk_upload_geometry_contains(geometry: object, x: float, y: float) -> bool:
+    if not isinstance(geometry, dict):
+        return False
+    kind = geometry.get("type")
+    coords = geometry.get("coordinates")
+    polygons = []
+    if kind == "Polygon" and isinstance(coords, list):
+        polygons = [coords]
+    elif kind == "MultiPolygon" and isinstance(coords, list):
+        polygons = coords
+    else:
+        return False
+    for polygon in polygons:
+        if not isinstance(polygon, list) or not polygon:
+            continue
+        if not _hk_upload_ring_contains(polygon[0], x, y):
+            continue
+        if any(_hk_upload_ring_contains(hole, x, y) for hole in polygon[1:]):
+            continue
+        return True
+    return False
+
+
+def import_hk_authorized_map_upload(value: object) -> dict:
+    """Direct website upload -> canonical shared map knowledge.
+
+    Required upload contract:
+      catalog: existing HK Maps index row (contains key/city/grid)
+      points: compact delta point array
+      meta: explicit canonical coordinates + coord_revision
+      buildingsGeoJSON: authorized full source with building_id properties
+
+    No login/session/cookie data is stored.
+    """
+    if not isinstance(value, dict):
+        raise ValueError("invalid authorized map upload")
+    catalog = value.get("catalog")
+    meta = value.get("meta")
+    collection = value.get("buildingsGeoJSON")
+    flat = value.get("points")
+    if not isinstance(catalog, dict) or not isinstance(meta, dict):
+        raise ValueError("missing catalog/meta")
+    features = collection.get("features") if isinstance(collection, dict) else None
+    if not isinstance(features, list):
+        raise ValueError("missing buildings GeoJSON")
+    key = str(catalog.get("key") or "").strip()
+    if not re.fullmatch(r"hk_[a-z0-9]+", key):
+        raise
+
+===== def enrich_rumor_routes #1 @ 118601 =====
+), "components":json.loads(row["components_json"] or "[]")} for row in rows]
+
+
+def normalize_map_area(value: object) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("invalid map area")
+    area_id, city_id = str(value.get("area_id", "")), str(value.get("city_id", ""))
+    if not ID_RE.fullmatch(area_id) or not ID_RE.fullmatch(city_id):
+        raise ValueError("invalid map ids")
+    buildings = value.get("buildings")
+    if not isinstance(buildings, list) or len(buildings) > 5000:
+        raise ValueError("invalid map buildings")
+    normalized = []
+    for row in buildings:
+        if not isinstance(row, dict): continue
+        building_id = str(row.get("building_id", ""))
+        if not ID_RE.fullmatch(building_id): continue
+        rooms = row.get("room_count")
+        rooms = None if rooms is None else max(0, min(20, int(rooms)))
+        normalized.append({"building_id":building_id, "opened":bool(row.get("opened")), "room_count":rooms,
+                           "has_events":bool(row.get("has_events")), "is_invest":bool(row.get("is_invest")),
+                           "tier":None if row.get("tier") is None else max(0,min(99,int(row.get("tier")))),
+                           "faction":str(row.get("faction", ""))[:40], "building_type":str(row.get("building_type", ""))[:100]})
+    return {"area_id":area_id, "city_id":city_id, "city_name":str(value.get("city_name", ""))[:120],
+            "coord_revision":str(value.get("coord_revision", ""))[:64],
+            "x":None if value.get("x") is None else int(value.get("x")), "y":None if value.get("y") is None else int(value.get("y")),
+            "invest_count":max(0,int(value.get("invest_count") or 0)), "expected_buildings":max(0,int(value.get("expected_buildings") or len(normalized))),
+            "buildings":normalized}
+
+
+def map_city_key(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
+
+
+def rumor_city_key(value: str) -> str:
+    key = re.sub(r"[^a-zа-я0-9]+", " ", str(value or "").casefold().replace("ё", "е")).strip()
+    aliases = {
+        "москва":"moscow", "санкт петербург":"spb", "saint petersburg":"spb", "st petersburg":"spb",
+        "минск":"minsk", "берлин":"berlin", "лондон":"london", "париж":"paris", "дубай":"dubai",
+        "токио":"tokyo", "сингапур":"singapore", "нью йорк":"new york", "лос анджелес":"los angeles",
+        "бостон":"boston", "вашингтон":"washington", "рио":"rio", "rio de janeiro":"rio",
+        "рио де жанейро":"rio", "лагос":"lagos", "сидней":"sydney", "окленд":"auckland",
+    }
+    return aliases.get(key, key)
+
+
+def enrich_rumor_routes(db: sqlite3.Connection, routes: list[dict]) -> list[dict]:
+    areas = db.execute("SELECT area_id,city_id,city_name,x,y FROM map_areas WHERE x IS NOT NULL AND y IS NOT NULL").fetchall()
+    alias_rows = db.execute("SELECT source_area_id,canonical_area_id FROM map_area_aliases").fetchall()
+    aliases: dict[str, list[str]] = {}
+    for row in alias_rows:
+        aliases.setdefault(str(row["canonical_area_id"]), []).append(str(row["source_area_id"]))
+    result = json.loads(json.dumps(routes, ensure_ascii=False))
+    for route in result:
+        wanted_city = rumor_city_key(route.get("city", ""))
+        for point in route.get("points", []):
+            matches = []
+            for area in areas:
+                city_keys = (rumor_city_key(area["city_name"]), rumor_city_key(area["city_id"]))
+                if int(area["x"]) == int(point.get("x", -1)) and int(area["y"]) == int(point.get("y", -1)) and any(
+                    wanted_city and (wanted_city in key or key in wanted_city) for key in city_keys if key
+                ):
+                    canonical = str(area["area_id"])
+                    matches.extend(aliases.get(canonical, []))
+                    matches.append(canonical)
+            point["area_ids"] = list(dict.fromkeys(matches))
+    return result
+
+
+def canonical_map_area(db: sqlite3.Connection, area: dict) -> str:
+    alias = db.execute("SELECT canonical_area_id FROM map_area_aliases WHERE source_area_id=?",
+                       (area["area_id"],)).fetchone()
+    if alias:
+        return str(alias[0])
+    if area["x"] is None or area["y"] is None:
+        return area["area_id"]
+    candidates = db.execute("SELECT area_id,city_id,city_name FROM map_areas WHERE x=? AND y=?",
+                            (area["x"], area["y"])).fetchall()
+    incoming_name = map_city_key(area["city_name"])
+    for row in candidates:
+        if str(row["city_id"]) == area["city_id"] or (incoming_name and map_city_key(row["city_name"]) == incoming_name):
+            return str(row["area_id"])
+    return area["area_id"]
+
+
+def map_completion(db: sqlite3.Connection, area_id: str) -> tuple[int, int, float]:
+    area = db.execute("SELECT expected_buildings FROM map_areas WHERE area_id=?", (area_id,)).fetchone()
+    counts = db.execute("""SELECT COUNT(*) total,SUM(CASE WHEN room_count IS NOT NULL THEN 1 ELSE 0 END) known
+                           FROM map_buildings WHERE area_id=?""", (area_id,)).fetchone()
+    total = max(int((area or {"expected_buildings": 0})["expected_buildings"] or 0), int(counts["total"] or 0))
+    known = int(counts["known"] or 0)
+    return known, total, round(100 * known / total, 1) if total else 0.0
+
+
+# HK_MAP_CRYSTAL_SOURCE_PRIORITY_R1
+def ensure_hk_map_source_crystals_schema(db: sqlite3.Connection) -> None:
+    db.execute("""CREATE TABLE IF NOT EXISTS hk_map_source_crystals(
+        map_key TEXT NOT NULL,
+        canonical_area_id TEXT NOT NULL,
+        building_id TEXT NOT NULL,
+        room_count INTEGER,
+        is_invest INTEGER NOT NULL DEFAULT 0,
+        observed_at INTEGER NOT NULL DEFAULT 0,
+        source TEXT NOT NULL DEFAULT 'full235_archive',
+        PRIMARY KEY(map_key,building_id)
+    )""")
+    db.execute("""CREATE INDEX IF NOT EXISTS idx_hk_map_source_crystals_area_building
+                  ON hk_map_source_crystals(canonical_area_id,building_id)""")
+
+
+def hk_source_crystal_row(db: sqlite3.Connection, area_id: str, building_id: str) -> sqlite3.Row | None:
+    ensure_hk_map_source_crystals_schema(db)
+    return db.execute("""SELECT room_count,is_invest,map_key,observed_at
+                         FROM hk_map_source_crystals
+                         WHERE canonical_area_id=? AND building_id=?
+                         ORDER BY observed_at DESC LIMIT 1""",
+                      (str(area_id),str(building_id))).fetchone()
+
+
+# HK_MAP_PROVENANCE_W5_V1
+def map_knowledge_source(player_id: str) -> str:
+    raw = str(player_id or "").strip()
+    if raw == "source-hk-maps-import":
+        return "hk_maps_import"
+    if raw == "kokkaras-import" or raw == "historical-har" or raw.startswith("source-"):
+        return "legacy"
+    return "game_live"
+
+
+def submit_map_area(player_id: str, value: object) -> dict:
+    raw_game_geometry = value.get('_website_geometry') if isinstance(value,dict) else None
+    area, now = normalize_map_area(value), utc_now()
+    knowledge_source = map_knowledge_source(player_id)
+    player_id = contributor_id(player_id)
+    with db_session() as db:
+        overlap_canonical = _canonical_area_from_exact_buildings(db, area) if knowledge_source == "game_live" else ""
+        canonical_id = overlap_canonical or canonical_map_area(db, area)
+        if knowledge_source == 'game_live' and raw_game_geometry is not None:
+            _hk_store_game_geometry(db,canonical_id,raw_game_geometry,now)
+        existing = db.execute("SELECT 1 FROM map_areas WHERE area_id=?", (canonical_id,)).fetchone()
+        trusted_coords = area.get("coord_revision") == "column-row-v1"
+        if existing:
+            # Coordinates in older rows were stored in raw API row:column order.
+            # Only the explicitly versioned column:row payload may replace them.
+            # Do this before the completed-map early return.
+            if trusted_coords and area["x"] is not None and area["y"] is not None:
+                db.execute("""UPDATE map_areas
+                              SET x=?,y=?,last_player_id=?,last_seen=?
+                              WHERE area_id=?""",
+                           (area["x"],area["y"],player_id,now,canonical_id))
+            known, total, progress = map_completion(db, canonical_id)
+            db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                          VALUES(?,?,?,?) ON CONFLICT(source_area_id) DO UPDATE SET
+                          canonical_area_id=excluded.canonical_area_id,last_seen=excluded.last_seen""",
+                       (area["area_id"], canonical_id, now, now))
+            if total and known >= total and knowledge_source not in ("game_live","hk_maps_import"):
+                return {"ok":True,"area_id":canonical_id,"source_area_id":area["area_id"],"ignored_complete":True,
+                        "progress":progress,"buildings":total,"added_buildings":0,"enriched_buildings":0}
+        db.execute("""INSERT INTO map_areas(area_id,city_id,city_name,x,y,invest_count,expected_buildings,last_player_id,last_seen)
+                    VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(area_id) DO UPDATE SET
+                    city_name=CASE WHEN map_areas.city_name='' AND excluded.city_name<>'' THEN excluded.city_name ELSE map_areas.city_name END,
+                    x=COALESCE(map_areas.x,excluded.x),y=COALESCE(map_areas.y,excluded.y),invest_count=MAX(map_areas.invest_count,excluded.invest_count),
+                    expected_buildings=MAX(map_areas.expected_buildings,excluded.expected_buildings),last_player_id=excluded.last_player_id,last_seen=excluded.last_seen""",
+                   (canonical_id,area["city_id"],area["city_name"],area["x"],area["y"],area["invest_count"],area["expected_buildings"],player_id,now))
+        db.execute("""INSERT INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                      VALUES(?,?,?,?) ON CONFLICT(source_area_id) DO UPDATE SET
+                      canonical_area_id=excluded.canonical_area_id,last_seen=excluded.last_seen""",
+                   (area["area_id"], canonical_id, now, now))
+        db.execute("""INSERT OR IGNORE INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                      VALUES(?,?,?,?)""", (canonical_id, canonical_id, now, now))
+        added = enriched = 0
+        for row in area["buildings"]:
+            before = db.execute("""SELECT opened,room_count,has_events,is_invest,tier,faction,building_type,
+                                         knowledge_source,knowledge_observed_at
+                                  FROM map_buildings WHERE area_id=? AND building_id=?""",
+                                (canonical_id, row["building_id"])).fetchone()
+            if not before:
+                added += 1
+            elif ((before["room_count"] is None and row["room_count"] is not None) or
+                  (knowledge_source == "game_live" and row["room_count"] is not None and before["room_count"] != row["room_count"]) or
+                  (not before["opened"] and row["opened"]) or (before["tier"] is None and row["tier"] is not None) or
+                  (not before["faction"] and row["faction"]) or (not before["building_type"] and row["building_type"])):
+                enriched += 1
+            db.execute("""INSERT INTO map_buildings(
+                            area_id,building_id,opened,room_count,has_events,is_invest,tier,faction,building_type,
+                            last_player_id,last_seen,knowledge_source,knowledge_observed_at)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(area_id,building_id) DO UPDATE SET
+                        opened=MAX(map_buildings.opened,excluded.opened),
+                        room_count=CASE
+                          WHEN excluded.knowledge_source='hk_maps_import' THEN excluded.room_count
+                          WHEN map_buildings.knowledge_source='hk_maps_import' THEN map_buildings.room_count
+                          WHEN excluded.room_count IS NULL THEN map_buildings.room_count
+                          WHEN excluded.knowledge_source='game_live' THEN excluded.room_count
+                          WHEN map_buildings.room_count IS NULL THEN excluded.room_count
+                          ELSE map_buildings.room_count END,
+                        has_events=CASE
+                          WHEN excluded.knowledge_source='hk_maps_import' THEN excluded.has_events
+                          WHEN map_buildings.knowledge_source='hk_maps_import' THEN map_buildings.has_events
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.has_events
+                          ELSE MAX(map_buildings.has_events,excluded.has_events) END,
+                        is_invest=MAX(map_buildings.is_invest,excluded.is_invest),
+                        tier=COALESCE(map_buildings.tier,excluded.tier),
+                        faction=CASE WHEN map_buildings.faction='' THEN excluded.faction ELSE map_buildings.faction END,
+                        building_type=CASE WHEN map_buildings.building_type='' THEN excluded.building_type ELSE map_buildings.building_type END,
+                        last_player_id=CASE
+                          WHEN excluded.knowledge_source='hk_maps_import' THEN excluded.last_player_id
+                          WHEN map_buildings.knowledge_source='hk_maps_import' THEN map_buildings.last_player_id
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.last_player_id ELSE map_buildings.last_player_id END,
+                        last_seen=MAX(map_buildings.last_seen,excluded.last_seen),
+                        knowledge_source=CASE
+                          WHEN excluded.knowledge_source='hk_maps_import' THEN 'hk_maps_import'
+                          WHEN map_buildings.knowledge_source='hk_maps_import' THEN 'hk_maps_import'
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.knowledge_source ELSE map_buildings.knowledge_source END,
+                        knowledge_observed_at=CASE
+                          WHEN excluded.knowledge_source='hk_maps_import' THEN excluded.knowledge_observed_at
+                          WHEN map_buildings.knowledge_source='hk_maps_import' THEN map_buildings.knowledge_observed_at
+                          WHEN excluded.room_count IS NOT NULL
+                           AND (excluded.knowledge_source='game_live' OR map_buildings.room_count IS NULL)
+                          THEN excluded.knowledge_observed_at ELSE map_buildings.knowledge_observed_at END""",
+                       (canonical_id,row["building_id"],int(row["opened"]),row["room_count"],int(row["has_events"]),int(row["is_invest"]),
+                        row["tier"],row["faction"],row["building_type"],player_id,now,knowledge_source,now))
+        known, total, progress = map_completion(db, canonical_id)
+    result = {"ok":True,"area_id":canonical_id,"source_area_id":area["area_id"],"ignored_complete":False,
+              "progress":progress,"buildings":total,"known_buildings":known,"added_buildings":added,"enriched_buildings":enriched}
+    if knowledge_source == "game_live" and isinstance(value, dict) and value.get("_website_hydrate"):
+        try:
+            result["website_hydration"] = hydrate_hk_website_map_for_area(
+                canonical_id, area, value.get("_website_geometry")
+            )
+        except Exception as error:
+            result["website_hydration"] = {
+                "ok": False,
+                "status": "hydrate_error",
+                "error": str(error)[:240],
+            }
+    return result
+
+
+def anonymize_existing_contributors() -> dict:
+    changed = 0
+    with db_session() as db:
+        player_ids = [row[0] for row in db.execute("SELECT player_id FROM licenses")]
+        for player_id in player_ids:
+            anonymous = contributor_id(player_id)
+            for table, column in (("business_plan_catalog", "first_player_id"),
+                                  ("map_areas", "last_player_id"), ("map_buildings", "last_player_id")):
+                changed += db.execute(f"UPDATE {table} SET {column}=? WHERE {column}=?", (anonymous, player_id)).rowcount
+    return {"players": len(player_ids), "changed": changed}
+
+
+def import_kokkaras_map(value: object) -> dict:
+    """Import one authorized HK Maps export without storing login/session data."""
+    if not isinstance(value, dict) or not isinstance(value.get("meta"), dict):
+        raise ValueError("invalid Kokkaras map export")
+    meta = value["meta"]
+    collection = value.get("buildingsGeoJSON")
+    features = collection.get("features") if isinstance(collection, dict) else None
+    if not isinstance(features, list):
+        raise ValueError("missing buildings GeoJSON")
+    buildings = []
+    for feature in features:
+        properties = feature.get("properties") if isinstance(feature, dict) else None
+        if not isinstance(properties, dict) or not properties.get("is_game") or not properties.get("building_id"):
+            continue
+        crystals = properties.get("crystals")
+        buildings.append({
+            "building_id": str(properties["building_id"]),
+            "opened": crystals is not None,
+            "room_count": crystals,
+            "has_events": crystals is not None and int(crystals) > 0,
+            "is_invest": bool(properties.get("is_investment")),
+            "tier": None,
+            "faction": str(properties.get("faction") or ""),
+            "building_type": str(properties.get("building_generator") or ""),
+        })
+    # HK Maps labels coordinates as Y:X, while the mobile UI displays x:y.
+    area = {
+        "area_id": str(meta.get("area_id") or ""),
+        "city_id": str(meta.get("city_id") or f"kokkaras:{meta.get('city_name', '')}"),
+        "city_name": str(meta.get("city_name") or ""),
+        "x": meta.get("y"),
+        "y": meta.get("x"),
+        "invest_count": int(meta.get("invest_count") or 0),
+        "expected_buildings": int(meta.get("expected_buildings") or len(buildings)),
+        "buildings": buildings,
+    }
+    result = submit_map_area("kokkaras-import", area)
+    result.update({"source": "kokkaras", "known": sum(row["room_count"] is not None for row in buildings)})
+    return result
+
+
+# HK_FULL235_IMPORT_V1
+# HK_FULL235_ORIGINAL75_V2
+FULL235_ORIGINAL_AREA_IDS_75 = {
+  "hk_riodejaneiro3430": "9b97ee80-1026-4a3c-a9c6-ef4a9ed40f2f",
+  "hk_dubai6808": "e7907b87-1b18-4f2b-81ad-4c927118694f",
+  "hk_dubai4433": "35c80ab3-3173-48e5-9356-ad7a0400f8d2",
+  "hk_dubai6409": "9a2a6b3f-a935-45a2-a8c1-93c127670871",
+  "hk_paris3122": "6856318b-28c1-4090-904d-e4e0ebf03287",
+  "hk_dubai4329": "40273907-c157-48c3-b5a6-8385dee8aff4",
+  "hk_riodejaneiro3530": "eba83f40-dc9f-4278-ba1d-8048c64f40a0",
+  "hk_dubai5216": "9d5ce193-1ca2-4b80-9403-07abbd1f4b5d",
+  "hk_dubai5315": "2593c04d-f3d1-4477-899c-e3ea7c89059c",
+  "hk_london3424": "5af04afd-bdab-40d3-b283-d4a98aac848c",
+  "hk_newyork3208": "0869b1b1-51d6-4c58-829f-dd0777d2f692",
+  "hk_dubai4229": "b6977834-bfed-4519-bfb2-5f9c87fc1f4c",
+  "hk_dubai6210": "031a4440-6c08-4e6f-b4ba-209fa8d58f74",
+  "hk_dubai6308": "fbe4f037-df7b-425f-8d25-e902da6b792b",
+  "hk_dubai5316": "a21e02e6-7273-4627-9093-90e9ac53588e",
+  "hk_dubai6212": "fdcdea06-8cd6-468e-937a-3ed249bae21a",
+  "hk_dubai5414": "ee25687a-495b-45d6-a540-119e96942290",
+  "hk_newyork2521": "5bd75ffb-bf25-4f0b-a56d-81be89ac76f3",
+  "hk_newyork2421": "8e45b719-d07a-48d8-8808-c39ab2588403",
+  "hk_dubai7003": "906c807d-1306-48ff-adf1-3037045d75d3",
+  "hk_riodejaneiro5441": "f4135d17-0348-4a86-8811-c38f531ef618",
+  "hk_saintpetersburg2219": "bc5a6599-3ddb-4dfd-855e-38c3ceda3165",
+  "hk_london3025": "12e6f3ce-9b68-4c61-86db-44662dbb0064",
+  "hk_newyork2620": "914199bc-0946-419d-ba8d-a43fedfa9742",
+  "hk_paris3022": "ec0ffc0e-41b2-437e-b9b7-e5605ce53c9b",
+  "hk_newyork3210": "7e6b1875-f390-4b25-93ab-74ee473b9615",
+  "hk_paris3223": "cf17aca2-b6a3-4c35-a62e-c15cf0d9b988",
+  "hk_london3125": "0f0c1217-7401-46d6-ad11-2f1668234ad1",
+  "hk_newyork2522": "411dde71-adc6-47a2-979a-476b8c818f6e",
+  "hk_paris3222": "10510846-4330-49c7-8d4e-e4d5e3c4d215",
+  "hk_newyork2518": "e66a6a1d-24ec-48d4-8b36-44cf8643f03d",
+  "
+
+===== /api/v1/rumors/today #1 @ 348943 =====
+s.pop("watermarkCode", None)
+                    encoded = json.dumps(settings, ensure_ascii=False, separators=(",", ":"))
+                    if len(encoded.encode("utf-8")) > 250_000:
+                        self.send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "settings_too_large"})
+                        return
+                    updated_at = int(settings.get("_settingsUpdatedAt") or 0) or int(time.time() * 1000)
+                    with db_session() as db:
+                        db.execute("""INSERT INTO user_settings(player_id,settings_json,updated_at) VALUES(?,?,?)
+                                      ON CONFLICT(player_id) DO UPDATE SET settings_json=excluded.settings_json,
+                                      updated_at=excluded.updated_at WHERE excluded.updated_at >= user_settings.updated_at""",
+                                   (player_id, encoded, updated_at))
+                    self.send_json(HTTPStatus.OK, {"ok": True, "updated_at": updated_at})
+                else:
+                    with db_session() as db:
+                        row = db.execute("SELECT settings_json,updated_at FROM user_settings WHERE player_id=?", (player_id,)).fetchone()
+                    try:
+                        settings = json.loads(row["settings_json"]) if row else {}
+                    except (json.JSONDecodeError, TypeError):
+                        settings = {}
+                    self.send_json(HTTPStatus.OK, {"ok": True, "settings": settings, "updated_at": row["updated_at"] if row else 0})
+            elif path in ("/api/v1/maps/submit", "/api/v1/maps/list", "/api/v1/maps/detail"):
+                origin = self.headers.get("Origin", "")
+                if origin not in ALLOWED_ORIGINS:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"error":"origin_not_allowed"}); return
+                player_id = self.recipe_player()
+                if not player_id:
+                    self.send_json(HTTPStatus.UNAUTHORIZED, {"error":"unauthorized"}); return
+                body = self.read_json(2_000_000)
+                if path.endswith("/submit"):
+                    self.send_json(HTTPStatus.OK, submit_map_area(player_id, body.get("area")))
+                elif path.endswith("/detail"):
+                    detail = map_detail(str(body.get("area_id", "")))
+                    self.send_json(HTTPStatus.OK if detail else HTTPStatus.NOT_FOUND, {"ok":bool(detail),"detail":detail})
+                else:
+                    maps = map_index(); self.send_json(HTTPStatus.OK, {"ok":True,"total":len(maps),"maps":maps})
+            elif path == "/api/v1/rumors/today":
+                origin = self.headers.get("Origin", "")
+                if origin not in ALLOWED_ORIGINS:
+                    self.send_json(HTTPStatus.FORBIDDEN, {"error":"origin_not_allowed"}); return
+                if not self.recipe_player():
+                    self.send_json(HTTPStatus.UNAUTHORIZED, {"error":"unauthorized"}); return
+                self.read_json()
+                today = active_rumor_route_date()
+                with db_session() as db:
+                    row = db.execute("SELECT route_date,routes_json,published_at FROM rumor_routes WHERE route_date=?", (today,)).fetchone()
+                if not row:
+                    self.send_json(HTTPStatus.OK, {"ok": True, "date": today, "routes": []})
+                    return
+                try:
+                    routes = json.loads(row["routes_json"])
+                except json.JSONDecodeError:
+                    routes = []
+                with db_session() as db:
+                    routes = enrich_rumor_routes(db, routes)
+                self.send_json(HTTPStatus.OK, {"ok": True, "date": row["route_date"], "published_at": row["published_at"], "routes": routes})
+            elif path == "/admin/login":
+                ip = self.client_ip()
+                if not rate_allowed(f"admin-login:{ip}", 5, 900):
+                    audit("admin_login_blocked", "admin", ip, "rate limit")
+                    self.send_common(HTTPStatus.TOO_MANY_REQUESTS, "text/html; charset=utf-8", page_shell("Вход", self.login_html("Слишком много попыток. Повторите через 15 минут.")))
+                    return
+                form = self.read_form()
+                if password_ok(form.get("password", "")):
+                    audit("admin_login_ok", "admin", ip)
+                    self.redirect("/admin", f"hk_admin={sign_token('admin', 43200)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200")
+                else:
+                    audit("admin_login_failed", "admin", ip)
+                    self.send_common(HTTPStatus.UNAUTHORIZED, "text/html; charset=utf-8", page_shell("Вход", self.login_html("Неверный пароль")))
+            elif path == "/admin/logout":
+                if self.admin_ok(): audit("admin_logout", "admin", self.client_ip())
+                self.redirect("/admin", "hk_admin=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0")
+            elif path.startswith("/admin/"):
+                if not self.admin_ok():
+                    self.redirect("/admin")
+                    return
+                self.admin_action(path, self.read_form())
+            else:
+                self.send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
+        except (ValueError, json.JSONDecodeError):
+            self.send_json(HTTPStatus.BAD_REQUEST, {"error": "bad_request"})
+
+    @staticmethod
+    def login_html(error: str = "") -> str:
+        message = f'<p class="bad">{html.escape(error)}</p>' if error else ""
+        return f'<div class="card" style="max-width:430px;margin:12vh auto"><h1>Hamster King</h1><p class=muted>Панель лицензий</p>{message}<form method=post action=/admin/login><input type=password name=password placeholder="Пароль владельца" required style="width:100%;margin-bottom:10px"><button class=primary style="width:100%">Войти</button></form></div>'
+
+    def render_admin(self) -> None:
+        if not self.admin_ok():
+            self.send_common(HTTPStatus.OK, "text/html; charset=utf-8", page_shell("Вход", self.login_html()))
+            return
+        with db_session() as db:
+            rows = db.execute("""SELECT l.*, MAX(d.last_seen) last_seen
+                               FROM licenses l LEFT JOIN devices d ON d.player_id=l.player_id
+                               GROUP BY l.player_id ORDER BY l.created_at DESC""").fetchall()
+            audit_rows = db.execute("SELECT created_at,action,target,ip,detail FROM admin_audit ORDER BY id DESC LIMIT 40").fetchall()
+            access_rows = db.execute("""SELECT created_at,player_id,device_id,script_version,ip
+                                       FROM access_log ORDER BY id DESC LIMIT 80""").fetchall()
+            rumor_row = db.execute("SELECT route_date,source_text,published_at FROM rumor_routes ORDER BY route_date DESC LIMIT 1").fetchone()
+            member_rows = db.execute("""SELECT telegram_id,note,first_name,username,linked_player_id,active,last_login,
+                                               maps_access,maps_manage
+                                        FROM clan_members ORDER BY active DESC,updated_at DESC""").fetchall()
+        table_rows = "".join(f"""<tr><td><b>{html.escape(row['player_id'])}</b><br><small>{html.escape(row['note'])}</small></td>
+            <td>{iso_time(row['expires_at'])}</td><td>{iso_time(row['last_seen'])}</td>
+            <td class={'ok' if row['active'] else 'bad'}>{'Разрешён' if row['active'] else 'Заблокирован'}</td>
+            <td><div class=actions><form method=post action=/admin/toggle><input type=hidden name=player_id value="{html.escape(row['player_id'], quote=True)}"><button>{'Блокировать' if row['active'] else 'Разрешить'}</button></form>
+            <form method=post action=/admin/delete onsubmit="return confirm('Удалить лицензию?')"><input type=hidden name=player_id value="{html.escape(row['player_id'], quote=True)}"><button class=danger>Удалить</button></form></div></td></tr>""" for row in rows)
+        audit_html = "".join(f"<tr><td>{iso_time(row['created_at'])}</td><td>{html.escape(row['action'])}</td><td>{html.escape(row['target'])}</td><td>{html.escape(row['ip'])}</td><td>{html.escape(row['detail'])}</td></tr>" for row in audit_rows)
+        access_html = "".join(f"<tr><td>{iso_time(row['created_at'])}</td><td><b>{html.escape(row['player_id'])}</b></td><td>{html.escape(row['device_id'][:12])}…{html.escape(row['device_id'][-6:])}</td><td>{html.escape(row['script_version'])}</td><td>{html.escape(row['ip'])}</td></tr>" for row in access_rows)
+        members_html = "".join(f"""<tr><td><b>{html.escape(row['telegram_id'])}</b><br><span class=muted>{html.escape(row['first_name'])}{(' · @' + html.escape(row['username'])) if row['username'] else ''}</span></td><td>{html.escape(row['note'])}</td><td>{html.escape(row['linked_player_id'] or '—')}</td><td>{'Разрешён' if row['active'] else 'Заблокирован'}<br><span class=muted>{iso_time(row['last_login'])}</span><br><span class=muted>Карты: {'доступ' if row['maps_access'] else 'нет'} · {'управление' if row['maps_manage'] else 'просмотр'}</span></td><td><div class=actions><form method=post action=/admin/telegram/maps-access><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button>{'Закрыть карты' if row['maps_access'] else 'Открыть карты'}</button></form><form method=post action=/admin/telegram/maps-manage><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button>{'Снять управление' if row['maps_manage'] else 'Дать управление'}</button></form><form method=post action=/admin/telegram/toggle><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button>{'Заблокировать' if row['active'] else 'Разрешить'}</button></form><form method=post action=/admin/telegram/delete onsubmit="return confirm('Удалить Telegram ID?')"><input type=hidden name=telegram_id value="{html.escape(row['telegram_id'], quote=True)}"><button class=danger>Удалить</button></form></div></td></tr>""" for row in member_rows)
+        rumor_text = html.escape(rumor_row["source_text"] if rumor_row else "", quote=False)
+        rumor_status = f"Опубликован маршрут на <b>{html.escape(rumor_row['route_date'])}</b> · {iso_time(rumor_row['published_at'])}" if rumor_row else "Маршрут ещё не опубликован"
+        content = f"""<div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h1>Лицензии Hamster King</h1><p class=muted>Разрешённые игровые ID · опубликована <b>{html.escape(release_version())}</b> · минимальная <b>{html.escape(MIN_SCRIPT_VERSION)}</b> · SHA-256 <b>{html.escape(release_sha256()[:12])}</b></p></div><form method=post action=/admin/logout><button>Выйти</button></form></div>
+        <div class=card><h2>Маршрут слухов на день</h2><p class=muted>{rumor_status}. Вставьте текст целиком: дата, затем строки «координаты Город». Регионы распознаются автоматически.</p><form method=post action=/admin/rumors/publish><textarea name=route_text required rows=18 style="width:100%;box-sizing:border-box;font:14px ui-monospace,monospace">{rumor_text}</textarea><div class=actions style="margin-top:10px"><button class=primary>Опубликовать маршрут</button></div></form></div>
+        <div class=card><h2>Доступ в личный кабинет</h2><p class=muted>Только добавленные здесь Telegram ID смогут войти. Игровой ID участник привяжет один раз самостоятельно — лицензия создастся автоматически.</p><form class=grid method=post action=/admin/telegram/add><input name=telegram_id inputmode=numeric pattern="[0-9]{{5,20}}" placeholder="Telegram ID" required maxlength=20><input name=note placeholder="Имя или комментарий"><button class=primary>Разрешить вход</button></form><table><thead><tr><th>Telegram</th><th>Комментарий</th><th>Игровой ID</th><th>Статус / вход</th><th>Действия</th></tr></thead><tbody>{members_html or '<tr><td colspan=5 class=muted>Разрешённых Telegram ID пока нет</td></tr>'}</tbody></table></div>
+        <div class=card><h2>Добавить игровой ID вручную</h2><form class=grid method=post action=/admin/add><input name=player_id placeholder="ID игрового аккаунта" required maxlength=128><input name=note placeholder="Комментарий"><input type=date name=expires title="Срок (пусто = бессрочно)"><button class=primary>Добавить</button></form></div>
+        <div class=card><table><thead><tr><th>ID / комментарий</th><th>Срок</th><th>Последняя проверка</th><th>Статус</th><th>Действия</th></tr></thead><tbody>{table_rows or '<tr><td colspan=5 class=muted>Пока нет разрешённых ID</td></tr>'}</tbody></table></div>
+        <div class=card><h2>Последние подключения</h2><p class=muted>Одна запись на аккаунт и устройство в час. Хранится до 1 000 последних подключений.</p><table><thead><tr><th>Время</th><th>Игровой ID</th><th>Устройство</th><th>Версия</th><th>IP</th></tr></thead><tbody>{access_html or '<tr><td colspan=5 class=muted>Подключений пока нет</td></tr>'}</tbody></table></div>
+        <div class=card><h2>Журнал безопасности</h2><table><thead><tr><th>Время</th><th>Действие</th><th>Цель</th><th>IP</th><th>Детали</th></tr></thead><tbody>{audit_html or '<tr><td colspan=5 class=muted>Событий пока нет</td></tr>'}</tbody></table></div>"""
+        self.send_common(HTTPStatus.OK, "text/html; charset=utf-8", page_shell("Лицензии", content))
+
+    def admin_action(self, path: str, form: dict[str, str]) -> None:
+        if path == "/admin/rumors/publish":
+            try:
+                route_date, routes = parse_rumor_route(form.get("route_text", ""))
+                now = utc_now()
+                with db_session() as db:
+                    db.execute("""INSERT INTO rumor_routes(route_date,source_text,routes_json,published_at,updated_at)
+                                  VALUES(?,?,?,?,?) ON CONFLICT(route_date) DO UPDATE SET source_text=excluded.source_text,
+                                  routes_json=excluded.routes_json,published_at=excluded.published_at,updated_at=excluded.updated_at""",
+                               (route_date, form.get("route_text", "")[:20000], json.dumps(routes, ensure_ascii=False, separators=(",", ":")), now, now))
+                audit("rumors_publish", route_date, self.client_ip(), f"cities={len(routes)} points={sum(len(row['points']) for row in routes)}")
+            except ValueError as error:
+                audit("rumors_publish_failed", "", self.client_ip(), str(error))
+            self.redirect("/admin")
+            return
+        if path.startswith("/admin/telegram/"):
+            telegram_id = form.get("telegram_id", "").strip()
+            if not TELEGRAM_ID_RE.fullmatch(telegram_id):
+                self.redirect("/admin")
+                return
+            now = utc_now()
+            with db_session() as db:
+                if path == "/admin/telegram/add":
+                    db.execute("""INSERT INTO clan_members(telegram_id,note,active,created_at,updated_at)
+                                  VALUES(?,?,1,?,?) ON CONFLICT(telegram_id) DO UPDATE SET
+                                  note=excluded.note,active=1,updated_at=excluded.updated_at""",
+                               (telegram_id, form.get("note", "")[:200], now, now))
+                elif path == "/admin/telegram/maps-access":
+                    row = db.execute("SELECT maps_access FROM clan_members WHERE telegram_id=?", (telegram_id,)).fetchone()
+                    if row:
+                        db.execute("UPDATE clan_members SET maps_access=?,updated_at=? WHERE telegram_id=?",
+                                   (0 if row["maps_access"] else 1, now, telegram_id))
+                elif path == "/admin/telegram/maps-manage":
+                    row = db.execute("SELECT maps_manage FROM clan_members WHERE telegram_id=?", (telegram_id,)).fetchone()
+                    if row:
+                        manage = 0 if row["maps_manage"] else 1
+                        db.execute("UPDATE clan_members SET maps_manage=?,maps_access=CASE WHEN ?=1 THEN 1 ELSE maps_access END,updated_at=? WHERE telegram_id=?",
+                                   (manage, manage, now, telegram_id))
+                elif path == "/admin/telegram/toggle":
+                    db.execute("UPDATE clan_members SET active=1-active,updated_at=? WHERE telegram_id=?", (now, telegram_id))
+                elif path == "/admin/telegram/delete":
+                    db.execute("DELETE FROM clan_members WHERE telegram_id=?", (telegram_id,))
+            audit(path.removeprefix("/admin/").replace("/", "_"), telegram_id, self.client_ip())
+            self.redirect("/admin")
+            return
+        player_id = form.get("player_id", "").strip()
+        if not ID_RE.fullmatch(player_id):
+            self.redirect("/admin")
+            return
+        now = utc_now()
+        with db_session() as db:
+            if path == "/admin/add":
+                expires_text = form.get("expires", "").strip()
+                expires_at = int(datetime.strptime(expires_text, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()) if expires_text else None
+                db.execute("""INSERT INTO licenses(player_id,note,active,expires_at,created_at,updated_at)
+                            VALUES(?,?,1,?,?,?) ON CONFLICT(player_id) DO UPDATE SET note=excluded.note,
+                            active=1,expires_at=excluded.expires_at,updated_at=excluded.updated_at""",
+                           (player_id, form.get("note", "")[:200], expires_at, now, now))
+            elif path == "/admin/toggle":
+                db.execute("UPDATE licenses SET active=1-active,updated_at=? WHERE player_id=?", (now, player_id))
+            elif path == "/admin/delete":
+                db.execute("DELETE FROM licenses WHERE player_id=?", (player_id,))
+        audit(path.removeprefix("/admin/").replace("/", "_"), player_id, self.client_ip())
+        self.redirect("/admin")
+
+
+def self_test() -> None:
+    global DB_PATH, ADMIN_HASH, SIGNING_SECRET, MIN_SCRIPT_VERSION, RELEASE_PATH, PUBLIC_BASE, TELEGRAM_BOT_TOKEN
+    import tempfile
+    with tempfile.TemporaryDirectory() as folder:
+        DB_PATH = os.path.join(folder, "test.db")
+        SIGNING_SECRET = "test-secret"
+        TELEGRAM_BOT_TOKEN = "123456:test-telegram-token"
+        MIN_SCRIPT_VERSION = "1.2.0"
+        RELEASE_PATH = os.path.join(folder, "HamsterKingMobile.user.js")
+        PUBLIC_BASE = "https://updates.example.test"
+        with open(RELEASE_PATH, "w", encoding="utf-8") as release:
+            release.write("// ==UserScript==\n// @version      1.7.7\n// ==/UserScript==\n")
+        salt = b"0123456789abcdef"
+        ADMIN_HASH = salt.hex() + ":" + hashlib.scrypt(b"correct", salt=salt, n=16384, r=8, p=1, dklen=32).hex()
+        init_db()
+        assert password_ok("correct") and not password_ok("wrong")
+        now = utc_now()
+        with db_session() as db:
+            db.execute("INSERT INTO licenses VALUES(?,?,1,1,NULL,?,?)", ("player-1", "owner", now, now))
+            db.execute("INSERT INTO licenses VALUES(?,?,1,1,NULL,?,?)", ("player-2", "member", now, now))
+            db.execute("""INSERT INTO clan_members(telegram_id,note,linked_player_id,active,created_at,updated_at)
+                          VALUES(?,?,?,1,?,?)""", ("123456789", "owner", "player-1", now, now))
+        telegram = {"id": "123456789", "first_name": "Owner", "username": "topking", "auth_date": now}
+        check = "\n".join(f"{key}={value}" for key, value in sorted(telegram.items())).encode()
+        secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
+        telegram["hash"] = hmac.new(secret_key, check, hashlib.sha256).hexdigest()
+        assert verify_telegram_login(telegram)["id"] == "123456789"
+        assert cabinet_member_from_token(cabinet_token("123456789"))["note"] == "owner"
+        with db_session() as db:
+            db.execute("UPDATE clan_members SET maps_access=1,maps_manage=1 WHERE telegram_id='123456789'")
+        owner_member = cabinet_member_from_token(cabinet_token("123456789"))
+        imported_maps = import_hk_maps_index([{
+            "key":"hk_test0102", "city":"Test City", "grid":"01:02", "invest":1, "buildings":10,
+            "unknown":0, "crystals":[4,3,2,1,0,0], "eventBuildings":6, "totalEvents":10,
+            "progress":100, "score":42, "reward":{"max":1200,"normal":900,"investment":300}}])
+        assert imported_maps["accepted"] == 1 and len(cabinet_maps(owner_member)["maps"]) == 1
+        set_map_open_url(owner_member, "hk_test0102", "/maps/hk_test0102/")
+        assert set_map_published(owner_member, "hk_test0102", True)["published"]
+  
+
+===== CREATE TABLE IF NOT EXISTS rumor_routes #1 @ 13962 =====
+        expected_buildings INTEGER NOT NULL DEFAULT 0, last_player_id TEXT NOT NULL, last_seen INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS map_buildings (
+                area_id TEXT NOT NULL, building_id TEXT NOT NULL, opened INTEGER NOT NULL DEFAULT 0,
+                room_count INTEGER, has_events INTEGER NOT NULL DEFAULT 0, is_invest INTEGER NOT NULL DEFAULT 0,
+                tier INTEGER, faction TEXT NOT NULL DEFAULT '', building_type TEXT NOT NULL DEFAULT '',
+                last_player_id TEXT NOT NULL, last_seen INTEGER NOT NULL,
+                PRIMARY KEY(area_id,building_id), FOREIGN KEY(area_id) REFERENCES map_areas(area_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_map_buildings_area ON map_buildings(area_id);
+            CREATE TABLE IF NOT EXISTS map_area_aliases (
+                source_area_id TEXT PRIMARY KEY, canonical_area_id TEXT NOT NULL,
+                first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
+                FOREIGN KEY(canonical_area_id) REFERENCES map_areas(area_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_map_alias_canonical ON map_area_aliases(canonical_area_id);
+            CREATE TABLE IF NOT EXISTS update_tokens (
+                token_hash TEXT PRIMARY KEY, player_id TEXT NOT NULL, device_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL, uses_left INTEGER NOT NULL DEFAULT 2, created_at INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_update_tokens_expiry ON update_tokens(expires_at);
+            CREATE TABLE IF NOT EXISTS admin_audit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL,
+                action TEXT NOT NULL, target TEXT NOT NULL DEFAULT '', ip TEXT NOT NULL DEFAULT '',
+                detail TEXT NOT NULL DEFAULT ''
+            );
+            CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit(created_at DESC);
+            CREATE TABLE IF NOT EXISTS access_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL,
+                player_id TEXT NOT NULL, device_id TEXT NOT NULL, script_version TEXT NOT NULL DEFAULT '',
+                ip TEXT NOT NULL DEFAULT '',
+                FOREIGN KEY (player_id) REFERENCES licenses(player_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_access_log_created ON access_log(created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_access_log_identity ON access_log(player_id,device_id,created_at DESC);
+            CREATE TABLE IF NOT EXISTS rumor_routes (
+                route_date TEXT PRIMARY KEY,
+                source_text TEXT NOT NULL,
+                routes_json TEXT NOT NULL,
+                published_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS user_settings (
+                player_id TEXT PRIMARY KEY,
+                settings_json TEXT NOT NULL DEFAULT '{}',
+                updated_at INTEGER NOT NULL,
+                FOREIGN KEY (player_id) REFERENCES licenses(player_id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS pit_power_observations (
+                pit_type TEXT NOT NULL, level INTEGER NOT NULL, enemy_power INTEGER NOT NULL,
+                player_power INTEGER, winrate REAL, contributor_id TEXT NOT NULL,
+                samples INTEGER NOT NULL DEFAULT 1, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
+                PRIMARY KEY (pit_type, level, enemy_power, contributor_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_pit_power_level
+                ON pit_power_observations(pit_type, level, last_seen DESC);
+            CREATE TABLE IF NOT EXISTS clan_skill_snapshots (
+                clan_key TEXT NOT NULL,
+                week_key TEXT NOT NULL,
+                player_id TEXT NOT NULL,
+                nickname TEXT NOT NULL DEFAULT '',
+                levels_json TEXT NOT NULL DEFAULT '{}',
+                scanned_at INTEGER NOT NULL,
+                PRIMARY KEY (clan_key, week_key, player_id),
+                FOREIGN KEY (player_id) REFERENCES licenses(player_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_clan_skill_week
+                ON clan_skill_snapshots(clan_key, week_key, scanned_at DESC);
+            CREATE TABLE IF NOT EXISTS clan_skill_full_snapshots (
+                clan_key TEXT NOT NULL,
+                week_key TEXT NOT NULL,
+                snapshot_json TEXT NOT NULL,
+                source_player_id TEXT NOT NULL,
+                captured_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (clan_key, week_key),
+                FOREIGN KEY (source_player_id) REFERENCES licenses(player_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_clan_skill_full_latest
+                ON clan_skill_full_snapshots(captured_at DESC);
+            CREATE TABLE IF NOT EXISTS clan_members (
+                telegram_id TEXT PRIMARY KEY,
+                note TEXT NOT NULL DEFAULT '',
+                first_name TEXT NOT NULL DEFAULT '',
+                username TEXT NOT NULL DEFAULT '',
+                linked_player_id TEXT UNIQUE,
+                active INTEGER NOT NULL DEFAULT 1,
+                maps_access INTEGER NOT NULL DEFAULT 0,
+                maps_manage INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                last_login INTEGER
+            );
+            CREATE INDEX IF NOT EXISTS idx_clan_members_active
+                ON clan_members(active, updated_at DESC);
+            CREATE TABLE IF NOT EXISTS hk_maps_catalog (
+                map_key TEXT PRIMARY KEY,
+                city TEXT NOT NULL,
+                grid TEXT NOT NULL,
+                invest INTEGER NOT NULL DEFAULT 0,
+                buildings INTEGER NOT NULL DEFAULT 0,
+                unknown INTEGER NOT NULL DEFAULT 0,
+                c0 INTEGER NOT NULL DEFAULT 0,
+                c1 INTEGER NOT NULL DEFAULT 0,
+                c2 INTEGER NOT NULL DEFAULT 0,
+                c3 INTEGER NOT NULL DEFAULT 0,
+                c4 INTEGER NOT NULL DEFAULT 0,
+                c5 INTEGER NOT NULL DEFAULT 0,
+                event_buildings INTEGER NOT NULL DEFAULT 0,
+                total_events INTEGER NOT NULL DEFAULT 0,
+                progress REAL NOT NULL DEFAULT 0,
+                score INTEGER NOT NULL DEFAULT 0,
+                reward_max INTEGER NOT NULL DEFAULT 0,
+                reward_normal INTEGER NOT NULL DEFAULT 0,
+                reward_investment INTEGER NOT NULL DEFAULT 0,
+                open_url TEXT NOT NULL DEFAULT '',
+                published INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS idx_hk_maps_public
+                ON hk_maps_catalog(published, score DESC);
+            CREATE TABLE IF NOT EXISTS hk_map_points (
+                map_key TEXT PRIMARY KEY,
+                points_json TEXT NOT NULL DEFAULT '[]',
+                point_count INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (map_key) REFERENCES hk_maps_catalog(map_key) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS hk_map_area_links (
+                map_key TEXT PRIMARY KEY,
+                canonical_area_id TEXT NOT NULL,
+                match_method TEXT NOT NULL CHECK(match_method IN ('exact_area_id','city_grid_yx')),
+                linked_at INTEGER NOT NULL,
+                FOREIGN KEY (map_key) REFERENCES hk_maps_catalog(map_key) ON DELETE CASCADE,
+                FOREIGN KEY (canonical_area_id) REFERENCES map_areas(area_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_hk_map_area_links_canonical_area
+                ON hk_map_area_links(canonical_area_id);
+            CREATE TABLE IF NOT EXISTS hk_map_point_links (
+                map_key TEXT NOT NULL,
+                point_index INTEGER NOT NULL CHECK(point_index >= 0),
+                building_id TEXT NOT NULL,
+                match_method TEXT NOT NULL CHECK(match_method IN ('osm_point_in_polygon','exact_building_id')),
+                linked_at INTEGER NOT NULL,
+                PRIMARY KEY(map_key,point_index),
+                FOREIGN KEY (map_key) REFERENCES hk_maps_catalog(map_key) ON DELETE CASCADE
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_hk_map_point_links_building
+                ON hk_map_point_links(map_key,building_id);
+            CREATE TABLE IF NOT EXISTS public_clan_war_snapshot (
+                singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+                snapshot_json TEXT NOT NULL,
+                source_player_id TEXT NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS public_rating_snapshots (
+                kind TEXT NOT NULL,
+                rank INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                value REAL NOT NULL,
+                source_player_id TEXT NOT NULL,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY(kind, rank)
+            );
+            CREATE INDEX IF NOT EXISTS idx_public_ratings_kind
+                ON public_rating_snapshots(kind, rank);
+            -- SITE_ANALYTICS_V1
+            CREATE TABLE IF NOT EXISTS site_pageviews (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at INTEGER NOT NULL,
+                day_key TEXT NOT NULL,
+                path TEXT NOT NULL,
+                title TEXT NOT NULL DEFAULT '',
+                referrer_host TEXT NOT NULL DEFAULT '',
+                source_group TEXT NOT NULL DEFAULT 'direct',
+                language TEXT NOT NULL DEFAULT '',
+                device TEXT NOT NULL DEFAULT '',
+                visitor_hash TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_site_pageviews_created
+                ON site_pageviews(created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_site_pageviews_path
+                ON site_pageviews(path, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_site_pageviews_visitor
+                ON site_pageviews(day_key, visitor_hash);
+            CREATE TABLE IF NOT EXISTS telegram_conversations (
+                telegram_id TEXT PRIMARY KEY,
+                chat_id TEXT NOT NULL,
+                scenario TEXT NOT NULL,
+                step INTEGER NOT NULL DEFAULT 0,
+                data_json TEXT NOT NULL DEFAULT '{}',
+                updated_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS telegram_updates (
+                update_id INTEGER PRIMARY KEY,
+                received_at INTEGER NOT NULL
+            );
+        """)
+        columns = {row["name"] for row in db.execute("PRAGMA table_info(business_plan_catalog)")}
+        migrations = {
+            "name":"TEXT NOT NULL DEFAULT ''", "description":"TEXT NOT NULL DEFAULT ''", "icon":"TEXT NOT NULL DEFAULT ''",
+            "quality":"INTEGER", "color":"TEXT NOT NULL DEFAULT ''", "pluses":"INTEGER NOT NULL DEFAULT 0",
+            "bonuses_json":"TEXT NOT NULL DEFAULT '[]'", "components_json":"TEXT NOT NULL DEFAULT '[]'",
+            "slot_order":"INTEGER NOT NULL DEFAULT 0", "last_seen":"INTEGER NOT NULL DEFAULT 0"
+        }
+        for name, definition in migrations.items():
+            if name not in columns:
+                db.execute(f"ALTER TABLE business_plan_catalog ADD COLUMN {name} {definition}")
+        member_columns = {row["name"] for row in db.execute("PRAGMA table_info(clan_members)")}
+        for name, definition in {
+            "maps_access": "INTEGER NOT NULL DEFAULT 0",
+            "maps_manage": "INTEGER NOT NULL DEFAULT 0",
+        }.items():
+            if name not in member_columns:
+                db.execute(f"ALTER TABLE clan_members ADD COLUMN {name} {definition}")
+        building_columns = {row["name"] for row in db.execute("PRAGMA table_info(map_buildings)")}
+        for name, definition in {
+            "knowledge_source": "TEXT NOT NULL DEFAULT 'legacy'",
+            "knowledge_observed_at": "INTEGER NOT NULL DEFAULT 0",
+        }.items():
+            if name not in building_columns:
+                db.execute(f"ALTER TABLE map_buildings ADD COLUMN {name} {definition}")
+        db.execute("""UPDATE map_buildings
+                      SET knowledge_source=CASE
+                        WHEN last_player_id='source-hk-maps-import' THEN 'hk_maps_import'
+                        WHEN last_player_id LIKE 'anon-%' THEN 'game_live'
+                        ELSE 'legacy'
+                      END
+                      WHERE knowledge_observed_at=0""")
+        db.execute("""UPDATE map_buildings
+                      SET knowledge_observed_at=last_seen
+                      WHERE knowledge_observed_at=0""")
+        now = utc_now()
+        db.execute("""INSERT OR IGNORE INTO map_area_aliases(source_area_id,canonical_area_id,first_seen,last_seen)
+                      SELECT area_id,area_id,?,? FROM map_areas""", (now, now))
+
+
+PIT_TYPES = {"normal", "boss", "gang"}
+
+
+def normalize_pit_observations(value: object) -> list[dict]:
+    if not isinstance(value, list) or len(value) > 80:
+        raise ValueError("invalid pit observations")
+    result: list[dict] = []
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        pit_type = str(raw.get("pit_type", "")).strip().lower()
+        try:
+            level = int(raw.get("level"))
+            enemy_power = int(raw.get("enemy_power"))
+        except (TypeError, ValueError):
+            continue
+        if pit_type not in PIT_TYPES or not 1 <= level <= 10000 or not 1 <= enemy_power <= 10**18:
+            continue
+        player_power = raw.get("player_power")
+        try:
+            player_power = int(player_power) if player_power not in (None, "") else None
+        except (TypeError, ValueError):
+            player_power = None
+        if player_power is not None and not 0 <= player_power <= 10**18:
+            player_power = None
+        winrate = raw.get("winrate")
+        try:
+            winrate = float(winrate) if winrate not in (None, "") else None
+        except (TypeError, ValueError):
+            winrate = None
+        if winrate is not None:
+            if 1 < winrate <= 100:
+                winrate /= 100
+            if not 0 <= winrate <= 1:
+                winrate = None
+        result.append({"pit_type": pit_type, "level": level, "enemy_power": enemy_power,
+                       "player_power": player_power, "winrate": winrate})
+    return result
+
+
+def submit_pit_observations(player_id: str, value: object) -> dict:
+    observations = normalize_pit_observations(value)
+    contributor = contributor_id(player_id)
+    now = utc_now()
+    with db_session() as db:
+        for row in observations:
+            db.execute("""INSERT INTO pit_power_observations(
+                            pit_type,level,enemy_power,player_power,winrate,contributor_id,samples,first_seen,last_seen)
+                          VALUES(?,?,?,?,?,?,1,?,?)
+                          ON CONFLICT(pit_type,level,enemy_power,contributor_id) DO UPDATE SET
+                            player_power=COALESCE(excluded.player_power,pit_power_observations.player_power),
+                            winrate=COALESCE(excluded.winrate,pit_power_observations.winrate),
+                            samples=pit_power_observations.samples+1,last_seen=excluded.last_seen""",
+                       (row["pit_type"], row["level"], row["enemy_power"], row["player_power"],
+                        row["winrate"], contributor, now, now))
+        total = db.execute("SELECT COUNT(*) FROM pit_power_observations").fetchone()[0]
+    return {"ok": True, "accepted": len(observations), "total": total}
+
+
+def pit_power_catalog() -> list[dict]:
+    with db_session() as db:
+        rows = db.execute("""SELECT pit_type,level,enemy_power,
+                              COUNT(DISTINCT contributor_id) AS players,SUM(samples) AS samples,
+                              AVG(winrate) AS observed_winrate,MAX(last_seen) AS last_seen
+                           FROM pit_power_observations
+                           GROUP BY pit_type,level,enemy_power
+                           ORDER BY level,pit_type,players DESC,samples DESC""").fetchall()
+    return [dict(row) for row in rows]
+
+
+def normalize_clan_skill_query(clan_key: object, week_key: object) -> tuple[str, str]:
+    clan = str(clan_key or "").strip()
+    week = str(week_key or "").strip()
+    if not ID_RE.fullmatch(clan):
+        raise ValueError("invalid clan key")
+    try:
+        parsed_week = datetime.strptime(week, "%Y-%m-%d")
+    except (TypeError, ValueError) as error:
+        raise ValueError("invalid week key") from error
+    if parsed_week.weekday() != 0:
+        raise ValueError("week key must be Monday")
+    return clan, week
+
+
+def normalize_clan_skill_submission(clan_key: object, week_key: object,
+                                    nickname: object, levels: object) -> tuple[str, str, str, dict[str, int]]:
+    clan, week = normalize_clan_skill_query(clan_key, week_key)
+    name = str(nickname or "").strip()[:100]
+    if not name:
+        raise ValueError("nickname is required")
+    if not isinstance(levels, dict) or len(levels) > 300:
+        raise ValueError("invalid skill levels")
+    normalized: dict[str, int] = {}
+    for raw_id, raw_value in levels.items():
+        line_id = str(raw_id or "").strip()
+        if not ID_RE.fullmatch(line_id):
+            continue
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= value <= 100_000:
+            normalized[line_id] = value
+    if not normalized:
+        raise ValueError("skill levels are empty")
+    return clan, week, name, normalized
+
+
+def clan_skill_players(clan_key: str, week_key: str) -> list[dict]:
+    clan, week = normalize_clan_skill_query(clan_key, week_key)
+    with db_session() as db:
+        rows = db.execute("""SELECT nickname,levels_json,scanned_at
+                             FROM clan_skill_snapshots
+                             WHERE clan_key=? AND week_key=?""", (clan, week)).fetchall()
+    players = []
+    for row in rows:
+        try:
+            levels = json.loads(row["levels_json"])
+        except (json.JSONDecodeError, TypeError):
+            levels = {}
+        levels = {str(key): max(0, int(value)) for key, value in levels.items()
+                  if isinstance(value, (int, float)) and not isinstance(value, bool)}
+        players.append({"nickname": row["nickname"], "levels": levels,
+                        "total": sum(levels.values()), "scanned_at": row["scanned_at"]})
+    players.sort(key=lambda row: (-row["total"], row["nickname"].casefold()))
+    return players
+
+
+def submit_clan_skill_snapshot(player_id: str, clan_key: object, week_key: object,
+                               nickname: object, levels: object) -> dict:
+    clan, week, name, normalized = normalize_clan_skill_submission(
+        clan_key, week_key, nickname, levels)
+    now = utc_now()
+    encoded = json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
+    with db_session() as db:
+        db.execute("""INSERT INTO clan_skill_snapshots(
+                        clan_key,week_key,player_id,nickname,levels_json,scanned_at)
+                      VALUES(?,?,?,?,?,?)
+                      ON CONFLICT(clan_key,week_key,player_id) DO UPDATE SET
+                        nickname=excluded.nickname,levels_json=excluded.levels_json,
+                        scanned_at=excluded.scanned_at""",
+                   (clan, week, player_id, name, encoded, now))
+    players = clan_skill_players(clan, week)
+    return {"ok": True, "clan_key": clan, "week_key": week,
+            "players": players, "total_players": len(players)}
+
+
+def normalize_clan_full_snapshot(value: object) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("snapshot object required")
+    if int(value.get("schema_version") or 0) != 2:
+        raise ValueError("unsupported snapshot schema")
+    clan, week = normalize_clan_skill_query(value.get("clan_key"), value.get("week_key"))
+    try:
+        captured_at = int(value.get("captured_at") or utc_now())
+        participants_count = int(value.get("participants_count") or 0)
+    except (TypeError, ValueError) as error:
+        
