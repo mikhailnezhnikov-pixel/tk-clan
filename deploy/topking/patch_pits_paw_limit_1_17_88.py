@@ -82,6 +82,10 @@ for forbidden in [
     "battle safety limit",
 ]:
     if forbidden in s:
+        pos = s.find(forbidden)
+        print("PITS_FORBIDDEN_CONTEXT_BEGIN")
+        print(s[max(0,pos-900):pos+1400])
+        print("PITS_FORBIDDEN_CONTEXT_END")
         raise SystemExit("artificial Pits battle limit still present: " + forbidden)
 
 target.write_text(s, encoding="utf-8")
