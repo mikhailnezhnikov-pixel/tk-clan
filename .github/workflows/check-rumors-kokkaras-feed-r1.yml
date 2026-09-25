@@ -1,0 +1,72 @@
+name: Check Rumors Kokkaras Feed R1
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_server_rumors_kokkaras_feed_r1.py'
+      - '.github/workflows/check-rumors-kokkaras-feed-r1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Patch live baseline and verify
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          python3 deploy/topking/patch_server_rumors_kokkaras_feed_r1.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq "HK_RUMORS_KOKKARAS_FEED_R1" /tmp/server.py
+          grep -Fq "def parse_kokkaras_rumors_text" /tmp/server.py
+          grep -Fq "external_source" /tmp/server.py
+
+          python3 - <<'PY'
+          import importlib.util
+          spec=importlib.util.spec_from_file_location('srv','/tmp/server.py')
+          srv=importlib.util.module_from_spec(spec);spec.loader.exec_module(srv)
+          sample=open('audit/hk-kokkaras-rumors-sample.txt',encoding='utf-8').read()
+          sample=sample.split('\n',1)[1] if sample.startswith('STATUS ') else sample
+          parsed=srv.parse_kokkaras_rumors_text(sample)
+          assert parsed['date']=='2026-09-25',parsed['date']
+          assert len(parsed['routes'])==17,len(parsed['routes'])
+          assert sum(len(r['points']) for r in parsed['routes'])==51
+          lag=[r for r in parsed['routes'] if r['city_id']=='a4a86f1e-70c4-43fa-b804-2a358dc6ae87'][0]
+          assert len(lag['points'])==3
+          assert lag['points'][0]['gamearea_id']=='555822ce-1c66-456d-8816-144626fc2146'
+          print('RUMORS_KOKKARAS_PARSE=PASS')
+          print('cities=17 points=51')
+          PY
+
+          {
+            echo "RUMORS_KOKKARAS_FEED_R1_CHECK=PASS"
+            echo "kokkaras_public_feed=PASS"
+            echo "cities=17"
+            echo "points=51"
+            echo "server_syntax=PASS"
+          } > audit/hk-rumors-kokkaras-feed-r1-check.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-rumors-kokkaras-feed-r1-check.txt
+          git commit -m "audit: verify Rumors Kokkaras feed R1"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py
