@@ -2,3 +2,4 @@ unified maps u1 live
 maps-visibility-access-v2 deploy 20260921-1433
 maps-visibility-access-v2 deploy retry markerfix
 maps-visibility-access-v2 deploy retry shellsafe
+game-geometry-r1 deploy 20260925
