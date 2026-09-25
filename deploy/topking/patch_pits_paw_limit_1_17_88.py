@@ -91,9 +91,9 @@ for marker in [
         raise SystemExit("missing marker: " + marker)
 
 for forbidden in [
-    "battles>1000",
     "защитный лимит боёв",
-    "battle safety limit",
+    "превышен безопасный предел боёв Ямы",
+    "Pit battle safety limit exceeded",
 ]:
     if forbidden in s:
         pos = s.find(forbidden)
