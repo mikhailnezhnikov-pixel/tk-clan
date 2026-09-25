@@ -5,6 +5,7 @@ on:
     paths:
       - 'deploy/topking/maps-crystal-repair-preview-trigger.txt'
       - 'deploy/topking/preview_maps_crystal_repair.py'
+      - 'deploy/topking/preview_full235_source_restore.py'
   workflow_dispatch:
 
 permissions:
@@ -36,13 +37,18 @@ jobs:
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71 'python3 /tmp/preview_maps_crystal_repair.py' > /tmp/maps-crystal-repair-preview.json
           cp /tmp/maps-crystal-repair-preview.json audit/hk-maps-crystal-repair-preview.json
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/preview_full235_source_restore.py root@89.125.1.71:/tmp/preview_full235_source_restore.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/preview_full235_source_restore.py' > /tmp/full235-source-restore-preview.json
+          cp /tmp/full235-source-restore-preview.json audit/hk-full235-source-restore-preview.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit/hk-maps-crystal-repair-preview.json
+          git add audit/hk-maps-crystal-repair-preview.json audit/hk-full235-source-restore-preview.json
           git commit -m "audit: preview Maps crystal repair"
           git pull --rebase origin main
           git push origin HEAD:main
 
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/preview_maps_crystal_repair.py /tmp/maps-crystal-repair-preview.json
+        run: rm -f "$HOME/.ssh/topking" /tmp/preview_maps_crystal_repair.py /tmp/maps-crystal-repair-preview.json /tmp/preview_full235_source_restore.py /tmp/full235-source-restore-preview.json
