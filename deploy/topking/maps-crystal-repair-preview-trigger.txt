@@ -1,1 +1,2 @@
 2026-09-25 preview source-priority crystal repair
+2026-09-25 exact Full235 source restore preview
