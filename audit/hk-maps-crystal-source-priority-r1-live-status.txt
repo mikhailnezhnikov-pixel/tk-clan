@@ -6,10 +6,10 @@ explicit_zero=SOURCE_ONLY
 canonical_repair=PASS
 catalog_repair=PASS
 lagos_33_22=PASS
-server_source_sha256=2639baaf9be4d490e0ec0e70d7f41e0ee9c8c38ddfda902bdfb1b4d3a51d0c38
+server_source_sha256=678aa05d997be40776c4b308784b0fb57c54fa569e0475c9403524268c2da333
 server_candidate_sha256=678aa05d997be40776c4b308784b0fb57c54fa569e0475c9403524268c2da333
 
-{"archive_sha256": "a4b84c5239168182702090efe0b7241b54295942d63e5f020539092694e0a3e1", "exported_at": "2026-09-19T10:34:26.478Z", "extra_live_ids": 268, "lagos_33_22": {"buildings": 1078, "c0": 1, "c1": 6, "c2": 101, "c3": 15, "c4": 0, "c5": 0, "map_key": "hk_lagos3322", "unknown": 955}, "maps": 235, "ok": true, "rows_restored": 48786, "source_rows": 152593, "source_table_rows": 152593}
+{"archive_sha256": "a4b84c5239168182702090efe0b7241b54295942d63e5f020539092694e0a3e1", "exported_at": "2026-09-19T10:34:26.478Z", "extra_live_ids": 268, "lagos_33_22": {"buildings": 1078, "c0": 1, "c1": 6, "c2": 101, "c3": 15, "c4": 0, "c5": 0, "map_key": "hk_lagos3322", "unknown": 955}, "maps": 235, "ok": true, "rows_restored": 0, "source_rows": 152593, "source_table_rows": 152593}
 MAPS_CRYSTAL_SOURCE_PRIORITY_R1=PASS
 maps=235
 source_rows=152593
