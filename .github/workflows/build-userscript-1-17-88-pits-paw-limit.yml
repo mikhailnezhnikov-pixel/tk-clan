@@ -1,0 +1,127 @@
+name: Build Userscript 1.17.88 Pits Paw Limit
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_pits_paw_limit_1_17_88.py'
+      - '.github/workflows/build-userscript-1-17-88-pits-paw-limit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-17-88-pits-paw-limit
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate from exact live baseline
+        run: |
+          set -euo pipefail
+
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.17.87" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.87';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "pits-canon-core-20260920-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_pits_paw_limit_1_17_88.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.88" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.88';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "pits-paw-limited-battles-20260925-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "остановка по лимиту Лап восстановления" /tmp/HamsterKingMobile.user.js
+
+          if grep -Fq "защитный лимит боёв" /tmp/HamsterKingMobile.user.js; then
+            echo "Artificial Pits battle limit still present" >&2
+            exit 1
+          fi
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+
+          candidate=deploy/topking/HamsterKingMobile.1.17.88.pits-paw-limit.candidate.user.js
+          audit=audit/hk-userscript-1-17-88-pits-paw-limit-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.17.87':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+
+          out={
+              'schema':1,
+              'source_version':'1.17.87',
+              'target_version':'1.17.88',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.17.88.pits-paw-limit.candidate.user.js',
+              'primary_marker':'pits-paw-limited-battles-20260925-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-17-88-pits-paw-limit-live-status.txt',
+              'commit_message':'fix: deploy Pits paw-limited battles in userscript 1.17.88',
+          }
+          path.write_text(json.dumps(out, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_17_88_PITS_PAW_LIMIT_PREDEPLOY=PASS"
+              echo "source_version=1.17.87"
+              echo "target_version=1.17.88"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+              echo "artificial_battle_limit=REMOVED"
+              echo "paw_limit_guard=PRESERVED"
+              echo "syntax=PASS"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.17.88 Pits paw limit"
+
+            if git push origin HEAD:main; then
+              pushed=1
+              break
+            fi
+            sleep 2
+          done
+
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
