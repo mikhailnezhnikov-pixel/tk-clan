@@ -1,0 +1,10 @@
+USERSCRIPT_1_17_94_RUMORS_HUNTER_PREDEPLOY=PASS
+source_version=1.17.93
+target_version=1.17.94
+dedicated_rumors_page=PASS
+today_rumors_summary=PASS
+kokkaras_source_badge=PASS
+direct_gamearea_ids=PASS
+syntax=PASS
+base_sha256=5336095d2175a76b20c81ebf27ca791de5171d1a4890194f691dbe1de673bced
+candidate_sha256=fe00595ac064d18f3f6d0434844f26a1039b4b38e0b657a1e0fedbecf2912836
