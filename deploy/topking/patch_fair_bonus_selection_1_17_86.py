@@ -58,6 +58,11 @@ replacement = """  function availableFairBonusLots(exactLots = fairComboSettings
   }"""
 s, count = pattern.subn(replacement, s, count=1)
 if count != 1:
+    pos = s.find("function availableFairBonusLots")
+    if pos >= 0:
+        print("FAIR_BONUS_FUNCTION_CONTEXT_BEGIN")
+        print(s[pos:pos+1200])
+        print("FAIR_BONUS_FUNCTION_CONTEXT_END")
     raise SystemExit(f"fair bonus availability function: expected 1 replacement, got {count}")
 
 # Make intent explicit at the two known callers. Extra main-purchase target
