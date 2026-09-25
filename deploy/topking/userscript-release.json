@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_version": "1.17.71",
-  "target_version": "1.17.72",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.72.stage7-combat-confirm.candidate.user.js",
-  "primary_marker": "stage7-combat-confirm-20260923-r1",
+  "source_version": "1.17.83",
+  "target_version": "1.17.84",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.84.resources-canon-fast.candidate.user.js",
+  "primary_marker": "resources-canon-fast-20260925-r1",
   "preserve_markers": [
     "growth-fresh-preflight-20260923-r1",
     "mutation-bridge-readonly-20260923-r1",
@@ -45,8 +45,10 @@
     "game-api-rate-guard-20260922-r1",
     "public-collector-activity-lease-20260922-r1",
     "businesses-kokkaras-donor-20260922-r1",
-    "businesses-runner-vertical-20260922-r1"
+    "businesses-runner-vertical-20260922-r1",
+    "userscript-update-metadata-20260924-r1",
+    "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-72-stage7-combat-confirm-live-status.txt",
-  "commit_message": "fix: deploy Stage 7 combat confirmations in userscript 1.17.72"
+  "audit_status_path": "audit/hk-userscript-1-17-84-resources-canon-fast-live-status.txt",
+  "commit_message": "fix: deploy resources canon and faster refresh 1.17.84"
 }
