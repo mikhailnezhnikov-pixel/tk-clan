@@ -1,0 +1,134 @@
+name: Build Userscript 1.17.93 Resources Kokkaras Canon
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_resource_kokkaras_canon_1_17_93.py'
+      - '.github/workflows/build-userscript-1-17-93-resources-kokkaras-canon.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-17-93-resources-kokkaras-canon
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify pinned Kokkaras reference metadata
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          ref=json.load(open('reference/topking/REFERENCE.json',encoding='utf-8'))
+          donor=ref['donor']
+          assert donor['name']=='Kokkaras HK Control Panel'
+          assert donor['version']=='5.3.22-ui-icons-pit-dim'
+          assert donor['sha256']=='28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1'
+          print('KOKKARAS_REFERENCE=PASS')
+          PY
+
+      - name: Build candidate from exact live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.17.92" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.92';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "resource-maximum-run-stable-20260925-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "shop-rate-limit-resume-20260925-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_resource_kokkaras_canon_1_17_93.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.93" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.93';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "resources-kokkaras-5.3.22-20260925-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const RESOURCE_CANONICAL_TIERS=[0,1,2,3,5];" /tmp/HamsterKingMobile.user.js
+          grep -Fq "event_building_id:row.roomId" /tmp/HamsterKingMobile.user.js
+          grep -Fq "tier:Number(requestedTier)" /tmp/HamsterKingMobile.user.js
+          grep -Fq "side_event_id:row.sideEventId" /tmp/HamsterKingMobile.user.js
+          grep -Fq "number_of_completions:Number(quantity)" /tmp/HamsterKingMobile.user.js
+          if grep -Fq "resources:run-preflight" /tmp/HamsterKingMobile.user.js; then
+            echo "Old hanging player/me preflight still present" >&2
+            exit 1
+          fi
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.93.resources-kokkaras-canon.candidate.user.js
+          audit=audit/hk-userscript-1-17-93-resources-kokkaras-canon-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.17.92':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.17.92',
+              'target_version':'1.17.93',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.17.93.resources-kokkaras-canon.candidate.user.js',
+              'primary_marker':'resources-kokkaras-5.3.22-20260925-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-17-93-resources-kokkaras-canon-live-status.txt',
+              'commit_message':'fix: deploy Resources Kokkaras canon in userscript 1.17.93',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_17_93_RESOURCES_KOKKARAS_CANON_PREDEPLOY=PASS"
+              echo "source_version=1.17.92"
+              echo "target_version=1.17.93"
+              echo "kokkaras_version=5.3.22-ui-icons-pit-dim"
+              echo "kokkaras_sha256=28c3104020ecb7f54d0d51a72d067404d0176bc069d59fcca417d66817d1fcf1"
+              echo "canonical_resource_tiers=0,1,2,3,5"
+              echo "event_endpoint=/player/event"
+              echo "player_me_preflight=REMOVED"
+              echo "syntax=PASS"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.17.93 Resources Kokkaras canon"
+
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
