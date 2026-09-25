@@ -121,6 +121,46 @@ jobs:
           print('EXACT_BUILDING_SET_DUPES',len(exact))
           for g in exact:
               print('EXACT_GROUP',[(r['area']['area_id'],r['area']['city_id'],r['area']['city_name'],r['area']['x'],r['area']['y'],r['buildings'],r['known'],r['links']) for r in g['rows']])
+
+          # High-overlap pairs, including partial scans of the same district.
+          area_meta={a['area_id']:a for a in areas}
+          area_sets=collections.defaultdict(set)
+          owners=collections.defaultdict(list)
+          for row in db.execute("SELECT area_id,building_id FROM map_buildings"):
+              aid,bid=str(row['area_id']),str(row['building_id'])
+              area_sets[aid].add(bid); owners[bid].append(aid)
+          shared=collections.Counter()
+          for bids in owners.values():
+              uniq=sorted(set(bids))
+              if len(uniq)>12:  # generic/template ids are not useful duplicate evidence
+                  continue
+              for i,a in enumerate(uniq):
+                  for b in uniq[i+1:]:
+                      shared[(a,b)]+=1
+          overlaps=[]
+          for (a,b),inter in shared.items():
+              A=area_sets[a]; B=area_sets[b]
+              union=len(A|B)
+              jac=inter/union if union else 0
+              if inter<20 or jac<0.30: continue
+              ma,mb=area_meta.get(a),area_meta.get(b)
+              if not ma or not mb: continue
+              if (ma['x'],ma['y'])==(-1,-1) and (mb['x'],mb['y'])==(-1,-1): continue
+              knownA={r[0] for r in db.execute("SELECT building_id FROM map_buildings WHERE area_id=? AND room_count IS NOT NULL",(a,))}
+              knownB={r[0] for r in db.execute("SELECT building_id FROM map_buildings WHERE area_id=? AND room_count IS NOT NULL",(b,))}
+              linksA=[r[0] for r in db.execute("SELECT map_key FROM hk_map_area_links WHERE canonical_area_id=?",(a,))]
+              linksB=[r[0] for r in db.execute("SELECT map_key FROM hk_map_area_links WHERE canonical_area_id=?",(b,))]
+              overlaps.append({
+                'a':ma,'b':mb,'intersection':inter,'union':union,'jaccard':round(jac,4),
+                'a_total':len(A),'b_total':len(B),'a_known':len(knownA),'b_known':len(knownB),
+                'a_known_unique':len(knownA-knownB),'b_known_unique':len(knownB-knownA),
+                'a_links':linksA,'b_links':linksB,
+              })
+          overlaps.sort(key=lambda x:(-x['jaccard'],-x['intersection']))
+          print('HIGH_OVERLAP_DUPES_JSON='+json.dumps(overlaps[:120],ensure_ascii=False,separators=(',',':')))
+          print('HIGH_OVERLAP_DUPES',len(overlaps))
+          for p in overlaps[:120]:
+              print('OVERLAP_PAIR',p)
           db.close()
           PY
           scp -q -i "$HOME/.ssh/topking" -o StrictHostKeyChecking=accept-new /tmp/audit-map-dupes.py root@89.125.1.71:/tmp/audit-map-dupes.py
