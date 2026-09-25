@@ -14,6 +14,8 @@ out={
   'area_links': scalar('SELECT COUNT(*) FROM hk_map_area_links'),
   'point_links': scalar('SELECT COUNT(*) FROM hk_map_point_links'),
   'map_buildings': scalar('SELECT COUNT(*) FROM map_buildings'),
+  'geometry_areas': scalar("SELECT COUNT(*) FROM hk_map_area_geometry"),
+  'geometry_features': scalar("SELECT COALESCE(SUM(feature_count),0) FROM hk_map_area_geometry"),
   'provenance': q('SELECT knowledge_source,COUNT(*) n FROM map_buildings GROUP BY knowledge_source ORDER BY knowledge_source'),
   'area_link_methods': q('SELECT match_method,COUNT(*) n FROM hk_map_area_links GROUP BY match_method ORDER BY match_method'),
   'linked_room_sources': q('''
@@ -87,5 +89,12 @@ out['linked_summary']={
   'unlinked_source_points':sum(r['unlinked_source_points'] for r in comparisons),
 }
 out['lagos_linked']=[r for r in comparisons if r['city'].lower()=='lagos' and r['grid']=='33:22']
+out['lagos_geometry']=q("""
+  SELECT c.map_key,g.feature_count,g.observed_at,g.source
+  FROM hk_maps_catalog c
+  JOIN hk_map_area_links al ON al.map_key=c.map_key
+  LEFT JOIN hk_map_area_geometry g ON g.canonical_area_id=al.canonical_area_id
+  WHERE lower(c.city)='lagos' AND c.grid='33:22'
+""")
 print(json.dumps(out,ensure_ascii=False,sort_keys=True))
 db.close()
