@@ -178,6 +178,36 @@ jobs:
               slim=[{k:r.get(k) for k in ('key','website_key','website_keys','area_id','canonical_area_id','source_kind','source_label','city','grid','canonical_grid','buildings','unknown','shared_known','progress','open_url')} for r in rows]
               print('CABINET_MAP_ROWS_JSON='+json.dumps(slim,ensure_ascii=False,separators=(',',':')))
               print('CABINET_MAP_ROWS',len(slim))
+
+              targets=[
+                ('bc5a6599-3ddb-4dfd-855e-38c3ceda3165','dc998bea-026b-4ea6-a50d-664d3c9be9bd'),
+                ('090d4543-e438-4998-afbf-978028187f83','ef46a07f-2031-4262-a291-d41dd524af8d'),
+                ('23d4c221-b89a-459a-af5e-dceaa8fda578','b5f00990-70ae-4ed1-8faa-97b127811af5'),
+                ('3fddb622-111f-488f-a70e-b31b563ce145','f87a568c-99db-4fb9-a79b-9ddf1a0c2f7f'),
+              ]
+              with srv.db_session() as live:
+                hasgeom=bool(live.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hk_map_area_geometry'").fetchone())
+                for a,b in targets:
+                  rows=[]
+                  for aid in (a,b):
+                    meta=live.execute("""SELECT area_id,city_id,city_name,x,y,expected_buildings,invest_count,last_seen
+                                         FROM map_areas WHERE area_id=?""",(aid,)).fetchone()
+                    br=[dict(r) for r in live.execute("""SELECT building_id,room_count,opened,has_events,is_invest,tier,faction,building_type,last_seen
+                                                        FROM map_buildings WHERE area_id=? ORDER BY building_id""",(aid,))]
+                    aliases=[r[0] for r in live.execute("SELECT source_area_id FROM map_area_aliases WHERE canonical_area_id=?",(aid,))]
+                    links=[r[0] for r in live.execute("SELECT map_key FROM hk_map_area_links WHERE canonical_area_id=?",(aid,))]
+                    geom=None
+                    if hasgeom:
+                      g=live.execute("SELECT feature_count,observed_at,length(geometry_json) bytes FROM hk_map_area_geometry WHERE canonical_area_id=?",(aid,)).fetchone()
+                      geom=dict(g) if g else None
+                    rows.append({'meta':dict(meta) if meta else None,'aliases':aliases,'links':links,'geometry':geom,
+                                 'total':len(br),'known':sum(r['room_count'] is not None for r in br),
+                                 'known_rows':[r for r in br if r['room_count'] is not None][:80],
+                                 'types':dict(collections.Counter(str(r['building_type'] or '') for r in br)),
+                                 'factions':dict(collections.Counter(str(r['faction'] or '') for r in br))})
+                  A={r[0] for r in live.execute("SELECT building_id FROM map_buildings WHERE area_id=?",(a,))}
+                  B={r[0] for r in live.execute("SELECT building_id FROM map_buildings WHERE area_id=?",(b,))}
+                  print('TARGET_PAIR_JSON='+json.dumps({'a':a,'b':b,'intersection':len(A&B),'union':len(A|B),'rows':rows},ensure_ascii=False,separators=(',',':')))
           PY
           scp -q -i "$HOME/.ssh/topking" -o StrictHostKeyChecking=accept-new /tmp/audit-map-dupes.py root@89.125.1.71:/tmp/audit-map-dupes.py
           ssh -i "$HOME/.ssh/topking" -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/audit-map-dupes.py; rm -f /tmp/audit-map-dupes.py'
