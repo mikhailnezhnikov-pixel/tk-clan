@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.89
+// @version      1.17.90
+// @release-note Магазин: массовый выкуп больше не штурмует /shop/buy без пауз. Добавлен безопасный темп запросов, автоматическое ожидание 429 и продолжение покупки после cooldown без двойного списания; Runner показывает ожидание и текущий лот.
 // @release-note Ярмарка: прокрутка больше не падает сразу при сетевом тайм-ауте. Для /fair/reroll увеличено окно ожидания, а неоднозначный тайм-аут сверяется с live-состоянием Ярмарки и балансом; если прокрутка уже прошла — работа продолжается без повторной траты, если нет — повтор выполняется только после подтверждения неизменившегося состояния.
 // @release-note Ямы: удалён искусственный защитный лимит количества боёв. Яма продолжает бой, пока позволяет фактический запас Лап восстановления и выбранный лимит Лап; отдельного лимита на число боёв больше нет.
 // @release-note Ярмарка: Runner приведён к канону панели — текущие проходы и действия показываются в самом Runner, счётчик прогресса виден рядом со статусом, кнопки компактные; в общий журнал пишется итог запуска, а не поток проходов.
@@ -100,7 +101,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.89';
+  const BUILD_VERSION = '1.17.90';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -108,6 +109,9 @@
   const HK_SHOP_ACTIVE_VIEW_REV = 'shop-active-view-canon-20260923-r1';
   const HK_SHOP_TODAY_DEDUP_REV = 'shop-today-dedup-20260923-r1';
   const HK_SHOP_BUY_FAST_PATH_REV = 'shop-buy-fast-path-20260923-r1';
+  const HK_SHOP_RATE_LIMIT_RESUME_REV = 'shop-rate-limit-resume-20260925-r1';
+  const SHOP_BUY_MIN_GAP_MS = 700;
+  const SHOP_BUY_POST_429_GAP_MS = 1500;
   const HK_SHOP_SHARED_LIMITS_UI_REV = 'shop-shared-limits-ui-20260923-r1';
   const HK_FAIR_SINGLE_PREFLIGHT_REV = 'fair-single-preflight-20260923-r1';
   const HK_FAIR_UNIFIED_NAV_REV = 'fair-unified-nav-20260923-r1';
@@ -6439,7 +6443,8 @@
       }
       const normalizedPath=hkNormalizedApiPath(path);
       const fastShopBuy=normalizedPath==='/shop/buy';
-      const gapMs=fastShopBuy?0:gameApiCurrentGapMs();
+      const shopBuyGap=Date.now()<gameApiSlowUntil?SHOP_BUY_POST_429_GAP_MS:SHOP_BUY_MIN_GAP_MS;
+      const gapMs=fastShopBuy?shopBuyGap:gameApiCurrentGapMs();
       gameApiNextRequestAt=Date.now()+gapMs;
       recordDiagnostic('game-rate-gate',{path,method,gapMs,fastShopBuy,slowUntil:gameApiSlowUntil});
     } finally {
@@ -10187,6 +10192,47 @@
     const buy = root?.querySelector('#hk-shop-buy'); if (buy) buy.disabled = shopRunning || !purchaseCount;
   }
 
+  function shopLotDisplayName(row) {
+    return String(gameText(row?.name) || row?.name || row?.rewardId || row?.lotId || either('Лот','Lot'));
+  }
+
+  function shopRateLimitError(error) {
+    return error?.name === 'HKRateLimitError' || Number(error?.httpStatus) === 429;
+  }
+
+  async function shopBuyWithRateLimitResume(body, label = '') {
+    let rateHits = 0;
+    while (true) {
+      if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+      await hkRunner.waitIfPaused();
+      try {
+        return await apiJson('/shop/buy', 'POST', body, true, 0);
+      } catch (error) {
+        if (!shopRateLimitError(error)) throw error;
+        rateHits += 1;
+        const waitMs = Math.max(
+          1000,
+          Number(error?.retryAfterMs || 0),
+          gameApiCooldownRemainingMs(),
+          GAME_API_429_FALLBACK_COOLDOWN_MS
+        ) + 1200;
+        const seconds = Math.ceil(waitMs / 1000);
+        hkRunner.setStep(either(
+          'Лимит игры · жду ' + seconds + ' сек.' + (label ? ' · ' + label : ''),
+          'Game limit · waiting ' + seconds + ' sec.' + (label ? ' · ' + label : '')
+        ));
+        if (rateHits === 1 || rateHits % 3 === 0) {
+          log(either(
+            'Магазин: лимит 429. Жду ' + seconds + ' сек. и продолжу автоматически' + (label ? ' · ' + label : ''),
+            'Shop: 429 rate limit. Waiting ' + seconds + ' sec. and resuming automatically' + (label ? ' · ' + label : '')
+          ), 'warn');
+        }
+        recordDiagnostic('shop-rate-limit-resume',{label,rateHits,waitMs});
+        await gameRetryDelay(waitMs);
+      }
+    }
+  }
+
   async function buyRegularShop() {
     if (!requireLicense() || shopRunning) return;
     try {
@@ -10238,11 +10284,11 @@
               if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
               await hkRunner.waitIfPaused();
               hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
-              playerDocument = await apiJson('/shop/buy', 'POST', {
+              playerDocument = await shopBuyWithRateLimitResume({
                 ...requestBody,
                 collection_entity_id:row.rewardId,
                 collection_count:batchMultiplier
-              }, true, 0);
+              }, shopLotDisplayName(row));
               purchasedRow += batchMultiplier;
               completed += 1;
             }
@@ -10257,8 +10303,8 @@
             // request after a lost response could buy an extra copy.
             if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
             await hkRunner.waitIfPaused();
-            hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
-            playerDocument = await apiJson('/shop/buy', 'POST', requestBody, true, 0);
+            hkRunner.setStep(either('Покупка: ','Buying: ') + shopLotDisplayName(row), completed, count);
+            playerDocument = await shopBuyWithRateLimitResume(requestBody, shopLotDisplayName(row));
             purchasedRow += 1;
             completed += 1;
           }

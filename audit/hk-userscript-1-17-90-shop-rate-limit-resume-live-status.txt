@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.89
+target_version=1.17.90
+marker=shop-rate-limit-resume-20260925-r1
+source_sha256=3c6121f75b9224786b3f2bb7303603d18cdfc64e7a8d601d2cf5a5eb7609e69c
+candidate_sha256=19c8a4cb05df5316f965d717e4fbaa916170bb0169d96f9361b9d9bddc4fb126
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
