@@ -1,0 +1,1320 @@
+
+===== async function apiJsonCore #1 @ 425180 =====
+';
+    error.httpStatus=429;
+    error.apiPath=path;
+    error.retryAfterMs=retryAfter;
+    recordDiagnostic('game-rate-limit',{path,retryAfterMs:retryAfter,until:gameApiRateLimitUntil});
+    setHealth('game',false,'лимит 429');
+    return error;
+  }
+
+  async function acquireGameApiRequestSlot(path,method) {
+    let release;
+    const turn=new Promise(resolve=>{release=resolve;});
+    const previous=gameApiRateGateTail;
+    gameApiRateGateTail=turn;
+    await previous.catch(()=>{});
+    try {
+      const now=Date.now();
+      if (gameApiRateLimitUntil>now) {
+        const error=new Error(either(
+          'Game API на cooldown после 429. Подождите '+Math.ceil((gameApiRateLimitUntil-now)/1000)+' сек.',
+          'Game API is cooling down after 429. Wait '+Math.ceil((gameApiRateLimitUntil-now)/1000)+' sec.'
+        ));
+        error.name='HKRateLimitError';
+        error.httpStatus=429;
+        error.apiPath=path;
+        error.retryAfterMs=gameApiRateLimitUntil-now;
+        throw error;
+      }
+      const wait=Math.max(0,gameApiNextRequestAt-now);
+      if(wait>0)await gameRetryDelay(wait);
+      if(gameApiRateLimitUntil>Date.now()){
+        const error=new Error(either('Game API на cooldown после 429','Game API is cooling down after 429'));
+        error.name='HKRateLimitError'; error.httpStatus=429; error.apiPath=path;
+        error.retryAfterMs=Math.max(0,gameApiRateLimitUntil-Date.now());
+        throw error;
+      }
+      const normalizedPath=hkNormalizedApiPath(path);
+      const fastShopBuy=normalizedPath==='/shop/buy';
+      const gapMs=fastShopBuy?0:gameApiCurrentGapMs();
+      gameApiNextRequestAt=Date.now()+gapMs;
+      recordDiagnostic('game-rate-gate',{path,method,gapMs,fastShopBuy,slowUntil:gameApiSlowUntil});
+    } finally {
+      release();
+    }
+  }
+
+  async function apiJsonCore(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3, timeoutMs = 18000) {
+    const maxRetries = retryNetwork === true ? GAME_REQUEST_RETRY_DELAYS_MS.length : retryNetwork === false ? 0 : Math.max(0, Math.trunc(Number(retryNetwork) || 0));
+    let authRetryLeft = retryAuthorization ? 1 : 0;
+    let attempt = 0, lockAttempt = 0;
+    while (true) {
+      const authorized = await ensureGameAuthorization(false, `api:${path}`);
+      if (!apiBase || !authorized || !apiHeaders.Authorization) throw new Error('Нет подключения к игре. Обновите страницу.');
+      await acquireGameApiRequestSlot(path,method);
+      const request = nativeNetworkFetch || window.fetch.bind(window);
+      const started = performance.now();
+      let response,text;
+      try {
+        ({response,text}=await gameFetchText(request,`${apiBase}${path}`,{method,headers:{...apiHeaders},body:body == null ? undefined : JSON.stringify(body)},timeoutMs));
+      } catch (error) {
+        if(error?.name==='AbortError'||hkRunner.signal?.aborted)throw error;
+        recordDiagnostic('game-request-network-error',{path,method,attempt:attempt+1,error:error?.message || error});
+        if (attempt < maxRetries) {
+          const delay = GAME_REQUEST_RETRY_DELAYS_MS[Math.min(attempt, GAME_REQUEST_RETRY_DELAYS_MS.length - 1)] || 6000;
+          attempt += 1; await gameRetryDelay(delay); continue;
+        }
+        setHealth('game', false, error?.name==='HKNetworkTimeout'?'тайм-аут':'ошибка сети');
+        throw new Error(`${path}: ${error?.message || error}`);
+      }
+      let value; try { value = JSON.parse(text); } catch (_) { value = null; }
+      recordDiagnostic('game-request',{path,method,status:response.status,attempt:attempt+1,durationMs:Math.round(performance.now()-started)});
+      if (response.status === 429) throw gameApiRateLimitError(path,response);
+      if ((response.status === 401 || response.status === 403) && authRetryLeft > 0) {
+        authRetryLeft -= 1;
+        const refreshed = await ensureGameAuthorization(true, `http-${response.status}:${path}`);
+        if (refreshed) { attempt = 0; continue; }
+      }
+      const lockedText=String(value?.description||value?.message||text||'').toLowerCase();
+      const playerLocked=/player state is locked|state is locked by (?:other|another) request|player.*locked.*request/.test(lockedText);
+      if(playerLocked&&lockAttempt<3){
+        const delay=[650,1400,3000][lockAttempt++]||3000;
+        recordDiagnostic('game-request-player-locked',{path,method,status:response.status,lockAttempt,delay});
+        await gameRetryDelay(delay);continue;
+      }
+      const transient = response.status === 408 || response.status === 425 || response.status >= 500;
+      if (transient && attempt < maxRetries) {
+        const delay = GAME_REQUEST_RETRY_DELAYS_MS[Math.min(attempt, GAME_REQUEST_RETRY_DELAYS_MS.length - 1)] || 6000;
+        attempt += 1; await gameRetryDelay(delay); continue;
+      }
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) setHealth('auth', false, 'сессия истекла');
+        setHealth('game', false, `HTTP ${response.status}`);
+        const error=new Error(value?.description || value?.message || `HTTP ${response.status}: ${text.slice(0,160)}`);
+        error.name='HKGameApiError'; error.httpStatus=response.status; error.apiData=value; error.apiPath=path;
+        throw error;
+      }
+      if (!value || typeof value !== 'object') throw new Error('Сервер вернул некорректный ответ');
+      setHealth('game', true, 'игра отвечает');
+      setHealth('auth', true, 'авторизация активна');
+      if (path === '/player/me') {
+        const partial = !!(body && Array.isArray(body.arguments));
+        if (partial) hkStateStore.merge(value, 'api:player/me-partial'); else { hkStateStore.replace(value, 'api:player/me'); value = hkStateStore.snapshot || value; }
+        playerDocument = hkStateStore.snapshot || value || playerDocument;
+      } else if (hkIsMutationRequest(path, method)) {
+        hkStateStore.merge(value, `api:${path}`);
+        playerDocument = hkStateStore.snapshot || playerDocument;
+      }
+      hkGameBridge.noteMutation(path, method);
+      return value;
+    }
+  }
+
+  const HK_MUTATION_GATE_REV = 'stage1-20260919-r4';
+
+  const HK_READ_ONLY_POST_PATHS = new Set([
+    '/player/me',
+    '/player/hamster/lvlUp/view',
+    '/player/building',
+    '/player/building/fast_completion/cost',
+    '/player/building/fast_remort/cost',
+    '/shop/view',
+    '/business/values',
+    '/business_items',
+    '/cities',
+    '/client_config',
+    '/events',
+    '/items',
+    '/leaderboard',
+    '/premium',
+    '/bonuses/view',
+    '/alliance/list',
+    '/clan/skill_lines/stats',
+    '/regional_boss/battle_state',
+  ]);
+
+  function hkNormalizedApiPath(path) {
+    const value = String(path || '');
+    const q = value.indexOf('?');
+    return q >= 0 ? value.slice(0, q) : value;
+  }
+
+  function hkIsMutationRequest(path, method = 'GET') {
+    const verb = String(method || 'GET').toUpperCase();
+    if (verb === 'GET' || verb === 'HEAD' || verb === 'OPTIONS') return false;
+    return !HK_READ_ONLY_POST_PATHS.has(hkNormalizedApiPath(path));
+  }
+
+  const hkMutationGate = (() => {
+    let tail = Promise.resolve();
+    let sequence = 0;
+    let active = null;
+    const state = {
+      pending: 0,
+      completed: 0,
+      failed: 0,
+      lastPath: '',
+      activePath: ''
+    };
+
+    const safeDiagnostic = (kind, payload) => {
+      try { recordDiagnostic(kind, payload); } catch (_) {}
+    };
+
+    const run = async (path, task) => {
+      const id = ++sequence;
+      const normalizedPath = hkNormalizedApiPath(path);
+      state.pending += 1;
+
+      let release;
+      const turn = new Promise(resolve => { release = resolve; });
+      const previous = tail;
+      tail = turn;
+
+      await previous.catch(() => {});
+      state.pending = Math.max(0, state.pending - 1);
+      state.activePath = normalizedPath;
+      state.lastPath = normalizedPath;
+      active = { id, path: normalizedPath, startedAt: Date.now() };
+      safeDiagnostic('mutation-start', { id, path: normalizedPath, pending: state.pending });
+
+      try {
+        // Serialization is neutral: module-specific Pause/Stop stays in the
+        // calling runner. A paused Growth task must not freeze unrelated modules.
+        // Internal apiJsonCore retries remain inside this same queue turn.
+        const value = await task();
+        state.completed += 1;
+        safeDiagnostic('mutation-finish', {
+          id,
+          path: normalizedPath,
+          durationMs: Date.now() - active.startedAt
+        });
+        return value;
+      } catch (error) {
+        state.failed += 1;
+        safeDiagnostic('mutation-error', {
+          id,
+          path: normalizedPath,
+          error: error?.message || String(error)
+        });
+        throw error;
+      } finally {
+        active = null;
+        state.activePath = '';
+        release(
+
+===== async function apiJson #1 @ 425180 =====
+';
+    error.httpStatus=429;
+    error.apiPath=path;
+    error.retryAfterMs=retryAfter;
+    recordDiagnostic('game-rate-limit',{path,retryAfterMs:retryAfter,until:gameApiRateLimitUntil});
+    setHealth('game',false,'лимит 429');
+    return error;
+  }
+
+  async function acquireGameApiRequestSlot(path,method) {
+    let release;
+    const turn=new Promise(resolve=>{release=resolve;});
+    const previous=gameApiRateGateTail;
+    gameApiRateGateTail=turn;
+    await previous.catch(()=>{});
+    try {
+      const now=Date.now();
+      if (gameApiRateLimitUntil>now) {
+        const error=new Error(either(
+          'Game API на cooldown после 429. Подождите '+Math.ceil((gameApiRateLimitUntil-now)/1000)+' сек.',
+          'Game API is cooling down after 429. Wait '+Math.ceil((gameApiRateLimitUntil-now)/1000)+' sec.'
+        ));
+        error.name='HKRateLimitError';
+        error.httpStatus=429;
+        error.apiPath=path;
+        error.retryAfterMs=gameApiRateLimitUntil-now;
+        throw error;
+      }
+      const wait=Math.max(0,gameApiNextRequestAt-now);
+      if(wait>0)await gameRetryDelay(wait);
+      if(gameApiRateLimitUntil>Date.now()){
+        const error=new Error(either('Game API на cooldown после 429','Game API is cooling down after 429'));
+        error.name='HKRateLimitError'; error.httpStatus=429; error.apiPath=path;
+        error.retryAfterMs=Math.max(0,gameApiRateLimitUntil-Date.now());
+        throw error;
+      }
+      const normalizedPath=hkNormalizedApiPath(path);
+      const fastShopBuy=normalizedPath==='/shop/buy';
+      const gapMs=fastShopBuy?0:gameApiCurrentGapMs();
+      gameApiNextRequestAt=Date.now()+gapMs;
+      recordDiagnostic('game-rate-gate',{path,method,gapMs,fastShopBuy,slowUntil:gameApiSlowUntil});
+    } finally {
+      release();
+    }
+  }
+
+  async function apiJsonCore(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3, timeoutMs = 18000) {
+    const maxRetries = retryNetwork === true ? GAME_REQUEST_RETRY_DELAYS_MS.length : retryNetwork === false ? 0 : Math.max(0, Math.trunc(Number(retryNetwork) || 0));
+    let authRetryLeft = retryAuthorization ? 1 : 0;
+    let attempt = 0, lockAttempt = 0;
+    while (true) {
+      const authorized = await ensureGameAuthorization(false, `api:${path}`);
+      if (!apiBase || !authorized || !apiHeaders.Authorization) throw new Error('Нет подключения к игре. Обновите страницу.');
+      await acquireGameApiRequestSlot(path,method);
+      const request = nativeNetworkFetch || window.fetch.bind(window);
+      const started = performance.now();
+      let response,text;
+      try {
+        ({response,text}=await gameFetchText(request,`${apiBase}${path}`,{method,headers:{...apiHeaders},body:body == null ? undefined : JSON.stringify(body)},timeoutMs));
+      } catch (error) {
+        if(error?.name==='AbortError'||hkRunner.signal?.aborted)throw error;
+        recordDiagnostic('game-request-network-error',{path,method,attempt:attempt+1,error:error?.message || error});
+        if (attempt < maxRetries) {
+          const delay = GAME_REQUEST_RETRY_DELAYS_MS[Math.min(attempt, GAME_REQUEST_RETRY_DELAYS_MS.length - 1)] || 6000;
+          attempt += 1; await gameRetryDelay(delay); continue;
+        }
+        setHealth('game', false, error?.name==='HKNetworkTimeout'?'тайм-аут':'ошибка сети');
+        throw new Error(`${path}: ${error?.message || error}`);
+      }
+      let value; try { value = JSON.parse(text); } catch (_) { value = null; }
+      recordDiagnostic('game-request',{path,method,status:response.status,attempt:attempt+1,durationMs:Math.round(performance.now()-started)});
+      if (response.status === 429) throw gameApiRateLimitError(path,response);
+      if ((response.status === 401 || response.status === 403) && authRetryLeft > 0) {
+        authRetryLeft -= 1;
+        const refreshed = await ensureGameAuthorization(true, `http-${response.status}:${path}`);
+        if (refreshed) { attempt = 0; continue; }
+      }
+      const lockedText=String(value?.description||value?.message||text||'').toLowerCase();
+      const playerLocked=/player state is locked|state is locked by (?:other|another) request|player.*locked.*request/.test(lockedText);
+      if(playerLocked&&lockAttempt<3){
+        const delay=[650,1400,3000][lockAttempt++]||3000;
+        recordDiagnostic('game-request-player-locked',{path,method,status:response.status,lockAttempt,delay});
+        await gameRetryDelay(delay);continue;
+      }
+      const transient = response.status === 408 || response.status === 425 || response.status >= 500;
+      if (transient && attempt < maxRetries) {
+        const delay = GAME_REQUEST_RETRY_DELAYS_MS[Math.min(attempt, GAME_REQUEST_RETRY_DELAYS_MS.length - 1)] || 6000;
+        attempt += 1; await gameRetryDelay(delay); continue;
+      }
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) setHealth('auth', false, 'сессия истекла');
+        setHealth('game', false, `HTTP ${response.status}`);
+        const error=new Error(value?.description || value?.message || `HTTP ${response.status}: ${text.slice(0,160)}`);
+        error.name='HKGameApiError'; error.httpStatus=response.status; error.apiData=value; error.apiPath=path;
+        throw error;
+      }
+      if (!value || typeof value !== 'object') throw new Error('Сервер вернул некорректный ответ');
+      setHealth('game', true, 'игра отвечает');
+      setHealth('auth', true, 'авторизация активна');
+      if (path === '/player/me') {
+        const partial = !!(body && Array.isArray(body.arguments));
+        if (partial) hkStateStore.merge(value, 'api:player/me-partial'); else { hkStateStore.replace(value, 'api:player/me'); value = hkStateStore.snapshot || value; }
+        playerDocument = hkStateStore.snapshot || value || playerDocument;
+      } else if (hkIsMutationRequest(path, method)) {
+        hkStateStore.merge(value, `api:${path}`);
+        playerDocument = hkStateStore.snapshot || playerDocument;
+      }
+      hkGameBridge.noteMutation(path, method);
+      return value;
+    }
+  }
+
+  const HK_MUTATION_GATE_REV = 'stage1-20260919-r4';
+
+  const HK_READ_ONLY_POST_PATHS = new Set([
+    '/player/me',
+    '/player/hamster/lvlUp/view',
+    '/player/building',
+    '/player/building/fast_completion/cost',
+    '/player/building/fast_remort/cost',
+    '/shop/view',
+    '/business/values',
+    '/business_items',
+    '/cities',
+    '/client_config',
+    '/events',
+    '/items',
+    '/leaderboard',
+    '/premium',
+    '/bonuses/view',
+    '/alliance/list',
+    '/clan/skill_lines/stats',
+    '/regional_boss/battle_state',
+  ]);
+
+  function hkNormalizedApiPath(path) {
+    const value = String(path || '');
+    const q = value.indexOf('?');
+    return q >= 0 ? value.slice(0, q) : value;
+  }
+
+  function hkIsMutationRequest(path, method = 'GET') {
+    const verb = String(method || 'GET').toUpperCase();
+    if (verb === 'GET' || verb === 'HEAD' || verb === 'OPTIONS') return false;
+    return !HK_READ_ONLY_POST_PATHS.has(hkNormalizedApiPath(path));
+  }
+
+  const hkMutationGate = (() => {
+    let tail = Promise.resolve();
+    let sequence = 0;
+    let active = null;
+    const state = {
+      pending: 0,
+      completed: 0,
+      failed: 0,
+      lastPath: '',
+      activePath: ''
+    };
+
+    const safeDiagnostic = (kind, payload) => {
+      try { recordDiagnostic(kind, payload); } catch (_) {}
+    };
+
+    const run = async (path, task) => {
+      const id = ++sequence;
+      const normalizedPath = hkNormalizedApiPath(path);
+      state.pending += 1;
+
+      let release;
+      const turn = new Promise(resolve => { release = resolve; });
+      const previous = tail;
+      tail = turn;
+
+      await previous.catch(() => {});
+      state.pending = Math.max(0, state.pending - 1);
+      state.activePath = normalizedPath;
+      state.lastPath = normalizedPath;
+      active = { id, path: normalizedPath, startedAt: Date.now() };
+      safeDiagnostic('mutation-start', { id, path: normalizedPath, pending: state.pending });
+
+      try {
+        // Serialization is neutral: module-specific Pause/Stop stays in the
+        // calling runner. A paused Growth task must not freeze unrelated modules.
+        // Internal apiJsonCore retries remain inside this same queue turn.
+        const value = await task();
+        state.completed += 1;
+        safeDiagnostic('mutation-finish', {
+          id,
+          path: normalizedPath,
+          durationMs: Date.now() - active.startedAt
+        });
+        return value;
+      } catch (error) {
+        state.failed += 1;
+        safeDiagnostic('mutation-error', {
+          id,
+          path: normalizedPath,
+          error: error?.message || String(error)
+        });
+        throw error;
+      } finally {
+        active = null;
+        state.activePath = '';
+        release(
+
+===== function fairState #1 @ 408666 =====
+uantity);
+    }
+    return [...quantities].map(([businessId, quantity]) => ({businessId, quantity})).sort((a,b) => a.businessId.localeCompare(b.businessId));
+  }
+
+  function visibleBusinessTier(value) {
+    const technicalTier = Number(value);
+    // Business quality codes are sparse in the game data. In particular,
+    // yellow is t5/T5 and orange is t8/T6; simply adding one makes yellow
+    // businesses appear as T6 and orange businesses as T9.
+    return ({0:1, 1:2, 2:3, 3:4, 5:5, 8:6})[technicalTier] ?? null;
+  }
+
+  function tier(id) {
+    const match = String(id || '').match(/_r\d+t(\d+)(?:_|$)/);
+    return match ? visibleBusinessTier(match[1]) : null;
+  }
+
+  function iconUrls(id) {
+    const urls = [];
+    const match = String(id || '').match(/^item_bsn_r(\d+)t\d+_(.+)$/);
+    if (match) {
+      const [, rarity, rest] = match;
+      if (rest.startsWith('event_') || rest.startsWith('tier2_')) urls.push(`${ASSET_BASE}/item_bsn_r${rarity}_${rest}_icon.png`);
+      urls.push(`${ASSET_BASE}/item_bsn_${rest}_r${rarity}_icon.png`, `${ASSET_BASE}/item_bsn_r${rarity}_${rest}_icon.png`);
+    }
+    urls.push(`${ASSET_BASE}/${id}_icon.png`);
+    return [...new Set(urls)];
+  }
+
+  function iconHtml(id) {
+    const urls = iconUrls(id);
+    return `<img class="hk-icon" src="${escapeHtml(urls[0] || '')}" data-fallbacks="${escapeHtml(JSON.stringify(urls.slice(1)))}" alt="">`;
+  }
+
+  function installIconFallbacks(scope) {
+    scope.querySelectorAll('img[data-fallbacks]').forEach(img => img.addEventListener('error', () => {
+      let items = []; try { items = JSON.parse(img.dataset.fallbacks || '[]'); } catch (_) {}
+      const next = items.shift(); img.dataset.fallbacks = JSON.stringify(items);
+      if (next) img.src = next; else img.style.visibility = 'hidden';
+    }));
+  }
+
+  function fairStates(documentValue = fairDocument || playerDocument) {
+    const values = documentValue?.fair ?? documentValue?.player?.fair ?? [];
+    return values.filter(value => value && value.id);
+  }
+
+  function fairState(id, documentValue = fairDocument || playerDocument) {
+    return fairStates(documentValue).find(value => String(value.id) === String(id));
+  }
+
+  function isEventFairState(state) {
+    return !!state && String(state.id || '').toLowerCase() !== 'fair_default';
+  }
+
+  function costParts(cost) {
+    return ['items', 'currencies'].flatMap(kind => (cost?.[kind] || []).map(value => ({
+      kind, id: String(value?.id || ''), quantity: Math.trunc(Number(value?.quantity || 0))
+    })));
+  }
+
+  // A shop limit only says that a lot may be bought today. It does not mean
+  // that the account has its required clan currency. Check the live player
+  // inventory first so daily purchases do not stop on a server-side 409.
+  function walletAmount(id, documentValue = playerDocument) {
+    const wanted = String(id || '');
+    const lists = [documentValue?.items, documentValue?.player?.items, documentValue?.inventory?.items,
+      documentValue?.currencies, documentValue?.player?.currencies, documentValue?.inventory?.currencies];
+    for (const list of lists) {
+      if (!Array.isArray(list)) continue;
+      const matches = list.filter(item => String(item?.item_id || item?.currency_id || item?.id || '') === wanted);
+      if (matches.length) return matches.reduce((sum, item) => sum + Math.max(0, Number(item?.quantity ?? item?.value ?? 0)), 0);
+    }
+    const direct = [documentValue?.[wanted], documentValue?.player?.[wanted], documentValue?.currencies?.[wanted], documentValue?.player?.currencies?.[wanted], documentValue?.wallet?.[wanted]];
+    for (const value of direct) if (Number.isFinite(Number(value))) return Math.max(0, Number(value));
+    return null;
+  }
+
+  function debitWallet(cost, multiplier = 1, documentValue = playerDocument) {
+    if (!documentValue) return;
+    for (const part of costParts(cost)) {
+      const amount = Math.max(0, Number(part.quantity || 0) * Math.max(0, Number(multiplier || 0)));
+      if (!amount) continue;
+      const wanted = String(part.id || '');
+      const lists = [documentValue?.items, documentValue?.player?.items, documentValue?.inventory?.items,
+        documentValue?.currencies, documentValue?.player?.currencies, documentValue?.inventory?.currencies];
+      let debited = false;
+      for (const list of lists) {
+        if (!Array.isArray(list)) continue;
+        const item = list.find(value => String(value?.item_id || value?.currency_id || value?.id || '') === wanted);
+        if (!item) continue;
+        if (item.quantity !== undefined) item.quantity = Math.max(0, Number(item.quantity || 0) - amount);
+        else if (item.value !== undefined) item.value = Math.max(0, Number(item.value || 0) - amount);
+        debited = true;
+        break;
+      }
+      if (debited) continue;
+      const owners = [documentValue, documentValue?.player, documentValue?.currencies, documentValue?.player?.currencies, documentValue?.wallet];
+      for (const owner of owners) {
+        if (!owner || !Number.isFinite(Number(owner[wanted]))) continue;
+        owner[wanted] = Math.max(0, Number(owner[wanted]) - amount);
+        break;
+      }
+    }
+  }
+
+  function setWalletAmount(id, amount, documentValue = playerDocument) {
+    if (!documentValue || !Number.isFinite(Number(amount))) return false;
+    const wanted = String(id || '');
+    const lists = [documentValue?.items, documentValue?.player?.items, documentValue?.inventory?.items,
+      documentValue?.currencies, documentValue?.player?.currencies, documentValue?.inventory?.currencies];
+    for (const list of lists) {
+      if (!Array.isArray(list)) continue;
+      const matches = list.filter(item => String(item?.item_id || item?.currency_id || item?.id || '') === wanted);
+      if (!matches.length) continue;
+      matches.forEach((item,index) => {
+        const value = index ? 0 : Math.max(0, Number(amount));
+        if (item.quantity !== undefined) item.quantity = value;
+        else if (item.value !== undefined) item.value = value;
+      });
+      return true;
+    }
+    const owners = [documentValue, documentValue?.player, documentValue?.currencies, documentValue?.player?.currencies, documentValue?.wallet];
+    for (const owner of owners) {
+      if (!owner || !Object.prototype.hasOwnProperty.call(owner,wanted)) continue;
+      owner[wanted] = Math.max(0, Number(amount));
+      return true;
+    }
+    return false;
+  }
+
+  function updateWalletFromResponse(response, cost) {
+    // Fair endpoints often return only the currency changed by that action.
+    // Replacing /player/me with such a partial response drops every other
+    // balance and makes the next discovered lot fail as "balance unknown".
+    for (const part of costParts(cost)) {
+      const serverBalance = walletAmount(part.id, response);
+      if (serverBalance === null || !setWalletAmount(part.id,serverBalance,playerDocument)) {
+        debitWallet(costDocumentFromParts([part]),1,playerDocument);
+      }
+    }
+  }
+
+  function canAffordCost(cost, documentValue = playerDocument) {
+    return costParts(cost).every(part => {
+      const amount = walletAmount(part.id, documentValue);
+      return amount === null || amount >= part.quantity;
+    });
+  }
+
+  function safeFairPurchase(cost) {
+    const parts = costParts(cost);
+    return !!parts.length && parts.every(part => part.quantity > 0 &&
+      ((part.kind === 'items' && part.id.startsWith('item_')) ||
+       (part.kind === 'currencies' && ['cur_gold', 'cur_cap', 'cur_prem'].includes(part.id))));
+  }
+
+  function premiumPurchase(cost) {
+    return costParts(cost).some(part => part.kind === 'currencies' && part.id === 'cur_prem' && part.quantity > 0);
+  }
+
+  function premiumReroll(cost) {
+    const parts = costParts(cost);
+    return !!parts.length && parts.every(part => part.kind === 'currencies' && part.id === 'cur_prem' && part.quantity > 0);
+  }
+
+  function safeReroll(cost, allowPremium) {
+    const parts = costParts(cost);
+    return (!parts.length || parts.every(part => part.quantity >= 0 && part.kind === 'items' && part.id.startsWith('item_'))) ||
+      (allowPremium && premiumReroll(cost));
+  }
+
+  function itemFamily(id) {
+    let value = String(id || '');
+    while (/_(?:pb|bp|\d+)$/i.test(value)) value = value.replace(/_(?:pb|bp|\d+)$/i, '');
+    return value;
+  }
+
+  function fairRowsForState(state) {
+    if (!state) return [];
+    // The game returns the actual live slots for each fair. Always include
+    // those first: newly added events and slots unlocked by progress do not
+    // need a hard-coded currency or event identifier in the script.
+    const liveSlotLotIds = new Set((state.fair_slots || []).map(slot => String(slot?.shop_lot_id || '')).filter(Boolean));
+    if (state.id === 'fair_default') return fairCatalog.filter(row => {
+      const parts = costParts(row.cost)
+
+===== function fairRerollCapacity #1 @ 611251 =====
+s.some(state => state.id === selectedFairId)) selectedFairId = visibleFairs[0]?.id || '';
+      selectedFairLots.clear();
+      selectedFairSlotRules.clear();
+      renderFair();
+      log(`Ярмарка считана: ${visibleFairs.length} разделов, ${fairCatalog.length} лотов`, 'ok');
+    } catch (error) { log(`Ошибка ярмарки: ${error.message}`, 'bad'); }
+  }
+
+  function costVisual(cost, multiplier = 1) {
+    const parts = costParts(cost);
+    if (!parts.length) return '<span>0</span>';
+    return parts.map(part => `${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${(part.quantity * multiplier).toLocaleString(locale())}</b>`).join('');
+  }
+
+  function addProjectedCost(target, part, multiplier = 1) {
+    if (!part?.id) return;
+    const key = `${part.kind}|${part.id}`;
+    const current = target.get(key) || {...part, quantity:0};
+    current.quantity += Math.max(0, Number(part.quantity || 0)) * Math.max(0, Number(multiplier || 0));
+    target.set(key, current);
+  }
+
+  function walletForecastHtml(parts) {
+    const values = [...parts.values()].filter(part => part?.id).sort((a, b) => a.id.localeCompare(b.id));
+    if (!values.length) return '';
+    return `<div class="hk-wallet-forecast">${values.map(part => {
+      const balance = walletAmount(part.id);
+      const spend = Math.max(0, Number(part.quantity || 0));
+      const known = balance !== null;
+      return `<div class="hk-wallet-row">
+        <span class="hk-wallet-currency">${fairIconHtml(paymentIcon(part), 'hk-price-icon')}<b>${escapeHtml(paymentLabel(part.id))}</b></span>
+        <span>${tr('balance')}: <b>${known ? balance.toLocaleString(locale()) : '—'}</b> · ${either('Макс. возможный расход','Maximum possible spend')}: <b>${spend.toLocaleString(locale())}</b></span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function fairRerollCapacity(state = fairState(selectedFairId), allowPremium = Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked), documentValue = playerDocument) {
+    const cost = state?.fair_reroll_cost || {};
+    if (!safeReroll(cost, allowPremium)) {
+      return {count:0, free:false, problems:[either('цена прокрутки запрещена текущими настройками','reroll cost is blocked by current settings')]};
+    }
+    const parts = costParts(cost).filter(part => part.quantity > 0);
+    if (!parts.length) return {count:Number.MAX_SAFE_INTEGER, free:true, problems:[]};
+
+    let walletLimit = Number.MAX_SAFE_INTEGER;
+    const problems = [];
+    for (const part of parts) {
+      const balance = walletAmount(part.id, documentValue);
+      if (balance === null) {
+        problems.push(`${paymentLabel(part.id)}: ${either('баланс не определён','balance is unknown')}`);
+        walletLimit = 0;
+        continue;
+      }
+      walletLimit = Math.min(walletLimit, Math.floor(Math.max(0, balance) / part.quantity));
+    }
+    if (!walletLimit || walletLimit === Number.MAX_SAFE_INTEGER) {
+      return {count:Math.max(0, walletLimit === Number.MAX_SAFE_INTEGER ? 0 : walletLimit), free:false, problems};
+    }
+
+    let allowed = walletLimit;
+    if (!isEventFairState(state)) {
+      let low = 0, high = walletLimit;
+      while (low < high) {
+        const middle = Math.ceil((low + high + 1) / 2);
+        const decision = budgetDecision(cost, 'fair', middle, documentValue, {allowPremiumOverride:allowPremium});
+        if (decision.allowed) low = middle;
+        else high = middle - 1;
+      }
+      allowed = low;
+      if (!allowed) {
+        const decision = budgetDecision(cost, 'fair', 1, documentValue, {allowPremiumOverride:allowPremium});
+        problems.push(...decision.problems);
+      }
+    }
+    return {count:Math.max(0, Math.trunc(allowed)), free:false, problems:[...new Set(problems)]};
+  }
+
+  function fairRerollCapacityLabel(state = fairState(selectedFairId), allowPremium = Boolean(root?.querySelector('#hk-fair-premium-reroll')?.checked)) {
+    if (!state) return either('Прокрутки: ярмарка не выбрана','Rerolls: no fair selected');
+    const plan = fairRerollCapacity(state, allowPremium, playerDocument);
+    if (plan.free) return either('Прокрутки: без расхода валюты','Rerolls: no currency cost');
+    const parts = costParts(state?.fair_reroll_cost).filter(part => part.quantity > 0);
+    const currency = parts.map(part => `${paymentLabel(part.id)} ${part.quantity.toLocaleString(locale())}`).join(' + ');
+    if (plan.count > 0) return either(`Прокрутки: до ${plan.count.toLocaleString(locale())} по текущему балансу · ${currency}`, `Rerolls: up to ${plan.count.toLocaleString(locale())} by current balance · ${currency}`);
+    return either(`Прокрутки недоступны${plan.problems.length ? ': ' + plan.problems.join('; ') : ''}`, `Rerolls unavailable${plan.problems.length ? ': ' + plan.problems.join('; ') : ''}`);
+  }
+
+  function fairBuyTargetValue(rawValue = root?.querySelector('#hk-fair-buy-limit')?.value, exactLots = fairComboSettings().exactLots) {
+    const raw = Math.min(999, Math.max(1, Math.trunc(Number(rawValue || 1))));
+    if (!exactLots) return raw;
+    return Math.min(999, Math.max(3, Math.floor(raw / 3) * 3));
+  }
+
+  function syncFairBuyTarget(normalize = false) {
+    const input = root?.querySelector('#hk-fair-buy-limit');
+    const exactLots = fairComboSettings().exactLots;
+    const target = fairBuyTargetValue(input?.value, exactLots);
+    if (input) {
+      input.min = exactLots ? '3' : '1';
+      input.step = exactLots ? '3' : '1';
+      if (normalize) input.value = String(target);
+    }
+    const hint = root?.querySelector('#hk-fair-buy-limit-hint');
+    if (hint) hint.textContent = exactLots
+      ? either(`Основные покупки: ${target}. В режиме 3/6/9 цель идёт целыми тройками; бонусные нижние ячейки в это число не входят.`,
+          `Main purchases: ${target}. In 3/6/9 mode the target uses complete groups of three; lower bonus cells are counted separately.`)
+      : either(`Основные покупки: ${target}. Бонусные нижние ячейки считаются отдельно.`,
+          `Main purchases: ${target}. Lower bonus cells are counted separately.`);
+    return target;
+  }
+
+  function fairBonusThreshold(quantity) {
+    const value = Number(quantity || 0);
+    return value === 5 ? 3 : value === 10 ? 6 : value === 30 ? 9 : 0;
+  }
+
+  function fairBonusMaximumPurchases(quantity, buyLimit) {
+    const threshold = fairBonusThreshold(quantity);
+    const target = Math.max(0, Math.trunc(Number(buyLimit || 0)));
+    if (!threshold || target < threshold) return 0;
+    // A fair board opens one lower bonus at 3, 6 and 9 bought main cells.
+    // After nine main cells the next board can open the same thresholds again.
+    return 1 + Math.floor((target - threshold) / 9);
+  }
+
+  function fairBonusRowsForQuantity(state, quantity) {
+    const wanted = Number(quantity || 0);
+    const rows = fairRowsForState(state);
+    const currentBonusRows = fairSlotOptions(state)
+      .filter(({index}) => index >= 9 && index < 12)
+      .map(({slot}) => fairCatalog.find(row => row.lotId === String(slot?.shop_lot_id || '')))
+      .filter(row => row && Number(row.rewardQuantity || 0) === wanted);
+    const rewardIds = new Set(currentBonusRows.map(row => row.rewardId).filter(Boolean));
+    let candidates = rewardIds.size
+      ? rows.filter(row => Number(row.rewardQuantity || 0) === wanted && rewardIds.has(row.rewardId))
+      : currentBonusRows;
+    // Fallback is deliberately conservative: if the current encrypted slot
+    // does not expose its reward family yet, use every same-quantity row from
+    // this fair and take the highest cost per currency below.
+    if (!candidates.length) candidates = rows.filter(row => Number(row.rewardQuantity || 0) === wanted);
+    return candidates.filter(row => row?.safe);
+  }
+
+  function fairProjectedPurchaseCosts(state = fairState(selectedFairId), buyLimit = fairBuyTargetValue(root?.querySelector('#hk-fair-buy-limit')?.value), exactLots = fairComboSettings().exactLots) {
+    const totals = new Map();
+    const rows = fairRowsForState(state);
+    const selectedRows = rows.filter(row => selectedFairLots.has(row.lotId));
+    const maximumMainLots = new Map();
+    for (const row of selectedRows) for (const part of costParts(row.cost)) {
+      const key = `${part.kind}|${part.id}`;
+      const current = maximumMainLots.get(key);
+      if (!current || part.quantity > current.quantity) maximumMainLots.set(key, {...part});
+    }
+    for (const part of maximumMainLots.values()) addProjectedCost(totals, part, selectedRows.length ? buyLimit : 0);
+
+    if (exactLots) {
+      const availableBonus = new Set(availableFairBonusLots(exactLots));
+      for (const quantity of [5, 10, 30]) {
+        if (!availableBonus.has(quantity) || !selectedFairBonusLots.has(quantity)) continue;
+        const purchases = fairBonusMaximumPurchases(quantity, buyLimit);
+        if (!purchases) continue;
+   
+
+===== function safeReroll #1 @ 414715 =====
+tValue, documentValue?.player, documentValue?.currencies, documentValue?.player?.currencies, documentValue?.wallet];
+    for (const owner of owners) {
+      if (!owner || !Object.prototype.hasOwnProperty.call(owner,wanted)) continue;
+      owner[wanted] = Math.max(0, Number(amount));
+      return true;
+    }
+    return false;
+  }
+
+  function updateWalletFromResponse(response, cost) {
+    // Fair endpoints often return only the currency changed by that action.
+    // Replacing /player/me with such a partial response drops every other
+    // balance and makes the next discovered lot fail as "balance unknown".
+    for (const part of costParts(cost)) {
+      const serverBalance = walletAmount(part.id, response);
+      if (serverBalance === null || !setWalletAmount(part.id,serverBalance,playerDocument)) {
+        debitWallet(costDocumentFromParts([part]),1,playerDocument);
+      }
+    }
+  }
+
+  function canAffordCost(cost, documentValue = playerDocument) {
+    return costParts(cost).every(part => {
+      const amount = walletAmount(part.id, documentValue);
+      return amount === null || amount >= part.quantity;
+    });
+  }
+
+  function safeFairPurchase(cost) {
+    const parts = costParts(cost);
+    return !!parts.length && parts.every(part => part.quantity > 0 &&
+      ((part.kind === 'items' && part.id.startsWith('item_')) ||
+       (part.kind === 'currencies' && ['cur_gold', 'cur_cap', 'cur_prem'].includes(part.id))));
+  }
+
+  function premiumPurchase(cost) {
+    return costParts(cost).some(part => part.kind === 'currencies' && part.id === 'cur_prem' && part.quantity > 0);
+  }
+
+  function premiumReroll(cost) {
+    const parts = costParts(cost);
+    return !!parts.length && parts.every(part => part.kind === 'currencies' && part.id === 'cur_prem' && part.quantity > 0);
+  }
+
+  function safeReroll(cost, allowPremium) {
+    const parts = costParts(cost);
+    return (!parts.length || parts.every(part => part.quantity >= 0 && part.kind === 'items' && part.id.startsWith('item_'))) ||
+      (allowPremium && premiumReroll(cost));
+  }
+
+  function itemFamily(id) {
+    let value = String(id || '');
+    while (/_(?:pb|bp|\d+)$/i.test(value)) value = value.replace(/_(?:pb|bp|\d+)$/i, '');
+    return value;
+  }
+
+  function fairRowsForState(state) {
+    if (!state) return [];
+    // The game returns the actual live slots for each fair. Always include
+    // those first: newly added events and slots unlocked by progress do not
+    // need a hard-coded currency or event identifier in the script.
+    const liveSlotLotIds = new Set((state.fair_slots || []).map(slot => String(slot?.shop_lot_id || '')).filter(Boolean));
+    if (state.id === 'fair_default') return fairCatalog.filter(row => {
+      const parts = costParts(row.cost);
+      return liveSlotLotIds.has(row.lotId) || (row.lotId.startsWith('mf_fairlot_') && !row.lotId.includes('_event_') &&
+        (parts.some(part => part.kind === 'currencies') || parts.some(part => part.id === 'item_invest_cur')));
+    });
+    const families = new Set(costParts(state.fair_reroll_cost).filter(p => p.kind === 'items').map(p => itemFamily(p.id)));
+    const overrides = {fair_event_hw:['item_event_hw_cur'], fair_event_nyear:['item_event_nyear_cur']};
+    (overrides[state.id] || []).forEach(value => families.add(value));
+    return fairCatalog.filter(row => liveSlotLotIds.has(row.lotId) ||
+      costParts(row.cost).some(p => p.kind === 'items' && families.has(itemFamily(p.id))));
+  }
+
+  let fairViewMode = 'all';
+
+  function userVisibleFair(state) {
+    if (!state) return false;
+    const id = String(state.id || '').toLowerCase();
+    // fair_event_base is reused by the game for the currently running event.
+    // New clients may instead expose a named state (for example an autumn
+    // fair). Match that state through its live reroll currency/slots so future
+    // event names do not require another hard-coded fair id.
+    if (id === 'fair_default' || id === 'fair_event_base') return true;
+    const code = captureActiveEventCode();
+    if (!code) return false;
+    const markers = [id,
+      ...costParts(state.fair_reroll_cost).map(part => part.id),
+      ...(state.fair_slots || []).map(slot => String(slot?.shop_lot_id || ''))
+    ].map(value => String(value || '').toLowerCase());
+    return markers.some(value => value.includes(`event_${code}`) || value.includes(`_${code}_`) || value.endsWith(`_${code}`));
+  }
+
+  function visibleFairStates(documentValue = fairDocument || playerDocument) {
+    return fairStates(documentValue).filter(state => userVisibleFair(state) && fairRowsForState(state).length);
+  }
+
+  function fairStatesForView(documentValue = fairDocument || playerDocument) {
+    const states = visibleFairStates(documentValue);
+    if (fairViewMode === 'regular') return states.filter(state => String(state?.id || '') === 'fair_default');
+    return states;
+  }
+
+  function mediaUrl(value, itemId = '') {
+    const raw = String(value || '');
+    if (/^https?:\/\//.test(raw)) return raw;
+    if (raw) return `https://cdn-prod-art.hwgame.cloud/${raw.replace(/^\/+/, '')}`;
+    return itemId ? `${ASSET_BASE}/${itemId}_icon.png` : '';
+  }
+
+  function paymentIcon(part) {
+    if (!part?.id) return '';
+    const folder = part.kind === 'currencies' ? 'currencies' : 'items';
+    return `https://cdn-prod-art.hwgame.cloud/${folder}/${part.id}_icon.png`;
+  }
+
+  function paymentLabel(id) {
+    const known = language === 'en'
+      ? {cur_gold:'Gold', cur_cap:'Caps', cur_nut:'Nuts', cur_prem:'Diamonds', item_invest_cur:'Invest coins', item_event_hw_cur:'Halloween', item_event_nyear_cur:'New Year', item_event_autumn_cur:'Autumn Leaves', item_event_autumn_cur_pb:'Golden Leaves'}
+      : {cur_gold:'Золото', cur_cap:'Крышки', cur_nut:'Орехи', cur_prem:'Алмазы', item_invest_cur:'Инвест-монеты', item_event_hw_cur:'Хэллоуин', item_event_nyear_cur:'Новый год', item_event_autumn_cur:'Осенние листья', item_event_autumn_cur_pb:'Золотые листья'};
+    return known[id] || String(id || '').replace(/^item_/, '').replace(/^cur_/, '').replace(/_/g, ' ');
+  }
+
+  function fairIconHtml(url, className = 'hk-fair-icon') {
+    return `<img class="${className}" src="${escapeHtml(url)}" alt="" onerror="this.style.visibility='hidden'">`;
+  }
+
+  function shopLotIconHtml(row) {
+    if (!row) return '';
+    const urls = [...new Set([row.icon, ...iconUrls(row.rewardId)].filter(Boolean))];
+    const first = urls.shift() || '';
+    const quantity = Math.max(0, Number(row.rewardQuantity || 0));
+    return `<span class="hk-today-lot-visual"><img class="hk-today-lot-image" src="${escapeHtml(first)}" data-fallbacks="${escapeHtml(JSON.stringify(urls))}" alt=""><small>${quantity ? `×${quantity.toLocaleString(locale())}` : ''}</small></span>`;
+  }
+
+  function normalizeFairCatalog(documentValue) {
+    return (documentValue?.shop_lots || []).flatMap(lot => {
+      const view = lot?.lot_view || {};
+      const content = (view.content_view || [])[0];
+      const parts = costParts(lot?.cost);
+      if (String(view.type || '').toLowerCase() !== 'fair' || lot.external_cost || !content || !parts.length || parts.some(p => p.quantity <= 0)) return [];
+      const rewardId = String(content.id || '');
+      return [{lotId:String(lot.id || ''), name:String(view.name || rewardId || lot.id), rewardId,
+        rewardQuantity:Math.trunc(Number(content.quantity || 0)), cost:lot.cost || {}, safe:safeFairPurchase(lot.cost), premium:premiumPurchase(lot.cost),
+        icon:mediaUrl(view.icon_card || view.icon || content.icon_card || content.icon, rewardId)}];
+    });
+  }
+
+  async function gameRetryDelay(ms){
+    const delay=Math.max(0,Number(ms)||0), signal=hkRunner.running?hkRunner.signal:null;
+    if(!delay)return;
+    if(!signal){await sleep(delay);return;}
+    if(signal.aborted)throw new DOMException('Aborted','AbortError');
+    await new Promise((resolve,reject)=>{let timer=null;const abort=()=>{if(timer)clearTimeout(timer);signal.removeEventListener('abort',abort);reject(new DOMException('Aborted','AbortError'));};timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},delay);signal.addEventListener('abort',abort,{once:true});});
+  }
+
+  async function gameFetchText(request,url,init={},timeoutMs=18000){
+    const controller=new AbortController(), runnerSignal=hkRunner.running?hkRunner.signal:null;
+    let timedOut=false, timer=null, detach=null;
+    if(runnerSignal){
+      const abort=()=>controller.abort('runner');
+      if(runnerSignal.aborted)abort();else{runnerSignal.addEventListener('abort',abort,{once:true});detach=()=>runnerSignal.removeEventListener('abort',abort);}
+    }
+    timer=setTimeout(()=>{timedOut=true;controller.abort('timeout');},Math.max(1000,Number(timeoutMs)||18000));
+    try{
+      const response=await request(url,{...init,signal:controller.signal});
+
+
+===== async function runFair #1 @ 633570 =====
+  if (!name || !confirm(tr('deleteSetting', {name}))) return;
+    const all = fairPresets(); delete all[name]; save({fairPresets:all}); refreshFairPresets();
+  }
+
+  function costDocumentFromParts(parts) {
+    const result = {items:[], currencies:[]};
+    for (const part of parts || []) if (part?.id && part.quantity > 0) result[part.kind === 'currencies' ? 'currencies' : 'items'].push({id:part.id, quantity:part.quantity});
+    return result;
+  }
+
+  async function executeFairPurchase(row, slot, allowPremium = false) {
+    // Event fairs have their own currency/amount controls in this tab. Do not
+    // let the global daily budget reject the whole event run because one of
+    // the selected variants costs diamonds. The normal fair remains covered
+    // by the unified budget.
+    if (!isEventFairState(fairState(selectedFairId))) {
+      const decision = budgetDecision(row.cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+      if (!decision.allowed) throw new Error(decision.problems.join('; '));
+    }
+    const beforeDoc = playerDocument;
+    const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, beforeDoc)]));
+    fairDocument = await apiJson('/shop/buy', 'POST', {shop_lot_id:row.lotId, payment_type:'INTERNAL', fair_id:selectedFairId, slot_id:slot.id, lotName:row.name, lotDescription:''});
+    updateWalletFromResponse(fairDocument, row.cost);
+    for (const part of costParts(row.cost)) appendExpense({section:'fair', lotId:row.lotId, name:gameText(row.name) || row.name,
+      currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'purchased'});
+  }
+
+  function fairRunnerNote(message,type='') { hkRunner.note(message,type); }
+
+  async function runFair() {
+    if (!requireLicense() || fairRunning || !selectedFairLots.size) return;
+    if ([...selectedFairLots].some(lotId => {
+      const rule = selectedFairSlotRules.get(lotId); return !(rule?.regular || rule?.vip);
+    })) {
+      alert(tr('noCells')); return;
+    }
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      shopViewDocument = await apiJson('/shop/view', 'GET');
+      fairCatalog = normalizeFairCatalog(shopViewDocument);
+      const missingSelected = [...selectedFairLots].filter(lotId => !fairCatalog.some(row => row.lotId === lotId && row.safe));
+      if (missingSelected.length) {
+        renderFair();
+        alert(either('Каталог ярмарки изменился. Проверьте выбранные лоты ещё раз.','The fair catalog changed. Review the selected lots again.'));
+        return;
+      }
+    } catch (error) {
+      log(either('Не удалось обновить ярмарку перед запуском','Could not refresh the fair before starting') + ': ' + (error?.message || error),'bad');
+      return;
+    }
+    const buyLimit = syncFairBuyTarget(true);
+    const allowPremium = root.querySelector('#hk-fair-premium-reroll').checked;
+    const combo = fairComboSettings();
+    const allowedBonusLots = new Set(availableFairBonusLots(combo.exactLots));
+    let state = fairState(selectedFairId);
+    if (!safeReroll(state?.fair_reroll_cost, allowPremium)) { alert(either('Прокрутка заблокирована: цена небезопасна.', 'Reroll is blocked: unsafe cost.')); return; }
+    const initialRerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
+    const initialRerollText = initialRerollPlan.free
+      ? either('без расхода валюты','no currency cost')
+      : initialRerollPlan.count.toLocaleString(locale());
+    const projectedPurchaseCosts = fairProjectedPurchaseCosts(state, buyLimit, combo.exactLots);
+    const maximumCrystalLotCost = Math.max(0, Number(projectedPurchaseCosts.get('currencies|cur_prem')?.quantity || 0));
+    const crystalNotice = maximumCrystalLotCost
+      ? either(`\nМаксимум кристаллов на покупки: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`, `\nMaximum crystals for purchases: ${maximumCrystalLotCost.toLocaleString(locale())} 💎`)
+      : '';
+    if (!confirm(language === 'en'
+      ? `Start searching for selected lots?\n\nMain purchases: ${buyLimit}${combo.exactLots ? `\n3/6/9 groups: max ${combo.exactLots} main purchases per board; smaller complete groups are also allowed; bonuses are separate` : ''}\nRerolls: by available currency (now: ${initialRerollText})${crystalNotice}`
+      : `Запустить поиск выбранных лотов?\n\nОсновных покупок: ${buyLimit}${combo.exactLots ? `\nГруппы 3/6/9: максимум ${combo.exactLots} основных покупок за поле; меньшие полные группы тоже разрешены; бонусы отдельно` : ''}\nПрокрутки: по доступной валюте (сейчас: ${initialRerollText})${crystalNotice}`)) return;
+    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+    hkRunner.start({title:either('Ярмарка','Fair'),total:buyLimit,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    fairRunning = true; fairStop = false; updateFairControls();
+    let bought = 0, bonusBought = 0, rerolls = 0, authRetries = 0, stopReason = '';
+    try {
+      playerDocument = await apiJson('/player/me', 'POST');
+      fairDocument = playerDocument;
+      while (!fairStop && bought < buyLimit) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep(either('Поиск и покупка лотов','Searching and buying lots'), bought, buyLimit);
+        if (combo.exactLots && buyLimit - bought < 3) {
+          stopReason = either(`Остановка: осталось ${buyLimit - bought} основных покупок, а для режима 3/6/9 нужна полная группа из трёх.`,
+            `Stopped: ${buyLimit - bought} main purchases remain, but 3/6/9 mode requires a complete group of three.`);
+          fairRunnerNote(stopReason, 'warn');
+          break;
+        }
+        state = fairState(selectedFairId);
+        if (!state) throw new Error('Выбранная ярмарка больше недоступна');
+        let purchased = false;
+        const options = fairSlotOptions(state);
+        const targets = options.filter(({slot, vip, index}) => {
+          // A combination spans all nine main cells: six regular and three
+          // VIP. Encrypted bonus cells start after them and never count toward
+          // the 3/6/9 group itself.
+          if (index >= 9 || slot.is_bought || !selectedFairLots.has(String(slot.shop_lot_id))) return false;
+          const groups = selectedFairSlotRules.get(String(slot.shop_lot_id));
+          return !groups || (vip ? groups.vip : groups.regular);
+        });
+        const maximumGroup = combo.exactLots
+          ? Math.floor(Math.min(combo.exactLots, buyLimit - bought) / 3) * 3
+          : 0;
+        const matchedTargets = maximumGroup ? targets.slice(0, maximumGroup) : [];
+        const groupSize = Math.floor(matchedTargets.length / 3) * 3;
+        const purchaseTargets = matchedTargets.slice(0, groupSize);
+        if (combo.exactLots && groupSize >= 3) {
+          const totalCosts = new Map();
+          for (const {slot} of purchaseTargets) {
+            const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+            for (const part of costParts(row?.cost)) totalCosts.set(part.id, (totalCosts.get(part.id) || 0) + part.quantity);
+          }
+          const insufficient = [...totalCosts].filter(([id, amount]) => {
+            const balance = walletAmount(id, playerDocument);
+            return balance === null || balance < amount;
+          }).map(([id, amount]) => {
+            const balance = walletAmount(id, playerDocument);
+            return `${paymentLabel(id)}: ${balance === null ? either('остаток не определён','balance is unknown') : `${balance.toLocaleString(locale())} / ${amount.toLocaleString(locale())}`}`;
+          });
+          if (insufficient.length) {
+            fairRunnerNote(either(`Комбинация ${purchaseTargets.length} не выкуплена — не хватает средств: ${insufficient.join('; ')}`,
+              `Combination ${purchaseTargets.length} was not purchased — insufficient funds: ${insufficient.join('; ')}`), 'warn');
+          } else {
+            for (const {slot} of purchaseTargets) {
+              const row = fairCatalog.find(value => value.lotId === String(slot.shop_lot_id));
+              if (!row?.safe) continue;
+              fairRunnerNote(`Лоты ${purchaseTargets.length}: покупка…`);
+              await executeFairPurchase(row, slot, allowPremium);
+              bought++; purchased = true; authRetries = 0;
+            }
+            // The last /shop/buy response may still contain the previous set
+            // of encrypted cells. Refresh once after the completed group so
+            // newly opened bonus slots are visible before we try to buy them.
+         
+
+===== /fair/reroll #1 @ 644414 =====
+tch (error) {
+            if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+            throw error;
+          }
+        }
+        if (purchased) continue;
+        if (!safeReroll(state.fair_reroll_cost, allowPremium)) throw new Error('Цена прокрутки изменилась и стала небезопасной');
+        const rerollPlan = fairRerollCapacity(state, allowPremium, playerDocument);
+        if (!rerollPlan.free && rerollPlan.count <= 0) {
+          stopReason = either(`Остановка: валюта прокрутки закончилась или достигнут резерв${rerollPlan.problems.length ? ' · ' + rerollPlan.problems.join('; ') : ''}`,
+            `Stopped: reroll currency is exhausted or reserve reached${rerollPlan.problems.length ? ' · ' + rerollPlan.problems.join('; ') : ''}`);
+          fairRunnerNote(stopReason, 'warn');
+          break;
+        }
+        fairRunnerNote(rerollPlan.free
+          ? either(`Лота нет. Бесплатная прокрутка ${rerolls + 1}…`, `No matching lot. Free reroll ${rerolls + 1}…`)
+          : either(`Лота нет. Прокрутка ${rerolls + 1} · доступно по балансу: ${rerollPlan.count}`, `No matching lot. Reroll ${rerolls + 1} · affordable now: ${rerollPlan.count}`));
+        try {
+          if (!isEventFairState(state)) {
+            const rerollDecision = budgetDecision(state.fair_reroll_cost, 'fair', 1, playerDocument, {allowPremiumOverride:allowPremium});
+            if (!rerollDecision.allowed) throw new Error(rerollDecision.problems.join('; '));
+          }
+          const before = new Map(costParts(state.fair_reroll_cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+          const rerollCost = state.fair_reroll_cost;
+          fairDocument = await apiJson('/fair/reroll', 'POST', {fair_id:selectedFairId});
+          updateWalletFromResponse(fairDocument, rerollCost);
+          for (const part of costParts(state.fair_reroll_cost)) appendExpense({section:'fair', lotId:`reroll:${selectedFairId}`, name:either('Прокрутка ярмарки','Fair reroll'),
+            currencyId:part.id, amount:part.quantity, balanceBefore:before.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'rerolled'});
+          rerolls++; authRetries = 0;
+        }
+        catch (error) {
+          if (/HTTP 401|unauthorized/i.test(error.message) && authRetries++ < 2) { playerDocument = await apiJson('/player/me', 'POST'); fairDocument = playerDocument; continue; }
+          throw error;
+        }
+        await gameRetryDelay(550);
+      }
+      if (fairStop || hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+      playerDocument = await hkAuthoritativePlayerRead('fair-complete');
+      fairDocument = playerDocument;
+      if (bought >= buyLimit) {
+        hkRunner.finish(either('Цель Ярмарки достигнута','Fair target reached'));
+        log(either(
+          `Цель Ярмарки достигнута: основных покупок ${bought}/${buyLimit}, бонусных ${bonusBought}, прокруток ${rerolls}`,
+          `Fair target reached: main purchases ${bought}/${buyLimit}, bonus purchases ${bonusBought}, rerolls ${rerolls}`
+        ), 'ok');
+      } else {
+        const reason = stopReason || either('Ярмарка остановлена до достижения цели','Fair stopped before reaching the target');
+        hkRunner.finish(reason);
+        log(either(
+          `${reason} Итог: основных покупок ${bought}/${buyLimit}, бонусных ${bonusBought}, прокруток ${rerolls}`,
+          `${reason} Result: main purchases ${bought}/${buyLimit}, bonus purchases ${bonusBought}, rerolls ${rerolls}`
+        ), 'warn');
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        hkRunner.reset();
+        log(either(
+          `Ярмарка остановлена. Итог: основных покупок ${bought}/${buyLimit}, бонусных ${bonusBought}, прокруток ${rerolls}`,
+          `Fair stopped. Result: main purchases ${bought}/${buyLimit}, bonus purchases ${bonusBought}, rerolls ${rerolls}`
+        ),'warn');
+      } else {
+        hkRunner.fail(error);
+        log(either(
+          `Аварийная остановка Ярмарки: ${error?.message || error}. Итог: основных покупок ${bought}/${buyLimit}, бонусных ${bonusBought}, прокруток ${rerolls}`,
+          `Fair failed: ${error?.message || error}. Result: main purchases ${bought}/${buyLimit}, bonus purchases ${bonusBought}, rerolls ${rerolls}`
+        ),'bad');
+      }
+    } finally { fairRunning = false; fairStop = false; renderFair(); }
+  }
+
+  function ordinaryShopGroup(lot) {
+    const lotId = String(lot?.id || '').toLowerCase();
+    // Each Resources card has one visible base lot plus three real hidden
+    // package commands (_10, _50 and _100). They are separate shop_lot_id
+    // values, not a quantity parameter on the base purchase.
+    if (/^mf_shoplot_itempack_[1-5](?:_(?:10|50|100))?$/.test(lotId)) return 'resources';
+    // Renovation contains the ten individual materials (two materials per tier).
+    // The combined mf_shoplot_pit_remort_all pack is intentionally excluded.
+    if (/^mf_shoplot_pit_remort_(?:beams|nails)_[1-5]$/.test(lotId)) return 'renovation';
+    // Invest Deals contains the two daily building-helper offers only.
+    if (/^mf_shoplot_building_helpers_offer_0[12]$/.test(lotId)) return 'invest';
+    return '';
+  }
+
+  function quantitySelectOptions(maximum, selected) {
+    const max = Math.max(0, Math.trunc(Number(maximum || 0)));
+    const current = Math.min(max, Math.max(0, Math.trunc(Number(selected || 0))));
+    const values = new Set([0, current, max]);
+    for (let value = 1; value <= Math.min(max, 20); value++) values.add(value);
+    for (const value of [25, 50, 100, 250, 500]) if (value <= max) values.add(value);
+    return [...values].sort((a, b) => a - b).map(value => `<option value="${value}" ${value === current ? 'selected' : ''}>${value}</option>`).join('');
+  }
+
+  function captureActiveEventCode() {
+    let code = '';
+    const activeIcon = document.querySelector('.picture-counter.special-counter img[src*="/special_events/icons/timer_event_"]');
+    const iconMatch = String(activeIcon?.getAttribute('src') || '').match(/timer_event_([^/?]+?)_icon(?:\.|\?)/i);
+    if (iconMatch?.[1]) code = iconMatch[1].toLowerCase();
+    // On a first installation the player may already be inside the current
+    // event page. Use its visible cards only until the map icon has supplied
+    // and persisted the authoritative current event code.
+    if (!code && !activeEventCode) {
+      const visibleCard = [...document.querySelectorAll('[data-lot-id^="mf_shoplot_"]')].find(element =>
+        visible(element) && /^mf_shoplot_(?:daily_|finite_|infinite_)?event_[^_]+_/i.test(String(element.getAttribute('data-lot-id') || '')));
+      const cardMatch = String(visibleCard?.getAttribute('data-lot-id') || '').match(/^mf_shoplot_(?:daily_|finite_|infinite_)?event_([^_]+)_/i);
+      if (cardMatch?.[1]) code = cardMatch[1].toLowerCase();
+    }
+    if (code && code !== activeEventCode) {
+      activeEventCode = code;
+      save({activeEventCode:code});
+      if (shopViewDocument) {
+        shopRows = normalizeRegularShop();
+        if (root && selectedShopSection === 'regular') renderShop();
+      }
+    }
+    return activeEventCode;
+  }
+
+  function normalizeRegularShop(shopDocument = shopViewDocument, playerDoc = playerDocument) {
+    const currentEventCode = captureActiveEventCode();
+    const limits = new Map();
+    const playerLimits = playerDoc?.shop_lot_limits || playerDoc?.player?.shop_lot_limits || [];
+    for (const item of playerLimits) limits.set(String(item?.shop_lot_id || ''), Math.max(0, Number(item?.number_of_purchase || 0)));
+    const shopLots = shopDocument?.shop_lots || [];
+    const lotsById = new Map(shopLots.map(lot => [String(lot?.id || ''), lot]));
+    return shopLots.flatMap(lot => {
+      const rawView = lot?.lot_view || {};
+      const lotId = String(lot.id || '');
+      const currentEventLot = Boolean(currentEventCode) &&
+        lotId.toLowerCase().includes(`_event_${currentEventCode}_`);
+      const resourceMatch = lotId.match(/^(mf_shoplot_itempack_[1-5])(?:_(10|50|100))?$/i);
+      const resourceBaseLot = resourceMatch ? lotsById.get(resourceMatch[1]) : null;
+      const resourceBaseView = resourceBaseLot?.lot_view || {};
+      const declaredMultiplier = Boolean(resourceMatch?.[2]) &&
+        (resourceBaseView.multiplier_lots || []).map(String).includes(lotId);
+      // Hidden multiplier lots contain only their resulting package quantity.
+      // Reuse the visible parent card for its name/icon/content, while keeping
+      // the child's own lot ID, cost and package quantity for the purchase.
+      if (resourceMatch?.[2] && !declaredMultiplier) return [];
+      const view = declaredMultiplier ? resourceBase
+
+===== /fair/reroll #2 @ 813440 =====
+hk-recipe-summary').textContent)}`,
+      `Reroll the business-plan catalog ${attempts} times?\n\n${tr('maxCost')}: ${clean(root.querySelector('#hk-recipe-summary').textContent)}`))) return;
+    if (hkRunner.running) { alert(either('Сначала завершите текущую задачу','Finish the current task first')); return; }
+    hkRunner.start({title:either('Рецепты','Recipes'),total:attempts,step:either('Подготовка','Preparing'),pausable:true,stoppable:true});
+    recipeRunning = true; recipeStop = false; renderRecipes();
+    let completed = 0;
+    try {
+      try { await submitRecipePlans(plansFromRecipeState(state)); } catch (_) {}
+      for (let index = 0; index < attempts && !recipeStop; index++) {
+        if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
+        await hkRunner.waitIfPaused();
+        hkRunner.setStep(either('Прокрутка каталога','Catalog reroll'), completed, attempts);
+        log(either(`Прокрутка каталога ${index + 1}/${attempts}…`, `Catalog reroll ${index + 1}/${attempts}…`));
+        state = recipeState(fairDocument || playerDocument);
+        if (!state) throw new Error(either('Каталог бизнес-планов больше недоступен','Business-plan catalog is no longer available'));
+        if (!safeReroll(state.fair_reroll_cost, false)) throw new Error(either('Цена прокрутки изменилась и стала небезопасной','Reroll cost changed and became unsafe'));
+        const recipeDecision = budgetDecision(state.fair_reroll_cost, 'recipes', 1, playerDocument);
+        if (!recipeDecision.allowed) throw new Error(recipeDecision.problems.join('; '));
+        const recipeCost = state.fair_reroll_cost;
+        const recipeBefore = new Map(costParts(recipeCost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
+        fairDocument = await apiJson('/fair/reroll', 'POST', {fair_id:recipeFairId});
+        updateWalletFromResponse(fairDocument, recipeCost);
+        for (const part of costParts(recipeCost)) appendExpense({section:'recipes', lotId:`recipe-reroll:${recipeFairId}`, name:either('Прокрутка каталога рецептов','Recipe catalog reroll'), currencyId:part.id, amount:part.quantity, balanceBefore:recipeBefore.get(part.id), balanceAfter:walletAmount(part.id, playerDocument), status:'ok', result:'rerolled'});
+        state = recipeState(fairDocument);
+        if (!state) throw new Error(either('Сервер не вернул каталог бизнес-планов', 'The server did not return the business-plan catalog'));
+        currentRecipePlans = plansFromRecipeState(state);
+        completed++;
+        try { await submitRecipePlans(currentRecipePlans); }
+        catch (error) { log(`${either('Общая база недоступна', 'Shared database unavailable')}: ${error.message}`, 'warn'); }
+        renderRecipes();
+        await gameRetryDelay(550);
+      }
+      log(either(`Прокрутка завершена: ${completed}`, `Rerolls completed: ${completed}`), 'ok');
+      await hkAuthoritativePlayerRead('recipes-complete');
+      hkRunner.finish(either('Прокрутка завершена','Rerolls completed'));
+    } catch (error) {
+      if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Прокрутка остановлена','Reroll stopped'),'warn'); }
+      else { hkRunner.fail(error); log(either('Прокрутка остановлена','Reroll stopped') + ': ' + (error?.message || error), 'bad'); }
+    }
+    finally { recipeRunning = false; recipeStop = false; renderRecipes(); }
+  }
+
+  async function loadCommunityRecipes() {
+    if (!requireLicense()) return;
+    try {
+      await ensureRecipeMetadata();
+      const result = await recipeServerJson('/list');
+      communityRecipes = Array.isArray(result.recipes) ? result.recipes : [];
+      renderCommunityRecipes();
+      log(tr('uniqueRecipes',{n:communityRecipes.length}), 'ok');
+    } catch (error) { log(`${either('Ошибка общей базы', 'Shared database error')}: ${error.message}`, 'bad'); }
+  }
+
+  function renderCommunityRecipes() {
+    if (!recipeDatabaseBox) return;
+    const groups = groupCommunityRecipes(communityRecipes);
+    const counter = root?.querySelector('#hk-recipe-db-count'); if (counter) counter.textContent = tr('uniqueRecipeResults',{results:groups.length,plans:communityRecipes.length});
+    recipeDatabaseBox.innerHTML = groups.length ? groups.map(communityRecipeGroupHtml).join('') : `<p class="hk-muted">${tr('recipeDatabaseEmpty')}</p>`;
+    installIconFallbacks(recipeDatabaseBox);
+    bindRecipeDetails(recipeDatabaseBox, communityRecipes);
+  }
+
+  function groupCommunityRecipes(rows) {
+    const groups = new Map();
+    for (const row of rows) {
+      const key=String(row?.item_id || ''); if (!key) continue;
+      if (!groups.has(key)) groups.set(key,{result:row,recipes:[]});
+      const group=groups.get(key);
+      if (!group.recipes.some(value=>String(value.plan_id)===String(row.plan_id))) group.recipes.push(row);
+      if ((!group.result?.bonuses?.length && row?.bonuses?.length) || (!group.result?.icon && row?.icon)) group.result=row;
+    }
+    return [...groups.values()];
+  }
+
+  function recipeComponentStepHtml(item, index) {
+    item = currentRecipeDisplay(item);
+    const itemImage=item.icon ? `<img class="hk-icon" src="${escapeHtml(item.icon)}" alt="">` : iconHtml(item.item_id);
+    return `<button type="button" class="hk-recipe-step" data-recipe-item="${escapeHtml(item.item_id)}" style="--rank:${escapeHtml(item.color || recipeQuality(item.quality).color)}">
+      <b class="hk-component-order">${index + 1}</b><span class="hk-recipe-result">${itemImage}<b class="hk-rank-badge">${escapeHtml(recipeRank(item.rarity))}</b><small>T${escapeHtml(item.tier || '?')}</small></span></button>`;
+  }
+
+  function communityRecipeGroupHtml(group) {
+    const row=currentRecipeDisplay(group.result); const bonuses=Array.isArray(row.bonuses) ? row.bonuses : [];
+    const image=row.icon ? `<img class="hk-icon" src="${escapeHtml(row.icon)}" alt="">` : iconHtml(row.item_id);
+    const bonusHtml=bonuses.length ? bonuses.map(value=>`<span>${value.icon ? fairIconHtml(value.icon,'hk-bonus-icon') : ''}<b>${escapeHtml(value.value)}</b> ${escapeHtml(value.caption)}</span>`).join('') : '—';
+    const ways=group.recipes.map((recipe,wayIndex)=>{
+      const components=Array.isArray(recipe.components) ? recipe.components : [];
+      const flow=components.length ? components.map((item,index)=>recipeComponentStepHtml(item,index)).join('<b class="hk-recipe-plus">+</b>') : `<span class="hk-muted">${either('Компоненты ещё не определены','Components have not been identified yet')}</span>`;
+      return `<div class="hk-recipe-way"><b class="hk-recipe-way-number">${wayIndex + 1}</b><div class="hk-recipe-way-flow">${flow}</div></div>`;
+    }).join('');
+    return `<details class="hk-recipe-group hk-recipe-result-group" style="--recipe-rank:${escapeHtml(row.color || recipeQuality(row.quality).color)}"><summary class="hk-recipe-row">
+      <span class="hk-recipe-result" data-recipe-item="${escapeHtml(row.item_id)}">${image}<b class="hk-rank-badge">${escapeHtml(recipeRank(row.rarity))}</b><small>T${escapeHtml(row.tier || '?')}</small></span>
+      <span class="hk-recipe-bonuses">${bonusHtml}</span><span class="hk-recipe-toggle"><b>${tr('recipeWays',{n:group.recipes.length})}</b><small>${either('Нажмите, чтобы раскрыть','Tap to expand')}</small></span></summary>
+      <div class="hk-recipe-ways">${ways}</div></details>`;
+  }
+
+  function recipePlanHtml(row) {
+    row = currentRecipeDisplay(row);
+    const bonuses = Array.isArray(row.bonuses) ? row.bonuses : [];
+    const components = Array.isArray(row.components) ? row.components.map(currentRecipeDisplay) : [];
+    const image = row.icon ? `<img class="hk-icon" src="${escapeHtml(row.icon)}" alt="">` : iconHtml(row.item_id);
+    const bonusHtml = bonuses.length ? bonuses.map(value => `<span>${value.icon ? fairIconHtml(value.icon,'hk-bonus-icon') : ''}<b>${escapeHtml(value.value)}</b> ${escapeHtml(value.caption)}</span>`).join('') : `<small>${either('Свойства будут считаны при следующем обновлении игры', 'Properties will be read after the next game refresh')}</small>`;
+    const componentHtml = components.length ? components.map((item, index) => {
+      const itemBonuses = Array.isArray(item.bonuses) ? item.bonuses : [];
+      const itemImage = item.icon ? `<img class="hk-icon" src="${escapeHtml(item.icon)}" alt="">` : iconHtml(item.item_id);
+      return `<button type="button" class="hk-recipe-component" data-recipe-item="${escapeHtml(item.item_id)}" style="--recipe-rank:${escapeHtml(item.color || recipeQuality(item.quality).color)}"><b class="hk-component-order">${index + 1}</b>
+        <span class="hk-recipe-result">${itemImage}<b class="hk-rank-badge">${escapeHtml(recipeRank(item.rarity))}</b><small>T${escapeHtml(item.tier || '?')}</small></span>
+        <span class="hk-recipe-bonuses">${itemBonuses.map(value => `<span
