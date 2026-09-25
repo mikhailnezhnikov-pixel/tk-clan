@@ -63,6 +63,20 @@ if guard_count != 1:
         print("PITS_BATTLE_LIMIT_CONTEXT_END")
     raise SystemExit(f"Pits artificial battle limit: expected 1 replacement, got {guard_count}")
 
+# A second legacy helper, finishDailyPitRace(), had its own independent
+# hard cap of 1000 battles. It is artificial too and must not terminate a Pit.
+legacy_guard = re.compile(
+    r"if\s*\(\s*\+\+battles\s*>\s*1000\s*\)\s*throw\s+new\s+Error\s*\(\s*either\('превышен безопасный предел боёв Ямы','Pit battle safety limit exceeded'\)\s*\)\s*;"
+)
+s, legacy_count = legacy_guard.subn("", s, count=1)
+if legacy_count != 1:
+    pos = s.find("Pit battle safety limit exceeded")
+    if pos >= 0:
+        print("PITS_LEGACY_BATTLE_LIMIT_CONTEXT_BEGIN")
+        print(s[max(0,pos-900):pos+1400])
+        print("PITS_LEGACY_BATTLE_LIMIT_CONTEXT_END")
+    raise SystemExit(f"legacy Pits artificial battle limit: expected 1 replacement, got {legacy_count}")
+
 # Remove the now-unused local counter if present, without depending on its exact formatting.
 s = re.sub(r"let\s+restorationSpent\s*=\s*0\s*,\s*battles\s*=\s*0\s*;", "let restorationSpent=0;", s, count=1)
 s = re.sub(r"\s*let\s+battles\s*=\s*0\s*;", "", s, count=1)
