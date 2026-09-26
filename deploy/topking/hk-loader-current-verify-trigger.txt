@@ -1,1 +1,1 @@
-2026-09-26 verify loader r25 fallback after primary 502
+2026-09-26 verify loader r25 fallback after pages deploy r2
