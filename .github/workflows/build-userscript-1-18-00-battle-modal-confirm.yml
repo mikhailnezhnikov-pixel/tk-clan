@@ -1,0 +1,117 @@
+name: Build Userscript 1.18.00 Battle Modal Confirm
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_battle_modal_confirm_1_18_00.py'
+      - '.github/workflows/build-userscript-1-18-00-battle-modal-confirm.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-18-00-battle-modal-confirm
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate from exact live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.17.99" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.99';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-auto-click-toggle-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-enemy-type04-20260926-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_battle_modal_confirm_1_18_00.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.00" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.00';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-modal-confirm-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-auto-open-card" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-auto-confirm-attack" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const position=solution.order[0];" /tmp/HamsterKingMobile.user.js
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.00.battle-modal-confirm.candidate.user.js
+          audit=audit/hk-userscript-1-18-00-battle-modal-confirm-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.17.99':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.17.99',
+              'target_version':'1.18.00',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.00.battle-modal-confirm.candidate.user.js',
+              'primary_marker':'battle-modal-confirm-20260926-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-00-battle-modal-confirm-live-status.txt',
+              'commit_message':'fix: deploy two-stage mobile battle auto-click in userscript 1.18.00',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_18_00_BATTLE_MODAL_CONFIRM_PREDEPLOY=PASS"
+              echo "source_version=1.17.99"
+              echo "target_version=1.18.00"
+              echo "scope=COMMON_HK_USERSCRIPT_ONLY"
+              echo "public_treasure_script=UNCHANGED"
+              echo "enemy_card_click=STEP_1"
+              echo "modal_attack_confirm=STEP_2"
+              echo "recalculate_after_each_real_hit=YES"
+              echo "type04=PRESERVED"
+              echo "syntax=PASS"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.18.00 battle modal confirm"
+
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
