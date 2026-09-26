@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.21
+target_version=1.18.22
+marker=treasure-auto-map-foreground-truth-20260926-r7
+source_sha256=73ebc6b58296cfbcccd4003c6cade84ee2a1a1ad35e88899a3974f305c165345
+candidate_sha256=4d3ed0ddae93ec6151909b58be77e360f209e370a4898e92b7ff68c8dd36ca57
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
