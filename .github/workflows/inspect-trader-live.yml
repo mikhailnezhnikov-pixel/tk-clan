@@ -1,0 +1,62 @@
+name: Inspect Secret Trader Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/inspect_trader_live_server.py'
+      - '.github/workflows/inspect-trader-live.yml'
+      - 'deploy/topking/trader-live-inspect-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inspect-secret-trader-live
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inspect
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            deploy/topking/inspect_trader_live_server.py \
+            root@89.125.1.71:/tmp/inspect_trader_live_server.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "python3 /tmp/inspect_trader_live_server.py" \
+            > /tmp/trader-live.json
+          python3 -m json.tool /tmp/trader-live.json >/dev/null
+
+      - name: Persist
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/trader-live.json audit/trader-live.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/trader-live.json
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist secret trader live snapshot"
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/trader-live.json
