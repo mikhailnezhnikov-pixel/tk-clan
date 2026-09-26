@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.10",
-  "target_version": "1.18.11",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.11.minigame-entry-gate.candidate.user.js",
-  "primary_marker": "minigame-entry-only-auto-20260926-r1",
+  "source_version": "1.18.11",
+  "target_version": "1.18.12",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.12.battle-visible-board.candidate.user.js",
+  "primary_marker": "battle-visible-board-active-20260926-r1",
   "preserve_markers": [
+    "minigame-entry-only-auto-20260926-r1",
     "trader-fishing-stability-20260926-r1",
     "rumors-shared-results-20260926-r2",
     "fishing-canon-priority-20260926-r2",
@@ -74,7 +75,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-11-minigame-entry-gate-live-status.txt",
-  "commit_message": "fix: deploy entry-only minigame automation in userscript 1.18.11",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-12-battle-visible-board-live-status.txt",
+  "commit_message": "fix: deploy immediate visible battle detection in userscript 1.18.12"
 }
