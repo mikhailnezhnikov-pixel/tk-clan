@@ -79,6 +79,7 @@ jobs:
           print("kokkaras_cities=17")
           print("kokkaras_points=51")
           PY
+          REMOTE
 
       - name: Persist live audit
         run: |
