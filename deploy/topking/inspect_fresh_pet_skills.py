@@ -126,3 +126,4 @@ result={
     "text_snippets":texts[:180]
 }
 print(json.dumps(result,ensure_ascii=False,indent=2))
+# trigger: 2026-09-26T12:21+09:00\n
