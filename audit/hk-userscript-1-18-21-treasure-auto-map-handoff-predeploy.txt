@@ -1,0 +1,13 @@
+USERSCRIPT_1_18_21_TREASURE_AUTOMAP_HANDOFF_PREDEPLOY=PASS
+source_version=1.18.20
+target_version=1.18.21
+battle_exit_while_active=FORBIDDEN
+map_click_under_minigame=FORBIDDEN
+return_settle_ms=1600
+stale_map_modal=AUTO_CLOSE
+chest_clicks=SINGLE
+fishing_clicks=SINGLE
+trader_clicks=SINGLE
+syntax=PASS
+base_sha256=65ebcb0701dd4342e1cbe28a321e5931ba332b860ff577b689e513a204904434
+candidate_sha256=73ebc6b58296cfbcccd4003c6cade84ee2a1a1ad35e88899a3974f305c165345

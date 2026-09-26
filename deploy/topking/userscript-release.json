@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.19",
-  "target_version": "1.18.20",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.20.treasure-auto-map-active-priority.candidate.user.js",
-  "primary_marker": "treasure-auto-map-active-priority-20260926-r5",
+  "source_version": "1.18.20",
+  "target_version": "1.18.21",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.21.treasure-auto-map-handoff.candidate.user.js",
+  "primary_marker": "treasure-auto-map-foreground-handoff-20260926-r6",
   "preserve_markers": [
+    "treasure-auto-map-active-priority-20260926-r5",
     "treasure-auto-map-start-lock-20260926-r4",
     "treasure-auto-map-session-20260926-r3",
     "treasure-auto-map-stability-20260926-r2",
@@ -83,7 +84,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-20-treasure-auto-map-active-priority-live-status.txt",
-  "commit_message": "fix: deploy active-cell priority in Treasure Auto Map 1.18.20",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-21-treasure-auto-map-handoff-live-status.txt",
+  "commit_message": "fix: deploy Treasure AutoMap minigame handoff in userscript 1.18.21"
 }
