@@ -1,0 +1,8 @@
+USERSCRIPT_1_18_22_TREASURE_AUTOMAP_FOREGROUND_TRUTH_PREDEPLOY=PASS
+source_version=1.18.21
+target_version=1.18.22
+stale_minigame_dom=IGNORED_WHEN_NOT_TOPMOST
+foreground_detection=ELEMENT_FROM_POINT
+syntax=PASS
+base_sha256=73ebc6b58296cfbcccd4003c6cade84ee2a1a1ad35e88899a3974f305c165345
+candidate_sha256=4d3ed0ddae93ec6151909b58be77e360f209e370a4898e92b7ff68c8dd36ca57
