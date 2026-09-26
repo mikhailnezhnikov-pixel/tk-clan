@@ -1,0 +1,90 @@
+name: Build Userscript 1.18.26 Minigame Human Pacing
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_minigame_human_pacing_1_18_26.py'
+      - '.github/workflows/build-userscript-1-18-26-minigame-human-pacing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.25" /tmp/HamsterKingMobile.user.js
+          grep -Fq "fishing-live-budget-20260927-r1" /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_minigame_human_pacing_1_18_26.py /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.26" /tmp/HamsterKingMobile.user.js
+          grep -Fq "minigame-human-pacing-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "minigameRandomMs(14000,19000)" /tmp/HamsterKingMobile.user.js
+          grep -Fq "AUTO_MAP_ACTION_GAP_MS=2400" /tmp/HamsterKingMobile.user.js
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.26.minigame-human-pacing.candidate.user.js
+          audit=audit/hk-userscript-1-18-26-minigame-human-pacing-predeploy.txt
+          git fetch origin main
+          git reset --hard origin/main
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.25':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.25',
+              'target_version':'1.18.26',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.26.minigame-human-pacing.candidate.user.js',
+              'primary_marker':'minigame-human-pacing-20260927-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-26-minigame-human-pacing-live-status.txt',
+              'commit_message':'fix: deploy human-paced minigame actions in userscript 1.18.26',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          {
+            echo "USERSCRIPT_1_18_26_MINIGAME_HUMAN_PACING_PREDEPLOY=PASS"
+            echo "source_version=1.18.25"
+            echo "target_version=1.18.26"
+            echo "scan_pause_ms=850-1450"
+            echo "aim_pause_ms=550-950"
+            echo "confirm_pause_ms=950-1650"
+            echo "settle_pause_ms=1500-2400"
+            echo "429_cooldown_ms=14000-19000+streak"
+            echo "409_cooldown_ms=5000-8000+streak"
+            echo "single_action_pipeline=YES"
+            echo "syntax=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.26 human minigame pacing"
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
