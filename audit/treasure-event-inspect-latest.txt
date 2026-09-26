@@ -1,4 +1,521 @@
 TREASURE_EVENT_INSPECT_SNAPSHOT=1
-captured_at_utc=2026-09-26T04:41:10Z
-STATE 13708 1790397547 [{"id":1,"is_bought":true,"lot":"mf_treasurelot_chest_type_015"},{"id":2,"is_bought":true,"lot":"mf_treasurelot_chest_type_02"},{"id":3,"is_bought":false,"lot":"mf_treasurelot_chest_type_03"},{"id":4,"is_bought":false,"lot":"mf_treasurelot_chest_empty_spot"},{"id":5,"is_bought":false,"lot":"mf_treasurelot_chest_empty_spot"},{"id":6,"is_bought":false,"lot":"mf_treasurelot_chest_empty_spot"},{"id":7,"is_bought":true,"lot":"mf_treasurelot_chest_type_01"},{"id":8,"is_bought":false,"lot":"mf_treasurelot_chest_digging_spot_sl8"},{"id":9,"is_bought":false,"lot":"mf_treasurelot_chest_digging_spot_sl9"}]
-ITEMS 13708 {"item_event_treasure_map_fight":1,"item_map_t4":352,"item_qst_bday_b_chest":0,"item_qst_col_season_2_chest_2":0,"item_qst_bday_5k_chest":0,"item_treasurehunt_key_epic":0,"item_treasurehunt_energy":6778,"item_map_t2":0,"item_treasurehunt_pet_food":319,"item_event_treasure_golden_berry":0,"item_event_treasure_map_path":21,"item_map_t3":122,"item_map_t5":113,"item_event_treasure_map_trader":3,"item_event_treasure_map_fishing":0,"item_qst_bday_y_chest":0,"item_qst_bday_g_chest":0,"item_qst_bday_v_chest":0,"item_qst_bday_hard_chest":0,"item_qst_bday_collect_all_chest":0,"item_qst_bday_50k_chest":0,"item_qst_bday_wok_chest":0,"item_qst_col_season_1_chest_1":0,"item_qst_col_season_1_chest_2":0,"item_qst_col_season_2_chest_1":0,"item_map_t1":0,"item_treasurehunt_cur_coins":3798,"item_event_treasure_egg_cradle":0,"item_treasurehunt_pet_skill_change":8,"item_treasurehunt_key_common":54,"item_treasurehunt_key_uncommon":23}
+captured_at_utc=2026-09-26T04:42:25Z
+{
+  "mf_treasurelot_chest_digging_spot_sl9": {
+    "capture": 13317,
+    "path": "$.rows[35].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 5
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_digging_spot_sl9",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/chests/backgrounds/chest_minigame_digging_spot_bg.png",
+        "desc": "mf_treasurelot_chest_digging_spot_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#FFFFFF",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_digging_spot_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  },
+  "mf_treasurelot_chest_digging_spot_sl7": {
+    "capture": 13317,
+    "path": "$.rows[37].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 5
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_digging_spot_sl7",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/chests/backgrounds/chest_minigame_digging_spot_bg.png",
+        "desc": "mf_treasurelot_chest_digging_spot_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#FFFFFF",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_digging_spot_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  },
+  "mf_treasurelot_chest_digging_spot_sl6": {
+    "capture": 13317,
+    "path": "$.rows[38].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 5
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_digging_spot_sl6",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/chests/backgrounds/chest_minigame_digging_spot_bg.png",
+        "desc": "mf_treasurelot_chest_digging_spot_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#FFFFFF",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_digging_spot_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  },
+  "mf_treasurelot_chest_digging_spot_sl5": {
+    "capture": 13317,
+    "path": "$.rows[39].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 5
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_digging_spot_sl5",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/chests/backgrounds/chest_minigame_digging_spot_bg.png",
+        "desc": "mf_treasurelot_chest_digging_spot_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#FFFFFF",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_digging_spot_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  },
+  "mf_treasurelot_chest_digging_spot_sl4": {
+    "capture": 13317,
+    "path": "$.rows[40].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 5
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_digging_spot_sl4",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/chests/backgrounds/chest_minigame_digging_spot_bg.png",
+        "desc": "mf_treasurelot_chest_digging_spot_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#FFFFFF",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_digging_spot_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  },
+  "mf_treasurelot_chest_type_03": {
+    "capture": 13317,
+    "path": "$.rows[41].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_key_epic",
+            "quantity": 1
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_type_03",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/fishing/backgrounds/fishing_minigame_rod_03_bg.png",
+        "content_view": [
+          {
+            "id": "item_treasurehunt_cur_coins",
+            "quantity": 420,
+            "type": "item"
+          },
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 56,
+            "type": "item"
+          },
+          {
+            "id": "item_treasurehunt_pet_skill_change",
+            "quantity": 3,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_01",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_02",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_03",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_05_r3",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_fish_egg_02_r3",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_04_r4",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_fish_egg_04_r4",
+            "quantity": 1,
+            "type": "item"
+          }
+        ],
+        "contents": "ui_can_be_obtained",
+        "desc": "mf_treasurelot_chest_type_03_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_type_03_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_type_03_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#350504",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_type_03_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  },
+  "mf_treasurelot_chest_type_02": {
+    "capture": 13317,
+    "path": "$.rows[42].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_key_uncommon",
+            "quantity": 1
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_type_02",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/chests/backgrounds/chest_minigame_type_02_bg.png",
+        "content_view": [
+          {
+            "id": "item_treasurehunt_cur_coins",
+            "quantity": 126,
+            "type": "item"
+          },
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 19,
+            "type": "item"
+          },
+          {
+            "id": "item_treasurehunt_pet_skill_change",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_01",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_05",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_06",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_fish_egg_01",
+            "quantity": 1,
+            "type": "item"
+          }
+        ],
+        "contents": "ui_can_be_obtained",
+        "desc": "mf_treasurelot_chest_type_02_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_type_02_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_type_02_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#F6DB80",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_type_02_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  },
+  "mf_treasurelot_chest_type_01": {
+    "capture": 13317,
+    "path": "$.rows[43].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 5
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_type_01",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/chests/backgrounds/chest_minigame_type_01_bg.png",
+        "content_view": [
+          {
+            "id": "item_treasurehunt_cur_coins",
+            "quantity": 11,
+            "type": "item"
+          },
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 5,
+            "type": "item"
+          },
+          {
+            "id": "item_treasurehunt_pet_food",
+            "quantity": 3,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_01",
+            "quantity": 1,
+            "type": "item"
+          }
+        ],
+        "contents": "ui_can_be_obtained",
+        "desc": "mf_treasurelot_chest_type_01_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_type_01_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_type_01_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#FFFFFF",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_type_01_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  },
+  "mf_treasurelot_chest_type_015": {
+    "capture": 13317,
+    "path": "$.rows[46].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_key_common",
+            "quantity": 1
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_type_015",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/chests/backgrounds/chest_minigame_type_015_bg.png",
+        "content_view": [
+          {
+            "id": "item_treasurehunt_cur_coins",
+            "quantity": 35,
+            "type": "item"
+          },
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 8,
+            "type": "item"
+          },
+          {
+            "id": "item_treasurehunt_pet_food",
+            "quantity": 5,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_mothcat_egg_01",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_treasurehunt_pet_skill_change",
+            "quantity": 1,
+            "type": "item"
+          },
+          {
+            "id": "item_pet_fish_egg_01",
+            "quantity": 1,
+            "type": "item"
+          }
+        ],
+        "contents": "ui_can_be_obtained",
+        "desc": "mf_treasurelot_chest_type_015_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_type_015_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_type_015_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#409F85",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_type_015_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  },
+  "mf_treasurelot_chest_digging_spot_sl8": {
+    "capture": 13317,
+    "path": "$.rows[48].payload",
+    "lot": {
+      "can_be_gift": false,
+      "cost": {
+        "clan_currency_cost": [],
+        "currencies": [],
+        "items": [
+          {
+            "id": "item_treasurehunt_energy",
+            "quantity": 5
+          }
+        ]
+      },
+      "id": "mf_treasurelot_chest_digging_spot_sl8",
+      "is_ad": false,
+      "is_partial_costed": false,
+      "lot_view": {
+        "card_background": "minigames/chests/backgrounds/chest_minigame_digging_spot_bg.png",
+        "desc": "mf_treasurelot_chest_digging_spot_desc",
+        "icon_card": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "icon_modal": "minigames/chests/icons/treasure_minigame_chest_digging_spot_icon.png",
+        "important_colors": true,
+        "main_dark_color": "#FFFFFF",
+        "main_light_color": "#e0a22e",
+        "name": "mf_treasurelot_chest_digging_spot_name",
+        "style": "default",
+        "type": "fair",
+        "type_card": "single"
+      },
+      "meta": {
+        "check_fair": true
+      },
+      "priority": -1
+    }
+  }
+}
