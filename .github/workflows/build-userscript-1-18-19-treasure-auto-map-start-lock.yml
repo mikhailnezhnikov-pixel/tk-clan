@@ -57,7 +57,7 @@ jobs:
               'schema':1,
               'source_version':'1.18.18',
               'target_version':'1.18.19',
-              'candidate_path':candidate,
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.19.treasure-auto-map-start-lock.candidate.user.js',
               'primary_marker':'treasure-auto-map-start-lock-20260926-r4',
               'preserve_markers':preserve,
               'audit_status_path':'audit/hk-userscript-1-18-19-treasure-auto-map-start-lock-live-status.txt',
