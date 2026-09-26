@@ -28,7 +28,19 @@ terms=[
   "__HK_MOBILE_REVISION__",
   "core-20260921-r27-businesses-runner-canon",
   "__HK_MOBILE_VERSION__",
-  "const BUILD_VERSION"
+  "const BUILD_VERSION",
+  "treasure-guide-passive-capture",
+  "treasureGuide",
+  "captureTreasure",
+  "capture",
+  "collector",
+  "/treasure",
+  "recordDiagnostic",
+  "publicCollector",
+  "fair_mini_game",
+  "MutationObserver",
+  "addEventListener('click'",
+  "addEventListener("click""
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
