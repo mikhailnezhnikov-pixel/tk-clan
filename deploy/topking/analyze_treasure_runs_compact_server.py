@@ -128,7 +128,8 @@ for _,sid,events,meta in all_sessions[:2]:
                     "fair_id":fair,"shop_lot_id":req.get("shop_lot_id"),
                     "slot_id":req.get("slot_id")
                 },ensure_ascii=False))
-    print("SECOND_MAP_FAIR_COUNTS "+json.dumps(dict(fair_counts),ensure_ascii=False))\n    print("LABYRINTH_GAP_STATES")
+    print("SECOND_MAP_FAIR_COUNTS "+json.dumps(dict(fair_counts),ensure_ascii=False))
+    print("LABYRINTH_GAP_STATES")
     last_state=None
     printed=0
     for e in events:
