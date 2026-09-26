@@ -1,0 +1,145 @@
+Warning: Permanently added '89.125.1.71' (ED25519) to the list of known hosts.
+[df]
+Filesystem     Type  Size  Used Avail Use% Mounted on
+/dev/vda1      ext4   30G   29G     0 100% /
+[top-level]
+4.0K	/bin.usr-is-merged
+4.0K	/cdrom
+4.0K	/lib.usr-is-merged
+4.0K	/media
+4.0K	/mnt
+4.0K	/sbin.usr-is-merged
+8.0K	/snap
+16K	/lost+found
+9.0M	/etc
+122M	/tmp
+200M	/boot
+202M	/root
+1.4G	/opt
+1.5G	/srv
+4.6G	/usr
+7.1G	/home
+14G	/var
+29G	/
+[var]
+4.0K	/var/local
+4.0K	/var/mail
+4.0K	/var/metrics
+4.0K	/var/opt
+4.0K	/var/snap
+24K	/var/spool
+68K	/var/tmp
+900K	/var/crash
+151M	/var/cache
+1.2G	/var/backups
+1.2G	/var/log
+11G	/var/lib
+14G	/var
+[var-lib]
+8.0K	/var/lib/xfonts
+8.0K	/var/lib/xkb
+12K	/var/lib/AccountsService
+12K	/var/lib/sgml-base
+12K	/var/lib/update-manager
+16K	/var/lib/grub
+20K	/var/lib/update-notifier
+24K	/var/lib/emacsen-common
+28K	/var/lib/dictionaries-common
+28K	/var/lib/pam
+32K	/var/lib/polkit-1
+32K	/var/lib/xml-core
+36K	/var/lib/PackageKit
+40K	/var/lib/ghostscript
+56K	/var/lib/colord
+68K	/var/lib/swcatalog
+120K	/var/lib/lightdm
+120K	/var/lib/ucf
+132K	/var/lib/caddy
+216K	/var/lib/cloud
+360K	/var/lib/snapd
+896K	/var/lib/systemd
+2.1M	/var/lib/fwupd
+3.8M	/var/lib/command-not-found
+4.2M	/var/lib/aspell
+6.7M	/var/lib/ubuntu-advantage
+62M	/var/lib/dpkg
+199M	/var/lib/apt
+11G	/var/lib
+11G	/var/lib/hamsterking-license
+[license-db-dir]
+11G	/var/lib/hamsterking-license
+total 11G
+-rw-r--r--  1 hamsterking-license hamsterking-license 2.2G Sep 26 07:33 licenses.db
+-rw-r--r--  1 root                root                2.2G Sep 26 07:05 licenses.db.bak.rumors-coordinator-r3.20260926-070526
+-rw-r--r--  1 root                root                2.1G Sep 26 06:33 licenses.db.bak.rumors-shared-r2.20260926-063329
+-rw-r--r--  1 root                root                1.4G Sep 25 05:11 licenses.db.rollback.maps-crystal-priority-r1.20260925-051105
+-rw-r--r--  1 root                root                1.4G Sep 25 05:10 licenses.db.rollback.maps-crystal-priority-r1.20260925-051030
+-rw-r--r--  1 root                root                1.2G Sep 26 07:10 licenses.db.bak.rumors-coordinator-r3.20260926-070954
+-rw-r--r--  1 root                root                 57M Sep 21 05:30 licenses.db.bak.full235.20260921-053021
+-rw-r--r--  1 root                root                 49M Sep 21 05:30 licenses.db.bak.full235-prestage.20260921-053018
+-rw-r--r--  1 root                root                 49M Sep 21 01:13 licenses.db.bak.full235-link160.20260921-011325
+-rw-r--r--  1 root                root                 49M Sep 20 15:16 licenses.db.bak.w6.20260920-151617
+-rw-r--r--  1 root                root                 49M Sep 20 15:17 licenses.db.bak.w6.20260920-151724
+-rw-r--r--  1 root                root                 49M Sep 20 15:10 licenses.db.bak.w6.20260920-151010
+-rw-r--r--  1 root                root                 49M Sep 20 15:12 licenses.db.bak.w6.20260920-151209
+-rw-r--r--  1 root                root                192K Aug  4 09:16 licenses.db.bak-before-remove-har-20260804
+-rw-r--r--  1 root                root                 32K Sep 25 05:01 licenses.db.bak-before-remove-har-20260804-shm
+-rw-r--r--  1 root                root                 32K Sep 25 05:11 licenses.db.bak.full235.20260921-053021-shm
+-rw-r--r--  1 root                root                 32K Sep 25 05:01 licenses.db.bak.full235-link160.20260921-011325-shm
+-rw-r--r--  1 root                root                 32K Sep 25 05:01 licenses.db.bak.full235-prestage.20260921-053018-shm
+-rw-r--r--  1 root                root                 32K Sep 25 05:01 licenses.db.bak.w6.20260920-151010-shm
+-rw-r--r--  1 root                root                 32K Sep 25 05:01 licenses.db.bak.w6.20260920-151209-shm
+-rw-r--r--  1 root                root                 32K Sep 25 05:01 licenses.db.bak.w6.20260920-151617-shm
+-rw-r--r--  1 root                root                 32K Sep 25 05:01 licenses.db.bak.w6.20260920-151724-shm
+drwxr-x---  2 hamsterking-license hamsterking-license 4.0K Sep 26 07:35 .
+drwxr-xr-x 63 root                root                4.0K Aug 22 08:53 ..
+-rw-r--r--  1 root                root                1.0K Sep 26 07:09 licenses.db.bak.rumors-coordinator-r3.20260926-070954-journal
+-rw-------  1 root                root                 202 Sep 26 07:13 public-collector-token
+-rw-r--r--  1 root                root                 182 Sep 26 07:33 public-collector-status.json
+-rw-------  1 hamsterking-license hamsterking-license  132 Sep 25 17:11 public-collector-auth.json
+-rw-------  1 hamsterking-license hamsterking-license   65 Sep 21 01:01 public-collector-identity.sha256
+-rw-r--r--  1 hamsterking-license hamsterking-license    3 Sep 26 07:39 licenses.db-shm
+-rw-r--r--  1 root                root                   0 Sep 25 05:01 licenses.db.bak-before-remove-har-20260804-wal
+-rw-r--r--  1 root                root                   0 Sep 25 05:01 licenses.db.bak.full235.20260921-053021-wal
+-rw-r--r--  1 root                root                   0 Sep 25 05:01 licenses.db.bak.full235-link160.20260921-011325-wal
+-rw-r--r--  1 root                root                   0 Sep 25 05:01 licenses.db.bak.full235-prestage.20260921-053018-wal
+-rw-r--r--  1 root                root                   0 Sep 25 05:01 licenses.db.bak.w6.20260920-151010-wal
+-rw-r--r--  1 root                root                   0 Sep 25 05:01 licenses.db.bak.w6.20260920-151209-wal
+-rw-r--r--  1 root                root                   0 Sep 25 05:01 licenses.db.bak.w6.20260920-151617-wal
+-rw-r--r--  1 root                root                   0 Sep 25 05:01 licenses.db.bak.w6.20260920-151724-wal
+-rw-r--r--  1 hamsterking-license hamsterking-license    0 Sep 26 07:35 licenses.db-wal
+[opt]
+4.4M	/opt/MTProxy
+191M	/opt/hamsterking-license
+204M	/opt/nodejs
+206M	/opt/hermes-personal-agent-sync
+756M	/opt/ai-office
+1.4G	/opt
+[logs]
+4.0K	/var/log/caddy
+4.0K	/var/log/cups-browsed
+4.0K	/var/log/dist-upgrade
+4.0K	/var/log/installer
+4.0K	/var/log/landscape
+4.0K	/var/log/private
+40K	/var/log/cups
+68K	/var/log/lightdm
+196K	/var/log/unattended-upgrades
+252K	/var/log/apt
+4.9M	/var/log/sysstat
+92M	/var/log/atop
+679M	/var/log/journal
+1.2G	/var/log
+Archived and active journals take up 678.8M in the file system.
+[large-files-over-200m]
+2299383808 /var/lib/hamsterking-license/licenses.db.bak.rumors-coordinator-r3.20260926-070526
+2299383808 /var/lib/hamsterking-license/licenses.db
+2212335616 /var/lib/hamsterking-license/licenses.db.bak.rumors-shared-r2.20260926-063329
+1436532736 /var/lib/hamsterking-license/licenses.db.rollback.maps-crystal-priority-r1.20260925-051105
+1405112320 /var/lib/hamsterking-license/licenses.db.rollback.maps-crystal-priority-r1.20260925-051030
+1234030592 /var/lib/hamsterking-license/licenses.db.bak.rumors-coordinator-r3.20260926-070954
+536870912 /swapfile
+276917464 /home/hermes/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome
+256520549 /srv/hermes/workspace/projects/phobo_video/output/PhoBo_promo_60s_4K_H264_25fps.mp4
+222275719 /var/backups/hamsterking-license/licenses-20260926-033505.db.gz
+220827721 /srv/hermes/workspace/projects/phobo_video/output/phobo_promo_60s_4k_raw.mp4
