@@ -1,3 +1,4 @@
+# build-trigger: 1.18.16 treasure auto map r1
 from pathlib import Path
 import sys
 
