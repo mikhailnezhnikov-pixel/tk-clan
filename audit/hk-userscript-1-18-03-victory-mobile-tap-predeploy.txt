@@ -1,0 +1,11 @@
+USERSCRIPT_1_18_03_VICTORY_MOBILE_TAP_PREDEPLOY=PASS
+source_version=1.18.02
+target_version=1.18.03
+scope=COMMON_HK_USERSCRIPT_ONLY
+public_treasure_script=UNCHANGED
+victory_tile=POINTER_TAP
+victory_claim=GEOMETRIC_BUTTON_PLUS_FALLBACK
+final_reward_dismiss=ENABLED
+syntax=PASS
+base_sha256=92e5a9cea4f2c05893b6c055e85c7f4e24c85222311466fe39ca70a071b7c21a
+candidate_sha256=b58977a8ddad306b0b34ee83fdd668fb565dcb628db3fea65c35e36d9b59b71c
