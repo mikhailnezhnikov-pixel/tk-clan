@@ -98,6 +98,37 @@ for _,sid,events,meta in all_sessions[:2]:
                 "text":str(t.get("text") or "")[:120]
             },ensure_ascii=False))
 
+    print("SECOND_MAP_DEEP_TRACE")
+    second_start_seq=729
+    fair_counts=Counter()
+    for e in events:
+        try: seq=int(e.get("seq") or 0)
+        except: seq=0
+        if seq<second_start_seq: continue
+        typ=str(e.get("type") or "")
+        d=e.get("data") if isinstance(e.get("data"),dict) else {}
+        if typ=="click":
+            t=target(e)
+            lot=str(t.get("lotId") or "")
+            txt=str(t.get("text") or "").replace("\n"," ")[:160]
+            if lot.startswith("mf_") or txt in ("Понятно","1","10","20","40") or "Покинуть" in txt or "Начать новое путешествие" in txt:
+                print(json.dumps({
+                    "seq":seq,"at":e.get("at"),"screen":e.get("screen"),
+                    "type":"click","lot":lot,"text":txt
+                },ensure_ascii=False))
+        elif typ=="network":
+            path=str(d.get("path") or "")
+            req=d.get("request") if isinstance(d.get("request"),dict) else {}
+            fair=str(req.get("fair_id") or "")
+            if fair: fair_counts[fair]+=1
+            if path in ("/shop/buy","/fair/reroll"):
+                print(json.dumps({
+                    "seq":seq,"at":e.get("at"),"screen":e.get("screen"),
+                    "type":"network","path":path,"status":d.get("status"),
+                    "fair_id":fair,"shop_lot_id":req.get("shop_lot_id"),
+                    "slot_id":req.get("slot_id")
+                },ensure_ascii=False))
+    print("SECOND_MAP_FAIR_COUNTS "+json.dumps(dict(fair_counts),ensure_ascii=False))
     print("ERRORS_AND_BLOCKERS")
     for e in events:
         typ=str(e.get("type") or "")
