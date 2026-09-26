@@ -64,5 +64,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-17-99-battle-auto-click-live-status.txt",
-  "commit_message": "fix: deploy optional battle auto-click in userscript 1.17.99"
+  "commit_message": "fix: deploy optional battle auto-click in userscript 1.17.99",
+  "trigger_revision": 1
 }
