@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.14",
-  "target_version": "1.18.15",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.15.rumors-hunter-full.candidate.user.js",
-  "primary_marker": "rumors-hunter-coordinator-kokkaras-v40-20260926-r4",
+  "source_version": "1.18.15",
+  "target_version": "1.18.16",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.16.treasure-auto-map.candidate.user.js",
+  "primary_marker": "treasure-auto-map-orchestrator-20260926-r1",
   "preserve_markers": [
+    "rumors-hunter-coordinator-kokkaras-v40-20260926-r4",
     "treasure-run-recorder-stability-blockers-20260926-r2",
     "treasure-run-recorder-20260926-r1",
     "battle-visible-board-active-20260926-r1",
@@ -78,7 +79,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-15-rumors-hunter-full-live-status.txt",
-  "commit_message": "feat: deploy full Rumors Hunter in userscript 1.18.15",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-16-treasure-auto-map-live-status.txt",
+  "commit_message": "feat: deploy full Treasure Map orchestrator in userscript 1.18.16"
 }
