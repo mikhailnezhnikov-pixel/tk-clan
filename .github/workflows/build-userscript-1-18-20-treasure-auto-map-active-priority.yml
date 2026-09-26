@@ -1,0 +1,87 @@
+name: Build Userscript 1.18.20 Treasure Auto Map Active Priority
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_treasure_auto_map_active_priority_1_18_20.py'
+      - '.github/workflows/build-userscript-1-18-20-treasure-auto-map-active-priority.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.19" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-auto-map-start-lock-20260926-r4" /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_treasure_auto_map_active_priority_1_18_20.py /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.20" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-auto-map-active-priority-20260926-r5" /tmp/HamsterKingMobile.user.js
+          grep -Fq "AUTO_MAP_NO_ACTIVE_COMPLETE_MS=4500" /tmp/HamsterKingMobile.user.js
+          grep -Fq "autoMapDismissAbandonModalIfNeeded" /tmp/HamsterKingMobile.user.js
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.20.treasure-auto-map-active-priority.candidate.user.js
+          audit=audit/hk-userscript-1-18-20-treasure-auto-map-active-priority-predeploy.txt
+          git fetch origin main
+          git reset --hard origin/main
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.19':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.19',
+              'target_version':'1.18.20',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.20.treasure-auto-map-active-priority.candidate.user.js',
+              'primary_marker':'treasure-auto-map-active-priority-20260926-r5',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-20-treasure-auto-map-active-priority-live-status.txt',
+              'commit_message':'fix: deploy active-cell priority in Treasure Auto Map 1.18.20',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          {
+            echo "USERSCRIPT_1_18_20_TREASURE_AUTO_MAP_ACTIVE_PRIORITY_PREDEPLOY=PASS"
+            echo "source_version=1.18.19"
+            echo "target_version=1.18.20"
+            echo "active_cells=ABSOLUTE_PRIORITY"
+            echo "new_journey_during_active_map=FORBIDDEN"
+            echo "abandon_modal=AUTO_BACK"
+            echo "completion=no_active_cells_stable_4500ms"
+            echo "syntax=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.20 Treasure active priority"
+          git push origin HEAD:main
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
