@@ -1,0 +1,43 @@
+name: Inspect Userscript Runtime Snippets
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/inspect_userscript_runtime_snippets.py'
+      - '.github/workflows/inspect-userscript-runtime-snippets.yml'
+      - 'deploy/topking/userscript-runtime-inspect-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inspect-userscript-runtime-snippets
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Inspect
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/inspect_userscript_runtime_snippets.py
+          python3 -m json.tool audit/userscript-runtime-snippets.json >/dev/null
+
+      - name: Persist
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/userscript-runtime-snippets.json
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist userscript runtime snippets"
+            git push origin HEAD:main
+          fi
