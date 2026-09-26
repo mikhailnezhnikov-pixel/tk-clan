@@ -1,3 +1,4 @@
+# build-trigger: 1.18.07 minigame flow fixes
 from pathlib import Path
 import sys
 
