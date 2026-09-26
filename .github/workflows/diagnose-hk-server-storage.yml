@@ -52,7 +52,7 @@ jobs:
             if ( : > "$p" ) 2>/dev/null; then echo "$dir=WRITE_OK"; rm -f "$p"; else echo "$dir=WRITE_FAIL"; fi
           done
           echo '[db-references]'
-          grep -nE 'DB_PATH|DATABASE|sqlite3\.connect|\.db["'"'\)]' /opt/hamsterking-license/server.py | head -80 || true
+          grep -nE 'DB_PATH|DATABASE|sqlite3\.connect|\.db' /opt/hamsterking-license/server.py | head -80 || true
           echo '[directory]'
           ls -lah /opt/hamsterking-license | head -80
           echo '[kernel-storage-errors]'
