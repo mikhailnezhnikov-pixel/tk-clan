@@ -77,5 +77,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-13-treasure-run-recorder-live-status.txt",
-  "commit_message": "feat: deploy passive Treasure Map run recorder in userscript 1.18.13"
+  "commit_message": "feat: deploy passive Treasure Map run recorder in userscript 1.18.13",
+  "trigger_revision": 1
 }
