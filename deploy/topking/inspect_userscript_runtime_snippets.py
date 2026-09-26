@@ -24,7 +24,11 @@ terms=[
   "battle-auto",
   "mf_treasurelot_sword_",
   "mf_treasurelot_battle",
-  "enemy"
+  "enemy",
+  "__HK_MOBILE_REVISION__",
+  "core-20260921-r27-businesses-runner-canon",
+  "__HK_MOBILE_VERSION__",
+  "const BUILD_VERSION"
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
