@@ -1,0 +1,7 @@
+RUMORS_SHARED_RESULTS_R2_LIVE=PASS
+kokkaras_public_feed=PRESERVED
+kokkaras_cities=17
+kokkaras_points=51
+hk_confirmed_jackpot_reports=ENABLED
+today_merge=ENABLED
+health=PASS
