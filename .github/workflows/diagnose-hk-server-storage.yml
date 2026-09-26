@@ -1,0 +1,79 @@
+name: Diagnose HK Server Storage
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/hk-server-storage-diagnose-trigger.txt'
+      - '.github/workflows/diagnose-hk-server-storage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Collect storage diagnostics
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' > /tmp/storage.txt 2>&1 <<'REMOTE'
+          set +e
+          echo "timestamp=$(date -Is)"
+          echo '[service-show]'
+          systemctl show hamsterking-license.service -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStatus -p ProtectSystem -p ProtectHome -p ReadWritePaths -p ReadOnlyPaths -p InaccessiblePaths -p DynamicUser --no-pager
+          echo '[service-unit]'
+          systemctl cat hamsterking-license.service
+          echo '[filesystems]'
+          findmnt -no TARGET,SOURCE,FSTYPE,OPTIONS /
+          findmnt -no TARGET,SOURCE,FSTYPE,OPTIONS /opt 2>/dev/null || true
+          findmnt -no TARGET,SOURCE,FSTYPE,OPTIONS /var 2>/dev/null || true
+          findmnt -no TARGET,SOURCE,FSTYPE,OPTIONS /opt/hamsterking-license 2>/dev/null || true
+          echo '[df]'
+          df -hT / /opt/hamsterking-license /var 2>&1
+          echo '[inodes]'
+          df -i / /opt/hamsterking-license /var 2>&1
+          echo '[write-tests]'
+          for dir in /tmp /var/tmp /opt/hamsterking-license; do
+            p="$dir/.hk_write_test_$$"
+            if ( : > "$p" ) 2>/dev/null; then echo "$dir=WRITE_OK"; rm -f "$p"; else echo "$dir=WRITE_FAIL"; fi
+          done
+          echo '[db-references]'
+          grep -nE 'DB_PATH|DATABASE|sqlite3\.connect|\.db["'"'\)]' /opt/hamsterking-license/server.py | head -80 || true
+          echo '[directory]'
+          ls -lah /opt/hamsterking-license | head -80
+          echo '[kernel-storage-errors]'
+          journalctl -k -n 160 --no-pager 2>&1 | grep -Ei 'ext4|xfs|btrfs|i/o error|read-only|filesystem|nvme|virtio|buffer' | tail -100 || true
+          echo '[service-errors]'
+          journalctl -u hamsterking-license.service -n 80 --no-pager 2>&1 | tail -80
+          REMOTE
+          cat /tmp/storage.txt
+
+      - name: Persist audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/storage.txt audit/hk-server-storage-latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-server-storage-latest.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist HK server storage diagnostics"
+            git push origin HEAD:main
+          fi
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/storage.txt
