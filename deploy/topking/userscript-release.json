@@ -72,5 +72,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-08-fishing-canon-live-status.txt",
-  "commit_message": "fix: deploy confirmed fishing canon in userscript 1.18.08"
+  "commit_message": "fix: deploy confirmed fishing canon in userscript 1.18.08",
+  "trigger_revision": 1
 }
