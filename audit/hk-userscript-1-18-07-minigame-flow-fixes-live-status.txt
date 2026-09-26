@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.06
+target_version=1.18.07
+marker=minigame-flow-fixes-20260926-r1
+source_sha256=1613b0c284b3cc71b84779bbb56757d00bd8385bf8c0b3338899a4979a3a5cd4
+candidate_sha256=8305b36a0c6366d07b5d621ba5a37f07ff55985fcc08ed714944511d7803159e
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
