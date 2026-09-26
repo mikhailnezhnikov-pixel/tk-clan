@@ -1,0 +1,143 @@
+name: Build Userscript 1.18.07 Minigame Flow Fixes
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_minigame_flow_fixes_1_18_07.py'
+      - '.github/workflows/build-userscript-1-18-07-minigame-flow-fixes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-18-07-minigame-flow-fixes
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate from exact live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.06" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.06';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "lights-modal-confirm-20260926-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "chest-auto-dig-open-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-auto-click-toggle-20260926-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_minigame_flow_fixes_1_18_07.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.07" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.07';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "lights-final-reward-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "mf_fairlot_lights_out_reward_slot" /tmp/HamsterKingMobile.user.js
+          grep -Fq "chest-full-dig-first-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "let priority=digging ? 1000 : 300;" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-entry-before-auto-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-enter-minigame" /tmp/HamsterKingMobile.user.js
+          grep -Fq "fishing-value-priority-auto-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "Авторыбалка: ВКЛ" /tmp/HamsterKingMobile.user.js
+          grep -Fq "lamp_fish_water" /tmp/HamsterKingMobile.user.js
+          grep -Fq "chest-auto-dig-open-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-auto-click-toggle-20260926-r1" /tmp/HamsterKingMobile.user.js
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.07.minigame-flow-fixes.candidate.user.js
+          audit=audit/hk-userscript-1-18-07-minigame-flow-fixes-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.06':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.06',
+              'target_version':'1.18.07',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.07.minigame-flow-fixes.candidate.user.js',
+              'primary_marker':'minigame-flow-fixes-20260926-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-07-minigame-flow-fixes-live-status.txt',
+              'commit_message':'fix: deploy minigame flow fixes in userscript 1.18.07',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+            # The release marker is additive and groups all four fixes.
+            python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/HamsterKingMobile.user.js')
+          s=p.read_text(encoding='utf-8')
+          anchor="  const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';"
+          marker="  const HK_MINIGAME_FLOW_FIXES_REV = 'minigame-flow-fixes-20260926-r1';"
+          if marker not in s:
+              if anchor not in s: raise SystemExit('release marker anchor missing')
+              s=s.replace(anchor,anchor+'\n'+marker,1)
+              p.write_text(s,encoding='utf-8')
+          PY
+            node --check /tmp/HamsterKingMobile.user.js
+            grep -Fq "minigame-flow-fixes-20260926-r1" /tmp/HamsterKingMobile.user.js
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+            sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_18_07_MINIGAME_FLOW_FIXES_PREDEPLOY=PASS"
+              echo "source_version=1.18.06"
+              echo "target_version=1.18.07"
+              echo "scope=COMMON_HK_USERSCRIPT_ONLY"
+              echo "public_treasure_script=UNCHANGED"
+              echo "lights_final_reward=AUTO_OPEN_CLAIM_ACK"
+              echo "chests=DIG_AFFORDABLE_SPOTS_FIRST"
+              echo "battle=ENTER_BEFORE_TARGET_CLICKS"
+              echo "fishing=RARE_VALUE_TIER_FIRST_THEN_COST"
+              echo "fishing_types=LAMP_FISH,FISHING,CREATURES,TORNADO,CALM"
+              echo "syntax=PASS"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.18.07 minigame flow fixes"
+
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
