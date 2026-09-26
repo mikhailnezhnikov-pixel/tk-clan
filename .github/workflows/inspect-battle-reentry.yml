@@ -1,0 +1,30 @@
+name: Inspect Battle Reentry
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/inspect_battle_reentry.py'
+      - '.github/workflows/inspect-battle-reentry.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Inspect
+        run: python3 deploy/topking/inspect_battle_reentry.py
+      - name: Persist
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/battle-reentry-snippets.json
+          git commit -m "audit: persist battle reentry snippets"
+          git pull --rebase origin main
+          git push origin HEAD:main
