@@ -1,0 +1,12 @@
+USERSCRIPT_1_17_99_BATTLE_AUTO_CLICK_PREDEPLOY=PASS
+source_version=1.17.98
+target_version=1.17.99
+scope=COMMON_HK_USERSCRIPT_ONLY
+public_treasure_script=UNCHANGED
+auto_battle_default=OFF
+auto_battle_toggle=PERSISTED
+click_mode=SEQUENTIAL_WITH_FIELD_CHANGE_GUARD
+type04=PRESERVED
+syntax=PASS
+base_sha256=eb7b8e0fb3f2825d401a4e5d0fe9dd210aca2af7894ae908a7cc9581b85c5189
+candidate_sha256=8ca7e49f773b3b75694014e8a3481e356226a77f613141698eb77b3e63b10ea9
