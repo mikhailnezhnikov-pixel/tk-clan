@@ -16,12 +16,12 @@ def rep(old,new,label,count=1):
     s=s.replace(old,new,count)
 
 rep(
-    "// @version      1.18.10",
+    "// @version      1.18.09",
     "// @version      1.18.10\n"
     "// @release-note Мини-игры: Тайный торговец получил последовательный автовыкуп всех доступных лотов с приоритетом карт/монет/ягод и защитой от повторной покупки. Рыбалка больше не выбирает уже «Активировано», ждёт сервер между покупками и переживает временные 409/500 через reconcile/backoff вместо мгновенного отключения.",
     "version"
 )
-rep("const BUILD_VERSION = '1.18.10';","const BUILD_VERSION = '1.18.10';","build")
+rep("const BUILD_VERSION = '1.18.09';","const BUILD_VERSION = '1.18.10';","build")
 
 rep(
     "  const HK_FISHING_CANON_REV = 'fishing-canon-priority-20260926-r2';",
