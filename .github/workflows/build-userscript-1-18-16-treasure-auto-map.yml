@@ -1,0 +1,139 @@
+name: Build Userscript 1.18.16 Treasure Auto Map
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_treasure_auto_map_1_18_16.py'
+      - '.github/workflows/build-userscript-1-18-16-treasure-auto-map.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-18-16-treasure-auto-map
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build from exact 1.18.15 live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.15" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.15';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "rumors-hunter-coordinator-kokkaras-v40-20260926-r4" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-run-recorder-stability-blockers-20260926-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-visible-board-active-20260926-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_treasure_auto_map_1_18_16.py /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+          markers=(
+            "// @version      1.18.16"
+            "const BUILD_VERSION = '1.18.16';"
+            "treasure-auto-map-orchestrator-20260926-r1"
+            "Автокарта: ВКЛ"
+            "Автокарта: ВЫКЛ"
+            "mf_treasurelot_active_sl"
+            "mf_fair_treasury_room_choose_way_"
+            "mf_fairlot_minigame_treasury_room_big_chest"
+            "treasure-auto-map-complete"
+            "response.status===409 || response.status===429 || response.status>=500"
+            "rumors-hunter-coordinator-kokkaras-v40-20260926-r4"
+            "treasure-run-recorder-stability-blockers-20260926-r2"
+            "battle-visible-board-active-20260926-r1"
+            "trader-fishing-stability-20260926-r1"
+          )
+          for marker in "${markers[@]}"; do
+            grep -Fq "$marker" /tmp/HamsterKingMobile.user.js || { echo "missing marker: $marker"; exit 1; }
+          done
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.16.treasure-auto-map.candidate.user.js
+          audit=audit/hk-userscript-1-18-16-treasure-auto-map-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.15':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.15',
+              'target_version':'1.18.16',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.16.treasure-auto-map.candidate.user.js',
+              'primary_marker':'treasure-auto-map-orchestrator-20260926-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-16-treasure-auto-map-live-status.txt',
+              'commit_message':'feat: deploy full Treasure Map orchestrator in userscript 1.18.16',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_18_16_TREASURE_AUTO_MAP_PREDEPLOY=PASS"
+              echo "source_version=1.18.15"
+              echo "target_version=1.18.16"
+              echo "scope=COMMON_HK_USERSCRIPT_ONLY"
+              echo "map_cells=ACTIVE_SLOT_LOWEST_INDEX_FIRST"
+              echo "map_confirm=MODAL_COST_BUTTON"
+              echo "ordinary_rewards=AUTO_ACK"
+              echo "battle=DELEGATE_EXISTING_MODULE"
+              echo "fishing=DELEGATE_EXISTING_MODULE"
+              echo "trader=DELEGATE_EXISTING_MODULE"
+              echo "lights=DELEGATE_EXISTING_MODULE"
+              echo "chests=DELEGATE_EXISTING_MODULE"
+              echo "treasury_room=WAY_1_BIG_CHEST_EXIT"
+              echo "labyrinth=ROOM_BY_ROOM_REROLL_UNTIL_MAP"
+              echo "http_409=RESCAN_NO_BLIND_RETRY"
+              echo "http_429=BACKOFF_RESCAN"
+              echo "http_5xx=BACKOFF_RESCAN"
+              echo "map_complete=STOP_DO_NOT_START_NEXT_MAP"
+              echo "syntax=PASS"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.18.16 Treasure Auto Map"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
