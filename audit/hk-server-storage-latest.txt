@@ -1,17 +1,17 @@
 Warning: Permanently added '89.125.1.71' (ED25519) to the list of known hosts.
-timestamp=2026-09-26T07:42:03+00:00
+timestamp=2026-09-26T07:49:42+00:00
 [service-show]
-MainPID=0
-NRestarts=6
-ExecMainStatus=1
+MainPID=32673
+NRestarts=0
+ExecMainStatus=0
 DynamicUser=no
 ReadWritePaths=/var/lib/hamsterking-license
 ReadOnlyPaths=
 InaccessiblePaths=
 ProtectHome=yes
 ProtectSystem=strict
-ActiveState=activating
-SubState=auto-restart
+ActiveState=active
+SubState=running
 [service-unit]
 # /etc/systemd/system/hamsterking-license.service
 [Unit]
@@ -44,14 +44,14 @@ Environment="HK_MIN_SCRIPT_VERSION=1.18.11"
 /      /dev/vda1 ext4   rw,relatime
 [df]
 Filesystem     Type  Size  Used Avail Use% Mounted on
-/dev/vda1      ext4   30G   29G     0 100% /
-/dev/vda1      ext4   30G   29G     0 100% /
-/dev/vda1      ext4   30G   29G     0 100% /
+/dev/vda1      ext4   30G   25G  3.8G  87% /
+/dev/vda1      ext4   30G   25G  3.8G  87% /
+/dev/vda1      ext4   30G   25G  3.8G  87% /
 [inodes]
 Filesystem      Inodes  IUsed   IFree IUse% Mounted on
-/dev/vda1      1966080 439049 1527031   23% /
-/dev/vda1      1966080 439049 1527031   23% /
-/dev/vda1      1966080 439049 1527031   23% /
+/dev/vda1      1966080 439041 1527039   23% /
+/dev/vda1      1966080 439041 1527039   23% /
+/dev/vda1      1966080 439041 1527039   23% /
 [write-tests]
 /tmp=WRITE_OK
 /var/tmp=WRITE_OK
@@ -67,7 +67,7 @@ Filesystem      Inodes  IUsed   IFree IUse% Mounted on
 8264:        DB_PATH = os.path.join(folder, "test.db")
 [directory]
 total 182M
-drwxr-xr-x 8 root                root                  32K Sep 26 07:42 .
+drwxr-xr-x 8 root                root                  32K Sep 26 07:49 .
 drwxr-xr-x 7 root                root                 4.0K Aug  3 11:28 ..
 -rwx------ 1 root                root                 1.4K Aug  9 10:34 backup_db.py
 drwxrwxrwx 3 root                root                 4.0K Sep 15 06:18 business-calculator
@@ -148,83 +148,83 @@ drwxrwxrwx 3 root                root                 4.0K Sep 15 06:18 business
 -rw-r--r-- 1 root                root                 454K Sep  5 14:22 HamsterKingMobile.user.js.bak-1.9.1
 [kernel-storage-errors]
 [service-errors]
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     init_db()
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     with db_session() as db:
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     return next(self.gen)
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:            ^^^^^^^^^^^^^^
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     db = connect()
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:          ^^^^^^^^^
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/opt/hamsterking-license/server.py", line 223, in connect
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     db.execute("PRAGMA journal_mode=WAL")
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]: sqlite3.OperationalError: disk I/O error
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]: Error in sys.excepthook:
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]: Traceback (most recent call last):
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 228, in partial_apport_excepthook
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     return apport_excepthook(binary, exc_type, exc_obj, exc_tb)
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 144, in apport_excepthook
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     os.open(pr_filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640), "wb"
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]: OSError: [Errno 30] Read-only file system: '/var/crash/_opt_hamsterking-license_server.py.995.crash'
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]: Original exception was:
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]: Traceback (most recent call last):
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     init_db()
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     with db_session() as db:
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     return next(self.gen)
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:            ^^^^^^^^^^^^^^
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     db = connect()
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:          ^^^^^^^^^
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:   File "/opt/hamsterking-license/server.py", line 223, in connect
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]:     db.execute("PRAGMA journal_mode=WAL")
-Sep 26 07:41:55 Mikhail.nezhnikov.com python3[31051]: sqlite3.OperationalError: disk I/O error
-Sep 26 07:41:55 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Main process exited, code=exited, status=1/FAILURE
-Sep 26 07:41:55 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Failed with result 'exit-code'.
-Sep 26 07:42:00 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Scheduled restart job, restart counter is at 6.
-Sep 26 07:42:00 Mikhail.nezhnikov.com systemd[1]: Started hamsterking-license.service - Hamster King License Service.
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]: Traceback (most recent call last):
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     init_db()
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     with db_session() as db:
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     return next(self.gen)
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:            ^^^^^^^^^^^^^^
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     db = connect()
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:          ^^^^^^^^^
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/opt/hamsterking-license/server.py", line 223, in connect
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     db.execute("PRAGMA journal_mode=WAL")
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]: sqlite3.OperationalError: disk I/O error
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]: Error in sys.excepthook:
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]: Traceback (most recent call last):
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 228, in partial_apport_excepthook
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     return apport_excepthook(binary, exc_type, exc_obj, exc_tb)
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 144, in apport_excepthook
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     os.open(pr_filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640), "wb"
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]: OSError: [Errno 30] Read-only file system: '/var/crash/_opt_hamsterking-license_server.py.995.crash'
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]: Original exception was:
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]: Traceback (most recent call last):
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     init_db()
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     with db_session() as db:
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     return next(self.gen)
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:            ^^^^^^^^^^^^^^
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     db = connect()
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:          ^^^^^^^^^
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:   File "/opt/hamsterking-license/server.py", line 223, in connect
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]:     db.execute("PRAGMA journal_mode=WAL")
-Sep 26 07:42:01 Mikhail.nezhnikov.com python3[31079]: sqlite3.OperationalError: disk I/O error
-Sep 26 07:42:01 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Main process exited, code=exited, status=1/FAILURE
-Sep 26 07:42:01 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Failed with result 'exit-code'.
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]: Traceback (most recent call last):
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     init_db()
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     with db_session() as db:
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     return next(self.gen)
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:            ^^^^^^^^^^^^^^
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     db = connect()
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:          ^^^^^^^^^
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/opt/hamsterking-license/server.py", line 223, in connect
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     db.execute("PRAGMA journal_mode=WAL")
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]: sqlite3.OperationalError: disk I/O error
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]: Error in sys.excepthook:
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]: Traceback (most recent call last):
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 228, in partial_apport_excepthook
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     return apport_excepthook(binary, exc_type, exc_obj, exc_tb)
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 144, in apport_excepthook
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     os.open(pr_filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640), "wb"
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]: OSError: [Errno 30] Read-only file system: '/var/crash/_opt_hamsterking-license_server.py.995.crash'
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]: Original exception was:
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]: Traceback (most recent call last):
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     init_db()
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     with db_session() as db:
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     return next(self.gen)
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:            ^^^^^^^^^^^^^^
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     db = connect()
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:          ^^^^^^^^^
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:   File "/opt/hamsterking-license/server.py", line 223, in connect
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]:     db.execute("PRAGMA journal_mode=WAL")
+Sep 26 07:47:24 Mikhail.nezhnikov.com python3[32488]: sqlite3.OperationalError: disk I/O error
+Sep 26 07:47:24 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Main process exited, code=exited, status=1/FAILURE
+Sep 26 07:47:24 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Failed with result 'exit-code'.
+Sep 26 07:47:28 Mikhail.nezhnikov.com systemd[1]: Stopped hamsterking-license.service - Hamster King License Service.
+Sep 26 07:47:28 Mikhail.nezhnikov.com systemd[1]: Started hamsterking-license.service - Hamster King License Service.
+Sep 26 07:47:30 Mikhail.nezhnikov.com python3[32596]: 200.169.178.51 - GET /api/v1/recipes/public - 200
+Sep 26 07:47:37 Mikhail.nezhnikov.com systemd[1]: Stopping hamsterking-license.service - Hamster King License Service...
+Sep 26 07:47:37 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Deactivated successfully.
+Sep 26 07:47:37 Mikhail.nezhnikov.com systemd[1]: Stopped hamsterking-license.service - Hamster King License Service.
+Sep 26 07:47:37 Mikhail.nezhnikov.com systemd[1]: Started hamsterking-license.service - Hamster King License Service.
+Sep 26 07:48:30 Mikhail.nezhnikov.com python3[32673]: 200.169.178.51 - GET /api/v1/recipes/public - 200
+Sep 26 07:48:53 Mikhail.nezhnikov.com python3[32673]: 91.108.5.163 - POST /api/v1/telegram/webhook - 200
+Sep 26 07:49:11 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - OPTIONS /api/v1/check - 204
+Sep 26 07:49:11 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/check - 200
+Sep 26 07:49:11 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - OPTIONS /api/v1/settings/load - 204
+Sep 26 07:49:11 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - OPTIONS /api/v1/pits/list - 204
+Sep 26 07:49:12 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/settings/load - 200
+Sep 26 07:49:12 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/pits/list - 200
+Sep 26 07:49:12 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - OPTIONS /api/v1/settings/save - 204
+Sep 26 07:49:12 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/settings/save - 200
+Sep 26 07:49:12 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - OPTIONS /api/v1/runtime-smoke/capture - 204
+Sep 26 07:49:12 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - OPTIONS /api/v1/clan-shop-facts/submit - 204
+Sep 26 07:49:12 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/runtime-smoke/capture - 200
+Sep 26 07:49:12 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/clan-shop-facts/submit - 200
+Sep 26 07:49:19 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/check - 200
+Sep 26 07:49:20 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - OPTIONS /api/v1/pits/submit - 204
+Sep 26 07:49:20 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/settings/load - 200
+Sep 26 07:49:20 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/pits/list - 200
+Sep 26 07:49:20 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/pits/submit - 200
+Sep 26 07:49:20 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/settings/save - 200
+Sep 26 07:49:21 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/runtime-smoke/capture - 200
+Sep 26 07:49:21 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/clan-shop-facts/submit - 200
+Sep 26 07:49:21 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - OPTIONS /api/v1/treasure-guide/capture - 204
+Sep 26 07:49:21 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - OPTIONS /api/v1/treasure-guide/capture - 204
+Sep 26 07:49:22 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/treasure-guide/capture - 200
+Sep 26 07:49:22 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/treasure-guide/capture - 200
+Sep 26 07:49:22 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/treasure-guide/capture - 200
+Sep 26 07:49:22 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/treasure-guide/capture - 200
+Sep 26 07:49:22 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/treasure-guide/capture - 200
+Sep 26 07:49:23 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/clan-shop-facts/submit - 200
+Sep 26 07:49:29 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/treasure-guide/capture - 200
+Sep 26 07:49:30 Mikhail.nezhnikov.com python3[32673]: 200.169.178.51 - GET /api/v1/recipes/public - 200
+Sep 26 07:49:32 Mikhail.nezhnikov.com python3[32673]: 95.104.177.249 - POST /api/v1/pits/submit - 200
