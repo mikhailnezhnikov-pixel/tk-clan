@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.08",
-  "target_version": "1.18.09",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.09.rumors-shared-results.candidate.user.js",
-  "primary_marker": "rumors-shared-results-20260926-r2",
+  "source_version": "1.18.09",
+  "target_version": "1.18.10",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.10.trader-fishing-stability.candidate.user.js",
+  "primary_marker": "trader-fishing-stability-20260926-r1",
   "preserve_markers": [
+    "rumors-shared-results-20260926-r2",
     "fishing-canon-priority-20260926-r2",
     "minigame-flow-fixes-20260926-r1",
     "lights-modal-confirm-20260926-r2",
@@ -72,7 +73,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-09-rumors-shared-results-live-status.txt",
-  "commit_message": "rumors: deploy shared live results in userscript 1.18.09",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-10-trader-fishing-stability-live-status.txt",
+  "commit_message": "fix: deploy trader auto-buy and fishing stability in userscript 1.18.10"
 }
