@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.96
+target_version=1.17.97
+marker=late-login-recovery-20260926-r1
+source_sha256=c391a2dfa3d1b89143c9e0009754ae3c81c12d7d9664c4f516bef46d5bc3a6b7
+candidate_sha256=448223f7614c0269f9394fdcfbe20aef436fcfe63b346539844a17955fd2dfdf
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

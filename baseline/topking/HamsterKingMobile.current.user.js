@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.96
+// @version      1.17.97
+// @release-note Запуск на Safari/iPhone: late-login handoff больше не выжигает лимит попыток во время 429 cooldown. После паузы HK автоматически пробует снова; /player/me bootstrap стал коротким one-shot, а диагностическая кнопка показывает актуальную стадию вместо застывшего BOOT.
 // @release-note Game API: базовый cooldown после HTTP 429 сокращён с 60 до 20 секунд. Магазин больше не добавляет сверху ещё 1,2 секунды перед повтором; если сервер явно прислал больший Retry-After, он по-прежнему уважается.
 // @release-note Ресурсы: «Выполнить рассчитанный максимум» теперь запускает уже рассчитанный обмен сразу, без второго системного confirm. Сообщение «Ресурсный обмен отменён пользователем» остаётся только для ручного режима с лимитом, если пользователь действительно отменил подтверждение.
 // @release-note Слухи: добавлен отдельный экран «Охота за слухами» по канону Kokkaras, а на главной «Сегодня» — автоматический блок «Слухи сегодня». Маршрут берётся с HK backend, который синхронизирует публичный rumors.php Kokkaras; прямые gamearea_id используются без повторного перебора карт.
@@ -107,7 +108,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.96';
+  const BUILD_VERSION = '1.17.97';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -198,16 +199,16 @@
   let bootstrapProblem = '';
   let bootstrapButton = null;
   function showBootstrap(problem = '') {
-    bootstrapProblem = String(problem || bootstrapProblem || ('HK '+HK_CORE_REVISION+' · '+hkStartupStage));
+    if (problem) bootstrapProblem = String(problem);
     if (!bootstrapButton) {
       bootstrapButton = document.createElement('button');
       bootstrapButton.id = 'hk-bootstrap-button';
       bootstrapButton.dataset.hkRevision = HK_CORE_REVISION;
       bootstrapButton.type = 'button';
       bootstrapButton.style.cssText = 'position:fixed;right:16px;bottom:90px;z-index:2147483647;border:0;border-radius:50%;width:58px;height:58px;background:#ff9f1c;color:#16110a;font:bold 20px Arial;box-shadow:0 8px 24px #0008';
-      bootstrapButton.onclick = () => alert(bootstrapProblem+'\nrev='+HK_CORE_REVISION+'\nstage='+hkStartupStage);
+      bootstrapButton.onclick = () => alert((bootstrapProblem || ('HK '+HK_CORE_REVISION+' · '+hkStartupStage))+'\nrev='+HK_CORE_REVISION+'\nstage='+hkStartupStage);
     }
-    bootstrapButton.textContent = problem ? 'HK!' : 'HK…';
+    bootstrapButton.textContent = bootstrapProblem ? 'HK!' : 'HK…';
     const host = document.documentElement || document.head;
     if (host && !bootstrapButton.isConnected) host.appendChild(bootstrapButton);
   }
@@ -1562,7 +1563,7 @@
     const authorized = await ensureGameAuthorization(false, 'late-bootstrap');
     if (!apiBase || !authorized) { setHealth('game', false, 'нет подключения к игре'); return false; }
     try {
-      const documentValue = await apiJson('/player/me', 'POST', null, true, 2);
+      const documentValue = await apiJson('/player/me', 'POST', null, true, 0, 10000);
       acceptPlayerState(`${apiBase}/player/me`, apiHeaders, documentValue, false);
       setHealth('game', true, 'игра отвечает');
       return true;
@@ -16100,6 +16101,7 @@
   const HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3';
   const HK_LAUNCHER_HANDOFF_REV = 'launcher-handoff-20260920-r4';
   const HK_LATE_LOGIN_HANDOFF_REV = 'late-login-handoff-20260921-r1';
+  const HK_LATE_LOGIN_RECOVERY_REV = 'late-login-recovery-20260926-r1';
   let hkNativeLoginRuntimeStarted = false;
   let hkLateLoginHandoffAttempts = 0;
   let hkLateLoginHandoffBusy = false;
@@ -16127,7 +16129,18 @@
 
   async function hkTryLateLoginHandoff() {
     if (hkNativeGameLoginReady() || hkLateLoginHandoffBusy) return hkNativeGameLoginReady();
-    if (Date.now() < hkLateLoginHandoffNextAt || hkLateLoginHandoffAttempts >= 6) return false;
+    const now=Date.now();
+    if (now < hkLateLoginHandoffNextAt) return false;
+
+    // A local 429 gate is not a failed login attempt. Do not burn through the
+    // recovery loop while Game API is intentionally cooling down.
+    const cooldown=Math.max(0,gameApiCooldownRemainingMs());
+    if(cooldown>0){
+      hkLateLoginHandoffNextAt=now+cooldown+250;
+      hkStartupStage='WAIT_NATIVE_LOGIN';
+      recordDiagnostic('late-login-handoff-cooldown',{revision:HK_LATE_LOGIN_RECOVERY_REV,cooldownMs:cooldown});
+      return false;
+    }
 
     restoreGameApiBaseFromPerformance();
     refreshStoredGameAuthorization();
@@ -16148,10 +16161,12 @@
 
     hkLateLoginHandoffBusy = true;
     hkLateLoginHandoffAttempts += 1;
-    hkLateLoginHandoffNextAt = Date.now() + 1500;
+    hkLateLoginHandoffNextAt = Date.now() + Math.min(8000,1500 + hkLateLoginHandoffAttempts*500);
     hkStartupStage = 'LATE_HANDOFF';
+    bootstrapProblem='';
+    showBootstrap();
     recordDiagnostic('late-login-handoff-attempt', {
-      revision:HK_LATE_LOGIN_HANDOFF_REV,
+      revision:HK_LATE_LOGIN_RECOVERY_REV,
       attempt:hkLateLoginHandoffAttempts,
       nativePlayerMeSeen,
       authSource:nativeAuthParams?.source || '',
@@ -16159,7 +16174,9 @@
     });
     try {
       const ok = await bootstrapLateGameConnection();
-      recordDiagnostic('late-login-handoff-result', {ok, attempt:hkLateLoginHandoffAttempts});
+      const afterCooldown=Math.max(0,gameApiCooldownRemainingMs());
+      if(!ok && afterCooldown>0) hkLateLoginHandoffNextAt=Date.now()+afterCooldown+250;
+      recordDiagnostic('late-login-handoff-result', {ok, attempt:hkLateLoginHandoffAttempts, cooldownMs:afterCooldown});
       return !!ok && hkNativeGameLoginReady();
     } finally {
       hkLateLoginHandoffBusy = false;
