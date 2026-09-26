@@ -1,0 +1,15 @@
+USERSCRIPT_1_18_04_CHEST_AUTO_DIG_OPEN_PREDEPLOY=PASS
+source_version=1.18.03
+target_version=1.18.04
+scope=COMMON_HK_USERSCRIPT_ONLY
+public_treasure_script=UNCHANGED
+dig_cost=item_treasurehunt_energy:5
+found_chest_type01_cost=item_treasurehunt_energy:5
+chest_015_cost=item_treasurehunt_key_common:1
+chest_02_cost=item_treasurehunt_key_uncommon:1
+chest_03_cost=item_treasurehunt_key_epic:1
+insufficient_resources=SKIP
+reward_chain=DISMISS_TO_END
+syntax=PASS
+base_sha256=b58977a8ddad306b0b34ee83fdd668fb565dcb628db3fea65c35e36d9b59b71c
+candidate_sha256=83c8c39147f095f28a33fca6dcecf8c9cfcd0b6627fe23265f7d89b2672abee7

@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.02",
-  "target_version": "1.18.03",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.03.victory-mobile-tap.candidate.user.js",
-  "primary_marker": "battle-victory-tap-fallback-20260926-r1",
+  "source_version": "1.18.03",
+  "target_version": "1.18.04",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.04.chest-auto-dig-open.candidate.user.js",
+  "primary_marker": "chest-auto-dig-open-20260926-r1",
   "preserve_markers": [
+    "battle-victory-tap-fallback-20260926-r1",
     "battle-victory-claim-20260926-r1",
     "battle-reward-dismiss-20260926-r1",
     "battle-modal-confirm-20260926-r1",
@@ -67,7 +68,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-03-victory-mobile-tap-live-status.txt",
-  "commit_message": "fix: deploy robust mobile victory reward tap in userscript 1.18.03",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-04-chest-auto-dig-open-live-status.txt",
+  "commit_message": "fix: deploy Treasure chest auto dig/open in userscript 1.18.04"
 }
