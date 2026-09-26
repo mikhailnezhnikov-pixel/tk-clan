@@ -1,0 +1,1 @@
+verify live Rumors coordinator R3 after disk recovery 2026-09-26 r1
