@@ -46,7 +46,13 @@ terms=[
   "Начать новое путешествие",
   "Покинуть локацию",
   "function recordDiagnostic(",
-  "TREASURE_RUN_RECORDER",
+  "TREASURE_RUN_RECORDER",,
+  "async function runAutoMapTick",
+  "function setAutoMapEnabled",
+  "function autoMapJourneyButton",
+  "function autoMapMapCards",
+  "function dispatchAutoMapTap",
+  "function autoMapStartLockAt"
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
