@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.27
+target_version=1.18.28
+marker=treasure-final-reward-handoff-20260927-r1
+source_sha256=24577c5722441e88a33b5d56c03bad97b282114f40aa74250116b3a07b75aea7
+candidate_sha256=2e4d6ec05a08f67fde2599a3edbd5b8eb85608e63dad5f897e6ef0ddd9217476
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

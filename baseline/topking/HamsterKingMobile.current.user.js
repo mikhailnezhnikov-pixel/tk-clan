@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.27
+// @version      1.18.28
+// @release-note Карта Сокровищ: исправлены три перехода мини-игр по записи прохода #5. Сражение теперь забирает реальный Сундук победителя (mf_fairlot_minigame_fight_room_big_chest) и после награды передаёт управление Автокарте; Лабиринт/лампочки забирают mf_fairlot_lights_out_reward_slot до перехода в следующую комнату; Рыбалка использует фактические «забросы» из mf_treasurelot_fishing_rod_* как бюджет и больше не выходит при наличии попыток.
+// @release-note Мини-игры: мобильный tap больше не генерирует два click подряд. Убрано дублирование synthetic click + element.click(), которое вызывало лишние 409 Shop lot cannot be bought.
 // @release-note Сражение: если оставшегося запаса мечей недостаточно для полной зачистки всех мобов, автобой больше не тратит мечи частично. Перед следующим ударом HK сравнивает суммарный HP с остатком мечей и дополнительно проверяет полный план решателем; при невозможности зачистки автоматически нажимает «Покинуть локацию».
 // @release-note Темп автоматизации: покупки и мини-игры переведены на последовательный человеческий ритм — пауза на пересканирование поля, отдельная пауза перед открытием лота, чтением окна и подтверждением, затем ожидание ответа/изменения поля перед следующим действием. 409/429/5xx получили увеличенный cooldown без мгновенных повторов.
 // @release-note Торговец: жёсткий whitelist — покупать только монеты сокровищ (random4coins), ягоды (food_*) и карты сокровищ (map). Ключи, яйца, HK-монеты и прочие лоты игнорируются. Рыбалка: каждая цель проходит живую проверку остатка валюты перед выбором и перед подтверждением; недоступные по балансу клетки не нажимаются, после исчерпания очков Автокарта штатно выходит.
@@ -138,7 +140,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.27';
+  const BUILD_VERSION = '1.18.28';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3726,6 +3728,9 @@
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
   const HK_BATTLE_FULL_CLEAR_EXIT_REV='battle-full-clear-exit-20260927-r1';
+  const HK_TREASURE_FINAL_REWARD_HANDOFF_REV='treasure-final-reward-handoff-20260927-r1';
+  const HK_FISHING_VISIBLE_CASTS_REV='fishing-visible-casts-20260927-r1';
+  const HK_MINIGAME_SINGLE_TAP_REV='minigame-single-tap-20260927-r1';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -18220,10 +18225,30 @@
       return {id:fishingCurrencyId(),quantity};
     }
 
+    function fishingVisibleCasts() {
+      const rods=[...document.querySelectorAll('[data-lot-id*="mf_treasurelot_fishing_rod_"]')].filter(visible);
+      for (const element of rods) {
+        const lotId=String(element.getAttribute('data-lot-id')||'');
+        const byId=lotId.match(/mf_treasurelot_fishing_rod_\d+_(\d+)/);
+        if (byId) return Math.max(0,Number(byId[1])||0);
+        const text=clean(element.innerText||element.textContent||'');
+        const byText=text.match(/(\d+)\s*(?:заброс(?:ов|а)?|casts?)/i);
+        if (byText) return Math.max(0,Number(byText[1])||0);
+      }
+      const body=clean(document.body?.innerText||'');
+      const byBody=body.match(/(\d+)\s*(?:заброс(?:ов|а)?|casts?)/i);
+      return byBody ? Math.max(0,Number(byBody[1])||0) : null;
+    }
+
     function fishingAffordable(cost) {
       const quantity=Math.max(0,Number(cost?.quantity||0));
+      if (!(quantity>0)) return false;
+
+      const casts=fishingVisibleCasts();
+      if (casts!==null) return casts>=quantity;
+
       const id=String(cost?.id||'');
-      if (!(quantity>0) || !id) return false;
+      if (!id) return false;
       const amount=walletAmount(id);
       return amount!==null && Number(amount)>=quantity;
     }
@@ -18231,9 +18256,12 @@
     function fishingBudgetSnapshot(cost) {
       const id=String(cost?.id||'');
       const amount=id ? walletAmount(id) : null;
+      const casts=fishingVisibleCasts();
       return {
         id,
-        balance:amount===null ? null : Number(amount),
+        balance:casts!==null ? casts : (amount===null ? null : Number(amount)),
+        casts,
+        source:casts!==null ? 'visible-rod' : (amount===null ? 'unknown' : 'wallet'),
         cost:Math.max(0,Number(cost?.quantity||0))
       };
     }
@@ -18286,7 +18314,7 @@
     }
 
     function fishingSignature() {
-      return 'FISHING|'+fishingElements()
+      return 'FISHING|casts='+String(fishingVisibleCasts())+'|'+fishingElements()
         .map(row=>row.lotId+'#'+(row.activated?'1':'0')+'#'+row.text+'#'+clean(row.element.className||''))
         .join('|');
     }
@@ -19156,6 +19184,22 @@
           const board=getLightsBoard();
           const valid=board.filter(cell=>cell!==null);
           if (valid.length!==9) {
+            if (lightsRewardElement()) {
+              const rewardResult=await runLightsFinalReward(runId,steps);
+              if (!rewardResult.ok) {
+                if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
+                return failLightsAuto(rewardResult.reason,{steps,phase:'post-board-replacement'});
+              }
+              recordDiagnostic('lights-auto-complete',{
+                revision:HK_TREASURE_FINAL_REWARD_HANDOFF_REV,
+                steps,
+                reason:rewardResult.claimed?'post-board-reward-claimed':'post-board-solved'
+              });
+              if (rewardResult.claimed && autoMapEnabled()) {
+                setTimeout(()=>void runAutoMapTick('lights-final-reward-claimed'),minigameRandomMs(700,1200));
+              }
+              return true;
+            }
             if (!getSignature().startsWith('LIGHTS|')) {
               clearNumbers();
               recordDiagnostic('lights-auto-complete',{revision:HK_LIGHTS_AUTO_REV,steps,reason:'board-closed'});
@@ -19429,9 +19473,8 @@
       try { leaf.dispatchEvent(new MouseEvent('mousedown',{...options,buttons:1})); } catch (_) {}
       try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
       try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
-      try { leaf.dispatchEvent(new MouseEvent('click',{...options,buttons:0})); } catch (_) {}
       try { leaf.click?.(); } catch (_) {}
-      recordDiagnostic('battle-mobile-tap',{revision:HK_BATTLE_VICTORY_TAP_REV,label,x:Math.round(x),y:Math.round(y),tag:leaf.tagName||''});
+      recordDiagnostic('battle-mobile-tap',{revision:HK_MINIGAME_SINGLE_TAP_REV,label,x:Math.round(x),y:Math.round(y),tag:leaf.tagName||''});
       return true;
     }
 
@@ -19445,9 +19488,8 @@
       try { leaf.dispatchEvent(new MouseEvent('mousedown',{...options,buttons:1})); } catch (_) {}
       try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
       try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
-      try { leaf.dispatchEvent(new MouseEvent('click',{...options,buttons:0})); } catch (_) {}
       try { leaf.click?.(); } catch (_) {}
-      recordDiagnostic('battle-mobile-tap',{revision:HK_BATTLE_VICTORY_TAP_REV,label,x:Math.round(px),y:Math.round(py),tag:leaf.tagName||''});
+      recordDiagnostic('battle-mobile-tap',{revision:HK_MINIGAME_SINGLE_TAP_REV,label,x:Math.round(px),y:Math.round(py),tag:leaf.tagName||''});
       return true;
     }
 
@@ -19759,8 +19801,15 @@
     }
 
     function battleVictoryElement() {
+      const exact=[...document.querySelectorAll('[data-lot-id="mf_fairlot_minigame_fight_room_big_chest"]')]
+        .find(element=>visible(element));
+      if (exact) return exact;
+
+      // Compatibility fallback for older layouts: only a defeated tile with an
+      // explicit action marker may be treated as the final reward.
       const elements=[...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_defeated"]')].filter(visible);
       return elements
+        .filter(element=>/▷|▶|►|claim|collect|забрать|получить/i.test(clean(element.innerText||element.textContent||'')))
         .map(element=>({element,area:(element.getBoundingClientRect?.().width||0)*(element.getBoundingClientRect?.().height||0)}))
         .sort((a,b)=>b.area-a.area)[0]?.element || null;
     }
@@ -19890,7 +19939,14 @@
         await new Promise(resolve=>setTimeout(resolve,300));
         await dismissBattleRewardIfPresent(runId);
         const success=!battleVictoryModalRoot();
-        recordDiagnostic('battle-victory-claim-complete',{revision:HK_BATTLE_VICTORY_TAP_REV,success});
+        recordDiagnostic('battle-victory-claim-complete',{
+          revision:HK_TREASURE_FINAL_REWARD_HANDOFF_REV,
+          success,
+          lotId:'mf_fairlot_minigame_fight_room_big_chest'
+        });
+        if (success && autoMapEnabled()) {
+          setTimeout(()=>void runAutoMapTick('battle-victory-claimed'),minigameRandomMs(700,1200));
+        }
         return success;
       } finally {
         if (runId===battleAutoRunId) battleAutoRunning=false;
@@ -20625,6 +20681,8 @@
         elements=traderElements().map(row=>row.element);
       } else if (signature.startsWith('LIGHTS|')) {
         elements=getLightsBoard().filter(Boolean).map(cell=>cell.element).filter(Boolean);
+        const reward=lightsRewardElement();
+        if (reward) elements.push(reward);
       } else {
         return false;
       }
@@ -21295,6 +21353,8 @@
     }
 
     function getSignature() {
+      const lightsReward=lightsRewardElement();
+      if (lightsReward) return 'LIGHTS|REWARD|mf_fairlot_lights_out_reward_slot';
       const lights = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')].filter(visible);
       if (lights.length === 9) return 'LIGHTS|' + lights.map(element => element.getAttribute('data-lot-id')).join('|');
 
@@ -21450,6 +21510,9 @@
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
       battleFullClearExitRevision:HK_BATTLE_FULL_CLEAR_EXIT_REV,
+      treasureFinalRewardHandoffRevision:HK_TREASURE_FINAL_REWARD_HANDOFF_REV,
+      fishingVisibleCastsRevision:HK_FISHING_VISIBLE_CASTS_REV,
+      minigameSingleTapRevision:HK_MINIGAME_SINGLE_TAP_REV,
       start,
       stop,
       check:checkPuzzle,
