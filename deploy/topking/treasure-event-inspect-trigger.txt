@@ -1,2 +1,2 @@
-inspect=concise-chest-transitions
-stamp=2026-09-26T13:23+09:00
+inspect=chest-lot-costs
+stamp=2026-09-26T13:25+09:00
