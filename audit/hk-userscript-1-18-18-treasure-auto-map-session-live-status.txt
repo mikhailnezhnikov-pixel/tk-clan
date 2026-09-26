@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.17
+target_version=1.18.18
+marker=treasure-auto-map-session-20260926-r3
+source_sha256=188746c00ab02f8ac0587fd8fcf668119c61b82c1b6ea62b5d45fdf2a43ee96b
+candidate_sha256=2c673e99cd1873dec1591a9754a08ffa0ed06a49d20a18a23b7b125d74510a37
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.17
+// @version      1.18.18
+// @release-note Автокарта: теперь сама начинает новую Карту Сокровищ через «Начать новое путешествие» + подтверждение 1, сохраняет состояние прохода через перезагрузку и останавливается только при повторном появлении кнопки после завершения карты.
 // @release-note Автокарта: после подтверждения клетки теперь ждёт фактического изменения карты/комнаты, а не только закрытия модального окна. Минимальный темп замедлен; при 409 текущая клетка временно исключается и выполняется новый пересчёт вместо повторного клика.
 // @release-note Карта Сокровищ: добавлен единый режим «Автокарта». Он проходит активные клетки по одной, подтверждает стоимость, забирает обычные награды, передаёт бой/рыбалку/торговца/лампочки/сундуки существующим авто-модулям, проходит treasury room и переходы лабиринта, после каждой комнаты возвращается к карте и пересчитывает доступные клетки. 409 обрабатывается пересканированием, 429/5xx — паузой без слепых повторных кликов.
 // @release-note Слухи: полноценная «Охота за слухами» переведена на канон Kokkaras v40 из 5.3.22-ui-icons-pit-dim: распределение городов через HK coordinator, claim/lease/heartbeat, поиск 3/3 с радиусом 3 и city-policy, защита сигнатур карты, общие результаты Kokkaras+HK, live-статусы/история и переходы по найденным координатам. Старый блок «Сегодня» сохранён.
@@ -128,7 +129,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.17';
+  const BUILD_VERSION = '1.18.18';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3705,6 +3706,7 @@
   const HK_TREASURE_RUN_RECORDER_STABILITY_REV='treasure-run-recorder-stability-blockers-20260926-r2';
   const HK_TREASURE_AUTO_MAP_REV='treasure-auto-map-orchestrator-20260926-r1';
   const HK_TREASURE_AUTO_MAP_STABILITY_REV='treasure-auto-map-stability-20260926-r2';
+  const HK_TREASURE_AUTO_MAP_SESSION_REV='treasure-auto-map-session-20260926-r3';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -20014,6 +20016,7 @@
 
     // ----- Full Treasure Map orchestrator -----
     const AUTO_MAP_STORAGE_KEY='hk:treasure:auto-map:v1';
+    const AUTO_MAP_SESSION_KEY='hk:treasure:auto-map-session:v1';
     const AUTO_MAP_LOOP_MS=420;
     const AUTO_MAP_ACTION_GAP_MS=1450;
     const AUTO_MAP_MODAL_TIMEOUT_MS=2600;
@@ -20034,6 +20037,19 @@
     function autoMapEnabled() {
       try{return localStorage.getItem(AUTO_MAP_STORAGE_KEY)==='1';}
       catch(_){return false;}
+    }
+
+    function autoMapSessionStarted() {
+      try{return localStorage.getItem(AUTO_MAP_SESSION_KEY)==='1';}
+      catch(_){return false;}
+    }
+
+    function setAutoMapSessionStarted(value) {
+      try{
+        if (value) localStorage.setItem(AUTO_MAP_SESSION_KEY,'1');
+        else localStorage.removeItem(AUTO_MAP_SESSION_KEY);
+      }catch(_){}
+      return !!value;
     }
 
     function autoMapModulesRunning() {
@@ -20091,13 +20107,18 @@
       const show=showOverride===null
         ? (enabled || treasureGuideScreenVisible())
         : !!showOverride;
-      autoMapToggle.style.display=show?'block':'none';
-      autoMapToggle.textContent=enabled
+      const display=show?'block':'none';
+      const label=enabled
         ? 'Автокарта: ВКЛ'+(autoMapLastStatus?' · '+autoMapLastStatus:'')
         : 'Автокарта: ВЫКЛ';
-      autoMapToggle.style.background=enabled?'#38c85a':'#292929';
-      autoMapToggle.style.color=enabled?'#071b0a':'#fff';
-      autoMapToggle.style.borderColor=enabled?'#d8ffe0':'rgba(255,255,255,.8)';
+      const background=enabled?'#38c85a':'#292929';
+      const color=enabled?'#071b0a':'#fff';
+      const borderColor=enabled?'#d8ffe0':'rgba(255,255,255,.8)';
+      if (autoMapToggle.style.display!==display) autoMapToggle.style.display=display;
+      if (autoMapToggle.textContent!==label) autoMapToggle.textContent=label;
+      if (autoMapToggle.style.background!==background) autoMapToggle.style.background=background;
+      if (autoMapToggle.style.color!==color) autoMapToggle.style.color=color;
+      if (autoMapToggle.style.borderColor!==borderColor) autoMapToggle.style.borderColor=borderColor;
     }
 
     function ensureAutoMapToggle() {
@@ -20495,11 +20516,23 @@
           return true;
         }
 
-        // A completed Treasure Map is the terminal state: do not start a new map.
+        // The same game button is present both before the first map and after the
+        // completed map. Persist session state so reloads cannot start a second map.
         if (treasureGuideScreenVisible() && autoMapJourneyButton()) {
+          if (!autoMapSessionStarted()) {
+            const journey=autoMapJourneyButton();
+            autoMapStatus('старт карты');
+            const started=await autoMapTapAndConfirm(journey,'new-journey',1);
+            if (started) {
+              setAutoMapSessionStarted(true);
+              autoMapStatus('карта открыта');
+            }
+            return started;
+          }
+
           autoMapStatus('ГОТОВО');
           recordDiagnostic('treasure-auto-map-complete',{
-            revision:HK_TREASURE_AUTO_MAP_REV,
+            revision:HK_TREASURE_AUTO_MAP_SESSION_REV,
             actions:autoMapActionCount,
             source
           });
@@ -20511,6 +20544,7 @@
         if (treasureGuideScreenVisible()) {
           const target=autoMapMapCards()[0];
           if (target) {
+            if (!autoMapSessionStarted()) setAutoMapSessionStarted(true);
             autoMapCurrentLot=target.lotId;
             autoMapStatus('ячейка '+String(target.slot),{
               lotId:target.lotId,
@@ -20526,6 +20560,11 @@
           }
           autoMapStatus('жду карту');
           return false;
+        }
+
+        // Any non-map room while AutoMap is active belongs to the current map.
+        if (!treasureGuideScreenVisible() && !autoMapSessionStarted()) {
+          setAutoMapSessionStarted(true);
         }
 
         // Treasury room after the boss: first choose route 1 (recorded canonical run),
@@ -20620,6 +20659,13 @@
       if (value) {
         autoMapActionCount=0;
         autoMapLastStatus='';
+        if (!autoMapSessionStarted()) {
+          // If enabling in the middle of an already-open map/minigame, infer that
+          // the current session has started. A visible "new journey" button means
+          // we are still before the map.
+          const alreadyInside=!autoMapJourneyButton();
+          setAutoMapSessionStarted(alreadyInside);
+        }
         autoMapEnableModules();
         autoMapStatus('старт');
         setTimeout(()=>void runAutoMapTick('enable'),50);
@@ -20628,6 +20674,7 @@
         autoMapRestoreModes();
         if (finalStatus) autoMapLastStatus=finalStatus;
         else if (meta?.reason && meta.reason!=='map-complete') autoMapLastStatus='стоп';
+        setAutoMapSessionStarted(false);
         recordDiagnostic('treasure-auto-map-toggle',{
           revision:HK_TREASURE_AUTO_MAP_REV,
           enabled:false,
@@ -20791,6 +20838,7 @@
       minigameEntryGateRevision:HK_MINIGAME_ENTRY_GATE_REV,
       battleVisibleBoardRevision:HK_BATTLE_VISIBLE_BOARD_REV,
       treasureAutoMapRevision:HK_TREASURE_AUTO_MAP_REV,
+      treasureAutoMapSessionRevision:HK_TREASURE_AUTO_MAP_SESSION_REV,
       start,
       stop,
       check:checkPuzzle,
