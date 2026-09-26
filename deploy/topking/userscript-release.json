@@ -69,5 +69,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-04-chest-auto-dig-open-live-status.txt",
-  "commit_message": "fix: deploy Treasure chest auto dig/open in userscript 1.18.04"
+  "commit_message": "fix: deploy Treasure chest auto dig/open in userscript 1.18.04",
+  "trigger_revision": 1
 }
