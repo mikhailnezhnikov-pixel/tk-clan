@@ -40,7 +40,7 @@ terms=[
   "fair_mini_game",
   "MutationObserver",
   "addEventListener('click'",
-  "addEventListener("click""
+  'addEventListener("click"'
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
