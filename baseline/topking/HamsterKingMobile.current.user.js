@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.18
+// @version      1.18.19
+// @release-note Автокарта: исправлен повторный запуск новой карты. Действия Автокарты теперь дают ровно один click; после первого запуска ставится start-lock и повторный «Начать новое путешествие» запрещён до появления активной карты либо истечения безопасного ожидания.
 // @release-note Автокарта: теперь сама начинает новую Карту Сокровищ через «Начать новое путешествие» + подтверждение 1, сохраняет состояние прохода через перезагрузку и останавливается только при повторном появлении кнопки после завершения карты.
 // @release-note Автокарта: после подтверждения клетки теперь ждёт фактического изменения карты/комнаты, а не только закрытия модального окна. Минимальный темп замедлен; при 409 текущая клетка временно исключается и выполняется новый пересчёт вместо повторного клика.
 // @release-note Карта Сокровищ: добавлен единый режим «Автокарта». Он проходит активные клетки по одной, подтверждает стоимость, забирает обычные награды, передаёт бой/рыбалку/торговца/лампочки/сундуки существующим авто-модулям, проходит treasury room и переходы лабиринта, после каждой комнаты возвращается к карте и пересчитывает доступные клетки. 409 обрабатывается пересканированием, 429/5xx — паузой без слепых повторных кликов.
@@ -129,7 +130,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.18';
+  const BUILD_VERSION = '1.18.19';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3707,6 +3708,7 @@
   const HK_TREASURE_AUTO_MAP_REV='treasure-auto-map-orchestrator-20260926-r1';
   const HK_TREASURE_AUTO_MAP_STABILITY_REV='treasure-auto-map-stability-20260926-r2';
   const HK_TREASURE_AUTO_MAP_SESSION_REV='treasure-auto-map-session-20260926-r3';
+  const HK_TREASURE_AUTO_MAP_START_LOCK_REV='treasure-auto-map-start-lock-20260926-r4';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -20017,6 +20019,8 @@
     // ----- Full Treasure Map orchestrator -----
     const AUTO_MAP_STORAGE_KEY='hk:treasure:auto-map:v1';
     const AUTO_MAP_SESSION_KEY='hk:treasure:auto-map-session:v1';
+    const AUTO_MAP_START_LOCK_KEY='hk:treasure:auto-map-start-lock:v1';
+    const AUTO_MAP_START_LOCK_MS=9000;
     const AUTO_MAP_LOOP_MS=420;
     const AUTO_MAP_ACTION_GAP_MS=1450;
     const AUTO_MAP_MODAL_TIMEOUT_MS=2600;
@@ -20152,6 +20156,31 @@
       },true);
       document.body.appendChild(autoMapToggle);
       updateAutoMapToggle();
+    }
+
+    function autoMapStartLockAt() {
+      try{return Number(localStorage.getItem(AUTO_MAP_START_LOCK_KEY)||0)||0;}
+      catch(_){return 0;}
+    }
+
+    function setAutoMapStartLock(value) {
+      try{
+        if (value) localStorage.setItem(AUTO_MAP_START_LOCK_KEY,String(value));
+        else localStorage.removeItem(AUTO_MAP_START_LOCK_KEY);
+      }catch(_){}
+    }
+
+    function dispatchAutoMapTap(element,label='auto-map-tap') {
+      if (!element || !visible(element)) return false;
+      const clickable=element.closest?.('button,[role="button"],a') || element;
+      try { clickable.click(); }
+      catch (_) { return false; }
+      recordDiagnostic('treasure-auto-map-tap',{
+        revision:HK_TREASURE_AUTO_MAP_START_LOCK_REV,
+        label,
+        tag:clickable.tagName||''
+      });
+      return true;
     }
 
     function autoMapFindTextButton(pattern,root=document) {
@@ -20372,7 +20401,7 @@
       autoMapActionCount+=1;
       autoMapLastActionAt=Date.now();
 
-      if (!dispatchBattleTap(element,'auto-map-'+label)) {
+      if (!dispatchAutoMapTap(element,'auto-map-'+label)) {
         autoMapStatus('клик не прошёл',{label});
         return false;
       }
@@ -20416,7 +20445,7 @@
       }
 
       autoMapLastActionAt=Date.now();
-      if (!dispatchBattleTap(action,'auto-map-confirm-'+label)) {
+      if (!dispatchAutoMapTap(action,'auto-map-confirm-'+label)) {
         autoMapRetryNotBefore=Date.now()+1400;
         return false;
       }
@@ -20452,7 +20481,7 @@
       autoMapActionCount+=1;
       autoMapLastActionAt=Date.now();
       const text=clean(button.innerText||button.textContent||'');
-      const ok=dispatchBattleTap(button,'auto-map-reward-'+text.slice(0,30));
+      const ok=dispatchAutoMapTap(button,'auto-map-reward-'+text.slice(0,30));
       if (ok) {
         autoMapStatus('награда');
         await new Promise(resolve=>setTimeout(resolve,340));
@@ -20520,16 +20549,27 @@
         // completed map. Persist session state so reloads cannot start a second map.
         if (treasureGuideScreenVisible() && autoMapJourneyButton()) {
           if (!autoMapSessionStarted()) {
+            const lockAt=autoMapStartLockAt();
+            if (lockAt && Date.now()-lockAt<AUTO_MAP_START_LOCK_MS) {
+              autoMapStatus('жду открытия',{elapsedMs:Date.now()-lockAt});
+              return false;
+            }
+            if (lockAt) setAutoMapStartLock(0);
             const journey=autoMapJourneyButton();
+            setAutoMapStartLock(Date.now());
             autoMapStatus('старт карты');
             const started=await autoMapTapAndConfirm(journey,'new-journey',1);
-            if (started) {
+            if (started && autoMapMapCards().length>0) {
               setAutoMapSessionStarted(true);
+              setAutoMapStartLock(0);
               autoMapStatus('карта открыта');
+            } else {
+              autoMapStatus('жду открытия');
             }
             return started;
           }
 
+          setAutoMapStartLock(0);
           autoMapStatus('ГОТОВО');
           recordDiagnostic('treasure-auto-map-complete',{
             revision:HK_TREASURE_AUTO_MAP_SESSION_REV,
@@ -20545,6 +20585,7 @@
           const target=autoMapMapCards()[0];
           if (target) {
             if (!autoMapSessionStarted()) setAutoMapSessionStarted(true);
+            setAutoMapStartLock(0);
             autoMapCurrentLot=target.lotId;
             autoMapStatus('ячейка '+String(target.slot),{
               lotId:target.lotId,
@@ -20675,6 +20716,7 @@
         if (finalStatus) autoMapLastStatus=finalStatus;
         else if (meta?.reason && meta.reason!=='map-complete') autoMapLastStatus='стоп';
         setAutoMapSessionStarted(false);
+        setAutoMapStartLock(0);
         recordDiagnostic('treasure-auto-map-toggle',{
           revision:HK_TREASURE_AUTO_MAP_REV,
           enabled:false,
@@ -20839,6 +20881,7 @@
       battleVisibleBoardRevision:HK_BATTLE_VISIBLE_BOARD_REV,
       treasureAutoMapRevision:HK_TREASURE_AUTO_MAP_REV,
       treasureAutoMapSessionRevision:HK_TREASURE_AUTO_MAP_SESSION_REV,
+      treasureAutoMapStartLockRevision:HK_TREASURE_AUTO_MAP_START_LOCK_REV,
       start,
       stop,
       check:checkPuzzle,
