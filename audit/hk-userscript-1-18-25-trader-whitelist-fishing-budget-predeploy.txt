@@ -1,0 +1,11 @@
+USERSCRIPT_1_18_25_TRADER_WHITELIST_FISHING_BUDGET_PREDEPLOY=PASS
+source_version=1.18.24
+target_version=1.18.25
+trader_allow=random4coins,food_*,map*
+trader_deny=keys,eggs,hk_coins,other
+fishing_live_balance_required=YES
+fishing_recheck_before_confirm=YES
+fishing_no_affordable_target=EXIT_ELIGIBLE
+syntax=PASS
+base_sha256=5f663509e67fc2cacece8e260781a76b24351122909c7dc33fc4e75cecd6e2d3
+candidate_sha256=811aa5bc903f5057e04a0cad81aaae9909e19681fc5dd9203921ffb0bb2f8587
