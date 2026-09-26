@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.20
+target_version=1.18.21
+marker=treasure-auto-map-foreground-handoff-20260926-r6
+source_sha256=65ebcb0701dd4342e1cbe28a321e5931ba332b860ff577b689e513a204904434
+candidate_sha256=73ebc6b58296cfbcccd4003c6cade84ee2a1a1ad35e88899a3974f305c165345
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

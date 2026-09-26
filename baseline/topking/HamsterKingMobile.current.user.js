@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.20
+// @version      1.18.21
+// @release-note Автокарта: исправлен переход мини-игра → карта. Пока бой/рыбалка/торговец/лампочки/сундуки реально находятся на переднем плане, клетки карты под ними не нажимаются. Автокарта больше не выходит из боя до его полного завершения. После возврата на карту действует короткий settle-lock. Двойные клики покупок в сундуках/рыбалке/торговце заменены одиночными.
 // @release-note Автокарта: активные клетки текущей Карты Сокровищ теперь имеют абсолютный приоритет над кнопкой сброса «Начать новое путешествие». Окно сброса закрывается через «Назад». Завершение карты требует устойчивого отсутствия активных клеток.
 // @release-note Автокарта: исправлен повторный запуск новой карты. Действия Автокарты теперь дают ровно один click; после первого запуска ставится start-lock и повторный «Начать новое путешествие» запрещён до появления активной карты либо истечения безопасного ожидания.
 // @release-note Автокарта: теперь сама начинает новую Карту Сокровищ через «Начать новое путешествие» + подтверждение 1, сохраняет состояние прохода через перезагрузку и останавливается только при повторном появлении кнопки после завершения карты.
@@ -131,7 +132,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.20';
+  const BUILD_VERSION = '1.18.21';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3711,6 +3712,7 @@
   const HK_TREASURE_AUTO_MAP_SESSION_REV='treasure-auto-map-session-20260926-r3';
   const HK_TREASURE_AUTO_MAP_START_LOCK_REV='treasure-auto-map-start-lock-20260926-r4';
   const HK_TREASURE_AUTO_MAP_ACTIVE_PRIORITY_REV='treasure-auto-map-active-priority-20260926-r5';
+  const HK_TREASURE_AUTO_MAP_HANDOFF_REV='treasure-auto-map-foreground-handoff-20260926-r6';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -18276,7 +18278,7 @@
           button=treasureRewardButton();
           if (!button) break;
         }
-        if (!dispatchBattleTap(button,'fishing-reward-'+(i+1))) break;
+        if (!dispatchAutoMapTap(button,'fishing-reward-'+(i+1))) break;
         clicked+=1;
         await new Promise(resolve=>setTimeout(resolve,280));
       }
@@ -18309,7 +18311,7 @@
       });
 
       try {
-        if (!dispatchBattleTap(target.element,'fishing-open-'+target.lotId)) {
+        if (!dispatchAutoMapTap(target.element,'fishing-open-'+target.lotId)) {
           return failFishingAuto('target-tap-failed',{lotId:target.lotId,startedAt});
         }
         fishingLastMutationAt=Date.now();
@@ -18367,7 +18369,7 @@
           return null;
         })();
 
-        if (!action || !dispatchBattleTap(action,'fishing-confirm-'+target.lotId)) {
+        if (!action || !dispatchAutoMapTap(action,'fishing-confirm-'+target.lotId)) {
           return failFishingAuto('action-missing',{lotId:target.lotId,cost:target.cost,startedAt});
         }
         fishingLastMutationAt=Date.now();
@@ -18611,7 +18613,7 @@
       });
 
       try {
-        if (!dispatchBattleTap(target.element,'trader-open-'+target.lotId)) {
+        if (!dispatchAutoMapTap(target.element,'trader-open-'+target.lotId)) {
           return traderBackoff('target-tap-failed',{lotId:target.lotId,startedAt});
         }
         traderLastMutationAt=Date.now();
@@ -18671,7 +18673,7 @@
           return null;
         })();
 
-        if (!action || !dispatchBattleTap(action,'trader-confirm-'+target.lotId)) {
+        if (!action || !dispatchAutoMapTap(action,'trader-confirm-'+target.lotId)) {
           try { target.element.dataset.hkTraderSkip='1'; } catch (_) {}
           return traderBackoff('action-missing',{lotId:target.lotId,cost:target.cost.parts,startedAt});
         }
@@ -19488,7 +19490,7 @@
           if (!treasureRewardButton()) break;
           continue;
         }
-        dispatchBattleTap(button,'chest-reward-'+(i+1));
+        dispatchAutoMapTap(button,'chest-reward-'+(i+1));
         clicked+=1;
         await new Promise(resolve=>setTimeout(resolve,280));
       }
@@ -19528,7 +19530,7 @@
       });
       try {
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
-        dispatchBattleTap(target.element,target.digging?'chest-dig-spot':'chest-open-card');
+        dispatchAutoMapTap(target.element,target.digging?'chest-dig-spot':'chest-open-card');
 
         const modal=await waitTreasureModal(target.cost,runId);
         if (!modal) {
@@ -19538,7 +19540,7 @@
 
         let action=await waitTreasureActionButton(modal,target.cost,runId);
         let tapped=false;
-        if (action) tapped=dispatchBattleTap(action,target.digging?'chest-dig-confirm':'chest-open-confirm');
+        if (action) tapped=dispatchAutoMapTap(action,target.digging?'chest-dig-confirm':'chest-open-confirm');
         if (!tapped) tapped=await tapTreasureActionFallback(modal,runId);
         if (!tapped) {
           recordDiagnostic('chest-auto-stop',{revision:HK_CHEST_AUTO_REV,reason:'action-missing',lotId:target.lotId});
@@ -20024,6 +20026,7 @@
     const AUTO_MAP_START_LOCK_KEY='hk:treasure:auto-map-start-lock:v1';
     const AUTO_MAP_START_LOCK_MS=9000;
     const AUTO_MAP_NO_ACTIVE_COMPLETE_MS=4500;
+    const AUTO_MAP_RETURN_SETTLE_MS=1600;
     const AUTO_MAP_LOOP_MS=420;
     const AUTO_MAP_ACTION_GAP_MS=1450;
     const AUTO_MAP_MODAL_TIMEOUT_MS=2600;
@@ -20041,6 +20044,7 @@
     let autoMapPreviousModes=null;
     let autoMapLastStatus='';
     let autoMapNoActiveSince=0;
+    let autoMapReturnNotBefore=0;
 
     function autoMapEnabled() {
       try{return localStorage.getItem(AUTO_MAP_STORAGE_KEY)==='1';}
@@ -20230,6 +20234,49 @@
         .filter(el=>el && el!==autoMapToggle && !el.disabled && visible(el))
         .map(el=>({el,text:clean(el.innerText||el.textContent||'').trim()}))
         .find(row=>/^(?:Назад|Back)$/i.test(row.text))?.el || null;
+    }
+
+    function autoMapMiniGameForeground() {
+      const signature=getSignature();
+      return /^(?:LIGHTS|BATTLE|FISHING|TRADER|CHESTS)(?:\||$|_)/.test(signature);
+    }
+
+    function autoMapModalCloseButton(root) {
+      if (!root) return null;
+      const candidates=[...root.querySelectorAll('button,[role="button"],a,div,span')]
+        .filter(el=>el && el!==autoMapToggle && !el.disabled && visible(el))
+        .map(el=>{
+          const text=clean(el.innerText||el.textContent||'').trim();
+          const aria=clean(el.getAttribute?.('aria-label')||'').trim();
+          const rect=el.getBoundingClientRect?.() || {width:0,height:0,left:0,top:0};
+          let score=0;
+          if (/^(?:×|✕|Назад|Back|Закрыть|Close)$/i.test(text)) score+=180;
+          if (/close|закрыть|back|назад/i.test(aria)) score+=160;
+          if (rect.width>0 && rect.width<=90 && rect.height>0 && rect.height<=90) score+=25;
+          return {el,score,area:rect.width*rect.height};
+        })
+        .filter(row=>row.score>=160)
+        .sort((a,b)=>b.score-a.score || a.area-b.area);
+      return candidates[0]?.el || null;
+    }
+
+    async function autoMapCloseLingeringModal(reason='stale-modal') {
+      if (autoMapMiniGameForeground()) return false;
+      const root=treasureModalRoot(null);
+      if (!root) return false;
+      const close=autoMapModalCloseButton(root);
+      if (!close) {
+        autoMapStatus('жду окно',{reason});
+        return false;
+      }
+      dispatchAutoMapTap(close,'close-'+reason);
+      autoMapLastActionAt=Date.now();
+      recordDiagnostic('treasure-auto-map-modal-close',{
+        revision:HK_TREASURE_AUTO_MAP_HANDOFF_REV,
+        reason
+      });
+      await new Promise(resolve=>setTimeout(resolve,420));
+      return true;
     }
 
     function autoMapJourneyButton() {
@@ -20521,13 +20568,15 @@
       if (signature.startsWith('FISHING|')) return !fishingTarget();
       if (signature.startsWith('TRADER|')) return !traderTarget();
       if (signature.startsWith('CHESTS|')) return !treasureChestTarget();
-      if (signature.startsWith('BATTLE')) return !!autoMapExitButton();
+      if (signature.startsWith('BATTLE')) return false;
       if (signature==='NONE' && !treasureGuideScreenVisible()) return true;
       return false;
     }
 
     async function autoMapHandleExitOrContinue() {
       if (autoMapModulesRunning()) return false;
+      const signature=getSignature();
+      if (signature.startsWith('BATTLE')) return false;
       const exit=autoMapExitButton();
       if (exit) {
         autoMapStatus('выход');
@@ -20556,6 +20605,7 @@
       }
 
       if (autoMapModulesRunning()) {
+        autoMapReturnNotBefore=Date.now()+AUTO_MAP_RETURN_SETTLE_MS;
         autoMapStatus('мини-игра');
         return false;
       }
@@ -20571,9 +20621,27 @@
           return true;
         }
 
+        const foregroundNow=autoMapMiniGameForeground();
+        if (foregroundNow) {
+          autoMapReturnNotBefore=Date.now()+AUTO_MAP_RETURN_SETTLE_MS;
+        } else if (treasureGuideScreenVisible() && Date.now()<autoMapReturnNotBefore) {
+          autoMapStatus('возврат на карту',{
+            waitMs:autoMapReturnNotBefore-Date.now()
+          });
+          return false;
+        }
+
+        // A stale purchase/confirmation modal from a failed 409 must be closed
+        // before the next map cell can be considered.
+        if (!foregroundNow && treasureGuideScreenVisible() && treasureModalRoot(null)) {
+          const closed=await autoMapCloseLingeringModal('map-overlay');
+          if (closed) return true;
+          return false;
+        }
+
         // Active cells always mean the current journey is still alive.
         // Handle them before even looking at the persistent reset button.
-        if (treasureGuideScreenVisible()) {
+        if (!autoMapMiniGameForeground() && !treasureModalRoot(null) && Date.now()>=autoMapReturnNotBefore && treasureGuideScreenVisible()) {
           const activeCount=autoMapActiveCellCount();
           if (activeCount>0) {
             autoMapNoActiveSince=0;
@@ -20618,7 +20686,7 @@
 
         // The same game button is present both before the first map and after the
         // completed map. Persist session state so reloads cannot start a second map.
-        if (treasureGuideScreenVisible() && autoMapJourneyButton()) {
+        if (!autoMapMiniGameForeground() && !treasureModalRoot(null) && Date.now()>=autoMapReturnNotBefore && treasureGuideScreenVisible() && autoMapJourneyButton()) {
           if (!autoMapSessionStarted()) {
             const lockAt=autoMapStartLockAt();
             if (lockAt && Date.now()-lockAt<AUTO_MAP_START_LOCK_MS) {
@@ -20660,7 +20728,7 @@
         }
 
         // Normal map traversal: lowest currently active slot first, then rescan.
-        if (treasureGuideScreenVisible()) {
+        if (!autoMapMiniGameForeground() && !treasureModalRoot(null) && Date.now()>=autoMapReturnNotBefore && treasureGuideScreenVisible()) {
           const target=autoMapMapCards()[0];
           if (target) {
             if (!autoMapSessionStarted()) setAutoMapSessionStarted(true);
@@ -20713,16 +20781,12 @@
           return true;
         }
         if (signature.startsWith('BATTLE')) {
+          // Battle module owns the whole battle until victory/reward state is gone.
+          // Never press the persistent "Покинуть локацию" while enemies remain.
+          autoMapReturnNotBefore=Date.now()+AUTO_MAP_RETURN_SETTLE_MS;
           autoMapStatus('сражение');
-          if (signature.startsWith('BATTLE_REWARD') && battleAutoEnabled()) {
-            lastSignature='';
-            setTimeout(checkPuzzle,20);
-          } else if (autoMapExitButton()) {
-            await autoMapHandleExitOrContinue();
-          } else {
-            lastSignature='';
-            setTimeout(checkPuzzle,20);
-          }
+          lastSignature='';
+          setTimeout(checkPuzzle,20);
           return true;
         }
         if (signature.startsWith('FISHING|')) {
@@ -20775,6 +20839,7 @@
       autoMapRetryNotBefore=0;
       autoMapCurrentLot='';
       autoMapNoActiveSince=0;
+      autoMapReturnNotBefore=0;
       if (!value) autoMapSkipLotsUntil.clear();
 
       if (value) {
@@ -20963,6 +21028,7 @@
       treasureAutoMapSessionRevision:HK_TREASURE_AUTO_MAP_SESSION_REV,
       treasureAutoMapStartLockRevision:HK_TREASURE_AUTO_MAP_START_LOCK_REV,
       treasureAutoMapActivePriorityRevision:HK_TREASURE_AUTO_MAP_ACTIVE_PRIORITY_REV,
+      treasureAutoMapHandoffRevision:HK_TREASURE_AUTO_MAP_HANDOFF_REV,
       start,
       stop,
       check:checkPuzzle,
