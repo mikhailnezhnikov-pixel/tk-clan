@@ -1,1 +1,1 @@
-2026-09-21 verify loader after embedded Puzzle Solver v3
+2026-09-26 verify loader r25 fallback after primary 502
