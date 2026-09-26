@@ -179,6 +179,13 @@ insert="""    function lightsAutoEnabled() {
       });
     }
 
+    function lightsNeedsAuto() {
+      const board=getLightsBoard();
+      if (!Array.isArray(board) || board.length!==9 || board.some(cell=>!cell)) return false;
+      const solution=solveLights(board);
+      return Array.isArray(solution) && solution.length>0;
+    }
+
     async function waitLightsBoardChange(before,runId) {
       const started=Date.now();
       while (Date.now()-started<LIGHTS_AUTO_CHANGE_TIMEOUT_MS) {
@@ -282,32 +289,7 @@ insert="""    function lightsAutoEnabled() {
 need(anchor,"chest toggle anchor")
 s=s.replace(anchor,anchor+insert,1)
 
-old_run="""    function runLights() {
-      const board = getLightsBoard();
-      if (board.filter(cell => cell !== null).length !== 9) return false;
-      clearNumbers();
-      const solution = solveLights(board);
-      if (solution === null) { console.log('HK LIGHTS: решения не найдено'); return true; }
-      if (solution.length === 0) { console.log('HK LIGHTS: все лампы уже включены'); return true; }
-      solution.forEach((position,index) => addNumber(board[position].element,index+1));
-      console.log('HK LIGHTS: нажать лампы:',solution.map(pos => pos+1));
-      return true;
-    }
-"""
-new_run="""    function runLights() {
-      const board = getLightsBoard();
-      if (board.filter(cell => cell !== null).length !== 9) return false;
-      clearNumbers();
-      const solution = solveLights(board);
-      if (solution === null) { console.log('HK LIGHTS: решения не найдено'); return true; }
-      if (solution.length === 0) { console.log('HK LIGHTS: все лампы уже включены'); return true; }
-      solution.forEach((position,index) => addNumber(board[position].element,index+1));
-      console.log('HK LIGHTS: нажать лампы:',solution.map(pos => pos+1));
-      if (lightsAutoEnabled() && !lightsAutoRunning) void runLightsAuto();
-      return true;
-    }
-"""
-rep(old_run,new_run,"runLights auto start")
+
 
 old_sig="""    function checkPuzzle() {
       const signature = getSignature();
@@ -340,7 +322,11 @@ new_sig="""    function checkPuzzle() {
       if (signature === lastSignature) return;
       lastSignature = signature;
       clearNumbers();
-      if (isLights) { runLights(); return; }
+      if (isLights) {
+        runLights();
+        if (lightsAutoEnabled() && !lightsAutoRunning && lightsNeedsAuto()) void runLightsAuto();
+        return;
+      }
       if (isBattle) { runBattle(); return; }
       if (isBattleReward && battleAutoEnabled()) { void runBattleVictoryClaim(); return; }
       if (isChests && chestAutoEnabled()) void runTreasureChestAuto();
@@ -417,7 +403,8 @@ for marker in [
     "waitLightsBoardChange",
     "state-cycle",
     "field-no-change",
-    "if (lightsAutoEnabled() && !lightsAutoRunning) void runLightsAuto();",
+    "lightsNeedsAuto",
+    "if (lightsAutoEnabled() && !lightsAutoRunning && lightsNeedsAuto()) void runLightsAuto();",
     "chest-auto-dig-open-20260926-r1",
     "battle-auto-click-toggle-20260926-r1",
 ]:
