@@ -1,0 +1,47 @@
+name: Diagnose Rumors R3 Server
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/rumors-r3-diagnose-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Inspect live server
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' <<'REMOTE'
+          set +e
+          echo "=== DF ==="
+          df -h /
+          echo "=== DB FILES ==="
+          ls -lh /var/lib/hamsterking-license/licenses.db* 2>/dev/null | tail -40
+          echo "=== SERVER BACKUPS ==="
+          ls -lh /opt/hamsterking-license/server.py* 2>/dev/null | tail -40
+          echo "=== DIR SIZES ==="
+          du -sh /var/lib/hamsterking-license /opt/hamsterking-license /var/log 2>/dev/null
+          echo "=== SERVICE ==="
+          systemctl status hamsterking-license.service --no-pager -l | tail -60
+          echo "=== JOURNAL ==="
+          journalctl -u hamsterking-license.service -n 120 --no-pager
+          echo "=== SERVER MARKERS ==="
+          grep -n "HK_RUMORS_COORDINATOR_R3\|def rumor_hunter_action\|rumor_hunter_presence" /opt/hamsterking-license/server.py | head -20
+          echo "=== LOCAL HEALTH ==="
+          curl -sS -i --max-time 10 http://127.0.0.1:8787/health 2>&1 | head -60
+          REMOTE
