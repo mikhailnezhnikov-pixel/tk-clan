@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.23
+// @version      1.18.24
+// @release-note Автокарта: после возврата на реальную карту зависшие running-флаги старой мини-игры больше не блокируют следующую клетку. Если активная клетка карты действительно находится сверху, а мини-игра уже нет, старый runner отменяется по runId и Автокарта продолжает маршрут сама.
 // @release-note Сундуки: уже активированные карточки «Активировано/Activated» больше не считаются покупаемой целью даже если у другого слота такой же lotId ещё остался некупленным. После верхних сундуков автомодуль продолжает по реально открывшимся клеткам.
 // @release-note Автокарта: исправлено зависание «сундуки» на чистом экране карты. Мини-игра теперь считается передним планом только если её реальные элементы действительно находятся сверху в точках экрана; старые DOM-элементы под картой больше не блокируют выбор следующей ячейки.
 // @release-note Автокарта: исправлен переход мини-игра → карта. Пока бой/рыбалка/торговец/лампочки/сундуки реально находятся на переднем плане, клетки карты под ними не нажимаются. Автокарта больше не выходит из боя до его полного завершения. После возврата на карту действует короткий settle-lock. Двойные клики покупок в сундуках/рыбалке/торговце заменены одиночными.
@@ -134,7 +135,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.23';
+  const BUILD_VERSION = '1.18.24';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3717,6 +3718,7 @@
   const HK_TREASURE_AUTO_MAP_HANDOFF_REV='treasure-auto-map-foreground-handoff-20260926-r6';
   const HK_TREASURE_AUTO_MAP_FOREGROUND_TRUTH_REV='treasure-auto-map-foreground-truth-20260926-r7';
   const HK_TREASURE_CHEST_ELEMENT_STATE_REV='treasure-chest-element-state-20260927-r1';
+  const HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV='treasure-auto-map-stale-runner-20260927-r2';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -20106,6 +20108,50 @@
       return !!(battleAutoRunning || chestAutoRunning || lightsAutoRunning || fishingAutoRunning || traderAutoRunning);
     }
 
+    function autoMapMapIsForeground() {
+      const rows=autoMapMapCards();
+      return rows.some(row=>autoMapElementIsForeground(row.element));
+    }
+
+    function autoMapCancelStaleRunners(reason='map-foreground') {
+      const cancelled=[];
+      if (battleAutoRunning) {
+        battleAutoRunId+=1;
+        battleAutoRunning=false;
+        cancelled.push('battle');
+      }
+      if (chestAutoRunning) {
+        chestAutoRunId+=1;
+        chestAutoRunning=false;
+        cancelled.push('chests');
+      }
+      if (lightsAutoRunning) {
+        lightsAutoRunId+=1;
+        lightsAutoRunning=false;
+        cancelled.push('lights');
+      }
+      if (fishingAutoRunning) {
+        fishingAutoRunId+=1;
+        fishingAutoRunning=false;
+        cancelled.push('fishing');
+      }
+      if (traderAutoRunning) {
+        traderAutoRunId+=1;
+        traderAutoRunning=false;
+        cancelled.push('trader');
+      }
+      if (cancelled.length) {
+        lastSignature='';
+        recordDiagnostic('treasure-auto-map-stale-runner-cancel',{
+          revision:HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV,
+          reason,
+          cancelled,
+          activeCells:autoMapActiveCellCount()
+        });
+      }
+      return cancelled;
+    }
+
     function autoMapCaptureModes() {
       if (autoMapPreviousModes) return;
       autoMapPreviousModes={
@@ -20689,6 +20735,15 @@
       }
 
       if (autoMapModulesRunning()) {
+        const minigameForeground=autoMapMiniGameForeground();
+        const mapForeground=autoMapMapIsForeground();
+        if (mapForeground && !minigameForeground) {
+          autoMapCancelStaleRunners('real-map-foreground');
+          autoMapReturnNotBefore=Date.now()+350;
+          autoMapStatus('возврат на карту');
+          return false;
+        }
+
         autoMapReturnNotBefore=Date.now()+AUTO_MAP_RETURN_SETTLE_MS;
         autoMapStatus('мини-игра');
         return false;
@@ -21115,6 +21170,7 @@
       treasureAutoMapHandoffRevision:HK_TREASURE_AUTO_MAP_HANDOFF_REV,
       treasureAutoMapForegroundTruthRevision:HK_TREASURE_AUTO_MAP_FOREGROUND_TRUTH_REV,
       treasureChestElementStateRevision:HK_TREASURE_CHEST_ELEMENT_STATE_REV,
+      treasureAutoMapStaleRunnerRevision:HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV,
       start,
       stop,
       check:checkPuzzle,
