@@ -65,5 +65,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-00-battle-modal-confirm-live-status.txt",
-  "commit_message": "fix: deploy two-stage mobile battle auto-click in userscript 1.18.00"
+  "commit_message": "fix: deploy two-stage mobile battle auto-click in userscript 1.18.00",
+  "trigger_revision": 1
 }
