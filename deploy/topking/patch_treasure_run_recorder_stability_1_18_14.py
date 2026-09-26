@@ -146,7 +146,7 @@ rep(
 
 # Enrich clicked target with actual blocking/disabled state.
 rep(
-    """    const rect=actionable.getBoundingClientRect?.();
+    r"""    const rect=actionable.getBoundingClientRect?.();
     return {
       lotId:String(lotNode?.getAttribute?.('data-lot-id')||'').slice(0,220),
       tag:String(actionable.tagName||'').toLowerCase(),
@@ -159,7 +159,7 @@ rep(
       h:rect?Math.round(rect.height):null
     };
 """,
-    """    const rect=actionable.getBoundingClientRect?.();
+    r"""    const rect=actionable.getBoundingClientRect?.();
     const style=getComputedStyle(actionable);
     return {
       lotId:String(lotNode?.getAttribute?.('data-lot-id')||'').slice(0,220),
