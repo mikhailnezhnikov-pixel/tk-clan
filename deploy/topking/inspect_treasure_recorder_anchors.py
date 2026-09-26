@@ -44,3 +44,9 @@ Path("audit/treasure-recorder-anchors.json").write_text(
     json.dumps(out,ensure_ascii=False,indent=2)+"\n",encoding="utf-8"
 )
 print("TREASURE_RECORDER_ANCHORS=PASS")
+
+print("PRINT_RECORDER_ANCHORS")
+for key in ["function treasureRunRecorderTargetInfo","function treasureRunRecorderUpdateButton","treasureRunRecorderObserver=new MutationObserver"]:
+    print("=== "+key+" ===")
+    for hit in out["hits"].get(key,[])[:1]:
+        print(hit["context"])
