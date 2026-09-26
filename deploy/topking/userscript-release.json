@@ -78,5 +78,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-14-treasure-recorder-stability-live-status.txt",
-  "commit_message": "fix: deploy Treasure recorder stability and blockers in userscript 1.18.14"
+  "commit_message": "fix: deploy Treasure recorder stability and blockers in userscript 1.18.14",
+  "trigger_revision": 1
 }
