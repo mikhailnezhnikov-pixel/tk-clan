@@ -1,3 +1,4 @@
+# build-trigger: 1.18.13 treasure run recorder r1
 from pathlib import Path
 import sys
 
