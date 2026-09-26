@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.97
+// @version      1.17.98
+// @release-note Сражение: новый золотой враг type_04 (Хранитель Сокровищ) теперь учитывается решателем как полноценный противник с его HP и попадает в расчёт порядка атак.
 // @release-note Запуск на Safari/iPhone: late-login handoff больше не выжигает лимит попыток во время 429 cooldown. После паузы HK автоматически пробует снова; /player/me bootstrap стал коротким one-shot, а диагностическая кнопка показывает актуальную стадию вместо застывшего BOOT.
 // @release-note Game API: базовый cooldown после HTTP 429 сокращён с 60 до 20 секунд. Магазин больше не добавляет сверху ещё 1,2 секунды перед повтором; если сервер явно прислал больший Retry-After, он по-прежнему уважается.
 // @release-note Ресурсы: «Выполнить рассчитанный максимум» теперь запускает уже рассчитанный обмен сразу, без второго системного confirm. Сообщение «Ресурсный обмен отменён пользователем» остаётся только для ручного режима с лимитом, если пользователь действительно отменил подтверждение.
@@ -108,7 +109,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.97';
+  const BUILD_VERSION = '1.17.98';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -16224,6 +16225,7 @@
   // The background loop preserves the standalone cadence (300 ms initial scan,
   // then every 500 ms) and only draws numbered, pointer-events:none overlays.
   const HK_PUZZLE_SOLVER_REV = 'puzzle-solver-v3-embedded-20260921-r1';
+  const HK_BATTLE_ENEMY_TYPE04_REV = 'battle-enemy-type04-20260926-r1';
   const hkPuzzleSolver = (() => {
     const BATTLE_FIRST_SLOT = 7;
     const BATTLE_SIZE = 12;
@@ -16359,7 +16361,7 @@
       const enemies = [...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_type_"]')];
       enemies.forEach(element => {
         const id = element.getAttribute('data-lot-id') || '';
-        const match = id.match(/enemy_type_(01|02|03)_(\d+)_sl(\d+)/);
+        const match = id.match(/enemy_type_(01|02|03|04)_(\d+)_sl(\d+)/);
         if (!match) return;
         const type = match[1];
         const hp = Number(match[2]);
