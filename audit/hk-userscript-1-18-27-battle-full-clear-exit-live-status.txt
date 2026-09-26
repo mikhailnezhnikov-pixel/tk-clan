@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.26
+target_version=1.18.27
+marker=battle-full-clear-exit-20260927-r1
+source_sha256=53d6a2ac473a82e7051d2501e9a09f06f70b098c80315816c9980e5fca15233d
+candidate_sha256=24577c5722441e88a33b5d56c03bad97b282114f40aa74250116b3a07b75aea7
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

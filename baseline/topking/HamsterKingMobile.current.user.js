@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.26
+// @version      1.18.27
+// @release-note Сражение: если оставшегося запаса мечей недостаточно для полной зачистки всех мобов, автобой больше не тратит мечи частично. Перед следующим ударом HK сравнивает суммарный HP с остатком мечей и дополнительно проверяет полный план решателем; при невозможности зачистки автоматически нажимает «Покинуть локацию».
 // @release-note Темп автоматизации: покупки и мини-игры переведены на последовательный человеческий ритм — пауза на пересканирование поля, отдельная пауза перед открытием лота, чтением окна и подтверждением, затем ожидание ответа/изменения поля перед следующим действием. 409/429/5xx получили увеличенный cooldown без мгновенных повторов.
 // @release-note Торговец: жёсткий whitelist — покупать только монеты сокровищ (random4coins), ягоды (food_*) и карты сокровищ (map). Ключи, яйца, HK-монеты и прочие лоты игнорируются. Рыбалка: каждая цель проходит живую проверку остатка валюты перед выбором и перед подтверждением; недоступные по балансу клетки не нажимаются, после исчерпания очков Автокарта штатно выходит.
 // @release-note Автокарта: после возврата на реальную карту зависшие running-флаги старой мини-игры больше не блокируют следующую клетку. Если активная клетка карты действительно находится сверху, а мини-игра уже нет, старый runner отменяется по runId и Автокарта продолжает маршрут сама.
@@ -137,7 +138,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.26';
+  const BUILD_VERSION = '1.18.27';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3724,6 +3725,7 @@
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
+  const HK_BATTLE_FULL_CLEAR_EXIT_REV='battle-full-clear-exit-20260927-r1';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -17840,6 +17842,7 @@
     let battleAutoRunning = false;
     let battleAutoRunId = 0;
     let battleAutoToggle = null;
+    let battleInsufficientExitNotBefore = 0;
     let chestAutoRunning = false;
     let chestAutoRunId = 0;
     let chestAutoToggle = null;
@@ -19952,6 +19955,101 @@
       }
     }
 
+    async function runBattleInsufficientExit(info={}) {
+      if (!battleAutoEnabled() || battleAutoRunning || Date.now()<battleInsufficientExitNotBefore) return false;
+      const exit=autoMapExitButton();
+      if (!exit) {
+        battleInsufficientExitNotBefore=Date.now()+1800;
+        recordDiagnostic('battle-full-clear-exit-wait',{
+          revision:HK_BATTLE_FULL_CLEAR_EXIT_REV,
+          reason:'leave-location-button-missing',
+          swords:Number(info.swords||0),
+          totalHp:Number(info.totalHp||0),
+          enemies:Number(info.enemies||0)
+        });
+        return false;
+      }
+
+      battleAutoRunning=true;
+      const runId=++battleAutoRunId;
+      let success=false;
+      recordDiagnostic('battle-full-clear-exit-start',{
+        revision:HK_BATTLE_FULL_CLEAR_EXIT_REV,
+        swords:Number(info.swords||0),
+        totalHp:Number(info.totalHp||0),
+        enemies:Number(info.enemies||0),
+        solverKilled:Number(info.solverKilled||0),
+        reason:String(info.reason||'insufficient')
+      });
+
+      try {
+        await minigameHumanPause('scan',{
+          module:'battle-insufficient-exit',
+          swords:Number(info.swords||0),
+          totalHp:Number(info.totalHp||0)
+        });
+        if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
+
+        if (autoMapEnabled()) {
+          autoMapStatus('не хватает мечей',{
+            swords:Number(info.swords||0),
+            totalHp:Number(info.totalHp||0),
+            enemies:Number(info.enemies||0)
+          });
+          success=await autoMapTapAndConfirm(exit,'battle-insufficient-swords-exit',null);
+        } else {
+          const before=getSignature();
+          if (!dispatchBattleTap(exit,'battle-insufficient-swords-exit')) return false;
+
+          let modal=null;
+          const modalDeadline=Date.now()+2600;
+          while (Date.now()<modalDeadline) {
+            if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
+            if (getSignature()!==before) {
+              success=true;
+              break;
+            }
+            modal=treasureModalRoot(null);
+            if (modal) break;
+            await new Promise(resolve=>setTimeout(resolve,90));
+          }
+
+          if (!success && modal) {
+            let action=null;
+            const actionDeadline=Date.now()+1800;
+            while (Date.now()<actionDeadline) {
+              if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
+              action=autoMapModalPrimaryButton(modal,null);
+              if (action) break;
+              await new Promise(resolve=>setTimeout(resolve,90));
+            }
+            if (action) {
+              await minigameHumanPause('confirm',{module:'battle-insufficient-exit'});
+              if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
+              if (dispatchBattleTap(action,'battle-insufficient-swords-confirm')) {
+                const changed=await waitBattleSignatureChange(before,runId);
+                success=changed || !getSignature().startsWith('BATTLE');
+              }
+            }
+          }
+        }
+
+        battleInsufficientExitNotBefore=success ? 0 : Date.now()+2600;
+        recordDiagnostic('battle-full-clear-exit-complete',{
+          revision:HK_BATTLE_FULL_CLEAR_EXIT_REV,
+          success,
+          swords:Number(info.swords||0),
+          totalHp:Number(info.totalHp||0),
+          enemies:Number(info.enemies||0)
+        });
+        return success;
+      } finally {
+        if (runId===battleAutoRunId) battleAutoRunning=false;
+        lastSignature='';
+        setTimeout(checkPuzzle,success?1200:1500);
+      }
+    }
+
     function addNumber(element, number) {
       if (!element) return;
       const style = window.getComputedStyle(element);
@@ -20187,13 +20285,44 @@
       if (enemies.length === 0) return false;
       clearNumbers();
       const state = board.map(enemy => enemy ? {type:enemy.type,hp:enemy.hp,alive:true} : null);
+      const totalHp=state.reduce((sum,enemy)=>sum+(enemy&&enemy.alive?Math.max(0,Number(enemy.hp)||0):0),0);
       const solution = solveBattle(state,maxAttack);
+      const solverKilled=Number(solution?.killed||0);
+      const insufficientByHp=totalHp>maxAttack;
+      const insufficientBySolver=solverKilled<enemies.length;
+
+      if (insufficientByHp || insufficientBySolver) {
+        console.log('HK BATTLE: полная зачистка невозможна — выходим');
+        console.log('HK BATTLE мечей:',maxAttack,'HP:',totalHp,'решатель:',solverKilled,'из',enemies.length);
+        recordDiagnostic('battle-full-clear-insufficient',{
+          revision:HK_BATTLE_FULL_CLEAR_EXIT_REV,
+          swords:maxAttack,
+          totalHp,
+          enemies:enemies.length,
+          solverKilled,
+          solutionCost:Number(solution?.cost||0),
+          insufficientByHp,
+          insufficientBySolver
+        });
+        if (battleAutoEnabled() && !battleAutoRunning) {
+          void runBattleInsufficientExit({
+            swords:maxAttack,
+            totalHp,
+            enemies:enemies.length,
+            solverKilled,
+            reason:insufficientByHp?'hp-over-swords':'solver-no-full-clear'
+          });
+        }
+        return true;
+      }
+
       if (!solution || solution.order.length === 0) return true;
       solution.order.forEach((position,index) => {
         const enemy = board[position];
         if (enemy?.element) addNumber(enemy.element,index + 1);
       });
       console.log('HK BATTLE ATK:',maxAttack);
+      console.log('HK BATTLE HP:',totalHp);
       console.log('HK BATTLE потрачено:',solution.cost);
       console.log('HK BATTLE уничтожено:',solution.killed,'из',enemies.length);
       console.log('HK BATTLE нажать слоты:',solution.order.map(pos => pos + BATTLE_FIRST_SLOT));
@@ -21065,8 +21194,9 @@
           return true;
         }
         if (signature.startsWith('BATTLE')) {
-          // Battle module owns the whole battle until victory/reward state is gone.
-          // Never press the persistent "Покинуть локацию" while enemies remain.
+          // Battle module owns the room. It may leave the location itself when
+          // the full-clear guard proves that the remaining swords cannot clear all mobs.
+          // AutoMap must not press the persistent exit button independently.
           autoMapReturnNotBefore=Date.now()+AUTO_MAP_RETURN_SETTLE_MS;
           autoMapStatus('сражение');
           lastSignature='';
@@ -21319,6 +21449,7 @@
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
+      battleFullClearExitRevision:HK_BATTLE_FULL_CLEAR_EXIT_REV,
       start,
       stop,
       check:checkPuzzle,
