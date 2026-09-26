@@ -71,5 +71,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-06-lights-modal-flow-live-status.txt",
-  "commit_message": "fix: deploy lamp modal confirm flow in userscript 1.18.06"
+  "commit_message": "fix: deploy lamp modal confirm flow in userscript 1.18.06",
+  "trigger_revision": 1
 }
