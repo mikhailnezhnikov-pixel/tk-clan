@@ -74,5 +74,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-10-trader-fishing-stability-live-status.txt",
-  "commit_message": "fix: deploy trader auto-buy and fishing stability in userscript 1.18.10"
+  "commit_message": "fix: deploy trader auto-buy and fishing stability in userscript 1.18.10",
+  "trigger_revision": 1
 }
