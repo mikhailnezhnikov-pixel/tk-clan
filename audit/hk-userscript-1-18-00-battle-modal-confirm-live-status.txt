@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.99
+target_version=1.18.00
+marker=battle-modal-confirm-20260926-r1
+source_sha256=8ca7e49f773b3b75694014e8a3481e356226a77f613141698eb77b3e63b10ea9
+candidate_sha256=adf352bec69e2d022f63559aa18400bee1b459991358738f4a2a56534376d179
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
