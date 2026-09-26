@@ -1,0 +1,74 @@
+name: Audit Fresh Treasure Pet Skills
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/inspect_fresh_pet_skills.py'
+      - '.github/workflows/audit-fresh-treasure-pet-skills.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: audit-fresh-treasure-pet-skills
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Read fresh pet skill captures
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            deploy/topking/inspect_fresh_pet_skills.py \
+            root@89.125.1.71:/tmp/inspect_fresh_pet_skills.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/inspect_fresh_pet_skills.py' \
+            > audit/fresh-treasure-pet-skills.json
+          python3 -m json.tool audit/fresh-treasure-pet-skills.json >/dev/null
+      - name: Add current guide skill snapshot
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('treasure-map/data.json')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          out={
+            'pet_skills_confirmed':d.get('pet_skills_confirmed',[]),
+            'pet_skill_groups':d.get('pet_skill_groups',[]),
+            'pet_skill_state':d.get('pet_skill_state',{})
+          }
+          Path('audit/current-treasure-guide-pet-skills.json').write_text(
+            json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8'
+          )
+          PY
+      - name: Commit audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/fresh-treasure-pet-skills.json audit/current-treasure-guide-pet-skills.json
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: capture fresh Treasure pet skill rerolls"
+            git push origin HEAD:main
+          fi
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
