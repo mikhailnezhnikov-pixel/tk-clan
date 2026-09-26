@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.10
+target_version=1.18.11
+marker=minigame-entry-only-auto-20260926-r1
+source_sha256=a341bf228cdfa58ccc35a68f4ab01a673735750af8fbaa6124f08ec617a98502
+candidate_sha256=76b81fbefcb4f7a86f0d62d97c87f1828d1f39f5d8cb4a66a69977084faad4a0
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

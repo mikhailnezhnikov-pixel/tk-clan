@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.10
+// @version      1.18.11
+// @release-note Мини-игры: все авто-режимы теперь запускаются только после фактического входа внутрь мини-игры. На внешней карте/превью скрипт не кликает входные ячейки и не атакует скрытый DOM. Настройка ВКЛ сохраняется и автоматически начинает работу после появления реального игрового поля.
 // @release-note Мини-игры: Тайный торговец получил последовательный автовыкуп всех доступных лотов с приоритетом карт/монет/ягод и защитой от повторной покупки. Рыбалка больше не выбирает уже «Активировано», ждёт сервер между покупками и переживает временные 409/500 через reconcile/backoff вместо мгновенного отключения.
 // @release-note Слухи: «Слухи сегодня» теперь автоматически обновляются каждые 30 секунд из публичного Kokkaras feed и общих результатов HK, показывают координаты прямо на главном экране; подтверждённые джекпоты, собранные через HK, публикуются в общую базу.
 // @release-note Рыбалка: порядок приведён к подтверждённому канону прохождения. Сначала активируется Проклятая вода, чтобы раскрыть проклятые клетки; затем приоритет Магический питомец → Рыба-фонарь → Существа → Особая вода → обычные воды. Стоимость берётся с карточки/канона, окно награды закрывается перед следующим выбором.
@@ -121,7 +122,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.10';
+  const BUILD_VERSION = '1.18.11';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -16375,6 +16376,7 @@
   const HK_TRADER_AUTO_REV = 'secret-trader-auto-buy-20260926-r1';
   const HK_MINIGAME_HTTP_BACKOFF_REV = 'minigame-http-409-500-backoff-20260926-r1';
   const HK_TRADER_FISHING_STABILITY_REV = 'trader-fishing-stability-20260926-r1';
+  const HK_MINIGAME_ENTRY_GATE_REV = 'minigame-entry-only-auto-20260926-r1';
   const hkPuzzleSolver = (() => {
     const BATTLE_FIRST_SLOT = 7;
     const BATTLE_SIZE = 12;
@@ -18591,14 +18593,16 @@
     }
 
     function getSignature() {
-      const lights = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')];
+      const lights = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')].filter(visible);
       if (lights.length === 9) return 'LIGHTS|' + lights.map(element => element.getAttribute('data-lot-id')).join('|');
 
-      const sword = document.querySelector('[data-lot-id^="mf_treasurelot_sword_"]');
-      const enemies = [...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_type_"]')];
+      const sword = battleSwordElement();
+      const enemies = [...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_type_"]')].filter(visible);
       if (sword && enemies.length > 0) {
-        return 'BATTLE|' + sword.getAttribute('data-lot-id') + '|' +
+        const battleIds='|' + sword.getAttribute('data-lot-id') + '|' +
           enemies.map(element => element.getAttribute('data-lot-id')).join('|');
+        if (battleNeedsEntry()) return 'BATTLE_PREVIEW' + battleIds;
+        return 'BATTLE' + battleIds;
       }
 
       const victory=battleVictoryElement();
@@ -18620,11 +18624,12 @@
       const signature = getSignature();
       const isLights=signature.startsWith('LIGHTS|');
       const isBattle=signature.startsWith('BATTLE|');
+      const isBattlePreview=signature.startsWith('BATTLE_PREVIEW|');
       const isBattleReward=signature.startsWith('BATTLE_REWARD');
       const isFishing=signature.startsWith('FISHING|');
       const isTrader=signature.startsWith('TRADER|');
       const isChests=signature.startsWith('CHESTS|');
-      const battleContext=isBattle || isBattleReward || !!document.querySelector('[data-lot-id^="mf_treasurelot_sword_"]');
+      const battleContext=isBattle || isBattleReward;
       ensureBattleAutoToggle(battleContext);
       ensureChestAutoToggle(isChests);
       ensureLightsAutoToggle(isLights);
@@ -18640,8 +18645,14 @@
         if (lightsAutoEnabled() && !lightsAutoRunning && lightsShouldAuto()) void runLightsAuto();
         return;
       }
+      if (isBattlePreview) {
+        recordDiagnostic('battle-auto-wait-entry',{
+          revision:HK_MINIGAME_ENTRY_GATE_REV,
+          autoEnabled:battleAutoEnabled()
+        });
+        return;
+      }
       if (isBattle) {
-        if (battleAutoEnabled() && battleNeedsEntry()) { void runBattleEntry(); return; }
         runBattle();
         return;
       }
@@ -18697,6 +18708,7 @@
       fishingAutoRevision:HK_FISHING_AUTO_REV,
       fishingStabilityRevision:HK_FISHING_STABILITY_REV,
       traderAutoRevision:HK_TRADER_AUTO_REV,
+      minigameEntryGateRevision:HK_MINIGAME_ENTRY_GATE_REV,
       start,
       stop,
       check:checkPuzzle,
