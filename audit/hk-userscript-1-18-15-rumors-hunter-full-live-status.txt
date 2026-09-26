@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.14
+target_version=1.18.15
+marker=rumors-hunter-coordinator-kokkaras-v40-20260926-r4
+source_sha256=904e971da3728fc652838728754fc47c1ef8734824e5386c2cbb71758429a486
+candidate_sha256=2b51034a4e5a0a85324a8432732ed2047711a3867aae79179f129092c0e55850
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
