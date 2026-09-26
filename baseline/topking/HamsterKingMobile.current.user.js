@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.00
+// @version      1.18.01
+// @release-note Сражение: автобой теперь закрывает промежуточное окно награды «Понятно» после убийства врага и только затем пересчитывает поле и продолжает следующий удар.
 // @release-note Сражение: исправлен автобой на мобильном интерфейсе. Первый клик открывает карточку врага, затем HK нажимает кнопку фактической атаки в модальном окне, ждёт изменение поля и заново пересчитывает весь порядок перед следующим ударом.
 // @release-note Сражение: в общем HK-скрипте добавлен отдельный переключатель «Автобой». По умолчанию выключен. При включении скрипт кликает врагов по рассчитанным цифрам по одному, ждёт обновления поля после каждого удара и останавливается при рассинхронизации. Публичный скрипт Сокровищ не изменён.
 // @release-note Сражение: новый золотой враг type_04 (Хранитель Сокровищ) теперь учитывается решателем как полноценный противник с его HP и попадает в расчёт порядка атак.
@@ -111,7 +112,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.00';
+  const BUILD_VERSION = '1.18.01';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -16230,6 +16231,7 @@
   const HK_BATTLE_ENEMY_TYPE04_REV = 'battle-enemy-type04-20260926-r1';
   const HK_BATTLE_AUTO_CLICK_REV = 'battle-auto-click-toggle-20260926-r1';
   const HK_BATTLE_MODAL_CONFIRM_REV = 'battle-modal-confirm-20260926-r1';
+  const HK_BATTLE_REWARD_DISMISS_REV = 'battle-reward-dismiss-20260926-r1';
   const hkPuzzleSolver = (() => {
     const BATTLE_FIRST_SLOT = 7;
     const BATTLE_SIZE = 12;
@@ -16380,6 +16382,38 @@
       });
     }
 
+    function battleRewardDismissButton() {
+      const exact=/^(?:понятно|ok|okay|got it|understood)$/i;
+      const candidates=[...document.querySelectorAll('button,[role="button"],a')]
+        .filter(element=>element && element!==battleAutoToggle && !element.disabled && visible(element))
+        .map(element=>({element,text:clean(element.innerText||element.textContent||'')}))
+        .filter(row=>exact.test(row.text));
+      return candidates[0]?.element || null;
+    }
+
+    function waitBattleRewardDismissButton(runId,timeoutMs=2200) {
+      return new Promise(resolve=>{
+        const started=Date.now();
+        const poll=()=>{
+          if (runId!==battleAutoRunId || !battleAutoEnabled()) { resolve(null); return; }
+          const button=battleRewardDismissButton();
+          if (button) { resolve(button); return; }
+          if (Date.now()-started>=timeoutMs) { resolve(null); return; }
+          setTimeout(poll,90);
+        };
+        setTimeout(poll,90);
+      });
+    }
+
+    async function dismissBattleRewardIfPresent(runId) {
+      const button=await waitBattleRewardDismissButton(runId);
+      if (!button) return false;
+      button.click();
+      recordDiagnostic('battle-auto-dismiss-reward',{revision:HK_BATTLE_REWARD_DISMISS_REV});
+      await new Promise(resolve=>setTimeout(resolve,220));
+      return true;
+    }
+
     async function runBattleAuto(solution) {
       if (!battleAutoEnabled() || battleAutoRunning || !solution?.order?.length) return false;
       battleAutoRunning=true;
@@ -16422,7 +16456,8 @@
         }
 
         await new Promise(resolve=>setTimeout(resolve,BATTLE_AUTO_SETTLE_MS));
-        recordDiagnostic('battle-auto-step-complete',{revision:HK_BATTLE_MODAL_CONFIRM_REV,slot,expectedCost});
+        await dismissBattleRewardIfPresent(runId);
+        recordDiagnostic('battle-auto-step-complete',{revision:HK_BATTLE_REWARD_DISMISS_REV,slot,expectedCost});
 
         // Deliberately execute one hit only. The board is recalculated from the
         // real post-hit DOM before choosing the next target. This protects

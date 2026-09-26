@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.00
+target_version=1.18.01
+marker=battle-reward-dismiss-20260926-r1
+source_sha256=adf352bec69e2d022f63559aa18400bee1b459991358738f4a2a56534376d179
+candidate_sha256=1f43912a83eb244be31e818cfeeae2c868de2305b7e9f14d1ce7f1cbd70df68f
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
