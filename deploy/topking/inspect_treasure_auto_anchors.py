@@ -54,7 +54,10 @@ terms=[
   "function dispatchAutoMapTap",
   "function autoMapStartLockAt",
   "function treasureChestTarget(",
-  "function treasureChestSignature("
+  "function treasureChestSignature(",
+  "function traderTarget(",
+  "function fishingTarget(",
+  "function fishingAffordable("
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
@@ -84,6 +87,12 @@ for key in ["async function runAutoMapTick","function setAutoMapEnabled","functi
 
 print("PRINT_CHEST_CURRENT_CONTEXT")
 for key in ["function treasureChestElements(","function treasureChestTarget(","async function runTreasureChestAuto(","function treasureChestSignature("]:
+    print("=== "+key+" ===")
+    for hit in out["hits"].get(key,[])[:1]:
+        print(hit["context"])
+
+print("PRINT_TRADER_FISHING_CURRENT_CONTEXT")
+for key in ["function traderElements(","function traderTarget(","async function runTraderAuto(","function fishingElements(","function fishingTarget(","async function runFishingAuto(","function fishingAffordable("]:
     print("=== "+key+" ===")
     for hit in out["hits"].get(key,[])[:1]:
         print(hit["context"])
