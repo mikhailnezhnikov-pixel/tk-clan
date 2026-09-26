@@ -1,0 +1,36 @@
+name: Inspect Treasure Auto Anchors
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/inspect_treasure_auto_anchors.py'
+      - '.github/workflows/inspect-treasure-auto-anchors.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Inspect
+        run: |
+          set -euo pipefail
+          python3 deploy/topking/inspect_treasure_auto_anchors.py
+          python3 -m json.tool audit/treasure-auto-anchors.json >/dev/null
+      - name: Persist
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/treasure-auto-anchors.json
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist Treasure auto anchors"
+            git push origin HEAD:main
+          fi
