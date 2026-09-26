@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.05
+// @version      1.18.06
+// @release-note Лампочки: автоклик теперь учитывает реальный мобильный сценарий игры — после выбора лампы ждёт карточку, подтверждает стоимость 1 ягода, закрывает экран «Понятно», затем ждёт фактического изменения поля 3×3 и только после этого заново пересчитывает следующий ход. Если любой этап модального сценария не найден, автолампы безопасно отключаются.
 // @release-note Лампочки: в общем HK-скрипте добавлен отдельный безопасный автоклик. После каждого нажатия скрипт ждёт фактического изменения 3×3 поля, заново считывает состояние, пересчитывает решение и только затем нажимает следующую лампу. При отсутствии изменения, потере цели, невалидном поле или цикле автоматизация отключается вместо повторных кликов. Цифры подсказки сохраняются.
 // @release-note Сундуки: в общем HK-скрипте добавлена автоцепочка «раскопать → открыть найденный сундук → забрать награду». Перед каждым действием проверяется живой баланс: раскоп/обычный найденный сундук — 5 энергии, зелёный — 1 обычный ключ, золотой — 1 необычный ключ, красный — 1 эпический ключ. Недоступные сундуки пропускаются.
 // @release-note Сражение: финальный «Сундук победителя» теперь нажимается мобильным tap-событием, а кнопка выдачи награды ищется по геометрии модального окна с безопасным fallback-тапом по нижней центральной кнопке.
@@ -116,7 +117,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.05';
+  const BUILD_VERSION = '1.18.06';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -16239,7 +16240,7 @@
   const HK_BATTLE_VICTORY_CLAIM_REV = 'battle-victory-claim-20260926-r1';
   const HK_BATTLE_VICTORY_TAP_REV = 'battle-victory-tap-fallback-20260926-r1';
   const HK_CHEST_AUTO_REV = 'chest-auto-dig-open-20260926-r1';
-  const HK_LIGHTS_AUTO_REV = 'lights-auto-recalc-20260926-r1';
+  const HK_LIGHTS_AUTO_REV = 'lights-modal-confirm-20260926-r2';
   const hkPuzzleSolver = (() => {
     const BATTLE_FIRST_SLOT = 7;
     const BATTLE_SIZE = 12;
@@ -16490,6 +16491,136 @@
       return false;
     }
 
+    function lightsModalText(element) {
+      return clean(element?.innerText || element?.textContent || '').toLowerCase();
+    }
+
+    function lightsModalRoot() {
+      const rows=[];
+      const add=(element,bonus=0)=>{
+        if (!element || !visible(element)) return;
+        const rect=element.getBoundingClientRect?.();
+        if (!rect || rect.width<Math.min(260,window.innerWidth*0.42) || rect.height<160) return;
+        if (rect.width>window.innerWidth*0.99 || rect.height>window.innerHeight*0.98) return;
+        const text=lightsModalText(element);
+        let score=bonus;
+        if (/лампоч|light\s*bulb|bulb|lights?\s*out/.test(text)) score+=180;
+        if (/понятно|got\s*it|understood|okay|\bok\b/.test(text)) score+=80;
+        const style=getComputedStyle(element);
+        const z=parseInt(style.zIndex,10);
+        if (style.position==='fixed') score+=90;
+        else if (style.position==='absolute') score+=45;
+        if (Number.isFinite(z) && z>=100) score+=Math.min(100,Math.log10(z+1)*20);
+        const cx=rect.left+rect.width/2;
+        const cy=rect.top+rect.height/2;
+        const dist=Math.hypot(cx-window.innerWidth/2,cy-window.innerHeight/2);
+        score+=Math.max(0,80-dist/8);
+        rows.push({element,score,area:rect.width*rect.height});
+      };
+
+      [...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]')]
+        .forEach(element=>add(element,90));
+
+      const buttons=[...document.querySelectorAll('button,[role="button"],a')].filter(visible);
+      for (const button of buttons) {
+        const text=clean(button.innerText||button.textContent||'').trim();
+        if (!(text==='1' || /^(?:понятно|got it|understood|ok|okay)$/i.test(text))) continue;
+        let node=button.parentElement;
+        for (let depth=0;node && depth<9;depth++,node=node.parentElement) add(node,50-depth*3);
+      }
+
+      rows.sort((a,b)=>b.score-a.score || a.area-b.area);
+      return rows[0]?.score>=100 ? rows[0].element : null;
+    }
+
+    async function waitLightsModal(runId,timeoutMs=2600) {
+      const started=Date.now();
+      while (Date.now()-started<timeoutMs) {
+        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return null;
+        const root=lightsModalRoot();
+        if (root) return root;
+        await new Promise(resolve=>setTimeout(resolve,80));
+      }
+      return null;
+    }
+
+    function lightsPurchaseButton(root) {
+      if (!root) return null;
+      const rr=root.getBoundingClientRect?.();
+      if (!rr) return null;
+      const candidates=[...root.querySelectorAll('button,[role="button"],a')]
+        .filter(element=>element && element!==lightsAutoToggle && !element.disabled && visible(element))
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          let score=0;
+          if (text==='1') score+=220;
+          if (/^(?:понятно|got it|understood|ok|okay)$/i.test(text)) score-=300;
+          if (/закрыть|close|×|✕|назад|back/i.test(text)) score-=300;
+          if (rect.width>=rr.width*0.28) score+=35;
+          if (rect.height>=38) score+=25;
+          if (rect.top>=rr.top+rr.height*0.55) score+=35;
+          return {element,score};
+        })
+        .filter(row=>row.score>=180)
+        .sort((a,b)=>b.score-a.score);
+      return candidates[0]?.element || null;
+    }
+
+    function lightsAcknowledgeButton(root = null) {
+      const scope=root || document;
+      const exact=/^(?:понятно|got it|understood|ok|okay)$/i;
+      const candidates=[...scope.querySelectorAll('button,[role="button"],a')]
+        .filter(element=>element && element!==lightsAutoToggle && !element.disabled && visible(element))
+        .map(element=>({element,text:clean(element.innerText||element.textContent||'').trim()}))
+        .filter(row=>exact.test(row.text));
+      return candidates[0]?.element || null;
+    }
+
+    async function waitLightsAcknowledge(runId,before,timeoutMs=3000) {
+      const started=Date.now();
+      while (Date.now()-started<timeoutMs) {
+        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return {button:null,changed:false};
+        const changed=lightsBoardSignature()!==before;
+        const root=lightsModalRoot();
+        const button=lightsAcknowledgeButton(root);
+        if (button) return {button,changed};
+        if (changed && !root) return {button:null,changed:true};
+        await new Promise(resolve=>setTimeout(resolve,90));
+      }
+      return {button:null,changed:lightsBoardSignature()!==before};
+    }
+
+    async function runLightsModalStep(before,target,slot,runId) {
+      if (!target || !target.isConnected) return {ok:false,reason:'target-missing'};
+
+      const opened=dispatchBattleTap(target,'lights-open-'+slot);
+      if (!opened) return {ok:false,reason:'target-tap-failed'};
+
+      const purchaseModal=await waitLightsModal(runId);
+      if (!purchaseModal) return {ok:false,reason:'purchase-modal-missing'};
+
+      const purchaseButton=lightsPurchaseButton(purchaseModal);
+      if (!purchaseButton) return {ok:false,reason:'purchase-button-missing'};
+
+      if (!dispatchBattleTap(purchaseButton,'lights-confirm-cost-'+slot)) {
+        return {ok:false,reason:'purchase-tap-failed'};
+      }
+
+      const acknowledgement=await waitLightsAcknowledge(runId,before);
+      if (acknowledgement.button) {
+        if (!dispatchBattleTap(acknowledgement.button,'lights-understood-'+slot)) {
+          return {ok:false,reason:'ack-tap-failed'};
+        }
+        await new Promise(resolve=>setTimeout(resolve,180));
+      }
+
+      if (acknowledgement.changed) return {ok:true,reason:'changed-before-ack'};
+
+      const changed=await waitLightsBoardChange(before,runId);
+      return changed ? {ok:true,reason:'field-changed'} : {ok:false,reason:'field-no-change'};
+    }
+
     function failLightsAuto(reason,data={}) {
       try { localStorage.setItem(LIGHTS_AUTO_STORAGE_KEY,'0'); } catch (_) {}
       lightsAutoRunId += 1;
@@ -16548,26 +16679,27 @@
             return failLightsAuto('target-missing',{position,steps});
           }
 
-          try {
-            target.click();
-          } catch (error) {
-            return failLightsAuto('click-error',{position,steps,error:String(error?.message||error||'unknown')});
-          }
-
           steps+=1;
           recordDiagnostic('lights-auto-click',{
             revision:HK_LIGHTS_AUTO_REV,
             step:steps,
             slot:position+1,
-            remainingPlan:solution.map(pos=>pos+1)
+            remainingPlan:solution.map(pos=>pos+1),
+            flow:'tile>cost1>ack>field-change'
           });
 
-          const changed=await waitLightsBoardChange(before,runId);
-          if (!changed) {
+          const result=await runLightsModalStep(before,target,position+1,runId);
+          if (!result.ok) {
             if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
-            return failLightsAuto('field-no-change',{position,slot:position+1,steps,state:before});
+            return failLightsAuto(result.reason,{position,slot:position+1,steps,state:before});
           }
 
+          recordDiagnostic('lights-auto-step-complete',{
+            revision:HK_LIGHTS_AUTO_REV,
+            step:steps,
+            slot:position+1,
+            result:result.reason
+          });
           await new Promise(resolve=>setTimeout(resolve,LIGHTS_AUTO_SETTLE_MS));
         }
         return false;

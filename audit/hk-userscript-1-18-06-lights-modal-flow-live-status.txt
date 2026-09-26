@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.05
+target_version=1.18.06
+marker=lights-modal-confirm-20260926-r2
+source_sha256=7512fa08ff129480b18b9108fb9e5b3bf1915943b50ec98408cdc4afb964be9b
+candidate_sha256=1613b0c284b3cc71b84779bbb56757d00bd8385bf8c0b3338899a4979a3a5cd4
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
