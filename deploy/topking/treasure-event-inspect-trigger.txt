@@ -1,2 +1,2 @@
-inspect=historical-pet-skill-modals
-stamp=2026-09-26T12:37+09:00
+inspect=fresh-pet-skill-assets-20260926
+stamp=2026-09-26T12:40+09:00
