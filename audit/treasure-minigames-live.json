@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-26T06:07:54Z",
-  "cutoff": 1790381259,
+  "captured_at_utc": "2026-09-26T06:10:32Z",
+  "cutoff": 1790381407,
   "lot_count": 84,
   "lots": {
     "mf_fairlot_minigame_trader_03_fish_egg_05_r3": {
@@ -3575,9 +3575,177 @@
       }
     }
   },
+  "visual_lots": {
+    "mf_fairlot_minigame_trader_01_rod_up2": {
+      "capture": 13317,
+      "path": "$.rows[26].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 1800
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_rod_up2",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [],
+          "contents": "shop_lot_contains",
+          "desc": "mf_fairlot_minigame_trader_01_rod_up2_desc",
+          "icon_card": "minigames/fishing/icons/treasure_minigame_rod_r4_icon.png",
+          "icon_modal": "minigames/fishing/icons/treasure_minigame_rod_r4_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "mf_treasurelot_rod_r4_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_treasurelot_chest_type_03": {
+      "capture": 13317,
+      "path": "$.rows[41].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_key_epic",
+              "quantity": 1
+            }
+          ]
+        },
+        "id": "mf_treasurelot_chest_type_03",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/fishing/backgrounds/fishing_minigame_rod_03_bg.png",
+          "content_view": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 420,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 56,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_pet_skill_change",
+              "quantity": 3,
+              "type": "item"
+            },
+            {
+              "id": "item_pet_mothcat_egg_01",
+              "quantity": 1,
+              "type": "item"
+            },
+            {
+              "id": "item_pet_mothcat_egg_02",
+              "quantity": 1,
+              "type": "item"
+            },
+            {
+              "id": "item_pet_mothcat_egg_03",
+              "quantity": 1,
+              "type": "item"
+            },
+            {
+              "id": "item_pet_mothcat_egg_05_r3",
+              "quantity": 1,
+              "type": "item"
+            },
+            {
+              "id": "item_pet_fish_egg_02_r3",
+              "quantity": 1,
+              "type": "item"
+            },
+            {
+              "id": "item_pet_mothcat_egg_04_r4",
+              "quantity": 1,
+              "type": "item"
+            },
+            {
+              "id": "item_pet_fish_egg_04_r4",
+              "quantity": 1,
+              "type": "item"
+            }
+          ],
+          "contents": "ui_can_be_obtained",
+          "desc": "mf_treasurelot_chest_type_03_desc",
+          "icon_card": "minigames/chests/icons/treasure_minigame_chest_type_03_icon.png",
+          "icon_modal": "minigames/chests/icons/treasure_minigame_chest_type_03_icon.png",
+          "important_colors": true,
+          "main_dark_color": "#350504",
+          "main_light_color": "#e0a22e",
+          "name": "mf_treasurelot_chest_type_03_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_rod_up1": {
+      "capture": 13317,
+      "path": "$.rows[53].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 600
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_rod_up1",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [],
+          "contents": "shop_lot_contains",
+          "desc": "mf_fairlot_minigame_trader_01_rod_up1_desc",
+          "icon_card": "minigames/fishing/icons/treasure_minigame_rod_r3_icon.png",
+          "icon_modal": "minigames/fishing/icons/treasure_minigame_rod_r3_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "mf_treasurelot_rod_r3_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    }
+  },
   "recent_states": [
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload",
       "fair_id": "fair_minigame_collection",
       "slots": [
@@ -3769,7 +3937,7 @@
       ]
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload",
       "fair_id": "fair_pet_missions",
       "slots": [
@@ -3836,7 +4004,7 @@
       ]
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[139].payload",
       "fair_id": "fair_pet_skills",
       "slots": [
@@ -3863,7 +4031,7 @@
       ]
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[187].payload",
       "fair_id": "fair_treasures",
       "slots": [
@@ -3875,67 +4043,67 @@
         {
           "id": 13,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_fishing_right_up_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl13_fishing_right_up_down"
         },
         {
           "id": 12,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_fishing_left_up"
+          "shop_lot_id": "mf_treasurelot_bought_sl12_fishing_left_up"
         },
         {
           "id": 11,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trap_left_right_up_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl11_trap_left_right_up_down"
         },
         {
           "id": 10,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_mine_right_up_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl10_mine_right_up_down"
         },
         {
           "id": 9,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_mine_left_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl9_mine_left_down"
         },
         {
           "id": 8,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_forest_left_right_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl8_forest_left_right_down"
         },
         {
           "id": 7,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_right_up_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl7_right_up_down"
         },
         {
           "id": 4,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_mine_up_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl4_mine_up_down"
         },
         {
           "id": 2,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_active_sl2_forest_left"
+          "shop_lot_id": "mf_treasurelot_bought_sl2_forest_left"
         },
         {
           "id": 1,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_active_sl1_forest_right_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl1_forest_right_down"
         },
         {
           "id": 14,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_left_up_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl14_chest_left_up_down"
         },
         {
           "id": 16,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trap_right_up_down"
+          "shop_lot_id": "mf_treasurelot_active_sl16_trap_right_up_down"
         },
         {
           "id": 17,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_left_up_down"
+          "shop_lot_id": "mf_treasurelot_bought_sl17_left_up_down"
         },
         {
           "id": 19,
@@ -3945,7 +4113,7 @@
         {
           "id": 20,
           "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trader_left_right_up"
+          "shop_lot_id": "mf_treasurelot_active_sl20_trader_left_right_up"
         },
         {
           "id": 21,
@@ -3975,24 +4143,24 @@
       ]
     },
     {
-      "capture": 13882,
+      "capture": 13941,
       "path": "$.fair[4]",
       "fair_id": "fair_lights_out",
       "slots": [
         {
           "id": 9,
           "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl9_true"
+          "shop_lot_id": "mf_fairlot_lights_out_sl9_false"
         },
         {
           "id": 8,
           "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl8_true"
+          "shop_lot_id": "mf_fairlot_lights_out_sl8_false"
         },
         {
           "id": 7,
           "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl7_false"
+          "shop_lot_id": "mf_fairlot_lights_out_sl7_true"
         },
         {
           "id": 6,
@@ -4007,17 +4175,17 @@
         {
           "id": 4,
           "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl4_false"
+          "shop_lot_id": "mf_fairlot_lights_out_sl4_true"
         },
         {
           "id": 3,
           "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl3_true"
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_false"
         },
         {
           "id": 2,
           "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl2_false"
+          "shop_lot_id": "mf_fairlot_lights_out_sl2_true"
         },
         {
           "id": 1,
@@ -4027,7 +4195,7 @@
       ]
     },
     {
-      "capture": 13882,
+      "capture": 13941,
       "path": "$.fair[5]",
       "fair_id": "fair_pet_companions",
       "slots": [
@@ -4214,6 +4382,1213 @@
       ]
     },
     {
+      "capture": 13941,
+      "path": "$.fair[6]",
+      "fair_id": "fair_treasures",
+      "slots": [
+        {
+          "id": 30,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_boss_up"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl13_fishing_right_up_down"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl12_fishing_left_up"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl11_trap_left_right_up_down"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl10_mine_right_up_down"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl9_mine_left_down"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl8_forest_left_right_down"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl7_right_up_down"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl4_mine_up_down"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl2_forest_left"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl1_forest_right_down"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl14_chest_left_up_down"
+        },
+        {
+          "id": 16,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl16_trap_right_up_down"
+        },
+        {
+          "id": 17,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl17_left_up_down"
+        },
+        {
+          "id": 19,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_right_up"
+        },
+        {
+          "id": 20,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_left_right_up"
+        },
+        {
+          "id": 21,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_left_down"
+        },
+        {
+          "id": 24,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_up_down"
+        },
+        {
+          "id": 25,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right"
+        },
+        {
+          "id": 26,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_right"
+        },
+        {
+          "id": 27,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_left_up_down"
+        }
+      ]
+    },
+    {
+      "capture": 13941,
+      "path": "$.fair[7]",
+      "fair_id": "fair_pet_gallery",
+      "slots": [
+        {
+          "id": 35,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_06_r3"
+        },
+        {
+          "id": 32,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_05_r3"
+        },
+        {
+          "id": 19,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_01"
+        },
+        {
+          "id": 20,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_01_r3"
+        },
+        {
+          "id": 21,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_01_r4"
+        },
+        {
+          "id": 22,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_02"
+        },
+        {
+          "id": 25,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_03"
+        },
+        {
+          "id": 26,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_03_r3"
+        }
+      ]
+    },
+    {
+      "capture": 13941,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13941,
+      "path": "$.fair[13]",
+      "fair_id": "fair_mini_game_fishing",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_fishing_rod_03_12"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_fishing_map_finder_r4"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_fishing_water"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
+        }
+      ]
+    },
+    {
+      "capture": 13941,
+      "path": "$.fair[14]",
+      "fair_id": "fair_mini_game_fight",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 16,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_fight_room_big_chest"
+        },
+        {
+          "id": 17,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 18,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_sword_03_8"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_enemy_defeated"
+        }
+      ]
+    },
+    {
+      "capture": 13941,
+      "path": "$.fair[15]",
+      "fair_id": "fair_mini_game_chests",
+      "slots": [
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl9"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl8"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl7"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl6"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl5"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl4"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_type_03"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_type_02"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_type_015"
+        }
+      ]
+    },
+    {
+      "capture": 13939,
+      "path": "$.fair[15]",
+      "fair_id": "fair_mini_game_chests",
+      "slots": [
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_empty_spot"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_empty_spot"
+        },
+        {
+          "id": 7,
+          "is_bought": true,
+          "shop_lot_id": "mf_treasurelot_chest_type_01"
+        },
+        {
+          "id": 6,
+          "is_bought": true,
+          "shop_lot_id": "mf_treasurelot_chest_type_015"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_empty_spot"
+        },
+        {
+          "id": 4,
+          "is_bought": true,
+          "shop_lot_id": "mf_treasurelot_chest_type_01"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_type_03"
+        },
+        {
+          "id": 2,
+          "is_bought": true,
+          "shop_lot_id": "mf_treasurelot_chest_type_02"
+        },
+        {
+          "id": 1,
+          "is_bought": true,
+          "shop_lot_id": "mf_treasurelot_chest_type_015"
+        }
+      ]
+    },
+    {
+      "capture": 13932,
+      "path": "$.fair[15]",
+      "fair_id": "fair_mini_game_chests",
+      "slots": [
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl9"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl8"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl7"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl6"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl5"
+        },
+        {
+          "id": 4,
+          "is_bought": true,
+          "shop_lot_id": "mf_treasurelot_chest_type_01"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_type_03"
+        },
+        {
+          "id": 2,
+          "is_bought": true,
+          "shop_lot_id": "mf_treasurelot_chest_type_02"
+        },
+        {
+          "id": 1,
+          "is_bought": true,
+          "shop_lot_id": "mf_treasurelot_chest_type_015"
+        }
+      ]
+    },
+    {
+      "capture": 13926,
+      "path": "$.rows[187].payload",
+      "fair_id": "fair_treasures",
+      "slots": [
+        {
+          "id": 30,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_boss_up"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl13_fishing_right_up_down"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl12_fishing_left_up"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl11_trap_left_right_up_down"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl10_mine_right_up_down"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl9_mine_left_down"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl8_forest_left_right_down"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl7_right_up_down"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl4_mine_up_down"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl2_forest_left"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl1_forest_right_down"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl14_chest_left_up_down"
+        },
+        {
+          "id": 16,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl16_trap_right_up_down"
+        },
+        {
+          "id": 17,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_up_down"
+        },
+        {
+          "id": 19,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_right_up"
+        },
+        {
+          "id": 20,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_left_right_up"
+        },
+        {
+          "id": 21,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_left_down"
+        },
+        {
+          "id": 24,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_up_down"
+        },
+        {
+          "id": 25,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right"
+        },
+        {
+          "id": 26,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_right"
+        },
+        {
+          "id": 27,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_left_up_down"
+        }
+      ]
+    },
+    {
+      "capture": 13919,
+      "path": "$.rows[187].payload",
+      "fair_id": "fair_treasures",
+      "slots": [
+        {
+          "id": 30,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_boss_up"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl13_fishing_right_up_down"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl12_fishing_left_up"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl11_trap_left_right_up_down"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl10_mine_right_up_down"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl9_mine_left_down"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl8_forest_left_right_down"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl7_right_up_down"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl4_mine_up_down"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl2_forest_left"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl1_forest_right_down"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl14_chest_left_up_down"
+        },
+        {
+          "id": 16,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right_up_down"
+        },
+        {
+          "id": 17,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_up_down"
+        },
+        {
+          "id": 19,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_right_up"
+        },
+        {
+          "id": 20,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_left_right_up"
+        },
+        {
+          "id": 21,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_left_down"
+        },
+        {
+          "id": 24,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_up_down"
+        },
+        {
+          "id": 25,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right"
+        },
+        {
+          "id": 26,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_right"
+        },
+        {
+          "id": 27,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_left_up_down"
+        }
+      ]
+    },
+    {
+      "capture": 13909,
+      "path": "$.fair[6]",
+      "fair_id": "fair_treasures",
+      "slots": [
+        {
+          "id": 30,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_boss_up"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl13_fishing_right_up_down"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl12_fishing_left_up"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl11_trap_left_right_up_down"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl10_mine_right_up_down"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl9_mine_left_down"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl8_forest_left_right_down"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl7_right_up_down"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl4_mine_up_down"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl2_forest_left"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl1_forest_right_down"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl14_chest_left_up_down"
+        },
+        {
+          "id": 16,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right_up_down"
+        },
+        {
+          "id": 17,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_up_down"
+        },
+        {
+          "id": 19,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_right_up"
+        },
+        {
+          "id": 20,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_left_right_up"
+        },
+        {
+          "id": 21,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_left_down"
+        },
+        {
+          "id": 24,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_up_down"
+        },
+        {
+          "id": 25,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right"
+        },
+        {
+          "id": 26,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_right"
+        },
+        {
+          "id": 27,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_left_up_down"
+        }
+      ]
+    },
+    {
+      "capture": 13909,
+      "path": "$.fair[13]",
+      "fair_id": "fair_mini_game_fishing",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_fishing_rod_03_12"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_fishing_map_finder_r4"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_lamp_fish_water"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_creatures_water"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
+        }
+      ]
+    },
+    {
+      "capture": 13907,
+      "path": "$.fair[4]",
+      "fair_id": "fair_lights_out",
+      "slots": [
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
+        },
+        {
+          "id": 5,
+          "is_bought": true,
+          "shop_lot_id": "mf_fairlot_lights_out_reward_slot"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
+        }
+      ]
+    },
+    {
+      "capture": 13890,
+      "path": "$.rows[187].payload",
+      "fair_id": "fair_treasures",
+      "slots": [
+        {
+          "id": 30,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_boss_up"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_fishing_right_up_down"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_fishing_left_up"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_left_right_up_down"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl10_mine_right_up_down"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_left_down"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl8_forest_left_right_down"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl7_right_up_down"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl4_mine_up_down"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl2_forest_left"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_bought_sl1_forest_right_down"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_left_up_down"
+        },
+        {
+          "id": 16,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right_up_down"
+        },
+        {
+          "id": 17,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_up_down"
+        },
+        {
+          "id": 19,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_right_up"
+        },
+        {
+          "id": 20,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_left_right_up"
+        },
+        {
+          "id": 21,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_left_down"
+        },
+        {
+          "id": 24,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_up_down"
+        },
+        {
+          "id": 25,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right"
+        },
+        {
+          "id": 26,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_right"
+        },
+        {
+          "id": 27,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_left_up_down"
+        }
+      ]
+    },
+    {
+      "capture": 13883,
+      "path": "$.rows[187].payload",
+      "fair_id": "fair_treasures",
+      "slots": [
+        {
+          "id": 30,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_boss_up"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_fishing_right_up_down"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_fishing_left_up"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_left_right_up_down"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_right_up_down"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_left_down"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_forest_left_right_down"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_right_up_down"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_up_down"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl2_forest_left"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_active_sl1_forest_right_down"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_left_up_down"
+        },
+        {
+          "id": 16,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right_up_down"
+        },
+        {
+          "id": 17,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_up_down"
+        },
+        {
+          "id": 19,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_right_up"
+        },
+        {
+          "id": 20,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_left_right_up"
+        },
+        {
+          "id": 21,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_mine_left_down"
+        },
+        {
+          "id": 24,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_up_down"
+        },
+        {
+          "id": 25,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trap_right"
+        },
+        {
+          "id": 26,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_left_right"
+        },
+        {
+          "id": 27,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_chest_left_up_down"
+        }
+      ]
+    },
+    {
+      "capture": 13882,
+      "path": "$.fair[4]",
+      "fair_id": "fair_lights_out",
+      "slots": [
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_sl9_true"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_sl8_true"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_sl7_false"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_sl6_true"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_sl5_false"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_sl4_false"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_true"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_sl2_false"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_lights_out_sl1_false"
+        }
+      ]
+    },
+    {
       "capture": 13882,
       "path": "$.fair[6]",
       "fair_id": "fair_treasures",
@@ -4327,147 +5702,6 @@
     },
     {
       "capture": 13882,
-      "path": "$.fair[7]",
-      "fair_id": "fair_pet_gallery",
-      "slots": [
-        {
-          "id": 35,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_06_r3"
-        },
-        {
-          "id": 32,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_05_r3"
-        },
-        {
-          "id": 19,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_01"
-        },
-        {
-          "id": 20,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_01_r3"
-        },
-        {
-          "id": 21,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_01_r4"
-        },
-        {
-          "id": 22,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_02"
-        },
-        {
-          "id": 25,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_03"
-        },
-        {
-          "id": 26,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_03_r3"
-        }
-      ]
-    },
-    {
-      "capture": 13882,
-      "path": "$.fair[9]",
-      "fair_id": "fair_mini_game_trader",
-      "slots": [
-        {
-          "id": 15,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
-        },
-        {
-          "id": 9,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
-        },
-        {
-          "id": 13,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
-        }
-      ]
-    },
-    {
-      "capture": 13882,
-      "path": "$.fair[13]",
-      "fair_id": "fair_mini_game_fishing",
-      "slots": [
-        {
-          "id": 15,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        },
-        {
-          "id": 14,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_fishing_rod_03_12"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_pet_skill_fishing_map_finder_r4"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
-        },
-        {
-          "id": 9,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_lamp_fish_water"
-        },
-        {
-          "id": 10,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_creatures_water"
-        },
-        {
-          "id": 11,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        },
-        {
-          "id": 12,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        },
-        {
-          "id": 13,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        }
-      ]
-    },
-    {
-      "capture": 13882,
       "path": "$.fair[14]",
       "fair_id": "fair_mini_game_fight",
       "slots": [
@@ -4535,110 +5769,6 @@
           "id": 10,
           "is_bought": false,
           "shop_lot_id": "mf_treasurelot_enemy_defeated"
-        }
-      ]
-    },
-    {
-      "capture": 13882,
-      "path": "$.fair[15]",
-      "fair_id": "fair_mini_game_chests",
-      "slots": [
-        {
-          "id": 9,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl9"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl8"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl7"
-        },
-        {
-          "id": 6,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl6"
-        },
-        {
-          "id": 5,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl5"
-        },
-        {
-          "id": 4,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_digging_spot_sl4"
-        },
-        {
-          "id": 3,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_type_03"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_type_02"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_type_015"
-        }
-      ]
-    },
-    {
-      "capture": 13880,
-      "path": "$.fair[4]",
-      "fair_id": "fair_lights_out",
-      "slots": [
-        {
-          "id": 9,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
-        },
-        {
-          "id": 6,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
-        },
-        {
-          "id": 5,
-          "is_bought": true,
-          "shop_lot_id": "mf_fairlot_lights_out_reward_slot"
-        },
-        {
-          "id": 4,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
-        },
-        {
-          "id": 3,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_slot_true"
         }
       ]
     },
@@ -6823,1383 +7953,606 @@
           "shop_lot_id": "mf_treasurelot_chest_type_015"
         }
       ]
-    },
-    {
-      "capture": 13699,
-      "path": "$.fair[6]",
-      "fair_id": "fair_treasures",
-      "slots": [
-        {
-          "id": 30,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_boss_up"
-        },
-        {
-          "id": 13,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_active_sl13_chest_right_up"
-        },
-        {
-          "id": 10,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl10_chest_up_down"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl7_forest_up_down"
-        },
-        {
-          "id": 4,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl4_up_down"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl2_mine_left"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl1_right_down"
-        },
-        {
-          "id": 14,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_mine_left_down"
-        },
-        {
-          "id": 17,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trap_up_down"
-        },
-        {
-          "id": 20,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trap_up_down"
-        },
-        {
-          "id": 23,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_forest_up_down"
-        },
-        {
-          "id": 26,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_fishing_right_up"
-        },
-        {
-          "id": 27,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_mine_left_down"
-        }
-      ]
-    },
-    {
-      "capture": 13675,
-      "path": "$.rows[187].payload",
-      "fair_id": "fair_treasures",
-      "slots": [
-        {
-          "id": 30,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_boss_up"
-        },
-        {
-          "id": 13,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_right_up"
-        },
-        {
-          "id": 10,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_up_down"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_active_sl7_forest_up_down"
-        },
-        {
-          "id": 4,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl4_up_down"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl2_mine_left"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl1_right_down"
-        },
-        {
-          "id": 14,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_mine_left_down"
-        },
-        {
-          "id": 17,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trap_up_down"
-        },
-        {
-          "id": 20,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trap_up_down"
-        },
-        {
-          "id": 23,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_forest_up_down"
-        },
-        {
-          "id": 26,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_fishing_right_up"
-        },
-        {
-          "id": 27,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_mine_left_down"
-        }
-      ]
-    },
-    {
-      "capture": 13588,
-      "path": "$.rows[187].payload",
-      "fair_id": "fair_treasures",
-      "slots": [
-        {
-          "id": 30,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_boss_up"
-        },
-        {
-          "id": 13,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_right_up"
-        },
-        {
-          "id": 10,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_chest_up_down"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_forest_up_down"
-        },
-        {
-          "id": 4,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_up_down"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_active_sl2_mine_left"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_active_sl1_right_down"
-        },
-        {
-          "id": 14,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_mine_left_down"
-        },
-        {
-          "id": 17,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trap_up_down"
-        },
-        {
-          "id": 20,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trap_up_down"
-        },
-        {
-          "id": 23,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_forest_up_down"
-        },
-        {
-          "id": 26,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_fishing_right_up"
-        },
-        {
-          "id": 27,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_mine_left_down"
-        }
-      ]
-    },
-    {
-      "capture": 13585,
-      "path": "$.fair[6]",
-      "fair_id": "fair_treasures",
-      "slots": [
-        {
-          "id": 30,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl30_left_up"
-        },
-        {
-          "id": 12,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl12_mine_up_down"
-        },
-        {
-          "id": 10,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl10_trader_up"
-        },
-        {
-          "id": 9,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl9_trap_left_up_down"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl8_mine_left_right_up"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl7_trap_right_up_down"
-        },
-        {
-          "id": 6,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl6_mine_left_down"
-        },
-        {
-          "id": 5,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl5_mine_left_right_up_down"
-        },
-        {
-          "id": 4,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl4_mine_right_down"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl2_forest_down"
-        },
-        {
-          "id": 15,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl15_fishing_up_down"
-        },
-        {
-          "id": 16,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl16_right"
-        },
-        {
-          "id": 17,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl17_left_right_down"
-        },
-        {
-          "id": 18,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl18_mine_left_up"
-        },
-        {
-          "id": 20,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl20_trader_up_down"
-        },
-        {
-          "id": 23,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl23_chest_right_up_down"
-        },
-        {
-          "id": 24,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl24_trader_left_down"
-        },
-        {
-          "id": 26,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl26_trader_right_up_down"
-        },
-        {
-          "id": 27,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl27_forest_left_up_down"
-        },
-        {
-          "id": 28,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl28_boss_right"
-        },
-        {
-          "id": 29,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl29_forest_left_right_up"
-        }
-      ]
-    },
-    {
-      "capture": 13585,
-      "path": "$.fair[14]",
-      "fair_id": "fair_mini_game_fight",
-      "slots": [
-        {
-          "id": 15,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_04_5_sl15"
-        },
-        {
-          "id": 16,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_03_3_sl16"
-        },
-        {
-          "id": 14,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_01_2_sl14"
-        },
-        {
-          "id": 12,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_02_4_sl12"
-        },
-        {
-          "id": 11,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_02_4_sl11"
-        },
-        {
-          "id": 17,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_01_2_sl17"
-        },
-        {
-          "id": 18,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_01_2_sl18"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_sword_03_28"
-        },
-        {
-          "id": 13,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_02_4_sl13"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_02_4_sl7"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_01_2_sl8"
-        },
-        {
-          "id": 9,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_01_2_sl9"
-        },
-        {
-          "id": 10,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_enemy_type_01_2_sl10"
-        }
-      ]
-    },
-    {
-      "capture": 13577,
-      "path": "$.rows[187].payload",
-      "fair_id": "fair_treasures",
-      "slots": [
-        {
-          "id": 30,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl30_left_up"
-        },
-        {
-          "id": 12,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl12_mine_up_down"
-        },
-        {
-          "id": 10,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl10_trader_up"
-        },
-        {
-          "id": 9,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl9_trap_left_up_down"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl8_mine_left_right_up"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl7_trap_right_up_down"
-        },
-        {
-          "id": 6,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl6_mine_left_down"
-        },
-        {
-          "id": 5,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl5_mine_left_right_up_down"
-        },
-        {
-          "id": 4,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl4_mine_right_down"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl2_forest_down"
-        },
-        {
-          "id": 15,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl15_fishing_up_down"
-        },
-        {
-          "id": 16,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl16_right"
-        },
-        {
-          "id": 17,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl17_left_right_down"
-        },
-        {
-          "id": 18,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl18_mine_left_up"
-        },
-        {
-          "id": 20,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl20_trader_up_down"
-        },
-        {
-          "id": 23,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl23_chest_right_up_down"
-        },
-        {
-          "id": 24,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl24_trader_left_down"
-        },
-        {
-          "id": 26,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl26_trader_right_up_down"
-        },
-        {
-          "id": 27,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl27_forest_left_up_down"
-        },
-        {
-          "id": 28,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_active_sl28_boss_right"
-        },
-        {
-          "id": 29,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl29_forest_left_right_up"
-        }
-      ]
-    },
-    {
-      "capture": 13564,
-      "path": "$.fair[4]",
-      "fair_id": "fair_lights_out",
-      "slots": [
-        {
-          "id": 9,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl9_true"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl8_false"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl7_false"
-        },
-        {
-          "id": 6,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl6_false"
-        },
-        {
-          "id": 5,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl5_true"
-        },
-        {
-          "id": 4,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl4_false"
-        },
-        {
-          "id": 3,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl3_true"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl2_true"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_lights_out_sl1_false"
-        }
-      ]
-    },
-    {
-      "capture": 13564,
-      "path": "$.fair[6]",
-      "fair_id": "fair_treasures",
-      "slots": [
-        {
-          "id": 12,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl12_left"
-        },
-        {
-          "id": 11,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl11_trader_right_up_down"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl8_left_down"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl7_mine_right_up"
-        },
-        {
-          "id": 4,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl4_mine_up_down"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl1_mine_down"
-        },
-        {
-          "id": 14,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl14_fishing_up_down"
-        },
-        {
-          "id": 17,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl17_chest_right_up_down"
-        },
-        {
-          "id": 18,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl18_trader_left"
-        },
-        {
-          "id": 19,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl19_forest_right"
-        },
-        {
-          "id": 20,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl20_fishing_left_up_down"
-        },
-        {
-          "id": 23,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl23_up_down"
-        },
-        {
-          "id": 25,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl25_chest_right_down"
-        },
-        {
-          "id": 26,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl26_forest_left_up"
-        },
-        {
-          "id": 28,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_bought_sl28_boss_up"
-        }
-      ]
-    },
-    {
-      "capture": 13564,
-      "path": "$.fair[7]",
-      "fair_id": "fair_pet_gallery",
-      "slots": [
-        {
-          "id": 35,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_06_r3"
-        },
-        {
-          "id": 32,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_05_r3"
-        },
-        {
-          "id": 20,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_01_r3"
-        },
-        {
-          "id": 21,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_01_r4"
-        },
-        {
-          "id": 22,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_02"
-        },
-        {
-          "id": 24,
-          "is_bought": true,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_02_r4"
-        },
-        {
-          "id": 25,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_03"
-        },
-        {
-          "id": 26,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_lab_slot_pet_fish_egg_03_r3"
-        }
-      ]
-    },
-    {
-      "capture": 13564,
-      "path": "$.fair[9]",
-      "fair_id": "fair_mini_game_trader",
-      "slots": [
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_trader_type_03_active_rep_5"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_02_r3"
-        },
-        {
-          "id": 10,
-          "is_bought": false,
-          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_05_r3"
-        }
-      ]
-    },
-    {
-      "capture": 13564,
-      "path": "$.fair[13]",
-      "fair_id": "fair_mini_game_fishing",
-      "slots": [
-        {
-          "id": 15,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        },
-        {
-          "id": 14,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        },
-        {
-          "id": 1,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_fishing_rod_03_12"
-        },
-        {
-          "id": 2,
-          "is_bought": false,
-          "shop_lot_id": "mf_fair_pet_skill_fishing_map_finder_r4"
-        },
-        {
-          "id": 7,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
-        },
-        {
-          "id": 8,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        },
-        {
-          "id": 9,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        },
-        {
-          "id": 10,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
-        },
-        {
-          "id": 11,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_tornado_water"
-        },
-        {
-          "id": 12,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_fishing_water"
-        },
-        {
-          "id": 13,
-          "is_bought": false,
-          "shop_lot_id": "mf_treasurelot_is_fishing_calm_water"
-        }
-      ]
     }
   ],
   "strings": [
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[6].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_01_150_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[7].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_01_50_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[8].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_01_10_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[11].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_01_1000_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[12].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_01_250_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[13].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_01_20_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[27].shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_06_200_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[28].shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_06_25_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[53].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_03_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[54].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_02_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[55].shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_04_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[82].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_04"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[83].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_05_10_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[84].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_05_100_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[85].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_05_400_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[86].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_06_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[87].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_07_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[88].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_08_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[89].shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_09_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[90].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_02_10_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[91].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_02_60_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[92].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_02_200_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[93].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_03_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[94].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_04_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[95].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_05_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[96].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_06_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[97].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_07_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[98].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_08_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[99].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_09_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[100].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_10_10_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[101].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_10_50_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[102].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_11_3_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[103].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_11_15_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[104].shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_12_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[105].shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_02_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[106].shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_03_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[0].payload.fair_slots[107].shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_05_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[7].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_01_150_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[8].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_01_50_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[9].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_01_10_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[12].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_01_1000_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[13].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_01_250_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[14].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_01_20_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[28].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_06_200_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[29].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_06_25_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[54].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_03_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[55].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_02_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[56].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_04_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[83].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_04"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[84].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_05_10_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[85].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_05_100_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[86].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_05_400_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[87].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_06_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[88].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_07_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[89].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_08_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[90].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_fishing_achievement_09_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[91].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_02_10_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[92].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_02_60_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[93].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_02_200_locked"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[94].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_03_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[95].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_04_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[96].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_05_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[97].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_06_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[98].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_07_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[99].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_08_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[100].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_09_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[101].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_10_10_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[102].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_10_50_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[103].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_11_3_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[104].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_11_15_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[105].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_chests_achievement_12_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[106].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_02_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[107].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_03_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[108].payload.shop_lot_id",
       "value": "mf_fairlot_minigame_lights_achievement_05_taken"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[1].shop_lot_id",
       "value": "mf_pm_fish_06_r3_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[7].shop_lot_id",
       "value": "mf_pm_fish_05_r1_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[8].shop_lot_id",
       "value": "mf_pm_fish_04_r4_done"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[13].shop_lot_id",
       "value": "mf_pm_fish_03_r3_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[14].shop_lot_id",
       "value": "mf_pm_fish_03_r2_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[15].shop_lot_id",
       "value": "mf_pm_fish_03_r1_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[18].shop_lot_id",
       "value": "mf_pm_fish_02_r2_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[19].shop_lot_id",
       "value": "mf_pm_fish_02_r1_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[21].shop_lot_id",
       "value": "mf_pm_fish_01_r3_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[32].shop_lot_id",
       "value": "mf_fair_pet_skill_native_mystery_fish_hs_view"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[49].shop_lot_id",
       "value": "mf_pm_fish_01_r1_x5"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[113].payload.fair_slots[50].shop_lot_id",
       "value": "mf_pm_fish_01_r2_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[114].payload.shop_lot_id",
       "value": "mf_pm_fish_06_r3_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[115].payload.shop_lot_id",
       "value": "mf_pm_fish_05_r1_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[116].payload.shop_lot_id",
       "value": "mf_pm_fish_04_r4_done"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[117].payload.shop_lot_id",
       "value": "mf_pm_fish_03_r3_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[118].payload.shop_lot_id",
       "value": "mf_pm_fish_03_r2_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[119].payload.shop_lot_id",
       "value": "mf_pm_fish_03_r1_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[120].payload.shop_lot_id",
       "value": "mf_pm_fish_02_r2_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[121].payload.shop_lot_id",
       "value": "mf_pm_fish_02_r1_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[122].payload.shop_lot_id",
       "value": "mf_pm_fish_01_r3_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[128].payload.shop_lot_id",
       "value": "mf_fair_pet_skill_native_mystery_fish_hs_view"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[137].payload.shop_lot_id",
       "value": "mf_pm_fish_01_r1_x5"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[138].payload.shop_lot_id",
       "value": "mf_pm_fish_01_r2_x1"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[139].payload.fair_slots[4].shop_lot_id",
       "value": "mf_fair_pet_skill_fishing_map_finder_r4"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[139].payload.fair_slots[5].shop_lot_id",
       "value": "mf_fair_pet_skill_chest_finder_r4"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[139].payload.fair_slots[10].shop_lot_id",
       "value": "mf_fair_pet_skill_native_fish"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[139].payload.fair_slots[11].shop_lot_id",
       "value": "mf_fair_lab_slot_pet_fish_phase_05_02_r4_lvl5"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[144].payload.shop_lot_id",
       "value": "mf_fair_pet_skill_fishing_map_finder_r4"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[145].payload.shop_lot_id",
       "value": "mf_fair_pet_skill_chest_finder_r4"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[147].payload.shop_lot_id",
       "value": "mf_fair_pet_skill_native_fish"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[149].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_event_summer_fish_on"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[150].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_pvp_discount_fish_on"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[152].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_maxqual_02_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[153].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_maxqual_01_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[154].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_remort_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[155].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_event_bday_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[156].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_event_ny_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[158].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_10kk_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[159].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_8kk_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[160].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_5kk_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[161].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_3500k_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[162].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_bsn_worker_02_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[163].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_bsn_slot_02_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[164].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_1kk_fish_unlock"
     },
     {
-      "capture": 13883,
+      "capture": 13944,
       "path": "$.rows[165].payload.shop_lot_id",
       "value": "mf_pm_companion_hamsteress_750k_fish_unlock"
     }
