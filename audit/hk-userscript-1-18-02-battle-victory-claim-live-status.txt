@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.01
+target_version=1.18.02
+marker=battle-victory-claim-20260926-r1
+source_sha256=1f43912a83eb244be31e818cfeeae2c868de2305b7e9f14d1ce7f1cbd70df68f
+candidate_sha256=92e5a9cea4f2c05893b6c055e85c7f4e24c85222311466fe39ca70a071b7c21a
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
