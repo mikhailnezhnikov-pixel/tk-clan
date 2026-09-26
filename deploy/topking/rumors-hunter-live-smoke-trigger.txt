@@ -1,0 +1,3 @@
+Rumors Hunter 1.18.15 live smoke trigger
+revision=1
+requested_at=2026-09-26T18:52:00+09:00
