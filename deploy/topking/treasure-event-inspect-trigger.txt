@@ -1,2 +1,2 @@
-inspect=all-fresh-pet-skill-modals
-stamp=2026-09-26T12:33+09:00
+inspect=pet-skill-localization
+stamp=2026-09-26T12:35+09:00
