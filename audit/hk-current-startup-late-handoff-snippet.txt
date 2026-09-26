@@ -1,0 +1,2403 @@
+
+===== let bootstrapProblem =====
+
+    if (!current.length || !required.length) return false;
+    const width = Math.max(current.length, required.length);
+    while (current.length < width) current.push(0);
+    while (required.length < width) required.push(0);
+    for (let index = 0; index < width; index++) {
+      if (current[index] !== required[index]) return current[index] > required[index];
+    }
+    return true;
+  }
+  const previousRuntime = window.__HK_MOBILE_RUNTIME__;
+  if (previousRuntime?.active && previousRuntime.revision === HK_CORE_REVISION && hkRuntimeAtLeast(previousRuntime.version, BUILD_VERSION)) {
+    try { previousRuntime.open?.(); } catch (_) {}
+    return;
+  }
+  if (previousRuntime?.active) {
+    try { previousRuntime.active = false; } catch (_) {}
+    try { document.getElementById('hk-mobile-root')?.remove(); } catch (_) {}
+    try { document.querySelectorAll('#hk-fab').forEach(node => node.remove()); } catch (_) {}
+    try { window.__HK_MOBILE_RUNTIME__ = null; } catch (_) {}
+    try { window.__HK_MOBILE_LOADED__ = false; } catch (_) {}
+  }
+  const runtime = {active:true, version:BUILD_VERSION, revision:HK_CORE_REVISION, open:null, ensure:null, destroy:null};
+  window.__HK_MOBILE_RUNTIME__ = runtime;
+  window.__HK_MOBILE_LOADED__ = true;
+  window.__HK_MOBILE_VERSION__ = BUILD_VERSION;
+  window.__HK_MOBILE_REVISION__ = HK_CORE_REVISION;
+
+  // Always leave a visible diagnostic entry point until the real panel is
+  // mounted.  This makes a failed start recoverable on Safari and desktop
+  // userscript managers instead of looking like the script simply vanished.
+  const HK_STARTUP_STAGE_REV = 'startup-stages-20260920-r7';
+  const HK_STARTUP_ERROR_TRAP_REV = 'startup-error-trap-20260920-r8';
+  const HK_STARTUP_ERROR_SCOPE_REV = 'startup-error-scope-20260920-r9';
+  let hkStartupStage = 'BOOT';
+  let bootstrapProblem = '';
+  let bootstrapButton = null;
+  function showBootstrap(problem = '') {
+    bootstrapProblem = String(problem || bootstrapProblem || ('HK '+HK_CORE_REVISION+' · '+hkStartupStage));
+    if (!bootstrapButton) {
+      bootstrapButton = document.createElement('button');
+      bootstrapButton.id = 'hk-bootstrap-button';
+      bootstrapButton.dataset.hkRevision = HK_CORE_REVISION;
+      bootstrapButton.type = 'button';
+      bootstrapButton.style.cssText = 'position:fixed;right:16px;bottom:90px;z-index:2147483647;border:0;border-radius:50%;width:58px;height:58px;background:#ff9f1c;color:#16110a;font:bold 20px Arial;box-shadow:0 8px 24px #0008';
+      bootstrapButton.onclick = () => alert(bootstrapProblem+'\nrev='+HK_CORE_REVISION+'\nstage='+hkStartupStage);
+    }
+    bootstrapButton.textContent = problem ? 'HK!' : 'HK…';
+    const host = document.documentElement || document.head;
+    if (host && !bootstrapButton.isConnected) host.appendChild(bootstrapButton);
+  }
+  function hideBootstrap() { bootstrapButton?.remove(); }
+
+  function hkStartupFailure(kind, value) {
+    try {
+      hkStartupStage = 'ERROR';
+      const message = String(
+        value?.stack ||
+        value?.message ||
+        value?.reason?.stack ||
+        value?.reason?.message ||
+        value ||
+        'unknown startup error'
+      ).slice(0, 1800);
+      showBootstrap(kind + ': ' + message);
+    } catch (_) {}
+  }
+
+  const hkStartupTrapActive = () => (
+    hkStartupStage === 'BOOT' ||
+    hkStartupStage === 'WAIT_BODY' ||
+    hkStartupStage === 'BODY' ||
+    hkStartupStage === 'RENDER' ||
+    hkStartupStage === 'WAIT_NATIVE_LOGIN' ||
+    hkStartupStage === 'LATE_HANDOFF'
+  );
+
+  const hkStartupErrorHandler = event => {
+    if (!hkStartupTrapActive()) return;
+    const filename = String(event?.filename || '');
+    const message = String(event?.message || '');
+    if (filename && !filename.includes('/panel.js') && !filename.includes('HamsterKingMobile')) return;
+    if (!filename && message === 'Script error.') return;
+    hkStartupFailure('error', event?.error || event?.message || event);
+  };
+
+  const hkStartupRejectionHandler = event => {
+    if (!hkStartupTrapActive()) return;
+    hkStartupFailure('promise', event?.reason || event);
+  };
+
+  window.addEventListener('error', hkStartupErrorHandler, true);
+  window.addEventListener('unhandledrejection', hkStartupRejectionHandler, true);
+
+  function disarmStartupErrorTrap() {
+    try { window.removeEventListener('error', hkStartupErrorHandler, true); } catch (_) {}
+    try { window.removeEventListener('unhandledrejection', hkStartupRejectionHandler, true); } catch (_) {}
+  }
+
+  showBootstrap();
+  // HK UI is intentionally deferred until the native game login has completed.
+
+  const VERSION = BUILD_VERSION;
+  const HK_LAUNCHER_REV = 'launcher-hotfix-20260920-r1';
+  const MENU_ICONS_BASE = 'https://tk-clan.ru/assets/menu';
+  // Event offers are identified from the live /shop/view response. The game
+  // keeps old event definitions in its catalog, but only current offers have
+  // an active purchase limit (checked below before this classification).
+  const STORE = 'hk_mobile_v1';
+  const ASSET_BASE = 'https://cdn-prod-art.hwgame.cloud/items';
+  const LICENSE_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/check';
+  const DONATION_URL = 'https://www.tbank.ru/cf/5Sta35vQwQM';
+  const RECIPE_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/recipes';
+  const MAP_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/maps';
+  const PIT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/pits';
+  const SETTINGS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/settings';
+  const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';
+  const CLAN_SHOP_FACT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1';
+  const PUBLIC_SNAPSHOT_API = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-snapshot';
+  const PUBLIC_COLLECTOR_AUTH_HEARTBEAT_REV = 'public-collector-auth-heartbeat-20260921-r1'; // PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1
+  const PUBLIC_COLLECTOR_AUTH_SYNC_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-collector/auth-sync';
+  const HK_PUBLIC_COLLECTOR_ACTIVITY_CLIENT_REV = 'public-collector-activity-lease-20260922-r1';
+  const PUBLIC_COLLECTOR_ACTIVITY_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-collector/activity';
+  const PUBLIC_COLLECTOR_ACTIVITY_TTL_SECONDS = 90;
+  const PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS = 20 * 1000;
+  let autoRoutineLeaseHold = false;
+  const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2';
+  const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
+  const HK_RUMORS_HUNTER_CANON_REV='rumors-hunter-kokkaras-public-feed-20260925-r1';
+  const PUBLIC_SNAPSHOT_INTERVAL_MS = 3 * 60 * 60 * 1000;
+  const LICENSE_RECHECK_MS = 60 * 60 * 1000;
+  const GAME_API_FALLBACK = 'https://hk-game-api.hwgame.cloud';
+  const GAME_AUTH_REFRESH_EARLY_MS = 60 * 1000;
+  const GAME_REQUEST_RETRY_DELAYS_MS = [900, 2500, 6000];
+  const HK_GAME_API_RATE_GUARD_REV = 'game-api-rate-guard-20260922-r1';
+  const HK_GAME_API_429_COOLDOWN_20S_REV = 'game-api-429-cooldown-20s-20260925-r1';
+  const GAME_API_MIN_REQUEST_GAP_MS = 2500;
+  const GAME_API_429_SLOW_GAP_MS = 5000;
+  const GAME_API_429_SLOW_WINDOW_MS = 15 * 60 * 1000;
+  const GAME_API_429_FALLBACK_COOLDOWN_MS = 20 * 1000;
+  let gameApiNextRequestAt = 0;
+  let gameApiRateLimitUntil = 0;
+  let gameApiSlowUntil = 0;
+  let gameApiRateGateTail = Promise.resolve();
+  const SERVER_REQUEST_RETRY_DELAYS_MS = [1000, 3000, 7000];
+  const HK_SERVER_HEALTH_SCOPE_REV = 'server-health-core-20260924-r1';
+  const DIAGNOSTIC_MAX_EVENTS = 180;
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+  const visible = element => !!(element && (element.offsetWidth || element.offsetHeight || element.getClientRects().length));
+  const number = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const HK_RUNTIME_SMOKE_SESSION_KEY='hk_runtime_smoke_events_v1';
+  function diagnosticLoadRuntimeSmokeEvents(){
+    try{
+      const value=JSON.parse(sessionStorage.getItem(HK_RUNTIME_SMOKE_SESSION_KEY)||'[]');
+      return Array.i
+===== function showBootstrap =====
+
+    const width = Math.max(current.length, required.length);
+    while (current.length < width) current.push(0);
+    while (required.length < width) required.push(0);
+    for (let index = 0; index < width; index++) {
+      if (current[index] !== required[index]) return current[index] > required[index];
+    }
+    return true;
+  }
+  const previousRuntime = window.__HK_MOBILE_RUNTIME__;
+  if (previousRuntime?.active && previousRuntime.revision === HK_CORE_REVISION && hkRuntimeAtLeast(previousRuntime.version, BUILD_VERSION)) {
+    try { previousRuntime.open?.(); } catch (_) {}
+    return;
+  }
+  if (previousRuntime?.active) {
+    try { previousRuntime.active = false; } catch (_) {}
+    try { document.getElementById('hk-mobile-root')?.remove(); } catch (_) {}
+    try { document.querySelectorAll('#hk-fab').forEach(node => node.remove()); } catch (_) {}
+    try { window.__HK_MOBILE_RUNTIME__ = null; } catch (_) {}
+    try { window.__HK_MOBILE_LOADED__ = false; } catch (_) {}
+  }
+  const runtime = {active:true, version:BUILD_VERSION, revision:HK_CORE_REVISION, open:null, ensure:null, destroy:null};
+  window.__HK_MOBILE_RUNTIME__ = runtime;
+  window.__HK_MOBILE_LOADED__ = true;
+  window.__HK_MOBILE_VERSION__ = BUILD_VERSION;
+  window.__HK_MOBILE_REVISION__ = HK_CORE_REVISION;
+
+  // Always leave a visible diagnostic entry point until the real panel is
+  // mounted.  This makes a failed start recoverable on Safari and desktop
+  // userscript managers instead of looking like the script simply vanished.
+  const HK_STARTUP_STAGE_REV = 'startup-stages-20260920-r7';
+  const HK_STARTUP_ERROR_TRAP_REV = 'startup-error-trap-20260920-r8';
+  const HK_STARTUP_ERROR_SCOPE_REV = 'startup-error-scope-20260920-r9';
+  let hkStartupStage = 'BOOT';
+  let bootstrapProblem = '';
+  let bootstrapButton = null;
+  function showBootstrap(problem = '') {
+    bootstrapProblem = String(problem || bootstrapProblem || ('HK '+HK_CORE_REVISION+' · '+hkStartupStage));
+    if (!bootstrapButton) {
+      bootstrapButton = document.createElement('button');
+      bootstrapButton.id = 'hk-bootstrap-button';
+      bootstrapButton.dataset.hkRevision = HK_CORE_REVISION;
+      bootstrapButton.type = 'button';
+      bootstrapButton.style.cssText = 'position:fixed;right:16px;bottom:90px;z-index:2147483647;border:0;border-radius:50%;width:58px;height:58px;background:#ff9f1c;color:#16110a;font:bold 20px Arial;box-shadow:0 8px 24px #0008';
+      bootstrapButton.onclick = () => alert(bootstrapProblem+'\nrev='+HK_CORE_REVISION+'\nstage='+hkStartupStage);
+    }
+    bootstrapButton.textContent = problem ? 'HK!' : 'HK…';
+    const host = document.documentElement || document.head;
+    if (host && !bootstrapButton.isConnected) host.appendChild(bootstrapButton);
+  }
+  function hideBootstrap() { bootstrapButton?.remove(); }
+
+  function hkStartupFailure(kind, value) {
+    try {
+      hkStartupStage = 'ERROR';
+      const message = String(
+        value?.stack ||
+        value?.message ||
+        value?.reason?.stack ||
+        value?.reason?.message ||
+        value ||
+        'unknown startup error'
+      ).slice(0, 1800);
+      showBootstrap(kind + ': ' + message);
+    } catch (_) {}
+  }
+
+  const hkStartupTrapActive = () => (
+    hkStartupStage === 'BOOT' ||
+    hkStartupStage === 'WAIT_BODY' ||
+    hkStartupStage === 'BODY' ||
+    hkStartupStage === 'RENDER' ||
+    hkStartupStage === 'WAIT_NATIVE_LOGIN' ||
+    hkStartupStage === 'LATE_HANDOFF'
+  );
+
+  const hkStartupErrorHandler = event => {
+    if (!hkStartupTrapActive()) return;
+    const filename = String(event?.filename || '');
+    const message = String(event?.message || '');
+    if (filename && !filename.includes('/panel.js') && !filename.includes('HamsterKingMobile')) return;
+    if (!filename && message === 'Script error.') return;
+    hkStartupFailure('error', event?.error || event?.message || event);
+  };
+
+  const hkStartupRejectionHandler = event => {
+    if (!hkStartupTrapActive()) return;
+    hkStartupFailure('promise', event?.reason || event);
+  };
+
+  window.addEventListener('error', hkStartupErrorHandler, true);
+  window.addEventListener('unhandledrejection', hkStartupRejectionHandler, true);
+
+  function disarmStartupErrorTrap() {
+    try { window.removeEventListener('error', hkStartupErrorHandler, true); } catch (_) {}
+    try { window.removeEventListener('unhandledrejection', hkStartupRejectionHandler, true); } catch (_) {}
+  }
+
+  showBootstrap();
+  // HK UI is intentionally deferred until the native game login has completed.
+
+  const VERSION = BUILD_VERSION;
+  const HK_LAUNCHER_REV = 'launcher-hotfix-20260920-r1';
+  const MENU_ICONS_BASE = 'https://tk-clan.ru/assets/menu';
+  // Event offers are identified from the live /shop/view response. The game
+  // keeps old event definitions in its catalog, but only current offers have
+  // an active purchase limit (checked below before this classification).
+  const STORE = 'hk_mobile_v1';
+  const ASSET_BASE = 'https://cdn-prod-art.hwgame.cloud/items';
+  const LICENSE_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/check';
+  const DONATION_URL = 'https://www.tbank.ru/cf/5Sta35vQwQM';
+  const RECIPE_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/recipes';
+  const MAP_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/maps';
+  const PIT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/pits';
+  const SETTINGS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/settings';
+  const CLAN_SKILLS_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/clan-skills';
+  const CLAN_SHOP_FACT_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1';
+  const PUBLIC_SNAPSHOT_API = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-snapshot';
+  const PUBLIC_COLLECTOR_AUTH_HEARTBEAT_REV = 'public-collector-auth-heartbeat-20260921-r1'; // PUBLIC_COLLECTOR_AUTH_HEARTBEAT_CLIENT_R1
+  const PUBLIC_COLLECTOR_AUTH_SYNC_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-collector/auth-sync';
+  const HK_PUBLIC_COLLECTOR_ACTIVITY_CLIENT_REV = 'public-collector-activity-lease-20260922-r1';
+  const PUBLIC_COLLECTOR_ACTIVITY_URL = 'https://hk-license.89.125.1.71.sslip.io/api/v1/public-collector/activity';
+  const PUBLIC_COLLECTOR_ACTIVITY_TTL_SECONDS = 90;
+  const PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS = 20 * 1000;
+  let autoRoutineLeaseHold = false;
+  const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2';
+  const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
+  const HK_RUMORS_HUNTER_CANON_REV='rumors-hunter-kokkaras-public-feed-20260925-r1';
+  const PUBLIC_SNAPSHOT_INTERVAL_MS = 3 * 60 * 60 * 1000;
+  const LICENSE_RECHECK_MS = 60 * 60 * 1000;
+  const GAME_API_FALLBACK = 'https://hk-game-api.hwgame.cloud';
+  const GAME_AUTH_REFRESH_EARLY_MS = 60 * 1000;
+  const GAME_REQUEST_RETRY_DELAYS_MS = [900, 2500, 6000];
+  const HK_GAME_API_RATE_GUARD_REV = 'game-api-rate-guard-20260922-r1';
+  const HK_GAME_API_429_COOLDOWN_20S_REV = 'game-api-429-cooldown-20s-20260925-r1';
+  const GAME_API_MIN_REQUEST_GAP_MS = 2500;
+  const GAME_API_429_SLOW_GAP_MS = 5000;
+  const GAME_API_429_SLOW_WINDOW_MS = 15 * 60 * 1000;
+  const GAME_API_429_FALLBACK_COOLDOWN_MS = 20 * 1000;
+  let gameApiNextRequestAt = 0;
+  let gameApiRateLimitUntil = 0;
+  let gameApiSlowUntil = 0;
+  let gameApiRateGateTail = Promise.resolve();
+  const SERVER_REQUEST_RETRY_DELAYS_MS = [1000, 3000, 7000];
+  const HK_SERVER_HEALTH_SCOPE_REV = 'server-health-core-20260924-r1';
+  const DIAGNOSTIC_MAX_EVENTS = 180;
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+  const visible = element => !!(element && (element.offsetWidth || element.offsetHeight || element.getClientRects().length));
+  const number = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const HK_RUNTIME_SMOKE_SESSION_KEY='hk_runtime_smoke_events_v1';
+  function diagnosticLoadRuntimeSmokeEvents(){
+    try{
+      const value=JSON.parse(sessionStorage.getItem(HK_RUNTIME_SMOKE_SESSION_KEY)||'[]');
+      return Array.isArray(value)?value.filter(row=>String(row?.type||'').start
+===== function bootstrapLateGameConnection =====
+
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: never prompt or refresh Google auth.
+    return params || null;
+  }
+
+  async function checkGameBearer(token) {
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: local expiry check only; no /auth/check.
+    return !!token && jwtExpiration(token) > Date.now() + 5000;
+  }
+
+  async function createFreshGameAuthorization(reason = 'refresh', expectedToken = '') {
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: native game exclusively owns /auth/create.
+    recordDiagnostic('auth-create-blocked-passive-only',{reason});
+    return '';
+  }
+
+  async function ensureGameAuthorization(force = false, reason = 'runtime') {
+    // AUTH_PASSIVE_SAFETY_R1
+    // Never create or refresh a game session from the userscript. The native
+    // game owns /auth/create. We only consume a bearer already issued by it.
+    restoreGameApiBaseFromPerformance();
+    if (!apiBase) apiBase = GAME_API_FALLBACK;
+    refreshStoredGameAuthorization();
+    const token = currentGameBearer();
+    const ok = !!token && jwtExpiration(token) > Date.now() + 5000;
+    setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
+    return ok;
+  }
+
+  function restoreGameApiBaseFromPerformance() {
+    if (apiBase) return true;
+    try {
+      const entries = performance.getEntriesByType('resource').slice().reverse();
+      const useful = new Set(['/player/me','/shop/view','/items','/business_items','/events','/client_config']);
+      for (const entry of entries) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.origin === new URL(LICENSE_URL).origin) continue;
+        if (!useful.has(url.pathname) && !url.pathname.startsWith('/localization/')) continue;
+        apiBase = url.origin;
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  async function bootstrapLateGameConnection() {
+    if (playerDocument && apiBase && apiHeaders.Authorization) { setHealth('game', true, 'игра подключена'); return true; }
+    const authorized = await ensureGameAuthorization(false, 'late-bootstrap');
+    if (!apiBase || !authorized) { setHealth('game', false, 'нет подключения к игре'); return false; }
+    try {
+      const documentValue = await apiJson('/player/me', 'POST', null, true, 2);
+      acceptPlayerState(`${apiBase}/player/me`, apiHeaders, documentValue, false);
+      setHealth('game', true, 'игра отвечает');
+      return true;
+    } catch (error) {
+      recordDiagnostic('late-bootstrap-failed',{error:error?.message || error});
+      setHealth('game', false, 'игра не отвечает');
+      console.warn('[HK] late connection bootstrap failed', error);
+      return false;
+    }
+  }
+
+  function acceptPlayerState(url, headers, documentValue, partial = false) {
+    if (!documentValue || typeof documentValue !== 'object') return;
+    if (!captureAuthorization(url, headers)) return;
+    // /player/me with `arguments` returns only the requested sections. Keep
+    // the rest of the last full response (advertisement, currencies, pits,
+    // etc.) instead of replacing it with that partial document.
+    setHealth('game', true, 'данные игрока получены');
+    setHealth('auth', true, 'игровая сессия активна');
+    playerDocument = partial && playerDocument ? {
+      ...playerDocument,
+      ...documentValue,
+      ...(playerDocument.player || documentValue.player ? {player:{...(playerDocument.player || {}), ...(documentValue.player || {})}} : {}),
+      ...(playerDocument.data || documentValue.data ? {data:{...(playerDocument.data || {}), ...(documentValue.data || {})}} : {})
+    } : documentValue;
+    if (partial) hkStateStore.merge(documentValue, 'player/me-partial');
+    else hkStateStore.replace(playerDocument, 'player/me');
+    playerDocument = hkStateStore.snapshot || playerDocument;
+    if(hkBusinessUiVisible()) refreshBusinessData();
+    const player = playerDocument.player || {};
+    log(`Подключено${player.nickname ? `: ${player.nickname}` : ''}`);
+    // Checking access is required to unlock the panel. This does not scan
+    // districts or submit any map data; those actions remain manual.
+    checkLicense(player);
+    scheduleClanShopActualFactsSync();
+    // Never scan or upload map areas automatically. The player must explicitly
+    // press "Считать карты аккаунта" in the Maps tab for that operation.
+  }
+
+  function getDeviceId() {
+    const stored = load().deviceId;
+    if (stored) return stored;
+    const value = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}_${Math.random()}`).replace(/[^A-Za-z0-9_-]/g, '');
+    save({deviceId:value});
+    return value;
+  }
+
+  function playerIdentity(player) {
+    return clean(player?.id ?? player?.player_id ?? player?.uuid ?? player?.nickname ?? '');
+  }
+
+  function licenseReason(code) {
+    return ({not_allowed:'ID не добавлен владельцем', blocked:'Лицензия заблокирована', expired:'Срок лицензии истёк',
+      device_limit:'Достигнут лимит устройств', origin_not_allowed:'Домен игры не разрешён', invalid_identity:'Не удалось определить аккаунт',
+      update_required:'Требуется обязательное обновление'}[code] || code || 'Проверка не пройдена');
+  }
+
+  function updateLicenseUI() {
+    setHealth('license', !!licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : (licenseState.checked ? licenseState.reason : 'ожидание'));
+    if (!panel) return;
+    const gate = root.querySelector('#hk-license-gate');
+    const updateBox = root.querySelector('#hk-update-banner');
+    const update = licenseState.update;
+    if (updateBox && update?.available && update?.download_url) {
+      const latest=escapeHtml(update.latest_version || '?');
+      updateBox.style.display='block';
+      updateBox.className=`hk-update${update.required ? ' required' : ''}`;
+      updateBox.innerHTML=`<b>${either('Доступно обновление','Update available')} ${latest}</b>${update.notes ? `<small>${escapeHtml(update.notes).replace(/\n/g,'<br>')}</small>` : ''}<button id="hk-install-update" class="hk-primary">${either('Установить обновление','Install update')}</button>`;
+      updateBox.querySelector('#hk-install-update').onclick=()=>{
+        const notes=clean(update.notes || '');
+        const heading=either(`Изменения версии ${latest}:`,`Changes in version ${latest}:`);
+        const instruction=either('После открытия файла нажмите значок расширений Safari возле адресной строки → Userscripts → Install/Update.',
+          'After the file opens, tap the Safari extensions icon beside the address bar → Userscripts → Install/Update.');
+        alert(`${heading}${notes ? `\n\n${notes}` : ''}\n\n${instruction}`);
+        window.open(String(update.download_url),'_blank','noopener');
+      };
+    } else if (updateBox) {
+      updateBox.style.display='none'; updateBox.innerHTML='';
+    }
+    if (licenseState.allowed) {
+      panel.classList.remove('hk-locked');
+      if (gate) { gate.className = 'hk-license ok'; gate.textContent = `${localizeMessage('Доступ разрешён')} · ID: ${licenseState.playerId}`; }
+    } else {
+      panel.classList.add('hk-locked');
+      if (gate) { gate.className = `hk-license ${licenseState.checked ? 'bad' : ''}`; gate.innerHTML = `${escapeHtml(localizeMessage(licenseState.reason))}${licenseState.playerId ? `<br><b>ID: ${escapeHtml(licenseState.playerId)}</b><br><small>${escapeHtml(localizeMessage('Добавьте этот ID в панели владельца'))}</small>` : ''}`; }
+      pitRunning = false; fairStop = true;
+    }
+    updateWatermark();
+  }
+
+  function watermarkCode() {
+    const stored = clean(load().watermarkCode);
+    if (/^[A-Z0-9]{6}$/.test(stored)) return stored;
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = new Uint8Array(6); crypto.getRandomValues(bytes);
+    const code = [...bytes].map(value => alphabet[value % alphabet.length]).join('');
+    save({watermarkCode:code});
+    return code;
+  }
+
+  function updateWatermark() {
+    const layer = root?.querySelector('#hk-watermark');
+    if (!layer) return;
+    const playerId = clean(licenseState.playerId || playerIdentity(playerDocument?.player || {})) || 'NO-ID';
+    const stamp = new Date().toLocaleString(locale(), {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const label = `HK · ID ${playerId} · ${stamp} · ${watermarkCode()}`;
+    layer.innerHTML = Array.from({lengt
+===== async function bootstrapLateGameConnection =====
+
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: never prompt or refresh Google auth.
+    return params || null;
+  }
+
+  async function checkGameBearer(token) {
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: local expiry check only; no /auth/check.
+    return !!token && jwtExpiration(token) > Date.now() + 5000;
+  }
+
+  async function createFreshGameAuthorization(reason = 'refresh', expectedToken = '') {
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: native game exclusively owns /auth/create.
+    recordDiagnostic('auth-create-blocked-passive-only',{reason});
+    return '';
+  }
+
+  async function ensureGameAuthorization(force = false, reason = 'runtime') {
+    // AUTH_PASSIVE_SAFETY_R1
+    // Never create or refresh a game session from the userscript. The native
+    // game owns /auth/create. We only consume a bearer already issued by it.
+    restoreGameApiBaseFromPerformance();
+    if (!apiBase) apiBase = GAME_API_FALLBACK;
+    refreshStoredGameAuthorization();
+    const token = currentGameBearer();
+    const ok = !!token && jwtExpiration(token) > Date.now() + 5000;
+    setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
+    return ok;
+  }
+
+  function restoreGameApiBaseFromPerformance() {
+    if (apiBase) return true;
+    try {
+      const entries = performance.getEntriesByType('resource').slice().reverse();
+      const useful = new Set(['/player/me','/shop/view','/items','/business_items','/events','/client_config']);
+      for (const entry of entries) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.origin === new URL(LICENSE_URL).origin) continue;
+        if (!useful.has(url.pathname) && !url.pathname.startsWith('/localization/')) continue;
+        apiBase = url.origin;
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  async function bootstrapLateGameConnection() {
+    if (playerDocument && apiBase && apiHeaders.Authorization) { setHealth('game', true, 'игра подключена'); return true; }
+    const authorized = await ensureGameAuthorization(false, 'late-bootstrap');
+    if (!apiBase || !authorized) { setHealth('game', false, 'нет подключения к игре'); return false; }
+    try {
+      const documentValue = await apiJson('/player/me', 'POST', null, true, 2);
+      acceptPlayerState(`${apiBase}/player/me`, apiHeaders, documentValue, false);
+      setHealth('game', true, 'игра отвечает');
+      return true;
+    } catch (error) {
+      recordDiagnostic('late-bootstrap-failed',{error:error?.message || error});
+      setHealth('game', false, 'игра не отвечает');
+      console.warn('[HK] late connection bootstrap failed', error);
+      return false;
+    }
+  }
+
+  function acceptPlayerState(url, headers, documentValue, partial = false) {
+    if (!documentValue || typeof documentValue !== 'object') return;
+    if (!captureAuthorization(url, headers)) return;
+    // /player/me with `arguments` returns only the requested sections. Keep
+    // the rest of the last full response (advertisement, currencies, pits,
+    // etc.) instead of replacing it with that partial document.
+    setHealth('game', true, 'данные игрока получены');
+    setHealth('auth', true, 'игровая сессия активна');
+    playerDocument = partial && playerDocument ? {
+      ...playerDocument,
+      ...documentValue,
+      ...(playerDocument.player || documentValue.player ? {player:{...(playerDocument.player || {}), ...(documentValue.player || {})}} : {}),
+      ...(playerDocument.data || documentValue.data ? {data:{...(playerDocument.data || {}), ...(documentValue.data || {})}} : {})
+    } : documentValue;
+    if (partial) hkStateStore.merge(documentValue, 'player/me-partial');
+    else hkStateStore.replace(playerDocument, 'player/me');
+    playerDocument = hkStateStore.snapshot || playerDocument;
+    if(hkBusinessUiVisible()) refreshBusinessData();
+    const player = playerDocument.player || {};
+    log(`Подключено${player.nickname ? `: ${player.nickname}` : ''}`);
+    // Checking access is required to unlock the panel. This does not scan
+    // districts or submit any map data; those actions remain manual.
+    checkLicense(player);
+    scheduleClanShopActualFactsSync();
+    // Never scan or upload map areas automatically. The player must explicitly
+    // press "Считать карты аккаунта" in the Maps tab for that operation.
+  }
+
+  function getDeviceId() {
+    const stored = load().deviceId;
+    if (stored) return stored;
+    const value = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}_${Math.random()}`).replace(/[^A-Za-z0-9_-]/g, '');
+    save({deviceId:value});
+    return value;
+  }
+
+  function playerIdentity(player) {
+    return clean(player?.id ?? player?.player_id ?? player?.uuid ?? player?.nickname ?? '');
+  }
+
+  function licenseReason(code) {
+    return ({not_allowed:'ID не добавлен владельцем', blocked:'Лицензия заблокирована', expired:'Срок лицензии истёк',
+      device_limit:'Достигнут лимит устройств', origin_not_allowed:'Домен игры не разрешён', invalid_identity:'Не удалось определить аккаунт',
+      update_required:'Требуется обязательное обновление'}[code] || code || 'Проверка не пройдена');
+  }
+
+  function updateLicenseUI() {
+    setHealth('license', !!licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : (licenseState.checked ? licenseState.reason : 'ожидание'));
+    if (!panel) return;
+    const gate = root.querySelector('#hk-license-gate');
+    const updateBox = root.querySelector('#hk-update-banner');
+    const update = licenseState.update;
+    if (updateBox && update?.available && update?.download_url) {
+      const latest=escapeHtml(update.latest_version || '?');
+      updateBox.style.display='block';
+      updateBox.className=`hk-update${update.required ? ' required' : ''}`;
+      updateBox.innerHTML=`<b>${either('Доступно обновление','Update available')} ${latest}</b>${update.notes ? `<small>${escapeHtml(update.notes).replace(/\n/g,'<br>')}</small>` : ''}<button id="hk-install-update" class="hk-primary">${either('Установить обновление','Install update')}</button>`;
+      updateBox.querySelector('#hk-install-update').onclick=()=>{
+        const notes=clean(update.notes || '');
+        const heading=either(`Изменения версии ${latest}:`,`Changes in version ${latest}:`);
+        const instruction=either('После открытия файла нажмите значок расширений Safari возле адресной строки → Userscripts → Install/Update.',
+          'After the file opens, tap the Safari extensions icon beside the address bar → Userscripts → Install/Update.');
+        alert(`${heading}${notes ? `\n\n${notes}` : ''}\n\n${instruction}`);
+        window.open(String(update.download_url),'_blank','noopener');
+      };
+    } else if (updateBox) {
+      updateBox.style.display='none'; updateBox.innerHTML='';
+    }
+    if (licenseState.allowed) {
+      panel.classList.remove('hk-locked');
+      if (gate) { gate.className = 'hk-license ok'; gate.textContent = `${localizeMessage('Доступ разрешён')} · ID: ${licenseState.playerId}`; }
+    } else {
+      panel.classList.add('hk-locked');
+      if (gate) { gate.className = `hk-license ${licenseState.checked ? 'bad' : ''}`; gate.innerHTML = `${escapeHtml(localizeMessage(licenseState.reason))}${licenseState.playerId ? `<br><b>ID: ${escapeHtml(licenseState.playerId)}</b><br><small>${escapeHtml(localizeMessage('Добавьте этот ID в панели владельца'))}</small>` : ''}`; }
+      pitRunning = false; fairStop = true;
+    }
+    updateWatermark();
+  }
+
+  function watermarkCode() {
+    const stored = clean(load().watermarkCode);
+    if (/^[A-Z0-9]{6}$/.test(stored)) return stored;
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = new Uint8Array(6); crypto.getRandomValues(bytes);
+    const code = [...bytes].map(value => alphabet[value % alphabet.length]).join('');
+    save({watermarkCode:code});
+    return code;
+  }
+
+  function updateWatermark() {
+    const layer = root?.querySelector('#hk-watermark');
+    if (!layer) return;
+    const playerId = clean(licenseState.playerId || playerIdentity(playerDocument?.player || {})) || 'NO-ID';
+    const stamp = new Date().toLocaleString(locale(), {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const label = `HK · ID ${playerId} · ${stamp} · ${watermarkCode()}`;
+    layer.innerHTML = Array.from(
+===== function hkTryLateLoginHandoff =====
+
+    }
+    if (root) {
+      try { root.remove(); } catch (_) {}
+      root = null;
+      panel = null;
+    }
+    try {
+      if (document.body) { hkStartupStage = 'RENDER'; renderUI(); }
+    } catch (error) {
+      try { root?.remove(); } catch (_) {}
+      root = null;
+      panel = null;
+      showBootstrap(error?.message || error);
+      setTimeout(startInterface, 500);
+      return;
+    }
+    if (!root?.isConnected || !root.querySelector('#hk-fab')) setTimeout(startInterface, 250);
+  }
+
+  // HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1
+  const HK_NATIVE_LOGIN_GATE_REV = 'login-gate-hotfix-20260920-r2';
+  const HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3';
+  const HK_LAUNCHER_HANDOFF_REV = 'launcher-handoff-20260920-r4';
+  const HK_LATE_LOGIN_HANDOFF_REV = 'late-login-handoff-20260921-r1';
+  let hkNativeLoginRuntimeStarted = false;
+  let hkLateLoginHandoffAttempts = 0;
+  let hkLateLoginHandoffBusy = false;
+  let hkLateLoginHandoffNextAt = 0;
+  const hkLateLoginHandoffStartedAt = Date.now();
+
+  function hkNativeGameLoginReady() {
+    // PRELOGIN_ZERO_GAME_API_R1
+    // Normal path: the native game itself made an authenticated /player/me and
+    // our passive observer captured both the response and its bearer.
+    return !!(playerDocument && apiHeaders.Authorization);
+  }
+
+  function hkPriorNativePlayerMeEvidence() {
+    try {
+      const allowedOrigins = new Set([new URL(GAME_API_FALLBACK).origin]);
+      if (apiBase) allowedOrigins.add(new URL(apiBase).origin);
+      for (const entry of performance.getEntriesByType('resource').slice().reverse()) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.pathname === '/player/me' && allowedOrigins.has(url.origin)) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  async function hkTryLateLoginHandoff() {
+    if (hkNativeGameLoginReady() || hkLateLoginHandoffBusy) return hkNativeGameLoginReady();
+    if (Date.now() < hkLateLoginHandoffNextAt || hkLateLoginHandoffAttempts >= 6) return false;
+
+    restoreGameApiBaseFromPerformance();
+    refreshStoredGameAuthorization();
+    const token = currentGameBearer();
+    const tokenReady = !!token && jwtExpiration(token) > Date.now() + 5000;
+    const nativePlayerMeSeen = hkPriorNativePlayerMeEvidence();
+    const nativeAuthParams = readNativeGameAuthParams();
+    const storageFallbackReady =
+      Date.now() - hkLateLoginHandoffStartedAt >= 2500 &&
+      !!nativeAuthParams?.authType &&
+      !!nativeAuthParams?.authData &&
+      tokenReady;
+
+    // We never create a game session here. Late handoff is allowed only after
+    // evidence that the native game has already authenticated, then performs
+    // one read-only /player/me to recover state missed by a late bookmarklet.
+    if (!tokenReady || (!nativePlayerMeSeen && !storageFallbackReady)) return false;
+
+    hkLateLoginHandoffBusy = true;
+    hkLateLoginHandoffAttempts += 1;
+    hkLateLoginHandoffNextAt = Date.now() + 1500;
+    hkStartupStage = 'LATE_HANDOFF';
+    recordDiagnostic('late-login-handoff-attempt', {
+      revision:HK_LATE_LOGIN_HANDOFF_REV,
+      attempt:hkLateLoginHandoffAttempts,
+      nativePlayerMeSeen,
+      authSource:nativeAuthParams?.source || '',
+      tokenFingerprint:diagnosticFingerprint(token),
+    });
+    try {
+      const ok = await bootstrapLateGameConnection();
+      recordDiagnostic('late-login-handoff-result', {ok, attempt:hkLateLoginHandoffAttempts});
+      return !!ok && hkNativeGameLoginReady();
+    } finally {
+      hkLateLoginHandoffBusy = false;
+      if (!hkNativeGameLoginReady()) hkStartupStage = 'WAIT_NATIVE_LOGIN';
+    }
+  }
+
+  async function startAfterNativeGameLogin() {
+    if (hkNativeLoginRuntimeStarted) return;
+    if (!hkNativeGameLoginReady()) {
+      hkStartupStage = 'WAIT_NATIVE_LOGIN';
+      try {
+        if (await hkTryLateLoginHandoff()) {
+          setTimeout(startAfterNativeGameLogin, 0);
+          return;
+        }
+      } catch (error) {
+        recordDiagnostic('late-login-handoff-error',{error:error?.message || error});
+      }
+      setTimeout(startAfterNativeGameLogin, 500);
+      return;
+    }
+    hkNativeLoginRuntimeStarted = true;
+    startInterface();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
+    setInterval(() => {
+      // PRELOGIN_ZERO_GAME_API_R1: observe only; never create/refresh the
+      // native session and never bootstrap /player/me ourselves.
+      refreshStoredGameAuthorization();
+      const token=currentGameBearer();
+      const ok=!!token && jwtExpiration(token)>Date.now()+5000;
+      setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
+      if (ok && licenseState.publicCollectorAuthSync) maybeSyncPublicCollectorAuthorization(token).catch(() => {});
+    }, 30000);
+    setInterval(captureActiveEventCode, 1500);
+    setTimeout(() => hkGameBridge.discover(false), 1500);
+    setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
+    setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
+    setInterval(() => { if (hkRunner.running||autoRoutineLeaseHold) void syncPublicCollectorActivity(true,autoRoutineLeaseHold?'auto-routine':String(hkRunner.state.title||'automation'),true); }, PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS);
+    recordDiagnostic('native-login-gate-open',{revision:'prelogin-zero-game-api-r1'});
+  }
+
+  // HK Puzzle Solver v3 embedded from the user's standalone userscript.
+  // It is intentionally DOM-only: no Game API calls and no automatic clicks.
+  // The background loop preserves the standalone cadence (300 ms initial scan,
+  // then every 500 ms) and only draws numbered, pointer-events:none overlays.
+  const HK_PUZZLE_SOLVER_REV = 'puzzle-solver-v3-embedded-20260921-r1';
+  const hkPuzzleSolver = (() => {
+    const BATTLE_FIRST_SLOT = 7;
+    const BATTLE_SIZE = 12;
+    const BATTLE_COLS = 3;
+    const BATTLE_ROWS = 4;
+    const RED = '01';
+    const BLUE = '02';
+    const GREEN = '03';
+
+    let lastSignature = '';
+    let intervalId = null;
+    let initialTimerId = null;
+
+    function clearNumbers() {
+      [...document.querySelectorAll('.hkSolverNumber')].forEach(element => element.remove());
+    }
+
+    function addNumber(element, number) {
+      if (!element) return;
+      const style = window.getComputedStyle(element);
+      if (style.position === 'static') element.style.position = 'relative';
+
+      const badge = document.createElement('div');
+      badge.className = 'hkSolverNumber';
+      badge.textContent = String(number);
+      Object.assign(badge.style, {
+        position:'absolute',
+        top:'6px',
+        right:'6px',
+        width:'38px',
+        height:'38px',
+        borderRadius:'50%',
+        background:number === 1 ? '#62ff75' : '#ffd740',
+        color:'#000',
+        border:'3px solid #fff',
+        boxSizing:'border-box',
+        fontSize:'22px',
+        fontWeight:'900',
+        lineHeight:'32px',
+        textAlign:'center',
+        zIndex:'9999999',
+        boxShadow:'0 2px 8px rgba(0,0,0,.9)',
+        pointerEvents:'none',
+        userSelect:'none'
+      });
+      element.appendChild(badge);
+    }
+
+    function getLightsBoard() {
+      const board = new Array(9).fill(null);
+      const elements = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')];
+      elements.forEach(element => {
+        const id = element.getAttribute('data-lot-id') || '';
+        const match = id.match(/mf_fairlot_lights_out_sl(\d+)_(true|false)/);
+        if (!match) return;
+        const slot = Number(match[1]);
+        const isOn = match[2] === 'true';
+        if (slot < 1 || slot > 9) return;
+        board[slot - 1] = {slot,on:isOn,element};
+      });
+      return board;
+    }
+
+    function lightNeighbours(position) {
+      const result = [position];
+      const row = Math.floor(position / 3);
+      const col = position % 3;
+      if (row > 0) result.push(position - 3);
+      if (row < 2) result.push(position + 3);
+      if (col > 0) result.push(position - 1);
+      if (col < 2) result.push(position + 1);
+      return result;
+    }
+
+    function applyLightPress(state, position) {
+      const next = state.slice();
+      lightNeighbours(position).forEach(po
+===== async function hkTryLateLoginHandoff =====
+
+      return;
+    }
+    if (root) {
+      try { root.remove(); } catch (_) {}
+      root = null;
+      panel = null;
+    }
+    try {
+      if (document.body) { hkStartupStage = 'RENDER'; renderUI(); }
+    } catch (error) {
+      try { root?.remove(); } catch (_) {}
+      root = null;
+      panel = null;
+      showBootstrap(error?.message || error);
+      setTimeout(startInterface, 500);
+      return;
+    }
+    if (!root?.isConnected || !root.querySelector('#hk-fab')) setTimeout(startInterface, 250);
+  }
+
+  // HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1
+  const HK_NATIVE_LOGIN_GATE_REV = 'login-gate-hotfix-20260920-r2';
+  const HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3';
+  const HK_LAUNCHER_HANDOFF_REV = 'launcher-handoff-20260920-r4';
+  const HK_LATE_LOGIN_HANDOFF_REV = 'late-login-handoff-20260921-r1';
+  let hkNativeLoginRuntimeStarted = false;
+  let hkLateLoginHandoffAttempts = 0;
+  let hkLateLoginHandoffBusy = false;
+  let hkLateLoginHandoffNextAt = 0;
+  const hkLateLoginHandoffStartedAt = Date.now();
+
+  function hkNativeGameLoginReady() {
+    // PRELOGIN_ZERO_GAME_API_R1
+    // Normal path: the native game itself made an authenticated /player/me and
+    // our passive observer captured both the response and its bearer.
+    return !!(playerDocument && apiHeaders.Authorization);
+  }
+
+  function hkPriorNativePlayerMeEvidence() {
+    try {
+      const allowedOrigins = new Set([new URL(GAME_API_FALLBACK).origin]);
+      if (apiBase) allowedOrigins.add(new URL(apiBase).origin);
+      for (const entry of performance.getEntriesByType('resource').slice().reverse()) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.pathname === '/player/me' && allowedOrigins.has(url.origin)) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  async function hkTryLateLoginHandoff() {
+    if (hkNativeGameLoginReady() || hkLateLoginHandoffBusy) return hkNativeGameLoginReady();
+    if (Date.now() < hkLateLoginHandoffNextAt || hkLateLoginHandoffAttempts >= 6) return false;
+
+    restoreGameApiBaseFromPerformance();
+    refreshStoredGameAuthorization();
+    const token = currentGameBearer();
+    const tokenReady = !!token && jwtExpiration(token) > Date.now() + 5000;
+    const nativePlayerMeSeen = hkPriorNativePlayerMeEvidence();
+    const nativeAuthParams = readNativeGameAuthParams();
+    const storageFallbackReady =
+      Date.now() - hkLateLoginHandoffStartedAt >= 2500 &&
+      !!nativeAuthParams?.authType &&
+      !!nativeAuthParams?.authData &&
+      tokenReady;
+
+    // We never create a game session here. Late handoff is allowed only after
+    // evidence that the native game has already authenticated, then performs
+    // one read-only /player/me to recover state missed by a late bookmarklet.
+    if (!tokenReady || (!nativePlayerMeSeen && !storageFallbackReady)) return false;
+
+    hkLateLoginHandoffBusy = true;
+    hkLateLoginHandoffAttempts += 1;
+    hkLateLoginHandoffNextAt = Date.now() + 1500;
+    hkStartupStage = 'LATE_HANDOFF';
+    recordDiagnostic('late-login-handoff-attempt', {
+      revision:HK_LATE_LOGIN_HANDOFF_REV,
+      attempt:hkLateLoginHandoffAttempts,
+      nativePlayerMeSeen,
+      authSource:nativeAuthParams?.source || '',
+      tokenFingerprint:diagnosticFingerprint(token),
+    });
+    try {
+      const ok = await bootstrapLateGameConnection();
+      recordDiagnostic('late-login-handoff-result', {ok, attempt:hkLateLoginHandoffAttempts});
+      return !!ok && hkNativeGameLoginReady();
+    } finally {
+      hkLateLoginHandoffBusy = false;
+      if (!hkNativeGameLoginReady()) hkStartupStage = 'WAIT_NATIVE_LOGIN';
+    }
+  }
+
+  async function startAfterNativeGameLogin() {
+    if (hkNativeLoginRuntimeStarted) return;
+    if (!hkNativeGameLoginReady()) {
+      hkStartupStage = 'WAIT_NATIVE_LOGIN';
+      try {
+        if (await hkTryLateLoginHandoff()) {
+          setTimeout(startAfterNativeGameLogin, 0);
+          return;
+        }
+      } catch (error) {
+        recordDiagnostic('late-login-handoff-error',{error:error?.message || error});
+      }
+      setTimeout(startAfterNativeGameLogin, 500);
+      return;
+    }
+    hkNativeLoginRuntimeStarted = true;
+    startInterface();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
+    setInterval(() => {
+      // PRELOGIN_ZERO_GAME_API_R1: observe only; never create/refresh the
+      // native session and never bootstrap /player/me ourselves.
+      refreshStoredGameAuthorization();
+      const token=currentGameBearer();
+      const ok=!!token && jwtExpiration(token)>Date.now()+5000;
+      setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
+      if (ok && licenseState.publicCollectorAuthSync) maybeSyncPublicCollectorAuthorization(token).catch(() => {});
+    }, 30000);
+    setInterval(captureActiveEventCode, 1500);
+    setTimeout(() => hkGameBridge.discover(false), 1500);
+    setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
+    setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
+    setInterval(() => { if (hkRunner.running||autoRoutineLeaseHold) void syncPublicCollectorActivity(true,autoRoutineLeaseHold?'auto-routine':String(hkRunner.state.title||'automation'),true); }, PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS);
+    recordDiagnostic('native-login-gate-open',{revision:'prelogin-zero-game-api-r1'});
+  }
+
+  // HK Puzzle Solver v3 embedded from the user's standalone userscript.
+  // It is intentionally DOM-only: no Game API calls and no automatic clicks.
+  // The background loop preserves the standalone cadence (300 ms initial scan,
+  // then every 500 ms) and only draws numbered, pointer-events:none overlays.
+  const HK_PUZZLE_SOLVER_REV = 'puzzle-solver-v3-embedded-20260921-r1';
+  const hkPuzzleSolver = (() => {
+    const BATTLE_FIRST_SLOT = 7;
+    const BATTLE_SIZE = 12;
+    const BATTLE_COLS = 3;
+    const BATTLE_ROWS = 4;
+    const RED = '01';
+    const BLUE = '02';
+    const GREEN = '03';
+
+    let lastSignature = '';
+    let intervalId = null;
+    let initialTimerId = null;
+
+    function clearNumbers() {
+      [...document.querySelectorAll('.hkSolverNumber')].forEach(element => element.remove());
+    }
+
+    function addNumber(element, number) {
+      if (!element) return;
+      const style = window.getComputedStyle(element);
+      if (style.position === 'static') element.style.position = 'relative';
+
+      const badge = document.createElement('div');
+      badge.className = 'hkSolverNumber';
+      badge.textContent = String(number);
+      Object.assign(badge.style, {
+        position:'absolute',
+        top:'6px',
+        right:'6px',
+        width:'38px',
+        height:'38px',
+        borderRadius:'50%',
+        background:number === 1 ? '#62ff75' : '#ffd740',
+        color:'#000',
+        border:'3px solid #fff',
+        boxSizing:'border-box',
+        fontSize:'22px',
+        fontWeight:'900',
+        lineHeight:'32px',
+        textAlign:'center',
+        zIndex:'9999999',
+        boxShadow:'0 2px 8px rgba(0,0,0,.9)',
+        pointerEvents:'none',
+        userSelect:'none'
+      });
+      element.appendChild(badge);
+    }
+
+    function getLightsBoard() {
+      const board = new Array(9).fill(null);
+      const elements = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')];
+      elements.forEach(element => {
+        const id = element.getAttribute('data-lot-id') || '';
+        const match = id.match(/mf_fairlot_lights_out_sl(\d+)_(true|false)/);
+        if (!match) return;
+        const slot = Number(match[1]);
+        const isOn = match[2] === 'true';
+        if (slot < 1 || slot > 9) return;
+        board[slot - 1] = {slot,on:isOn,element};
+      });
+      return board;
+    }
+
+    function lightNeighbours(position) {
+      const result = [position];
+      const row = Math.floor(position / 3);
+      const col = position % 3;
+      if (row > 0) result.push(position - 3);
+      if (row < 2) result.push(position + 3);
+      if (col > 0) result.push(position - 1);
+      if (col < 2) result.push(position + 1);
+      return result;
+    }
+
+    function applyLightPress(state, position) {
+      const next = state.slice();
+      lightNeighbours(position).forE
+===== function startAfterNativeGameLogin =====
+
+  async function hkTryLateLoginHandoff() {
+    if (hkNativeGameLoginReady() || hkLateLoginHandoffBusy) return hkNativeGameLoginReady();
+    if (Date.now() < hkLateLoginHandoffNextAt || hkLateLoginHandoffAttempts >= 6) return false;
+
+    restoreGameApiBaseFromPerformance();
+    refreshStoredGameAuthorization();
+    const token = currentGameBearer();
+    const tokenReady = !!token && jwtExpiration(token) > Date.now() + 5000;
+    const nativePlayerMeSeen = hkPriorNativePlayerMeEvidence();
+    const nativeAuthParams = readNativeGameAuthParams();
+    const storageFallbackReady =
+      Date.now() - hkLateLoginHandoffStartedAt >= 2500 &&
+      !!nativeAuthParams?.authType &&
+      !!nativeAuthParams?.authData &&
+      tokenReady;
+
+    // We never create a game session here. Late handoff is allowed only after
+    // evidence that the native game has already authenticated, then performs
+    // one read-only /player/me to recover state missed by a late bookmarklet.
+    if (!tokenReady || (!nativePlayerMeSeen && !storageFallbackReady)) return false;
+
+    hkLateLoginHandoffBusy = true;
+    hkLateLoginHandoffAttempts += 1;
+    hkLateLoginHandoffNextAt = Date.now() + 1500;
+    hkStartupStage = 'LATE_HANDOFF';
+    recordDiagnostic('late-login-handoff-attempt', {
+      revision:HK_LATE_LOGIN_HANDOFF_REV,
+      attempt:hkLateLoginHandoffAttempts,
+      nativePlayerMeSeen,
+      authSource:nativeAuthParams?.source || '',
+      tokenFingerprint:diagnosticFingerprint(token),
+    });
+    try {
+      const ok = await bootstrapLateGameConnection();
+      recordDiagnostic('late-login-handoff-result', {ok, attempt:hkLateLoginHandoffAttempts});
+      return !!ok && hkNativeGameLoginReady();
+    } finally {
+      hkLateLoginHandoffBusy = false;
+      if (!hkNativeGameLoginReady()) hkStartupStage = 'WAIT_NATIVE_LOGIN';
+    }
+  }
+
+  async function startAfterNativeGameLogin() {
+    if (hkNativeLoginRuntimeStarted) return;
+    if (!hkNativeGameLoginReady()) {
+      hkStartupStage = 'WAIT_NATIVE_LOGIN';
+      try {
+        if (await hkTryLateLoginHandoff()) {
+          setTimeout(startAfterNativeGameLogin, 0);
+          return;
+        }
+      } catch (error) {
+        recordDiagnostic('late-login-handoff-error',{error:error?.message || error});
+      }
+      setTimeout(startAfterNativeGameLogin, 500);
+      return;
+    }
+    hkNativeLoginRuntimeStarted = true;
+    startInterface();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
+    setInterval(() => {
+      // PRELOGIN_ZERO_GAME_API_R1: observe only; never create/refresh the
+      // native session and never bootstrap /player/me ourselves.
+      refreshStoredGameAuthorization();
+      const token=currentGameBearer();
+      const ok=!!token && jwtExpiration(token)>Date.now()+5000;
+      setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
+      if (ok && licenseState.publicCollectorAuthSync) maybeSyncPublicCollectorAuthorization(token).catch(() => {});
+    }, 30000);
+    setInterval(captureActiveEventCode, 1500);
+    setTimeout(() => hkGameBridge.discover(false), 1500);
+    setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
+    setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
+    setInterval(() => { if (hkRunner.running||autoRoutineLeaseHold) void syncPublicCollectorActivity(true,autoRoutineLeaseHold?'auto-routine':String(hkRunner.state.title||'automation'),true); }, PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS);
+    recordDiagnostic('native-login-gate-open',{revision:'prelogin-zero-game-api-r1'});
+  }
+
+  // HK Puzzle Solver v3 embedded from the user's standalone userscript.
+  // It is intentionally DOM-only: no Game API calls and no automatic clicks.
+  // The background loop preserves the standalone cadence (300 ms initial scan,
+  // then every 500 ms) and only draws numbered, pointer-events:none overlays.
+  const HK_PUZZLE_SOLVER_REV = 'puzzle-solver-v3-embedded-20260921-r1';
+  const hkPuzzleSolver = (() => {
+    const BATTLE_FIRST_SLOT = 7;
+    const BATTLE_SIZE = 12;
+    const BATTLE_COLS = 3;
+    const BATTLE_ROWS = 4;
+    const RED = '01';
+    const BLUE = '02';
+    const GREEN = '03';
+
+    let lastSignature = '';
+    let intervalId = null;
+    let initialTimerId = null;
+
+    function clearNumbers() {
+      [...document.querySelectorAll('.hkSolverNumber')].forEach(element => element.remove());
+    }
+
+    function addNumber(element, number) {
+      if (!element) return;
+      const style = window.getComputedStyle(element);
+      if (style.position === 'static') element.style.position = 'relative';
+
+      const badge = document.createElement('div');
+      badge.className = 'hkSolverNumber';
+      badge.textContent = String(number);
+      Object.assign(badge.style, {
+        position:'absolute',
+        top:'6px',
+        right:'6px',
+        width:'38px',
+        height:'38px',
+        borderRadius:'50%',
+        background:number === 1 ? '#62ff75' : '#ffd740',
+        color:'#000',
+        border:'3px solid #fff',
+        boxSizing:'border-box',
+        fontSize:'22px',
+        fontWeight:'900',
+        lineHeight:'32px',
+        textAlign:'center',
+        zIndex:'9999999',
+        boxShadow:'0 2px 8px rgba(0,0,0,.9)',
+        pointerEvents:'none',
+        userSelect:'none'
+      });
+      element.appendChild(badge);
+    }
+
+    function getLightsBoard() {
+      const board = new Array(9).fill(null);
+      const elements = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')];
+      elements.forEach(element => {
+        const id = element.getAttribute('data-lot-id') || '';
+        const match = id.match(/mf_fairlot_lights_out_sl(\d+)_(true|false)/);
+        if (!match) return;
+        const slot = Number(match[1]);
+        const isOn = match[2] === 'true';
+        if (slot < 1 || slot > 9) return;
+        board[slot - 1] = {slot,on:isOn,element};
+      });
+      return board;
+    }
+
+    function lightNeighbours(position) {
+      const result = [position];
+      const row = Math.floor(position / 3);
+      const col = position % 3;
+      if (row > 0) result.push(position - 3);
+      if (row < 2) result.push(position + 3);
+      if (col > 0) result.push(position - 1);
+      if (col < 2) result.push(position + 1);
+      return result;
+    }
+
+    function applyLightPress(state, position) {
+      const next = state.slice();
+      lightNeighbours(position).forEach(pos => { next[pos] = !next[pos]; });
+      return next;
+    }
+
+    function allLightsOn(state) {
+      for (let i=0;i<state.length;i++) if (!state[i]) return false;
+      return true;
+    }
+
+    function solveLights(board) {
+      const initial = board.map(cell => cell.on);
+      if (allLightsOn(initial)) return [];
+      let best = null;
+      for (let mask=1;mask<512;mask++) {
+        let state = initial.slice();
+        const presses = [];
+        for (let pos=0;pos<9;pos++) {
+          if (mask & (1 << pos)) {
+            presses.push(pos);
+            state = applyLightPress(state,pos);
+          }
+        }
+        if (!allLightsOn(state)) continue;
+        if (best === null || presses.length < best.length) best = presses;
+      }
+      return best;
+    }
+
+    function runLights() {
+      const board = getLightsBoard();
+      if (board.filter(cell => cell !== null).length !== 9) return false;
+      clearNumbers();
+      const solution = solveLights(board);
+      if (solution === null) {
+        console.log('HK LIGHTS: решения не найдено');
+        return true;
+      }
+      if (solution.length === 0) {
+        console.log('HK LIGHTS: все лампы уже включены');
+        return true;
+      }
+      solution.forEach((position,index) => addNumber(board[position].element,index + 1));
+      console.log('HK LIGHTS: нажать лампы:',solution.map(pos => pos + 1));
+      return true;
+    }
+
+    function getBattleAttack() {
+      const sword = document.querySelector('[data-lot-id^="mf_treasurelot_sword_"]');
+      if (!sword) return null;
+      const id = sword.getAttribute('data-lot-id') || '';
+      const match = id.match(/mf_treasurelot_sword_\d+_(\d+)/);
+      return match ? Number(match[1]) : null;
+    }
+
+    function getBattleBoard() {
+      const board = new Array(BATTLE_SIZE).fill(null);
+      const enemies
+===== async function startAfterNativeGameLogin =====
+
+  async function hkTryLateLoginHandoff() {
+    if (hkNativeGameLoginReady() || hkLateLoginHandoffBusy) return hkNativeGameLoginReady();
+    if (Date.now() < hkLateLoginHandoffNextAt || hkLateLoginHandoffAttempts >= 6) return false;
+
+    restoreGameApiBaseFromPerformance();
+    refreshStoredGameAuthorization();
+    const token = currentGameBearer();
+    const tokenReady = !!token && jwtExpiration(token) > Date.now() + 5000;
+    const nativePlayerMeSeen = hkPriorNativePlayerMeEvidence();
+    const nativeAuthParams = readNativeGameAuthParams();
+    const storageFallbackReady =
+      Date.now() - hkLateLoginHandoffStartedAt >= 2500 &&
+      !!nativeAuthParams?.authType &&
+      !!nativeAuthParams?.authData &&
+      tokenReady;
+
+    // We never create a game session here. Late handoff is allowed only after
+    // evidence that the native game has already authenticated, then performs
+    // one read-only /player/me to recover state missed by a late bookmarklet.
+    if (!tokenReady || (!nativePlayerMeSeen && !storageFallbackReady)) return false;
+
+    hkLateLoginHandoffBusy = true;
+    hkLateLoginHandoffAttempts += 1;
+    hkLateLoginHandoffNextAt = Date.now() + 1500;
+    hkStartupStage = 'LATE_HANDOFF';
+    recordDiagnostic('late-login-handoff-attempt', {
+      revision:HK_LATE_LOGIN_HANDOFF_REV,
+      attempt:hkLateLoginHandoffAttempts,
+      nativePlayerMeSeen,
+      authSource:nativeAuthParams?.source || '',
+      tokenFingerprint:diagnosticFingerprint(token),
+    });
+    try {
+      const ok = await bootstrapLateGameConnection();
+      recordDiagnostic('late-login-handoff-result', {ok, attempt:hkLateLoginHandoffAttempts});
+      return !!ok && hkNativeGameLoginReady();
+    } finally {
+      hkLateLoginHandoffBusy = false;
+      if (!hkNativeGameLoginReady()) hkStartupStage = 'WAIT_NATIVE_LOGIN';
+    }
+  }
+
+  async function startAfterNativeGameLogin() {
+    if (hkNativeLoginRuntimeStarted) return;
+    if (!hkNativeGameLoginReady()) {
+      hkStartupStage = 'WAIT_NATIVE_LOGIN';
+      try {
+        if (await hkTryLateLoginHandoff()) {
+          setTimeout(startAfterNativeGameLogin, 0);
+          return;
+        }
+      } catch (error) {
+        recordDiagnostic('late-login-handoff-error',{error:error?.message || error});
+      }
+      setTimeout(startAfterNativeGameLogin, 500);
+      return;
+    }
+    hkNativeLoginRuntimeStarted = true;
+    startInterface();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
+    setInterval(() => {
+      // PRELOGIN_ZERO_GAME_API_R1: observe only; never create/refresh the
+      // native session and never bootstrap /player/me ourselves.
+      refreshStoredGameAuthorization();
+      const token=currentGameBearer();
+      const ok=!!token && jwtExpiration(token)>Date.now()+5000;
+      setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
+      if (ok && licenseState.publicCollectorAuthSync) maybeSyncPublicCollectorAuthorization(token).catch(() => {});
+    }, 30000);
+    setInterval(captureActiveEventCode, 1500);
+    setTimeout(() => hkGameBridge.discover(false), 1500);
+    setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
+    setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
+    setInterval(() => { if (hkRunner.running||autoRoutineLeaseHold) void syncPublicCollectorActivity(true,autoRoutineLeaseHold?'auto-routine':String(hkRunner.state.title||'automation'),true); }, PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS);
+    recordDiagnostic('native-login-gate-open',{revision:'prelogin-zero-game-api-r1'});
+  }
+
+  // HK Puzzle Solver v3 embedded from the user's standalone userscript.
+  // It is intentionally DOM-only: no Game API calls and no automatic clicks.
+  // The background loop preserves the standalone cadence (300 ms initial scan,
+  // then every 500 ms) and only draws numbered, pointer-events:none overlays.
+  const HK_PUZZLE_SOLVER_REV = 'puzzle-solver-v3-embedded-20260921-r1';
+  const hkPuzzleSolver = (() => {
+    const BATTLE_FIRST_SLOT = 7;
+    const BATTLE_SIZE = 12;
+    const BATTLE_COLS = 3;
+    const BATTLE_ROWS = 4;
+    const RED = '01';
+    const BLUE = '02';
+    const GREEN = '03';
+
+    let lastSignature = '';
+    let intervalId = null;
+    let initialTimerId = null;
+
+    function clearNumbers() {
+      [...document.querySelectorAll('.hkSolverNumber')].forEach(element => element.remove());
+    }
+
+    function addNumber(element, number) {
+      if (!element) return;
+      const style = window.getComputedStyle(element);
+      if (style.position === 'static') element.style.position = 'relative';
+
+      const badge = document.createElement('div');
+      badge.className = 'hkSolverNumber';
+      badge.textContent = String(number);
+      Object.assign(badge.style, {
+        position:'absolute',
+        top:'6px',
+        right:'6px',
+        width:'38px',
+        height:'38px',
+        borderRadius:'50%',
+        background:number === 1 ? '#62ff75' : '#ffd740',
+        color:'#000',
+        border:'3px solid #fff',
+        boxSizing:'border-box',
+        fontSize:'22px',
+        fontWeight:'900',
+        lineHeight:'32px',
+        textAlign:'center',
+        zIndex:'9999999',
+        boxShadow:'0 2px 8px rgba(0,0,0,.9)',
+        pointerEvents:'none',
+        userSelect:'none'
+      });
+      element.appendChild(badge);
+    }
+
+    function getLightsBoard() {
+      const board = new Array(9).fill(null);
+      const elements = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')];
+      elements.forEach(element => {
+        const id = element.getAttribute('data-lot-id') || '';
+        const match = id.match(/mf_fairlot_lights_out_sl(\d+)_(true|false)/);
+        if (!match) return;
+        const slot = Number(match[1]);
+        const isOn = match[2] === 'true';
+        if (slot < 1 || slot > 9) return;
+        board[slot - 1] = {slot,on:isOn,element};
+      });
+      return board;
+    }
+
+    function lightNeighbours(position) {
+      const result = [position];
+      const row = Math.floor(position / 3);
+      const col = position % 3;
+      if (row > 0) result.push(position - 3);
+      if (row < 2) result.push(position + 3);
+      if (col > 0) result.push(position - 1);
+      if (col < 2) result.push(position + 1);
+      return result;
+    }
+
+    function applyLightPress(state, position) {
+      const next = state.slice();
+      lightNeighbours(position).forEach(pos => { next[pos] = !next[pos]; });
+      return next;
+    }
+
+    function allLightsOn(state) {
+      for (let i=0;i<state.length;i++) if (!state[i]) return false;
+      return true;
+    }
+
+    function solveLights(board) {
+      const initial = board.map(cell => cell.on);
+      if (allLightsOn(initial)) return [];
+      let best = null;
+      for (let mask=1;mask<512;mask++) {
+        let state = initial.slice();
+        const presses = [];
+        for (let pos=0;pos<9;pos++) {
+          if (mask & (1 << pos)) {
+            presses.push(pos);
+            state = applyLightPress(state,pos);
+          }
+        }
+        if (!allLightsOn(state)) continue;
+        if (best === null || presses.length < best.length) best = presses;
+      }
+      return best;
+    }
+
+    function runLights() {
+      const board = getLightsBoard();
+      if (board.filter(cell => cell !== null).length !== 9) return false;
+      clearNumbers();
+      const solution = solveLights(board);
+      if (solution === null) {
+        console.log('HK LIGHTS: решения не найдено');
+        return true;
+      }
+      if (solution.length === 0) {
+        console.log('HK LIGHTS: все лампы уже включены');
+        return true;
+      }
+      solution.forEach((position,index) => addNumber(board[position].element,index + 1));
+      console.log('HK LIGHTS: нажать лампы:',solution.map(pos => pos + 1));
+      return true;
+    }
+
+    function getBattleAttack() {
+      const sword = document.querySelector('[data-lot-id^="mf_treasurelot_sword_"]');
+      if (!sword) return null;
+      const id = sword.getAttribute('data-lot-id') || '';
+      const match = id.match(/mf_treasurelot_sword_\d+_(\d+)/);
+      return match ? Number(match[1]) : null;
+    }
+
+    function getBattleBoard() {
+      const board = new Array(BATTLE_SIZE).fill(null);
+      const e
+===== function hkNativeGameLoginReady =====
+
+        const next=apiHeaders.Authorization?tr('connectedSlots',{n:layout.length}):tr('waiting');
+        if(c.textContent!==next)c.textContent=next;
+      }
+      const token=currentGameBearer(); const exp=jwtExpiration(token);
+      setHealth('auth', !!token && exp > Date.now()+5000, token ? (exp > Date.now()+5000 ? 'авторизация активна' : 'токен истёк') : 'нет токена');
+    }, 5000);
+    setInterval(updateWatermark, 30000);
+    hkStartupStage = 'READY';
+    disarmStartupErrorTrap();
+  }
+
+  function startNetworkCapture() {
+    try { installNetworkCapture(); }
+    catch (_) { setTimeout(startNetworkCapture, 250); }
+  }
+
+  function startInterface() {
+    hkStartupStage = document.body ? 'BODY' : 'WAIT_BODY';
+    if (root?.isConnected && root.querySelector('#hk-fab')) {
+      hideBootstrap();
+      return;
+    }
+    if (root) {
+      try { root.remove(); } catch (_) {}
+      root = null;
+      panel = null;
+    }
+    try {
+      if (document.body) { hkStartupStage = 'RENDER'; renderUI(); }
+    } catch (error) {
+      try { root?.remove(); } catch (_) {}
+      root = null;
+      panel = null;
+      showBootstrap(error?.message || error);
+      setTimeout(startInterface, 500);
+      return;
+    }
+    if (!root?.isConnected || !root.querySelector('#hk-fab')) setTimeout(startInterface, 250);
+  }
+
+  // HK_NATIVE_LOGIN_GATE_V1 login-gate-20260920-r1
+  const HK_NATIVE_LOGIN_GATE_REV = 'login-gate-hotfix-20260920-r2';
+  const HK_UI_PRELOGIN_REV = 'ui-prelogin-20260920-r3';
+  const HK_LAUNCHER_HANDOFF_REV = 'launcher-handoff-20260920-r4';
+  const HK_LATE_LOGIN_HANDOFF_REV = 'late-login-handoff-20260921-r1';
+  let hkNativeLoginRuntimeStarted = false;
+  let hkLateLoginHandoffAttempts = 0;
+  let hkLateLoginHandoffBusy = false;
+  let hkLateLoginHandoffNextAt = 0;
+  const hkLateLoginHandoffStartedAt = Date.now();
+
+  function hkNativeGameLoginReady() {
+    // PRELOGIN_ZERO_GAME_API_R1
+    // Normal path: the native game itself made an authenticated /player/me and
+    // our passive observer captured both the response and its bearer.
+    return !!(playerDocument && apiHeaders.Authorization);
+  }
+
+  function hkPriorNativePlayerMeEvidence() {
+    try {
+      const allowedOrigins = new Set([new URL(GAME_API_FALLBACK).origin]);
+      if (apiBase) allowedOrigins.add(new URL(apiBase).origin);
+      for (const entry of performance.getEntriesByType('resource').slice().reverse()) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.pathname === '/player/me' && allowedOrigins.has(url.origin)) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  async function hkTryLateLoginHandoff() {
+    if (hkNativeGameLoginReady() || hkLateLoginHandoffBusy) return hkNativeGameLoginReady();
+    if (Date.now() < hkLateLoginHandoffNextAt || hkLateLoginHandoffAttempts >= 6) return false;
+
+    restoreGameApiBaseFromPerformance();
+    refreshStoredGameAuthorization();
+    const token = currentGameBearer();
+    const tokenReady = !!token && jwtExpiration(token) > Date.now() + 5000;
+    const nativePlayerMeSeen = hkPriorNativePlayerMeEvidence();
+    const nativeAuthParams = readNativeGameAuthParams();
+    const storageFallbackReady =
+      Date.now() - hkLateLoginHandoffStartedAt >= 2500 &&
+      !!nativeAuthParams?.authType &&
+      !!nativeAuthParams?.authData &&
+      tokenReady;
+
+    // We never create a game session here. Late handoff is allowed only after
+    // evidence that the native game has already authenticated, then performs
+    // one read-only /player/me to recover state missed by a late bookmarklet.
+    if (!tokenReady || (!nativePlayerMeSeen && !storageFallbackReady)) return false;
+
+    hkLateLoginHandoffBusy = true;
+    hkLateLoginHandoffAttempts += 1;
+    hkLateLoginHandoffNextAt = Date.now() + 1500;
+    hkStartupStage = 'LATE_HANDOFF';
+    recordDiagnostic('late-login-handoff-attempt', {
+      revision:HK_LATE_LOGIN_HANDOFF_REV,
+      attempt:hkLateLoginHandoffAttempts,
+      nativePlayerMeSeen,
+      authSource:nativeAuthParams?.source || '',
+      tokenFingerprint:diagnosticFingerprint(token),
+    });
+    try {
+      const ok = await bootstrapLateGameConnection();
+      recordDiagnostic('late-login-handoff-result', {ok, attempt:hkLateLoginHandoffAttempts});
+      return !!ok && hkNativeGameLoginReady();
+    } finally {
+      hkLateLoginHandoffBusy = false;
+      if (!hkNativeGameLoginReady()) hkStartupStage = 'WAIT_NATIVE_LOGIN';
+    }
+  }
+
+  async function startAfterNativeGameLogin() {
+    if (hkNativeLoginRuntimeStarted) return;
+    if (!hkNativeGameLoginReady()) {
+      hkStartupStage = 'WAIT_NATIVE_LOGIN';
+      try {
+        if (await hkTryLateLoginHandoff()) {
+          setTimeout(startAfterNativeGameLogin, 0);
+          return;
+        }
+      } catch (error) {
+        recordDiagnostic('late-login-handoff-error',{error:error?.message || error});
+      }
+      setTimeout(startAfterNativeGameLogin, 500);
+      return;
+    }
+    hkNativeLoginRuntimeStarted = true;
+    startInterface();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startInterface, {once:true});
+    setInterval(() => {
+      // PRELOGIN_ZERO_GAME_API_R1: observe only; never create/refresh the
+      // native session and never bootstrap /player/me ourselves.
+      refreshStoredGameAuthorization();
+      const token=currentGameBearer();
+      const ok=!!token && jwtExpiration(token)>Date.now()+5000;
+      setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
+      if (ok && licenseState.publicCollectorAuthSync) maybeSyncPublicCollectorAuthorization(token).catch(() => {});
+    }, 30000);
+    setInterval(captureActiveEventCode, 1500);
+    setTimeout(() => hkGameBridge.discover(false), 1500);
+    setInterval(() => { if (!hkGameBridge.ready) hkGameBridge.discover(false); }, 30000);
+    setInterval(() => { if (playerDocument) checkLicense(playerDocument.player || {}, true); }, LICENSE_RECHECK_MS);
+    setInterval(() => { if (hkRunner.running||autoRoutineLeaseHold) void syncPublicCollectorActivity(true,autoRoutineLeaseHold?'auto-routine':String(hkRunner.state.title||'automation'),true); }, PUBLIC_COLLECTOR_ACTIVITY_HEARTBEAT_MS);
+    recordDiagnostic('native-login-gate-open',{revision:'prelogin-zero-game-api-r1'});
+  }
+
+  // HK Puzzle Solver v3 embedded from the user's standalone userscript.
+  // It is intentionally DOM-only: no Game API calls and no automatic clicks.
+  // The background loop preserves the standalone cadence (300 ms initial scan,
+  // then every 500 ms) and only draws numbered, pointer-events:none overlays.
+  const HK_PUZZLE_SOLVER_REV = 'puzzle-solver-v3-embedded-20260921-r1';
+  const hkPuzzleSolver = (() => {
+    const BATTLE_FIRST_SLOT = 7;
+    const BATTLE_SIZE = 12;
+    const BATTLE_COLS = 3;
+    const BATTLE_ROWS = 4;
+    const RED = '01';
+    const BLUE = '02';
+    const GREEN = '03';
+
+    let lastSignature = '';
+    let intervalId = null;
+    let initialTimerId = null;
+
+    function clearNumbers() {
+      [...document.querySelectorAll('.hkSolverNumber')].forEach(element => element.remove());
+    }
+
+    function addNumber(element, number) {
+      if (!element) return;
+      const style = window.getComputedStyle(element);
+      if (style.position === 'static') element.style.position = 'relative';
+
+      const badge = document.createElement('div');
+      badge.className = 'hkSolverNumber';
+      badge.textContent = String(number);
+      Object.assign(badge.style, {
+        position:'absolute',
+        top:'6px',
+        right:'6px',
+        width:'38px',
+        height:'38px',
+        borderRadius:'50%',
+        background:number === 1 ? '#62ff75' : '#ffd740',
+        color:'#000',
+        border:'3px solid #fff',
+        boxSizing:'border-box',
+        fontSize:'22px',
+        fontWeight:'900',
+        lineHeight:'32px',
+        textAlign:'center',
+        zIndex:'9999999',
+        boxShadow:'0 2px 8px rgba(0,0,0,.9)',
+        pointerEvents:'none',
+        userSelect:'none'
+      });
+      element.appendChild(badge);
+    }
+
+    function getLightsBoard() {
+      const board = new Array(9).fill(null);
+      const elements = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')];
+      elements.forEach(element => {
+        const id = element.getAttribute('data-lot-id') || '';
+        const mat
+===== function currentGameBearer =====
+
+    const previousAuthorization = String(apiHeaders.Authorization || '');
+    apiBase = resolvedUrl.origin;
+    apiHeaders = {Authorization: auth[1], Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json'};
+    authUpdatedAt = Date.now();
+    if (previousAuthorization !== String(apiHeaders.Authorization || '') && licenseState?.publicCollectorAuthSync) {
+      setTimeout(() => { maybeSyncPublicCollectorAuthorization().catch(() => {}); }, 0);
+    }
+    return true;
+  }
+
+  function jwtPayload(token) {
+    try {
+      const encoded = String(token || '').replace(/^Bearer\s+/i,'').split('.')[1];
+      if (!encoded) return null;
+      const padded = encoded.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(encoded.length/4)*4,'=');
+      return JSON.parse(atob(padded));
+    } catch (_) { return null; }
+  }
+
+  function jwtExpiration(token) {
+    return Number(jwtPayload(token)?.exp || 0) * 1000;
+  }
+
+  function gameBearerPlayerId(token) {
+    const payload = jwtPayload(token) || {};
+    return clean(payload.id ?? payload.player_id ?? payload.playerId ?? payload.user_id ?? payload.sub ?? '');
+  }
+
+  function sameGameJwt(currentToken, candidateToken) {
+    const current = jwtPayload(currentToken);
+    const candidate = jwtPayload(candidateToken);
+    if (!current || !candidate) return false;
+    const currentId = gameBearerPlayerId(currentToken);
+    const candidateId = gameBearerPlayerId(candidateToken);
+    if (currentId && candidateId) return currentId === candidateId;
+    const stableClaims = ['sub','iss','aud'];
+    let compared = 0;
+    for (const claim of stableClaims) {
+      if (current[claim] == null || candidate[claim] == null) continue;
+      compared += 1;
+      if (JSON.stringify(current[claim]) !== JSON.stringify(candidate[claim])) return false;
+    }
+    return compared > 0;
+  }
+
+  function currentGameBearer() {
+    return String(apiHeaders.Authorization || '').replace(/^Bearer\s+/i,'').trim();
+  }
+
+  function refreshStoredGameAuthorization() {
+    let newest = '', newestExpiration = 0;
+    const pattern = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g;
+    const currentAuthorization = apiHeaders.Authorization || '';
+    for (const storage of [sessionStorage, localStorage]) {
+      try {
+        for (let index = 0; index < storage.length; index += 1) {
+          const raw = String(storage.getItem(storage.key(index)) || '');
+          if (!raw || raw.length > 1_000_000) continue;
+          for (const token of raw.match(pattern) || []) {
+            if (currentAuthorization && !sameGameJwt(currentAuthorization, token)) continue;
+            const expiration = jwtExpiration(token);
+            if (expiration > newestExpiration && expiration > Date.now() + 5000) {
+              newest = token; newestExpiration = expiration;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    if (!newest) return false;
+    const authorization = `Bearer ${newest}`;
+    if (apiHeaders.Authorization === authorization) return false;
+    apiHeaders = {...apiHeaders, Authorization:authorization, Accept:'application/json, text/plain, */*', 'Content-Type':'application/json'};
+    authUpdatedAt = Date.now();
+    setHealth('auth', true, 'токен восстановлен из браузера');
+    recordDiagnostic('auth-restored',{fingerprint:diagnosticFingerprint(newest), expiresAt:newestExpiration});
+    return true;
+  }
+
+  function authParamsFromUrl(url, source = 'network-url') {
+    try {
+      const parsed = new URL(String(url || ''), location.href);
+      if (parsed.pathname !== '/auth/create') return null;
+      const authType = clean(parsed.searchParams.get('auth_type') || parsed.searchParams.get('authType'));
+      const authData = clean(parsed.searchParams.get('auth_data') || parsed.searchParams.get('authData'));
+      const platform = clean(parsed.searchParams.get('platform'));
+      if (!authType || !authData || !platform) return null;
+      return {authType, authData, platform, source};
+    } catch (_) { return null; }
+  }
+
+  function authParamsFromBody(body, source = 'network-body') {
+    if (body == null) return null;
+    let value = body;
+    try {
+      if (typeof FormData !== 'undefined' && body instanceof FormData) {
+        value = Object.fromEntries(body.entries());
+      } else if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) {
+        value = Object.fromEntries(body.entries());
+      } else if (typeof body === 'string') {
+        try { value = JSON.parse(body); }
+        catch (_) { value = Object.fromEntries(new URLSearchParams(body).entries()); }
+      }
+    } catch (_) { return null; }
+    if (!value || typeof value !== 'object') return null;
+    const authType = clean(value.auth_type ?? value.authType);
+    const authData = clean(value.auth_data ?? value.authData);
+    const platform = clean(value.platform);
+    if (!authType || !authData || !platform) return null;
+    return {authType, authData, platform, source};
+  }
+
+  function captureNativeGameAuthParams(url, body = null, source = 'network') {
+    let path = '';
+    try { path = new URL(String(url || ''), location.href).pathname; } catch (_) {}
+    if (path !== '/auth/create') return false;
+    const params = authParamsFromUrl(url, `${source}-url`) || authParamsFromBody(body, `${source}-body`);
+    if (!params) return false;
+    observedNativeGameAuthParams = params;
+    return true;
+  }
+
+  function captureNativeGameAuthToken(documentValue) {
+    const token = clean(documentValue?.token);
+    if (!token || jwtExpiration(token) <= Date.now() + 5000) return false;
+    observedNativeGameToken = token;
+    return true;
+  }
+
+  function readNativeGameAuthParams() {
+    if (observedNativeGameAuthParams?.authType && observedNativeGameAuthParams?.authData && observedNativeGameAuthParams?.platform) {
+      return {...observedNativeGameAuthParams};
+    }
+
+    try {
+      const webApp = window.Telegram?.WebApp;
+      const initData = String(webApp?.initData || '');
+      if (webApp && webApp.platform && webApp.platform !== 'unknown' && initData) {
+        return {authType:'MiniApp', authData:initData.replaceAll('&','%26'), platform:'TG', source:'telegram-passive'};
+      }
+    } catch (_) {}
+
+    try {
+      const stored = JSON.parse(localStorage.getItem('auth-data') || 'null');
+      const authType = clean(stored?.params?.auth_type);
+      const authData = clean(stored?.params?.auth_data);
+      const platform = clean(stored?.params?.platform || 'WEB');
+      const remembered = clean(localStorage.getItem('remember-me'));
+      if (authType && authData && remembered === authType) {
+        return {authType, authData, platform, source:'browser-storage-passive'};
+      }
+    } catch (_) {}
+
+    try {
+      const entries = performance.getEntriesByType('resource').slice().reverse();
+      for (const entry of entries) {
+        const params = authParamsFromUrl(entry?.name, 'performance-passive');
+        if (!params) continue;
+        observedNativeGameAuthParams = params;
+        return {...params};
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  function publicCollectorServerPost(url, payload, timeoutMs = 12000) {
+    // AUTH_BRIDGE_XHR_TRANSPORT_R1
+    // Deliberately independent from the game fetch/runner path.
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.timeout = Math.max(1000, Number(timeoutMs) || 12000);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + String(licenseState.token || ''));
+      xhr.onload = () => {
+        let body = null;
+        try { body = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
+        resolve({ok:xhr.status >= 200 && xhr.status < 300, status:xhr.status, body});
+      };
+      xhr.onerror = () => reject(new Error('network_error'));
+      xhr.ontimeout = () => reject(new Error('timeout'));
+      xhr.send(JSON.stringify(payload || {}));
+    });
+  }
+
+  async function maybeSyncPublicCollectorAuthorization(token = currentGameBearer() || observedNativeGameToken) {
+    token = clean(token);
+    if (!licenseState.allowed || !licenseState.publicCollectorAuthSync || !licenseState.token || !token) return false;
+    const expiresAt = jwtExpiration(token);
+    if (expiresAt && expiresAt <= Date.now
+===== function refreshStoredGameAuthorization =====
+
+    apiHeaders = {Authorization: auth[1], Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json'};
+    authUpdatedAt = Date.now();
+    if (previousAuthorization !== String(apiHeaders.Authorization || '') && licenseState?.publicCollectorAuthSync) {
+      setTimeout(() => { maybeSyncPublicCollectorAuthorization().catch(() => {}); }, 0);
+    }
+    return true;
+  }
+
+  function jwtPayload(token) {
+    try {
+      const encoded = String(token || '').replace(/^Bearer\s+/i,'').split('.')[1];
+      if (!encoded) return null;
+      const padded = encoded.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(encoded.length/4)*4,'=');
+      return JSON.parse(atob(padded));
+    } catch (_) { return null; }
+  }
+
+  function jwtExpiration(token) {
+    return Number(jwtPayload(token)?.exp || 0) * 1000;
+  }
+
+  function gameBearerPlayerId(token) {
+    const payload = jwtPayload(token) || {};
+    return clean(payload.id ?? payload.player_id ?? payload.playerId ?? payload.user_id ?? payload.sub ?? '');
+  }
+
+  function sameGameJwt(currentToken, candidateToken) {
+    const current = jwtPayload(currentToken);
+    const candidate = jwtPayload(candidateToken);
+    if (!current || !candidate) return false;
+    const currentId = gameBearerPlayerId(currentToken);
+    const candidateId = gameBearerPlayerId(candidateToken);
+    if (currentId && candidateId) return currentId === candidateId;
+    const stableClaims = ['sub','iss','aud'];
+    let compared = 0;
+    for (const claim of stableClaims) {
+      if (current[claim] == null || candidate[claim] == null) continue;
+      compared += 1;
+      if (JSON.stringify(current[claim]) !== JSON.stringify(candidate[claim])) return false;
+    }
+    return compared > 0;
+  }
+
+  function currentGameBearer() {
+    return String(apiHeaders.Authorization || '').replace(/^Bearer\s+/i,'').trim();
+  }
+
+  function refreshStoredGameAuthorization() {
+    let newest = '', newestExpiration = 0;
+    const pattern = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g;
+    const currentAuthorization = apiHeaders.Authorization || '';
+    for (const storage of [sessionStorage, localStorage]) {
+      try {
+        for (let index = 0; index < storage.length; index += 1) {
+          const raw = String(storage.getItem(storage.key(index)) || '');
+          if (!raw || raw.length > 1_000_000) continue;
+          for (const token of raw.match(pattern) || []) {
+            if (currentAuthorization && !sameGameJwt(currentAuthorization, token)) continue;
+            const expiration = jwtExpiration(token);
+            if (expiration > newestExpiration && expiration > Date.now() + 5000) {
+              newest = token; newestExpiration = expiration;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    if (!newest) return false;
+    const authorization = `Bearer ${newest}`;
+    if (apiHeaders.Authorization === authorization) return false;
+    apiHeaders = {...apiHeaders, Authorization:authorization, Accept:'application/json, text/plain, */*', 'Content-Type':'application/json'};
+    authUpdatedAt = Date.now();
+    setHealth('auth', true, 'токен восстановлен из браузера');
+    recordDiagnostic('auth-restored',{fingerprint:diagnosticFingerprint(newest), expiresAt:newestExpiration});
+    return true;
+  }
+
+  function authParamsFromUrl(url, source = 'network-url') {
+    try {
+      const parsed = new URL(String(url || ''), location.href);
+      if (parsed.pathname !== '/auth/create') return null;
+      const authType = clean(parsed.searchParams.get('auth_type') || parsed.searchParams.get('authType'));
+      const authData = clean(parsed.searchParams.get('auth_data') || parsed.searchParams.get('authData'));
+      const platform = clean(parsed.searchParams.get('platform'));
+      if (!authType || !authData || !platform) return null;
+      return {authType, authData, platform, source};
+    } catch (_) { return null; }
+  }
+
+  function authParamsFromBody(body, source = 'network-body') {
+    if (body == null) return null;
+    let value = body;
+    try {
+      if (typeof FormData !== 'undefined' && body instanceof FormData) {
+        value = Object.fromEntries(body.entries());
+      } else if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) {
+        value = Object.fromEntries(body.entries());
+      } else if (typeof body === 'string') {
+        try { value = JSON.parse(body); }
+        catch (_) { value = Object.fromEntries(new URLSearchParams(body).entries()); }
+      }
+    } catch (_) { return null; }
+    if (!value || typeof value !== 'object') return null;
+    const authType = clean(value.auth_type ?? value.authType);
+    const authData = clean(value.auth_data ?? value.authData);
+    const platform = clean(value.platform);
+    if (!authType || !authData || !platform) return null;
+    return {authType, authData, platform, source};
+  }
+
+  function captureNativeGameAuthParams(url, body = null, source = 'network') {
+    let path = '';
+    try { path = new URL(String(url || ''), location.href).pathname; } catch (_) {}
+    if (path !== '/auth/create') return false;
+    const params = authParamsFromUrl(url, `${source}-url`) || authParamsFromBody(body, `${source}-body`);
+    if (!params) return false;
+    observedNativeGameAuthParams = params;
+    return true;
+  }
+
+  function captureNativeGameAuthToken(documentValue) {
+    const token = clean(documentValue?.token);
+    if (!token || jwtExpiration(token) <= Date.now() + 5000) return false;
+    observedNativeGameToken = token;
+    return true;
+  }
+
+  function readNativeGameAuthParams() {
+    if (observedNativeGameAuthParams?.authType && observedNativeGameAuthParams?.authData && observedNativeGameAuthParams?.platform) {
+      return {...observedNativeGameAuthParams};
+    }
+
+    try {
+      const webApp = window.Telegram?.WebApp;
+      const initData = String(webApp?.initData || '');
+      if (webApp && webApp.platform && webApp.platform !== 'unknown' && initData) {
+        return {authType:'MiniApp', authData:initData.replaceAll('&','%26'), platform:'TG', source:'telegram-passive'};
+      }
+    } catch (_) {}
+
+    try {
+      const stored = JSON.parse(localStorage.getItem('auth-data') || 'null');
+      const authType = clean(stored?.params?.auth_type);
+      const authData = clean(stored?.params?.auth_data);
+      const platform = clean(stored?.params?.platform || 'WEB');
+      const remembered = clean(localStorage.getItem('remember-me'));
+      if (authType && authData && remembered === authType) {
+        return {authType, authData, platform, source:'browser-storage-passive'};
+      }
+    } catch (_) {}
+
+    try {
+      const entries = performance.getEntriesByType('resource').slice().reverse();
+      for (const entry of entries) {
+        const params = authParamsFromUrl(entry?.name, 'performance-passive');
+        if (!params) continue;
+        observedNativeGameAuthParams = params;
+        return {...params};
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  function publicCollectorServerPost(url, payload, timeoutMs = 12000) {
+    // AUTH_BRIDGE_XHR_TRANSPORT_R1
+    // Deliberately independent from the game fetch/runner path.
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.timeout = Math.max(1000, Number(timeoutMs) || 12000);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + String(licenseState.token || ''));
+      xhr.onload = () => {
+        let body = null;
+        try { body = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
+        resolve({ok:xhr.status >= 200 && xhr.status < 300, status:xhr.status, body});
+      };
+      xhr.onerror = () => reject(new Error('network_error'));
+      xhr.ontimeout = () => reject(new Error('timeout'));
+      xhr.send(JSON.stringify(payload || {}));
+    });
+  }
+
+  async function maybeSyncPublicCollectorAuthorization(token = currentGameBearer() || observedNativeGameToken) {
+    token = clean(token);
+    if (!licenseState.allowed || !licenseState.publicCollectorAuthSync || !licenseState.token || !token) return false;
+    const expiresAt = jwtExpiration(token);
+    if (expiresAt && expiresAt <= Date.now() + 5000) return false;
+    const fingerprint = diagnosticFingerprint(token);
+    if (fingerprint && fingerprint === publ
+===== async function ensureGameAuthorization =====
+
+          recordDiagnostic('collector-activity-sync-failed',{status:result.status,active});
+          return false;
+        }
+        publicCollectorActivityLastActive=active;
+        publicCollectorActivityLastSentAt=Date.now();
+        recordDiagnostic('collector-activity-sync-ok',{active,leaseUntil:Number(result.body?.lease_until||0),reason:String(reason||'').slice(0,80)});
+        return true;
+      }catch(error){
+        recordDiagnostic('collector-activity-sync-network-error',{active,error:error?.message||error});
+        return false;
+      }finally{
+        publicCollectorActivityPromise=null;
+      }
+    })();
+    return publicCollectorActivityPromise;
+  }
+
+  function notePublicCollectorRunnerActivity(state=hkRunner.state) {
+    const runnerActive=['running','paused','stopping'].includes(String(state?.status||''));
+    const active=runnerActive||autoRoutineLeaseHold;
+    if(active){
+      const reason=autoRoutineLeaseHold ? 'auto-routine' : String(state?.title||'automation');
+      void syncPublicCollectorActivity(true,reason,false);
+    }else if(publicCollectorActivityLastActive===true){
+      void syncPublicCollectorActivity(false,String(state?.title||'idle'),true);
+    }
+  }
+
+  async function refreshGoogleAuthData(params) {
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: never prompt or refresh Google auth.
+    return params || null;
+  }
+
+  async function checkGameBearer(token) {
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: local expiry check only; no /auth/check.
+    return !!token && jwtExpiration(token) > Date.now() + 5000;
+  }
+
+  async function createFreshGameAuthorization(reason = 'refresh', expectedToken = '') {
+    // TECHNICAL_PASSIVE_AUTH_BRIDGE_R1: native game exclusively owns /auth/create.
+    recordDiagnostic('auth-create-blocked-passive-only',{reason});
+    return '';
+  }
+
+  async function ensureGameAuthorization(force = false, reason = 'runtime') {
+    // AUTH_PASSIVE_SAFETY_R1
+    // Never create or refresh a game session from the userscript. The native
+    // game owns /auth/create. We only consume a bearer already issued by it.
+    restoreGameApiBaseFromPerformance();
+    if (!apiBase) apiBase = GAME_API_FALLBACK;
+    refreshStoredGameAuthorization();
+    const token = currentGameBearer();
+    const ok = !!token && jwtExpiration(token) > Date.now() + 5000;
+    setHealth('auth', ok, ok ? 'авторизация активна' : 'ожидаю вход игры');
+    return ok;
+  }
+
+  function restoreGameApiBaseFromPerformance() {
+    if (apiBase) return true;
+    try {
+      const entries = performance.getEntriesByType('resource').slice().reverse();
+      const useful = new Set(['/player/me','/shop/view','/items','/business_items','/events','/client_config']);
+      for (const entry of entries) {
+        const url = new URL(String(entry?.name || ''), location.href);
+        if (url.origin === new URL(LICENSE_URL).origin) continue;
+        if (!useful.has(url.pathname) && !url.pathname.startsWith('/localization/')) continue;
+        apiBase = url.origin;
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  async function bootstrapLateGameConnection() {
+    if (playerDocument && apiBase && apiHeaders.Authorization) { setHealth('game', true, 'игра подключена'); return true; }
+    const authorized = await ensureGameAuthorization(false, 'late-bootstrap');
+    if (!apiBase || !authorized) { setHealth('game', false, 'нет подключения к игре'); return false; }
+    try {
+      const documentValue = await apiJson('/player/me', 'POST', null, true, 2);
+      acceptPlayerState(`${apiBase}/player/me`, apiHeaders, documentValue, false);
+      setHealth('game', true, 'игра отвечает');
+      return true;
+    } catch (error) {
+      recordDiagnostic('late-bootstrap-failed',{error:error?.message || error});
+      setHealth('game', false, 'игра не отвечает');
+      console.warn('[HK] late connection bootstrap failed', error);
+      return false;
+    }
+  }
+
+  function acceptPlayerState(url, headers, documentValue, partial = false) {
+    if (!documentValue || typeof documentValue !== 'object') return;
+    if (!captureAuthorization(url, headers)) return;
+    // /player/me with `arguments` returns only the requested sections. Keep
+    // the rest of the last full response (advertisement, currencies, pits,
+    // etc.) instead of replacing it with that partial document.
+    setHealth('game', true, 'данные игрока получены');
+    setHealth('auth', true, 'игровая сессия активна');
+    playerDocument = partial && playerDocument ? {
+      ...playerDocument,
+      ...documentValue,
+      ...(playerDocument.player || documentValue.player ? {player:{...(playerDocument.player || {}), ...(documentValue.player || {})}} : {}),
+      ...(playerDocument.data || documentValue.data ? {data:{...(playerDocument.data || {}), ...(documentValue.data || {})}} : {})
+    } : documentValue;
+    if (partial) hkStateStore.merge(documentValue, 'player/me-partial');
+    else hkStateStore.replace(playerDocument, 'player/me');
+    playerDocument = hkStateStore.snapshot || playerDocument;
+    if(hkBusinessUiVisible()) refreshBusinessData();
+    const player = playerDocument.player || {};
+    log(`Подключено${player.nickname ? `: ${player.nickname}` : ''}`);
+    // Checking access is required to unlock the panel. This does not scan
+    // districts or submit any map data; those actions remain manual.
+    checkLicense(player);
+    scheduleClanShopActualFactsSync();
+    // Never scan or upload map areas automatically. The player must explicitly
+    // press "Считать карты аккаунта" in the Maps tab for that operation.
+  }
+
+  function getDeviceId() {
+    const stored = load().deviceId;
+    if (stored) return stored;
+    const value = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}_${Math.random()}`).replace(/[^A-Za-z0-9_-]/g, '');
+    save({deviceId:value});
+    return value;
+  }
+
+  function playerIdentity(player) {
+    return clean(player?.id ?? player?.player_id ?? player?.uuid ?? player?.nickname ?? '');
+  }
+
+  function licenseReason(code) {
+    return ({not_allowed:'ID не добавлен владельцем', blocked:'Лицензия заблокирована', expired:'Срок лицензии истёк',
+      device_limit:'Достигнут лимит устройств', origin_not_allowed:'Домен игры не разрешён', invalid_identity:'Не удалось определить аккаунт',
+      update_required:'Требуется обязательное обновление'}[code] || code || 'Проверка не пройдена');
+  }
+
+  function updateLicenseUI() {
+    setHealth('license', !!licenseState.allowed, licenseState.allowed ? 'доступ разрешён' : (licenseState.checked ? licenseState.reason : 'ожидание'));
+    if (!panel) return;
+    const gate = root.querySelector('#hk-license-gate');
+    const updateBox = root.querySelector('#hk-update-banner');
+    const update = licenseState.update;
+    if (updateBox && update?.available && update?.download_url) {
+      const latest=escapeHtml(update.latest_version || '?');
+      updateBox.style.display='block';
+      updateBox.className=`hk-update${update.required ? ' required' : ''}`;
+      updateBox.innerHTML=`<b>${either('Доступно обновление','Update available')} ${latest}</b>${update.notes ? `<small>${escapeHtml(update.notes).replace(/\n/g,'<br>')}</small>` : ''}<button id="hk-install-update" class="hk-primary">${either('Установить обновление','Install update')}</button>`;
+      updateBox.querySelector('#hk-install-update').onclick=()=>{
+        const notes=clean(update.notes || '');
+        const heading=either(`Изменения версии ${latest}:`,`Changes in version ${latest}:`);
+        const instruction=either('После открытия файла нажмите значок расширений Safari возле адресной строки → Userscripts → Install/Update.',
+          'After the file opens, tap the Safari extensions icon beside the address bar → Userscripts → Install/Update.');
+        alert(`${heading}${notes ? `\n\n${notes}` : ''}\n\n${instruction}`);
+        window.open(String(update.download_url),'_blank','noopener');
+      };
+    } else if (updateBox) {
+      updateBox.style.display='none'; updateBox.innerHTML='';
+    }
+    if (licenseState.allowed) {
+      panel.classList.remove('hk-locked');
+      if (gate) { gate.className = 'hk-license ok'; gate.textContent = `${localizeMessage('Доступ разрешён')} · ID: ${licenseState.playerId}`; }
+    } else {
+      panel.classList.add('hk-locked');
+      if (gate) { ga
+===== function gameApiRateLimitError =====
+
+    await new Promise((resolve,reject)=>{let timer=null;const abort=()=>{if(timer)clearTimeout(timer);signal.removeEventListener('abort',abort);reject(new DOMException('Aborted','AbortError'));};timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},delay);signal.addEventListener('abort',abort,{once:true});});
+  }
+
+  async function gameFetchText(request,url,init={},timeoutMs=18000){
+    const controller=new AbortController(), runnerSignal=hkRunner.running?hkRunner.signal:null;
+    let timedOut=false, timer=null, detach=null;
+    if(runnerSignal){
+      const abort=()=>controller.abort('runner');
+      if(runnerSignal.aborted)abort();else{runnerSignal.addEventListener('abort',abort,{once:true});detach=()=>runnerSignal.removeEventListener('abort',abort);}
+    }
+    timer=setTimeout(()=>{timedOut=true;controller.abort('timeout');},Math.max(1000,Number(timeoutMs)||18000));
+    try{
+      const response=await request(url,{...init,signal:controller.signal});
+      const text=await response.text();
+      return{response,text};
+    }catch(error){
+      if(runnerSignal?.aborted)throw new DOMException('Aborted','AbortError');
+      if(timedOut){const timeoutError=new Error(either('Тайм-аут запроса к игре','Game request timed out'));timeoutError.name='HKNetworkTimeout';throw timeoutError;}
+      throw error;
+    }finally{if(timer)clearTimeout(timer);try{detach?.();}catch(_){}}
+  }
+
+
+  function gameApiCooldownRemainingMs() {
+    return Math.max(0,gameApiRateLimitUntil-Date.now());
+  }
+
+  function gameApiCurrentGapMs() {
+    return Date.now()<gameApiSlowUntil ? GAME_API_429_SLOW_GAP_MS : GAME_API_MIN_REQUEST_GAP_MS;
+  }
+
+  function gameApiRetryAfterMs(response) {
+    try {
+      const raw=String(response?.headers?.get?.('Retry-After')||'').trim();
+      if (!raw) return 0;
+      if (/^\d+(?:\.\d+)?$/.test(raw)) return Math.max(0,Math.round(Number(raw)*1000));
+      const stamp=Date.parse(raw);
+      return Number.isFinite(stamp) ? Math.max(0,stamp-Date.now()) : 0;
+    } catch (_) { return 0; }
+  }
+
+  function gameApiRateLimitError(path,response) {
+    const retryAfter=Math.max(GAME_API_429_FALLBACK_COOLDOWN_MS,gameApiRetryAfterMs(response));
+    gameApiRateLimitUntil=Math.max(gameApiRateLimitUntil,Date.now()+retryAfter);
+    gameApiSlowUntil=Math.max(gameApiSlowUntil,Date.now()+GAME_API_429_SLOW_WINDOW_MS);
+    const seconds=Math.ceil(retryAfter/1000);
+    const error=new Error(either(
+      'Лимит запросов игры (429). HK остановил запросы примерно на '+seconds+' сек.',
+      'Game request limit (429). HK stopped Game API requests for about '+seconds+' sec.'
+    ));
+    error.name='HKRateLimitError';
+    error.httpStatus=429;
+    error.apiPath=path;
+    error.retryAfterMs=retryAfter;
+    recordDiagnostic('game-rate-limit',{path,retryAfterMs:retryAfter,until:gameApiRateLimitUntil});
+    setHealth('game',false,'лимит 429');
+    return error;
+  }
+
+  async function acquireGameApiRequestSlot(path,method) {
+    let release;
+    const turn=new Promise(resolve=>{release=resolve;});
+    const previous=gameApiRateGateTail;
+    gameApiRateGateTail=turn;
+    await previous.catch(()=>{});
+    try {
+      const now=Date.now();
+      if (gameApiRateLimitUntil>now) {
+        const error=new Error(either(
+          'Game API на cooldown после 429. Подождите '+Math.ceil((gameApiRateLimitUntil-now)/1000)+' сек.',
+          'Game API is cooling down after 429. Wait '+Math.ceil((gameApiRateLimitUntil-now)/1000)+' sec.'
+        ));
+        error.name='HKRateLimitError';
+        error.httpStatus=429;
+        error.apiPath=path;
+        error.retryAfterMs=gameApiRateLimitUntil-now;
+        throw error;
+      }
+      const wait=Math.max(0,gameApiNextRequestAt-now);
+      if(wait>0)await gameRetryDelay(wait);
+      if(gameApiRateLimitUntil>Date.now()){
+        const error=new Error(either('Game API на cooldown после 429','Game API is cooling down after 429'));
+        error.name='HKRateLimitError'; error.httpStatus=429; error.apiPath=path;
+        error.retryAfterMs=Math.max(0,gameApiRateLimitUntil-Date.now());
+        throw error;
+      }
+      const normalizedPath=hkNormalizedApiPath(path);
+      const fastShopBuy=normalizedPath==='/shop/buy';
+      const shopBuyGap=Date.now()<gameApiSlowUntil?SHOP_BUY_POST_429_GAP_MS:SHOP_BUY_MIN_GAP_MS;
+      const gapMs=fastShopBuy?shopBuyGap:gameApiCurrentGapMs();
+      gameApiNextRequestAt=Date.now()+gapMs;
+      recordDiagnostic('game-rate-gate',{path,method,gapMs,fastShopBuy,slowUntil:gameApiSlowUntil});
+    } finally {
+      release();
+    }
+  }
+
+  async function apiJsonCore(path, method = 'GET', body = null, retryAuthorization = true, retryNetwork = 3, timeoutMs = 18000) {
+    if (hkNormalizedApiPath(path) === '/fair/reroll' && timeoutMs === 18000) timeoutMs = 35000;
+    const maxRetries = retryNetwork === true ? GAME_REQUEST_RETRY_DELAYS_MS.length : retryNetwork === false ? 0 : Math.max(0, Math.trunc(Number(retryNetwork) || 0));
+    let authRetryLeft = retryAuthorization ? 1 : 0;
+    let attempt = 0, lockAttempt = 0;
+    while (true) {
+      const authorized = await ensureGameAuthorization(false, `api:${path}`);
+      if (!apiBase || !authorized || !apiHeaders.Authorization) throw new Error('Нет подключения к игре. Обновите страницу.');
+      await acquireGameApiRequestSlot(path,method);
+      const request = nativeNetworkFetch || window.fetch.bind(window);
+      const started = performance.now();
+      let response,text;
+      try {
+        ({response,text}=await gameFetchText(request,`${apiBase}${path}`,{method,headers:{...apiHeaders},body:body == null ? undefined : JSON.stringify(body)},timeoutMs));
+      } catch (error) {
+        if(error?.name==='AbortError'||hkRunner.signal?.aborted)throw error;
+        recordDiagnostic('game-request-network-error',{path,method,attempt:attempt+1,error:error?.message || error});
+        if (attempt < maxRetries) {
+          const delay = GAME_REQUEST_RETRY_DELAYS_MS[Math.min(attempt, GAME_REQUEST_RETRY_DELAYS_MS.length - 1)] || 6000;
+          attempt += 1; await gameRetryDelay(delay); continue;
+        }
+        setHealth('game', false, error?.name==='HKNetworkTimeout'?'тайм-аут':'ошибка сети');
+        throw new Error(`${path}: ${error?.message || error}`);
+      }
+      let value; try { value = JSON.parse(text); } catch (_) { value = null; }
+      recordDiagnostic('game-request',{path,method,status:response.status,attempt:attempt+1,durationMs:Math.round(performance.now()-started)});
+      if (response.status === 429) throw gameApiRateLimitError(path,response);
+      if ((response.status === 401 || response.status === 403) && authRetryLeft > 0) {
+        authRetryLeft -= 1;
+        const refreshed = await ensureGameAuthorization(true, `http-${response.status}:${path}`);
+        if (refreshed) { attempt = 0; continue; }
+      }
+      const lockedText=String(value?.description||value?.message||text||'').toLowerCase();
+      const playerLocked=/player state is locked|state is locked by (?:other|another) request|player.*locked.*request/.test(lockedText);
+      if(playerLocked&&lockAttempt<3){
+        const delay=[650,1400,3000][lockAttempt++]||3000;
+        recordDiagnostic('game-request-player-locked',{path,method,status:response.status,lockAttempt,delay});
+        await gameRetryDelay(delay);continue;
+      }
+      const transient = response.status === 408 || response.status === 425 || response.status >= 500;
+      if (transient && attempt < maxRetries) {
+        const delay = GAME_REQUEST_RETRY_DELAYS_MS[Math.min(attempt, GAME_REQUEST_RETRY_DELAYS_MS.length - 1)] || 6000;
+        attempt += 1; await gameRetryDelay(delay); continue;
+      }
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) setHealth('auth', false, 'сессия истекла');
+        setHealth('game', false, `HTTP ${response.status}`);
+        const error=new Error(value?.description || value?.message || `HTTP ${response.status}: ${text.slice(0,160)}`);
+        error.name='HKGameApiError'; error.httpStatus=response.status; error.apiData=value; error.apiPath=path;
+        throw error;
+      }
+      if (!value || typeof value !== 'object') throw new Error('Сервер вернул некорректный ответ');
+      setHealth('game', true, 'игра отвечает');
+      setHealth('auth', true, 'авторизация активна');
+      if (path === '/player/me') {
+        const partial = !!(body && Array.isArray(body.arguments));
+        if (partial) hkStateStore.merge(value, 'api:player/me-partial'); else { hkStateStore.replace(value, 'api:player/me'); value 
