@@ -168,6 +168,27 @@ for _,sid,events,meta in all_sessions[:2]:
                     "click_lot":lid,"click_text":txt
                 },ensure_ascii=False))
 
+    print("FIRST_MAP_BOSS_TRACE")
+    for e in events:
+        try: seq=int(e.get("seq") or 0)
+        except: seq=0
+        if seq<555 or seq>595: continue
+        typ=str(e.get("type") or "")
+        d=e.get("data") if isinstance(e.get("data"),dict) else {}
+        if typ=="click":
+            t=target(e)
+            print(json.dumps({
+                "seq":seq,"at":e.get("at"),"screen":e.get("screen"),
+                "type":"click","lot":str(t.get("lotId") or ""),
+                "text":str(t.get("text") or "").replace("\n"," ")[:220]
+            },ensure_ascii=False))
+        elif typ=="network":
+            req=d.get("request") if isinstance(d.get("request"),dict) else {}
+            print(json.dumps({
+                "seq":seq,"at":e.get("at"),"screen":e.get("screen"),
+                "type":"network","path":d.get("path"),"status":d.get("status"),
+                "fair_id":req.get("fair_id"),"shop_lot_id":req.get("shop_lot_id"),"slot_id":req.get("slot_id")
+            },ensure_ascii=False))
     print("ERRORS_AND_BLOCKERS")
     for e in events:
         typ=str(e.get("type") or "")
