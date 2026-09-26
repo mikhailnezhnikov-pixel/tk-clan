@@ -1,1 +1,1 @@
-trigger 2026-09-20 public-panel-v2
+verify public panel after disk cleanup 2026-09-26 r2
