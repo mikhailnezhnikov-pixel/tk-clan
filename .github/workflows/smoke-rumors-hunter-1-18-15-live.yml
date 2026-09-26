@@ -130,6 +130,114 @@ jobs:
           systemctl_status=$(ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71             'systemctl is-active hamsterking-license.service')
           test "$systemctl_status" = active
 
+      - name: Verify coordinator lifecycle on temporary database
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 - <<'"'"'PY'"'"'
+          import importlib.util,os,tempfile
+
+          path="/opt/hamsterking-license/server.py"
+          spec=importlib.util.spec_from_file_location("hk_lifecycle_server",path)
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+
+          fd,tmp=tempfile.mkstemp(prefix="hk-rumor-lifecycle-",suffix=".db")
+          os.close(fd)
+          os.unlink(tmp)
+          try:
+              s.DB_PATH=tmp
+              s.init_db()
+              s.rumor_hunter_known_map=lambda cycle_id: {}
+
+              player="smoke-player"
+              clan="smoke-clan"
+              city1=s.RUMOR_HUNTER_CITIES[0][0]
+              city2=s.RUMOR_HUNTER_CITIES[1][0]
+              base={
+                  "clan_id":clan,
+                  "nickname":"Smoke Hunter",
+                  "timezone":"UTC",
+                  "unlocked_city_ids":[city1,city2],
+                  "ready":True,
+              }
+
+              state=s.rumor_hunter_action(player,"heartbeat",base)
+              assert state["ok"] is True,state
+              assigned=[c for c in state["cities"] if c["assigned_player_id"]==player and c["status"]=="queued"]
+              assert {c["city_id"] for c in assigned}=={city1,city2},assigned
+
+              claim1=s.rumor_hunter_action(player,"claim",{**base,"city_id":city1})
+              assert claim1["ok"] is True,claim1
+              token1=claim1["lease_token"]
+              assert token1 and claim1["lease_until"]>s.utc_now(),claim1
+
+              progress1=s.rumor_hunter_action(player,"progress",{
+                  **base,
+                  "city_id":city1,
+                  "lease_token":token1,
+                  "probes":4,
+                  "posts":3,
+                  "wait409":1,
+                  "jackpots":[{"x":11,"y":12,"gamearea_id":"smoke-area-a","rumor_id":"rumor_jackpot_test"}],
+              })
+              assert progress1["ok"] is True,progress1
+              row1=next(c for c in progress1["state"]["cities"] if c["city_id"]==city1)
+              assert row1["status"]=="running" and row1["probes"]==4 and row1["posts"]==3 and row1["wait409"]==1,row1
+              assert len(row1["jackpots"])==1,row1
+
+              release1=s.rumor_hunter_action(player,"release",{
+                  **base,"city_id":city1,"lease_token":token1
+              })
+              assert release1["ok"] is True,release1
+              row1=next(c for c in release1["state"]["cities"] if c["city_id"]==city1)
+              assert row1["status"]=="queued" and row1["assigned_player_id"]==player,row1
+
+              claim2=s.rumor_hunter_action(player,"claim",{**base,"city_id":city2})
+              assert claim2["ok"] is True,claim2
+              token2=claim2["lease_token"]
+
+              points=[
+                  {"x":21,"y":31,"gamearea_id":"smoke-area-1","rumor_id":"rumor_jackpot_test_1"},
+                  {"x":22,"y":32,"gamearea_id":"smoke-area-2","rumor_id":"rumor_jackpot_test_2"},
+                  {"x":23,"y":33,"gamearea_id":"smoke-area-3","rumor_id":"rumor_jackpot_test_3"},
+              ]
+              done=s.rumor_hunter_action(player,"done",{
+                  **base,
+                  "city_id":city2,
+                  "lease_token":token2,
+                  "probes":9,
+                  "posts":8,
+                  "wait409":2,
+                  "jackpots":points,
+              })
+              assert done["ok"] is True,done
+              row2=next(c for c in done["state"]["cities"] if c["city_id"]==city2)
+              assert row2["status"]=="done" and len(row2["jackpots"])==3,row2
+              assert row2["assigned_player_id"]=="",row2
+
+              ready=s.rumor_hunter_action(player,"claim",{**base,"city_id":city2})
+              assert ready["ok"] is False and ready["error"]=="RESULT_READY",ready
+
+              left=s.rumor_hunter_action(player,"leave",{**base,"ready":False})
+              self_row=next(p for p in left["players"] if p["player_id"]==player)
+              assert self_row["ready"] is False,self_row
+              row1=next(c for c in left["cities"] if c["city_id"]==city1)
+              assert row1["status"]=="unassigned" and row1["assigned_player_id"]=="",row1
+
+              print("COORDINATOR_TEMPDB_LIFECYCLE=PASS")
+              print("heartbeat_assignment=PASS")
+              print("claim_lease=PASS")
+              print("progress_metrics=PASS")
+              print("release=PASS")
+              print("done_3of3=PASS")
+              print("result_ready=PASS")
+              print("leave_cleanup=PASS")
+          finally:
+              for suffix in ("","-wal","-shm"):
+                  try: os.remove(tmp+suffix)
+                  except FileNotFoundError: pass
+          PY' | tee /tmp/coordinator-lifecycle.txt
+
       - name: Persist smoke audit
         run: |
           set -euo pipefail
@@ -147,6 +255,14 @@ jobs:
             echo "coordinator_marker=PASS"
             echo "coordinator_tables=PASS"
             echo "coordinator_readonly_smoke=PASS"
+            echo "coordinator_tempdb_lifecycle=PASS"
+            echo "heartbeat_assignment=PASS"
+            echo "claim_lease=PASS"
+            echo "progress_metrics=PASS"
+            echo "release=PASS"
+            echo "done_3of3=PASS"
+            echo "result_ready=PASS"
+            echo "leave_cleanup=PASS"
             echo "kokkaras_cities=17"
             echo "kokkaras_points=51"
             echo "known_map_cities=17"
@@ -167,4 +283,4 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          rm -f "$HOME/.ssh/topking" /tmp/health.json /tmp/public.js /tmp/public.sha             /tmp/today-unauth.json /tmp/hunter-unauth.json /tmp/today.code /tmp/hunter.code             /tmp/coordinator-smoke.txt
+          rm -f "$HOME/.ssh/topking" /tmp/health.json /tmp/public.js /tmp/public.sha             /tmp/today-unauth.json /tmp/hunter-unauth.json /tmp/today.code /tmp/hunter.code             /tmp/coordinator-smoke.txt /tmp/coordinator-lifecycle.txt
