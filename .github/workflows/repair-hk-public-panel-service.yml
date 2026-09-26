@@ -1,0 +1,98 @@
+name: Repair HK Public Panel Service
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/hk-public-panel-repair-trigger.txt'
+      - '.github/workflows/repair-hk-public-panel-service.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-hk-public-panel-service
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Diagnose and repair service
+        run: |
+          set -euo pipefail
+          out=/tmp/hk-panel-repair.txt
+          : > "$out"
+          url="https://hk-license.89.125.1.71.sslip.io/panel.js?repair=$(date +%s)"
+          before=$(curl -L -sS --connect-timeout 8 --max-time 20 -o /tmp/before.js -w '%{http_code}' "$url" || true)
+          echo "before_http=$before" >> "$out"
+
+          echo "[service-before]" >> "$out"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "systemctl show hamsterking-license.service -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStatus --no-pager" >> "$out" 2>&1 || true
+
+          if [ "$before" != "200" ]; then
+            echo "repair_action=restart" >> "$out"
+            ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+              "systemctl restart hamsterking-license.service && systemctl is-active hamsterking-license.service" >> "$out" 2>&1
+            sleep 3
+          else
+            echo "repair_action=none" >> "$out"
+          fi
+
+          echo "[service-after]" >> "$out"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "systemctl show hamsterking-license.service -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStatus --no-pager" >> "$out" 2>&1 || true
+
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/server.js
+          node --check /tmp/server.js
+
+          after=$(curl -L -sS --retry 8 --retry-delay 2 --connect-timeout 10 --max-time 30 -o /tmp/after.js -w '%{http_code}' \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?repair_after=$(date +%s)" || true)
+          echo "after_http=$after" >> "$out"
+          if [ "$after" = "200" ]; then
+            node --check /tmp/after.js && echo "public_syntax=PASS" >> "$out" || echo "public_syntax=FAIL" >> "$out"
+            echo "server_sha=$(sha256sum /tmp/server.js | awk '{print $1}')" >> "$out"
+            echo "public_sha=$(sha256sum /tmp/after.js | awk '{print $1}')" >> "$out"
+            if cmp -s /tmp/server.js /tmp/after.js; then echo "public_exact_match=PASS" >> "$out"; else echo "public_exact_match=FAIL" >> "$out"; fi
+          else
+            echo "public_exact_match=FAIL" >> "$out"
+            echo "[journal-tail]" >> "$out"
+            ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+              "journalctl -u hamsterking-license.service -n 50 --no-pager" >> "$out" 2>&1 || true
+          fi
+          cat "$out"
+
+      - name: Persist audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/hk-panel-repair.txt audit/hk-public-panel-repair-latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-public-panel-repair-latest.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist HK public panel repair result"
+            git push origin HEAD:main
+          fi
+          grep -Fq 'after_http=200' audit/hk-public-panel-repair-latest.txt
+          grep -Fq 'public_exact_match=PASS' audit/hk-public-panel-repair-latest.txt
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/before.js /tmp/after.js /tmp/server.js /tmp/hk-panel-repair.txt
