@@ -1,0 +1,15 @@
+USERSCRIPT_1_18_13_TREASURE_RUN_RECORDER_PREDEPLOY=PASS
+source_version=1.18.12
+target_version=1.18.13
+mode=PASSIVE_OBSERVATION_ONLY
+game_requests_added=NONE
+clicks_added=NONE
+session_toggle=Запись карты
+captures=CLICKS,SCREENS,LOTS,MODALS,NETWORK_STATUS,RELEVANT_REQUEST_RESPONSE
+batch_interval_ms=10000
+batch_max_events=16
+resume_after_reload=ENABLED
+multiple_runs=SEPARATE_SESSION_IDS
+syntax=PASS
+base_sha256=544e003fb8cd2bda4e7e8cf671d63b50e60075689fb1a01b6e3f4b09e77ab6d9
+candidate_sha256=50c59c9f950f277f3e366ab81ae122de4a3f3fed499dbb5137003637d950b21f
