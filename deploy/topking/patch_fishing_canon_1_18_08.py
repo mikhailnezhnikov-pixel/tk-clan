@@ -1,3 +1,4 @@
+# build-trigger: 1.18.08 fishing canon
 from pathlib import Path
 import sys
 
