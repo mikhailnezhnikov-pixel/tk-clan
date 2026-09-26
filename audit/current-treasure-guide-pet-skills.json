@@ -1,0 +1,287 @@
+{
+  "pet_skills_confirmed": [
+    {
+      "rank": "S+",
+      "title": "Любитель покушать",
+      "effect": "Если в комнате получена Провизия для путешествий, её количество увеличивается на 4.",
+      "value": "+4 провизии",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_more_food_r4_icon.png"
+    },
+    {
+      "rank": "S+",
+      "title": "Охотник за сокровищами",
+      "effect": "В Сражении появляется шанс встретить уникального врага — Хранителя Сокровищ.",
+      "value": "Хороший шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png"
+    },
+    {
+      "rank": "S+",
+      "title": "Любитель блестяшек",
+      "effect": "Если в комнате получены Монеты сокровищ, их количество увеличивается на 4.",
+      "value": "+4 монеты",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_more_money_r4_icon.png"
+    },
+    {
+      "rank": "S+",
+      "title": "Боевая кладка",
+      "effect": "Вместо врага может появиться обычное яйцо Молекота или Рыбы с равными шансами. Взрыв превращает неполученное яйцо в случайное тёмное яйцо того же вида, усилитель — в светлое. Забрать яйцо стоит 1 Провизию.",
+      "value": "Хороший шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fight_egg_spawn_r4_icon.png"
+    },
+    {
+      "rank": "S+",
+      "title": "Ключник",
+      "effect": "Повышает шанс найти Обычные и Необычные ключи во время Рыбалки.",
+      "value": "+Хороший шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_keys_r4_icon.png"
+    },
+    {
+      "rank": "S+",
+      "title": "Картограф",
+      "effect": "Даёт шанс зарисовать дорогу к только что пройденному событию. Специальная Карта сокровищ затем переносит прямо в соответствующую комнату.",
+      "value": "Хороший шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_map_generator_r4_icon.png"
+    },
+    {
+      "rank": "S+",
+      "title": "Карты на прилавке",
+      "effect": "Торговцы начинают предлагать дополнительные лоты со специальными Картами сокровищ.",
+      "value": "Хороший шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_maps_r4_icon.png"
+    },
+    {
+      "rank": "S+",
+      "title": "Рыбацкое чутьё",
+      "effect": "Повышает шанс найти карту на Рыбалку в Ураганных водах.",
+      "value": "1% → 5%",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fishing_map_finder_r4_icon.png"
+    },
+    {
+      "rank": "S+",
+      "title": "Любимчик торговцев",
+      "effect": "Увеличивает репутацию за покупку товаров у торговцев.",
+      "value": "10 → 14 (+4)",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_rep_r4_icon.png"
+    },
+    {
+      "rank": "S",
+      "title": "Чутьё на сундуки",
+      "effect": "Повышает шанс найти дополнительный сундук, включая Таинственный, во время раскопок.",
+      "value": "Особый эффект",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_chest_finder_r4_icon.png"
+    },
+    {
+      "rank": "S",
+      "title": "Карты на прилавке",
+      "effect": "Торговцы получают шанс предложить дополнительные лоты с Картами сокровищ.",
+      "value": "Средний шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_maps_r4_icon.png"
+    },
+    {
+      "rank": "S",
+      "title": "Ключник",
+      "effect": "Повышает шанс найти Обычные и Необычные ключи во время Рыбалки.",
+      "value": "+Средний шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_keys_r4_icon.png"
+    },
+    {
+      "rank": "A",
+      "title": "Картограф",
+      "effect": "Даёт шанс зарисовать дорогу к только что пройденному событию.",
+      "value": "Малый шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_map_generator_r4_icon.png"
+    },
+    {
+      "rank": "A",
+      "title": "Карты на прилавке",
+      "effect": "Торговцы получают шанс предложить дополнительные лоты с Картами сокровищ.",
+      "value": "Малый шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_maps_r4_icon.png"
+    },
+    {
+      "rank": "A",
+      "title": "Ключник",
+      "effect": "Повышает шанс найти Обычные и Необычные ключи во время Рыбалки.",
+      "value": "+Малый шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_keys_r4_icon.png"
+    },
+    {
+      "rank": "B",
+      "title": "Картограф",
+      "effect": "Даёт шанс зарисовать дорогу к только что пройденному событию.",
+      "value": "Очень малый шанс",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_map_generator_r4_icon.png"
+    },
+    {
+      "rank": "B",
+      "title": "Рыбацкое чутьё",
+      "effect": "Повышает шанс найти карту на Рыбалку в Ураганных водах.",
+      "value": "1% → 2%",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fishing_map_finder_r4_icon.png"
+    }
+  ],
+  "pet_skill_groups": [
+    {
+      "title": "Боевая кладка",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fight_egg_spawn_r4_icon.png",
+      "grades": [
+        {
+          "rank": "S+",
+          "effect": "Вместо врага может появиться обычное яйцо Молекота или Рыбы с равными шансами. Взрыв превращает неполученное яйцо в случайное тёмное яйцо того же вида, усилитель — в светлое. Забрать яйцо стоит 1 Провизию.",
+          "value": "Хороший шанс"
+        }
+      ]
+    },
+    {
+      "title": "Картограф",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_map_generator_r4_icon.png",
+      "grades": [
+        {
+          "rank": "S+",
+          "effect": "Даёт шанс зарисовать дорогу к только что пройденному событию. Специальная Карта сокровищ затем переносит прямо в соответствующую комнату.",
+          "value": "Хороший шанс"
+        },
+        {
+          "rank": "A",
+          "effect": "Даёт шанс зарисовать дорогу к только что пройденному событию.",
+          "value": "Малый шанс"
+        },
+        {
+          "rank": "B",
+          "effect": "Даёт шанс зарисовать дорогу к только что пройденному событию.",
+          "value": "Очень малый шанс"
+        }
+      ]
+    },
+    {
+      "title": "Карты на прилавке",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_maps_r4_icon.png",
+      "grades": [
+        {
+          "rank": "S+",
+          "effect": "Торговцы начинают предлагать дополнительные лоты со специальными Картами сокровищ.",
+          "value": "Хороший шанс"
+        },
+        {
+          "rank": "S",
+          "effect": "Торговцы получают шанс предложить дополнительные лоты с Картами сокровищ.",
+          "value": "Средний шанс"
+        },
+        {
+          "rank": "A",
+          "effect": "Торговцы получают шанс предложить дополнительные лоты с Картами сокровищ.",
+          "value": "Малый шанс"
+        }
+      ]
+    },
+    {
+      "title": "Ключник",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_keys_r4_icon.png",
+      "grades": [
+        {
+          "rank": "S+",
+          "effect": "Повышает шанс найти Обычные и Необычные ключи во время Рыбалки.",
+          "value": "+Хороший шанс"
+        },
+        {
+          "rank": "S",
+          "effect": "Повышает шанс найти Обычные и Необычные ключи во время Рыбалки.",
+          "value": "+Средний шанс"
+        },
+        {
+          "rank": "A",
+          "effect": "Повышает шанс найти Обычные и Необычные ключи во время Рыбалки.",
+          "value": "+Малый шанс"
+        }
+      ]
+    },
+    {
+      "title": "Любимчик торговцев",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_trader_rep_r4_icon.png",
+      "grades": [
+        {
+          "rank": "S+",
+          "effect": "Увеличивает репутацию за покупку товаров у торговцев.",
+          "value": "10 → 14 (+4)"
+        }
+      ]
+    },
+    {
+      "title": "Любитель блестяшек",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_more_money_r4_icon.png",
+      "grades": [
+        {
+          "rank": "S+",
+          "effect": "Если в комнате получены Монеты сокровищ, их количество увеличивается на 4.",
+          "value": "+4 монеты"
+        }
+      ]
+    },
+    {
+      "title": "Любитель покушать",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_more_food_r4_icon.png",
+      "grades": [
+        {
+          "rank": "S+",
+          "effect": "Если в комнате получена Провизия для путешествий, её количество увеличивается на 4.",
+          "value": "+4 провизии"
+        }
+      ]
+    },
+    {
+      "title": "Охотник за сокровищами",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/treasures/icons/treasure_minigame_enemy_g_icon.png",
+      "grades": [
+        {
+          "rank": "S+",
+          "effect": "В Сражении появляется шанс встретить уникального врага — Хранителя Сокровищ.",
+          "value": "Хороший шанс"
+        }
+      ]
+    },
+    {
+      "title": "Рыбацкое чутьё",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_fishing_map_finder_r4_icon.png",
+      "grades": [
+        {
+          "rank": "S+",
+          "effect": "Повышает шанс найти карту на Рыбалку в Ураганных водах.",
+          "value": "1% → 5%"
+        },
+        {
+          "rank": "B",
+          "effect": "Повышает шанс найти карту на Рыбалку в Ураганных водах.",
+          "value": "1% → 2%"
+        }
+      ]
+    },
+    {
+      "title": "Чутьё на сундуки",
+      "image": "https://cdn-prod-art.hwgame.cloud/minigames/pets/icons/skill_chest_finder_r4_icon.png",
+      "grades": [
+        {
+          "rank": "S",
+          "effect": "Повышает шанс найти дополнительный сундук, включая Таинственный, во время раскопок.",
+          "value": "Особый эффект"
+        }
+      ]
+    }
+  ],
+  "pet_skill_state": {
+    "max_level": 4,
+    "observed_levels": {
+      "more_money": 4,
+      "more_food": 4,
+      "fight_hp_up": 4,
+      "fight_treasure_goblin": 4,
+      "trader_keys": 4,
+      "fishing_map_finder": 0,
+      "chest_finder": 0,
+      "chest_map_finder": 0,
+      "map_generator": 0,
+      "trader_maps": 0,
+      "trader_rep": 0
+    },
+    "note": "Максимальный уровень навыка — 4."
+  }
+}
