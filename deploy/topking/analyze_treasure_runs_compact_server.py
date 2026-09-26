@@ -227,4 +227,20 @@ for _,sid,events,meta in all_sessions[:2]:
             },ensure_ascii=False))
     except Exception as exc:
         print("RECOVERY_ERROR "+repr(exc))
+    print("RECOVERY_RAW_TARGETS")
+    try:
+        with server.db_session() as db:
+            rawrows=[dict(r) for r in db.execute("""
+              SELECT id,path,payload_json,captured_at
+              FROM treasure_guide_captures
+              WHERE id BETWEEN 14902 AND 14914
+              ORDER BY id
+            """)]
+        for row in rawrows:
+            print(json.dumps({
+                "id":row.get("id"),"captured_at":row.get("captured_at"),"path":row.get("path"),
+                "raw":str(row.get("payload_json") or "")[:5000]
+            },ensure_ascii=False))
+    except Exception as exc:
+        print("RECOVERY_RAW_ERROR "+repr(exc))
     print("END_SESSION")
