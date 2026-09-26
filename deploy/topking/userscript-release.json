@@ -83,5 +83,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-19-treasure-auto-map-start-lock-live-status.txt",
-  "commit_message": "fix: deploy Treasure Auto Map start lock in userscript 1.18.19"
+  "commit_message": "fix: deploy Treasure Auto Map start lock in userscript 1.18.19",
+  "trigger_revision": 1
 }
