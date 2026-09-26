@@ -18,7 +18,10 @@ terms=[
     "recordDiagnostic(",
     "function licensedServerJson",
     "function treasureGuideScreenVisible",
-    "function treasureGuideHash"
+    "function treasureGuideHash",
+    "function treasureRunRecorderTargetInfo",
+    "function treasureRunRecorderUpdateButton",
+    "treasureRunRecorderObserver=new MutationObserver"
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
