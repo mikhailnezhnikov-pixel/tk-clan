@@ -1,0 +1,170 @@
+name: Smoke Rumors Hunter 1.18.15 Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/rumors-hunter-live-smoke-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: smoke-rumors-hunter-live
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Verify public userscript and health
+        run: |
+          set -euo pipefail
+          base=https://hk-license.89.125.1.71.sslip.io
+
+          curl -fsS --retry 5 --retry-delay 2 "$base/health" -o /tmp/health.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True,d
+          print('HEALTH=PASS')
+          PY
+
+          curl -fsS --retry 5 --retry-delay 2 "$base/panel.js?smoke=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          node --check baseline/topking/HamsterKingMobile.current.user.js
+          cmp -s /tmp/public.js baseline/topking/HamsterKingMobile.current.user.js
+          grep -Fq "// @version      1.18.15" /tmp/public.js
+          grep -Fq "const BUILD_VERSION = '1.18.15';" /tmp/public.js
+          grep -Fq "rumors-hunter-coordinator-kokkaras-v40-20260926-r4" /tmp/public.js
+          grep -Fq "class HKRumorCityHunter" /tmp/public.js
+          grep -Fq "async function runRumorHunter()" /tmp/public.js
+          grep -Fq "async function runDailyRumors(internal = false)" /tmp/public.js
+          grep -Fq "treasure-run-recorder-stability-blockers-20260926-r2" /tmp/public.js
+          grep -Fq "battle-visible-board-active-20260926-r1" /tmp/public.js
+          grep -Fq "false zero is not stored." /tmp/public.js
+          sha256sum /tmp/public.js | awk '{print $1}' > /tmp/public.sha
+
+      - name: Verify protected rumor routes exist
+        run: |
+          set -euo pipefail
+          base=https://hk-license.89.125.1.71.sslip.io
+          origin=https://app.hamsterking.games
+
+          today_code=$(curl -sS -o /tmp/today-unauth.json -w '%{http_code}'             -X POST -H "Origin: $origin" -H 'Content-Type: application/json'             --data '{}' "$base/api/v1/rumors/today")
+          hunter_code=$(curl -sS -o /tmp/hunter-unauth.json -w '%{http_code}'             -X POST -H "Origin: $origin" -H 'Content-Type: application/json'             --data '{"action":"state","clan_id":"smoke"}' "$base/api/v1/rumors/hunter")
+
+          test "$today_code" = 401
+          test "$hunter_code" = 401
+          grep -Fq '"unauthorized"' /tmp/today-unauth.json
+          grep -Fq '"unauthorized"' /tmp/hunter-unauth.json
+          printf '%s\n' "$today_code" > /tmp/today.code
+          printf '%s\n' "$hunter_code" > /tmp/hunter.code
+
+      - name: Verify live coordinator state read-only
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71 'python3 - <<'"'"'PY'"'"'
+          import importlib.util,sqlite3,json
+          path="/opt/hamsterking-license/server.py"
+          text=open(path,encoding="utf-8").read()
+          for marker in [
+              "HK_RUMORS_COORDINATOR_R3",
+              "def rumor_hunter_action",
+              "def rumor_hunter_state",
+              "path == \"/api/v1/rumors/hunter\"",
+              "fetch_kokkaras_rumors",
+          ]:
+              assert marker in text,marker
+
+          spec=importlib.util.spec_from_file_location("hk_live_server",path)
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          s.init_db()
+
+          db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
+          names={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          required={"rumor_observations","rumor_hunter_presence","rumor_hunter_cities","rumor_hunter_history","rumor_routes"}
+          assert required.issubset(names),(required-names)
+
+          cycle=s.active_rumor_route_date()
+          feed=s.fetch_kokkaras_rumors(force=True)
+          assert feed and str(feed.get("date") or "")==cycle,(cycle,feed and feed.get("date"))
+          routes=feed.get("routes") or []
+          assert len(routes)==17,len(routes)
+          points=sum(len(r.get("points") or []) for r in routes)
+          assert points==51,points
+
+          known=s.rumor_hunter_known_map(cycle)
+          assert len(known)==17,len(known)
+          known_points=sum(len((row or {}).get("points") or []) for row in known.values())
+          assert known_points==51,known_points
+
+          route_row=db.execute("SELECT route_date,routes_json,published_at FROM rumor_routes WHERE route_date=?",(cycle,)).fetchone()
+          assert route_row is not None,cycle
+          stored=json.loads(route_row[1] or "[]")
+          assert len(stored)==17,len(stored)
+
+          print("COORDINATOR_READONLY_SMOKE=PASS")
+          print("cycle="+cycle)
+          print("kokkaras_cities=17")
+          print("kokkaras_points=51")
+          print("known_map_cities=17")
+          print("known_map_points=51")
+          db.close()
+          PY' | tee /tmp/coordinator-smoke.txt
+
+          systemctl_status=$(ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71             'systemctl is-active hamsterking-license.service')
+          test "$systemctl_status" = active
+
+      - name: Persist smoke audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+
+          {
+            echo "RUMORS_HUNTER_1_18_15_LIVE_SMOKE=PASS"
+            echo "version=1.18.15"
+            echo "public_userscript_exact_match=PASS"
+            echo "public_sha256=$(cat /tmp/public.sha)"
+            echo "health=PASS"
+            echo "today_route_unauthorized_guard=$(cat /tmp/today.code)"
+            echo "hunter_route_unauthorized_guard=$(cat /tmp/hunter.code)"
+            echo "service=active"
+            echo "coordinator_marker=PASS"
+            echo "coordinator_tables=PASS"
+            echo "coordinator_readonly_smoke=PASS"
+            echo "kokkaras_cities=17"
+            echo "kokkaras_points=51"
+            echo "known_map_cities=17"
+            echo "known_map_points=51"
+            echo "runDailyRumors=PRESERVED"
+            echo "full235_zero_guard=PRESERVED"
+            echo "treasure_recorder_stability=PRESERVED"
+            echo "battle_visible_board=PRESERVED"
+            echo "game_mutations=NONE"
+          } > audit/hk-rumors-hunter-1-18-15-live-smoke.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-rumors-hunter-1-18-15-live-smoke.txt
+          git commit -m "audit: smoke full Rumors Hunter 1.18.15 live"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$HOME/.ssh/topking" /tmp/health.json /tmp/public.js /tmp/public.sha             /tmp/today-unauth.json /tmp/hunter-unauth.json /tmp/today.code /tmp/hunter.code             /tmp/coordinator-smoke.txt
