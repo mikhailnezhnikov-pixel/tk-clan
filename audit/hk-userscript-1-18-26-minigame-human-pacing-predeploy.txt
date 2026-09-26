@@ -1,0 +1,13 @@
+USERSCRIPT_1_18_26_MINIGAME_HUMAN_PACING_PREDEPLOY=PASS
+source_version=1.18.25
+target_version=1.18.26
+scan_pause_ms=850-1450
+aim_pause_ms=550-950
+confirm_pause_ms=950-1650
+settle_pause_ms=1500-2400
+429_cooldown_ms=14000-19000+streak
+409_cooldown_ms=5000-8000+streak
+single_action_pipeline=YES
+syntax=PASS
+base_sha256=811aa5bc903f5057e04a0cad81aaae9909e19681fc5dd9203921ffb0bb2f8587
+candidate_sha256=53d6a2ac473a82e7051d2501e9a09f06f70b098c80315816c9980e5fca15233d

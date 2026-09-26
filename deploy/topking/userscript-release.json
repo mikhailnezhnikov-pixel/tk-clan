@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.24",
-  "target_version": "1.18.25",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.25.trader-whitelist-fishing-budget.candidate.user.js",
-  "primary_marker": "fishing-live-budget-20260927-r1",
+  "source_version": "1.18.25",
+  "target_version": "1.18.26",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.26.minigame-human-pacing.candidate.user.js",
+  "primary_marker": "minigame-human-pacing-20260927-r1",
   "preserve_markers": [
+    "fishing-live-budget-20260927-r1",
     "treasure-auto-map-stale-runner-20260927-r2",
     "treasure-chest-element-state-20260927-r1",
     "treasure-auto-map-foreground-truth-20260926-r7",
@@ -88,7 +89,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-25-trader-whitelist-fishing-budget-live-status.txt",
-  "commit_message": "fix: deploy trader whitelist and fishing budget in userscript 1.18.25",
-  "trigger_revision": 2
+  "audit_status_path": "audit/hk-userscript-1-18-26-minigame-human-pacing-live-status.txt",
+  "commit_message": "fix: deploy human-paced minigame actions in userscript 1.18.26"
 }
