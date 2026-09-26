@@ -84,5 +84,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-20-treasure-auto-map-active-priority-live-status.txt",
-  "commit_message": "fix: deploy active-cell priority in Treasure Auto Map 1.18.20"
+  "commit_message": "fix: deploy active-cell priority in Treasure Auto Map 1.18.20",
+  "trigger_revision": 1
 }
