@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Prepare SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
@@ -26,36 +27,84 @@ jobs:
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
-      - name: Free safe system space and restart service
+
+      - name: Free only redundant backup space and restart service
         run: |
           set -euo pipefail
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' > /tmp/recovery.txt 2>&1 <<'REMOTE'
           set -euo pipefail
+          dbdir=/var/lib/hamsterking-license
+          live="$dbdir/licenses.db"
+
           echo '[before]'
           df -hT /
-          journalctl --disk-usage || true
+          ls -lh "$dbdir"/licenses.db* 2>/dev/null | tail -40 || true
+
+          test -f "$live"
+          test -s "$live"
+
+          safe_rm_backup() {
+            p="$1"
+            case "$p" in
+              "$dbdir"/licenses.db.bak.*|"$dbdir"/licenses.db.rollback.*) ;;
+              *) echo "REFUSE_DELETE=$p"; return 1 ;;
+            esac
+            if [ -e "$p" ]; then
+              echo "DELETE_BACKUP=$p"
+              rm -f -- "$p"
+            fi
+          }
+
+          # Keep the live DB, the complete R3 pre-deploy backup from 07:05,
+          # and the R2 backup. Remove only redundant/partial large snapshots.
+          safe_rm_backup "$dbdir/licenses.db.bak.rumors-coordinator-r3.20260926-070954"
+          safe_rm_backup "$dbdir/licenses.db.bak.rumors-coordinator-r3.20260926-070954-journal"
+          safe_rm_backup "$dbdir/licenses.db.rollback.maps-crystal-priority-r1.20260925-051030"
+          safe_rm_backup "$dbdir/licenses.db.rollback.maps-crystal-priority-r1.20260925-051105"
+
           journalctl --vacuum-size=150M || true
           apt-get clean || true
           sync
+
           echo '[after-cleanup]'
           df -hT /
-          journalctl --disk-usage || true
+          ls -lh "$live"
+          test -s "$live"
+
           systemctl reset-failed hamsterking-license.service || true
           systemctl restart hamsterking-license.service
-          sleep 4
-          systemctl is-active hamsterking-license.service
+          sleep 5
+          systemctl is-active --quiet hamsterking-license.service
           systemctl show hamsterking-license.service -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStatus --no-pager
+
+          echo '[local-health]'
+          curl -fsS --retry 4 --retry-delay 1 --max-time 10 http://127.0.0.1:8787/health
+          echo
+
+          echo '[rumors-r3-marker]'
+          grep -n "HK_RUMORS_COORDINATOR_R3\|def rumor_hunter_action\|rumor_hunter_presence" /opt/hamsterking-license/server.py | head -20
           REMOTE
           cat /tmp/recovery.txt
-      - name: Verify public panel
+
+      - name: Verify public panel and health
         run: |
           set -euo pipefail
-          curl -fsSL --retry 8 --retry-delay 2 --connect-timeout 10 --max-time 30 \
-            "https://hk-license.89.125.1.71.sslip.io/panel.js?safefix=$(date +%s)" -o /tmp/public.js
+          curl -fsS --retry 8 --retry-delay 2 --connect-timeout 10 --max-time 30             "https://hk-license.89.125.1.71.sslip.io/health?spacefix=$(date +%s)" -o /tmp/health.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True,d
+          print('HEALTH=PASS')
+          PY
+          curl -fsSL --retry 8 --retry-delay 2 --connect-timeout 10 --max-time 30             "https://hk-license.89.125.1.71.sslip.io/panel.js?safefix=$(date +%s)" -o /tmp/public.js
           node --check /tmp/public.js
-          echo '[public]' >> /tmp/recovery.txt
-          echo 'http=200' >> /tmp/recovery.txt
-          echo 'syntax=PASS' >> /tmp/recovery.txt
+          {
+            echo '[public]'
+            echo 'health=PASS'
+            echo 'http=200'
+            echo 'syntax=PASS'
+          } >> /tmp/recovery.txt
+
       - name: Persist audit
         run: |
           set -euo pipefail
@@ -68,6 +117,7 @@ jobs:
             git commit -m "ops: persist safe HK service recovery"
             git push origin HEAD:main
           fi
+
       - name: Cleanup
         if: always()
-        run: rm -f "$HOME/.ssh/topking" /tmp/recovery.txt /tmp/public.js
+        run: rm -f "$HOME/.ssh/topking" /tmp/recovery.txt /tmp/public.js /tmp/health.json
