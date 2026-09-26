@@ -1,12 +1,20 @@
 (()=>{
   'use strict';
   const HOST='app.hamsterking.games';
-  const CORE_URL='https://hk-license.89.125.1.71.sslip.io/panel.js';
+  const CORE_SOURCES=[
+    {name:'primary',url:'https://hk-license.89.125.1.71.sslip.io/panel.js'},
+    {name:'pages',url:'https://tk-clan.ru/baseline/topking/HamsterKingMobile.current.user.js'}
+  ];
   const LOCK_KEY='__HK_BOOKMARKLET_RUNTIME__';
-  const LOADER_REV='loader-20260921-r24';
+  const LOADER_REV='loader-20260926-r25-fallback';
   const EXPECTED_CORE_REV='core-20260921-r27-businesses-runner-canon';
-  const TIMEOUTS=[3500,6000,12000,20000];
-  const RETRY_DELAYS=[700,1800,4000];
+  const ATTEMPTS=[
+    {source:0,timeoutMs:3500},
+    {source:1,timeoutMs:8000},
+    {source:0,timeoutMs:7000},
+    {source:1,timeoutMs:15000}
+  ];
+  const RETRY_DELAYS=[350,900,1800];
   const runtime=window[LOCK_KEY]||{active:false,promise:null,events:[],startedAt:'',revision:LOADER_REV};
   runtime.revision=LOADER_REV;
 
@@ -15,7 +23,7 @@
   function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
   function badge(){let el=document.getElementById('tk-hk-loader-badge');if(!el){el=document.createElement('div');el.id='tk-hk-loader-badge';el.style.cssText='position:fixed;right:16px;bottom:20px;z-index:2147483647;max-width:min(360px,calc(100vw - 32px));padding:11px 14px;border-radius:13px;background:#17130d;color:#f4cf75;border:1px solid #b68a35;font:700 13px/1.3 Arial,sans-serif;box-shadow:0 8px 28px #0009;cursor:default';(document.body||document.documentElement).appendChild(el)}return el}
   function setBadge(text,state='loading'){const el=badge();el.textContent=text;el.style.borderColor=state==='ok'?'#3aa978':state==='bad'?'#bd5361':'#b68a35';el.style.color=state==='ok'?'#a7f3cf':state==='bad'?'#ffd0d5':'#f4cf75';return el}
-  function report(){const payload={schema:'topking-hk-loader-diagnostic-v2',loaderRevision:LOADER_REV,expectedCoreRevision:EXPECTED_CORE_REV,startedAt:runtime.startedAt||new Date().toISOString(),exportedAt:new Date().toISOString(),page:{origin:location.origin,pathname:location.pathname},browser:{userAgent:navigator.userAgent,language:navigator.language,onLine:navigator.onLine},viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio||1},core:{version:window.__HK_MOBILE_VERSION__||'',revision:window.__HK_MOBILE_REVISION__||window.__HK_MOBILE_RUNTIME__?.revision||'',active:!!window.__HK_MOBILE_RUNTIME__?.active},events:runtime.events};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`HK_loader_diagnostic_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200)}
+  function report(){const payload={schema:'topking-hk-loader-diagnostic-v3',loaderRevision:LOADER_REV,expectedCoreRevision:EXPECTED_CORE_REV,coreSources:CORE_SOURCES.map(x=>({name:x.name,url:x.url})),startedAt:runtime.startedAt||new Date().toISOString(),exportedAt:new Date().toISOString(),page:{origin:location.origin,pathname:location.pathname},browser:{userAgent:navigator.userAgent,language:navigator.language,onLine:navigator.onLine},viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio||1},core:{version:window.__HK_MOBILE_VERSION__||'',revision:window.__HK_MOBILE_REVISION__||window.__HK_MOBILE_RUNTIME__?.revision||'',active:!!window.__HK_MOBILE_RUNTIME__?.active},events:runtime.events};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`HK_loader_diagnostic_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200)}
   function coreIsCurrent(){const core=window.__HK_MOBILE_RUNTIME__;return !!(core?.active&&core.revision===EXPECTED_CORE_REV)}
   function purgeLegacyUi(){
     try{document.getElementById('hk-mobile-root')?.remove()}catch{}
@@ -39,7 +47,26 @@
     try{delete window.__HK_MOBILE_VERSION__}catch{window.__HK_MOBILE_VERSION__=''}
     try{delete window.__HK_MOBILE_REVISION__}catch{window.__HK_MOBILE_REVISION__=''}
   }
-  function loadOnce(timeoutMs,attempt){return new Promise((resolve,reject)=>{const script=document.createElement('script');let done=false;const finish=(error)=>{if(done)return;done=true;clearTimeout(timer);script.onload=null;script.onerror=null;script.remove();error?reject(error):resolve()};script.async=true;script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';script.src=`${CORE_URL}?v=${encodeURIComponent(EXPECTED_CORE_REV)}&t=${Date.now()}&a=${attempt}`;script.onload=()=>finish();script.onerror=()=>finish(new Error('core-load-error'));const timer=setTimeout(()=>finish(new Error(`core-load-timeout-${timeoutMs}`)),timeoutMs);(document.head||document.documentElement).appendChild(script)})}
+  function loadOnce(source,timeoutMs,attempt){return new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    let done=false;
+    const finish=(error)=>{
+      if(done)return;
+      done=true;
+      clearTimeout(timer);
+      script.onload=null;
+      script.onerror=null;
+      script.remove();
+      error?reject(error):resolve();
+    };
+    script.async=true;
+    script.referrerPolicy='no-referrer';
+    script.src=`${source.url}?v=${encodeURIComponent(EXPECTED_CORE_REV)}&loader=${encodeURIComponent(LOADER_REV)}&t=${Date.now()}&a=${attempt}`;
+    script.onload=()=>finish();
+    script.onerror=()=>finish(new Error('core-load-error'));
+    const timer=setTimeout(()=>finish(new Error(`core-load-timeout-${timeoutMs}`)),timeoutMs);
+    (document.head||document.documentElement).appendChild(script);
+  })}
 
   async function start(){
     runtime.startedAt=new Date().toISOString();runtime.events=[];record('start',{loaderRevision:LOADER_REV,expectedCoreRevision:EXPECTED_CORE_REV});
@@ -61,29 +88,38 @@
 
     setBadge('HK · загружаю актуальную версию…');
     let lastError=null;
-    for(let i=0;i<TIMEOUTS.length;i++){
-      const timeoutMs=TIMEOUTS[i];const started=performance.now();record('load-attempt',{attempt:i+1,timeoutMs});
+    for(let i=0;i<ATTEMPTS.length;i++){
+      const plan=ATTEMPTS[i];
+      const source=CORE_SOURCES[plan.source];
+      const timeoutMs=plan.timeoutMs;
+      const started=performance.now();
+      record('load-attempt',{attempt:i+1,source:source.name,sourceHost:(()=>{try{return new URL(source.url).host}catch{return''}})(),timeoutMs});
       try{
-        await loadOnce(timeoutMs,i+1);
+        await loadOnce(source,timeoutMs,i+1);
         await sleep(180);
         const core=window.__HK_MOBILE_RUNTIME__;
         if(!core?.active)throw new Error('core-loaded-without-active-runtime');
         if(core.revision!==EXPECTED_CORE_REV)throw new Error(`core-revision-mismatch:${core.revision||'missing'}`);
         window.__HK_LOADER_CORE_REVISION__=EXPECTED_CORE_REV;
-        record('load-success',{attempt:i+1,durationMs:Math.round(performance.now()-started),version:core.version||'',revision:core.revision||''});
+        window.__HK_LOADER_CORE_SOURCE__=source.name;
+        record('load-success',{attempt:i+1,source:source.name,durationMs:Math.round(performance.now()-started),version:core.version||'',revision:core.revision||''});
         try{core.ensure?.()}catch{}
-        setBadge(`HK · запущен · ${core.version||''}`,'ok');
+        setBadge(`HK · запущен · ${core.version||''}${source.name==='pages'?' · резерв':''}`,'ok');
         setTimeout(()=>badge().remove(),2200);
         return;
       }catch(error){
         lastError=error;
-        record('load-error',{attempt:i+1,timeoutMs,durationMs:Math.round(performance.now()-started),error:error?.message||error,version:window.__HK_MOBILE_RUNTIME__?.version||'',revision:window.__HK_MOBILE_RUNTIME__?.revision||'',online:navigator.onLine});
+        record('load-error',{attempt:i+1,source:source.name,timeoutMs,durationMs:Math.round(performance.now()-started),error:error?.message||error,version:window.__HK_MOBILE_RUNTIME__?.version||'',revision:window.__HK_MOBILE_RUNTIME__?.revision||'',online:navigator.onLine});
         if(!coreIsCurrent())resetStaleCore('load-retry');
-        if(i<TIMEOUTS.length-1){setBadge(`HK · повтор загрузки ${i+2}/${TIMEOUTS.length}…`);await sleep(RETRY_DELAYS[Math.min(i,RETRY_DELAYS.length-1)])}
+        if(i<ATTEMPTS.length-1){
+          const next=CORE_SOURCES[ATTEMPTS[i+1].source];
+          setBadge(`HK · пробую ${next.name==='pages'?'резерв':'основной сервер'}…`);
+          await sleep(RETRY_DELAYS[Math.min(i,RETRY_DELAYS.length-1)]);
+        }
       }
     }
     const el=setBadge('HK · ошибка загрузки · нажмите для отчёта','bad');el.style.cursor='pointer';el.onclick=report;record('failed',{error:lastError?.message||lastError||'unknown'});
-    alert(`Не удалось загрузить актуальный HK (${EXPECTED_CORE_REV}). Нажмите на сообщение HK внизу экрана, чтобы скачать диагностический отчёт.`);
+    alert(`Не удалось загрузить актуальный HK (${EXPECTED_CORE_REV}) ни с основного, ни с резервного источника. Нажмите на сообщение HK внизу экрана, чтобы скачать диагностический отчёт.`);
   }
 
   if(runtime.active&&runtime.promise)return;
