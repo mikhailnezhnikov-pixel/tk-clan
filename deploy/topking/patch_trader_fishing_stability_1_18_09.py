@@ -1,3 +1,4 @@
+# build-trigger: 1.18.09 trader fishing stability
 from pathlib import Path
 import sys
 
