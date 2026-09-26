@@ -1,3 +1,4 @@
+# build-trigger: 1.18.12 battle visible board r1
 from pathlib import Path
 import sys
 
