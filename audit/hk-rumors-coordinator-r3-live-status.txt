@@ -1,0 +1,13 @@
+RUMORS_COORDINATOR_R3_LIVE=PASS
+canon=Kokkaras_5.3.22_ui_icons_pit_dim
+public_feed=kokkaras_rumors.php
+private_external_coordinator=NOT_USED
+game_bearer_to_third_party=NEVER
+hk_claim_lease=ENABLED
+hk_heartbeat=ENABLED
+hk_progress_done_release=ENABLED
+hidden_shared_results=ENABLED
+tables=PASS
+kokkaras_cities=17
+kokkaras_points=51
+health=PASS
