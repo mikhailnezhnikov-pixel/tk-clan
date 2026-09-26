@@ -36,7 +36,14 @@ jobs:
           grep -Fq "fishing-canon-priority-20260926-r2" /tmp/HamsterKingMobile.user.js
           grep -Fq "minigame-flow-fixes-20260926-r1" /tmp/HamsterKingMobile.user.js
 
-          python3 deploy/topking/patch_trader_fishing_stability_1_18_09.py /tmp/HamsterKingMobile.user.js
+          if ! python3 deploy/topking/patch_trader_fishing_stability_1_18_09.py /tmp/HamsterKingMobile.user.js >/tmp/patch.out 2>/tmp/patch.err; then
+            echo "PATCH_FAILED=1"
+            cat /tmp/patch.out || true
+            cat /tmp/patch.err || true
+            exit 1
+          fi
+          cat /tmp/patch.out || true
+          cat /tmp/patch.err || true
           echo "PATCH_APPLIED=1"
           node --check /tmp/HamsterKingMobile.user.js
           echo "NODE_CHECK=PASS"
