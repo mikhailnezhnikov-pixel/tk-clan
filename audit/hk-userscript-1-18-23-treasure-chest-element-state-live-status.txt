@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.22
+target_version=1.18.23
+marker=treasure-chest-element-state-20260927-r1
+source_sha256=4d3ed0ddae93ec6151909b58be77e360f209e370a4898e92b7ff68c8dd36ca57
+candidate_sha256=b3b72300a54b02c4c7a71348f3bb019e126dbd9ee48bc3db49e4617c6ba7b268
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

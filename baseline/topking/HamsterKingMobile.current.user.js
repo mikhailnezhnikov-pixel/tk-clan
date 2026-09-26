@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.22
+// @version      1.18.23
+// @release-note Сундуки: уже активированные карточки «Активировано/Activated» больше не считаются покупаемой целью даже если у другого слота такой же lotId ещё остался некупленным. После верхних сундуков автомодуль продолжает по реально открывшимся клеткам.
 // @release-note Автокарта: исправлено зависание «сундуки» на чистом экране карты. Мини-игра теперь считается передним планом только если её реальные элементы действительно находятся сверху в точках экрана; старые DOM-элементы под картой больше не блокируют выбор следующей ячейки.
 // @release-note Автокарта: исправлен переход мини-игра → карта. Пока бой/рыбалка/торговец/лампочки/сундуки реально находятся на переднем плане, клетки карты под ними не нажимаются. Автокарта больше не выходит из боя до его полного завершения. После возврата на карту действует короткий settle-lock. Двойные клики покупок в сундуках/рыбалке/торговце заменены одиночными.
 // @release-note Автокарта: активные клетки текущей Карты Сокровищ теперь имеют абсолютный приоритет над кнопкой сброса «Начать новое путешествие». Окно сброса закрывается через «Назад». Завершение карты требует устойчивого отсутствия активных клеток.
@@ -133,7 +134,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.22';
+  const BUILD_VERSION = '1.18.23';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3715,6 +3716,7 @@
   const HK_TREASURE_AUTO_MAP_ACTIVE_PRIORITY_REV='treasure-auto-map-active-priority-20260926-r5';
   const HK_TREASURE_AUTO_MAP_HANDOFF_REV='treasure-auto-map-foreground-handoff-20260926-r6';
   const HK_TREASURE_AUTO_MAP_FOREGROUND_TRUTH_REV='treasure-auto-map-foreground-truth-20260926-r7';
+  const HK_TREASURE_CHEST_ELEMENT_STATE_REV='treasure-chest-element-state-20260927-r1';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -19349,7 +19351,21 @@
       const selector='[data-lot-id*="mf_treasurelot_chest_"]';
       return [...document.querySelectorAll(selector)]
         .filter(visible)
-        .map(element=>({element,lotId:String(element.getAttribute('data-lot-id')||'')}))
+        .map(element=>{
+          const lotId=String(element.getAttribute('data-lot-id')||'');
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const activated=/^(?:Активировано|Activated)$/i.test(text)
+            || /(?:^|\s)(?:Активировано|Activated)(?:\s|$)/i.test(text);
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          return {
+            element,
+            lotId,
+            text,
+            activated,
+            x:Math.round(rect.left+rect.width/2),
+            y:Math.round(rect.top+rect.height/2)
+          };
+        })
         .filter(row=>row.lotId && !row.lotId.includes('_empty_spot') && !row.lotId.includes('_bought_'));
     }
 
@@ -19357,7 +19373,7 @@
       const rows=treasureChestElements()
         .map(row=>{
           const rect=row.element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
-          return row.lotId+'@'+Math.round(rect.left)+','+Math.round(rect.top)+'#'+clean(row.element.className||'');
+          return row.lotId+'@'+Math.round(rect.left)+','+Math.round(rect.top)+'#'+clean(row.element.className||'')+'#'+row.text+'#'+(row.activated?'A':'N');
         })
         .sort();
       const balances=[
@@ -19374,6 +19390,7 @@
       const candidates=[];
       rows.forEach((row,index)=>{
         const lotId=row.lotId;
+        if (row.activated) return;
         const cost=treasureChestCost(lotId);
         if (!cost || !treasureChestAffordable(cost)) return;
         const unbought=treasureChestUnboughtCount(lotId);
@@ -19393,7 +19410,26 @@
         candidates.push({...row,cost,digging,chest,priority,index});
       });
       candidates.sort((a,b)=>b.priority-a.priority || a.index-b.index);
-      return candidates[0] || null;
+      const selected=candidates[0] || null;
+      if (!selected && rows.some(row=>row.activated)) {
+        recordDiagnostic('treasure-chest-no-target-after-activated',{
+          revision:HK_TREASURE_CHEST_ELEMENT_STATE_REV,
+          activated:rows.filter(row=>row.activated).map(row=>({
+            lotId:row.lotId,
+            text:row.text,
+            x:row.x,
+            y:row.y
+          })).slice(0,12),
+          visible:rows.map(row=>({
+            lotId:row.lotId,
+            text:row.text,
+            activated:row.activated,
+            x:row.x,
+            y:row.y
+          })).slice(0,24)
+        });
+      }
+      return selected;
     }
 
     function treasureModalRoot(cost) {
@@ -21078,6 +21114,7 @@
       treasureAutoMapActivePriorityRevision:HK_TREASURE_AUTO_MAP_ACTIVE_PRIORITY_REV,
       treasureAutoMapHandoffRevision:HK_TREASURE_AUTO_MAP_HANDOFF_REV,
       treasureAutoMapForegroundTruthRevision:HK_TREASURE_AUTO_MAP_FOREGROUND_TRUTH_REV,
+      treasureChestElementStateRevision:HK_TREASURE_CHEST_ELEMENT_STATE_REV,
       start,
       stop,
       check:checkPuzzle,
