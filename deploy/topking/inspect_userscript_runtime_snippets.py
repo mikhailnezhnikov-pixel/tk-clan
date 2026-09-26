@@ -9,7 +9,9 @@ terms=[
   "runFishingAuto","fishingSignature","waitFishingChange","dismissFishingRewards",
   "fairCatalog","costParts","treasureActionButton","treasureModalRoot",
   "fetch(","XMLHttpRequest","409","500","apiRequest","request(","purchase","buy",
-  "trader","fair_mini_game_trader","mf_fairlot_minigame_trader"
+  "trader","fair_mini_game_trader","mf_fairlot_minigame_trader",
+  "apiJsonCore","async function apiJson","hkMutationGate","GAME_API_MIN_REQUEST_GAP_MS",
+  "httpStatus","response.status","/fair/","fair_slots"
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
