@@ -1,0 +1,11 @@
+USERSCRIPT_1_18_02_BATTLE_VICTORY_CLAIM_PREDEPLOY=PASS
+source_version=1.18.01
+target_version=1.18.02
+scope=COMMON_HK_USERSCRIPT_ONLY
+public_treasure_script=UNCHANGED
+victory_lot=mf_treasurelot_enemy_defeated
+victory_modal_claim=ENABLED
+post_claim_dismiss=ENABLED
+syntax=PASS
+base_sha256=1f43912a83eb244be31e818cfeeae2c868de2305b7e9f14d1ce7f1cbd70df68f
+candidate_sha256=92e5a9cea4f2c05893b6c055e85c7f4e24c85222311466fe39ca70a071b7c21a
