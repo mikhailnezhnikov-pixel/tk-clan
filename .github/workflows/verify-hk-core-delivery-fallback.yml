@@ -1,0 +1,54 @@
+name: Verify HK Core Delivery Fallback
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/hk-core-delivery-verify-trigger.txt'
+      - '.github/workflows/verify-hk-core-delivery-fallback.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Probe delivery paths
+        run: |
+          set -u
+          out=audit/hk-core-delivery-latest.txt
+          : > "$out"
+          for item in \
+            'primary|https://hk-license.89.125.1.71.sslip.io/panel.js' \
+            'pages|https://tk-clan.ru/baseline/topking/HamsterKingMobile.current.user.js'; do
+            name="${item%%|*}"; url="${item#*|}"
+            echo "[$name]" >> "$out"
+            file="/tmp/${name}.js"
+            meta=$(curl -L -sS --connect-timeout 10 --max-time 30 -o "$file" -w 'http=%{http_code} time=%{time_total} size=%{size_download} type=%{content_type} remote=%{remote_ip}' "${url}?verify=$(date +%s)" 2>&1); rc=$?
+            echo "curl_rc=$rc $meta" >> "$out"
+            if [ "$rc" -eq 0 ] && [ -s "$file" ]; then
+              echo "sha256=$(sha256sum "$file" | awk '{print $1}')" >> "$out"
+              echo "version=$(grep -m1 '^// @version' "$file" || true)" >> "$out"
+              echo "build=$(grep -m1 "const BUILD_VERSION" "$file" || true)" >> "$out"
+              echo "core_rev_hits=$(grep -Foc 'core-20260921-r27-businesses-runner-canon' "$file" || true)" >> "$out"
+              if node --check "$file" >/tmp/${name}.node.out 2>&1; then echo 'syntax=PASS' >> "$out"; else echo 'syntax=FAIL' >> "$out"; cat /tmp/${name}.node.out >> "$out"; fi
+            fi
+            echo >> "$out"
+          done
+          cat "$out"
+      - name: Persist result
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-core-delivery-latest.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist HK core delivery probe"
+            git push origin HEAD:main
+          fi
