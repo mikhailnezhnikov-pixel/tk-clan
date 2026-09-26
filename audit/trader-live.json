@@ -1,0 +1,2646 @@
+{
+  "captured_at_utc": "2026-09-26T06:31:16Z",
+  "states": [
+    {
+      "capture": 14038,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_01"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_pet_skill_change"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_l"
+        }
+      ]
+    },
+    {
+      "capture": 14022,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_03_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_l"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_m"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_03_r3"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_06_r3"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_l"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4food_m"
+        }
+      ]
+    },
+    {
+      "capture": 14017,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_03_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_l"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_m"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_03_r3"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_06_r3"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_l"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4food_m"
+        }
+      ]
+    },
+    {
+      "capture": 14015,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_03_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_l"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_m"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_03_r3"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_06_r3"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_l"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4food_m"
+        }
+      ]
+    },
+    {
+      "capture": 13999,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_03_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_l"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_m"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_03_r3"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_06_r3"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_l"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4food_m"
+        }
+      ]
+    },
+    {
+      "capture": 13988,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_03_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_l"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_m"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_03_r3"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_06_r3"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_l"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4food_m"
+        }
+      ]
+    },
+    {
+      "capture": 13986,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_03_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_l"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_m"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_03_r3"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_06_r3"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_l"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4food_m"
+        }
+      ]
+    },
+    {
+      "capture": 13978,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_03_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_l"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_food_m"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_03_r3"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_fish_egg_06_r3"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4coins_l"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_verse_gold4coins"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_03_random4food_m"
+        }
+      ]
+    },
+    {
+      "capture": 13974,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13958,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13956,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13941,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13939,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13932,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13909,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13907,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13882,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13880,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13873,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    },
+    {
+      "capture": 13871,
+      "path": "$.fair[9]",
+      "fair_id": "fair_mini_game_trader",
+      "slots": [
+        {
+          "id": 15,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_02"
+        },
+        {
+          "id": 14,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 1,
+          "is_bought": false,
+          "shop_lot_id": "mf_treasurelot_trader_type_01_active_rep_5"
+        },
+        {
+          "id": 2,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 3,
+          "is_bought": false,
+          "shop_lot_id": "mf_fair_pet_skill_locked_by_bonus"
+        },
+        {
+          "id": 4,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 5,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 6,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_empty"
+        },
+        {
+          "id": 7,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 8,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_05"
+        },
+        {
+          "id": 9,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_06"
+        },
+        {
+          "id": 10,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_s"
+        },
+        {
+          "id": 11,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_verse_gold4food_m"
+        },
+        {
+          "id": 12,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_food_m"
+        },
+        {
+          "id": 13,
+          "is_bought": false,
+          "shop_lot_id": "mf_fairlot_minigame_trader_01_fish_egg_03"
+        }
+      ]
+    }
+  ],
+  "lot_ids": [
+    "mf_fairlot_minigame_trader_01_fish_egg_05",
+    "mf_fairlot_minigame_trader_01_food_s",
+    "mf_treasurelot_trader_type_01_active_rep_5",
+    "mf_fair_pet_skill_locked_by_bonus",
+    "mf_fairlot_empty",
+    "mf_fairlot_minigame_trader_01_fish_egg_01",
+    "mf_fairlot_minigame_trader_01_pet_skill_change",
+    "mf_fairlot_minigame_trader_01_fish_egg_03",
+    "mf_fairlot_minigame_trader_01_verse_gold4food_s",
+    "mf_fairlot_minigame_trader_01_fish_egg_02",
+    "mf_fairlot_minigame_trader_01_verse_gold4food_l",
+    "mf_fairlot_minigame_trader_03_verse_gold4coins",
+    "mf_fairlot_minigame_trader_03_random4coins_m",
+    "mf_treasurelot_trader_type_03_active_rep_5",
+    "mf_fairlot_minigame_trader_03_food_l",
+    "mf_fairlot_minigame_trader_03_food_m",
+    "mf_fairlot_minigame_trader_03_fish_egg_03_r3",
+    "mf_fairlot_minigame_trader_03_fish_egg_06_r3",
+    "mf_fairlot_minigame_trader_03_random4coins_l",
+    "mf_fairlot_minigame_trader_03_random4food_m",
+    "mf_fairlot_minigame_trader_01_verse_gold4food_m",
+    "mf_fairlot_minigame_trader_01_food_m",
+    "mf_fairlot_minigame_trader_01_fish_egg_06"
+  ],
+  "definitions": {
+    "mf_fairlot_minigame_trader_03_food_m": {
+      "capture": 13317,
+      "path": "$.rows[7].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 60
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_03_food_m",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 38,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_treasurehunt_energy_trader_desc",
+          "icon_card": "items/item_treasurehunt_energy_icon.png",
+          "icon_modal": "items/item_treasurehunt_energy_icon.png",
+          "main_dark_color": "#502928",
+          "main_light_color": "#DBB87B",
+          "name": "item_treasurehunt_energy_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_food_s": {
+      "capture": 13317,
+      "path": "$.rows[19].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 50
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_food_s",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 28,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_treasurehunt_energy_trader_desc",
+          "icon_card": "items/item_treasurehunt_energy_icon.png",
+          "icon_modal": "items/item_treasurehunt_energy_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "item_treasurehunt_energy_name",
+          "quantity": 30,
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_verse_gold4food_m": {
+      "capture": 13317,
+      "path": "$.rows[20].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 180
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_verse_gold4food_m",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "cur_gold",
+              "quantity": 1,
+              "type": "cur"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "cur_gold_trader_desc",
+          "icon_card": "currencies/cur_gold_icon.png",
+          "icon_modal": "currencies/cur_gold_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "cur_gold_name",
+          "quantity": 1,
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_verse_gold4food_s": {
+      "capture": 13317,
+      "path": "$.rows[21].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 100
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_verse_gold4food_s",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "cur_gold",
+              "quantity": 1,
+              "type": "cur"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "cur_gold_trader_desc",
+          "icon_card": "currencies/cur_gold_icon.png",
+          "icon_modal": "currencies/cur_gold_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "cur_gold_name",
+          "quantity": 1,
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_fish_egg_06": {
+      "capture": 13317,
+      "path": "$.rows[22].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 600
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_fish_egg_06",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_pet_fish_egg_06",
+              "quantity": 1,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_pet_fish_egg_06_trader_desc",
+          "icon_card": "items/pets/item_pet_fish_egg_06_icon.png",
+          "icon_modal": "items/pets/item_pet_fish_egg_06_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "item_pet_fish_egg_06_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_fish_egg_05": {
+      "capture": 13317,
+      "path": "$.rows[23].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 600
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_fish_egg_05",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_pet_fish_egg_05",
+              "quantity": 1,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_pet_fish_egg_05_trader_desc",
+          "icon_card": "items/pets/item_pet_fish_egg_05_icon.png",
+          "icon_modal": "items/pets/item_pet_fish_egg_05_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "item_pet_fish_egg_05_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_fish_egg_03": {
+      "capture": 13317,
+      "path": "$.rows[24].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 600
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_fish_egg_03",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_pet_fish_egg_03",
+              "quantity": 1,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_pet_fish_egg_03_trader_desc",
+          "icon_card": "items/pets/item_pet_fish_egg_03_icon.png",
+          "icon_modal": "items/pets/item_pet_fish_egg_03_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "item_pet_fish_egg_03_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_fish_egg_01": {
+      "capture": 13317,
+      "path": "$.rows[25].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 300
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_fish_egg_01",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_pet_fish_egg_01",
+              "quantity": 1,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_pet_fish_egg_01_trader_desc",
+          "icon_card": "items/pets/item_pet_fish_egg_01_icon.png",
+          "icon_modal": "items/pets/item_pet_fish_egg_01_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "item_pet_fish_egg_01_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_03_food_l": {
+      "capture": 13317,
+      "path": "$.rows[27].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 70
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_03_food_l",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 47,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_treasurehunt_energy_trader_desc",
+          "icon_card": "items/item_treasurehunt_energy_icon.png",
+          "icon_modal": "items/item_treasurehunt_energy_icon.png",
+          "main_dark_color": "#502928",
+          "main_light_color": "#DBB87B",
+          "name": "item_treasurehunt_energy_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_03_verse_gold4coins": {
+      "capture": 13317,
+      "path": "$.rows[31].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 300
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_03_verse_gold4coins",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "cur_gold",
+              "quantity": 1,
+              "type": "cur"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "cur_gold_trader_desc",
+          "icon_card": "currencies/cur_gold_icon.png",
+          "icon_modal": "currencies/cur_gold_icon.png",
+          "main_dark_color": "#502928",
+          "main_light_color": "#DBB87B",
+          "name": "cur_gold_name",
+          "quantity": 1,
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_food_m": {
+      "capture": 13317,
+      "path": "$.rows[32].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 60
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_food_m",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 38,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_treasurehunt_energy_trader_desc",
+          "icon_card": "items/item_treasurehunt_energy_icon.png",
+          "icon_modal": "items/item_treasurehunt_energy_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "item_treasurehunt_energy_name",
+          "quantity": 40,
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_pet_skill_change": {
+      "capture": 13317,
+      "path": "$.rows[33].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 300
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_pet_skill_change",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_treasurehunt_pet_skill_change",
+              "quantity": 1,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_treasurehunt_pet_skill_change_trader_desc",
+          "icon_card": "items/item_treasurehunt_pet_skill_change_icon.png",
+          "icon_modal": "items/item_treasurehunt_pet_skill_change_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "item_treasurehunt_pet_skill_change_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_03_random4coins_l": {
+      "capture": 13317,
+      "path": "$.rows[36].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 50
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_03_random4coins_l",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 1,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 25,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 75,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 100,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 200,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_treasurehunt_cur_coins_trader_random_desc",
+          "icon_card": "items/item_treasurehunt_cur_coins_icon.png",
+          "icon_modal": "items/item_treasurehunt_cur_coins_icon.png",
+          "main_dark_color": "#502928",
+          "main_light_color": "#DBB87B",
+          "name": "item_treasurehunt_cur_coins_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_treasurelot_trader_type_01_active_rep_5": {
+      "capture": 13317,
+      "path": "$.rows[44].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": []
+        },
+        "id": "mf_treasurelot_trader_type_01_active_rep_5",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_deck_bg.png",
+          "context": "info:modal",
+          "desc": "mf_treasurelot_trader_type_01_active_rep_5_desc",
+          "icon_card": "minigames/trader/icons/minigame_trader_type_01_rep_5_s_icon.png",
+          "icon_modal": "minigames/trader/icons/minigame_trader_type_01_rep_5_s_icon.png",
+          "important_colors": true,
+          "main_dark_color": "#ECD8A3",
+          "main_light_color": "#e0a22e",
+          "name": "mf_treasurelot_trader_type_01_name",
+          "ribbon_dark_color": "#ECD8A3",
+          "ribbon_text": "ui_ribbon_level_5",
+          "ribbon_text_color": "#000000",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_03_random4food_m": {
+      "capture": 13317,
+      "path": "$.rows[50].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 30
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_03_random4food_m",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 10,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 20,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 40,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 50,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 150,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_treasurehunt_energy_trader_random_desc",
+          "icon_card": "items/item_treasurehunt_energy_icon.png",
+          "icon_modal": "items/item_treasurehunt_energy_icon.png",
+          "main_dark_color": "#502928",
+          "main_light_color": "#DBB87B",
+          "name": "item_treasurehunt_energy_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_03_fish_egg_06_r3": {
+      "capture": 13317,
+      "path": "$.rows[54].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 2000
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_03_fish_egg_06_r3",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_pet_fish_egg_06_r3",
+              "quantity": 1,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_pet_fish_egg_06_r3_trader_desc",
+          "icon_card": "items/pets/item_pet_fish_egg_06_r3_icon.png",
+          "icon_modal": "items/pets/item_pet_fish_egg_06_r3_icon.png",
+          "main_dark_color": "#502928",
+          "main_light_color": "#DBB87B",
+          "name": "item_pet_fish_egg_06_r3_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_fish_egg_02": {
+      "capture": 13317,
+      "path": "$.rows[61].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 600
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_fish_egg_02",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_pet_fish_egg_02",
+              "quantity": 1,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_pet_fish_egg_02_trader_desc",
+          "icon_card": "items/pets/item_pet_fish_egg_02_icon.png",
+          "icon_modal": "items/pets/item_pet_fish_egg_02_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "item_pet_fish_egg_02_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_01_verse_gold4food_l": {
+      "capture": 13317,
+      "path": "$.rows[64].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_energy",
+              "quantity": 250
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_01_verse_gold4food_l",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "cur_gold",
+              "quantity": 1,
+              "type": "cur"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "cur_gold_trader_desc",
+          "icon_card": "currencies/cur_gold_icon.png",
+          "icon_modal": "currencies/cur_gold_icon.png",
+          "main_dark_color": "#76bae2",
+          "main_light_color": "#DBB87B",
+          "name": "cur_gold_name",
+          "quantity": 1,
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_03_random4coins_m": {
+      "capture": 13317,
+      "path": "$.rows[66].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 30
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_03_random4coins_m",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 10,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 20,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 40,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 50,
+              "type": "item"
+            },
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 150,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_treasurehunt_cur_coins_trader_random_desc",
+          "icon_card": "items/item_treasurehunt_cur_coins_icon.png",
+          "icon_modal": "items/item_treasurehunt_cur_coins_icon.png",
+          "main_dark_color": "#502928",
+          "main_light_color": "#DBB87B",
+          "name": "item_treasurehunt_cur_coins_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_fairlot_minigame_trader_03_fish_egg_03_r3": {
+      "capture": 13317,
+      "path": "$.rows[68].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": [
+            {
+              "id": "item_treasurehunt_cur_coins",
+              "quantity": 2000
+            }
+          ]
+        },
+        "id": "mf_fairlot_minigame_trader_03_fish_egg_03_r3",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_lots_bg.png",
+          "content_view": [
+            {
+              "id": "item_pet_fish_egg_03_r3",
+              "quantity": 1,
+              "type": "item"
+            }
+          ],
+          "contents": "shop_lot_contains",
+          "desc": "item_pet_fish_egg_03_r3_trader_desc",
+          "icon_card": "items/pets/item_pet_fish_egg_03_r3_icon.png",
+          "icon_modal": "items/pets/item_pet_fish_egg_03_r3_icon.png",
+          "main_dark_color": "#502928",
+          "main_light_color": "#DBB87B",
+          "name": "item_pet_fish_egg_03_r3_name",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    },
+    "mf_treasurelot_trader_type_03_active_rep_5": {
+      "capture": 13317,
+      "path": "$.rows[69].payload",
+      "lot": {
+        "can_be_gift": false,
+        "cost": {
+          "clan_currency_cost": [],
+          "currencies": [],
+          "items": []
+        },
+        "id": "mf_treasurelot_trader_type_03_active_rep_5",
+        "is_ad": false,
+        "is_partial_costed": false,
+        "lot_view": {
+          "card_background": "minigames/trader/backgrounds/trader_minigame_deck_bg.png",
+          "context": "info:modal",
+          "desc": "mf_treasurelot_trader_type_03_active_rep_5_desc",
+          "icon_card": "minigames/trader/icons/minigame_trader_type_03_rep_5_s_icon.png",
+          "icon_modal": "minigames/trader/icons/minigame_trader_type_03_rep_5_s_icon.png",
+          "important_colors": true,
+          "main_dark_color": "#ECD8A3",
+          "main_light_color": "#e0a22e",
+          "name": "mf_treasurelot_trader_type_03_name",
+          "ribbon_dark_color": "#ECD8A3",
+          "ribbon_text": "ui_ribbon_level_5",
+          "ribbon_text_color": "#000000",
+          "style": "default",
+          "type": "fair",
+          "type_card": "single"
+        },
+        "meta": {
+          "check_fair": true
+        },
+        "priority": -1
+      }
+    }
+  }
+}
