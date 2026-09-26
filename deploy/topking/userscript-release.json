@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.12",
-  "target_version": "1.18.13",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.13.treasure-run-recorder.candidate.user.js",
-  "primary_marker": "treasure-run-recorder-20260926-r1",
+  "source_version": "1.18.13",
+  "target_version": "1.18.14",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.14.treasure-recorder-stability.candidate.user.js",
+  "primary_marker": "treasure-run-recorder-stability-blockers-20260926-r2",
   "preserve_markers": [
+    "treasure-run-recorder-20260926-r1",
     "battle-visible-board-active-20260926-r1",
     "minigame-entry-only-auto-20260926-r1",
     "trader-fishing-stability-20260926-r1",
@@ -76,7 +77,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-13-treasure-run-recorder-live-status.txt",
-  "commit_message": "feat: deploy passive Treasure Map run recorder in userscript 1.18.13",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-14-treasure-recorder-stability-live-status.txt",
+  "commit_message": "fix: deploy Treasure recorder stability and blockers in userscript 1.18.14"
 }

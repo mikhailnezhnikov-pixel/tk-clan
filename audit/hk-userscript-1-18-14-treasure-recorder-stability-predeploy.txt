@@ -1,0 +1,17 @@
+USERSCRIPT_1_18_14_TREASURE_RECORDER_STABILITY_PREDEPLOY=PASS
+source_version=1.18.13
+target_version=1.18.14
+observer_self_loop=REMOVED
+recorder_ui_mutations=IGNORED
+style_attribute_observer=REMOVED
+blocked_actions=CAPTURED
+disabled_locked=CAPTURED
+insufficient_resource=CAPTURED
+cooldown_wait=CAPTURED
+no_state_change=CAPTURED
+http_409_429_5xx=CAPTURED
+game_requests_added=NONE
+game_clicks_added=NONE
+syntax=PASS
+base_sha256=50c59c9f950f277f3e366ab81ae122de4a3f3fed499dbb5137003637d950b21f
+candidate_sha256=904e971da3728fc652838728754fc47c1ef8734824e5386c2cbb71758429a486
