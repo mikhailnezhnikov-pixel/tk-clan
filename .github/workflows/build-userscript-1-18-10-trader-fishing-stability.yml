@@ -1,0 +1,145 @@
+name: Build Userscript 1.18.10 Trader Fishing Stability
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_trader_fishing_stability_1_18_10.py'
+      - '.github/workflows/build-userscript-1-18-10-trader-fishing-stability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-18-10-trader-fishing-stability
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate from exact live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.09" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.09';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "rumors-shared-results-20260926-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "fishing-canon-priority-20260926-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "minigame-flow-fixes-20260926-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_trader_fishing_stability_1_18_10.py /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.10" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.10';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "rumors-shared-results-20260926-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "fishing-activated-backoff-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "secret-trader-auto-buy-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "minigame-http-409-500-backoff-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "Автоторговец: ВКЛ" /tmp/HamsterKingMobile.user.js
+          grep -Fq "FISHING_MIN_NEXT_ACTION_GAP_MS = 1800" /tmp/HamsterKingMobile.user.js
+          grep -Fq "TRADER_MIN_NEXT_ACTION_GAP_MS = 1800" /tmp/HamsterKingMobile.user.js
+          grep -Fq "fishing-canon-priority-20260926-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "minigame-flow-fixes-20260926-r1" /tmp/HamsterKingMobile.user.js
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.10.trader-fishing-stability.candidate.user.js
+          audit=audit/hk-userscript-1-18-10-trader-fishing-stability-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.09':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.09',
+              'target_version':'1.18.10',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.10.trader-fishing-stability.candidate.user.js',
+              'primary_marker':'trader-fishing-stability-20260926-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-10-trader-fishing-stability-live-status.txt',
+              'commit_message':'fix: deploy trader auto-buy and fishing stability in userscript 1.18.10',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+            python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/HamsterKingMobile.user.js')
+          s=p.read_text(encoding='utf-8')
+          anchor="  const HK_MINIGAME_HTTP_BACKOFF_REV = 'minigame-http-409-500-backoff-20260926-r1';"
+          marker="  const HK_TRADER_FISHING_STABILITY_REV = 'trader-fishing-stability-20260926-r1';"
+          if marker not in s:
+              if anchor not in s: raise SystemExit('release marker anchor missing')
+              s=s.replace(anchor,anchor+'\n'+marker,1)
+              p.write_text(s,encoding='utf-8')
+          PY
+
+            node --check /tmp/HamsterKingMobile.user.js
+            grep -Fq "trader-fishing-stability-20260926-r1" /tmp/HamsterKingMobile.user.js
+            grep -Fq "rumors-shared-results-20260926-r2" /tmp/HamsterKingMobile.user.js
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+            sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_18_10_TRADER_FISHING_STABILITY_PREDEPLOY=PASS"
+              echo "source_version=1.18.09"
+              echo "target_version=1.18.10"
+              echo "scope=COMMON_HK_USERSCRIPT_ONLY"
+              echo "public_treasure_script=UNCHANGED"
+              echo "rumors_1_18_09=PRESERVED"
+              echo "trader_auto=BUY_ALL_AVAILABLE_SEQUENTIALLY"
+              echo "trader_priority=MAPS,COINS,BERRIES_ENERGY,GOLD,UPGRADES,EGGS,OTHER"
+              echo "trader_default=ON"
+              echo "fishing_activated_cells=EXCLUDED"
+              echo "fishing_gap_ms=1800"
+              echo "http_409=BACKOFF_AND_RECONCILE"
+              echo "http_5xx=LONGER_BACKOFF_AND_RECONCILE"
+              echo "no_blind_duplicate_clicks=ENABLED"
+              echo "syntax=PASS"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.18.10 trader fishing stability"
+
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
