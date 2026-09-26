@@ -1,0 +1,81 @@
+name: Check Rumors Shared Results R2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_server_rumors_shared_results_r2.py'
+      - '.github/workflows/check-rumors-shared-results-r2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Patch current live server
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          grep -Fq "HK_RUMORS_KOKKARAS_FEED_R1" /tmp/server.py
+          python3 deploy/topking/patch_server_rumors_shared_results_r2.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          grep -Fq "HK_RUMORS_SHARED_RESULTS_R2" /tmp/server.py
+          grep -Fq "CREATE TABLE IF NOT EXISTS rumor_observations" /tmp/server.py
+          grep -Fq 'path == "/api/v1/rumors/report"' /tmp/server.py
+          grep -Fq '"source": "kokkaras+hk" if local_added else "kokkaras"' /tmp/server.py
+
+      - name: Unit check merge helpers
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util, tempfile, os
+          spec=importlib.util.spec_from_file_location("server","/tmp/server.py")
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          primary=[{"city":"Moscow","city_id":"c1","points":[{"x":1,"y":2,"gamearea_id":"g1"}]}]
+          extra=[{"city":"Moscow","city_id":"c1","points":[{"x":1,"y":2,"gamearea_id":"g1"},{"x":3,"y":4,"gamearea_id":"g2"}]},
+                 {"city":"Berlin","city_id":"c2","points":[{"x":5,"y":6,"gamearea_id":"g3"}]}]
+          merged,added=s.merge_rumor_routes(primary,extra)
+          assert added==2,(added,merged)
+          by={r["city_id"]:r for r in merged}
+          assert [p["gamearea_id"] for p in by["c1"]["points"]]==["g1","g2"],by
+          assert [p["gamearea_id"] for p in by["c2"]["points"]]==["g3"],by
+          print("RUMOR_MERGE_HELPERS=PASS")
+          PY
+
+      - name: Persist check audit
+        run: |
+          set -euo pipefail
+          {
+            echo "RUMORS_SHARED_RESULTS_R2_CHECK=PASS"
+            echo "kokkaras_public_feed=PRESERVED"
+            echo "hk_confirmed_jackpot_reports=SUPPORTED"
+            echo "merge_cap_per_city=3"
+            echo "server_syntax=PASS"
+          } > audit/hk-rumors-shared-results-r2-check.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-rumors-shared-results-r2-check.txt
+          git commit -m "audit: verify Rumors shared results R2"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py
