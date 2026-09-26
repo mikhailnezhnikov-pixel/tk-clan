@@ -1,0 +1,118 @@
+name: Build Userscript 1.17.97 Safari Late Login Recovery
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_late_login_recovery_1_17_97.py'
+      - '.github/workflows/build-userscript-1-17-97-late-login-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-17-97-late-login-recovery
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate from exact live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.17.96" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.96';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "late-login-handoff-20260921-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "game-api-429-cooldown-20s-20260925-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "resource-maximum-direct-run-20260925-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_late_login_recovery_1_17_97.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.17.97" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.17.97';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "late-login-recovery-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "hkLateLoginHandoffNextAt=now+cooldown+250" /tmp/HamsterKingMobile.user.js
+          grep -Fq "apiJson('/player/me', 'POST', null, true, 0, 10000)" /tmp/HamsterKingMobile.user.js
+          if grep -Fq "hkLateLoginHandoffAttempts >= 6" /tmp/HamsterKingMobile.user.js; then
+            echo "Old late-login attempt cap still present" >&2
+            exit 1
+          fi
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.17.97.late-login-recovery.candidate.user.js
+          audit=audit/hk-userscript-1-17-97-late-login-recovery-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.17.96':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.17.96',
+              'target_version':'1.17.97',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.17.97.late-login-recovery.candidate.user.js',
+              'primary_marker':'late-login-recovery-20260926-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-17-97-late-login-recovery-live-status.txt',
+              'commit_message':'fix: deploy Safari late-login recovery in userscript 1.17.97',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_17_97_LATE_LOGIN_RECOVERY_PREDEPLOY=PASS"
+              echo "source_version=1.17.96"
+              echo "target_version=1.17.97"
+              echo "late_handoff_attempt_cap=REMOVED"
+              echo "429_cooldown_attempt_burn=FIXED"
+              echo "late_bootstrap_player_me=ONE_SHOT_10S"
+              echo "bootstrap_stage_label=DYNAMIC"
+              echo "syntax=PASS"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.17.97 Safari late-login recovery"
+
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
