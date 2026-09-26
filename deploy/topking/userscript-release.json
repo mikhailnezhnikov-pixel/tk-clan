@@ -67,5 +67,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-02-battle-victory-claim-live-status.txt",
-  "commit_message": "fix: deploy battle victory reward claim in userscript 1.18.02"
+  "commit_message": "fix: deploy battle victory reward claim in userscript 1.18.02",
+  "trigger_revision": 1
 }
