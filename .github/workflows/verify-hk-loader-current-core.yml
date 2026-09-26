@@ -20,8 +20,12 @@ jobs:
           set -euo pipefail
           curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 15 --max-time 30 \
             "https://tk-clan.ru/hk/loader.js?verify=$(date +%s)" -o /tmp/loader.js
-          grep -Fq "const LOADER_REV='loader-20260921-r24';" /tmp/loader.js
+          grep -Fq "const LOADER_REV='loader-20260926-r25-fallback';" /tmp/loader.js
           grep -Fq "const EXPECTED_CORE_REV='core-20260921-r27-businesses-runner-canon';" /tmp/loader.js
+          grep -Fq "https://hk-license.89.125.1.71.sslip.io/panel.js" /tmp/loader.js
+          grep -Fq "https://tk-clan.ru/baseline/topking/HamsterKingMobile.current.user.js" /tmp/loader.js
+          grep -Fq "topking-hk-loader-diagnostic-v3" /tmp/loader.js
+          ! grep -Fq "script.crossOrigin='anonymous'" /tmp/loader.js
           ! grep -Fq "const EXPECTED_CORE_REV='core-20260920-r6';" /tmp/loader.js
           ! grep -Fq " · r6" /tmp/loader.js
           echo "PUBLIC_HK_LOADER_CURRENT_CORE=PASS"
