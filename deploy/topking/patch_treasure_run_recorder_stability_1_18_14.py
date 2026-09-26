@@ -1,3 +1,4 @@
+# build-trigger: 1.18.14 treasure recorder stability r1
 from pathlib import Path
 import sys
 
