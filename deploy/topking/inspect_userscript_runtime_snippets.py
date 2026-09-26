@@ -11,7 +11,20 @@ terms=[
   "fetch(","XMLHttpRequest","409","500","apiRequest","request(","purchase","buy",
   "trader","fair_mini_game_trader","mf_fairlot_minigame_trader",
   "apiJsonCore","async function apiJson","hkMutationGate","GAME_API_MIN_REQUEST_GAP_MS",
-  "httpStatus","response.status","/fair/","fair_slots"
+  "httpStatus","response.status","/fair/","fair_slots",
+  "runBattle()",
+  "runBattleEntry",
+  "battleNeedsEntry",
+  "battleSignature",
+  "battleElements",
+  "battleAutoRunning",
+  "lastSignature",
+  "isBattle",
+  "battleTarget",
+  "battle-auto",
+  "mf_treasurelot_sword_",
+  "mf_treasurelot_battle",
+  "enemy"
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
