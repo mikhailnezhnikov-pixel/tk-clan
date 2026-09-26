@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.05",
-  "target_version": "1.18.06",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.06.lights-modal-flow.candidate.user.js",
-  "primary_marker": "lights-modal-confirm-20260926-r2",
+  "source_version": "1.18.06",
+  "target_version": "1.18.07",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.07.minigame-flow-fixes.candidate.user.js",
+  "primary_marker": "minigame-flow-fixes-20260926-r1",
   "preserve_markers": [
+    "lights-modal-confirm-20260926-r2",
     "chest-auto-dig-open-20260926-r1",
     "battle-victory-tap-fallback-20260926-r1",
     "battle-victory-claim-20260926-r1",
@@ -69,7 +70,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-06-lights-modal-flow-live-status.txt",
-  "commit_message": "fix: deploy lamp modal confirm flow in userscript 1.18.06",
-  "trigger_revision": 2
+  "audit_status_path": "audit/hk-userscript-1-18-07-minigame-flow-fixes-live-status.txt",
+  "commit_message": "fix: deploy minigame flow fixes in userscript 1.18.07"
 }
