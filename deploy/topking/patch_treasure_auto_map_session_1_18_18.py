@@ -1,3 +1,4 @@
+# build-trigger: 1.18.18 treasure auto map session r1
 from pathlib import Path
 import sys
 
