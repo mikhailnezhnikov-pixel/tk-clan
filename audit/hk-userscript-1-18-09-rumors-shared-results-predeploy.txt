@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_09_RUMORS_SHARED_RESULTS_PREDEPLOY=PASS
+source_version=1.18.08
+target_version=1.18.09
+base_sha256=eff6bcc3f4ae739d8317f7917016cf92db7ea97ebc2e637edcd084c6ac3e54d0
+candidate_sha256=9967143d9e370d1e460cdf2747332512bc745b536c5ab6d676223d7627526be0
+kokkaras_public_feed=PRESERVED
+auto_refresh_seconds=30
+today_coordinates=PASS
+hk_jackpot_report=PASS
+syntax=PASS
