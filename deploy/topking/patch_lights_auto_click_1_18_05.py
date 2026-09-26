@@ -1,3 +1,4 @@
+# build-trigger: 1.18.05 lights auto-click
 from pathlib import Path
 import sys
 
