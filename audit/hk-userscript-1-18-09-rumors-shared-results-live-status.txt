@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.08
+target_version=1.18.09
+marker=rumors-shared-results-20260926-r2
+source_sha256=eff6bcc3f4ae739d8317f7917016cf92db7ea97ebc2e637edcd084c6ac3e54d0
+candidate_sha256=9967143d9e370d1e460cdf2747332512bc745b536c5ab6d676223d7627526be0
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

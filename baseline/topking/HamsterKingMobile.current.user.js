@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.08
+// @version      1.18.09
+// @release-note Слухи: «Слухи сегодня» теперь автоматически обновляются каждые 30 секунд из публичного Kokkaras feed и общих результатов HK, показывают координаты прямо на главном экране; подтверждённые джекпоты, собранные через HK, публикуются в общую базу.
 // @release-note Рыбалка: порядок приведён к подтверждённому канону прохождения. Сначала активируется Проклятая вода, чтобы раскрыть проклятые клетки; затем приоритет Магический питомец → Рыба-фонарь → Существа → Особая вода → обычные воды. Стоимость берётся с карточки/канона, окно награды закрывается перед следующим выбором.
 // @release-note Мини-игры: лампочки теперь забирают итоговое хранилище; сундуки сначала полностью раскапывают доступные клетки; автобой не атакует скрытое поле до входа в сражение; рыбалка получила авторежим с приоритетом редких/выгодных типов воды и пересчётом после каждого улова.
 // @release-note Лампочки: автоклик теперь учитывает реальный мобильный сценарий игры — после выбора лампы ждёт карточку, подтверждает стоимость 1 ягода, закрывает экран «Понятно», затем ждёт фактического изменения поля 3×3 и только после этого заново пересчитывает следующий ход. Если любой этап модального сценария не найден, автолампы безопасно отключаются.
@@ -119,7 +120,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.08';
+  const BUILD_VERSION = '1.18.09';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -301,6 +302,8 @@
   const HK_PUBLIC_SNAPSHOT_CLIENT_REV = 'public-server-only-20260920-r2';
   const RUMOR_API_BASE = 'https://hk-license.89.125.1.71.sslip.io/api/v1/rumors';
   const HK_RUMORS_HUNTER_CANON_REV='rumors-hunter-kokkaras-public-feed-20260925-r1';
+  const HK_RUMORS_SHARED_RESULTS_REV='rumors-shared-results-20260926-r2';
+  const RUMOR_AUTO_REFRESH_MS=30*1000;
   const PUBLIC_SNAPSHOT_INTERVAL_MS = 3 * 60 * 60 * 1000;
   const LICENSE_RECHECK_MS = 60 * 60 * 1000;
   const GAME_API_FALLBACK = 'https://hk-game-api.hwgame.cloud';
@@ -811,6 +814,8 @@
   let dailyRumorRoute = [];
   let dailyRumorMeta = {source:'',date:'',publishedAt:0,sourceUpdatedAt:''};
   let dailyAccountAreaIndex = [];
+  let rumorAutoRefreshTimer = null;
+  let rumorRouteFingerprint = '';
   let dailyShopRows = [];
   let dailyClientConfigDocument = null;
   let dailyRunning = false;
@@ -10679,20 +10684,8 @@
   async function loadRumorRoute() {
     try {
       const result = await rumorServerJson('/today');
-      dailyRumorRoute = Array.isArray(result.routes) ? result.routes : [];
-      dailyRumorMeta = {
-        source:String(result?.source||''),
-        date:String(result?.date||''),
-        publishedAt:Number(result?.published_at||0),
-        sourceUpdatedAt:String(result?.source_updated_at||'')
-      };
-      dailyAccountAreaIndex = [];
-      if (dailyRumorRoute.length) {
-        const points = dailyRumorRoute.reduce((sum,row)=>sum+(Array.isArray(row?.points)?row.points.length:0),0);
-        log(either('Маршрут слухов загружен: ','Rumor route loaded: ') + dailyRumorRoute.length + either(' городов · ',' cities · ') + points + either(' точек',' points') + ' · ' + rumorRouteSourceLabel(),'ok');
-      }
-      renderRumorsTodaySummary();
-      renderRumorsPage();
+      rumorApplyRoutePayload(result,{quiet:false});
+      scheduleRumorAutoRefresh();
       return dailyRumorRoute;
     } catch (error) {
       dailyRumorRoute = [];
@@ -10727,9 +10720,106 @@
 
   function rumorRouteSourceLabel() {
     if(dailyRumorMeta.source==='kokkaras')return 'Kokkaras · live';
+    if(dailyRumorMeta.source==='kokkaras+hk')return 'Kokkaras + HK · live';
     if(dailyRumorMeta.source==='kokkaras-cache')return 'Kokkaras · cache';
+    if(dailyRumorMeta.source==='kokkaras-cache+hk')return 'Kokkaras + HK · cache';
+    if(dailyRumorMeta.source==='hk')return either('HK · общая база','HK · shared results');
     if(dailyRumorMeta.source==='local')return either('HK · локальный резерв','HK · local fallback');
+    if(dailyRumorMeta.source==='local+hk')return either('HK · резерв + общая база','HK · fallback + shared');
     return either('источник не опубликован','source unavailable');
+  }
+
+  function rumorRouteSignature(value=dailyRumorRoute,meta=dailyRumorMeta) {
+    try{
+      return JSON.stringify({
+        source:String(meta?.source||''),
+        date:String(meta?.date||''),
+        updated:String(meta?.sourceUpdatedAt||meta?.publishedAt||''),
+        routes:(value||[]).map(route=>({
+          city_id:String(route?.city_id||''),
+          points:(route?.points||[]).map(point=>[Number(point?.x),Number(point?.y),String(point?.gamearea_id||'')])
+        }))
+      });
+    }catch(_){return '';}
+  }
+
+  function rumorApplyRoutePayload(result,{quiet=false}={}) {
+    const routes=Array.isArray(result?.routes)?result.routes:[];
+    const meta={
+      source:String(result?.source||''),
+      date:String(result?.date||''),
+      publishedAt:Number(result?.published_at||0),
+      sourceUpdatedAt:String(result?.source_updated_at||'')
+    };
+    const nextFingerprint=rumorRouteSignature(routes,meta);
+    const changed=nextFingerprint!==rumorRouteFingerprint;
+    dailyRumorRoute=routes;
+    dailyRumorMeta=meta;
+    rumorRouteFingerprint=nextFingerprint;
+    dailyAccountAreaIndex=[];
+    renderRumorsTodaySummary();
+    renderRumorsPage();
+    if(changed&&!quiet&&dailyRumorRoute.length){
+      const points=dailyRumorRoute.reduce((sum,row)=>sum+(Array.isArray(row?.points)?row.points.length:0),0);
+      log(either('Маршрут слухов загружен: ','Rumor route loaded: ')+dailyRumorRoute.length+either(' городов · ',' cities · ')+points+either(' точек',' points')+' · '+rumorRouteSourceLabel(),'ok');
+    }
+    return changed;
+  }
+
+  async function refreshRumorRouteQuietly() {
+    try{
+      const result=await rumorServerJson('/today');
+      rumorApplyRoutePayload(result,{quiet:true});
+      return true;
+    }catch(error){
+      recordDiagnostic('rumors-auto-refresh-error',{message:String(error?.message||error||'').slice(0,500)});
+      return false;
+    }
+  }
+
+  function scheduleRumorAutoRefresh() {
+    if(rumorAutoRefreshTimer)return;
+    rumorAutoRefreshTimer=setTimeout(async()=>{
+      rumorAutoRefreshTimer=null;
+      try{
+        const active=hkPanelOpen()&&['daily','rumors'].includes(hkActiveModule());
+        if(active)await refreshRumorRouteQuietly();
+      }finally{
+        scheduleRumorAutoRefresh();
+      }
+    },RUMOR_AUTO_REFRESH_MS);
+  }
+
+  function rumorJackpotIdFromResponse(response,gameareaId) {
+    const rows=Array.isArray(response?.rumors?.researched_cells)?response.rumors.researched_cells:[];
+    for(let i=rows.length-1;i>=0;i--){
+      const row=rows[i];
+      if(String(row?.gamearea_id||'')!==String(gameareaId||''))continue;
+      const rumorId=String(row?.rumor_id||'');
+      return /jackpot/i.test(rumorId)?rumorId:'';
+    }
+    const direct=String(response?.rumor_id||'');
+    return /jackpot/i.test(direct)?direct:'';
+  }
+
+  async function reportRumorJackpot(route,point,gameareaId,response) {
+    const rumorId=rumorJackpotIdFromResponse(response,gameareaId);
+    if(!rumorId)return false;
+    try{
+      await rumorServerJson('/report',{
+        city_id:String(route?.city_id||''),
+        city_key:String(route?.city_key||''),
+        city_name:rumorRouteCityLabel(route),
+        x:Number(point?.x),
+        y:Number(point?.y),
+        gamearea_id:String(gameareaId||''),
+        rumor_id:rumorId
+      },false);
+      return true;
+    }catch(error){
+      recordDiagnostic('rumors-report-error',{city_id:String(route?.city_id||''),gamearea_id:String(gameareaId||''),message:String(error?.message||error||'').slice(0,500)});
+      return false;
+    }
   }
 
   function rumorRouteUpdatedLabel() {
@@ -10782,20 +10872,27 @@
   }
 
   function renderRumorsTodaySummary() {
+    scheduleRumorAutoRefresh();
     const host=root?.querySelector?.('#hk-rumors-today-summary');
     if(!host)return;
     const complete=dailyRumorRoute.filter(route=>rumorRouteProgress(route)>=3).length;
     const total=dailyRumorRoute.length;
     const points=dailyRumorRoute.reduce((sum,row)=>sum+(row?.points?.length||0),0);
+    const routePreview=total?dailyRumorRoute.map(route=>{
+      const coords=(route?.points||[]).map(point=>String(Number(point?.x))+':'+String(Number(point?.y)).padStart(2,'0')).join(' · ');
+      return `<div class="hk-rumor-summary-route"><b>${escapeHtml(rumorRouteCityLabel(route))}</b><span>${escapeHtml(coords||'—')}</span></div>`;
+    }).join(''):`<span class="hk-muted">${either('Координаты ещё не опубликованы.','Coordinates are not published yet.')}</span>`;
     host.innerHTML=`
-      <div class="hk-rumor-summary-head"><div><h3>${either('Слухи сегодня','Rumors today')}</h3><small>${escapeHtml(rumorRouteSourceLabel())} · ${escapeHtml(rumorRouteUpdatedLabel())}</small></div><b>${complete}/${total||17}</b></div>
+      <div class="hk-rumor-summary-head"><div><h3>${either('Слухи сегодня','Rumors today')}</h3><small>${escapeHtml(rumorRouteSourceLabel())} · ${escapeHtml(rumorRouteUpdatedLabel())} · ${either('автообновление 30 сек.','auto refresh 30 sec.')}</small></div><b>${complete}/${total||17}</b></div>
       <div class="hk-rumor-summary-meta"><span>${either('Городов','Cities')}: <b>${total||'—'}</b></span><span>${either('Точек','Points')}: <b>${points||'—'}</b></span></div>
+      <details class="hk-rumor-summary-routes" open><summary>${either('Координаты сегодня','Today coordinates')}</summary><div>${routePreview}</div></details>
       <div class="hk-rumor-summary-actions"><button type="button" id="hk-rumors-summary-open" class="hk-primary">${either('Открыть охоту','Open hunter')}</button><button type="button" id="hk-rumors-summary-refresh" class="hk-secondary">${either('Обновить','Refresh')}</button></div>`;
     host.querySelector('#hk-rumors-summary-open')?.addEventListener('click',()=>runtime.navigate?.('rumors'));
     host.querySelector('#hk-rumors-summary-refresh')?.addEventListener('click',()=>void refreshRumorsPage());
   }
 
   function renderRumorsPage() {
+    scheduleRumorAutoRefresh();
     if(!rumorBox)return;
     const complete=dailyRumorRoute.filter(route=>rumorRouteProgress(route)>=3).length;
     const total=dailyRumorRoute.length;
@@ -10901,6 +10998,7 @@
           for (const gameareaId of ids) {
             try {
               playerDocument = await apiJson('/rumors/search','POST',{gamearea_id:gameareaId});
+              void reportRumorJackpot(route,point,gameareaId,playerDocument);
               collected++; completed++; cityCollected++; cityCompleted++; checked++; searched = true;
               log(either('★ СЛУХ СОБРАН → ','★ RUMOR COLLECTED → ') + route.city + ' [' + point.x + ':' + point.y + '] (' + cityCompleted + '/3)','ok');
               break;
@@ -15622,7 +15720,7 @@
       @media(max-width:620px){.hk-recipe-group>.hk-recipe-row{grid-template-columns:67px minmax(0,1fr)}.hk-recipe-toggle{grid-column:1/3;border-top:1px solid #25344a;padding-top:7px;text-align:left}.hk-recipe-component{grid-template-columns:58px minmax(0,1fr)}}
       .hk-map-source-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0 12px}.hk-map-source-tabs button{border:1px solid #34445b;border-radius:11px;background:#182230;color:#aebbd0;padding:11px 5px;font-size:12px;font-weight:800}.hk-map-source-tabs button.active{border-color:#ffad1f;background:#3a2b14;color:#fff}.hk-map-controls{display:grid;grid-template-columns:1fr 120px;gap:7px}.hk-map-controls input,.hk-map-controls select,.hk-map-filters select{min-width:0;background:#0b111b;color:white;border:1px solid #3b4a61;border-radius:10px;padding:10px}.hk-map-list{display:grid;gap:7px;margin-top:10px}.hk-map-row{display:grid;grid-template-columns:1.2fr 54px repeat(3,1fr) 58px 48px;gap:6px;align-items:center;text-align:left;background:#111a27;color:white;border:1px solid #35445a;border-radius:11px;padding:10px;font-size:10px}.hk-map-row>b{font-size:12px;color:#ffe083}.hk-map-row strong{color:#35df9e}.hk-progress{background:#35df9e;color:#082117;border-radius:12px;padding:4px;text-align:center;font-weight:900}.hk-map-filters{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:10px 0}.hk-map-legend{display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:#9eabc0;margin:8px 0}.hk-map-legend span{display:flex;align-items:center;gap:4px}.hk-map-dot{width:10px;height:10px;border-radius:3px;display:inline-block}.hk-map-zoom{display:grid;grid-template-columns:44px 82px 44px;gap:6px;justify-content:end;margin:7px 0}.hk-map-zoom button{padding:8px 4px;font-weight:900}.hk-map-zoom #hk-map-zoom-value{color:#ffe083}.hk-map-visual{height:56vh;min-height:360px;max-height:650px;background:#080d14;border:1px solid #304057;border-radius:13px;overflow:hidden;touch-action:none}.hk-map-visual svg{display:block;width:100%;height:100%;touch-action:none;transform-origin:50% 50%;will-change:transform}.hk-map-shape{cursor:pointer;transition:opacity .15s,stroke-width .15s}.hk-map-shape.dim{opacity:.055;pointer-events:none}.hk-map-shape.match{opacity:.94}.hk-map-shape.selected{stroke:#fff!important;stroke-width:3.2!important;opacity:1}.hk-map-selected{display:grid;grid-template-columns:1.1fr 1fr 55px;gap:7px;align-items:center;margin-top:8px;padding:10px;background:#101927;border:1px solid #304057;border-radius:11px}.hk-map-selected small{grid-column:1/4;color:#93a3b8}.hk-map-selected strong{color:#6deaff}.hk-map-match-count{font-size:11px;color:#9eabc0;margin:6px 0}
 
-      .hk-rumor-summary{margin-bottom:12px}.hk-rumor-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.hk-rumor-summary-head h3{margin:0 0 4px}.hk-rumor-summary-head small{color:#8fa1b8}.hk-rumor-summary-head>b{font-size:20px;color:#ffd166}.hk-rumor-summary-meta{display:flex;gap:8px;margin:10px 0}.hk-rumor-summary-meta span,.hk-rumor-stats span{padding:7px 9px;border:1px solid #304057;border-radius:10px;background:#101927;color:#9fb0c6}.hk-rumor-summary-actions,.hk-rumor-actions{display:flex;gap:7px;flex-wrap:wrap}.hk-rumor-summary-actions button,.hk-rumor-actions button{flex:1;min-width:120px}.hk-rumor-hero{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.hk-rumor-hero h3{margin:0}.hk-rumor-hero p{margin:5px 0 0;color:#93a3b8;line-height:1.4;max-width:760px}.hk-rumor-source{flex:0 0 auto;text-align:right;padding:8px 10px;border:1px solid #30506b;border-radius:11px;background:#0d1722}.hk-rumor-source b,.hk-rumor-source small{display:block}.hk-rumor-source b{color:#7fe0ad}.hk-rumor-source small{margin-top:3px;color:#8192a8}.hk-rumor-stats{display:flex;gap:8px;margin:12px 0}.hk-rumor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.hk-rumor-city{padding:10px;border:1px solid #304057;border-radius:12px;background:#101927}.hk-rumor-city.done{border-color:#2c7457;background:#10211c}.hk-rumor-city>div:first-child{display:flex;justify-content:space-between;gap:8px}.hk-rumor-city>div:first-child span{color:#ffd166;font-weight:900}.hk-rumor-points{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.hk-rumor-point{display:grid;padding:6px 8px;border:1px solid #293a50;border-radius:9px;background:#0c1420;min-width:64px}.hk-rumor-point b{font:800 11px ui-monospace,monospace}.hk-rumor-point small{margin-top:2px;color:#74869c;font-size:8px}.hk-rumor-point.done{border-color:#2e7058;background:#10231d}.hk-rumor-point.done b{color:#7fe0ad}@media(max-width:720px){.hk-rumor-grid{grid-template-columns:1fr}.hk-rumor-hero{display:block}.hk-rumor-source{margin-top:9px;text-align:left}}
+      .hk-rumor-summary{margin-bottom:12px}.hk-rumor-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.hk-rumor-summary-head h3{margin:0 0 4px}.hk-rumor-summary-head small{color:#8fa1b8}.hk-rumor-summary-head>b{font-size:20px;color:#ffd166}.hk-rumor-summary-meta{display:flex;gap:8px;margin:10px 0}.hk-rumor-summary-meta span,.hk-rumor-stats span{padding:7px 9px;border:1px solid #304057;border-radius:10px;background:#101927;color:#9fb0c6}.hk-rumor-summary-routes{margin:10px 0;border:1px solid #2c3c50;border-radius:11px;background:#0d1621}.hk-rumor-summary-routes>summary{padding:9px 10px;cursor:pointer;font-weight:800}.hk-rumor-summary-routes>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:0 8px 8px}.hk-rumor-summary-route{display:flex;justify-content:space-between;gap:7px;padding:6px 7px;border:1px solid #26364a;border-radius:8px;background:#101927}.hk-rumor-summary-route b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hk-rumor-summary-route span{font:800 10px ui-monospace,monospace;color:#ffd166;white-space:nowrap}.hk-rumor-summary-actions,.hk-rumor-actions{display:flex;gap:7px;flex-wrap:wrap}.hk-rumor-summary-actions button,.hk-rumor-actions button{flex:1;min-width:120px}.hk-rumor-hero{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.hk-rumor-hero h3{margin:0}.hk-rumor-hero p{margin:5px 0 0;color:#93a3b8;line-height:1.4;max-width:760px}.hk-rumor-source{flex:0 0 auto;text-align:right;padding:8px 10px;border:1px solid #30506b;border-radius:11px;background:#0d1722}.hk-rumor-source b,.hk-rumor-source small{display:block}.hk-rumor-source b{color:#7fe0ad}.hk-rumor-source small{margin-top:3px;color:#8192a8}.hk-rumor-stats{display:flex;gap:8px;margin:12px 0}.hk-rumor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.hk-rumor-city{padding:10px;border:1px solid #304057;border-radius:12px;background:#101927}.hk-rumor-city.done{border-color:#2c7457;background:#10211c}.hk-rumor-city>div:first-child{display:flex;justify-content:space-between;gap:8px}.hk-rumor-city>div:first-child span{color:#ffd166;font-weight:900}.hk-rumor-points{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.hk-rumor-point{display:grid;padding:6px 8px;border:1px solid #293a50;border-radius:9px;background:#0c1420;min-width:64px}.hk-rumor-point b{font:800 11px ui-monospace,monospace}.hk-rumor-point small{margin-top:2px;color:#74869c;font-size:8px}.hk-rumor-point.done{border-color:#2e7058;background:#10231d}.hk-rumor-point.done b{color:#7fe0ad}@media(max-width:720px){.hk-rumor-summary-routes>div{grid-template-columns:1fr}.hk-rumor-grid{grid-template-columns:1fr}.hk-rumor-hero{display:block}.hk-rumor-source{margin-top:9px;text-align:left}}
       @media(max-width:620px){.hk-map-row{grid-template-columns:1fr 45px 54px}.hk-map-row span:nth-of-type(2),.hk-map-row span:nth-of-type(3){display:none}.hk-map-row strong{grid-column:3}.hk-map-row .hk-progress{grid-column:2}.hk-map-building{grid-template-columns:1fr 55px}.hk-map-building>span{grid-column:1}.hk-map-building small{grid-column:1/3}}
     `;
     document.head.appendChild(style);
