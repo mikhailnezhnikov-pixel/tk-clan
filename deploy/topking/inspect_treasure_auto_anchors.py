@@ -52,7 +52,9 @@ terms=[
   "function autoMapJourneyButton",
   "function autoMapMapCards",
   "function dispatchAutoMapTap",
-  "function autoMapStartLockAt"
+  "function autoMapStartLockAt",
+  "function treasureChestTarget(",
+  "function treasureChestSignature("
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
@@ -76,6 +78,12 @@ print("TREASURE_AUTO_ANCHORS=PASS")
 
 print("PRINT_AUTOMAP_CURRENT_CONTEXT")
 for key in ["async function runAutoMapTick","function setAutoMapEnabled","function autoMapJourneyButton","function autoMapMapCards","function dispatchAutoMapTap","function autoMapStartLockAt"]:
+    print("=== "+key+" ===")
+    for hit in out["hits"].get(key,[])[:1]:
+        print(hit["context"])
+
+print("PRINT_CHEST_CURRENT_CONTEXT")
+for key in ["function treasureChestElements(","function treasureChestTarget(","async function runTreasureChestAuto(","function treasureChestSignature("]:
     print("=== "+key+" ===")
     for hit in out["hits"].get(key,[])[:1]:
         print(hit["context"])
