@@ -87,5 +87,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-23-treasure-chest-element-state-live-status.txt",
-  "commit_message": "fix: deploy chest element-state targeting in userscript 1.18.23"
+  "commit_message": "fix: deploy chest element-state targeting in userscript 1.18.23",
+  "trigger_revision": 1
 }
