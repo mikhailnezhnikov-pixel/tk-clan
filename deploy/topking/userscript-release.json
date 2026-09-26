@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.18",
-  "target_version": "1.18.19",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.19.treasure-auto-map-start-lock.candidate.user.js",
-  "primary_marker": "treasure-auto-map-start-lock-20260926-r4",
+  "source_version": "1.18.19",
+  "target_version": "1.18.20",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.20.treasure-auto-map-active-priority.candidate.user.js",
+  "primary_marker": "treasure-auto-map-active-priority-20260926-r5",
   "preserve_markers": [
+    "treasure-auto-map-start-lock-20260926-r4",
     "treasure-auto-map-session-20260926-r3",
     "treasure-auto-map-stability-20260926-r2",
     "treasure-auto-map-orchestrator-20260926-r1",
@@ -82,7 +83,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-19-treasure-auto-map-start-lock-live-status.txt",
-  "commit_message": "fix: deploy Treasure Auto Map start lock in userscript 1.18.19",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-20-treasure-auto-map-active-priority-live-status.txt",
+  "commit_message": "fix: deploy active-cell priority in Treasure Auto Map 1.18.20"
 }
