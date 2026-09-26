@@ -31,7 +31,7 @@ jobs:
           grep -Fq "// @version      1.18.20" /tmp/HamsterKingMobile.user.js
           grep -Fq "treasure-auto-map-active-priority-20260926-r5" /tmp/HamsterKingMobile.user.js
           grep -Fq "AUTO_MAP_NO_ACTIVE_COMPLETE_MS=4500" /tmp/HamsterKingMobile.user.js
-          grep -Fq "autoMapDismissAbandonModalIfNeeded" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function autoMapActiveCellCount()" /tmp/HamsterKingMobile.user.js
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
       - name: Publish candidate
         run: |
