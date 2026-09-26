@@ -42,7 +42,7 @@ for sid,group in sessions.items():
         allruns.append((str(meta.get("started_at") or ""),sid,events,meta))
 allruns.sort(reverse=True)
 
-print("LATEST_AUTOMAP_CHESTS_TRACE_R5")
+print("LATEST_AUTOMAP_CHESTS_POINTER_R5")
 for started,sid,events,meta in allruns[:1]:
     print(json.dumps({"session_id":sid,"started_at":started,"run_index":meta.get("run_index"),"events":len(events)},ensure_ascii=False))
     prev_screen=None
@@ -60,7 +60,7 @@ for started,sid,events,meta in allruns[:1]:
             if txt or lot:
                 print(json.dumps({
                     "seq":e.get("seq"),"at":e.get("at"),"screen":sc,"type":"click",
-                    "text":txt,"lot":lot,"clickId":d.get("clickId")
+                    "text":txt,"lot":lot,"clickId":d.get("clickId"),"pointerType":d.get("pointerType")
                 },ensure_ascii=False))
         elif typ=="network":
             path=str(d.get("path") or "")
