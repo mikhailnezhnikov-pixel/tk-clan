@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_01_BATTLE_REWARD_DISMISS_PREDEPLOY=PASS
+source_version=1.18.00
+target_version=1.18.01
+scope=COMMON_HK_USERSCRIPT_ONLY
+public_treasure_script=UNCHANGED
+reward_modal_dismiss=ENABLED
+recalculate_after_reward_close=YES
+syntax=PASS
+base_sha256=adf352bec69e2d022f63559aa18400bee1b459991358738f4a2a56534376d179
+candidate_sha256=1f43912a83eb244be31e818cfeeae2c868de2305b7e9f14d1ce7f1cbd70df68f
