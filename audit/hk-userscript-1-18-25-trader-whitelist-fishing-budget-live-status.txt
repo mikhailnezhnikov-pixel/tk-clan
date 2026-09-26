@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.24
+target_version=1.18.25
+marker=fishing-live-budget-20260927-r1
+source_sha256=5f663509e67fc2cacece8e260781a76b24351122909c7dc33fc4e75cecd6e2d3
+candidate_sha256=811aa5bc903f5057e04a0cad81aaae9909e19681fc5dd9203921ffb0bb2f8587
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

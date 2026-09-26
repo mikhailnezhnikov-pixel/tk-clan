@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.24
+// @version      1.18.25
+// @release-note Торговец: жёсткий whitelist — покупать только монеты сокровищ (random4coins), ягоды (food_*) и карты сокровищ (map). Ключи, яйца, HK-монеты и прочие лоты игнорируются. Рыбалка: каждая цель проходит живую проверку остатка валюты перед выбором и перед подтверждением; недоступные по балансу клетки не нажимаются, после исчерпания очков Автокарта штатно выходит.
 // @release-note Автокарта: после возврата на реальную карту зависшие running-флаги старой мини-игры больше не блокируют следующую клетку. Если активная клетка карты действительно находится сверху, а мини-игра уже нет, старый runner отменяется по runId и Автокарта продолжает маршрут сама.
 // @release-note Сундуки: уже активированные карточки «Активировано/Activated» больше не считаются покупаемой целью даже если у другого слота такой же lotId ещё остался некупленным. После верхних сундуков автомодуль продолжает по реально открывшимся клеткам.
 // @release-note Автокарта: исправлено зависание «сундуки» на чистом экране карты. Мини-игра теперь считается передним планом только если её реальные элементы действительно находятся сверху в точках экрана; старые DOM-элементы под картой больше не блокируют выбор следующей ячейки.
@@ -135,7 +136,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.24';
+  const BUILD_VERSION = '1.18.25';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3719,6 +3720,8 @@
   const HK_TREASURE_AUTO_MAP_FOREGROUND_TRUTH_REV='treasure-auto-map-foreground-truth-20260926-r7';
   const HK_TREASURE_CHEST_ELEMENT_STATE_REV='treasure-chest-element-state-20260927-r1';
   const HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV='treasure-auto-map-stale-runner-20260927-r2';
+  const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
+  const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -18161,6 +18164,15 @@
       return 1;
     }
 
+    function fishingCurrencyId() {
+      for (const item of fairCatalog) {
+        if (!String(item?.lotId||'').includes('mf_treasurelot_is_fishing_')) continue;
+        const parts=costParts(item?.cost).filter(part=>part.quantity>0);
+        if (parts.length===1 && parts[0].id) return String(parts[0].id);
+      }
+      return '';
+    }
+
     function fishingTileCost(row) {
       const catalogRow=fairCatalog.find(item=>String(item?.lotId||'')===row.lotId);
       const parts=costParts(catalogRow?.cost).filter(part=>part.quantity>0);
@@ -18171,7 +18183,25 @@
         .map(match=>Number(match[1]))
         .filter(value=>value>=1 && value<=9);
       const quantity=nums.length ? nums[nums.length-1] : fishingCanonicalCost(row.lotId);
-      return {id:'',quantity};
+      return {id:fishingCurrencyId(),quantity};
+    }
+
+    function fishingAffordable(cost) {
+      const quantity=Math.max(0,Number(cost?.quantity||0));
+      const id=String(cost?.id||'');
+      if (!(quantity>0) || !id) return false;
+      const amount=walletAmount(id);
+      return amount!==null && Number(amount)>=quantity;
+    }
+
+    function fishingBudgetSnapshot(cost) {
+      const id=String(cost?.id||'');
+      const amount=id ? walletAmount(id) : null;
+      return {
+        id,
+        balance:amount===null ? null : Number(amount),
+        cost:Math.max(0,Number(cost?.quantity||0))
+      };
     }
 
     function fishingValueTier(lotId,hasCurseTrigger=false) {
@@ -18210,7 +18240,7 @@
         const tier=fishingValueTier(row.lotId,hasCurseTrigger);
         const roi=tier/Math.max(1,cost.quantity||1);
         return {...row,cost,tier,roi};
-      }).filter(row=>row.tier>0);
+      }).filter(row=>row.tier>0 && fishingAffordable(row.cost));
 
       rows.sort((a,b)=>
         b.tier-a.tier ||
@@ -18298,10 +18328,26 @@
         return false;
       }
       const target=fishingTarget();
-      if (!target) return false;
+      if (!target) {
+        recordDiagnostic('fishing-auto-budget-empty',{
+          revision:HK_FISHING_BUDGET_REV,
+          candidates:fishingElements().filter(row=>!row.activated).length
+        });
+        return false;
+      }
 
       await waitMutationGap(fishingLastMutationAt,FISHING_MIN_NEXT_ACTION_GAP_MS);
       if (!fishingAutoEnabled()) return false;
+      if (!fishingAffordable(target.cost)) {
+        recordDiagnostic('fishing-auto-budget-changed',{
+          revision:HK_FISHING_BUDGET_REV,
+          lotId:target.lotId,
+          ...fishingBudgetSnapshot(target.cost)
+        });
+        lastSignature='';
+        setTimeout(checkPuzzle,80);
+        return false;
+      }
 
       fishingAutoRunning=true;
       const runId=++fishingAutoRunId;
@@ -18368,12 +18414,26 @@
           const started=Date.now();
           while (Date.now()-started<1800) {
             if (runId!==fishingAutoRunId || !fishingAutoEnabled()) return null;
+            if (!fishingAffordable(target.cost)) return null;
             const button=treasureActionButton(modal,target.cost);
             if (button) return button;
             await new Promise(resolve=>setTimeout(resolve,80));
           }
           return null;
         })();
+
+        if (!fishingAffordable(target.cost)) {
+          const close=[...modal.querySelectorAll('button,[role="button"],a,div,span')]
+            .filter(el=>el && !el.disabled && visible(el))
+            .find(el=>/^(?:×|✕|Назад|Back|Закрыть|Close)$/i.test(clean(el.innerText||el.textContent||'').trim()));
+          if (close) dispatchAutoMapTap(close,'fishing-insufficient-close');
+          recordDiagnostic('fishing-auto-insufficient-before-confirm',{
+            revision:HK_FISHING_BUDGET_REV,
+            lotId:target.lotId,
+            ...fishingBudgetSnapshot(target.cost)
+          });
+          return false;
+        }
 
         if (!action || !dispatchAutoMapTap(action,'fishing-confirm-'+target.lotId)) {
           return failFishingAuto('action-missing',{lotId:target.lotId,cost:target.cost,startedAt});
@@ -18510,6 +18570,22 @@
       return true;
     }
 
+    function traderApprovedLot(lotId) {
+      const id=String(lotId||'').toLowerCase();
+      if (!id) return false;
+
+      // Treasure coins. "4coins" alone is NOT enough: key_uncommon4coins is a key.
+      if (/random4coins/.test(id) || /treasure[_-]?coins/.test(id)) return true;
+
+      // Berries/food lots.
+      if (/(?:^|_)food(?:_|$)/.test(id) || /berr(?:y|ies)/.test(id)) return true;
+
+      // Treasure maps.
+      if (/(?:^|_)map(?:_|$)/.test(id) || /treasure[_-]?map/.test(id)) return true;
+
+      return false;
+    }
+
     function traderValueTier(lotId) {
       const id=String(lotId||'').toLowerCase();
       if (/map/.test(id)) return 1200;
@@ -18524,6 +18600,7 @@
     function traderTarget() {
       const rows=traderElements()
         .filter(row=>!row.activated)
+        .filter(row=>traderApprovedLot(row.lotId))
         .map(row=>{
           const cost=traderCost(row);
           return {...row,cost,tier:traderValueTier(row.lotId)};
@@ -18593,10 +18670,12 @@
 
       const target=traderTarget();
       if (!target) {
+        const visible=traderElements().filter(row=>!row.activated);
         recordDiagnostic('trader-auto-complete',{
-          revision:HK_TRADER_AUTO_REV,
+          revision:HK_TRADER_WHITELIST_REV,
           purchases:traderSessionPurchases,
-          reason:'no-affordable-lots'
+          reason:'no-approved-affordable-lots',
+          skipped:visible.filter(row=>!traderApprovedLot(row.lotId)).map(row=>row.lotId).slice(0,24)
         });
         return false;
       }
@@ -21171,6 +21250,8 @@
       treasureAutoMapForegroundTruthRevision:HK_TREASURE_AUTO_MAP_FOREGROUND_TRUTH_REV,
       treasureChestElementStateRevision:HK_TREASURE_CHEST_ELEMENT_STATE_REV,
       treasureAutoMapStaleRunnerRevision:HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV,
+      traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
+      fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       start,
       stop,
       check:checkPuzzle,
