@@ -45,17 +45,22 @@ jobs:
           echo "timestamp=$(date -Is)"
           echo '[before]'
           df -hT /
-          ls -lh "$live" "$keep" "$old"
+          ls -lh "$live" "$keep"
+          if [ -e "$old" ]; then ls -lh "$old"; else echo "old_backup=already_removed"; fi
           test -s "$live"
           test -s "$keep"
-          test -s "$old"
 
           echo '[cleanup]'
-          old_size=$(stat -c %s "$old")
-          rm -f -- "$old"
-          test ! -e "$old"
+          if [ -e "$old" ]; then
+            old_size=$(stat -c %s "$old")
+            rm -f -- "$old"
+            test ! -e "$old"
+            echo "removed_bytes=$old_size"
+          else
+            echo "removed_bytes=0"
+            echo "cleanup_state=already_removed"
+          fi
           sync
-          echo "removed_bytes=$old_size"
 
           echo '[sqlite]'
           runuser -u hamsterking-license -- python3 - <<'PY'
