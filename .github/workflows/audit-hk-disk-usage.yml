@@ -1,0 +1,68 @@
+name: Audit HK Disk Usage
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/hk-disk-usage-trigger.txt'
+      - '.github/workflows/audit-hk-disk-usage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Audit usage
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' > /tmp/disk.txt 2>&1 <<'REMOTE'
+          set +e
+          echo '[df]'
+          df -hT /
+          echo '[top-level]'
+          du -xhd1 / 2>/dev/null | sort -h | tail -25
+          echo '[var]'
+          du -xhd1 /var 2>/dev/null | sort -h | tail -25
+          echo '[var-lib]'
+          du -xhd1 /var/lib 2>/dev/null | sort -h | tail -30
+          echo '[license-db-dir]'
+          du -xhd1 /var/lib/hamsterking-license 2>/dev/null | sort -h | tail -30
+          ls -lahS /var/lib/hamsterking-license 2>/dev/null | head -60
+          echo '[opt]'
+          du -xhd1 /opt 2>/dev/null | sort -h | tail -25
+          echo '[logs]'
+          du -xhd1 /var/log 2>/dev/null | sort -h | tail -25
+          journalctl --disk-usage 2>/dev/null || true
+          echo '[large-files-over-200m]'
+          find / -xdev -type f -size +200M -printf '%s %p\n' 2>/dev/null | sort -nr | head -80
+          REMOTE
+          cat /tmp/disk.txt
+      - name: Persist
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/disk.txt audit/hk-disk-usage-latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-disk-usage-latest.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist HK disk usage"
+            git push origin HEAD:main
+          fi
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/disk.txt
