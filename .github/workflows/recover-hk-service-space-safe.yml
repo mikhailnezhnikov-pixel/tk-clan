@@ -1,0 +1,73 @@
+name: Recover HK Service Space Safe
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/hk-safe-space-recovery-trigger.txt'
+      - '.github/workflows/recover-hk-service-space-safe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Free safe system space and restart service
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' > /tmp/recovery.txt 2>&1 <<'REMOTE'
+          set -euo pipefail
+          echo '[before]'
+          df -hT /
+          journalctl --disk-usage || true
+          journalctl --vacuum-size=150M || true
+          apt-get clean || true
+          sync
+          echo '[after-cleanup]'
+          df -hT /
+          journalctl --disk-usage || true
+          systemctl reset-failed hamsterking-license.service || true
+          systemctl restart hamsterking-license.service
+          sleep 4
+          systemctl is-active hamsterking-license.service
+          systemctl show hamsterking-license.service -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStatus --no-pager
+          REMOTE
+          cat /tmp/recovery.txt
+      - name: Verify public panel
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 8 --retry-delay 2 --connect-timeout 10 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?safefix=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/public.js
+          echo '[public]' >> /tmp/recovery.txt
+          echo 'http=200' >> /tmp/recovery.txt
+          echo 'syntax=PASS' >> /tmp/recovery.txt
+      - name: Persist audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/recovery.txt audit/hk-safe-space-recovery-latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-safe-space-recovery-latest.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "ops: persist safe HK service recovery"
+            git push origin HEAD:main
+          fi
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/recovery.txt /tmp/public.js
