@@ -37,19 +37,30 @@ jobs:
           grep -Fq "minigame-flow-fixes-20260926-r1" /tmp/HamsterKingMobile.user.js
 
           python3 deploy/topking/patch_trader_fishing_stability_1_18_09.py /tmp/HamsterKingMobile.user.js
-
+          echo "PATCH_APPLIED=1"
           node --check /tmp/HamsterKingMobile.user.js
-          grep -Fq "// @version      1.18.09" /tmp/HamsterKingMobile.user.js
-          grep -Fq "const BUILD_VERSION = '1.18.09';" /tmp/HamsterKingMobile.user.js
-          grep -Fq "fishing-activated-backoff-20260926-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "secret-trader-auto-buy-20260926-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "minigame-http-409-500-backoff-20260926-r1" /tmp/HamsterKingMobile.user.js
-          grep -Fq "Автоторговец: ВКЛ" /tmp/HamsterKingMobile.user.js
-          grep -Fq "FISHING_MIN_NEXT_ACTION_GAP_MS = 1800" /tmp/HamsterKingMobile.user.js
-          grep -Fq "TRADER_MIN_NEXT_ACTION_GAP_MS = 1800" /tmp/HamsterKingMobile.user.js
-          grep -Fq "response.status===409 || response.status>=500" /tmp/HamsterKingMobile.user.js
-          grep -Fq "fishing-canon-priority-20260926-r2" /tmp/HamsterKingMobile.user.js
-          grep -Fq "minigame-flow-fixes-20260926-r1" /tmp/HamsterKingMobile.user.js
+          echo "NODE_CHECK=PASS"
+          markers=(
+            "// @version      1.18.09"
+            "const BUILD_VERSION = '1.18.09';"
+            "fishing-activated-backoff-20260926-r1"
+            "secret-trader-auto-buy-20260926-r1"
+            "minigame-http-409-500-backoff-20260926-r1"
+            "Автоторговец: ВКЛ"
+            "FISHING_MIN_NEXT_ACTION_GAP_MS = 1800"
+            "TRADER_MIN_NEXT_ACTION_GAP_MS = 1800"
+            "response.status===409 || response.status>=500"
+            "fishing-canon-priority-20260926-r2"
+            "minigame-flow-fixes-20260926-r1"
+          )
+          for marker in "${markers[@]}"; do
+            if grep -Fq "$marker" /tmp/HamsterKingMobile.user.js; then
+              echo "MARKER_OK=$marker"
+            else
+              echo "MARKER_MISSING=$marker"
+              exit 1
+            fi
+          done
 
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
 
