@@ -1,0 +1,12 @@
+USERSCRIPT_1_18_00_BATTLE_MODAL_CONFIRM_PREDEPLOY=PASS
+source_version=1.17.99
+target_version=1.18.00
+scope=COMMON_HK_USERSCRIPT_ONLY
+public_treasure_script=UNCHANGED
+enemy_card_click=STEP_1
+modal_attack_confirm=STEP_2
+recalculate_after_each_real_hit=YES
+type04=PRESERVED
+syntax=PASS
+base_sha256=8ca7e49f773b3b75694014e8a3481e356226a77f613141698eb77b3e63b10ea9
+candidate_sha256=adf352bec69e2d022f63559aa18400bee1b459991358738f4a2a56534376d179

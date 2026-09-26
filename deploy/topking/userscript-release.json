@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.98",
-  "target_version": "1.17.99",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.99.battle-auto-click.candidate.user.js",
-  "primary_marker": "battle-auto-click-toggle-20260926-r1",
+  "source_version": "1.17.99",
+  "target_version": "1.18.00",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.00.battle-modal-confirm.candidate.user.js",
+  "primary_marker": "battle-modal-confirm-20260926-r1",
   "preserve_markers": [
+    "battle-auto-click-toggle-20260926-r1",
     "battle-enemy-type04-20260926-r1",
     "late-login-recovery-20260926-r1",
     "game-api-429-cooldown-20s-20260925-r1",
@@ -63,7 +64,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-99-battle-auto-click-live-status.txt",
-  "commit_message": "fix: deploy optional battle auto-click in userscript 1.17.99",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-00-battle-modal-confirm-live-status.txt",
+  "commit_message": "fix: deploy two-stage mobile battle auto-click in userscript 1.18.00"
 }
