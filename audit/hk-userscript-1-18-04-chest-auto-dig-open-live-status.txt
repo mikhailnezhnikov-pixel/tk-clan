@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.03
+target_version=1.18.04
+marker=chest-auto-dig-open-20260926-r1
+source_sha256=b58977a8ddad306b0b34ee83fdd668fb565dcb628db3fea65c35e36d9b59b71c
+candidate_sha256=83c8c39147f095f28a33fca6dcecf8c9cfcd0b6627fe23265f7d89b2672abee7
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
