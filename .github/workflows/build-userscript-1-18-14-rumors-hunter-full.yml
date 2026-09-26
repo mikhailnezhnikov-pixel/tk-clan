@@ -1,0 +1,207 @@
+name: Build Userscript 1.18.14 Rumors Hunter Full
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_rumors_hunter_full_1_18_14.py'
+      - '.github/workflows/build-userscript-1-18-14-rumors-hunter-full.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-18-14-rumors-hunter-full
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build from exact live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+          cp "$base" /tmp/base.user.js
+
+          grep -Fq "// @version      1.18.13" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.13';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-run-recorder-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-visible-board-active-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "rumors-shared-results-20260926-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "maps-manual-scan-only-20260923-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "false zero is not stored." /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_rumors_hunter_full_1_18_14.py /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.14" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.14';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "rumors-hunter-coordinator-kokkaras-v40-20260926-r4" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const RUMOR_HUNTER_RADIUS=3;" /tmp/HamsterKingMobile.user.js
+          grep -Fq "class HKRumorCityHunter" /tmp/HamsterKingMobile.user.js
+          grep -Fq "async function runRumorHunter()" /tmp/HamsterKingMobile.user.js
+          grep -Fq "private coordinator is NOT used" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-run-recorder-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-visible-board-active-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "rumors-shared-results-20260926-r2" /tmp/HamsterKingMobile.user.js
+          grep -Fq "maps-manual-scan-only-20260923-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "false zero is not stored." /tmp/HamsterKingMobile.user.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+
+          before=Path('/tmp/base.user.js').read_text(encoding='utf-8')
+          after=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+
+          def function_block(text, signature):
+              start=text.index(signature)
+              brace=text.index('{',start)
+              depth=0
+              quote=None
+              escaped=False
+              template=False
+              i=brace
+              while i < len(text):
+                  ch=text[i]
+                  if quote:
+                      if escaped:
+                          escaped=False
+                      elif ch=='\\':
+                          escaped=True
+                      elif ch==quote:
+                          quote=None
+                      i+=1
+                      continue
+                  if template:
+                      if escaped:
+                          escaped=False
+                      elif ch=='\\':
+                          escaped=True
+                      elif ord(ch)==96:
+                          template=False
+                      i+=1
+                      continue
+                  if ch in ("'",'"'):
+                      quote=ch
+                  elif ord(ch)==96:
+                      template=True
+                  elif ch=='{':
+                      depth+=1
+                  elif ch=='}':
+                      depth-=1
+                      if depth==0:
+                          return text[start:i+1]
+                  i+=1
+              raise RuntimeError(signature)
+
+          old_daily=function_block(before,'async function runDailyRumors(internal = false)')
+          new_daily=function_block(after,'async function runDailyRumors(internal = false)')
+          assert hashlib.sha256(old_daily.encode()).hexdigest()==hashlib.sha256(new_daily.encode()).hexdigest(), 'Today runDailyRumors changed'
+
+          for marker in [
+              'treasure-run-recorder-20260926-r1',
+              'battle-visible-board-active-20260926-r1',
+              'minigame-entry-only-auto-20260926-r1',
+              'trader-fishing-stability-20260926-r1',
+              'rumors-shared-results-20260926-r2',
+              'maps-manual-scan-only-20260923-r1',
+              "const CRYSTAL_ROOM_MARKER = 'item_fake_prematmaxeventlvl';",
+              'false zero is not stored.'
+          ]:
+              assert marker in before and marker in after, marker
+
+          assert after.count('data-content="rumors"')==before.count('data-content="rumors"')==1
+          assert after.count('id="hk-rumors-today-summary"')==1
+          print('REGRESSION_GUARDS=PASS')
+          PY
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.14.rumors-hunter-full.candidate.user.js
+          audit=audit/hk-userscript-1-18-14-rumors-hunter-full-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            grep -Fq "RUMORS_COORDINATOR_R3_LIVE=PASS" audit/hk-rumors-coordinator-r3-live-status.txt
+
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          current=json.loads(path.read_text(encoding='utf-8'))
+          if current.get('target_version') != '1.18.13':
+              raise SystemExit(f"unexpected current release target: {current.get('target_version')}")
+          preserve=[]
+          for marker in [current.get('primary_marker'), *current.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.13',
+              'target_version':'1.18.14',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.14.rumors-hunter-full.candidate.user.js',
+              'primary_marker':'rumors-hunter-coordinator-kokkaras-v40-20260926-r4',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-14-rumors-hunter-full-live-status.txt',
+              'commit_message':'feat: deploy full Rumors Hunter in userscript 1.18.14',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+            {
+              echo "USERSCRIPT_1_18_14_RUMORS_HUNTER_FULL_PREDEPLOY=PASS"
+              echo "source_version=1.18.13"
+              echo "target_version=1.18.14"
+              echo "canon=Kokkaras_5.3.22_ui_icons_pit_dim_v40"
+              echo "coordinator=HK_R3_LIVE"
+              echo "public_kokkaras_feed=ENABLED"
+              echo "private_kokkaras_coordinator=NOT_USED"
+              echo "game_bearer_to_third_party=NEVER"
+              echo "claim_lease_heartbeat=ENABLED"
+              echo "radius=3"
+              echo "jackpots_per_city=3"
+              echo "tier2_primary=ENABLED"
+              echo "map_signature_guard=ENABLED"
+              echo "pause_stop=ENABLED"
+              echo "history_freshness=ENABLED"
+              echo "today_runDailyRumors=BYTE_IDENTICAL"
+              echo "today_summary=ENHANCED"
+              echo "full235_zero_guard=PRESERVED"
+              echo "treasure_run_recorder=PRESERVED"
+              echo "battle_visible_board=PRESERVED"
+              echo "syntax=PASS"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.18.14 full Rumors Hunter"
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.user.js /tmp/base.sha /tmp/candidate.sha
