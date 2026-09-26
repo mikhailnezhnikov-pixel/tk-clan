@@ -1,0 +1,116 @@
+name: Cleanup Approved HK DB Backup
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/hk-approved-db-cleanup-trigger.txt'
+      - '.github/workflows/cleanup-approved-hk-db-backup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cleanup-approved-hk-db-backup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Remove approved redundant backup and verify database
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' > /tmp/cleanup.txt 2>&1 <<'REMOTE'
+          set -euo pipefail
+          dir=/var/lib/hamsterking-license
+          live="$dir/licenses.db"
+          keep="$dir/licenses.db.bak.rumors-coordinator-r3.20260926-070526"
+          old="$dir/licenses.db.bak.rumors-shared-r2.20260926-063329"
+
+          echo "timestamp=$(date -Is)"
+          echo '[before]'
+          df -hT /
+          ls -lh "$live" "$keep" "$old"
+          test -s "$live"
+          test -s "$keep"
+          test -s "$old"
+
+          echo '[cleanup]'
+          old_size=$(stat -c %s "$old")
+          rm -f -- "$old"
+          test ! -e "$old"
+          sync
+          echo "removed_bytes=$old_size"
+
+          echo '[sqlite]'
+          runuser -u hamsterking-license -- python3 - <<'PY'
+          import sqlite3
+          p='/var/lib/hamsterking-license/licenses.db'
+          db=sqlite3.connect(p, timeout=30)
+          try:
+              mode=db.execute('PRAGMA journal_mode').fetchone()[0]
+              result=db.execute('PRAGMA quick_check(1)').fetchone()[0]
+              print('journal_mode='+str(mode))
+              print('quick_check='+str(result))
+              if str(result).lower()!='ok':
+                  raise SystemExit('quick_check failed: '+str(result))
+          finally:
+              db.close()
+          PY
+
+          echo '[service]'
+          systemctl is-active hamsterking-license.service
+          systemctl show hamsterking-license.service -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStatus --no-pager
+
+          echo '[after]'
+          df -hT /
+          ls -lh "$live" "$keep"
+          REMOTE
+          cat /tmp/cleanup.txt
+
+      - name: Verify public panel exact match
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/HamsterKingMobile.user.js /tmp/server.js
+          curl -fsSL --retry 6 --retry-delay 2 --connect-timeout 10 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/panel.js?cleanup=$(date +%s)" -o /tmp/public.js
+          node --check /tmp/server.js
+          node --check /tmp/public.js
+          cmp -s /tmp/server.js /tmp/public.js
+          echo '[public]' >> /tmp/cleanup.txt
+          echo 'http=200' >> /tmp/cleanup.txt
+          echo 'syntax=PASS' >> /tmp/cleanup.txt
+          echo 'public_exact_match=PASS' >> /tmp/cleanup.txt
+
+      - name: Persist audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/cleanup.txt audit/hk-approved-db-cleanup-latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-approved-db-cleanup-latest.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "ops: persist approved HK DB backup cleanup"
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup runner
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/cleanup.txt /tmp/server.js /tmp/public.js
