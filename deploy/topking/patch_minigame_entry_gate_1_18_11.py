@@ -1,3 +1,4 @@
+# build-trigger: 1.18.11 minigame entry gate r1
 from pathlib import Path
 import sys
 
