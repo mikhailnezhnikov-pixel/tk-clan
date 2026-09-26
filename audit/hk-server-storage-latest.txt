@@ -1,0 +1,230 @@
+Warning: Permanently added '89.125.1.71' (ED25519) to the list of known hosts.
+timestamp=2026-09-26T07:38:04+00:00
+[service-show]
+MainPID=0
+NRestarts=25
+ExecMainStatus=1
+DynamicUser=no
+ReadWritePaths=/var/lib/hamsterking-license
+ReadOnlyPaths=
+InaccessiblePaths=
+ProtectHome=yes
+ProtectSystem=strict
+ActiveState=activating
+SubState=auto-restart
+[service-unit]
+# /etc/systemd/system/hamsterking-license.service
+[Unit]
+Description=Hamster King License Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hamsterking-license
+Group=hamsterking-license
+EnvironmentFile=/etc/hamsterking-license.env
+WorkingDirectory=/opt/hamsterking-license
+ExecStart=/usr/bin/python3 /opt/hamsterking-license/server.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/hamsterking-license
+
+[Install]
+WantedBy=multi-user.target
+
+# /etc/systemd/system/hamsterking-license.service.d/min-version.conf
+[Service]
+Environment="HK_MIN_SCRIPT_VERSION=1.18.11"
+[filesystems]
+/      /dev/vda1 ext4   rw,relatime
+[df]
+Filesystem     Type  Size  Used Avail Use% Mounted on
+/dev/vda1      ext4   30G   29G     0 100% /
+/dev/vda1      ext4   30G   29G     0 100% /
+/dev/vda1      ext4   30G   29G     0 100% /
+[inodes]
+Filesystem      Inodes  IUsed   IFree IUse% Mounted on
+/dev/vda1      1966080 439123 1526957   23% /
+/dev/vda1      1966080 439123 1526957   23% /
+/dev/vda1      1966080 439123 1526957   23% /
+[write-tests]
+/tmp=WRITE_OK
+/var/tmp=WRITE_OK
+/opt/hamsterking-license=WRITE_OK
+[db-references]
+31:DB_PATH = os.environ.get("HK_LICENSE_DB", "/var/lib/hamsterking-license/licenses.db")
+221:    db = sqlite3.connect(DB_PATH, timeout=10)
+239:    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+4259:    backup = DB_PATH + ".bak.full235." + stamp
+4260:    source = sqlite3.connect(DB_PATH)
+4261:    target = sqlite3.connect(backup)
+8261:    global DB_PATH, ADMIN_HASH, SIGNING_SECRET, MIN_SCRIPT_VERSION, RELEASE_PATH, PUBLIC_BASE, TELEGRAM_BOT_TOKEN
+8264:        DB_PATH = os.path.join(folder, "test.db")
+[directory]
+total 182M
+drwxr-xr-x 8 root                root                  32K Sep 26 07:38 .
+drwxr-xr-x 7 root                root                 4.0K Aug  3 11:28 ..
+-rwx------ 1 root                root                 1.4K Aug  9 10:34 backup_db.py
+drwxrwxrwx 3 root                root                 4.0K Sep 15 06:18 business-calculator
+-rw-r--r-- 1 root                root                    0 Aug 21 02:22 hamsterking.db
+-rw-r--r-- 1 root                root                 1.7K Aug 22 10:49 HamsterKingMobile.loader.user.js
+-rw-r--r-- 1 root                root                 1.7K Aug 22 10:49 HamsterKingMobile.loader.user.js.bak-before-443
+-rw-r--r-- 1 root                root                 270K Aug 23 04:41 HamsterKingMobile.previous.user.js
+-rw-r--r-- 1 root                root                 1.3M Sep 26 07:00 HamsterKingMobile.user.js
+-rw-r--r-- 1 root                root                 326K Aug 24 06:51 HamsterKingMobile.user.js.1.7.59.bak
+-rw-r--r-- 1 root                root                 918K Sep 21 02:20 HamsterKingMobile.user.js.bak.1.17.10.20260921-023111
+-rw-r--r-- 1 root                root                 923K Sep 21 02:31 HamsterKingMobile.user.js.bak.1.17.10.20260921-023207
+-rw-r--r-- 1 root                root                 923K Sep 21 02:32 HamsterKingMobile.user.js.bak.1.17.10.20260921-023929
+-rw-r--r-- 1 root                root                 924K Sep 21 02:39 HamsterKingMobile.user.js.bak.1.17.10.20260921-024612
+-rw-r--r-- 1 root                root                 924K Sep 21 04:28 HamsterKingMobile.user.js.bak.1.17.10.20260921-043631
+-rw-r--r-- 1 root                root                 920K Sep 21 04:36 HamsterKingMobile.user.js.bak.1.17.13.20260921-052701
+-rw-r--r-- 1 root                root                 923K Sep 21 05:27 HamsterKingMobile.user.js.bak.1.17.14.20260921-053542
+-rw-r--r-- 1 root                root                 928K Sep 21 05:35 HamsterKingMobile.user.js.bak.1.17.15.20260921-054444
+-rw-r--r-- 1 root                root                 927K Sep 21 05:44 HamsterKingMobile.user.js.bak.1.17.16.20260921-061820
+-rw-r--r-- 1 root                root                 929K Sep 21 06:18 HamsterKingMobile.user.js.bak.1.17.17.20260921-063630
+-rw-r--r-- 1 root                root                 932K Sep 21 06:36 HamsterKingMobile.user.js.bak.1.17.18.20260921-071732
+-rw-r--r-- 1 root                root                 935K Sep 21 07:17 HamsterKingMobile.user.js.bak.1.17.19.20260921-075709
+-rw-r--r-- 1 root                root                 938K Sep 21 07:57 HamsterKingMobile.user.js.bak.1.17.20.20260921-081542
+-rw-r--r-- 1 root                root                 939K Sep 21 08:15 HamsterKingMobile.user.js.bak.1.17.21.20260921-082542
+-rw-r--r-- 1 root                root                 945K Sep 21 08:25 HamsterKingMobile.user.js.bak.1.17.22.20260921-084326
+-rw-r--r-- 1 root                root                 944K Sep 21 08:43 HamsterKingMobile.user.js.bak.1.17.23.20260921-090147
+-rw-r--r-- 1 root                root                 959K Sep 21 09:01 HamsterKingMobile.user.js.bak.1.17.24.20260921-104909
+-rw-r--r-- 1 root                root                 962K Sep 21 11:50 HamsterKingMobile.user.js.bak.1.17.24.finalize.20260921-115739
+-rw-r--r-- 1 root                root                 963K Sep 21 11:57 HamsterKingMobile.user.js.bak.1.17.24.finalize-loader-compat.20260921-120349
+-rw-r--r-- 1 root                root                 963K Sep 21 12:03 HamsterKingMobile.user.js.bak.1.17.24.puzzle-solver.20260921-121723
+-rw-r--r-- 1 root                root                 975K Sep 21 12:17 HamsterKingMobile.user.js.bak.1.17.24.puzzle-solver.20260921-132450
+-rw-r--r-- 1 root                root                 975K Sep 21 13:24 HamsterKingMobile.user.js.bak.1.17.24.puzzle-solver.20260921-132741
+-rw-r--r-- 1 root                root                 975K Sep 21 13:27 HamsterKingMobile.user.js.bak.1.17.24.puzzle-solver.20260921-134832
+-rw-r--r-- 1 root                root                 977K Sep 21 13:48 HamsterKingMobile.user.js.bak.1.17.24.puzzle-solver.20260921-154848
+-rw-r--r-- 1 root                root                 978K Sep 21 15:48 HamsterKingMobile.user.js.bak.1.17.24.puzzle-solver.20260922-012432
+-rw-r--r-- 1 root                root                 961K Sep 21 10:49 HamsterKingMobile.user.js.bak.1.17.24.runner-canon.20260921-115044
+-rw-r--r-- 1 root                root                 980K Sep 22 01:24 HamsterKingMobile.user.js.bak.1.17.25.20260922-105214
+-rw-r--r-- 1 root                root                 987K Sep 22 10:52 HamsterKingMobile.user.js.bak.1.17.26.20260922-115805
+-rw-r--r-- 1 root                root                 998K Sep 22 11:58 HamsterKingMobile.user.js.bak.1.17.27.20260922-122052
+-rw-r--r-- 1 root                root                1000K Sep 22 12:20 HamsterKingMobile.user.js.bak.1.17.28.20260922-123229
+-rw-r--r-- 1 root                root                 995K Sep 22 12:32 HamsterKingMobile.user.js.bak.1.17.29.20260922-124712
+-rw-r--r-- 1 root                root                 999K Sep 22 12:47 HamsterKingMobile.user.js.bak.1.17.30.20260922-130029
+-rw-r--r-- 1 root                root                1003K Sep 22 13:00 HamsterKingMobile.user.js.bak.1.17.31.20260922-132342
+-rw-r--r-- 1 root                root                1005K Sep 22 13:23 HamsterKingMobile.user.js.bak.1.17.32.20260922-132950
+-rw-r--r-- 1 root                root                1007K Sep 22 13:29 HamsterKingMobile.user.js.bak.1.17.33.20260922-133558
+-rw-r--r-- 1 root                root                1014K Sep 22 13:35 HamsterKingMobile.user.js.bak.1.17.34.20260922-133933
+-rw-r--r-- 1 root                root                1021K Sep 22 13:39 HamsterKingMobile.user.js.bak.1.17.35.20260922-140917
+-rw-r--r-- 1 root                root                1021K Sep 22 14:09 HamsterKingMobile.user.js.bak.1.17.36.20260922-151608
+-rw-r--r-- 1 root                root                1021K Sep 22 15:16 HamsterKingMobile.user.js.bak.1.17.37.20260922-152027
+-rw-r--r-- 1 root                root                1022K Sep 22 15:20 HamsterKingMobile.user.js.bak.1.17.38.20260923-023444
+-rw-r--r-- 1 root                root                1022K Sep 23 02:34 HamsterKingMobile.user.js.bak.1.17.39.20260923-024721
+-rw-r--r-- 1 root                root                 1.1M Sep 23 03:11 HamsterKingMobile.user.js.bak.1.17.41.20260923-032016
+-rw-r--r-- 1 root                root                 920K Sep 21 01:15 HamsterKingMobile.user.js.bak.1.17.5.20260921-013738
+-rw-r--r-- 1 root                root                 1.1M Sep 23 06:17 HamsterKingMobile.user.js.bak.1.17.53.20260923-062616
+-rw-r--r-- 1 root                root                 1.1M Sep 23 06:47 HamsterKingMobile.user.js.bak.1.17.56.20260923-065311
+-rw-r--r-- 1 root                root                 920K Sep 21 01:37 HamsterKingMobile.user.js.bak.1.17.6.20260921-014246
+-rw-r--r-- 1 root                root                 1.1M Sep 23 11:39 HamsterKingMobile.user.js.bak.1.17.62.20260923-121504
+-rw-r--r-- 1 root                root                 922K Sep 21 01:42 HamsterKingMobile.user.js.bak.1.17.7.20260921-014822
+-rw-r--r-- 1 root                root                 1.2M Sep 23 13:42 HamsterKingMobile.user.js.bak.1.17.73.20260923-134704
+-rw-r--r-- 1 root                root                 922K Sep 21 01:48 HamsterKingMobile.user.js.bak.1.17.8.20260921-015843
+-rw-r--r-- 1 root                root                 920K Sep 21 01:58 HamsterKingMobile.user.js.bak.1.17.9.20260921-022038
+-rw-r----- 1 hamsterking-license hamsterking-license  171K Aug  5 04:00 HamsterKingMobile.user.js.bak-1.7.10
+-rw-r----- 1 hamsterking-license hamsterking-license  174K Aug  5 04:12 HamsterKingMobile.user.js.bak-1.7.12
+-rw-r----- 1 hamsterking-license hamsterking-license  174K Aug  5 05:18 HamsterKingMobile.user.js.bak-1.7.13
+-rw-r--r-- 1 root                root                 211K Aug 21 04:13 HamsterKingMobile.user.js.bak-1.7.47
+-rw-r--r-- 1 root                root                 215K Aug 21 04:17 HamsterKingMobile.user.js.bak-1.7.48
+-rw-r--r-- 1 root                root                 215K Aug 21 06:45 HamsterKingMobile.user.js.bak-1.7.49
+-rw-r--r-- 1 root                root                 216K Aug 21 06:48 HamsterKingMobile.user.js.bak-1.7.50
+-rw-r--r-- 1 root                root                 216K Aug 21 12:29 HamsterKingMobile.user.js.bak-1.7.51
+-rw-r----- 1 hamsterking-license hamsterking-license  169K Aug  5 03:47 HamsterKingMobile.user.js.bak-1.7.7
+-rw-r--r-- 1 root                root                 430K Aug 26 15:27 HamsterKingMobile.user.js.bak-1.7.86
+-rw-r--r-- 1 root                root                 426K Aug 26 16:05 HamsterKingMobile.user.js.bak-1.7.88
+-rw-r--r-- 1 root                root                 427K Aug 27 02:46 HamsterKingMobile.user.js.bak-1.7.90
+-rw-r--r-- 1 root                root                 428K Aug 27 16:33 HamsterKingMobile.user.js.bak-1.7.91
+-rw-r--r-- 1 root                root                 432K Aug 28 02:22 HamsterKingMobile.user.js.bak-1.7.92
+-rw-r--r-- 1 root                root                 426K Aug 28 02:27 HamsterKingMobile.user.js.bak-1.7.93
+-rw-r--r-- 1 root                root                 425K Aug 28 02:46 HamsterKingMobile.user.js.bak-1.7.94
+-rw-r--r-- 1 root                root                 427K Aug 28 02:59 HamsterKingMobile.user.js.bak-1.7.95
+-rw-r--r-- 1 root                root                 454K Sep  5 14:22 HamsterKingMobile.user.js.bak-1.9.1
+[kernel-storage-errors]
+[service-errors]
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     init_db()
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     with db_session() as db:
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     return next(self.gen)
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:            ^^^^^^^^^^^^^^
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     db = connect()
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:          ^^^^^^^^^
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/opt/hamsterking-license/server.py", line 223, in connect
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     db.execute("PRAGMA journal_mode=WAL")
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]: sqlite3.OperationalError: disk I/O error
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]: Error in sys.excepthook:
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]: Traceback (most recent call last):
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 228, in partial_apport_excepthook
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     return apport_excepthook(binary, exc_type, exc_obj, exc_tb)
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 144, in apport_excepthook
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     os.open(pr_filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640), "wb"
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]: OSError: [Errno 30] Read-only file system: '/var/crash/_opt_hamsterking-license_server.py.995.crash'
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]: Original exception was:
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]: Traceback (most recent call last):
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     init_db()
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     with db_session() as db:
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     return next(self.gen)
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:            ^^^^^^^^^^^^^^
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     db = connect()
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:          ^^^^^^^^^
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:   File "/opt/hamsterking-license/server.py", line 223, in connect
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]:     db.execute("PRAGMA journal_mode=WAL")
+Sep 26 07:37:57 Mikhail.nezhnikov.com python3[29532]: sqlite3.OperationalError: disk I/O error
+Sep 26 07:37:57 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Main process exited, code=exited, status=1/FAILURE
+Sep 26 07:37:57 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Failed with result 'exit-code'.
+Sep 26 07:38:02 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Scheduled restart job, restart counter is at 25.
+Sep 26 07:38:02 Mikhail.nezhnikov.com systemd[1]: Started hamsterking-license.service - Hamster King License Service.
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]: Traceback (most recent call last):
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     init_db()
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     with db_session() as db:
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     return next(self.gen)
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:            ^^^^^^^^^^^^^^
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     db = connect()
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:          ^^^^^^^^^
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/opt/hamsterking-license/server.py", line 223, in connect
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     db.execute("PRAGMA journal_mode=WAL")
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]: sqlite3.OperationalError: disk I/O error
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]: Error in sys.excepthook:
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]: Traceback (most recent call last):
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 228, in partial_apport_excepthook
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     return apport_excepthook(binary, exc_type, exc_obj, exc_tb)
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 144, in apport_excepthook
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     os.open(pr_filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640), "wb"
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]: OSError: [Errno 30] Read-only file system: '/var/crash/_opt_hamsterking-license_server.py.995.crash'
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]: Original exception was:
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]: Traceback (most recent call last):
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     init_db()
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     with db_session() as db:
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     return next(self.gen)
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:            ^^^^^^^^^^^^^^
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     db = connect()
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:          ^^^^^^^^^
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:   File "/opt/hamsterking-license/server.py", line 223, in connect
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]:     db.execute("PRAGMA journal_mode=WAL")
+Sep 26 07:38:02 Mikhail.nezhnikov.com python3[29558]: sqlite3.OperationalError: disk I/O error
+Sep 26 07:38:02 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Main process exited, code=exited, status=1/FAILURE
+Sep 26 07:38:02 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Failed with result 'exit-code'.
