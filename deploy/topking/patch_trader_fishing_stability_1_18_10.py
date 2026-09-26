@@ -1,4 +1,4 @@
-# build-trigger: 1.18.10 trader fishing stability
+# build-trigger: 1.18.10 trader fishing stability r2
 from pathlib import Path
 import sys
 
