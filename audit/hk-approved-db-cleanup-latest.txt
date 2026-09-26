@@ -1,13 +1,14 @@
 Warning: Permanently added '89.125.1.71' (ED25519) to the list of known hosts.
-timestamp=2026-09-26T07:56:23+00:00
+timestamp=2026-09-26T07:57:51+00:00
 [before]
 Filesystem     Type  Size  Used Avail Use% Mounted on
-/dev/vda1      ext4   30G   25G  3.8G  87% /
+/dev/vda1      ext4   30G   23G  5.8G  80% /
 -rw-r--r-- 1 hamsterking-license hamsterking-license 2.2G Sep 26 07:56 /var/lib/hamsterking-license/licenses.db
 -rw-r--r-- 1 root                root                2.2G Sep 26 07:05 /var/lib/hamsterking-license/licenses.db.bak.rumors-coordinator-r3.20260926-070526
--rw-r--r-- 1 root                root                2.1G Sep 26 06:33 /var/lib/hamsterking-license/licenses.db.bak.rumors-shared-r2.20260926-063329
+old_backup=already_removed
 [cleanup]
-removed_bytes=2212335616
+removed_bytes=0
+cleanup_state=already_removed
 [sqlite]
 journal_mode=wal
 quick_check=ok
