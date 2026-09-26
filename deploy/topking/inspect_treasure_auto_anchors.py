@@ -73,3 +73,9 @@ Path("audit/treasure-auto-anchors.json").write_text(
     json.dumps(out,ensure_ascii=False,indent=2)+"\n",encoding="utf-8"
 )
 print("TREASURE_AUTO_ANCHORS=PASS")
+
+print("PRINT_AUTOMAP_CURRENT_CONTEXT")
+for key in ["async function runAutoMapTick","function setAutoMapEnabled","function autoMapJourneyButton","function autoMapMapCards","function dispatchAutoMapTap","function autoMapStartLockAt"]:
+    print("=== "+key+" ===")
+    for hit in out["hits"].get(key,[])[:1]:
+        print(hit["context"])
