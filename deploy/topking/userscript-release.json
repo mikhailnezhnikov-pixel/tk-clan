@@ -85,5 +85,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-21-treasure-auto-map-handoff-live-status.txt",
-  "commit_message": "fix: deploy Treasure AutoMap minigame handoff in userscript 1.18.21"
+  "commit_message": "fix: deploy Treasure AutoMap minigame handoff in userscript 1.18.21",
+  "trigger_revision": 1
 }
