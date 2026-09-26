@@ -1,0 +1,9 @@
+USERSCRIPT_1_18_19_TREASURE_AUTO_MAP_START_LOCK_PREDEPLOY=PASS
+source_version=1.18.18
+target_version=1.18.19
+auto_map_click_dispatch=SINGLE
+journey_start_lock_ms=9000
+repeat_journey_while_locked=NO
+syntax=PASS
+base_sha256=2c673e99cd1873dec1591a9754a08ffa0ed06a49d20a18a23b7b125d74510a37
+candidate_sha256=b05af8932ffda8e8e483186bfa5963ac4a36fc32967c7d9c54dc2da65062ef07
