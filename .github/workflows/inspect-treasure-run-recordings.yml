@@ -1,0 +1,58 @@
+name: Inspect Treasure Run Recordings
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/treasure-run-recordings-inspect-trigger.txt'
+      - 'deploy/topking/inspect_treasure_run_recordings_server.py'
+      - '.github/workflows/inspect-treasure-run-recordings.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inspect-treasure-run-recordings
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Read recordings
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            deploy/topking/inspect_treasure_run_recordings_server.py \
+            root@89.125.1.71:/tmp/inspect_treasure_run_recordings_server.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "python3 /tmp/inspect_treasure_run_recordings_server.py" \
+            > /tmp/treasure-run-recordings.json
+          python3 -m json.tool /tmp/treasure-run-recordings.json >/dev/null
+      - name: Persist latest inspection
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/treasure-run-recordings.json audit/treasure-run-recordings-latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/treasure-run-recordings-latest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist Treasure Map run recordings"
+            git push origin HEAD:main
+          fi
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/treasure-run-recordings.json
