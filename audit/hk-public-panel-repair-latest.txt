@@ -1,0 +1,69 @@
+before_http=502
+[service-before]
+Warning: Permanently added '89.125.1.71' (ED25519) to the list of known hosts.
+MainPID=0
+NRestarts=313
+ExecMainStatus=1
+ActiveState=activating
+SubState=auto-restart
+repair_action=restart
+active
+[service-after]
+MainPID=0
+NRestarts=0
+ExecMainStatus=1
+ActiveState=activating
+SubState=auto-restart
+after_http=502
+public_exact_match=FAIL
+[journal-tail]
+Sep 26 07:35:53 Mikhail.nezhnikov.com python3[28454]:          ^^^^^^^^^
+Sep 26 07:35:53 Mikhail.nezhnikov.com python3[28454]:   File "/opt/hamsterking-license/server.py", line 223, in connect
+Sep 26 07:35:53 Mikhail.nezhnikov.com python3[28454]:     db.execute("PRAGMA journal_mode=WAL")
+Sep 26 07:35:53 Mikhail.nezhnikov.com python3[28454]: sqlite3.OperationalError: disk I/O error
+Sep 26 07:35:54 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Main process exited, code=exited, status=1/FAILURE
+Sep 26 07:35:54 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Failed with result 'exit-code'.
+Sep 26 07:35:59 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Scheduled restart job, restart counter is at 4.
+Sep 26 07:35:59 Mikhail.nezhnikov.com systemd[1]: Started hamsterking-license.service - Hamster King License Service.
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]: Traceback (most recent call last):
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     init_db()
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     with db_session() as db:
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     return next(self.gen)
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:            ^^^^^^^^^^^^^^
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     db = connect()
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:          ^^^^^^^^^
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/opt/hamsterking-license/server.py", line 223, in connect
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     db.execute("PRAGMA journal_mode=WAL")
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]: sqlite3.OperationalError: disk I/O error
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]: Error in sys.excepthook:
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]: Traceback (most recent call last):
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 228, in partial_apport_excepthook
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     return apport_excepthook(binary, exc_type, exc_obj, exc_tb)
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 144, in apport_excepthook
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     os.open(pr_filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640), "wb"
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]: OSError: [Errno 30] Read-only file system: '/var/crash/_opt_hamsterking-license_server.py.995.crash'
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]: Original exception was:
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]: Traceback (most recent call last):
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/opt/hamsterking-license/server.py", line 8453, in <module>
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     init_db()
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/opt/hamsterking-license/server.py", line 240, in init_db
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     with db_session() as db:
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     return next(self.gen)
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:            ^^^^^^^^^^^^^^
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/opt/hamsterking-license/server.py", line 230, in db_session
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     db = connect()
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:          ^^^^^^^^^
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:   File "/opt/hamsterking-license/server.py", line 223, in connect
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]:     db.execute("PRAGMA journal_mode=WAL")
+Sep 26 07:35:59 Mikhail.nezhnikov.com python3[28488]: sqlite3.OperationalError: disk I/O error
+Sep 26 07:35:59 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Main process exited, code=exited, status=1/FAILURE
+Sep 26 07:35:59 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Failed with result 'exit-code'.
+Sep 26 07:36:04 Mikhail.nezhnikov.com systemd[1]: hamsterking-license.service: Scheduled restart job, restart counter is at 5.
+Sep 26 07:36:04 Mikhail.nezhnikov.com systemd[1]: Started hamsterking-license.service - Hamster King License Service.
