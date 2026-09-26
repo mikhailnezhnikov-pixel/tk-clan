@@ -23,6 +23,7 @@ keywords=(
 )
 
 lots={}
+visual_lots={}
 states=[]
 strings=[]
 
@@ -38,6 +39,11 @@ def walk(v,capture,path):
             key=lot_id
             if key not in lots:
                 lots[key]={"capture":capture,"path":path,"lot":v}
+        if isinstance(v.get("lot_view"),dict):
+            vv=json.dumps(v.get("lot_view"),ensure_ascii=False).lower()
+            if "minigames/fishing/" in vv or "fishing_water" in vv or "calm_water" in vv or "tornado_water" in vv or "creatures_water" in vv:
+                vid=str(v.get("id") or v.get("shop_lot_id") or v.get("lot_view",{}).get("name") or path)
+                visual_lots.setdefault(vid,{"capture":capture,"path":path,"lot":v})
         if "fair_slots" in v and isinstance(v.get("fair_slots"),list):
             slot_rows=v.get("fair_slots") or []
             hits=[]
@@ -90,6 +96,7 @@ out={
     "cutoff":cutoff,
     "lot_count":len(lots),
     "lots":lots,
+    "visual_lots":visual_lots,
     "recent_states":unique,
     "strings":strings[:120],
 }
