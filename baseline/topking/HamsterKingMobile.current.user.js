@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.17.98
+// @version      1.17.99
+// @release-note Сражение: в общем HK-скрипте добавлен отдельный переключатель «Автобой». По умолчанию выключен. При включении скрипт кликает врагов по рассчитанным цифрам по одному, ждёт обновления поля после каждого удара и останавливается при рассинхронизации. Публичный скрипт Сокровищ не изменён.
 // @release-note Сражение: новый золотой враг type_04 (Хранитель Сокровищ) теперь учитывается решателем как полноценный противник с его HP и попадает в расчёт порядка атак.
 // @release-note Запуск на Safari/iPhone: late-login handoff больше не выжигает лимит попыток во время 429 cooldown. После паузы HK автоматически пробует снова; /player/me bootstrap стал коротким one-shot, а диагностическая кнопка показывает актуальную стадию вместо застывшего BOOT.
 // @release-note Game API: базовый cooldown после HTTP 429 сокращён с 60 до 20 секунд. Магазин больше не добавляет сверху ещё 1,2 секунды перед повтором; если сервер явно прислал больший Retry-After, он по-прежнему уважается.
@@ -109,7 +110,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.17.98';
+  const BUILD_VERSION = '1.17.99';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -16220,12 +16221,13 @@
     recordDiagnostic('native-login-gate-open',{revision:'prelogin-zero-game-api-r1'});
   }
 
-  // HK Puzzle Solver v3 embedded from the user's standalone userscript.
-  // It is intentionally DOM-only: no Game API calls and no automatic clicks.
-  // The background loop preserves the standalone cadence (300 ms initial scan,
-  // then every 500 ms) and only draws numbered, pointer-events:none overlays.
+  // HK Puzzle Solver v3 embedded only in the common HK userscript.
+  // It remains DOM-only. Number hints are always passive; optional battle
+  // auto-click is local, default-off, and is NOT published to the standalone
+  // public Treasure script/site.
   const HK_PUZZLE_SOLVER_REV = 'puzzle-solver-v3-embedded-20260921-r1';
   const HK_BATTLE_ENEMY_TYPE04_REV = 'battle-enemy-type04-20260926-r1';
+  const HK_BATTLE_AUTO_CLICK_REV = 'battle-auto-click-toggle-20260926-r1';
   const hkPuzzleSolver = (() => {
     const BATTLE_FIRST_SLOT = 7;
     const BATTLE_SIZE = 12;
@@ -16234,13 +16236,139 @@
     const RED = '01';
     const BLUE = '02';
     const GREEN = '03';
+    const BATTLE_AUTO_STORAGE_KEY = 'hk:battle:auto-click:v1';
+    const BATTLE_AUTO_SETTLE_MS = 260;
+    const BATTLE_AUTO_CHANGE_TIMEOUT_MS = 4500;
 
     let lastSignature = '';
     let intervalId = null;
     let initialTimerId = null;
+    let battleAutoRunning = false;
+    let battleAutoRunId = 0;
+    let battleAutoToggle = null;
 
     function clearNumbers() {
       [...document.querySelectorAll('.hkSolverNumber')].forEach(element => element.remove());
+    }
+
+    function battleAutoEnabled() {
+      try { return localStorage.getItem(BATTLE_AUTO_STORAGE_KEY) === '1'; }
+      catch (_) { return false; }
+    }
+
+    function setBattleAutoEnabled(enabled) {
+      const value=!!enabled;
+      try { localStorage.setItem(BATTLE_AUTO_STORAGE_KEY,value?'1':'0'); } catch (_) {}
+      if (!value) {
+        battleAutoRunId += 1;
+        battleAutoRunning = false;
+      }
+      updateBattleAutoToggle();
+      recordDiagnostic('battle-auto-toggle',{revision:HK_BATTLE_AUTO_CLICK_REV,enabled:value});
+      if (value) {
+        lastSignature='';
+        setTimeout(checkPuzzle,0);
+      }
+      return value;
+    }
+
+    function updateBattleAutoToggle(isBattle = null) {
+      if (!battleAutoToggle) return;
+      const enabled=battleAutoEnabled();
+      battleAutoToggle.textContent=enabled ? either('Автобой: ВКЛ','Auto battle: ON') : either('Автобой: ВЫКЛ','Auto battle: OFF');
+      battleAutoToggle.style.background=enabled ? '#40c85a' : '#2b2b2b';
+      battleAutoToggle.style.color=enabled ? '#071b0a' : '#fff';
+      if (isBattle !== null) battleAutoToggle.style.display=isBattle ? 'block' : 'none';
+    }
+
+    function ensureBattleAutoToggle(isBattle) {
+      if (!battleAutoToggle) {
+        battleAutoToggle=document.createElement('button');
+        battleAutoToggle.id='hkBattleAutoToggle';
+        battleAutoToggle.type='button';
+        Object.assign(battleAutoToggle.style,{
+          position:'fixed',
+          right:'14px',
+          bottom:'154px',
+          zIndex:'2147483646',
+          border:'2px solid rgba(255,255,255,.75)',
+          borderRadius:'18px',
+          padding:'8px 11px',
+          fontSize:'12px',
+          fontWeight:'900',
+          lineHeight:'1',
+          boxShadow:'0 4px 14px rgba(0,0,0,.55)',
+          WebkitTapHighlightColor:'transparent',
+          touchAction:'manipulation'
+        });
+        battleAutoToggle.addEventListener('click',event=>{
+          event.preventDefault();
+          event.stopPropagation();
+          setBattleAutoEnabled(!battleAutoEnabled());
+        },true);
+        (document.body || document.documentElement)?.appendChild(battleAutoToggle);
+      }
+      updateBattleAutoToggle(!!isBattle);
+    }
+
+    function battleElementForSlot(slot) {
+      const elements=[...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_type_"]')];
+      return elements.find(element=>{
+        const id=element.getAttribute('data-lot-id')||'';
+        const match=id.match(/enemy_type_(01|02|03|04)_(\d+)_sl(\d+)/);
+        return !!match && Number(match[3])===Number(slot);
+      }) || null;
+    }
+
+    function waitBattleSignatureChange(before,runId) {
+      return new Promise(resolve=>{
+        const started=Date.now();
+        const poll=()=>{
+          if (runId!==battleAutoRunId || !battleAutoEnabled()) { resolve(false); return; }
+          const current=getSignature();
+          if (current!==before) { resolve(true); return; }
+          if (Date.now()-started>=BATTLE_AUTO_CHANGE_TIMEOUT_MS) { resolve(false); return; }
+          setTimeout(poll,90);
+        };
+        setTimeout(poll,90);
+      });
+    }
+
+    async function runBattleAuto(solution) {
+      if (!battleAutoEnabled() || battleAutoRunning || !solution?.order?.length) return false;
+      battleAutoRunning=true;
+      const runId=++battleAutoRunId;
+      recordDiagnostic('battle-auto-start',{
+        revision:HK_BATTLE_AUTO_CLICK_REV,
+        steps:solution.order.length,
+        order:solution.order.map(position=>position+BATTLE_FIRST_SLOT)
+      });
+      try {
+        for (let index=0;index<solution.order.length;index++) {
+          if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
+          const slot=solution.order[index]+BATTLE_FIRST_SLOT;
+          const element=battleElementForSlot(slot);
+          if (!element) {
+            recordDiagnostic('battle-auto-stop',{revision:HK_BATTLE_AUTO_CLICK_REV,reason:'target-missing',slot,index});
+            return false;
+          }
+          const before=getSignature();
+          element.click();
+          recordDiagnostic('battle-auto-click',{revision:HK_BATTLE_AUTO_CLICK_REV,slot,index:index+1});
+          const changed=await waitBattleSignatureChange(before,runId);
+          if (!changed) {
+            recordDiagnostic('battle-auto-stop',{revision:HK_BATTLE_AUTO_CLICK_REV,reason:'field-no-change',slot,index});
+            return false;
+          }
+          await new Promise(resolve=>setTimeout(resolve,BATTLE_AUTO_SETTLE_MS));
+        }
+        recordDiagnostic('battle-auto-complete',{revision:HK_BATTLE_AUTO_CLICK_REV,steps:solution.order.length});
+        return true;
+      } finally {
+        if (runId===battleAutoRunId) battleAutoRunning=false;
+        lastSignature='';
+        setTimeout(checkPuzzle,300);
+      }
     }
 
     function addNumber(element, number) {
@@ -16488,6 +16616,7 @@
       console.log('HK BATTLE потрачено:',solution.cost);
       console.log('HK BATTLE уничтожено:',solution.killed,'из',enemies.length);
       console.log('HK BATTLE нажать слоты:',solution.order.map(pos => pos + BATTLE_FIRST_SLOT));
+      if (battleAutoEnabled() && !battleAutoRunning) void runBattleAuto(solution);
       return true;
     }
 
@@ -16506,11 +16635,14 @@
 
     function checkPuzzle() {
       const signature = getSignature();
+      const isBattle=signature.startsWith('BATTLE|');
+      ensureBattleAutoToggle(isBattle);
+      if (battleAutoRunning) return;
       if (signature === lastSignature) return;
       lastSignature = signature;
       clearNumbers();
       if (signature.startsWith('LIGHTS|')) { runLights(); return; }
-      if (signature.startsWith('BATTLE|')) runBattle();
+      if (isBattle) runBattle();
     }
 
     function start() {
@@ -16526,11 +16658,24 @@
       initialTimerId = null;
       intervalId = null;
       lastSignature = '';
+      battleAutoRunId += 1;
+      battleAutoRunning = false;
       clearNumbers();
+      try { battleAutoToggle?.remove(); } catch (_) {}
+      battleAutoToggle = null;
       recordDiagnostic('puzzle-solver-stop',{revision:HK_PUZZLE_SOLVER_REV});
     }
 
-    return {revision:HK_PUZZLE_SOLVER_REV,start,stop,check:checkPuzzle,get running(){return intervalId !== null;}};
+    return {
+      revision:HK_PUZZLE_SOLVER_REV,
+      battleAutoRevision:HK_BATTLE_AUTO_CLICK_REV,
+      start,
+      stop,
+      check:checkPuzzle,
+      get autoBattleEnabled(){return battleAutoEnabled();},
+      setAutoBattleEnabled:setBattleAutoEnabled,
+      get running(){return intervalId !== null;}
+    };
   })();
   runtime.puzzleSolver = hkPuzzleSolver;
 

@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.17.98
+target_version=1.17.99
+marker=battle-auto-click-toggle-20260926-r1
+source_sha256=eb7b8e0fb3f2825d401a4e5d0fe9dd210aca2af7894ae908a7cc9581b85c5189
+candidate_sha256=8ca7e49f773b3b75694014e8a3481e356226a77f613141698eb77b3e63b10ea9
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
