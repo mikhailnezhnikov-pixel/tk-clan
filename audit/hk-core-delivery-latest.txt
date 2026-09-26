@@ -1,0 +1,11 @@
+[primary]
+curl_rc=0 http=502 time=0.345420 size=0 type= remote=89.125.1.71
+
+[pages]
+curl_rc=0 http=200 time=0.215469 size=1330858 type=application/javascript; charset=utf-8 remote=185.199.111.153
+sha256=76b81fbefcb4f7a86f0d62d97c87f1828d1f39f5d8cb4a66a69977084faad4a0
+version=// @version      1.18.11
+build=  const BUILD_VERSION = '1.18.11';
+core_rev_hits=1
+syntax=PASS
+
