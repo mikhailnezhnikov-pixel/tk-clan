@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.25
+// @version      1.18.26
+// @release-note Темп автоматизации: покупки и мини-игры переведены на последовательный человеческий ритм — пауза на пересканирование поля, отдельная пауза перед открытием лота, чтением окна и подтверждением, затем ожидание ответа/изменения поля перед следующим действием. 409/429/5xx получили увеличенный cooldown без мгновенных повторов.
 // @release-note Торговец: жёсткий whitelist — покупать только монеты сокровищ (random4coins), ягоды (food_*) и карты сокровищ (map). Ключи, яйца, HK-монеты и прочие лоты игнорируются. Рыбалка: каждая цель проходит живую проверку остатка валюты перед выбором и перед подтверждением; недоступные по балансу клетки не нажимаются, после исчерпания очков Автокарта штатно выходит.
 // @release-note Автокарта: после возврата на реальную карту зависшие running-флаги старой мини-игры больше не блокируют следующую клетку. Если активная клетка карты действительно находится сверху, а мини-игра уже нет, старый runner отменяется по runId и Автокарта продолжает маршрут сама.
 // @release-note Сундуки: уже активированные карточки «Активировано/Activated» больше не считаются покупаемой целью даже если у другого слота такой же lotId ещё остался некупленным. После верхних сундуков автомодуль продолжает по реально открывшимся клеткам.
@@ -136,7 +137,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.25';
+  const BUILD_VERSION = '1.18.26';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3722,6 +3723,7 @@
   const HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV='treasure-auto-map-stale-runner-20260927-r2';
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
+  const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -17825,10 +17827,10 @@
     const BATTLE_AUTO_STORAGE_KEY = 'hk:battle:auto-click:v1';
     const CHEST_AUTO_STORAGE_KEY = 'hk:chests:auto-open:v1';
     const LIGHTS_AUTO_STORAGE_KEY = 'hk:lights:auto-click:v1';
-    const BATTLE_AUTO_SETTLE_MS = 260;
+    const BATTLE_AUTO_SETTLE_MS = 1200;
     const BATTLE_AUTO_CHANGE_TIMEOUT_MS = 4500;
     const CHEST_ACTION_TIMEOUT_MS = 3600;
-    const LIGHTS_AUTO_SETTLE_MS = 240;
+    const LIGHTS_AUTO_SETTLE_MS = 1600;
     const LIGHTS_AUTO_CHANGE_TIMEOUT_MS = 4200;
     const LIGHTS_AUTO_MAX_STEPS = 24;
 
@@ -17846,7 +17848,7 @@
     let lightsAutoToggle = null;
     const FISHING_AUTO_STORAGE_KEY = 'hk:fishing:auto-click:v1';
     const FISHING_ACTION_TIMEOUT_MS = 5200;
-    const FISHING_MIN_NEXT_ACTION_GAP_MS = 1800;
+    const FISHING_MIN_NEXT_ACTION_GAP_MS = 2800;
     const FISHING_RECONCILE_WAIT_MS = 2800;
     let fishingAutoRunning = false;
     let fishingAutoRunId = 0;
@@ -17857,7 +17859,7 @@
 
     const TRADER_AUTO_STORAGE_KEY = 'hk:trader:auto-buy:v1';
     const TRADER_ACTION_TIMEOUT_MS = 5200;
-    const TRADER_MIN_NEXT_ACTION_GAP_MS = 1800;
+    const TRADER_MIN_NEXT_ACTION_GAP_MS = 2800;
     const TRADER_MAX_PURCHASES_PER_VISIT = 40;
     let traderAutoRunning = false;
     let traderAutoRunId = 0;
@@ -18053,6 +18055,33 @@
       updateLightsAutoToggle(!!isLights);
     }
 
+    function minigameRandomMs(minMs,maxMs) {
+      const min=Math.max(0,Math.round(Number(minMs)||0));
+      const max=Math.max(min,Math.round(Number(maxMs)||min));
+      return min+Math.floor(Math.random()*(max-min+1));
+    }
+
+    async function minigameHumanPause(stage='scan',data={}) {
+      const ranges={
+        scan:[850,1450],
+        aim:[550,950],
+        confirm:[950,1650],
+        settle:[1500,2400],
+        reward:[650,1050],
+        map:[700,1250]
+      };
+      const range=ranges[stage] || ranges.scan;
+      const waitMs=minigameRandomMs(range[0],range[1]);
+      recordDiagnostic('minigame-human-pause',{
+        revision:HK_MINIGAME_HUMAN_PACING_REV,
+        stage,
+        waitMs,
+        ...data
+      });
+      await new Promise(resolve=>setTimeout(resolve,waitMs));
+      return waitMs;
+    }
+
     function minigameRecentHttpError(since=0,windowMs=8000) {
       const error=window.__HK_MINIGAME_HTTP_ERROR__;
       if (!error || !Number(error.at)) return null;
@@ -18063,9 +18092,11 @@
 
     function minigameBackoffMs(error,streak=0) {
       const status=Number(error?.status||0);
-      if (status>=500) return Math.min(10000,5000+Math.max(0,streak)*1200);
-      if (status===409) return Math.min(7000,2800+Math.max(0,streak)*800);
-      return Math.min(8000,1800+Math.max(0,streak)*900);
+      const n=Math.max(0,Number(streak)||0);
+      if (status===429) return Math.min(30000,minigameRandomMs(14000,19000)+n*1800);
+      if (status>=500) return Math.min(22000,minigameRandomMs(8000,12000)+n*1400);
+      if (status===409) return Math.min(16000,minigameRandomMs(5000,8000)+n*1100);
+      return Math.min(14000,minigameRandomMs(3500,5500)+n*900);
     }
 
     async function waitMutationGap(lastAt,gapMs) {
@@ -18314,9 +18345,10 @@
           button=treasureRewardButton();
           if (!button) break;
         }
+        await minigameHumanPause('reward',{module:'fishing',index:i+1});
         if (!dispatchAutoMapTap(button,'fishing-reward-'+(i+1))) break;
         clicked+=1;
-        await new Promise(resolve=>setTimeout(resolve,280));
+        await minigameHumanPause('settle',{module:'fishing-reward',index:i+1});
       }
       return clicked;
     }
@@ -18327,7 +18359,7 @@
         setTimeout(checkPuzzle,Math.max(200,fishingRetryNotBefore-Date.now()+40));
         return false;
       }
-      const target=fishingTarget();
+      let target=fishingTarget();
       if (!target) {
         recordDiagnostic('fishing-auto-budget-empty',{
           revision:HK_FISHING_BUDGET_REV,
@@ -18338,6 +18370,10 @@
 
       await waitMutationGap(fishingLastMutationAt,FISHING_MIN_NEXT_ACTION_GAP_MS);
       if (!fishingAutoEnabled()) return false;
+      await minigameHumanPause('scan',{module:'fishing'});
+      if (!fishingAutoEnabled()) return false;
+      target=fishingTarget();
+      if (!target) return false;
       if (!fishingAffordable(target.cost)) {
         recordDiagnostic('fishing-auto-budget-changed',{
           revision:HK_FISHING_BUDGET_REV,
@@ -18363,6 +18399,9 @@
       });
 
       try {
+        await minigameHumanPause('aim',{module:'fishing',lotId:target.lotId});
+        if (runId!==fishingAutoRunId || !fishingAutoEnabled()) return false;
+        if (!fishingAffordable(target.cost)) return false;
         if (!dispatchAutoMapTap(target.element,'fishing-open-'+target.lotId)) {
           return failFishingAuto('target-tap-failed',{lotId:target.lotId,startedAt});
         }
@@ -18422,6 +18461,9 @@
           return null;
         })();
 
+        await minigameHumanPause('confirm',{module:'fishing',lotId:target.lotId});
+        if (runId!==fishingAutoRunId || !fishingAutoEnabled()) return false;
+
         if (!fishingAffordable(target.cost)) {
           const close=[...modal.querySelectorAll('button,[role="button"],a,div,span')]
             .filter(el=>el && !el.disabled && visible(el))
@@ -18452,6 +18494,7 @@
 
         fishingFailureStreak=0;
         fishingRetryNotBefore=0;
+        await minigameHumanPause('settle',{module:'fishing',lotId:target.lotId});
         await waitMutationGap(fishingLastMutationAt,FISHING_MIN_NEXT_ACTION_GAP_MS);
         recordDiagnostic('fishing-auto-complete',{
           revision:HK_FISHING_STABILITY_REV,
@@ -18668,7 +18711,7 @@
         return false;
       }
 
-      const target=traderTarget();
+      let target=traderTarget();
       if (!target) {
         const visible=traderElements().filter(row=>!row.activated);
         recordDiagnostic('trader-auto-complete',{
@@ -18682,6 +18725,10 @@
 
       await waitMutationGap(traderLastMutationAt,TRADER_MIN_NEXT_ACTION_GAP_MS);
       if (!traderAutoEnabled()) return false;
+      await minigameHumanPause('scan',{module:'trader'});
+      if (!traderAutoEnabled()) return false;
+      target=traderTarget();
+      if (!target) return false;
 
       traderAutoRunning=true;
       const runId=++traderAutoRunId;
@@ -18698,6 +18745,8 @@
       });
 
       try {
+        await minigameHumanPause('aim',{module:'trader',lotId:target.lotId});
+        if (runId!==traderAutoRunId || !traderAutoEnabled()) return false;
         if (!dispatchAutoMapTap(target.element,'trader-open-'+target.lotId)) {
           return traderBackoff('target-tap-failed',{lotId:target.lotId,startedAt});
         }
@@ -18758,6 +18807,9 @@
           return null;
         })();
 
+        await minigameHumanPause('confirm',{module:'trader',lotId:target.lotId});
+        if (runId!==traderAutoRunId || !traderAutoEnabled()) return false;
+
         if (!action || !dispatchAutoMapTap(action,'trader-confirm-'+target.lotId)) {
           try { target.element.dataset.hkTraderSkip='1'; } catch (_) {}
           return traderBackoff('action-missing',{lotId:target.lotId,cost:target.cost.parts,startedAt});
@@ -18779,6 +18831,7 @@
         traderFailureStreak=0;
         traderRetryNotBefore=0;
         if (target.cost.raw) debitWallet(target.cost.raw,1);
+        await minigameHumanPause('settle',{module:'trader',lotId:target.lotId});
         await waitMutationGap(traderLastMutationAt,TRADER_MIN_NEXT_ACTION_GAP_MS);
 
         recordDiagnostic('trader-auto-purchase',{
@@ -19609,9 +19662,10 @@
           if (!treasureRewardButton()) break;
           continue;
         }
+        await minigameHumanPause('reward',{module:'chests',index:i+1});
         dispatchAutoMapTap(button,'chest-reward-'+(i+1));
         clicked+=1;
-        await new Promise(resolve=>setTimeout(resolve,280));
+        await minigameHumanPause('settle',{module:'chest-reward',index:i+1});
       }
       return clicked;
     }
@@ -19633,7 +19687,11 @@
 
     async function runTreasureChestAuto() {
       if (!chestAutoEnabled() || chestAutoRunning || battleAutoRunning) return false;
-      const target=treasureChestTarget();
+      let target=treasureChestTarget();
+      if (!target) return false;
+      await minigameHumanPause('scan',{module:'chests'});
+      if (!chestAutoEnabled()) return false;
+      target=treasureChestTarget();
       if (!target) return false;
 
       chestAutoRunning=true;
@@ -19649,6 +19707,8 @@
       });
       try {
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
+        await minigameHumanPause('aim',{module:'chests',lotId:target.lotId});
+        if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
         dispatchAutoMapTap(target.element,target.digging?'chest-dig-spot':'chest-open-card');
 
         const modal=await waitTreasureModal(target.cost,runId);
@@ -19658,6 +19718,8 @@
         }
 
         let action=await waitTreasureActionButton(modal,target.cost,runId);
+        await minigameHumanPause('confirm',{module:'chests',lotId:target.lotId});
+        if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
         let tapped=false;
         if (action) tapped=dispatchAutoMapTap(action,target.digging?'chest-dig-confirm':'chest-open-confirm');
         if (!tapped) tapped=await tapTreasureActionFallback(modal,runId);
@@ -19675,7 +19737,7 @@
           await new Promise(resolve=>setTimeout(resolve,100));
         }
 
-        await new Promise(resolve=>setTimeout(resolve,220));
+        await minigameHumanPause('settle',{module:'chests',lotId:target.lotId});
         const rewards=await dismissTreasureRewards(runId);
         recordDiagnostic('chest-auto-complete',{
           revision:HK_CHEST_AUTO_REV,
@@ -19689,7 +19751,7 @@
       } finally {
         if (runId===chestAutoRunId) chestAutoRunning=false;
         lastSignature='';
-        setTimeout(checkPuzzle,320);
+        setTimeout(checkPuzzle,minigameRandomMs(1400,2200));
       }
     }
 
@@ -20147,7 +20209,7 @@
     const AUTO_MAP_NO_ACTIVE_COMPLETE_MS=4500;
     const AUTO_MAP_RETURN_SETTLE_MS=1600;
     const AUTO_MAP_LOOP_MS=420;
-    const AUTO_MAP_ACTION_GAP_MS=1450;
+    const AUTO_MAP_ACTION_GAP_MS=2400;
     const AUTO_MAP_MODAL_TIMEOUT_MS=2600;
     const AUTO_MAP_SETTLE_TIMEOUT_MS=5200;
     const AUTO_MAP_MAX_ACTIONS=240;
@@ -20651,9 +20713,9 @@
 
     function autoMapBackoff(error,reason='transient') {
       const status=Number(error?.status||0);
-      const wait=status===409 ? 1800 :
-        status===429 ? 3600 :
-        status>=500 ? 5600 : 2200;
+      const wait=status===409 ? minigameRandomMs(5000,8000) :
+        status===429 ? minigameRandomMs(14000,19000) :
+        status>=500 ? minigameRandomMs(8000,12000) : minigameRandomMs(3500,5500);
       if (status===409 && autoMapCurrentLot) {
         autoMapSkipLotsUntil.set(autoMapCurrentLot,Date.now()+6500);
       }
@@ -20681,6 +20743,8 @@
       const startedAt=Date.now();
       clearMinigameHttpError();
       autoMapActionCount+=1;
+      await minigameHumanPause('map',{module:'auto-map',label});
+      if (runId!==autoMapRunId || !autoMapEnabled()) return false;
       autoMapLastActionAt=Date.now();
 
       if (!dispatchAutoMapTap(element,'auto-map-'+label)) {
@@ -20726,6 +20790,8 @@
         return false;
       }
 
+      await minigameHumanPause('confirm',{module:'auto-map',label});
+      if (runId!==autoMapRunId || !autoMapEnabled()) return false;
       autoMapLastActionAt=Date.now();
       if (!dispatchAutoMapTap(action,'auto-map-confirm-'+label)) {
         autoMapRetryNotBefore=Date.now()+1400;
@@ -20741,7 +20807,7 @@
           return false;
         }
         if (autoMapStateFingerprint()!==before) {
-          await new Promise(resolve=>setTimeout(resolve,260));
+          await minigameHumanPause('settle',{module:'auto-map',label});
           return true;
         }
         await new Promise(resolve=>setTimeout(resolve,100));
@@ -21252,6 +21318,7 @@
       treasureAutoMapStaleRunnerRevision:HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV,
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
+      minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
       start,
       stop,
       check:checkPuzzle,
