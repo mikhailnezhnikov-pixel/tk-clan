@@ -122,7 +122,7 @@ jobs:
           ]:
               assert marker in before and marker in after, marker
 
-          assert after.count('data-content="rumors"')==before.count('data-content="rumors"')==1
+          assert after.count('<div class="hk-page" data-content="rumors">')==before.count('<div class="hk-page" data-content="rumors">')==1
           assert after.count('id="hk-rumors-today-summary"')==1
           print('REGRESSION_GUARDS=PASS')
           PY
