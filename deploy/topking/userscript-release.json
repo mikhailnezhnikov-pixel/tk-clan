@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.15",
-  "target_version": "1.18.16",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.16.treasure-auto-map.candidate.user.js",
-  "primary_marker": "treasure-auto-map-orchestrator-20260926-r1",
+  "source_version": "1.18.16",
+  "target_version": "1.18.17",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.17.treasure-auto-map-stability.candidate.user.js",
+  "primary_marker": "treasure-auto-map-stability-20260926-r2",
   "preserve_markers": [
+    "treasure-auto-map-orchestrator-20260926-r1",
     "rumors-hunter-coordinator-kokkaras-v40-20260926-r4",
     "treasure-run-recorder-stability-blockers-20260926-r2",
     "treasure-run-recorder-20260926-r1",
@@ -79,7 +80,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-16-treasure-auto-map-live-status.txt",
-  "commit_message": "feat: deploy full Treasure Map orchestrator in userscript 1.18.16",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-17-treasure-auto-map-stability-live-status.txt",
+  "commit_message": "fix: deploy Treasure Auto Map stability in userscript 1.18.17"
 }
