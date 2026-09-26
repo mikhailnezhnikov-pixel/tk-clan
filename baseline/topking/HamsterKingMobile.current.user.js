@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.16
+// @version      1.18.17
+// @release-note Автокарта: после подтверждения клетки теперь ждёт фактического изменения карты/комнаты, а не только закрытия модального окна. Минимальный темп замедлен; при 409 текущая клетка временно исключается и выполняется новый пересчёт вместо повторного клика.
 // @release-note Карта Сокровищ: добавлен единый режим «Автокарта». Он проходит активные клетки по одной, подтверждает стоимость, забирает обычные награды, передаёт бой/рыбалку/торговца/лампочки/сундуки существующим авто-модулям, проходит treasury room и переходы лабиринта, после каждой комнаты возвращается к карте и пересчитывает доступные клетки. 409 обрабатывается пересканированием, 429/5xx — паузой без слепых повторных кликов.
 // @release-note Слухи: полноценная «Охота за слухами» переведена на канон Kokkaras v40 из 5.3.22-ui-icons-pit-dim: распределение городов через HK coordinator, claim/lease/heartbeat, поиск 3/3 с радиусом 3 и city-policy, защита сигнатур карты, общие результаты Kokkaras+HK, live-статусы/история и переходы по найденным координатам. Старый блок «Сегодня» сохранён.
 // @release-note Карта Сокровищ: исправлена самопетля пассивного рекордера на Safari. Добавлена запись блокирующих действий: disabled/locked, модальные запреты, нехватка ресурсов, кулдауны, HTTP 4xx/5xx и «клик без изменения состояния».
@@ -127,7 +128,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.16';
+  const BUILD_VERSION = '1.18.17';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3703,6 +3704,7 @@
   const HK_TREASURE_RUN_RECORDER_REV='treasure-run-recorder-20260926-r1';
   const HK_TREASURE_RUN_RECORDER_STABILITY_REV='treasure-run-recorder-stability-blockers-20260926-r2';
   const HK_TREASURE_AUTO_MAP_REV='treasure-auto-map-orchestrator-20260926-r1';
+  const HK_TREASURE_AUTO_MAP_STABILITY_REV='treasure-auto-map-stability-20260926-r2';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -20013,7 +20015,7 @@
     // ----- Full Treasure Map orchestrator -----
     const AUTO_MAP_STORAGE_KEY='hk:treasure:auto-map:v1';
     const AUTO_MAP_LOOP_MS=420;
-    const AUTO_MAP_ACTION_GAP_MS=850;
+    const AUTO_MAP_ACTION_GAP_MS=1450;
     const AUTO_MAP_MODAL_TIMEOUT_MS=2600;
     const AUTO_MAP_SETTLE_TIMEOUT_MS=5200;
     const AUTO_MAP_MAX_ACTIONS=240;
@@ -20025,6 +20027,7 @@
     let autoMapRetryNotBefore=0;
     let autoMapActionCount=0;
     let autoMapCurrentLot='';
+    const autoMapSkipLotsUntil=new Map();
     let autoMapPreviousModes=null;
     let autoMapLastStatus='';
 
@@ -20073,7 +20076,7 @@
       if (value!==autoMapLastStatus) {
         autoMapLastStatus=value;
         recordDiagnostic('treasure-auto-map-status',{
-          revision:HK_TREASURE_AUTO_MAP_REV,
+          revision:HK_TREASURE_AUTO_MAP_STABILITY_REV,
           status:value,
           actions:autoMapActionCount,
           ...data
@@ -20208,7 +20211,13 @@
             disabled
           };
         })
-        .filter(row=>row.lotId && !row.disabled)
+        .filter(row=>{
+          if (!row.lotId || row.disabled) return false;
+          const until=Number(autoMapSkipLotsUntil.get(row.lotId)||0);
+          if (until>Date.now()) return false;
+          if (until) autoMapSkipLotsUntil.delete(row.lotId);
+          return true;
+        })
         .sort((a,b)=>a.slot-b.slot || (a.cost??9999)-(b.cost??9999));
     }
 
@@ -20310,9 +20319,12 @@
 
     function autoMapBackoff(error,reason='transient') {
       const status=Number(error?.status||0);
-      const wait=status===409 ? 1200 :
-        status===429 ? 3200 :
-        status>=500 ? 5200 : 1800;
+      const wait=status===409 ? 1800 :
+        status===429 ? 3600 :
+        status>=500 ? 5600 : 2200;
+      if (status===409 && autoMapCurrentLot) {
+        autoMapSkipLotsUntil.set(autoMapCurrentLot,Date.now()+6500);
+      }
       autoMapRetryNotBefore=Date.now()+wait;
       autoMapStatus('пауза',{
         reason,
@@ -20396,14 +20408,17 @@
           autoMapBackoff(error,'confirm-http-error');
           return false;
         }
-        if (autoMapStateFingerprint()!==before || !treasureModalRoot(null)) {
-          await new Promise(resolve=>setTimeout(resolve,180));
+        if (autoMapStateFingerprint()!==before) {
+          await new Promise(resolve=>setTimeout(resolve,260));
           return true;
         }
         await new Promise(resolve=>setTimeout(resolve,100));
       }
 
-      autoMapRetryNotBefore=Date.now()+1800;
+      if (autoMapCurrentLot) {
+        autoMapSkipLotsUntil.set(autoMapCurrentLot,Date.now()+4200);
+      }
+      autoMapRetryNotBefore=Date.now()+2200;
       autoMapStatus('пересканирую',{label,reason:'no-state-change'});
       return false;
     }
@@ -20600,6 +20615,7 @@
       autoMapRunning=false;
       autoMapRetryNotBefore=0;
       autoMapCurrentLot='';
+      if (!value) autoMapSkipLotsUntil.clear();
 
       if (value) {
         autoMapActionCount=0;
