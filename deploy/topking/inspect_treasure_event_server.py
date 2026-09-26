@@ -1,22 +1,44 @@
-import importlib.util, json, re, time
+import importlib.util, json, time, re
 server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
+
 with server.db_session() as db:
     rows=[dict(r) for r in db.execute("""
-      SELECT id,path,page_text,assets_json,captured_at
+      SELECT id,path,payload_json,captured_at
       FROM treasure_guide_captures
-      WHERE source='dom' AND captured_at>=?
-      ORDER BY id DESC LIMIT 1200
-    """,(int(time.time())-72*3600,))]
-urls={}
+      WHERE captured_at>=?
+        AND payload_json LIKE '%fair_mini_game_fight%'
+      ORDER BY id DESC
+      LIMIT 160
+    """,(int(time.time())-6*3600,))]
+
+seen=set()
 for r in rows:
-    try: assets=json.loads(r.get("assets_json") or "[]")
-    except: assets=[]
-    for a in assets:
-        s=str(a)
-        if re.search(r"skill_(?:fight_hp_up|chest_map_finder|more_food|more_money|chest_finder|trader_rep|fishing_map_finder)",s,re.I):
-            urls.setdefault(s,[]).append(r["id"])
-print("ASSETS",json.dumps([{"url":k,"captures":v[-10:]} for k,v in sorted(urls.items())],ensure_ascii=False))
+    raw=str(r.get("payload_json") or "")
+    try: obj=json.loads(raw)
+    except: continue
+    payloads=[]
+    if isinstance(obj,dict) and isinstance(obj.get("rows"),list):
+        payloads=[x.get("payload") for x in obj["rows"] if isinstance(x,dict)]
+    else:
+        payloads=[obj]
+    for p in payloads:
+        if not isinstance(p,dict): continue
+        # Direct fair object.
+        if p.get("id")=="fair_mini_game_fight" and isinstance(p.get("fair_slots"),list):
+            key=(r["id"],json.dumps(p["fair_slots"],sort_keys=True,ensure_ascii=False))
+            if key in seen: continue
+            seen.add(key)
+            print("FIGHT",r["id"],r["captured_at"],r["path"],json.dumps(p["fair_slots"],ensure_ascii=False,separators=(",",":")))
+        # Whole API state.
+        fairs=p.get("fair")
+        if isinstance(fairs,list):
+            for f in fairs:
+                if isinstance(f,dict) and f.get("id")=="fair_mini_game_fight":
+                    key=(r["id"],json.dumps(f.get("fair_slots"),sort_keys=True,ensure_ascii=False))
+                    if key in seen: continue
+                    seen.add(key)
+                    print("FIGHT",r["id"],r["captured_at"],r["path"],json.dumps(f.get("fair_slots") or [],ensure_ascii=False,separators=(",",":")))
