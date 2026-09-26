@@ -91,5 +91,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-27-battle-full-clear-exit-live-status.txt",
-  "commit_message": "fix: deploy battle full-clear exit in userscript 1.18.27"
+  "commit_message": "fix: deploy battle full-clear exit in userscript 1.18.27",
+  "trigger_revision": 1
 }
