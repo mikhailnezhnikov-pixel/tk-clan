@@ -68,5 +68,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-03-victory-mobile-tap-live-status.txt",
-  "commit_message": "fix: deploy robust mobile victory reward tap in userscript 1.18.03"
+  "commit_message": "fix: deploy robust mobile victory reward tap in userscript 1.18.03",
+  "trigger_revision": 1
 }
