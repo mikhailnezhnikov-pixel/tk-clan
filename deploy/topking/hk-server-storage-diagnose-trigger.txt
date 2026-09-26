@@ -1,1 +1,1 @@
-diagnose storage after sqlite disk io 2026-09-26 r3
+diagnose storage after safe log cleanup 2026-09-26 r4
