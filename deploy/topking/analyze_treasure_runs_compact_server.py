@@ -190,4 +190,41 @@ for _,sid,events,meta in all_sessions[:2]:
                     "fair_id":req.get("fair_id"),"shop_lot_id":req.get("shop_lot_id"),
                     "slot_id":req.get("slot_id"),"message":resp.get("message")
                 },ensure_ascii=False))
+    print("RECOVERY_GENERAL_CAPTURES")
+    try:
+        with server.db_session() as db:
+            extra=[dict(r) for r in db.execute("""
+              SELECT id,capture_key,player_id,source,path,payload_json,page_text,captured_at
+              FROM treasure_guide_captures
+              WHERE player_id=?
+                AND id BETWEEN 14700 AND 15080
+                AND capture_key NOT LIKE 'trace:%'
+              ORDER BY id
+            """,(str(group[0][0].get("player_id") or ""),))]
+        for row in extra:
+            payload={}
+            try: payload=json.loads(row.get("payload_json") or "{}")
+            except Exception: payload={}
+            compact={}
+            if isinstance(payload,dict):
+                for key in ["url","path","method","status","fair_id","shop_lot_id","slot_id","type","message","error","result","data"]:
+                    if key in payload:
+                        val=payload.get(key)
+                        if isinstance(val,(dict,list)):
+                            val=str(val)[:700]
+                        compact[key]=val
+                # Common nested request/response shapes.
+                for nest in ["request","response","body"]:
+                    val=payload.get(nest)
+                    if isinstance(val,dict):
+                        compact[nest]={k:val.get(k) for k in ["fair_id","shop_lot_id","slot_id","type","message","status"] if k in val}
+            text_preview=str(row.get("page_text") or "").replace("\n"," ")[:500]
+            print(json.dumps({
+                "id":row.get("id"),"captured_at":row.get("captured_at"),
+                "source":row.get("source"),"path":row.get("path"),
+                "capture_key":str(row.get("capture_key") or "")[:180],
+                "payload":compact,"page":text_preview
+            },ensure_ascii=False))
+    except Exception as exc:
+        print("RECOVERY_ERROR "+repr(exc))
     print("END_SESSION")
