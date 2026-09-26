@@ -1,0 +1,34 @@
+name: Analyze Latest AutoMap Start
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/analyze_latest_automap_start_server.py'
+      - '.github/workflows/analyze-latest-automap-start.yml'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Analyze latest AutoMap start
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            deploy/topking/analyze_latest_automap_start_server.py \
+            root@89.125.1.71:/tmp/analyze_latest_automap_start_server.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "python3 /tmp/analyze_latest_automap_start_server.py"
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
