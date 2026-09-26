@@ -46,7 +46,7 @@ terms=[
   "Начать новое путешествие",
   "Покинуть локацию",
   "function recordDiagnostic(",
-  "TREASURE_RUN_RECORDER",,
+  "TREASURE_RUN_RECORDER",
   "async function runAutoMapTick",
   "function setAutoMapEnabled",
   "function autoMapJourneyButton",
