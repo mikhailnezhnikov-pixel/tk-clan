@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.09
+target_version=1.18.10
+marker=trader-fishing-stability-20260926-r1
+source_sha256=9967143d9e370d1e460cdf2747332512bc745b536c5ab6d676223d7627526be0
+candidate_sha256=a341bf228cdfa58ccc35a68f4ab01a673735750af8fbaa6124f08ec617a98502
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
