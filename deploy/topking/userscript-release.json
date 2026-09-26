@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.17.96",
-  "target_version": "1.17.97",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.97.late-login-recovery.candidate.user.js",
-  "primary_marker": "late-login-recovery-20260926-r1",
+  "source_version": "1.17.97",
+  "target_version": "1.17.98",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.17.98.battle-enemy-type04.candidate.user.js",
+  "primary_marker": "battle-enemy-type04-20260926-r1",
   "preserve_markers": [
+    "late-login-recovery-20260926-r1",
     "game-api-429-cooldown-20s-20260925-r1",
     "resource-maximum-direct-run-20260925-r1",
     "rumors-hunter-kokkaras-public-feed-20260925-r1",
@@ -61,7 +62,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-17-97-late-login-recovery-live-status.txt",
-  "commit_message": "fix: deploy Safari late-login recovery in userscript 1.17.97",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-17-98-battle-enemy-type04-live-status.txt",
+  "commit_message": "fix: count Treasure battle enemy type04 in userscript 1.17.98"
 }
