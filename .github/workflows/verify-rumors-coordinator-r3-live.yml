@@ -31,7 +31,9 @@ jobs:
       - name: Verify health and live coordinator without redeploy
         run: |
           set -euo pipefail
-          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30             "https://hk-license.89.125.1.71.sslip.io/health?r3verify=$(date +%s)"             -o /tmp/health.json
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30 \
+            "https://hk-license.89.125.1.71.sslip.io/health?r3verify=$(date +%s)" \
+            -o /tmp/health.json
           python3 - <<'PY'
           import json
           d=json.load(open('/tmp/health.json'))
@@ -39,7 +41,8 @@ jobs:
           print('HEALTH=PASS')
           PY
 
-          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71 'python3 - <<'"'"'PY'"'"''
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "python3 -" <<'PY'
           import sqlite3,urllib.request
           server="/opt/hamsterking-license/server.py"
           db_path="/var/lib/hamsterking-license/licenses.db"
@@ -79,7 +82,6 @@ jobs:
           print("kokkaras_cities=17")
           print("kokkaras_points=51")
           PY
-          REMOTE
 
       - name: Persist live audit
         run: |
