@@ -42,7 +42,7 @@ for sid,group in sessions.items():
         allruns.append((str(meta.get("started_at") or ""),sid,events,meta))
 allruns.sort(reverse=True)
 
-print("LATEST_AUTOMAP_TRANSITION_TRACE")
+print("LATEST_AUTOMAP_TRANSITION_TRACE_R4")
 for started,sid,events,meta in allruns[:1]:
     print(json.dumps({"session_id":sid,"started_at":started,"run_index":meta.get("run_index"),"events":len(events)},ensure_ascii=False))
     prev_screen=None
