@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.22",
-  "target_version": "1.18.23",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.23.treasure-chest-element-state.candidate.user.js",
-  "primary_marker": "treasure-chest-element-state-20260927-r1",
+  "source_version": "1.18.23",
+  "target_version": "1.18.24",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.24.treasure-auto-map-stale-runner.candidate.user.js",
+  "primary_marker": "treasure-auto-map-stale-runner-20260927-r2",
   "preserve_markers": [
+    "treasure-chest-element-state-20260927-r1",
     "treasure-auto-map-foreground-truth-20260926-r7",
     "treasure-auto-map-foreground-handoff-20260926-r6",
     "treasure-auto-map-active-priority-20260926-r5",
@@ -86,7 +87,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-23-treasure-chest-element-state-live-status.txt",
-  "commit_message": "fix: deploy chest element-state targeting in userscript 1.18.23",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-24-treasure-auto-map-stale-runner-live-status.txt",
+  "commit_message": "fix: deploy stale minigame runner cancellation in userscript 1.18.24"
 }

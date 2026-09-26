@@ -1,0 +1,9 @@
+USERSCRIPT_1_18_24_TREASURE_AUTOMAP_STALE_RUNNER_PREDEPLOY=PASS
+source_version=1.18.23
+target_version=1.18.24
+real_map_foreground=OVERRIDES_STALE_RUNNING_FLAGS
+stale_runners=CANCEL_BY_RUN_ID
+module_preferences=PRESERVED
+syntax=PASS
+base_sha256=b3b72300a54b02c4c7a71348f3bb019e126dbd9ee48bc3db49e4617c6ba7b268
+candidate_sha256=5f663509e67fc2cacece8e260781a76b24351122909c7dc33fc4e75cecd6e2d3
