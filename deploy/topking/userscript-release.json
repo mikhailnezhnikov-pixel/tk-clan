@@ -76,5 +76,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-12-battle-visible-board-live-status.txt",
-  "commit_message": "fix: deploy immediate visible battle detection in userscript 1.18.12"
+  "commit_message": "fix: deploy immediate visible battle detection in userscript 1.18.12",
+  "trigger_revision": 1
 }
