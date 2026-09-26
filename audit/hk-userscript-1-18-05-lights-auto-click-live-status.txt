@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.04
+target_version=1.18.05
+marker=lights-auto-recalc-20260926-r1
+source_sha256=83c8c39147f095f28a33fca6dcecf8c9cfcd0b6627fe23265f7d89b2672abee7
+candidate_sha256=7512fa08ff129480b18b9108fb9e5b3bf1915943b50ec98408cdc4afb964be9b
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

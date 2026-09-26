@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.04
+// @version      1.18.05
+// @release-note Лампочки: в общем HK-скрипте добавлен отдельный безопасный автоклик. После каждого нажатия скрипт ждёт фактического изменения 3×3 поля, заново считывает состояние, пересчитывает решение и только затем нажимает следующую лампу. При отсутствии изменения, потере цели, невалидном поле или цикле автоматизация отключается вместо повторных кликов. Цифры подсказки сохраняются.
 // @release-note Сундуки: в общем HK-скрипте добавлена автоцепочка «раскопать → открыть найденный сундук → забрать награду». Перед каждым действием проверяется живой баланс: раскоп/обычный найденный сундук — 5 энергии, зелёный — 1 обычный ключ, золотой — 1 необычный ключ, красный — 1 эпический ключ. Недоступные сундуки пропускаются.
 // @release-note Сражение: финальный «Сундук победителя» теперь нажимается мобильным tap-событием, а кнопка выдачи награды ищется по геометрии модального окна с безопасным fallback-тапом по нижней центральной кнопке.
 // @release-note Сражение: после полной зачистки автобой теперь сам открывает mf_treasurelot_enemy_defeated («Сундук победителя»), нажимает кнопку получения награды и закрывает возможное итоговое окно.
@@ -115,7 +116,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.04';
+  const BUILD_VERSION = '1.18.05';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -16238,6 +16239,7 @@
   const HK_BATTLE_VICTORY_CLAIM_REV = 'battle-victory-claim-20260926-r1';
   const HK_BATTLE_VICTORY_TAP_REV = 'battle-victory-tap-fallback-20260926-r1';
   const HK_CHEST_AUTO_REV = 'chest-auto-dig-open-20260926-r1';
+  const HK_LIGHTS_AUTO_REV = 'lights-auto-recalc-20260926-r1';
   const hkPuzzleSolver = (() => {
     const BATTLE_FIRST_SLOT = 7;
     const BATTLE_SIZE = 12;
@@ -16248,9 +16250,13 @@
     const GREEN = '03';
     const BATTLE_AUTO_STORAGE_KEY = 'hk:battle:auto-click:v1';
     const CHEST_AUTO_STORAGE_KEY = 'hk:chests:auto-open:v1';
+    const LIGHTS_AUTO_STORAGE_KEY = 'hk:lights:auto-click:v1';
     const BATTLE_AUTO_SETTLE_MS = 260;
     const BATTLE_AUTO_CHANGE_TIMEOUT_MS = 4500;
     const CHEST_ACTION_TIMEOUT_MS = 3600;
+    const LIGHTS_AUTO_SETTLE_MS = 240;
+    const LIGHTS_AUTO_CHANGE_TIMEOUT_MS = 4200;
+    const LIGHTS_AUTO_MAX_STEPS = 24;
 
     let lastSignature = '';
     let intervalId = null;
@@ -16261,6 +16267,9 @@
     let chestAutoRunning = false;
     let chestAutoRunId = 0;
     let chestAutoToggle = null;
+    let lightsAutoRunning = false;
+    let lightsAutoRunId = 0;
+    let lightsAutoToggle = null;
 
     function clearNumbers() {
       [...document.querySelectorAll('.hkSolverNumber')].forEach(element => element.remove());
@@ -16386,6 +16395,187 @@
         (document.body || document.documentElement)?.appendChild(chestAutoToggle);
       }
       updateChestAutoToggle(!!isChest);
+    }
+
+    function lightsAutoEnabled() {
+      try { return localStorage.getItem(LIGHTS_AUTO_STORAGE_KEY) === '1'; }
+      catch (_) { return false; }
+    }
+
+    function updateLightsAutoToggle(isLights = null) {
+      if (!lightsAutoToggle) return;
+      const enabled=lightsAutoEnabled();
+      lightsAutoToggle.textContent=enabled ? either('Автолампы: ВКЛ','Auto lights: ON') : either('Автолампы: ВЫКЛ','Auto lights: OFF');
+      lightsAutoToggle.style.background=enabled ? '#40c85a' : '#2b2b2b';
+      lightsAutoToggle.style.color=enabled ? '#071b0a' : '#fff';
+      if (isLights !== null) lightsAutoToggle.style.display=isLights ? 'block' : 'none';
+    }
+
+    function setLightsAutoEnabled(enabled) {
+      const value=!!enabled;
+      try { localStorage.setItem(LIGHTS_AUTO_STORAGE_KEY,value?'1':'0'); } catch (_) {}
+      if (!value) {
+        lightsAutoRunId += 1;
+        lightsAutoRunning = false;
+      }
+      updateLightsAutoToggle();
+      recordDiagnostic('lights-auto-toggle',{revision:HK_LIGHTS_AUTO_REV,enabled:value});
+      if (value) {
+        lastSignature='';
+        setTimeout(checkPuzzle,0);
+      }
+      return value;
+    }
+
+    function ensureLightsAutoToggle(isLights) {
+      if (!lightsAutoToggle) {
+        lightsAutoToggle=document.createElement('button');
+        lightsAutoToggle.id='hkLightsAutoToggle';
+        lightsAutoToggle.type='button';
+        Object.assign(lightsAutoToggle.style,{
+          position:'fixed',
+          right:'14px',
+          bottom:'154px',
+          zIndex:'2147483646',
+          border:'2px solid rgba(255,255,255,.75)',
+          borderRadius:'18px',
+          padding:'8px 11px',
+          fontSize:'12px',
+          fontWeight:'900',
+          lineHeight:'1',
+          boxShadow:'0 4px 14px rgba(0,0,0,.55)',
+          WebkitTapHighlightColor:'transparent',
+          touchAction:'manipulation'
+        });
+        lightsAutoToggle.addEventListener('click',event=>{
+          event.preventDefault();
+          event.stopPropagation();
+          setLightsAutoEnabled(!lightsAutoEnabled());
+        },true);
+        (document.body || document.documentElement)?.appendChild(lightsAutoToggle);
+      }
+      updateLightsAutoToggle(!!isLights);
+    }
+
+    function lightsBoardSignature(board = null) {
+      const source=board || getLightsBoard();
+      if (!Array.isArray(source) || source.length!==9 || source.some(cell=>!cell)) return 'LIGHTS_INVALID';
+      return 'LIGHTS_STATE|'+source.map(cell=>String(cell.slot)+':'+(cell.on?'1':'0')).join('|');
+    }
+
+    function drawLightsSolution(board,solution) {
+      clearNumbers();
+      if (!Array.isArray(solution)) return;
+      solution.forEach((position,index)=>{
+        const cell=board?.[position];
+        if (cell?.element) addNumber(cell.element,index+1);
+      });
+    }
+
+    function lightsNeedsAuto() {
+      const board=getLightsBoard();
+      if (!Array.isArray(board) || board.length!==9 || board.some(cell=>!cell)) return false;
+      const solution=solveLights(board);
+      return Array.isArray(solution) && solution.length>0;
+    }
+
+    async function waitLightsBoardChange(before,runId) {
+      const started=Date.now();
+      while (Date.now()-started<LIGHTS_AUTO_CHANGE_TIMEOUT_MS) {
+        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
+        const current=lightsBoardSignature();
+        if (current!==before) return true;
+        await new Promise(resolve=>setTimeout(resolve,90));
+      }
+      return false;
+    }
+
+    function failLightsAuto(reason,data={}) {
+      try { localStorage.setItem(LIGHTS_AUTO_STORAGE_KEY,'0'); } catch (_) {}
+      lightsAutoRunId += 1;
+      lightsAutoRunning=false;
+      updateLightsAutoToggle();
+      recordDiagnostic('lights-auto-stop',{revision:HK_LIGHTS_AUTO_REV,reason,...data});
+      return false;
+    }
+
+    async function runLightsAuto() {
+      if (!lightsAutoEnabled() || lightsAutoRunning || battleAutoRunning || chestAutoRunning) return false;
+      lightsAutoRunning=true;
+      const runId=++lightsAutoRunId;
+      const seen=new Set();
+      let steps=0;
+      recordDiagnostic('lights-auto-start',{revision:HK_LIGHTS_AUTO_REV});
+
+      try {
+        while (runId===lightsAutoRunId && lightsAutoEnabled()) {
+          if (steps>=LIGHTS_AUTO_MAX_STEPS) {
+            return failLightsAuto('step-limit',{steps});
+          }
+
+          const board=getLightsBoard();
+          const valid=board.filter(cell=>cell!==null);
+          if (valid.length!==9) {
+            if (!getSignature().startsWith('LIGHTS|')) {
+              clearNumbers();
+              recordDiagnostic('lights-auto-complete',{revision:HK_LIGHTS_AUTO_REV,steps,reason:'board-closed'});
+              return true;
+            }
+            return failLightsAuto('board-invalid',{valid:valid.length,steps});
+          }
+
+          const before=lightsBoardSignature(board);
+          if (seen.has(before)) {
+            return failLightsAuto('state-cycle',{state:before,steps});
+          }
+          seen.add(before);
+
+          const solution=solveLights(board);
+          drawLightsSolution(board,solution);
+
+          if (solution===null) {
+            return failLightsAuto('solution-missing',{state:before,steps});
+          }
+
+          if (solution.length===0) {
+            recordDiagnostic('lights-auto-complete',{revision:HK_LIGHTS_AUTO_REV,steps,reason:'solved'});
+            return true;
+          }
+
+          const position=solution[0];
+          const target=board[position]?.element;
+          if (!target || !target.isConnected) {
+            return failLightsAuto('target-missing',{position,steps});
+          }
+
+          try {
+            target.click();
+          } catch (error) {
+            return failLightsAuto('click-error',{position,steps,error:String(error?.message||error||'unknown')});
+          }
+
+          steps+=1;
+          recordDiagnostic('lights-auto-click',{
+            revision:HK_LIGHTS_AUTO_REV,
+            step:steps,
+            slot:position+1,
+            remainingPlan:solution.map(pos=>pos+1)
+          });
+
+          const changed=await waitLightsBoardChange(before,runId);
+          if (!changed) {
+            if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
+            return failLightsAuto('field-no-change',{position,slot:position+1,steps,state:before});
+          }
+
+          await new Promise(resolve=>setTimeout(resolve,LIGHTS_AUTO_SETTLE_MS));
+        }
+        return false;
+      } finally {
+        if (runId===lightsAutoRunId) lightsAutoRunning=false;
+        lastSignature='';
+        setTimeout(checkPuzzle,300);
+      }
     }
 
     function battleElementForSlot(slot) {
@@ -17249,17 +17439,23 @@
 
     function checkPuzzle() {
       const signature = getSignature();
+      const isLights=signature.startsWith('LIGHTS|');
       const isBattle=signature.startsWith('BATTLE|');
       const isBattleReward=signature.startsWith('BATTLE_REWARD');
       const isChests=signature.startsWith('CHESTS|');
       const battleContext=isBattle || isBattleReward || !!document.querySelector('[data-lot-id^="mf_treasurelot_sword_"]');
       ensureBattleAutoToggle(battleContext);
       ensureChestAutoToggle(isChests);
-      if (battleAutoRunning || chestAutoRunning) return;
+      ensureLightsAutoToggle(isLights);
+      if (battleAutoRunning || chestAutoRunning || lightsAutoRunning) return;
       if (signature === lastSignature) return;
       lastSignature = signature;
       clearNumbers();
-      if (signature.startsWith('LIGHTS|')) { runLights(); return; }
+      if (isLights) {
+        runLights();
+        if (lightsAutoEnabled() && !lightsAutoRunning && lightsNeedsAuto()) void runLightsAuto();
+        return;
+      }
       if (isBattle) { runBattle(); return; }
       if (isBattleReward && battleAutoEnabled()) { void runBattleVictoryClaim(); return; }
       if (isChests && chestAutoEnabled()) void runTreasureChestAuto();
@@ -17282,11 +17478,15 @@
       battleAutoRunning = false;
       chestAutoRunId += 1;
       chestAutoRunning = false;
+      lightsAutoRunId += 1;
+      lightsAutoRunning = false;
       clearNumbers();
       try { battleAutoToggle?.remove(); } catch (_) {}
       try { chestAutoToggle?.remove(); } catch (_) {}
+      try { lightsAutoToggle?.remove(); } catch (_) {}
       battleAutoToggle = null;
       chestAutoToggle = null;
+      lightsAutoToggle = null;
       recordDiagnostic('puzzle-solver-stop',{revision:HK_PUZZLE_SOLVER_REV});
     }
 
@@ -17294,6 +17494,7 @@
       revision:HK_PUZZLE_SOLVER_REV,
       battleAutoRevision:HK_BATTLE_AUTO_CLICK_REV,
       chestAutoRevision:HK_CHEST_AUTO_REV,
+      lightsAutoRevision:HK_LIGHTS_AUTO_REV,
       start,
       stop,
       check:checkPuzzle,
@@ -17301,6 +17502,8 @@
       setAutoBattleEnabled:setBattleAutoEnabled,
       get autoChestsEnabled(){return chestAutoEnabled();},
       setAutoChestsEnabled:setChestAutoEnabled,
+      get autoLightsEnabled(){return lightsAutoEnabled();},
+      setAutoLightsEnabled:setLightsAutoEnabled,
       get running(){return intervalId !== null;}
     };
   })();
