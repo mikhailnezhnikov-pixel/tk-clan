@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.13
+target_version=1.18.14
+marker=treasure-run-recorder-stability-blockers-20260926-r2
+source_sha256=50c59c9f950f277f3e366ab81ae122de4a3f3fed499dbb5137003637d950b21f
+candidate_sha256=904e971da3728fc652838728754fc47c1ef8734824e5386c2cbb71758429a486
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
