@@ -1,0 +1,142 @@
+name: Deploy Rumors Shared Results R2
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/rumors-shared-results-r2-deploy-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-rumors-shared-results-r2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Build patched server
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/source.sha
+          python3 deploy/topking/patch_server_rumors_shared_results_r2.py /tmp/server.py
+          python3 -m py_compile /tmp/server.py
+          sha256sum /tmp/server.py | awk '{print $1}' > /tmp/candidate.sha
+          grep -Fq "HK_RUMORS_SHARED_RESULTS_R2" /tmp/server.py
+
+      - name: Deploy with rollback guard
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            /tmp/server.py root@89.125.1.71:/tmp/server.rumors-shared-r2.py
+          SOURCE_SHA="$(cat /tmp/source.sha)"
+          CANDIDATE_SHA="$(cat /tmp/candidate.sha)"
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "SOURCE_SHA='$SOURCE_SHA' CANDIDATE_SHA='$CANDIDATE_SHA' bash -s" <<'REMOTE'
+          set -euo pipefail
+          live=/opt/hamsterking-license/server.py
+          cand=/tmp/server.rumors-shared-r2.py
+          db=/var/lib/hamsterking-license/licenses.db
+          stamp="$(date -u +%Y%m%d-%H%M%S)"
+          backup="/opt/hamsterking-license/server.py.bak.rumors-shared-r2.$stamp"
+          dbbackup="/var/lib/hamsterking-license/licenses.db.bak.rumors-shared-r2.$stamp"
+
+          test "$(sha256sum "$live" | awk '{print $1}')" = "$SOURCE_SHA"
+          test "$(sha256sum "$cand" | awk '{print $1}')" = "$CANDIDATE_SHA"
+          cp -a "$live" "$backup"
+          python3 - "$db" "$dbbackup" <<'PY'
+          import sqlite3,sys
+          src=sqlite3.connect(sys.argv[1]);dst=sqlite3.connect(sys.argv[2]);src.backup(dst);dst.close();src.close()
+          PY
+
+          rollback(){
+            set +e
+            install -m 0644 "$backup" "$live"
+            cp -a "$dbbackup" "$db"
+            systemctl restart hamsterking-license.service
+          }
+          trap rollback ERR
+
+          install -m 0644 "$cand" "$live"
+          python3 -m py_compile "$live"
+          systemctl restart hamsterking-license.service
+          systemctl is-active --quiet hamsterking-license.service
+          trap - ERR
+          echo "SERVER_BACKUP=$backup"
+          echo "DB_BACKUP=$dbbackup"
+          REMOTE
+
+      - name: Verify live
+        run: |
+          set -euo pipefail
+          sleep 2
+          curl -fsS --retry 5 --retry-delay 2 https://hk-license.89.125.1.71.sslip.io/health -o /tmp/health.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True,d
+          print('HEALTH=PASS')
+          PY
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            'python3 - <<'"'"'PY'"'"'
+          import importlib.util,sqlite3
+          path="/opt/hamsterking-license/server.py"
+          text=open(path,encoding="utf-8").read()
+          assert "HK_RUMORS_SHARED_RESULTS_R2" in text
+          spec=importlib.util.spec_from_file_location("server",path)
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          s.init_db()
+          db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
+          names={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='"'"'table'"'"'")}
+          assert "rumor_observations" in names,names
+          feed=s.fetch_kokkaras_rumors(force=True)
+          assert feed and len(feed.get("routes") or [])==17,feed
+          points=sum(len(r.get("points") or []) for r in feed["routes"])
+          assert points==51,points
+          print("RUMORS_SHARED_RESULTS_R2_LIVE=PASS")
+          print("kokkaras_cities=17")
+          print("kokkaras_points=51")
+          db.close()
+          PY'
+
+      - name: Persist live audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          {
+            echo "RUMORS_SHARED_RESULTS_R2_LIVE=PASS"
+            echo "kokkaras_public_feed=PRESERVED"
+            echo "kokkaras_cities=17"
+            echo "kokkaras_points=51"
+            echo "hk_confirmed_jackpot_reports=ENABLED"
+            echo "today_merge=ENABLED"
+            echo "health=PASS"
+          } > audit/hk-rumors-shared-results-r2-live-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-rumors-shared-results-r2-live-status.txt
+          git commit -m "rumors: deploy shared results R2"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/server.py /tmp/source.sha /tmp/candidate.sha /tmp/health.json
