@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.19
+// @version      1.18.20
+// @release-note Автокарта: активные клетки текущей Карты Сокровищ теперь имеют абсолютный приоритет над кнопкой сброса «Начать новое путешествие». Окно сброса закрывается через «Назад». Завершение карты требует устойчивого отсутствия активных клеток.
 // @release-note Автокарта: исправлен повторный запуск новой карты. Действия Автокарты теперь дают ровно один click; после первого запуска ставится start-lock и повторный «Начать новое путешествие» запрещён до появления активной карты либо истечения безопасного ожидания.
 // @release-note Автокарта: теперь сама начинает новую Карту Сокровищ через «Начать новое путешествие» + подтверждение 1, сохраняет состояние прохода через перезагрузку и останавливается только при повторном появлении кнопки после завершения карты.
 // @release-note Автокарта: после подтверждения клетки теперь ждёт фактического изменения карты/комнаты, а не только закрытия модального окна. Минимальный темп замедлен; при 409 текущая клетка временно исключается и выполняется новый пересчёт вместо повторного клика.
@@ -130,7 +131,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.19';
+  const BUILD_VERSION = '1.18.20';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3709,6 +3710,7 @@
   const HK_TREASURE_AUTO_MAP_STABILITY_REV='treasure-auto-map-stability-20260926-r2';
   const HK_TREASURE_AUTO_MAP_SESSION_REV='treasure-auto-map-session-20260926-r3';
   const HK_TREASURE_AUTO_MAP_START_LOCK_REV='treasure-auto-map-start-lock-20260926-r4';
+  const HK_TREASURE_AUTO_MAP_ACTIVE_PRIORITY_REV='treasure-auto-map-active-priority-20260926-r5';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -20021,6 +20023,7 @@
     const AUTO_MAP_SESSION_KEY='hk:treasure:auto-map-session:v1';
     const AUTO_MAP_START_LOCK_KEY='hk:treasure:auto-map-start-lock:v1';
     const AUTO_MAP_START_LOCK_MS=9000;
+    const AUTO_MAP_NO_ACTIVE_COMPLETE_MS=4500;
     const AUTO_MAP_LOOP_MS=420;
     const AUTO_MAP_ACTION_GAP_MS=1450;
     const AUTO_MAP_MODAL_TIMEOUT_MS=2600;
@@ -20037,6 +20040,7 @@
     const autoMapSkipLotsUntil=new Map();
     let autoMapPreviousModes=null;
     let autoMapLastStatus='';
+    let autoMapNoActiveSince=0;
 
     function autoMapEnabled() {
       try{return localStorage.getItem(AUTO_MAP_STORAGE_KEY)==='1';}
@@ -20204,6 +20208,28 @@
         .filter(row=>pattern.test(row.text))
         .sort((a,b)=>a.area-b.area);
       return candidates[0]?.element || null;
+    }
+
+    function autoMapActiveCellCount() {
+      return [...document.querySelectorAll('[data-lot-id^="mf_treasurelot_active_sl"]')]
+        .filter(visible).length;
+    }
+
+    function autoMapAbandonModalRoot() {
+      const nodes=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]')].filter(visible);
+      for (const node of nodes) {
+        const text=clean(node.innerText||node.textContent||'');
+        if (/завершит текущее путешествие|будет начата новая карта|нельзя будет вернуться/i.test(text)) return node;
+      }
+      return null;
+    }
+
+    function autoMapAbandonBackButton(root) {
+      if (!root) return null;
+      return [...root.querySelectorAll('button,[role="button"],a,div,span')]
+        .filter(el=>el && el!==autoMapToggle && !el.disabled && visible(el))
+        .map(el=>({el,text:clean(el.innerText||el.textContent||'').trim()}))
+        .find(row=>/^(?:Назад|Back)$/i.test(row.text))?.el || null;
     }
 
     function autoMapJourneyButton() {
@@ -20545,6 +20571,51 @@
           return true;
         }
 
+        // Active cells always mean the current journey is still alive.
+        // Handle them before even looking at the persistent reset button.
+        if (treasureGuideScreenVisible()) {
+          const activeCount=autoMapActiveCellCount();
+          if (activeCount>0) {
+            autoMapNoActiveSince=0;
+            if (!autoMapSessionStarted()) setAutoMapSessionStarted(true);
+            setAutoMapStartLock(0);
+
+            const abandonRoot=autoMapAbandonModalRoot();
+            if (abandonRoot) {
+              const back=autoMapAbandonBackButton(abandonRoot);
+              if (back) {
+                autoMapStatus('закрываю сброс',{activeCount});
+                dispatchAutoMapTap(back,'abandon-back');
+                await new Promise(resolve=>setTimeout(resolve,450));
+                return true;
+              }
+              autoMapStatus('закрой сброс',{activeCount});
+              return false;
+            }
+
+            const target=autoMapMapCards()[0];
+            if (!target) {
+              // Active cells may be temporarily skipped after 409; that is not completion.
+              autoMapStatus('жду ячейку',{activeCount});
+              return false;
+            }
+
+            autoMapCurrentLot=target.lotId;
+            autoMapStatus('ячейка '+String(target.slot),{
+              lotId:target.lotId,
+              cost:target.cost,
+              activeCount
+            });
+            const ok=await autoMapTapAndConfirm(target.element,'map-'+target.lotId,target.cost);
+            if (ok) {
+              autoMapCurrentLot='';
+              lastSignature='';
+              setTimeout(checkPuzzle,100);
+            }
+            return ok;
+          }
+        }
+
         // The same game button is present both before the first map and after the
         // completed map. Persist session state so reloads cannot start a second map.
         if (treasureGuideScreenVisible() && autoMapJourneyButton()) {
@@ -20569,12 +20640,20 @@
             return started;
           }
 
+          if (!autoMapNoActiveSince) autoMapNoActiveSince=Date.now();
+          const emptyFor=Date.now()-autoMapNoActiveSince;
+          if (emptyFor<AUTO_MAP_NO_ACTIVE_COMPLETE_MS) {
+            autoMapStatus('проверяю карту',{emptyForMs:emptyFor});
+            return false;
+          }
+
           setAutoMapStartLock(0);
           autoMapStatus('ГОТОВО');
           recordDiagnostic('treasure-auto-map-complete',{
-            revision:HK_TREASURE_AUTO_MAP_SESSION_REV,
+            revision:HK_TREASURE_AUTO_MAP_ACTIVE_PRIORITY_REV,
             actions:autoMapActionCount,
-            source
+            source,
+            emptyForMs:emptyFor
           });
           setAutoMapEnabled(false,{reason:'map-complete',preserveStatus:'ГОТОВО'});
           return true;
@@ -20695,6 +20774,7 @@
       autoMapRunning=false;
       autoMapRetryNotBefore=0;
       autoMapCurrentLot='';
+      autoMapNoActiveSince=0;
       if (!value) autoMapSkipLotsUntil.clear();
 
       if (value) {
@@ -20704,7 +20784,7 @@
           // If enabling in the middle of an already-open map/minigame, infer that
           // the current session has started. A visible "new journey" button means
           // we are still before the map.
-          const alreadyInside=!autoMapJourneyButton();
+          const alreadyInside=autoMapActiveCellCount()>0 || !autoMapJourneyButton();
           setAutoMapSessionStarted(alreadyInside);
         }
         autoMapEnableModules();
@@ -20882,6 +20962,7 @@
       treasureAutoMapRevision:HK_TREASURE_AUTO_MAP_REV,
       treasureAutoMapSessionRevision:HK_TREASURE_AUTO_MAP_SESSION_REV,
       treasureAutoMapStartLockRevision:HK_TREASURE_AUTO_MAP_START_LOCK_REV,
+      treasureAutoMapActivePriorityRevision:HK_TREASURE_AUTO_MAP_ACTIVE_PRIORITY_REV,
       start,
       stop,
       check:checkPuzzle,
