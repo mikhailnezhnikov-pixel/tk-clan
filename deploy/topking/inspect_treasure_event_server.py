@@ -1,27 +1,22 @@
-import importlib.util, re
+import importlib.util, json, re, time
 server_path="/opt/hamsterking-license/server.py"
 spec=importlib.util.spec_from_file_location("hk_server",server_path)
 server=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server)
 server.ensure_treasure_guide_capture_schema()
-
 with server.db_session() as db:
     rows=[dict(r) for r in db.execute("""
-      SELECT id,path,page_text,captured_at
+      SELECT id,path,page_text,assets_json,captured_at
       FROM treasure_guide_captures
-      WHERE page_text LIKE '%Навык:%'
-      ORDER BY id DESC
-      LIMIT 3000
-    """)]
-print("ALL_SKILL_DOM_COUNT",len(rows))
-seen=set()
+      WHERE source='dom' AND captured_at>=?
+      ORDER BY id DESC LIMIT 1200
+    """,(int(time.time())-72*3600,))]
+urls={}
 for r in rows:
-    txt=re.sub(r"\s+"," ",str(r.get("page_text") or "")).strip()
-    pos=txt.find("Навык:")
-    if pos<0: continue
-    snippet=txt[max(0,pos-100):pos+1900]
-    # de-duplicate identical modal text while preserving first/newest source id.
-    key=re.sub(r"^.*?Навык:","Навык:",snippet)
-    if key in seen: continue
-    seen.add(key)
-    print("SKILLDOM",r["id"],r["captured_at"],r["path"],snippet)
+    try: assets=json.loads(r.get("assets_json") or "[]")
+    except: assets=[]
+    for a in assets:
+        s=str(a)
+        if re.search(r"skill_(?:fight_hp_up|chest_map_finder|more_food|more_money|chest_finder|trader_rep|fishing_map_finder)",s,re.I):
+            urls.setdefault(s,[]).append(r["id"])
+print("ASSETS",json.dumps([{"url":k,"captures":v[-10:]} for k,v in sorted(urls.items())],ensure_ascii=False))
