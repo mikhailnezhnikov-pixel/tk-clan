@@ -1,0 +1,115 @@
+name: Build Userscript 1.18.03 Victory Mobile Tap
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_battle_victory_tap_1_18_03.py'
+      - '.github/workflows/build-userscript-1-18-03-victory-mobile-tap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-userscript-1-18-03-victory-mobile-tap
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate from exact live baseline
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          test -f "$base"
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.02" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.02';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-victory-claim-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-reward-dismiss-20260926-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_battle_victory_tap_1_18_03.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.03" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.03';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-victory-tap-fallback-20260926-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "dispatchBattleTapAt" /tmp/HamsterKingMobile.user.js
+          grep -Fq "victory-fallback-" /tmp/HamsterKingMobile.user.js
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate and release manifest
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.03.victory-mobile-tap.candidate.user.js
+          audit=audit/hk-userscript-1-18-03-victory-mobile-tap-predeploy.txt
+
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+            cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.02':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.02',
+              'target_version':'1.18.03',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.03.victory-mobile-tap.candidate.user.js',
+              'primary_marker':'battle-victory-tap-fallback-20260926-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-03-victory-mobile-tap-live-status.txt',
+              'commit_message':'fix: deploy robust mobile victory reward tap in userscript 1.18.03',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+            mkdir -p "$(dirname "$audit")"
+            {
+              echo "USERSCRIPT_1_18_03_VICTORY_MOBILE_TAP_PREDEPLOY=PASS"
+              echo "source_version=1.18.02"
+              echo "target_version=1.18.03"
+              echo "scope=COMMON_HK_USERSCRIPT_ONLY"
+              echo "public_treasure_script=UNCHANGED"
+              echo "victory_tile=POINTER_TAP"
+              echo "victory_claim=GEOMETRIC_BUTTON_PLUS_FALLBACK"
+              echo "final_reward_dismiss=ENABLED"
+              echo "syntax=PASS"
+              echo "base_sha256=$(cat /tmp/base.sha)"
+              echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+            } > "$audit"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$candidate" deploy/topking/userscript-release.json "$audit"
+            git commit -m "build: prepare userscript 1.18.03 victory mobile tap"
+
+            if git push origin HEAD:main; then pushed=1; break; fi
+            sleep 2
+          done
+          test "$pushed" = 1
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
