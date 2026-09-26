@@ -128,7 +128,45 @@ for _,sid,events,meta in all_sessions[:2]:
                     "fair_id":fair,"shop_lot_id":req.get("shop_lot_id"),
                     "slot_id":req.get("slot_id")
                 },ensure_ascii=False))
-    print("SECOND_MAP_FAIR_COUNTS "+json.dumps(dict(fair_counts),ensure_ascii=False))
+    print("SECOND_MAP_FAIR_COUNTS "+json.dumps(dict(fair_counts),ensure_ascii=False))\n    print("LABYRINTH_GAP_STATES")
+    last_state=None
+    printed=0
+    for e in events:
+        try: seq=int(e.get("seq") or 0)
+        except: seq=0
+        if seq<850 or seq>1428: continue
+        typ=str(e.get("type") or "")
+        d=e.get("data") if isinstance(e.get("data"),dict) else {}
+        if typ=="snapshot":
+            headings=tuple(str(x)[:180] for x in (d.get("headings") or [])[:6])
+            modals=tuple(str(x)[:220] for x in (d.get("modals") or [])[:4])
+            lots=[]
+            for item in (d.get("lots") or []):
+                if isinstance(item,dict):
+                    lid=str(item.get("lotId") or "")
+                    txt=str(item.get("text") or "").replace("\n"," ")[:100]
+                    if lid or txt:
+                        lots.append((lid,txt))
+            key=(headings,modals,tuple(lots[:24]))
+            if key!=last_state and printed<80:
+                print(json.dumps({
+                    "seq":seq,"at":e.get("at"),"screen":e.get("screen"),
+                    "headings":list(headings),"modals":list(modals),
+                    "lots":[{"lotId":lid,"text":txt} for lid,txt in lots[:24]],
+                    "page":str(d.get("pageText") or "").replace("\n"," ")[:500]
+                },ensure_ascii=False))
+                printed+=1
+                last_state=key
+        elif typ=="click":
+            t=target(e)
+            lid=str(t.get("lotId") or "")
+            txt=str(t.get("text") or "").replace("\n"," ")[:220]
+            if lid or txt:
+                print(json.dumps({
+                    "seq":seq,"at":e.get("at"),"screen":e.get("screen"),
+                    "click_lot":lid,"click_text":txt
+                },ensure_ascii=False))
+
     print("ERRORS_AND_BLOCKERS")
     for e in events:
         typ=str(e.get("type") or "")
