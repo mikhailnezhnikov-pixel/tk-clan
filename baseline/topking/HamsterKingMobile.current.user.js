@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.11
+// @version      1.18.12
+// @release-note Сражение: реальный бой теперь определяется сразу по видимому мечу и видимой сетке врагов. Закрытые костями карточки больше не считаются признаком превью, поэтому подсказка и автобой запускаются с первого хода после входа в бой.
 // @release-note Мини-игры: все авто-режимы теперь запускаются только после фактического входа внутрь мини-игры. На внешней карте/превью скрипт не кликает входные ячейки и не атакует скрытый DOM. Настройка ВКЛ сохраняется и автоматически начинает работу после появления реального игрового поля.
 // @release-note Мини-игры: Тайный торговец получил последовательный автовыкуп всех доступных лотов с приоритетом карт/монет/ягод и защитой от повторной покупки. Рыбалка больше не выбирает уже «Активировано», ждёт сервер между покупками и переживает временные 409/500 через reconcile/backoff вместо мгновенного отключения.
 // @release-note Слухи: «Слухи сегодня» теперь автоматически обновляются каждые 30 секунд из публичного Kokkaras feed и общих результатов HK, показывают координаты прямо на главном экране; подтверждённые джекпоты, собранные через HK, публикуются в общую базу.
@@ -122,7 +123,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.11';
+  const BUILD_VERSION = '1.18.12';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -16377,6 +16378,7 @@
   const HK_MINIGAME_HTTP_BACKOFF_REV = 'minigame-http-409-500-backoff-20260926-r1';
   const HK_TRADER_FISHING_STABILITY_REV = 'trader-fishing-stability-20260926-r1';
   const HK_MINIGAME_ENTRY_GATE_REV = 'minigame-entry-only-auto-20260926-r1';
+  const HK_BATTLE_VISIBLE_BOARD_REV = 'battle-visible-board-active-20260926-r1';
   const hkPuzzleSolver = (() => {
     const BATTLE_FIRST_SLOT = 7;
     const BATTLE_SIZE = 12;
@@ -18601,8 +18603,17 @@
       if (sword && enemies.length > 0) {
         const battleIds='|' + sword.getAttribute('data-lot-id') + '|' +
           enemies.map(element => element.getAttribute('data-lot-id')).join('|');
-        if (battleNeedsEntry()) return 'BATTLE_PREVIEW' + battleIds;
+        // Once the user has entered the battle, unopened/covered enemy cards are
+        // still part of the real board. Their visual "bones" state must never
+        // downgrade the screen back to preview.
         return 'BATTLE' + battleIds;
+      }
+
+      // Preview/entry card may exist in DOM before the real enemy grid is visible.
+      // Keep automation idle there, while preserving the user's ON setting.
+      const previewSword=[...document.querySelectorAll('[data-lot-id^="mf_treasurelot_sword_"]')].find(visible);
+      if (previewSword) {
+        return 'BATTLE_PREVIEW|' + (previewSword.getAttribute('data-lot-id') || 'sword');
       }
 
       const victory=battleVictoryElement();
@@ -18647,7 +18658,8 @@
       }
       if (isBattlePreview) {
         recordDiagnostic('battle-auto-wait-entry',{
-          revision:HK_MINIGAME_ENTRY_GATE_REV,
+          revision:HK_BATTLE_VISIBLE_BOARD_REV,
+          reason:'visible-enemy-grid-not-found',
           autoEnabled:battleAutoEnabled()
         });
         return;
@@ -18709,6 +18721,7 @@
       fishingStabilityRevision:HK_FISHING_STABILITY_REV,
       traderAutoRevision:HK_TRADER_AUTO_REV,
       minigameEntryGateRevision:HK_MINIGAME_ENTRY_GATE_REV,
+      battleVisibleBoardRevision:HK_BATTLE_VISIBLE_BOARD_REV,
       start,
       stop,
       check:checkPuzzle,

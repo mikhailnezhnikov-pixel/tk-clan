@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.11
+target_version=1.18.12
+marker=battle-visible-board-active-20260926-r1
+source_sha256=76b81fbefcb4f7a86f0d62d97c87f1828d1f39f5d8cb4a66a69977084faad4a0
+candidate_sha256=544e003fb8cd2bda4e7e8cf671d63b50e60075689fb1a01b6e3f4b09e77ab6d9
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
