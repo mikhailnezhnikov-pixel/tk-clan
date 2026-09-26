@@ -88,5 +88,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-24-treasure-auto-map-stale-runner-live-status.txt",
-  "commit_message": "fix: deploy stale minigame runner cancellation in userscript 1.18.24"
+  "commit_message": "fix: deploy stale minigame runner cancellation in userscript 1.18.24",
+  "trigger_revision": 1
 }
