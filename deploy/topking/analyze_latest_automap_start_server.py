@@ -42,13 +42,17 @@ for sid,group in sessions.items():
         allruns.append((str(meta.get("started_at") or ""),sid,events,meta))
 allruns.sort(reverse=True)
 
-print("LATEST_AUTOMAP_START_TRACE")
-for started,sid,events,meta in allruns[:3]:
+print("LATEST_AUTOMAP_TRANSITION_TRACE")
+for started,sid,events,meta in allruns[:1]:
     print(json.dumps({"session_id":sid,"started_at":started,"run_index":meta.get("run_index"),"events":len(events)},ensure_ascii=False))
+    prev_screen=None
     for e in events:
         typ=str(e.get("type") or "")
         d=e.get("data") if isinstance(e.get("data"),dict) else {}
         sc=str(e.get("screen") or "")
+        if sc!=prev_screen:
+            print(json.dumps({"seq":e.get("seq"),"at":e.get("at"),"type":"screen-change","from":prev_screen,"to":sc},ensure_ascii=False))
+            prev_screen=sc
         if typ=="click":
             t=d.get("target") if isinstance(d.get("target"),dict) else {}
             txt=str(t.get("text") or "").replace("\n"," ")[:220]
@@ -74,5 +78,4 @@ for started,sid,events,meta in allruns[:3]:
                 "seq":e.get("seq"),"at":e.get("at"),"screen":sc,"type":"blocked",
                 "reason":d.get("reason"),"status":d.get("status"),"path":d.get("path")
             },ensure_ascii=False))
-        if int(e.get("seq") or 0)>160: break
-    print("END_LATEST_SESSION")
+    print("END_LATEST_TRANSITION_SESSION")
