@@ -1,2 +1,2 @@
-inspect=battle-victory-chest
-stamp=2026-09-26T13:12+09:00
+inspect=treasure-digging-chest-flow
+stamp=2026-09-26T13:20+09:00
