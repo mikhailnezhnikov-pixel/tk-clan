@@ -1,0 +1,5 @@
+RUMORS_SHARED_RESULTS_R2_CHECK=PASS
+kokkaras_public_feed=PRESERVED
+hk_confirmed_jackpot_reports=SUPPORTED
+merge_cap_per_city=3
+server_syntax=PASS
