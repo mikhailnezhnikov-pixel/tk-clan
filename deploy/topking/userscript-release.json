@@ -82,5 +82,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-18-treasure-auto-map-session-live-status.txt",
-  "commit_message": "feat: deploy full Treasure Auto Map session flow in userscript 1.18.18"
+  "commit_message": "feat: deploy full Treasure Auto Map session flow in userscript 1.18.18",
+  "trigger_revision": 1
 }
