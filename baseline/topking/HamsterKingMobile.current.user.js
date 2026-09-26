@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.07
+// @version      1.18.08
+// @release-note Рыбалка: порядок приведён к подтверждённому канону прохождения. Сначала активируется Проклятая вода, чтобы раскрыть проклятые клетки; затем приоритет Магический питомец → Рыба-фонарь → Существа → Особая вода → обычные воды. Стоимость берётся с карточки/канона, окно награды закрывается перед следующим выбором.
 // @release-note Мини-игры: лампочки теперь забирают итоговое хранилище; сундуки сначала полностью раскапывают доступные клетки; автобой не атакует скрытое поле до входа в сражение; рыбалка получила авторежим с приоритетом редких/выгодных типов воды и пересчётом после каждого улова.
 // @release-note Лампочки: автоклик теперь учитывает реальный мобильный сценарий игры — после выбора лампы ждёт карточку, подтверждает стоимость 1 ягода, закрывает экран «Понятно», затем ждёт фактического изменения поля 3×3 и только после этого заново пересчитывает следующий ход. Если любой этап модального сценария не найден, автолампы безопасно отключаются.
 // @release-note Лампочки: в общем HK-скрипте добавлен отдельный безопасный автоклик. После каждого нажатия скрипт ждёт фактического изменения 3×3 поля, заново считывает состояние, пересчитывает решение и только затем нажимает следующую лампу. При отсутствии изменения, потере цели, невалидном поле или цикле автоматизация отключается вместо повторных кликов. Цифры подсказки сохраняются.
@@ -118,7 +119,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.07';
+  const BUILD_VERSION = '1.18.08';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -16247,6 +16248,7 @@
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
   const HK_MINIGAME_FLOW_FIXES_REV = 'minigame-flow-fixes-20260926-r1';
+  const HK_FISHING_CANON_REV = 'fishing-canon-priority-20260926-r2';
   const hkPuzzleSolver = (() => {
     const BATTLE_FIRST_SLOT = 7;
     const BATTLE_SIZE = 12;
@@ -16542,6 +16544,19 @@
         .filter(row=>row.lotId);
     }
 
+    function fishingCanonicalCost(lotId) {
+      const id=String(lotId||'');
+      if (/magic_pet_water_uncursed/.test(id)) return 3;
+      if (/^.*is_fishing_cursed_water$/.test(id)) return 3;
+      if (/lamp_fish_water_uncursed/.test(id)) return 2;
+      if (/creatures_water_uncursed/.test(id)) return 2;
+      if (/tornado_cursed_water/.test(id)) return 2;
+      if (/tornado_water/.test(id)) return 2;
+      if (/fishing_water/.test(id)) return 2;
+      if (/calm_water/.test(id)) return 1;
+      return 1;
+    }
+
     function fishingTileCost(row) {
       const catalogRow=fairCatalog.find(item=>String(item?.lotId||'')===row.lotId);
       const parts=costParts(catalogRow?.cost).filter(part=>part.quantity>0);
@@ -16551,24 +16566,44 @@
       const nums=[...text.matchAll(/(?:^|\s)(\d{1,2})(?=\s|$)/g)]
         .map(match=>Number(match[1]))
         .filter(value=>value>=1 && value<=9);
-      const quantity=nums.length ? nums[nums.length-1] : (/calm_water/.test(row.lotId)?1:2);
+      const quantity=nums.length ? nums[nums.length-1] : fishingCanonicalCost(row.lotId);
       return {id:'',quantity};
     }
 
-    function fishingValueTier(lotId) {
+    function fishingValueTier(lotId,hasCurseTrigger=false) {
       const id=String(lotId||'');
-      if (/lamp_fish_water/.test(id)) return 600;
-      if (/fishing_water/.test(id)) return 500;
-      if (/creatures_water/.test(id)) return 440;
-      if (/tornado_water/.test(id)) return 260;
-      if (/calm_water/.test(id)) return 120;
+
+      // Confirmed 24.09 mechanic: the single cursed-water trigger must go first.
+      // It converts tornado_cursed cells into valuable uncursed/special cells.
+      if (/is_fishing_cursed_water$/.test(id)) return 1200;
+
+      // Do NOT waste casts on pink tornado-cursed cells while the trigger exists.
+      if (/tornado_cursed_water/.test(id)) return hasCurseTrigger ? -1000 : 80;
+
+      // Confirmed all-pink run priority consumed the remaining 9 casts exactly:
+      // magic pet (3) -> lamp fish (2+2) -> creatures (2).
+      if (/magic_pet_water_uncursed/.test(id)) return 1000;
+      if (/lamp_fish_water_uncursed/.test(id) || /lamp_fish_water/.test(id)) return 920;
+      if (/creatures_water_uncursed/.test(id) || /creatures_water/.test(id)) return 860;
+
+      // Other special water remains above ordinary water.
+      if (/fishing_water/.test(id)) return 720;
+
+      // Hurricane water can benefit from the Fishing Map finder skill.
+      if (/tornado_water/.test(id)) return 300;
+
+      // Calm cells are the cheapest fallback.
+      if (/calm_water_uncursed/.test(id)) return 230;
+      if (/calm_water/.test(id)) return 200;
       return 0;
     }
 
     function fishingTarget() {
-      const rows=fishingElements().map(row=>{
+      const source=fishingElements();
+      const hasCurseTrigger=source.some(row=>/is_fishing_cursed_water$/.test(row.lotId));
+      const rows=source.map(row=>{
         const cost=fishingTileCost(row);
-        const tier=fishingValueTier(row.lotId);
+        const tier=fishingValueTier(row.lotId,hasCurseTrigger);
         const roi=tier/Math.max(1,cost.quantity||1);
         return {...row,cost,tier,roi};
       }).filter(row=>row.tier>0);
@@ -16607,6 +16642,23 @@
       return false;
     }
 
+    async function dismissFishingRewards(runId) {
+      let clicked=0;
+      for (let i=0;i<6;i++) {
+        if (runId!==fishingAutoRunId || !fishingAutoEnabled()) break;
+        let button=treasureRewardButton();
+        if (!button) {
+          await new Promise(resolve=>setTimeout(resolve,180));
+          button=treasureRewardButton();
+          if (!button) break;
+        }
+        if (!dispatchBattleTap(button,'fishing-reward-'+(i+1))) break;
+        clicked+=1;
+        await new Promise(resolve=>setTimeout(resolve,280));
+      }
+      return clicked;
+    }
+
     async function runFishingAuto() {
       if (!fishingAutoEnabled() || fishingAutoRunning || battleAutoRunning || chestAutoRunning || lightsAutoRunning) return false;
       const target=fishingTarget();
@@ -16633,7 +16685,14 @@
         while (Date.now()-directStarted<700) {
           if (runId!==fishingAutoRunId || !fishingAutoEnabled()) return false;
           if (fishingSignature()!==before) {
-            recordDiagnostic('fishing-auto-complete',{revision:HK_FISHING_AUTO_REV,lotId:target.lotId,mode:'direct'});
+            await new Promise(resolve=>setTimeout(resolve,180));
+            const rewards=await dismissFishingRewards(runId);
+            recordDiagnostic('fishing-auto-complete',{
+              revision:HK_FISHING_CANON_REV,
+              lotId:target.lotId,
+              mode:'direct',
+              rewardsDismissed:rewards
+            });
             return true;
           }
           await new Promise(resolve=>setTimeout(resolve,80));
@@ -16669,13 +16728,13 @@
 
         const changed=await waitFishingChange(before,runId);
         await new Promise(resolve=>setTimeout(resolve,220));
-        const rewards=await dismissTreasureRewards(runId);
+        const rewards=await dismissFishingRewards(runId);
         if (!changed && rewards===0) {
           return failFishingAuto('field-no-change',{lotId:target.lotId});
         }
 
         recordDiagnostic('fishing-auto-complete',{
-          revision:HK_FISHING_AUTO_REV,
+          revision:HK_FISHING_CANON_REV,
           lotId:target.lotId,
           tier:target.tier,
           cost:target.cost,

@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.07
+target_version=1.18.08
+marker=fishing-canon-priority-20260926-r2
+source_sha256=8305b36a0c6366d07b5d621ba5a37f07ff55985fcc08ed714944511d7803159e
+candidate_sha256=eff6bcc3f4ae739d8317f7917016cf92db7ea97ebc2e637edcd084c6ac3e54d0
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
