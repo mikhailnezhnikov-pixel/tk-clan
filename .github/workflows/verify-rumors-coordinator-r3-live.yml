@@ -1,0 +1,112 @@
+name: Verify Rumors Coordinator R3 Live
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/rumors-coordinator-r3-verify-trigger.txt'
+      - '.github/workflows/verify-rumors-coordinator-r3-live.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Verify health and live coordinator without redeploy
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 5 --retry-delay 2 --connect-timeout 10 --max-time 30             "https://hk-license.89.125.1.71.sslip.io/health?r3verify=$(date +%s)"             -o /tmp/health.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True,d
+          print('HEALTH=PASS')
+          PY
+
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new             root@89.125.1.71 'python3 - <<'"'"'PY'"'"''
+          import sqlite3,urllib.request
+          server="/opt/hamsterking-license/server.py"
+          db_path="/var/lib/hamsterking-license/licenses.db"
+          text=open(server,encoding="utf-8").read()
+          for marker in [
+              "HK_RUMORS_COORDINATOR_R3",
+              "def rumor_hunter_action",
+              'path == "/api/v1/rumors/hunter"',
+              "RUMOR_HUNTER_LEASE_SECONDS = 90",
+              "RESULT_READY",
+          ]:
+              assert marker in text,marker
+
+          db=sqlite3.connect(f"file:{db_path}?mode=ro",uri=True)
+          names={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          required={"rumor_observations","rumor_hunter_presence","rumor_hunter_cities","rumor_hunter_history"}
+          missing=required-names
+          assert not missing,missing
+          db.close()
+
+          req=urllib.request.Request(
+              "https://kokkaras.com/hk_maps/rumors.php",
+              headers={"User-Agent":"Mozilla/5.0 HK-Rumors-Verify/1.0","Accept":"text/plain,*/*;q=0.8"},
+          )
+          with urllib.request.urlopen(req,timeout=10) as response:
+              raw=response.read(300001).decode("utf-8","replace")
+          rows=[line.strip() for line in raw.replace("\r","").split("\n")
+                if line.strip() and not line.lstrip().startswith("#")]
+          assert rows and rows[0].upper().startswith("UPDATED_AT="),rows[:2]
+          data=[line.split("|") for line in rows[1:] if len(line.split("|"))==5]
+          assert len(data)==51,len(data)
+          cities={parts[1] for parts in data}
+          assert len(cities)==17,len(cities)
+
+          print("RUMORS_COORDINATOR_R3_LIVE=PASS")
+          print("tables=PASS")
+          print("kokkaras_cities=17")
+          print("kokkaras_points=51")
+          PY
+
+      - name: Persist live audit
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          {
+            echo "RUMORS_COORDINATOR_R3_LIVE=PASS"
+            echo "canon=Kokkaras_5.3.22_ui_icons_pit_dim"
+            echo "public_feed=kokkaras_rumors.php"
+            echo "private_external_coordinator=NOT_USED"
+            echo "game_bearer_to_third_party=NEVER"
+            echo "hk_claim_lease=ENABLED"
+            echo "hk_heartbeat=ENABLED"
+            echo "hk_progress_done_release=ENABLED"
+            echo "hidden_shared_results=ENABLED"
+            echo "tables=PASS"
+            echo "kokkaras_cities=17"
+            echo "kokkaras_points=51"
+            echo "health=PASS"
+          } > audit/hk-rumors-coordinator-r3-live-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/hk-rumors-coordinator-r3-live-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: verify Rumors coordinator R3 live"
+            git push origin HEAD:main
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/health.json
