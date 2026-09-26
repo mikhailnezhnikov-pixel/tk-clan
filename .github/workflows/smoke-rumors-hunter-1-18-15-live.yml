@@ -96,7 +96,7 @@ jobs:
           s.init_db()
 
           db=sqlite3.connect("/var/lib/hamsterking-license/licenses.db")
-          names={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          names={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type=?",("table",))}
           required={"rumor_observations","rumor_hunter_presence","rumor_hunter_cities","rumor_hunter_history","rumor_routes"}
           assert required.issubset(names),(required-names)
 
