@@ -75,5 +75,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-11-minigame-entry-gate-live-status.txt",
-  "commit_message": "fix: deploy entry-only minigame automation in userscript 1.18.11"
+  "commit_message": "fix: deploy entry-only minigame automation in userscript 1.18.11",
+  "trigger_revision": 1
 }
