@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: inspect-treasure-run-recordings
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   inspect:
