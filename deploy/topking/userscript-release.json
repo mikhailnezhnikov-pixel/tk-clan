@@ -112,5 +112,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-48-treasure-lights-resume-live-status.txt",
-  "commit_message": "fix: deploy Treasure lights resume recovery in userscript 1.18.48"
+  "commit_message": "fix: deploy Treasure lights resume recovery in userscript 1.18.48",
+  "trigger_revision": 1
 }
