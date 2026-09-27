@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.54
+// @version      1.18.55
+// @release-note Сокровищница: левый путь теперь одноразовый на одно посещение — после входа в левую комнату остальные пути заблокированы до возврата на карту. После получения награды Автокарта выходит из локации и продолжает маршрут. Когда активных клеток больше нет, Автокарта не выключается, а автоматически начинает новую Карту сокровищ и продолжает цикл.
 // @release-note Сражения: добавлен разовый приоритет двух достижений. Пока достижение не отмечено выполненным, Автобой заранее моделирует цепочки зелёных/синих врагов и, если это достижимо текущими мечами, сначала пытается довести HP одного живого врага до 16+ и отдельно общую сумму HP живых врагов до 68+. После фактического достижения условие запоминается для аккаунта; если игра уже показывает достижение выполненным, специальный режим пропускается. Если подходящей цепочки нет, бой идёт обычным оптимальным маршрутом.
 // @release-note Сражения: строгий запрет выхода теперь работает даже когда окно «Покинуть локацию» перекрывает поле. Проверка боя использует сырой DOM врагов, а не только визуально видимые карточки. Пока есть хотя бы один враг с HP не больше остатка мечей, выход блокируется и окно закрывается через «Назад». Атака на мобильном выполняется полноценным pointer/touch tap вместо обычного element.click().
 // @release-note Сражения: введено строгое правило выхода. Покинуть боевую локацию можно только после получения финального сундука либо когда среди оставшихся врагов нет ни одного, кого можно атаковать текущим запасом мечей. Невозможность полной зачистки больше не является причиной выхода. Если окно выхода открылось преждевременно, Автокарта сама нажимает «Назад» и продолжает бой.
@@ -166,7 +167,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.54';
+  const BUILD_VERSION = '1.18.55';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17886,6 +17887,7 @@
   const HK_TREASURE_EVENT_UI_SCOPE_REV = 'treasure-event-ui-scope-20260927-r1';
   const HK_BATTLE_SKIP_CANON_REV = 'battle-skip-run9-20260927-r1';
   const HK_TREASURY_LEFT_PATH_REV = 'treasury-left-path-exit-recovery-20260927-r1';
+  const HK_TREASURY_LOOP_REV = 'treasury-left-once-continuous-map-20260927-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -22186,6 +22188,7 @@
     const AUTO_MAP_STORAGE_KEY='hk:treasure:auto-map:v1';
     const AUTO_MAP_SESSION_KEY='hk:treasure:auto-map-session:v1';
     const AUTO_MAP_START_LOCK_KEY='hk:treasure:auto-map-start-lock:v1';
+    const AUTO_MAP_TREASURY_LOCK_KEY='hk:treasure:auto-map-treasury-left:v1';
     const AUTO_MAP_START_LOCK_MS=9000;
     const AUTO_MAP_NO_ACTIVE_COMPLETE_MS=4500;
     const AUTO_MAP_RETURN_SETTLE_MS=1600;
@@ -22223,6 +22226,24 @@
         if (value) localStorage.setItem(AUTO_MAP_SESSION_KEY,'1');
         else localStorage.removeItem(AUTO_MAP_SESSION_KEY);
       }catch(_){}
+      return !!value;
+    }
+
+    function autoMapTreasuryLeftSelected() {
+      try{return localStorage.getItem(AUTO_MAP_TREASURY_LOCK_KEY)==='1';}
+      catch(_){return false;}
+    }
+
+    function setAutoMapTreasuryLeftSelected(value,meta={}) {
+      try{
+        if (value) localStorage.setItem(AUTO_MAP_TREASURY_LOCK_KEY,'1');
+        else localStorage.removeItem(AUTO_MAP_TREASURY_LOCK_KEY);
+      }catch(_){}
+      recordDiagnostic(value?'treasury-left-once-selected':'treasury-left-once-reset',{
+        revision:HK_TREASURY_LOOP_REV,
+        reason:String(meta?.reason||''),
+        lotId:String(meta?.lotId||'')
+      });
       return !!value;
     }
 
@@ -22993,8 +23014,8 @@
         .sort((a,b)=>a.slot-b.slot || (a.cost??9999)-(b.cost??9999));
     }
 
-    function autoMapTreasuryChoice() {
-      const rows=[...document.querySelectorAll('[data-lot-id^="mf_fair_treasury_room_choose_way_"]')]
+    function autoMapTreasuryChoiceRowsRaw() {
+      return [...document.querySelectorAll('[data-lot-id^="mf_fair_treasury_room_choose_way_"]')]
         .filter(visible)
         .map(element=>{
           const lotId=String(element.getAttribute('data-lot-id')||'');
@@ -23013,11 +23034,16 @@
         })
         .filter(row=>Number.isFinite(row.x) && row.x>=0)
         .sort((a,b)=>a.x-b.x || a.y-b.y || a.index-b.index);
+    }
 
+    function autoMapTreasuryChoice() {
+      if (autoMapTreasuryLeftSelected()) return null;
+
+      const rows=autoMapTreasuryChoiceRowsRaw();
       const choice=rows[0] || null;
       if (choice) {
         recordDiagnostic('treasury-left-path-selected',{
-          revision:HK_TREASURY_LEFT_PATH_REV,
+          revision:HK_TREASURY_LOOP_REV,
           lotId:choice.lotId,
           index:choice.index,
           x:Math.round(choice.x),
@@ -23031,6 +23057,43 @@
         });
       }
       return choice;
+    }
+
+    async function autoMapEnterTreasuryLeftPath(choice) {
+      if (!choice || autoMapTreasuryLeftSelected()) return false;
+
+      const before=autoMapStateFingerprint();
+      setAutoMapTreasuryLeftSelected(true,{
+        reason:'before-left-entry',
+        lotId:choice.lotId
+      });
+
+      autoMapStatus('treasury левый путь',{
+        revision:HK_TREASURY_LOOP_REV,
+        lotId:choice.lotId,
+        x:Math.round(choice.x||0)
+      });
+
+      const ok=await autoMapTapAndConfirm(
+        choice.element,
+        'treasury-left-once-'+choice.lotId,
+        choice.cost
+      );
+
+      if (ok) return true;
+
+      // Roll back only when the same left-choice screen is still present.
+      const sameScreen=
+        autoMapTreasuryScreenVisible() &&
+        autoMapTreasuryChoiceRowsRaw().some(row=>row.lotId===choice.lotId) &&
+        autoMapStateFingerprint()===before;
+      if (sameScreen) {
+        setAutoMapTreasuryLeftSelected(false,{
+          reason:'left-entry-failed',
+          lotId:choice.lotId
+        });
+      }
+      return ok;
     }
 
     function autoMapTreasuryChestRows() {
@@ -23707,6 +23770,43 @@
       return false;
     }
 
+    async function autoMapStartJourney(label='new-journey') {
+      const lockAt=autoMapStartLockAt();
+      if (lockAt && Date.now()-lockAt<AUTO_MAP_START_LOCK_MS) {
+        autoMapStatus('жду открытия',{elapsedMs:Date.now()-lockAt,label});
+        return false;
+      }
+      if (lockAt) setAutoMapStartLock(0);
+
+      const journey=autoMapJourneyButton();
+      if (!journey) return false;
+
+      setAutoMapStartLock(Date.now());
+      autoMapStatus(label==='next-journey'?'новая карта':'старт карты',{
+        revision:HK_TREASURY_LOOP_REV,
+        label
+      });
+
+      const started=await autoMapTapAndConfirm(journey,label,1);
+      if (started && autoMapMapCards().length>0) {
+        setAutoMapSessionStarted(true);
+        setAutoMapStartLock(0);
+        autoMapNoActiveSince=0;
+        autoMapStatus('карта открыта',{
+          revision:HK_TREASURY_LOOP_REV,
+          label
+        });
+        recordDiagnostic('treasure-auto-map-next-journey',{
+          revision:HK_TREASURY_LOOP_REV,
+          label,
+          activeCells:autoMapActiveCellCount()
+        });
+      } else {
+        autoMapStatus('жду открытия',{label});
+      }
+      return started;
+    }
+
     async function runAutoMapTick(source='loop') {
       if (!autoMapEnabled() || autoMapRunning) {
         ensureAutoMapToggle();
@@ -23806,6 +23906,11 @@
         }
 
         const foregroundNow=autoMapMiniGameForeground();
+
+        if (treasureGuideScreenVisible() && autoMapTreasuryLeftSelected()) {
+          setAutoMapTreasuryLeftSelected(false,{reason:'map-visible'});
+        }
+
         if (foregroundNow) {
           autoMapReturnNotBefore=Date.now()+AUTO_MAP_RETURN_SETTLE_MS;
         } else if (treasureGuideScreenVisible() && Date.now()<autoMapReturnNotBefore) {
@@ -23872,24 +23977,7 @@
         // completed map. Persist session state so reloads cannot start a second map.
         if (!autoMapMiniGameForeground() && !treasureModalRoot(null) && Date.now()>=autoMapReturnNotBefore && treasureGuideScreenVisible() && autoMapJourneyButton()) {
           if (!autoMapSessionStarted()) {
-            const lockAt=autoMapStartLockAt();
-            if (lockAt && Date.now()-lockAt<AUTO_MAP_START_LOCK_MS) {
-              autoMapStatus('жду открытия',{elapsedMs:Date.now()-lockAt});
-              return false;
-            }
-            if (lockAt) setAutoMapStartLock(0);
-            const journey=autoMapJourneyButton();
-            setAutoMapStartLock(Date.now());
-            autoMapStatus('старт карты');
-            const started=await autoMapTapAndConfirm(journey,'new-journey',1);
-            if (started && autoMapMapCards().length>0) {
-              setAutoMapSessionStarted(true);
-              setAutoMapStartLock(0);
-              autoMapStatus('карта открыта');
-            } else {
-              autoMapStatus('жду открытия');
-            }
-            return started;
+            return await autoMapStartJourney('new-journey');
           }
 
           if (!autoMapNoActiveSince) autoMapNoActiveSince=Date.now();
@@ -23900,15 +23988,22 @@
           }
 
           setAutoMapStartLock(0);
-          autoMapStatus('ГОТОВО');
-          recordDiagnostic('treasure-auto-map-complete',{
-            revision:HK_TREASURE_AUTO_MAP_ACTIVE_PRIORITY_REV,
-            actions:autoMapActionCount,
+          setAutoMapSessionStarted(false);
+          setAutoMapTreasuryLeftSelected(false,{reason:'map-complete'});
+          autoMapNoActiveSince=0;
+          autoMapStatus('новая карта',{
+            revision:HK_TREASURY_LOOP_REV,
             source,
             emptyForMs:emptyFor
           });
-          setAutoMapEnabled(false,{reason:'map-complete',preserveStatus:'ГОТОВО'});
-          return true;
+          recordDiagnostic('treasure-auto-map-complete',{
+            revision:HK_TREASURY_LOOP_REV,
+            actions:autoMapActionCount,
+            source,
+            emptyForMs:emptyFor,
+            nextJourney:true
+          });
+          return await autoMapStartJourney('next-journey');
         }
 
         // Normal map traversal: lowest currently active slot first, then rescan.
@@ -23948,8 +24043,7 @@
 
         const choice=autoMapTreasuryChoice();
         if (choice) {
-          autoMapStatus('treasury путь');
-          return autoMapTapAndConfirm(choice.element,'treasury-'+choice.lotId,choice.cost);
+          return await autoMapEnterTreasuryLeftPath(choice);
         }
         const treasuryChest=autoMapTreasuryChest();
         if (treasuryChest) {
@@ -24066,6 +24160,7 @@
         else if (meta?.reason && meta.reason!=='map-complete') autoMapLastStatus='стоп';
         setAutoMapSessionStarted(false);
         setAutoMapStartLock(0);
+        setAutoMapTreasuryLeftSelected(false,{reason:'auto-map-off'});
         recordDiagnostic('treasure-auto-map-toggle',{
           revision:HK_TREASURE_AUTO_MAP_REV,
           enabled:false,
@@ -24298,6 +24393,7 @@
       treasureEventUiScopeRevision:HK_TREASURE_EVENT_UI_SCOPE_REV,
       battleSkipCanonRevision:HK_BATTLE_SKIP_CANON_REV,
       treasuryLeftPathRevision:HK_TREASURY_LEFT_PATH_REV,
+      treasuryLoopRevision:HK_TREASURY_LOOP_REV,
       start,
       stop,
       check:checkPuzzle,
