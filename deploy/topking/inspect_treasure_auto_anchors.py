@@ -57,7 +57,9 @@ terms=[
   "function treasureChestSignature(",
   "function traderTarget(",
   "function fishingTarget(",
-  "function fishingAffordable("
+  "function fishingAffordable(",
+  "let fishingAutoRunning",
+  "function fishingVisibleCasts("
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
@@ -93,6 +95,12 @@ for key in ["function treasureChestElements(","function treasureChestTarget(","a
 
 print("PRINT_TRADER_FISHING_CURRENT_CONTEXT")
 for key in ["function traderElements(","function traderTarget(","async function runTraderAuto(","function fishingElements(","function fishingTarget(","async function runFishingAuto(","function fishingAffordable("]:
+    print("=== "+key+" ===")
+    for hit in out["hits"].get(key,[])[:1]:
+        print(hit["context"])
+
+print("PRINT_FISHING_ZERO_CURRENT_CONTEXT")
+for key in ["let fishingAutoRunning","function fishingVisibleCasts(","function fishingAffordable(","function fishingTarget(","async function runFishingAuto("]:
     print("=== "+key+" ===")
     for hit in out["hits"].get(key,[])[:1]:
         print(hit["context"])
