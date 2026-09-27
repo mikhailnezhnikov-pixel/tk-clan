@@ -10,4 +10,5 @@ public_verify_rollback=ENABLED
 treasure_regression_contract=PASS
 treasure_lights_resume_contract=PASS
 treasure_lights_outer_modal_contract=PASS
+treasure_chest_fast_pacing_contract=PASS
 ci_game_mutations=NONE
