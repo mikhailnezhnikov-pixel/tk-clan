@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.45
+// @version      1.18.46
+// @release-note Карта сокровищ: исправлено зависание «ЖДУ ОКНО» после выбора клетки. Для модалки входа в локацию HK теперь сначала определяет реальный центральный диалог по геометрии и кнопке действия (например стоимость 20), а не случайный контейнер вокруг картинки. Поэтому кнопка входа подтверждается сразу, после чего Автокарта продолжает маршрут.
 // @release-note Карта сокровищ: клетки карты больше не принимаются за мини-игру «Сундуки». Пока реальная активная клетка карты находится на переднем плане, детектор сундуков блокируется, Автосундуки не стартуют и Автокарта продолжает маршрут. При входе в настоящую комнату сундуков защита автоматически снимается.
 // @release-note Сокровищница: путь теперь выбирается строго по фактической позиции на экране — всегда левый видимый вариант, а не по номеру lot-id. Также исправлено зависание на окне «Покинуть локацию»: уже открытая модалка подхватывается без повторного нажатия выхода, кнопка стоимости 10 ищется отдельно и подтверждается один раз, после чего HK ждёт возврата на Карту сокровищ.
 // @release-note Сражение/Автокарта: по записи #9 сражения теперь пропускаются без проведения боя. После входа в комнату HK закрывает стартовое «Понятно», нажимает «Покинуть локацию», подтверждает стоимость 10 и ждёт возврата на Карту сокровищ. Пока Автокарта включена, боевой решатель не делает ни одного удара.
@@ -157,7 +158,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.45';
+  const BUILD_VERSION = '1.18.46';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3742,6 +3743,7 @@
   const HK_TREASURE_CHEST_ELEMENT_STATE_REV='treasure-chest-element-state-20260927-r1';
   const HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV='treasure-auto-map-stale-runner-20260927-r2';
   const HK_TREASURE_CHEST_MAP_GUARD_REV='treasure-chest-map-foreground-guard-20260927-r1';
+  const HK_TREASURE_LOCATION_MODAL_ROOT_REV='treasure-location-modal-root-20260927-r1';
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
@@ -20670,7 +20672,96 @@
       return selected;
     }
 
+    function treasureCenteredModalRoot() {
+      const vw=Math.max(1,window.innerWidth);
+      const vh=Math.max(1,window.innerHeight);
+      const center=document.elementFromPoint?.(vw/2,vh/2);
+      if (!center) return null;
+
+      const rows=[];
+      let node=center;
+      for (let depth=0;node && depth<14;depth++,node=node.parentElement) {
+        if (!visible(node)) continue;
+        const rect=node.getBoundingClientRect?.();
+        if (!rect) continue;
+        if (rect.width<Math.min(260,vw*0.30) || rect.height<180) continue;
+        if (rect.width>vw*0.94 || rect.height>vh*0.94) continue;
+
+        const centerX=rect.left+rect.width/2;
+        const actions=[...node.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+          .filter(element=>element && !element.disabled && visible(element))
+          .map(element=>{
+            const text=clean(element.innerText||element.textContent||'').trim();
+            const r=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+            const cx=r.left+r.width/2;
+            let actionable=false;
+            try {
+              actionable=
+                element.matches?.('button,[role="button"],a,[onclick]') ||
+                !!element.onclick ||
+                getComputedStyle(element).cursor==='pointer';
+            } catch (_) {}
+            let score=0;
+            if (/^\d{1,4}$/.test(text)) score+=260;
+            if (/^(?:▷|▶|►|play|start|open|открыть|получить|забрать|claim|collect)$/i.test(text)) score+=220;
+            if (r.top>=rect.top+rect.height*0.48) score+=120;
+            if (r.width>=rect.width*0.24 && r.width<=rect.width*0.92) score+=100;
+            if (r.height>=34 && r.height<=150) score+=80;
+            if (Math.abs(cx-centerX)<=rect.width*0.30) score+=100;
+            if (actionable) score+=80;
+            if (/закрыть|close|×|✕|назад|back|понятно|ok|okay/i.test(text)) score-=600;
+            return {element,text,score};
+          })
+          .filter(row=>row.score>=420);
+
+        if (!actions.length) continue;
+
+        const text=clean(node.innerText||node.textContent||'').trim();
+        if (/завершит текущее путешествие|будет начата новая карта|нельзя будет вернуться/i.test(text)) continue;
+
+        const cx=rect.left+rect.width/2;
+        const cy=rect.top+rect.height/2;
+        const centered=
+          Math.abs(cx-vw/2)<=vw*0.18 &&
+          Math.abs(cy-vh/2)<=vh*0.22;
+        if (!centered) continue;
+
+        rows.push({
+          element:node,
+          rect,
+          area:rect.width*rect.height,
+          actionScore:Math.max(...actions.map(row=>row.score))
+        });
+      }
+
+      rows.sort((a,b)=>
+        a.area-b.area ||
+        b.actionScore-a.actionScore
+      );
+      const selected=rows[0]?.element || null;
+      if (selected) {
+        const rect=selected.getBoundingClientRect?.();
+        recordDiagnostic('treasure-location-modal-root',{
+          revision:HK_TREASURE_LOCATION_MODAL_ROOT_REV,
+          left:Math.round(rect?.left||0),
+          top:Math.round(rect?.top||0),
+          width:Math.round(rect?.width||0),
+          height:Math.round(rect?.height||0)
+        });
+      }
+      return selected;
+    }
+
     function treasureModalRoot(cost) {
+      // Generic AutoMap/location modals have many decorative images. Choosing
+      // the smallest image ancestor could land inside the reward preview and
+      // exclude the real bottom action button. For cost-less lookups prefer the
+      // centered dialog that actually contains a usable action.
+      if (!cost) {
+        const centered=treasureCenteredModalRoot();
+        if (centered) return centered;
+      }
+
       const needle=String(cost?.id||'');
       const imgs=[...document.querySelectorAll('img')].filter(img=>visible(img) && (!needle || String(img.src||'').includes(needle)));
       const rows=[];
@@ -22649,6 +22740,21 @@
       while (Date.now()<actionDeadline) {
         if (runId!==autoMapRunId || !autoMapEnabled()) return false;
         action=autoMapModalPrimaryButton(modal,costHint);
+        if (!action) {
+          const centered=treasureCenteredModalRoot();
+          if (centered && centered!==modal) {
+            const centeredAction=autoMapModalPrimaryButton(centered,costHint);
+            if (centeredAction) {
+              modal=centered;
+              action=centeredAction;
+              recordDiagnostic('treasure-location-modal-action-recovered',{
+                revision:HK_TREASURE_LOCATION_MODAL_ROOT_REV,
+                label,
+                costHint:Number.isFinite(costHint)?Number(costHint):null
+              });
+            }
+          }
+        }
         if (action) break;
         await new Promise(resolve=>setTimeout(resolve,80));
       }
@@ -23375,6 +23481,7 @@
       treasureChestElementStateRevision:HK_TREASURE_CHEST_ELEMENT_STATE_REV,
       treasureAutoMapStaleRunnerRevision:HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV,
       treasureChestMapGuardRevision:HK_TREASURE_CHEST_MAP_GUARD_REV,
+      treasureLocationModalRootRevision:HK_TREASURE_LOCATION_MODAL_ROOT_REV,
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
