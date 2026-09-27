@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.32",
-  "target_version": "1.18.33",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.33.lights-stable-plan.candidate.user.js",
-  "primary_marker": "lights-stable-plan-20260927-r1",
+  "source_version": "1.18.33",
+  "target_version": "1.18.34",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.34.lights-reward-bottom-action.candidate.user.js",
+  "primary_marker": "lights-reward-bottom-action-20260927-r1",
   "preserve_markers": [
+    "lights-stable-plan-20260927-r1",
     "lights-confirm-verified-20260927-r2",
     "lights-confirm-recovery-20260927-r1",
     "fishing-zero-cast-exit-20260927-r1",
@@ -96,7 +97,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-33-lights-stable-plan-live-status.txt",
-  "commit_message": "fix: deploy stable shortest lights plan in userscript 1.18.33",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-34-lights-reward-bottom-action-live-status.txt",
+  "commit_message": "fix: deploy lights reward bottom action in userscript 1.18.34"
 }

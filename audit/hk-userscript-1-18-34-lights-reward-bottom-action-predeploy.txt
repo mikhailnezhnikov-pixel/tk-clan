@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_34_LIGHTS_REWARD_BOTTOM_ACTION_PREDEPLOY=PASS
+source_version=1.18.33
+target_version=1.18.34
+reward_target=BOTTOM_CENTER_ACTION_ONLY
+resource_icons=EXCLUDED
+global_ack=EXCLUDED
+post_click_ui_verification=ENABLED
+syntax=PASS
+base_sha256=ecd2ddfa191585a8f8f97dd54428f00ce5dad85c8e257d05c7de7c3ba132decf
+candidate_sha256=3f02849b53ad1988291c887fab81bade2ea66956663db11d79aca708243ca110
