@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.39",
-  "target_version": "1.18.40",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.40.treasury-visual-exit.candidate.user.js",
-  "primary_marker": "treasury-visual-exit-20260927-r2",
+  "source_version": "1.18.40",
+  "target_version": "1.18.41",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.41.trader-approved-modal.candidate.user.js",
+  "primary_marker": "trader-approved-modal-buy-20260927-r1",
   "preserve_markers": [
+    "treasury-visual-exit-20260927-r2",
     "treasury-exit-after-claim-20260927-r1",
     "lights-fast-confirm-20260927-r1",
     "lights-close-modal-between-steps-20260927-r1",
@@ -103,7 +104,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-40-treasury-visual-exit-live-status.txt",
-  "commit_message": "fix: deploy visual treasury exit in userscript 1.18.40",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-41-trader-approved-modal-live-status.txt",
+  "commit_message": "fix: deploy approved trader modal purchases in userscript 1.18.41"
 }

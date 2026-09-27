@@ -1,0 +1,14 @@
+USERSCRIPT_1_18_41_TRADER_APPROVED_MODAL_PREDEPLOY=PASS
+source_version=1.18.40
+target_version=1.18.41
+approved_pet_treats=ENABLED
+approved_treasure_keys=ENABLED
+approved_hiking_supplies=ENABLED
+approved_pet_skill_change=ENABLED
+pet_eggs=AUTO_BUY_DISABLED
+already_open_modal=RESUME_AND_CONFIRM
+purchase_target=CLICKABLE_ANCESTOR_WITH_CENTER_FALLBACK
+syntax=PASS
+static_smoke=PASS
+base_sha256=b4c6ba5b3eb0308ee09745e8faa09fad5d0a12ed9016cbfd5e4454c55d32f66d
+candidate_sha256=0d9b431d6c50ae56ef4a4b17ba10613d687e1664d71188764044619dc35cf908
