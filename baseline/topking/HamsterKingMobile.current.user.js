@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.35
+// @version      1.18.36
+// @release-note Лампочки/Автокарта: завершение комнаты теперь определяется не только временным JS-флагом, но и реальным состоянием центральной награды «Активировано», поэтому возврат работает после перерисовки/перезапуска раннера. Зависший раннер Автоламп после забора награды принудительно отпускается. Для выхода приоритет отдан нижней золотой кнопке возврата в игровом футере; правый плавающий Back/HK-контрол исключён.
 // @release-note Лампочки/Автокарта: после подтверждённого получения центральной награды комната считается завершённой и больше не запускает Автолампы повторно. Автокарта получает строгий handoff «основная награда забрана → кнопка возврата из мини-игры → Карта Сокровищ → продолжить активные клетки». Для выхода добавлен отдельный поиск текстового или иконочного Back/Exit-контрола с проверкой фактического возврата на карту.
 // @release-note Лабиринт: финальное «Активированное хранилище» теперь подтверждается только нижней центральной кнопкой действия. Иконки ресурсов внутри окна явно исключены из кандидатов, а глобальная кнопка «Понятно» под модалкой больше не может быть нажата как подтверждение награды. После клика скрипт ждёт фактического закрытия/смены модалки перед передачей управления Автокарте.
 // @release-note Лампочки: убран повторный клик подтверждения при медленном ответе сервера — одна покупка теперь отправляется только один раз и затем ждёт ответ до 8 секунд. Автолампы больше не пересчитывают новый маршрут после каждого хода: фиксируется один кратчайший план, каждый фактический переход сверяется с ожидаемой моделью 3×3, а при расхождении автоматизация останавливается вместо кликов туда‑сюда.
@@ -147,7 +148,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.35';
+  const BUILD_VERSION = '1.18.36';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17826,6 +17827,7 @@
   const HK_LIGHTS_FINAL_REWARD_REV = 'lights-final-reward-20260926-r1';
   const HK_LIGHTS_REWARD_CLAIM_REV = 'lights-reward-bottom-action-20260927-r1';
   const HK_LIGHTS_MAP_RETURN_REV = 'lights-map-return-after-main-reward-20260927-r1';
+  const HK_LIGHTS_COMPLETED_RETURN_REV = 'lights-completed-dom-return-20260927-r2';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -19371,6 +19373,24 @@
         .find(element=>visible(element)) || null;
     }
 
+    function lightsRewardActivated() {
+      const reward=lightsRewardElement();
+      if (!reward) return false;
+      const text=clean(reward.innerText||reward.textContent||'').trim();
+      const aria=clean(
+        reward.getAttribute?.('aria-label') ||
+        reward.getAttribute?.('title') ||
+        ''
+      ).trim();
+      const cls=String(reward.className||'');
+      return /(?:^|\s)(?:Активировано|Activated)(?:\s|$)/i.test(text+' '+aria)
+        || /activated|claimed|completed|bought/i.test(cls);
+    }
+
+    function lightsRoomCompleted() {
+      return !!(lightsFinalRewardClaimed || lightsRewardActivated());
+    }
+
     function lightsRewardModalRoot() {
       const candidates=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
         .filter(element=>visible(element))
@@ -19557,7 +19577,7 @@
     }
 
     function lightsShouldAuto() {
-      if (lightsFinalRewardClaimed) return false;
+      if (lightsRoomCompleted()) return false;
       return lightsNeedsAuto() || !!lightsRewardElement();
     }
 
@@ -21257,11 +21277,11 @@
     }
 
     function autoMapCompletedLightsBackButton() {
-      if (!lightsFinalRewardClaimed) return null;
+      if (!lightsRoomCompleted()) return null;
 
       const viewportW=Math.max(1,window.innerWidth);
       const viewportH=Math.max(1,window.innerHeight);
-      const candidates=[...document.querySelectorAll('button,[role="button"],a,[onclick],div')]
+      const all=[...document.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
         .filter(element=>
           element &&
           element!==autoMapToggle &&
@@ -21288,42 +21308,70 @@
             element.matches?.('button,[role="button"],a,[onclick]') ||
             !!element.onclick ||
             style.cursor==='pointer';
-          const squareish=
-            rect.width>=28 && rect.width<=105 &&
-            rect.height>=28 && rect.height<=105 &&
-            rect.width/Math.max(1,rect.height)>=0.55 &&
-            rect.width/Math.max(1,rect.height)<=1.85;
-          const nearRight=rect.left>=viewportW*0.84;
-          const nearLeft=rect.left+rect.width<=viewportW*0.20;
-          const low=rect.top>=viewportH*0.62;
-          const veryLow=rect.top>=viewportH*0.78;
           const hasIcon=!!element.querySelector?.('svg,img,use,path') || /[←↩⟵‹«]/.test(text);
           const explicitBack=/назад|back|return|вернуться|покинуть|leave|exit/i.test(text+' '+aria);
+          return {element,text,aria,rect,actionable,hasIcon,explicitBack};
+        })
+        .filter(row=>row.actionable && row.rect.width>0 && row.rect.height>0);
 
+      // Canonical desktop/mobile layout: the real room-return control is the
+      // small gold square in the bottom game footer, immediately left of the
+      // wide yellow cost/continue bar. Prefer that region over any floating HK
+      // or browser-like back controls on the right edge.
+      const footer=all
+        .map(row=>{
+          const r=row.rect;
+          const cx=r.left+r.width/2;
+          const cy=r.top+r.height/2;
+          const squareish=
+            r.width>=26 && r.width<=100 &&
+            r.height>=26 && r.height<=100 &&
+            r.width/Math.max(1,r.height)>=0.55 &&
+            r.width/Math.max(1,r.height)<=1.85;
+          const footerY=cy>=viewportH*0.86;
+          const gameBand=cx>=viewportW*0.20 && cx<=viewportW*0.55;
+          const farRight=cx>=viewportW*0.82;
           let score=0;
-          if (actionable) score+=100;
-          if (explicitBack) score+=340;
-          if (squareish) score+=130;
-          if (low) score+=80;
-          if (veryLow) score+=55;
-          if (nearRight) score+=150;
-          if (nearLeft) score+=70;
-          if (hasIcon) score+=70;
-          if (!text || /^[←↩⟵‹«]$/.test(text)) score+=45;
+          if (squareish) score+=180;
+          if (footerY) score+=260;
+          if (gameBand) score+=240;
+          if (row.hasIcon) score+=100;
+          if (row.explicitBack) score+=120;
+          if (!row.text || /^[←↩⟵‹«]$/.test(row.text)) score+=55;
+          if (farRight) score-=800;
+          if (r.width>130 || r.height>120) score-=700;
+          if (/^\d+$/.test(row.text)) score-=700;
+          if (/^hk$/i.test(row.text)) score-=900;
+          if (/автокарта|автолампы|auto\s*map|auto\s*lights/i.test(row.text)) score-=900;
+          return {...row,score};
+        })
+        .filter(row=>row.score>=500)
+        .sort((a,b)=>b.score-a.score || a.rect.width*a.rect.height-b.rect.width*b.rect.height);
 
-          // Never mistake the wide yellow "10" continuation/cost bar or HK
-          // floating controls for the room-return control.
-          if (rect.width>130 || rect.height>120) score-=500;
-          if (/^\d+$/.test(text)) score-=500;
-          if (/^hk$/i.test(text)) score-=500;
-          if (/автокарта|автолампы|auto\s*map|auto\s*lights/i.test(text)) score-=700;
+      if (footer[0]?.element) return footer[0].element;
 
-          return {element,score,rect,text,aria};
+      // Secondary fallback: explicit textual/icon back controls, but never the
+      // right floating control visible in the HK overlay.
+      const fallback=all
+        .map(row=>{
+          const r=row.rect;
+          const cx=r.left+r.width/2;
+          const cy=r.top+r.height/2;
+          const farRight=cx>=viewportW*0.82;
+          let score=0;
+          if (row.explicitBack) score+=360;
+          if (row.hasIcon) score+=90;
+          if (cy>=viewportH*0.60) score+=70;
+          if (cx<=viewportW*0.70) score+=90;
+          if (farRight) score-=800;
+          if (r.width>130 || r.height>120) score-=500;
+          if (/^hk$/i.test(row.text)) score-=900;
+          return {...row,score};
         })
         .filter(row=>row.score>=300)
         .sort((a,b)=>b.score-a.score || a.rect.width*a.rect.height-b.rect.width*b.rect.height);
 
-      return candidates[0]?.element || null;
+      return fallback[0]?.element || null;
     }
 
     async function autoMapWaitReturnedFromLights(timeoutMs=6500) {
@@ -21340,15 +21388,24 @@
     }
 
     async function autoMapReturnFromCompletedLights() {
-      if (!autoMapEnabled() || !lightsFinalRewardClaimed) return false;
+      if (!autoMapEnabled() || !lightsRoomCompleted()) return false;
+
+      if (!lightsFinalRewardClaimed && lightsRewardActivated()) {
+        lightsFinalRewardClaimed=true;
+        lightsFinalRewardClaimedAt=Date.now();
+        recordDiagnostic('lights-final-reward-recovered',{
+          revision:HK_LIGHTS_COMPLETED_RETURN_REV,
+          source:'activated-reward-dom'
+        });
+      }
 
       autoMapStatus('возврат на карту',{
-        revision:HK_LIGHTS_MAP_RETURN_REV,
+        revision:HK_LIGHTS_COMPLETED_RETURN_REV,
         claimedAgoMs:lightsFinalRewardClaimedAt ? Date.now()-lightsFinalRewardClaimedAt : null
       });
 
       await autoMapWaitActionGap();
-      if (!autoMapEnabled() || !lightsFinalRewardClaimed) return false;
+      if (!autoMapEnabled() || !lightsRoomCompleted()) return false;
 
       // Prefer an explicit Leave/Exit button if the room exposes one.
       const explicit=autoMapExitButton();
@@ -21391,7 +21448,7 @@
           const action=autoMapModalPrimaryButton(modal,10);
           if (action) {
             await minigameHumanPause('confirm',{module:'auto-map',label:'lights-return-map'});
-            if (autoMapEnabled() && lightsFinalRewardClaimed) {
+            if (autoMapEnabled() && lightsRoomCompleted()) {
               dispatchAutoMapTap(action,'auto-map-confirm-lights-return-map');
               autoMapLastActionAt=Date.now();
               returned=await autoMapWaitReturnedFromLights(5200);
@@ -21746,6 +21803,19 @@
         return false;
       }
 
+      // After the central reward is visibly Activated, the lights runner has no
+      // more work. Release a stale runner before the generic "mini-game busy"
+      // gate, otherwise AutoMap can remain forever on "мини-игра".
+      if (lightsRoomCompleted() && getSignature().startsWith('LIGHTS|') && lightsAutoRunning) {
+        lightsAutoRunId+=1;
+        lightsAutoRunning=false;
+        lastSignature='';
+        recordDiagnostic('lights-completed-runner-release',{
+          revision:HK_LIGHTS_COMPLETED_RETURN_REV,
+          activated:lightsRewardActivated()
+        });
+      }
+
       if (autoMapModulesRunning()) {
         const minigameForeground=autoMapMiniGameForeground();
         const mapForeground=autoMapMapIsForeground();
@@ -21767,7 +21837,7 @@
         // Lights room has a strict handoff: claim the central/main reward first,
         // then return to Treasure Map, then resume traversal. Do not treat the
         // persistent activated reward tile as unfinished work.
-        if (lightsFinalRewardClaimed && getSignature().startsWith('LIGHTS|')) {
+        if (lightsRoomCompleted() && getSignature().startsWith('LIGHTS|')) {
           return await autoMapReturnFromCompletedLights();
         }
 
@@ -22090,8 +22160,15 @@
         lightsFinalRewardClaimed=false;
         lightsFinalRewardClaimedAt=0;
         recordDiagnostic('lights-final-reward-reset',{
-          revision:HK_LIGHTS_MAP_RETURN_REV,
+          revision:HK_LIGHTS_COMPLETED_RETURN_REV,
           reason:'left-lights-screen'
+        });
+      } else if (isLights && !lightsFinalRewardClaimed && lightsRewardActivated()) {
+        lightsFinalRewardClaimed=true;
+        lightsFinalRewardClaimedAt=Date.now();
+        recordDiagnostic('lights-final-reward-recovered',{
+          revision:HK_LIGHTS_COMPLETED_RETURN_REV,
+          source:'check-puzzle-activated-dom'
         });
       }
       const isBattle=signature.startsWith('BATTLE|');
@@ -22215,6 +22292,7 @@
       lightsStablePlanRevision:HK_LIGHTS_STABLE_PLAN_REV,
       lightsRewardClaimRevision:HK_LIGHTS_REWARD_CLAIM_REV,
       lightsMapReturnRevision:HK_LIGHTS_MAP_RETURN_REV,
+      lightsCompletedReturnRevision:HK_LIGHTS_COMPLETED_RETURN_REV,
       start,
       stop,
       check:checkPuzzle,
