@@ -113,16 +113,21 @@ helper = """    async function minigameDevicePause(stage='scan',data={}) {
 """
 s = s.replace(anchor, helper + anchor, 1)
 
-# All normal "human" pauses now resolve through one deterministic table.
-for old in (
-    "await minigameHumanPause(",
-    "await fishingHumanPause(",
-    "await traderHumanPause(",
-    "await chestHumanPause(",
+# Preserve historical helper names/markers for regression contracts, but route
+# their execution through the same deterministic pacing table on every device.
+for signature,label in (
+    ("    async function minigameHumanPause(stage='scan',data={}) {", "general"),
+    ("    async function fishingHumanPause(stage='scan',data={}) {", "fishing"),
+    ("    async function traderHumanPause(stage='scan',data={}) {", "trader"),
+    ("    async function chestHumanPause(stage='scan',data={}) {", "chests"),
 ):
-    n = s.count(old)
-    if n:
-        s = s.replace(old, "await minigameDevicePause(")
+    if s.count(signature) != 1:
+        raise SystemExit(f"{label} pacing helper missing")
+    s = s.replace(
+        signature,
+        signature + "\n      return minigameDevicePause(stage,{...data,deviceNeutralModule:'" + label + "'});",
+        1,
+    )
 
 # Keep module-specific safety timeouts, but normal action cadence is fixed.
 sub(r"const BATTLE_AUTO_SETTLE_MS = \d+;", "const BATTLE_AUTO_SETTLE_MS = 700;", "battle settle")
@@ -130,12 +135,6 @@ sub(r"const LIGHTS_AUTO_SETTLE_MS = \d+;", "const LIGHTS_AUTO_SETTLE_MS = 700;",
 sub(r"const FISHING_MIN_NEXT_ACTION_GAP_MS = \d+;", "const FISHING_MIN_NEXT_ACTION_GAP_MS = 1200;", "fishing gap")
 sub(r"const TRADER_MIN_NEXT_ACTION_GAP_MS = \d+;", "const TRADER_MIN_NEXT_ACTION_GAP_MS = 1200;", "trader gap")
 sub(r"const AUTO_MAP_ACTION_GAP_MS=\d+;", "const AUTO_MAP_ACTION_GAP_MS=1200;", "auto map gap")
-
-# Chest follow-up used random jitter even after the shared pacing step.
-s = s.replace(
-    "setTimeout(checkPuzzle,minigameRandomMs(950,1450));",
-    "setTimeout(checkPuzzle,700);",
-)
 
 # Replace the complete lamp step. The important behavioral change is that a
 # dispatched event is no longer considered success by itself: desktop/mobile
