@@ -1,0 +1,11 @@
+USERSCRIPT_1_18_35_LIGHTS_MAP_RETURN_PREDEPLOY=PASS
+source_version=1.18.34
+target_version=1.18.35
+handoff=MAIN_REWARD_TO_TREASURE_MAP
+persistent_reward_tile=IGNORED_AFTER_CLAIM
+exit_control=TEXT_OR_ICON_BACK
+map_return_verification=ENABLED
+resume_active_cells=ENABLED
+syntax=PASS
+base_sha256=3f02849b53ad1988291c887fab81bade2ea66956663db11d79aca708243ca110
+candidate_sha256=a47be2831b86d802bc0fd6500429c3598fab150bd9d130dd9bc82072fa0e6879
