@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.41",
-  "target_version": "1.18.42",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.42.trader-exit-ui-scope.candidate.user.js",
-  "primary_marker": "trader-exit-handoff-20260927-r1",
+  "source_version": "1.18.42",
+  "target_version": "1.18.43",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.43.battle-skip-run9.candidate.user.js",
+  "primary_marker": "battle-skip-run9-20260927-r1",
   "preserve_markers": [
+    "trader-exit-handoff-20260927-r1",
     "trader-approved-modal-buy-20260927-r1",
     "treasury-visual-exit-20260927-r2",
     "treasury-exit-after-claim-20260927-r1",
@@ -105,7 +106,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-42-trader-exit-ui-scope-live-status.txt",
-  "commit_message": "fix: deploy trader exit handoff and treasure UI scope in userscript 1.18.42",
-  "trigger_revision": 2
+  "audit_status_path": "audit/hk-userscript-1-18-43-battle-skip-run9-live-status.txt",
+  "commit_message": "fix: deploy Treasure Map battle skip from recording 9 in userscript 1.18.43"
 }
