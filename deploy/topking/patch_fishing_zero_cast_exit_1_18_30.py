@@ -221,3 +221,5 @@ for marker in [
 
 p.write_text(s,encoding="utf-8")
 print("FISHING_ZERO_CAST_EXIT_1_18_30=PASS")
+
+# build-trigger: fishing-zero-cast-exit-r1
