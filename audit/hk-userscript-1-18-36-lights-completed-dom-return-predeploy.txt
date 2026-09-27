@@ -1,0 +1,11 @@
+USERSCRIPT_1_18_36_LIGHTS_COMPLETED_DOM_RETURN_PREDEPLOY=PASS
+source_version=1.18.35
+target_version=1.18.36
+completion_source=ACTIVATED_REWARD_DOM
+stale_lights_runner=RELEASED
+return_target=BOTTOM_GAME_FOOTER
+right_floating_back=EXCLUDED
+map_return_verification=ENABLED
+syntax=PASS
+base_sha256=a47be2831b86d802bc0fd6500429c3598fab150bd9d130dd9bc82072fa0e6879
+candidate_sha256=cca63dbc63adfe1035e6ff1ef6a94afc4976ef817d907aee1227ff6accf4b6a9
