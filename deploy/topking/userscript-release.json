@@ -5,7 +5,6 @@
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.42.trader-exit-ui-scope.candidate.user.js",
   "primary_marker": "trader-exit-handoff-20260927-r1",
   "preserve_markers": [
-    "treasure-event-ui-scope-20260927-r1",
     "trader-approved-modal-buy-20260927-r1",
     "treasury-visual-exit-20260927-r2",
     "treasury-exit-after-claim-20260927-r1",
@@ -108,5 +107,5 @@
   ],
   "audit_status_path": "audit/hk-userscript-1-18-42-trader-exit-ui-scope-live-status.txt",
   "commit_message": "fix: deploy trader exit handoff and treasure UI scope in userscript 1.18.42",
-  "trigger_revision": 1
+  "trigger_revision": 2
 }
