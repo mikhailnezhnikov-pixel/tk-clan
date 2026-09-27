@@ -1,0 +1,11 @@
+USERSCRIPT_1_18_56_DEVICE_NEUTRAL_PREDEPLOY=PASS
+source_version=1.18.55
+target_version=1.18.56
+desktop_tablet_mobile_state_machine=ONE
+normal_pacing=DEVICE_NEUTRAL
+lights_confirmation=STATE_VERIFIED
+native_click_then_common_fallback=YES
+existing_treasure_contracts=PASS
+syntax=PASS
+base_sha256=4d83dc6fd39a0fa843c6a90de7bf8812cc47e1218b3856e198f582881ba1156f
+candidate_sha256=ca22c374693dbae54e815a1979fa2d9ed3bc3721e70d9d886d983e1dc55b49b6
