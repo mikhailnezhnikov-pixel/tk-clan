@@ -45,9 +45,9 @@ jobs:
           # New approved categories.
           for needle in [
               "item_treasurehunt_key_",
-              "походн.*припас",
-              "вкусняшк.*питом",
-              "смена\\\\s+навыка\\\\s+питомца",
+              "function traderModalApproved(root)",
+              "function traderApprovedRow(row)",
+              "trader-approved-modal-confirm",
           ]:
               assert needle in s, needle
 
