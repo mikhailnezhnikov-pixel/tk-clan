@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.38",
-  "target_version": "1.18.39",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.39.treasury-exit.candidate.user.js",
-  "primary_marker": "treasury-exit-after-claim-20260927-r1",
+  "source_version": "1.18.39",
+  "target_version": "1.18.40",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.40.treasury-visual-exit.candidate.user.js",
+  "primary_marker": "treasury-visual-exit-20260927-r2",
   "preserve_markers": [
+    "treasury-exit-after-claim-20260927-r1",
     "lights-fast-confirm-20260927-r1",
     "lights-close-modal-between-steps-20260927-r1",
     "lights-completed-dom-return-20260927-r2",
@@ -102,7 +103,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-39-treasury-exit-live-status.txt",
-  "commit_message": "fix: deploy treasury exit after claimed chest in userscript 1.18.39",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-40-treasury-visual-exit-live-status.txt",
+  "commit_message": "fix: deploy visual treasury exit in userscript 1.18.40"
 }
