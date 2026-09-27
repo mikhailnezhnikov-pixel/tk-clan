@@ -2,8 +2,8 @@
   "schema": 1,
   "source_version": "1.18.55",
   "target_version": "1.18.56",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.56.device-neutral-minigame.candidate.user.js",
-  "primary_marker": "device-neutral-minigame-20260928-r1",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.56.treasure-key-battle-handoff.candidate.user.js",
+  "primary_marker": "treasure-key-battle-handoff-20260928-r1",
   "preserve_markers": [
     "treasury-left-once-continuous-map-20260927-r1",
     "battle-achievement-priority-20260927-r1",
@@ -119,7 +119,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-56-device-neutral-minigame-live-status.txt",
-  "commit_message": "fix: deploy device-neutral minigame logic in userscript 1.18.56"
+  "audit_status_path": "audit/hk-userscript-1-18-56-treasure-key-battle-handoff-live-status.txt",
+  "commit_message": "fix: deploy unusual key and strict battle handoff in userscript 1.18.56"
 }
-
