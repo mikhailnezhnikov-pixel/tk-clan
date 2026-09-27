@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.37
+// @version      1.18.38
+// @release-note Автокарта/Лабиринт: выход после основной награды — через широкую кнопку 10, маленькая кнопка инструкции исключена. Лампочки подтверждаются быстрее: один клик 1, короткое ожидание ответа, закрытие модалки и проверка поля без повторной покупки. Торговец работает быстрее с защитой от 429 и теперь покупает также ключи common/uncommon/rare/epic/legendary.
 // @release-note Лампочки: исправлена причина цикла между двумя состояниями. После успешного переключения поля скрипт теперь обязательно закрывает старое окно лампы (Понятно/X) и только после этого открывает следующую лампу; уже открытая модалка больше никогда не подтверждается как новый ход. Несовпадение рассчитанного перехода/цикл теперь останавливают Автолампы вместо бесконечных повторов.
 // @release-note Лампочки/Автокарта: завершение комнаты теперь определяется не только временным JS-флагом, но и реальным состоянием центральной награды «Активировано», поэтому возврат работает после перерисовки/перезапуска раннера. Зависший раннер Автоламп после забора награды принудительно отпускается. Для выхода приоритет отдан нижней золотой кнопке возврата в игровом футере; правый плавающий Back/HK-контрол исключён.
 // @release-note Лампочки/Автокарта: после подтверждённого получения центральной награды комната считается завершённой и больше не запускает Автолампы повторно. Автокарта получает строгий handoff «основная награда забрана → кнопка возврата из мини-игры → Карта Сокровищ → продолжить активные клетки». Для выхода добавлен отдельный поиск текстового или иконочного Back/Exit-контрола с проверкой фактического возврата на карту.
@@ -149,7 +150,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.37';
+  const BUILD_VERSION = '1.18.38';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17830,6 +17831,9 @@
   const HK_LIGHTS_MAP_RETURN_REV = 'lights-map-return-after-main-reward-20260927-r1';
   const HK_LIGHTS_COMPLETED_RETURN_REV = 'lights-completed-dom-return-20260927-r2';
   const HK_LIGHTS_MODAL_STEP_REV = 'lights-close-modal-between-steps-20260927-r1';
+  const HK_LIGHTS_COST_EXIT_REV = 'lights-cost10-exit-20260927-r1';
+  const HK_LIGHTS_FAST_CONFIRM_REV = 'lights-fast-confirm-20260927-r1';
+  const HK_TRADER_KEYS_FAST_REV = 'trader-keys-fast-20260927-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -17855,8 +17859,8 @@
     const BATTLE_AUTO_SETTLE_MS = 1200;
     const BATTLE_AUTO_CHANGE_TIMEOUT_MS = 4500;
     const CHEST_ACTION_TIMEOUT_MS = 3600;
-    const LIGHTS_AUTO_SETTLE_MS = 1600;
-    const LIGHTS_AUTO_CHANGE_TIMEOUT_MS = 4200;
+    const LIGHTS_AUTO_SETTLE_MS = 450;
+    const LIGHTS_AUTO_CHANGE_TIMEOUT_MS = 3200;
     const LIGHTS_AUTO_MAX_STEPS = 24;
 
     let lastSignature = '';
@@ -17886,8 +17890,8 @@
     let fishingFailureStreak = 0;
 
     const TRADER_AUTO_STORAGE_KEY = 'hk:trader:auto-buy:v1';
-    const TRADER_ACTION_TIMEOUT_MS = 5200;
-    const TRADER_MIN_NEXT_ACTION_GAP_MS = 2800;
+    const TRADER_ACTION_TIMEOUT_MS = 3600;
+    const TRADER_MIN_NEXT_ACTION_GAP_MS = 1200;
     const TRADER_MAX_PURCHASES_PER_VISIT = 40;
     let traderAutoRunning = false;
     let traderAutoRunId = 0;
@@ -18102,6 +18106,26 @@
       const waitMs=minigameRandomMs(range[0],range[1]);
       recordDiagnostic('minigame-human-pause',{
         revision:HK_MINIGAME_HUMAN_PACING_REV,
+        stage,
+        waitMs,
+        ...data
+      });
+      await new Promise(resolve=>setTimeout(resolve,waitMs));
+      return waitMs;
+    }
+
+    async function traderHumanPause(stage='scan',data={}) {
+      const ranges={
+        scan:[250,450],
+        aim:[180,320],
+        confirm:[300,520],
+        settle:[450,700],
+        reward:[260,440]
+      };
+      const range=ranges[stage] || ranges.scan;
+      const waitMs=minigameRandomMs(range[0],range[1]);
+      recordDiagnostic('trader-human-pause',{
+        revision:HK_TRADER_KEYS_FAST_REV,
         stage,
         waitMs,
         ...data
@@ -18754,8 +18778,11 @@
       const id=String(lotId||'').toLowerCase();
       if (!id) return false;
 
-      // Treasure coins. "4coins" alone is NOT enough: key_uncommon4coins is a key.
+      // Treasure coins.
       if (/random4coins/.test(id) || /treasure[_-]?coins/.test(id)) return true;
+
+      // Keys are explicitly approved too (common/uncommon/rare/epic/legendary).
+      if (/key_(?:common|uncommon|rare|epic|legendary)4coins/.test(id)) return true;
 
       // Berries/food lots.
       if (/(?:^|_)food(?:_|$)/.test(id) || /berr(?:y|ies)/.test(id)) return true;
@@ -18768,6 +18795,7 @@
 
     function traderValueTier(lotId) {
       const id=String(lotId||'').toLowerCase();
+      if (/key_(?:common|uncommon|rare|epic|legendary)4coins/.test(id)) return 1250;
       if (/map/.test(id)) return 1200;
       if (/coins/.test(id)) return 1100;
       if (/food|berry|berries|energy/.test(id)) return 1000;
@@ -18862,7 +18890,7 @@
 
       await waitMutationGap(traderLastMutationAt,TRADER_MIN_NEXT_ACTION_GAP_MS);
       if (!traderAutoEnabled()) return false;
-      await minigameHumanPause('scan',{module:'trader'});
+      await traderHumanPause('scan',{module:'trader'});
       if (!traderAutoEnabled()) return false;
       target=traderTarget();
       if (!target) return false;
@@ -18882,7 +18910,7 @@
       });
 
       try {
-        await minigameHumanPause('aim',{module:'trader',lotId:target.lotId});
+        await traderHumanPause('aim',{module:'trader',lotId:target.lotId});
         if (runId!==traderAutoRunId || !traderAutoEnabled()) return false;
         if (!dispatchAutoMapTap(target.element,'trader-open-'+target.lotId)) {
           return traderBackoff('target-tap-failed',{lotId:target.lotId,startedAt});
@@ -18891,7 +18919,7 @@
 
         // Some trader lots execute directly; most open the standard lot modal.
         const directStarted=Date.now();
-        while (Date.now()-directStarted<750) {
+        while (Date.now()-directStarted<420) {
           if (runId!==traderAutoRunId || !traderAutoEnabled()) return false;
           if (traderSignature()!==before || traderTargetResolved(target)) {
             traderSessionPurchases+=1;
@@ -18912,7 +18940,7 @@
 
         const modal=await (async()=>{
           const started=Date.now();
-          while (Date.now()-started<2400) {
+          while (Date.now()-started<1200) {
             if (runId!==traderAutoRunId || !traderAutoEnabled()) return null;
             const root=treasureModalRoot(target.cost.primary);
             if (root) return root;
@@ -18922,7 +18950,7 @@
         })();
 
         if (!modal) {
-          await new Promise(resolve=>setTimeout(resolve,2200));
+          await new Promise(resolve=>setTimeout(resolve,900));
           if (traderTargetResolved(target)) {
             traderSessionPurchases+=1;
             traderFailureStreak=0;
@@ -18935,7 +18963,7 @@
 
         const action=await (async()=>{
           const started=Date.now();
-          while (Date.now()-started<2000) {
+          while (Date.now()-started<900) {
             if (runId!==traderAutoRunId || !traderAutoEnabled()) return null;
             const button=treasureActionButton(modal,target.cost.primary);
             if (button) return button;
@@ -18944,7 +18972,7 @@
           return null;
         })();
 
-        await minigameHumanPause('confirm',{module:'trader',lotId:target.lotId});
+        await traderHumanPause('confirm',{module:'trader',lotId:target.lotId});
         if (runId!==traderAutoRunId || !traderAutoEnabled()) return false;
 
         if (!action || !dispatchAutoMapTap(action,'trader-confirm-'+target.lotId)) {
@@ -18958,7 +18986,7 @@
         const rewards=await dismissTreasureRewards(runId);
 
         if (!changed && rewards===0) {
-          await new Promise(resolve=>setTimeout(resolve,2600));
+          await new Promise(resolve=>setTimeout(resolve,1200));
           if (!traderTargetResolved(target)) {
             return traderBackoff('field-no-change',{lotId:target.lotId,startedAt});
           }
@@ -18968,7 +18996,7 @@
         traderFailureStreak=0;
         traderRetryNotBefore=0;
         if (target.cost.raw) debitWallet(target.cost.raw,1);
-        await minigameHumanPause('settle',{module:'trader',lotId:target.lotId});
+        await traderHumanPause('settle',{module:'trader',lotId:target.lotId});
         await waitMutationGap(traderLastMutationAt,TRADER_MIN_NEXT_ACTION_GAP_MS);
 
         recordDiagnostic('trader-auto-purchase',{
@@ -19030,7 +19058,7 @@
       return changed;
     }
 
-    async function waitLightsStableBoard(runId,timeoutMs=2600,stableMs=360) {
+    async function waitLightsStableBoard(runId,timeoutMs=1600,stableMs=180) {
       const started=Date.now();
       let lastKey='';
       let stableSince=0;
@@ -19056,9 +19084,9 @@
       return state ? {board,state,key:lightsStateKey(state)} : null;
     }
 
-    async function waitLightsBoardChange(before,runId) {
+    async function waitLightsBoardChange(before,runId,timeoutMs=LIGHTS_AUTO_CHANGE_TIMEOUT_MS) {
       const started=Date.now();
-      while (Date.now()-started<LIGHTS_AUTO_CHANGE_TIMEOUT_MS) {
+      while (Date.now()-started<timeoutMs) {
         if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
         const current=lightsBoardSignature();
         if (current!==before) return true;
@@ -19504,23 +19532,100 @@
         singleAttempt:true
       });
 
-      // First wait only for the board itself to change. Do not return to the
-      // planner while any lamp modal is still open.
-      const changed=await waitLightsBoardChange(before,runId);
+      // Fast path: the purchase is sent only once. For ~0.8s watch for either
+      // an immediate field mutation or an acknowledgement/close affordance.
+      // If the game keeps the purchase modal open, close that modal (never press
+      // the cost button again) and then wait for the already-sent purchase to
+      // settle on the 3x3 board.
+      let changed=lightsBoardSignature()!==before;
+      const fastStarted=Date.now();
+      let fastCloseSent=false;
+
+      while (!changed && Date.now()-fastStarted<820) {
+        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) {
+          return {ok:false,reason:'cancelled'};
+        }
+
+        changed=lightsBoardSignature()!==before;
+        if (changed) break;
+
+        const current=lightsModalRoot();
+        if (!current) {
+          await new Promise(resolve=>setTimeout(resolve,70));
+          continue;
+        }
+
+        const ack=lightsAcknowledgeButton(current);
+        if (ack) {
+          if (dispatchBattleTap(ack,'lights-fast-ack-'+slot)) {
+            fastCloseSent=true;
+            recordDiagnostic('lights-fast-confirm-ui',{
+              revision:HK_LIGHTS_FAST_CONFIRM_REV,
+              slot,
+              action:'ack'
+            });
+            await new Promise(resolve=>setTimeout(resolve,150));
+            break;
+          }
+        }
+
+        await new Promise(resolve=>setTimeout(resolve,70));
+      }
+
+      changed=changed || lightsBoardSignature()!==before;
+
+      if (!changed && !fastCloseSent) {
+        const current=lightsModalRoot();
+        if (current) {
+          const close=lightsModalCloseButton(current);
+          if (close && dispatchBattleTap(close,'lights-fast-close-'+slot)) {
+            fastCloseSent=true;
+            recordDiagnostic('lights-fast-confirm-ui',{
+              revision:HK_LIGHTS_FAST_CONFIRM_REV,
+              slot,
+              action:'close'
+            });
+          } else {
+            const rr=current.getBoundingClientRect?.();
+            if (rr && rr.width>120 && rr.height>120) {
+              fastCloseSent=dispatchBattleTapAt(
+                rr.left+rr.width-18,
+                rr.top+18,
+                'lights-fast-close-corner-'+slot
+              );
+              if (fastCloseSent) {
+                recordDiagnostic('lights-fast-confirm-ui',{
+                  revision:HK_LIGHTS_FAST_CONFIRM_REV,
+                  slot,
+                  action:'corner'
+                });
+              }
+            }
+          }
+          if (fastCloseSent) await new Promise(resolve=>setTimeout(resolve,180));
+        }
+      }
+
+      if (!changed) {
+        changed=await waitLightsBoardChange(before,runId,2600);
+      }
       if (!changed) return {ok:false,reason:'field-no-change'};
 
-      const drained=await closeLightsModalAfterStateChange(runId,before,slot);
-      if (!drained) {
-        return {ok:false,reason:'modal-not-closed-after-change'};
+      if (lightsModalRoot()) {
+        const drained=await closeLightsModalAfterStateChange(runId,before,slot,1100);
+        if (!drained) {
+          return {ok:false,reason:'modal-not-closed-after-change'};
+        }
       }
 
       recordDiagnostic('lights-auto-step-ui-complete',{
-        revision:HK_LIGHTS_MODAL_STEP_REV,
+        revision:HK_LIGHTS_FAST_CONFIRM_REV,
         slot,
         mode:confirmMode,
+        fastCloseSent,
         state:lightsBoardSignature()
       });
-      return {ok:true,reason:'field-changed-modal-closed'};
+      return {ok:true,reason:'field-changed-modal-closed-fast'};
     }
 
     function lightsRewardElement() {
@@ -21563,15 +21668,14 @@
         });
       }
 
-      autoMapStatus('возврат на карту',{
-        revision:HK_LIGHTS_COMPLETED_RETURN_REV,
+      autoMapStatus('выход за 10',{
+        revision:HK_LIGHTS_COST_EXIT_REV,
         claimedAgoMs:lightsFinalRewardClaimedAt ? Date.now()-lightsFinalRewardClaimedAt : null
       });
 
       await autoMapWaitActionGap();
       if (!autoMapEnabled() || !lightsRoomCompleted()) return false;
 
-      // Prefer an explicit Leave/Exit button if the room exposes one.
       const explicit=autoMapExitButton();
       if (explicit) {
         const ok=await autoMapTapAndConfirm(explicit,'lights-return-map-explicit',10);
@@ -21579,9 +21683,10 @@
           lightsFinalRewardClaimed=false;
           lightsFinalRewardClaimedAt=0;
           autoMapReturnNotBefore=Date.now()+350;
+          autoMapCurrentLot='';
           lastSignature='';
           recordDiagnostic('lights-map-return-complete',{
-            revision:HK_LIGHTS_MAP_RETURN_REV,
+            revision:HK_LIGHTS_COST_EXIT_REV,
             method:'explicit-exit'
           });
           setTimeout(()=>void runAutoMapTick('lights-returned-map'),420);
@@ -21589,42 +21694,39 @@
         }
       }
 
-      const back=autoMapCompletedLightsBackButton();
-      if (!back) {
-        autoMapStatus('жду выход из ламп',{
-          revision:HK_LIGHTS_MAP_RETURN_REV
+      const costExit=autoMapBottomContinueButton(10);
+      if (!costExit) {
+        autoMapRetryNotBefore=Date.now()+900;
+        autoMapStatus('жду кнопку выхода 10',{
+          revision:HK_LIGHTS_COST_EXIT_REV
+        });
+        recordDiagnostic('lights-cost-exit-missing',{
+          revision:HK_LIGHTS_COST_EXIT_REV
         });
         return false;
       }
 
-      autoMapActionCount+=1;
-      autoMapLastActionAt=Date.now();
-      if (!dispatchBattleTap(back,'lights-return-map-back')) {
+      const rect=costExit.getBoundingClientRect?.();
+      recordDiagnostic('lights-cost-exit-target',{
+        revision:HK_LIGHTS_COST_EXIT_REV,
+        text:clean(costExit.innerText||costExit.textContent||'').trim(),
+        left:Math.round(rect?.left||0),
+        top:Math.round(rect?.top||0),
+        width:Math.round(rect?.width||0),
+        height:Math.round(rect?.height||0)
+      });
+
+      const ok=await autoMapTapAndConfirm(costExit,'lights-return-map-cost10',10);
+      if (!ok) {
+        autoMapRetryNotBefore=Date.now()+1200;
         return false;
       }
 
-      // Some layouts return immediately; others put a confirm modal over the
-      // room. Confirm that modal once, then require the actual Treasure Map.
-      let returned=await autoMapWaitReturnedFromLights(2600);
-      if (!returned) {
-        const modal=treasureModalRoot(null);
-        if (modal) {
-          const action=autoMapModalPrimaryButton(modal,10);
-          if (action) {
-            await minigameHumanPause('confirm',{module:'auto-map',label:'lights-return-map'});
-            if (autoMapEnabled() && lightsRoomCompleted()) {
-              dispatchAutoMapTap(action,'auto-map-confirm-lights-return-map');
-              autoMapLastActionAt=Date.now();
-              returned=await autoMapWaitReturnedFromLights(5200);
-            }
-          }
-        }
-      }
-
+      const returned=await autoMapWaitReturnedFromLights(6500);
       if (!returned) {
         autoMapRetryNotBefore=Date.now()+1400;
-        autoMapStatus('жду карту после ламп',{
-          revision:HK_LIGHTS_MAP_RETURN_REV
+        autoMapStatus('жду карту после выхода 10',{
+          revision:HK_LIGHTS_COST_EXIT_REV
         });
         return false;
       }
@@ -21635,8 +21737,8 @@
       autoMapCurrentLot='';
       lastSignature='';
       recordDiagnostic('lights-map-return-complete',{
-        revision:HK_LIGHTS_MAP_RETURN_REV,
-        method:'back-control',
+        revision:HK_LIGHTS_COST_EXIT_REV,
+        method:'cost10-footer',
         activeCells:autoMapActiveCellCount()
       });
       setTimeout(()=>{
@@ -21646,28 +21748,57 @@
       return true;
     }
 
-    function autoMapBottomContinueButton() {
-      const candidates=[...document.querySelectorAll('button,[role="button"],a,div')]
+    function autoMapBottomContinueButton(cost=10) {
+      const wanted=String(Number(cost)||10);
+      const vw=Math.max(1,window.innerWidth);
+      const vh=Math.max(1,window.innerHeight);
+      const centerX=vw/2;
+
+      const candidates=[...document.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
         .filter(element=>
           element &&
           element!==autoMapToggle &&
+          element!==battleAutoToggle &&
+          element!==chestAutoToggle &&
+          element!==lightsAutoToggle &&
+          element!==fishingAutoToggle &&
+          element!==traderAutoToggle &&
           !element.disabled &&
+          element.getAttribute?.('aria-disabled')!=='true' &&
           visible(element)
         )
         .map(element=>{
           const text=clean(element.innerText||element.textContent||'').trim();
           const rect=element.getBoundingClientRect?.() || {width:0,height:0,left:0,top:0};
-          const actionable=element.matches?.('button,[role="button"],a') || !!element.onclick || getComputedStyle(element).cursor==='pointer';
+          const style=getComputedStyle(element);
+          const actionable=
+            element.matches?.('button,[role="button"],a,[onclick]') ||
+            !!element.onclick ||
+            style.cursor==='pointer';
+          const cx=rect.left+rect.width/2;
+          const cy=rect.top+rect.height/2;
+
           let score=0;
-          if (/^10$/.test(text)) score+=120;
-          if (rect.top>=window.innerHeight*0.62) score+=80;
-          if (rect.width>=window.innerWidth*0.45) score+=80;
-          if (rect.height>=38 && rect.height<=150) score+=40;
-          if (actionable) score+=50;
+          if (text===wanted) score+=500;
+          else if (new RegExp('(?:^|\\s)'+wanted+'(?:\\s|$)').test(text) && text.length<=12) score+=300;
+
+          if (cy>=vh*0.84) score+=260;
+          if (Math.abs(cx-centerX)<=vw*0.22) score+=220;
+          if (rect.width>=vw*0.12 && rect.width<=vw*0.48) score+=220;
+          if (rect.height>=30 && rect.height<=110) score+=100;
+          if (actionable) score+=120;
+
+          if (rect.width<vw*0.08) score-=700;
+          if (rect.width>vw*0.60) score-=500;
+          if (cx<=vw*0.28 || cx>=vw*0.78) score-=320;
+          if (/правила|инструкц|help|rules|info/i.test(text+' '+String(element.getAttribute?.('aria-label')||''))) score-=900;
+          if (/^hk$/i.test(text)) score-=900;
+
           return {element,text,rect,score,area:rect.width*rect.height};
         })
-        .filter(row=>row.score>=240)
+        .filter(row=>row.score>=850)
         .sort((a,b)=>b.score-a.score || b.area-a.area);
+
       return candidates[0]?.element || null;
     }
 
@@ -22458,6 +22589,9 @@
       lightsMapReturnRevision:HK_LIGHTS_MAP_RETURN_REV,
       lightsCompletedReturnRevision:HK_LIGHTS_COMPLETED_RETURN_REV,
       lightsModalStepRevision:HK_LIGHTS_MODAL_STEP_REV,
+      lightsCostExitRevision:HK_LIGHTS_COST_EXIT_REV,
+      lightsFastConfirmRevision:HK_LIGHTS_FAST_CONFIRM_REV,
+      traderKeysFastRevision:HK_TRADER_KEYS_FAST_REV,
       start,
       stop,
       check:checkPuzzle,
