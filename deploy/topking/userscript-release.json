@@ -117,5 +117,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-53-treasure-battle-raw-context-live-status.txt",
-  "commit_message": "fix: deploy raw battle context and mobile tap attacks in userscript 1.18.53"
+  "commit_message": "fix: deploy raw battle context and mobile tap attacks in userscript 1.18.53",
+  "trigger_revision": 1
 }
