@@ -1,4 +1,5 @@
 name: Build Userscript 1.18.54 Treasure Battle Achievements
+# retry: planner-aware battle contract
 
 on:
   push:
