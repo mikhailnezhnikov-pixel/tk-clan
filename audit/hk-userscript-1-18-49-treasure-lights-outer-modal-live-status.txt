@@ -1,12 +1,13 @@
 GENERIC_USERSCRIPT_DEPLOY=PASS
-source_version=1.18.48
+source_version=1.18.49
 target_version=1.18.49
 marker=treasure-lights-outer-modal-20260927-r1
-source_sha256=8b781b05b857786b7f96e1c7f5a9573ec4da4ea0af9e8de0a5a1f88ed90a06d2
+source_sha256=5579bc89eb803b1b536091532ba995b634d6c170d1147d7554f07a85b85dfe4f
 candidate_sha256=5579bc89eb803b1b536091532ba995b634d6c170d1147d7554f07a85b85dfe4f
 public_exact_match=PASS
 server_rollback_guard=ENABLED
 public_verify_rollback=ENABLED
 treasure_regression_contract=PASS
 treasure_lights_resume_contract=PASS
+treasure_lights_outer_modal_contract=PASS
 ci_game_mutations=NONE
