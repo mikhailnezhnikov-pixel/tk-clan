@@ -78,7 +78,7 @@ if "battle-strict-exit-gate-20260927-r1" in s:
 
     insufficient=section("async function runBattleInsufficientExit","function addNumber")
     for marker in [
-        "const gate=battleExitState();",
+        "let gate=battleExitState();",
         "if (!gate.allowed)",
         "battle-insufficient-exit-blocked",
     ]:
