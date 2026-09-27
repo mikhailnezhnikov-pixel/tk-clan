@@ -1,10 +1,11 @@
 {
   "schema": 1,
   "source_version": "1.18.51",
-  "target_version": "1.18.51",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.51.treasure-battle-full-clear.candidate.user.js",
-  "primary_marker": "battle-automap-full-clear-20260927-r1",
+  "target_version": "1.18.52",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.52.treasure-battle-strict-exit.candidate.user.js",
+  "primary_marker": "battle-strict-exit-gate-20260927-r1",
   "preserve_markers": [
+    "battle-automap-full-clear-20260927-r1",
     "treasure-chest-fast-pacing-20260927-r1",
     "treasure-lights-outer-modal-20260927-r1",
     "treasure-lights-resume-open-modal-20260927-r1",
@@ -114,7 +115,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-51-treasure-battle-full-clear-live-status.txt",
-  "commit_message": "ci: normalize userscript release manifest at 1.18.51",
-  "trigger_revision": 2
+  "audit_status_path": "audit/hk-userscript-1-18-52-treasure-battle-strict-exit-live-status.txt",
+  "commit_message": "fix: deploy strict Treasure battle exit gate in userscript 1.18.52"
 }
