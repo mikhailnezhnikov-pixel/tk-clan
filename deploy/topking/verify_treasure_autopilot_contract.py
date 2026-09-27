@@ -108,4 +108,35 @@ if "treasure-automap-module-ownership-20260927-r1" in s:
     if "stale-modal-blocking" in fatal or "modal-not-closed-after-change" in fatal:
         raise SystemExit("contract broken: recoverable lights UI failures became fatal again")
 
+
+if "treasure-key-battle-handoff-20260928-r1" in s:
+    key_helpers=section("function autoMapTreasureKeyModalRoot","async function autoMapWaitModal")
+    for marker in [
+        "Необычный ключ сокровищ",
+        "Unusual treasure key",
+        "quantity:10",
+        "treasure-unusual-key-buy-10",
+        "autoMapTreasureKeyModalRoot()",
+        "autoMapTreasureKeyPurchaseButton(root)",
+    ]:
+        if marker not in key_helpers:
+            raise SystemExit(f"treasure key purchase contract broken: {marker}")
+
+    tick=section("async function runAutoMapTick","function setAutoMapEnabled")
+    key_pos=tick.find("const keyModal=autoMapTreasureKeyModalRoot();")
+    owner_pos=tick.find("const ownedSignature=getSignature();")
+    if key_pos<0 or owner_pos<0 or key_pos>=owner_pos:
+        raise SystemExit("treasure key modal must outrank child-module ownership")
+    for marker in [
+        "autoMapBuyTreasureKeyIfPresent()",
+        "autoMapStatus('выкупаю ключ'",
+        "cost:10",
+    ]:
+        if marker not in tick and marker not in key_helpers:
+            raise SystemExit(f"treasure key AutoMap handoff broken: {marker}")
+
+    check=section("function checkPuzzle()","function start()")
+    if "autoMapTreasureKeyModalRoot()" not in check:
+        raise SystemExit("treasure key overlay is not dispatched from puzzle loop")
+
 print("TREASURE_AUTOPILOT_CONTRACT=PASS")
