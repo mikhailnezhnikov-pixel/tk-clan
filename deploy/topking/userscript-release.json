@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.52",
-  "target_version": "1.18.53",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.53.treasure-battle-raw-context.candidate.user.js",
-  "primary_marker": "battle-raw-context-mobile-tap-20260927-r1",
+  "source_version": "1.18.53",
+  "target_version": "1.18.54",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.54.treasure-battle-achievements.candidate.user.js",
+  "primary_marker": "battle-achievement-priority-20260927-r1",
   "preserve_markers": [
+    "battle-raw-context-mobile-tap-20260927-r1",
     "battle-strict-exit-gate-20260927-r1",
     "battle-automap-full-clear-20260927-r1",
     "treasure-chest-fast-pacing-20260927-r1",
@@ -116,7 +117,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-53-treasure-battle-raw-context-live-status.txt",
-  "commit_message": "fix: deploy raw battle context and mobile tap attacks in userscript 1.18.53",
-  "trigger_revision": 2
+  "audit_status_path": "audit/hk-userscript-1-18-54-treasure-battle-achievements-live-status.txt",
+  "commit_message": "feat: deploy one-time Treasure battle achievement planning in userscript 1.18.54"
 }
