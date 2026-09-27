@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.33
+// @version      1.18.34
+// @release-note Лабиринт: финальное «Активированное хранилище» теперь подтверждается только нижней центральной кнопкой действия. Иконки ресурсов внутри окна явно исключены из кандидатов, а глобальная кнопка «Понятно» под модалкой больше не может быть нажата как подтверждение награды. После клика скрипт ждёт фактического закрытия/смены модалки перед передачей управления Автокарте.
 // @release-note Лампочки: убран повторный клик подтверждения при медленном ответе сервера — одна покупка теперь отправляется только один раз и затем ждёт ответ до 8 секунд. Автолампы больше не пересчитывают новый маршрут после каждого хода: фиксируется один кратчайший план, каждый фактический переход сверяется с ожидаемой моделью 3×3, а при расхождении автоматизация останавливается вместо кликов туда‑сюда.
 // @release-note Лампочки: подтверждение покупки теперь считается успешным только после реального изменения интерфейса. Скрипт поднимается от вложенного текста 1 к настоящему кликабельному контейнеру, проверяет результат после каждого нажатия и только при отсутствии реакции пробует native click и точечный fallback по центру кнопки. Повторная покупка не выполняется, если модалка уже сменилась или поле изменилось.
 // @release-note Лампочки: подтверждение покупки восстановлено. После появления модалки скрипт отдельно ждёт готовность кнопки стоимости 1, умеет продолжить уже из открытого окна и использует безопасный fallback по нижней центральной кнопке. При включённой Автокарте временная ошибка подтверждения больше не выключает Автолампы навсегда.
@@ -145,7 +146,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.33';
+  const BUILD_VERSION = '1.18.34';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17822,6 +17823,7 @@
   const HK_CHEST_AUTO_REV = 'chest-auto-dig-open-20260926-r1';
   const HK_LIGHTS_AUTO_REV = 'lights-modal-confirm-20260926-r2';
   const HK_LIGHTS_FINAL_REWARD_REV = 'lights-final-reward-20260926-r1';
+  const HK_LIGHTS_REWARD_CLAIM_REV = 'lights-reward-bottom-action-20260927-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -19382,26 +19384,92 @@
       if (!root) return null;
       const rr=root.getBoundingClientRect?.();
       if (!rr) return null;
-      const candidates=[...root.querySelectorAll('button,[role="button"],a,div')]
+      const centerX=rr.left+rr.width/2;
+      const candidates=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
         .filter(element=>element && element!==lightsAutoToggle && !element.disabled && visible(element))
         .map(element=>{
           const text=clean(element.innerText||element.textContent||'').trim();
           const rect=element.getBoundingClientRect?.() || {width:0,height:0,top:0,left:0};
           const style=getComputedStyle(element);
-          const actionable=element.matches?.('button,[role="button"],a') || !!element.onclick || style.cursor==='pointer';
-          const hasIcon=!!element.querySelector?.('svg,img');
-          let score=actionable?40:0;
-          if (/^(?:понятно|got it|understood|ok|okay)$/i.test(text)) score-=400;
-          if (/закрыть|close|×|✕|назад|back/i.test(text)) score-=400;
-          if (/забрать|получить|claim|collect|open|открыть/i.test(text)) score+=180;
-          if (hasIcon) score+=70;
-          if (rect.width>=rr.width*0.32 && rect.height>=42) score+=80;
-          if (rect.top>=rr.top+rr.height*0.58) score+=70;
-          return {element,score,rect};
+          const actionable=
+            element.matches?.('button,[role="button"],a,[onclick]') ||
+            !!element.onclick ||
+            style.cursor==='pointer';
+          const cx=rect.left+rect.width/2;
+          const centered=Math.abs(cx-centerX)<=rr.width*0.18;
+          const bottom=rect.top>=rr.top+rr.height*0.68;
+          const buttonWidth=rect.width>=rr.width*0.22 && rect.width<=rr.width*0.72;
+          const buttonHeight=rect.height>=28 && rect.height<=100;
+          const iconCount=element.querySelectorAll?.('img,svg')?.length || 0;
+          const resourceLike=
+            /(?:^|\s)x\s*\d+/i.test(text) ||
+            /доступно\s*:/i.test(text) ||
+            !!element.closest?.('[data-lot-id]') ||
+            rect.top<rr.top+rr.height*0.60;
+
+          let score=0;
+          if (actionable) score+=120;
+          if (bottom) score+=220;
+          if (centered) score+=180;
+          if (buttonWidth) score+=120;
+          if (buttonHeight) score+=90;
+          if (iconCount>0 && iconCount<=2) score+=35;
+          if (/забрать|получить|claim|collect|open|открыть|▶|▷|►/i.test(text)) score+=120;
+          if (/^(?:понятно|got it|understood|ok|okay)$/i.test(text)) score-=500;
+          if (/закрыть|close|×|✕|назад|back/i.test(text)) score-=500;
+          if (resourceLike) score-=700;
+
+          return {element,score,rect,actionable,bottom,centered};
         })
-        .filter(row=>row.score>=120)
+        .filter(row=>
+          row.actionable &&
+          row.bottom &&
+          row.centered &&
+          row.rect.width>0 &&
+          row.rect.height>0 &&
+          row.score>=400
+        )
         .sort((a,b)=>b.score-a.score || b.rect.width*b.rect.height-a.rect.width*a.rect.height);
       return candidates[0]?.element || null;
+    }
+
+    function lightsRewardAckButton() {
+      const roots=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]')]
+        .filter(element=>visible(element))
+        .filter(element=>{
+          const rect=element.getBoundingClientRect?.();
+          return rect && rect.width>=220 && rect.height>=120 &&
+            rect.width<window.innerWidth*0.98 &&
+            rect.height<window.innerHeight*0.95;
+        });
+
+      const exact=/^(?:понятно|got it|understood|ok|okay)$/i;
+      for (const root of roots) {
+        const button=[...root.querySelectorAll('button,[role="button"],a')]
+          .filter(element=>element && !element.disabled && visible(element))
+          .find(element=>exact.test(clean(element.innerText||element.textContent||'').trim()));
+        if (button) return button;
+      }
+      return null;
+    }
+
+    async function waitLightsRewardResult(runId,originalModal,timeoutMs=6500) {
+      const started=Date.now();
+      while (Date.now()-started<timeoutMs) {
+        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) {
+          return {ok:false,reason:'cancelled',ack:null};
+        }
+
+        const ack=lightsRewardAckButton();
+        if (ack) return {ok:true,reason:'ack-visible',ack};
+
+        const current=lightsRewardModalRoot();
+        if (!current) return {ok:true,reason:'modal-closed',ack:null};
+        if (current!==originalModal) return {ok:true,reason:'modal-changed',ack:null};
+
+        await new Promise(resolve=>setTimeout(resolve,100));
+      }
+      return {ok:false,reason:'claim-no-ui-change',ack:null};
     }
 
     async function waitLightsRewardModal(runId,timeoutMs=2800) {
@@ -19415,57 +19483,68 @@
       return null;
     }
 
-    async function waitLightsRewardAck(runId,timeoutMs=3200) {
-      const started=Date.now();
-      while (Date.now()-started<timeoutMs) {
-        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return null;
-        const button=lightsAcknowledgeButton(lightsRewardModalRoot());
-        if (button) return button;
-        await new Promise(resolve=>setTimeout(resolve,90));
-      }
-      return null;
-    }
-
     async function runLightsFinalReward(runId,steps) {
       const reward=lightsRewardElement();
-      if (!reward) {
-        recordDiagnostic('lights-final-reward-skip',{revision:HK_LIGHTS_FINAL_REWARD_REV,reason:'reward-not-visible',steps});
-        return {ok:true,claimed:false,reason:'reward-not-visible'};
+      let modal=lightsRewardModalRoot();
+
+      if (!modal) {
+        if (!reward) {
+          recordDiagnostic('lights-final-reward-skip',{revision:HK_LIGHTS_REWARD_CLAIM_REV,reason:'reward-not-visible',steps});
+          return {ok:true,claimed:false,reason:'reward-not-visible'};
+        }
+
+        if (!dispatchBattleTap(reward,'lights-final-reward-open')) {
+          return {ok:false,claimed:false,reason:'reward-open-tap-failed'};
+        }
+
+        modal=await waitLightsRewardModal(runId);
       }
 
-      if (!dispatchBattleTap(reward,'lights-final-reward-open')) {
-        return {ok:false,claimed:false,reason:'reward-open-tap-failed'};
-      }
-
-      const modal=await waitLightsRewardModal(runId);
       if (!modal) return {ok:false,claimed:false,reason:'reward-modal-missing'};
 
-      let claim=lightsRewardClaimButton(modal);
-      let clicked=false;
-      if (claim) clicked=dispatchBattleTap(claim,'lights-final-reward-claim');
-
-      if (!clicked) {
-        const rr=modal.getBoundingClientRect?.();
-        if (rr) clicked=dispatchBattleTapAt(
-          rr.left+rr.width/2,
-          rr.top+rr.height*0.86,
-          'lights-final-reward-claim-fallback'
-        );
+      const claim=lightsRewardClaimButton(modal);
+      if (!claim) {
+        recordDiagnostic('lights-final-reward-claim-missing',{
+          revision:HK_LIGHTS_REWARD_CLAIM_REV,
+          steps
+        });
+        return {ok:false,claimed:false,reason:'reward-claim-button-missing'};
       }
-      if (!clicked) return {ok:false,claimed:false,reason:'reward-claim-button-missing'};
 
-      const ack=await waitLightsRewardAck(runId);
-      if (ack) {
-        if (!dispatchBattleTap(ack,'lights-final-reward-understood')) {
+      const rect=claim.getBoundingClientRect?.();
+      recordDiagnostic('lights-final-reward-claim-target',{
+        revision:HK_LIGHTS_REWARD_CLAIM_REV,
+        steps,
+        left:Math.round(rect?.left||0),
+        top:Math.round(rect?.top||0),
+        width:Math.round(rect?.width||0),
+        height:Math.round(rect?.height||0),
+        text:clean(claim.innerText||claim.textContent||'').trim().slice(0,80)
+      });
+
+      if (!dispatchBattleTap(claim,'lights-final-reward-claim-bottom-action')) {
+        return {ok:false,claimed:false,reason:'reward-claim-tap-failed'};
+      }
+
+      const result=await waitLightsRewardResult(runId,modal);
+      if (!result.ok) {
+        return {ok:false,claimed:false,reason:result.reason};
+      }
+
+      let acknowledged=false;
+      if (result.ack) {
+        if (!dispatchBattleTap(result.ack,'lights-final-reward-understood')) {
           return {ok:false,claimed:true,reason:'reward-ack-tap-failed'};
         }
-        await new Promise(resolve=>setTimeout(resolve,220));
+        acknowledged=true;
+        await new Promise(resolve=>setTimeout(resolve,260));
       }
 
       recordDiagnostic('lights-final-reward-complete',{
-        revision:HK_LIGHTS_FINAL_REWARD_REV,
+        revision:HK_LIGHTS_REWARD_CLAIM_REV,
         steps,
-        acknowledgement:!!ack
+        acknowledgement:acknowledged,
+        result:result.reason
       });
       return {ok:true,claimed:true,reason:'reward-claimed'};
     }
@@ -21933,6 +22012,7 @@
       lightsConfirmRecoveryRevision:HK_LIGHTS_CONFIRM_RECOVERY_REV,
       lightsConfirmVerifiedRevision:HK_LIGHTS_CONFIRM_VERIFIED_REV,
       lightsStablePlanRevision:HK_LIGHTS_STABLE_PLAN_REV,
+      lightsRewardClaimRevision:HK_LIGHTS_REWARD_CLAIM_REV,
       start,
       stop,
       check:checkPuzzle,

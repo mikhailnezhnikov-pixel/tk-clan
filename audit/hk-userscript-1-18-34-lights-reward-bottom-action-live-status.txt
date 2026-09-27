@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.33
+target_version=1.18.34
+marker=lights-reward-bottom-action-20260927-r1
+source_sha256=ecd2ddfa191585a8f8f97dd54428f00ce5dad85c8e257d05c7de7c3ba132decf
+candidate_sha256=3f02849b53ad1988291c887fab81bade2ea66956663db11d79aca708243ca110
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
