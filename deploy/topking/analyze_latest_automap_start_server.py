@@ -38,7 +38,7 @@ for sid,group in sessions.items():
         runs.append((started,sid,ev))
 runs.sort(reverse=True)
 
-print("LATEST_FISHING_ZERO_BALANCE_TRACE")
+print("LATEST_LIGHTS_CONFIRM_TRACE")
 for started,sid,ev in runs[:6]:
     print(json.dumps({"session_id":sid,"started_at":started,"events":len(ev)},ensure_ascii=False))
     prev=None
