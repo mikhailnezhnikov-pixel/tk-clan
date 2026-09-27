@@ -189,3 +189,5 @@ for marker in [
 
 p.write_text(s,encoding="utf-8")
 print("TREASURY_EXIT_AFTER_CLAIM_1_18_39=PASS")
+
+# trigger build after workflow installation
