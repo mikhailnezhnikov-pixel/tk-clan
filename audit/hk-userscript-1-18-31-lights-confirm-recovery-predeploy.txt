@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_31_LIGHTS_CONFIRM_RECOVERY_PREDEPLOY=PASS
+source_version=1.18.30
+target_version=1.18.31
+lights_purchase_button=WAIT_AND_RECOVER
+lights_existing_modal=RESUME
+lights_cost1_fallback=BOTTOM_CENTER
+automap_transient_lights_failure=AUTO_REARM
+syntax=PASS
+base_sha256=099d485b014d4f3e5ed3df610879db7d43f22928839a2ace675ae8869a2e41da
+candidate_sha256=6ad9d877ed16c9f07bd274468000700a73973adecee1018af08e995585140701
