@@ -1,10 +1,11 @@
 {
   "schema": 1,
   "source_version": "1.18.47",
-  "target_version": "1.18.47",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.47.treasure-automap-ownership.candidate.user.js",
-  "primary_marker": "treasure-automap-module-ownership-20260927-r1",
+  "target_version": "1.18.48",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.48.treasure-lights-resume.candidate.user.js",
+  "primary_marker": "treasure-lights-resume-open-modal-20260927-r1",
   "preserve_markers": [
+    "treasure-automap-module-ownership-20260927-r1",
     "treasure-location-modal-root-20260927-r1",
     "treasure-chest-map-foreground-guard-20260927-r1",
     "treasury-left-path-exit-recovery-20260927-r1",
@@ -110,7 +111,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-47-treasure-automap-ownership-live-status.txt",
-  "commit_message": "ci: normalize userscript release manifest at 1.18.47",
-  "trigger_revision": 2
+  "audit_status_path": "audit/hk-userscript-1-18-48-treasure-lights-resume-live-status.txt",
+  "commit_message": "fix: deploy Treasure lights resume recovery in userscript 1.18.48"
 }

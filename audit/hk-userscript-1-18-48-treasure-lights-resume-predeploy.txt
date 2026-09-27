@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_48_TREASURE_LIGHTS_RESUME_PREDEPLOY=PASS
+source_version=1.18.47
+target_version=1.18.48
+lights_resume_open_modal=RECOVERED
+stale_modal_spend=FORBIDDEN
+treasure_regression_contract=PASS
+lights_resume_contract=PASS
+syntax=PASS
+base_sha256=153e680cfb5a44ade49db266c12f25e552c8e16610cddca1059e6289ee26fc97
+candidate_sha256=8b781b05b857786b7f96e1c7f5a9573ec4da4ea0af9e8de0a5a1f88ed90a06d2
