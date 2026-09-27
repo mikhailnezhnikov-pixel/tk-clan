@@ -379,3 +379,5 @@ for marker in [
 
 p.write_text(s,encoding="utf-8")
 print("TRADER_APPROVED_MODAL_BUY_1_18_41=PASS")
+
+# trigger build after smoke assertion fix
