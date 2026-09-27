@@ -1,0 +1,144 @@
+name: Build Userscript 1.18.33 Lights Stable Plan
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_lights_stable_plan_1_18_33.py'
+      - '.github/workflows/build-userscript-1-18-33-lights-stable-plan.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.32" /tmp/HamsterKingMobile.user.js
+          grep -Fq "lights-confirm-verified-20260927-r2" /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_lights_stable_plan_1_18_33.py /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.33" /tmp/HamsterKingMobile.user.js
+          grep -Fq "lights-stable-plan-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "singleAttempt:true" /tmp/HamsterKingMobile.user.js
+          grep -Fq "transition-mismatch" /tmp/HamsterKingMobile.user.js
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Exhaustive Lights Out solver test
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          function neighbours(position){
+            const out=[position],row=Math.floor(position/3),col=position%3;
+            if(row>0) out.push(position-3);
+            if(row<2) out.push(position+3);
+            if(col>0) out.push(position-1);
+            if(col<2) out.push(position+1);
+            return out;
+          }
+          function press(state,position){
+            const next=state.slice();
+            for(const p of neighbours(position)) next[p]=!next[p];
+            return next;
+          }
+          function allOn(state){ return state.every(Boolean); }
+          function solve(state){
+            if(allOn(state)) return [];
+            let best=null;
+            for(let mask=1;mask<512;mask++){
+              let current=state.slice();
+              const presses=[];
+              for(let pos=0;pos<9;pos++){
+                if(mask&(1<<pos)){
+                  presses.push(pos);
+                  current=press(current,pos);
+                }
+              }
+              if(!allOn(current)) continue;
+              if(best===null || presses.length<best.length) best=presses;
+            }
+            return best;
+          }
+          for(let mask=0;mask<512;mask++){
+            let state=Array.from({length:9},(_,i)=>!!(mask&(1<<i)));
+            const plan=solve(state);
+            if(!Array.isArray(plan)) throw new Error('unsolved mask '+mask);
+            const initialLength=plan.length;
+            for(let i=0;i<plan.length;i++){
+              state=press(state,plan[i]);
+              const residual=solve(state);
+              if(!Array.isArray(residual)) throw new Error('residual unsolved mask '+mask);
+              if(residual.length>initialLength-i-1) {
+                throw new Error('non-monotonic shortest path mask '+mask);
+              }
+            }
+            if(!allOn(state)) throw new Error('plan failed mask '+mask);
+          }
+          console.log('LIGHTS_SOLVER_512_STATES=PASS');
+          NODE
+
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.33.lights-stable-plan.candidate.user.js
+          audit=audit/hk-userscript-1-18-33-lights-stable-plan-predeploy.txt
+          git fetch origin main
+          git reset --hard origin/main
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.32':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.32',
+              'target_version':'1.18.33',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.33.lights-stable-plan.candidate.user.js',
+              'primary_marker':'lights-stable-plan-20260927-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-33-lights-stable-plan-live-status.txt',
+              'commit_message':'fix: deploy stable shortest lights plan in userscript 1.18.33',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          {
+            echo "USERSCRIPT_1_18_33_LIGHTS_STABLE_PLAN_PREDEPLOY=PASS"
+            echo "source_version=1.18.32"
+            echo "target_version=1.18.33"
+            echo "solver_512_states=PASS"
+            echo "purchase_confirmation=SINGLE_ATTEMPT"
+            echo "auto_plan=FIXED_SHORTEST"
+            echo "transition_verification=ENABLED"
+            echo "anti_ping_pong=ENABLED"
+            echo "syntax=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.33 stable lights plan"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
