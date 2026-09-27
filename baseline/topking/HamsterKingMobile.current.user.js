@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.31
+// @version      1.18.32
+// @release-note Лампочки: подтверждение покупки теперь считается успешным только после реального изменения интерфейса. Скрипт поднимается от вложенного текста 1 к настоящему кликабельному контейнеру, проверяет результат после каждого нажатия и только при отсутствии реакции пробует native click и точечный fallback по центру кнопки. Повторная покупка не выполняется, если модалка уже сменилась или поле изменилось.
 // @release-note Лампочки: подтверждение покупки восстановлено. После появления модалки скрипт отдельно ждёт готовность кнопки стоимости 1, умеет продолжить уже из открытого окна и использует безопасный fallback по нижней центральной кнопке. При включённой Автокарте временная ошибка подтверждения больше не выключает Автолампы навсегда.
 // @release-note Рыбалка: при 0 забросов больше не открывает следующий слот. Обычный wallet полностью исключён из расчёта бюджета рыбалки — источник только реальный счётчик забросов. Если счётчик исчез после последней покупки или модалка уже открыта с недоступной кнопкой, окно закрывается и Автокарта штатно выходит из комнаты.
 // @release-note Рыбалка: ускорен только темп покупки слотов. Сохраняется последовательность «перескан → выбор → открытие → пауза → подтверждение → ответ сервера → следующий слот», но без избыточных общих задержек. Целевой темп — около 2–3 секунд на слот при нормальном ответе сервера.
@@ -143,7 +144,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.31';
+  const BUILD_VERSION = '1.18.32';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3737,6 +3738,7 @@
   const HK_FISHING_HUMAN_FAST_REV='fishing-human-fast-20260927-r1';
   const HK_FISHING_ZERO_CAST_EXIT_REV='fishing-zero-cast-exit-20260927-r1';
   const HK_LIGHTS_CONFIRM_RECOVERY_REV='lights-confirm-recovery-20260927-r1';
+  const HK_LIGHTS_CONFIRM_VERIFIED_REV='lights-confirm-verified-20260927-r2';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -19105,6 +19107,64 @@
       }
     }
 
+    function lightsPurchaseClickTarget(element,root) {
+      if (!element || !root) return element || null;
+
+      const usable=(node)=>{
+        if (!node || node===lightsAutoToggle || node.disabled || node.getAttribute?.('aria-disabled')==='true' || !visible(node)) return false;
+        if (node.matches?.('button,[role="button"],a,[onclick]')) return true;
+        try { return getComputedStyle(node).cursor==='pointer'; } catch (_) { return false; }
+      };
+
+      let node=element;
+      for (let depth=0;node && depth<8;depth++,node=node.parentElement) {
+        if (!root.contains(node) && node!==root) break;
+        if (usable(node)) return node;
+        if (node===root) break;
+      }
+
+      const rect=element.getBoundingClientRect?.();
+      if (rect && rect.width>0 && rect.height>0) {
+        const x=Math.max(1,Math.min(window.innerWidth-1,rect.left+rect.width/2));
+        const y=Math.max(1,Math.min(window.innerHeight-1,rect.top+rect.height/2));
+        const stack=document.elementsFromPoint?.(x,y) || [];
+        for (const hit of stack) {
+          if (!hit || (!root.contains(hit) && hit!==root)) continue;
+          let current=hit;
+          for (let depth=0;current && depth<8;depth++,current=current.parentElement) {
+            if (!root.contains(current) && current!==root) break;
+            if (usable(current)) return current;
+            if (current===root) break;
+          }
+        }
+      }
+
+      return element;
+    }
+
+    async function tryLightsPurchaseAction(action,purchaseModal,before,runId,slot,mode) {
+      if (runId!==lightsAutoRunId || !lightsAutoEnabled() || typeof action!=='function') return null;
+
+      let fired=false;
+      try { fired=action()!==false; } catch (_) { fired=false; }
+      if (!fired) return null;
+
+      recordDiagnostic('lights-purchase-attempt',{
+        revision:HK_LIGHTS_CONFIRM_VERIFIED_REV,
+        slot,
+        mode
+      });
+
+      const probe=await waitLightsAcknowledge(runId,before,1500);
+      if (probe.button || probe.changed) return probe;
+
+      const current=lightsModalRoot();
+      if (!current || current!==purchaseModal) {
+        return {button:lightsAcknowledgeButton(current),changed:lightsBoardSignature()!==before};
+      }
+      return null;
+    }
+
     async function waitLightsPurchaseButton(root,runId,timeoutMs=2200) {
       const started=Date.now();
       while (Date.now()-started<timeoutMs) {
@@ -19168,25 +19228,94 @@
       if (!purchaseModal) return {ok:false,reason:'purchase-modal-missing'};
 
       const purchaseButton=await waitLightsPurchaseButton(purchaseModal,runId);
-      let confirmed=false;
+      let acknowledgement=null;
+      let confirmMode='none';
 
       if (purchaseButton) {
-        confirmed=dispatchAutoMapTap(purchaseButton,'lights-confirm-cost-'+slot);
+        const target=lightsPurchaseClickTarget(purchaseButton,purchaseModal);
+        acknowledgement=await tryLightsPurchaseAction(
+          ()=>dispatchAutoMapTap(target || purchaseButton,'lights-confirm-cost-'+slot),
+          purchaseModal,
+          before,
+          runId,
+          slot,
+          'clickable-target'
+        );
+        if (acknowledgement) confirmMode='clickable-target';
       }
 
-      if (!confirmed) {
-        confirmed=tapLightsPurchaseFallback(purchaseModal,slot);
+      // Dispatching an event is not proof that the game accepted the purchase.
+      // Retry only while the same modal remains and the board is unchanged.
+      if (!acknowledgement && runId===lightsAutoRunId && lightsAutoEnabled()) {
+        const current=lightsModalRoot();
+        if (current && current===purchaseModal && lightsBoardSignature()===before) {
+          const fresh=lightsPurchaseButton(current) || purchaseButton;
+          const target=lightsPurchaseClickTarget(fresh,current);
+          if (target) {
+            acknowledgement=await tryLightsPurchaseAction(
+              ()=>{
+                try {
+                  if (typeof target.click!=='function') return false;
+                  target.click();
+                  return true;
+                } catch (_) {
+                  return false;
+                }
+              },
+              purchaseModal,
+              before,
+              runId,
+              slot,
+              'native-click'
+            );
+            if (acknowledgement) confirmMode='native-click';
+          }
+        }
       }
 
-      if (!confirmed) return {ok:false,reason:'purchase-tap-failed'};
+      if (!acknowledgement && runId===lightsAutoRunId && lightsAutoEnabled()) {
+        const current=lightsModalRoot();
+        if (current && current===purchaseModal && lightsBoardSignature()===before) {
+          const fresh=lightsPurchaseButton(current) || purchaseButton;
+          const rect=fresh?.getBoundingClientRect?.();
+          const tap=()=>{
+            if (rect && rect.width>0 && rect.height>0) {
+              return dispatchBattleTapAt(
+                rect.left+rect.width/2,
+                rect.top+rect.height/2,
+                'lights-confirm-center-'+slot
+              );
+            }
+            return tapLightsPurchaseFallback(current,slot);
+          };
+          acknowledgement=await tryLightsPurchaseAction(
+            tap,
+            purchaseModal,
+            before,
+            runId,
+            slot,
+            'center-fallback'
+          );
+          if (acknowledgement) confirmMode='center-fallback';
+        }
+      }
+
+      if (!acknowledgement) {
+        return {ok:false,reason:'purchase-not-accepted'};
+      }
 
       recordDiagnostic('lights-purchase-confirmed',{
-        revision:HK_LIGHTS_CONFIRM_RECOVERY_REV,
+        revision:HK_LIGHTS_CONFIRM_VERIFIED_REV,
         slot,
-        selector:purchaseButton?'element':'coordinate-fallback'
+        selector:purchaseButton?'element':'coordinate-fallback',
+        mode:confirmMode,
+        changed:!!acknowledgement.changed,
+        hasAcknowledge:!!acknowledgement.button
       });
 
-      const acknowledgement=await waitLightsAcknowledge(runId,before);
+      if (!acknowledgement.button && !acknowledgement.changed) {
+        acknowledgement=await waitLightsAcknowledge(runId,before);
+      }
       if (acknowledgement.button) {
         if (!dispatchBattleTap(acknowledgement.button,'lights-understood-'+slot)) {
           return {ok:false,reason:'ack-tap-failed'};
@@ -21701,6 +21830,7 @@
       fishingHumanFastRevision:HK_FISHING_HUMAN_FAST_REV,
       fishingZeroCastExitRevision:HK_FISHING_ZERO_CAST_EXIT_REV,
       lightsConfirmRecoveryRevision:HK_LIGHTS_CONFIRM_RECOVERY_REV,
+      lightsConfirmVerifiedRevision:HK_LIGHTS_CONFIRM_VERIFIED_REV,
       start,
       stop,
       check:checkPuzzle,
