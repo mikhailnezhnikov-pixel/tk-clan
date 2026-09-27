@@ -1,7 +1,7 @@
 {
   "schema": "treasure-run-recordings-review-v3",
-  "generated_at_utc": "2026-09-27T13:35:20Z",
-  "source_trace_rows": 1350,
+  "generated_at_utc": "2026-09-27T14:52:41Z",
+  "source_trace_rows": 1507,
   "session_count": 20,
   "sessions": [
     {
@@ -48,17 +48,17 @@
       "started_at": "2026-09-27T07:54:38.728Z",
       "player_id": "5112494832",
       "capture_id_min": 21259,
-      "capture_id_max": 23024,
-      "captures": 350,
-      "batches": 350,
+      "capture_id_max": 24130,
+      "captures": 464,
+      "batches": 463,
       "batch_min": 1,
-      "batch_max": 350,
+      "batch_max": 463,
       "revisions": [
         "treasure-run-recorder-20260926-r1"
       ],
-      "events": 5119,
+      "events": 6900,
       "first_event_at": "2026-09-27T07:54:38.728Z",
-      "last_event_at": "2026-09-27T12:46:42.038Z",
+      "last_event_at": "2026-09-27T14:52:05.048Z",
       "screen_sequence": [
         "treasure-map",
         "other",
@@ -67,7 +67,67 @@
         "treasure-map",
         "other",
         "treasure-map",
-        "other"
+        "other",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "chests"
       ],
       "screen_transitions": [
         {
@@ -125,42 +185,462 @@
           "from": "treasure-map",
           "to": "other",
           "event": "snapshot"
+        },
+        {
+          "seq": 5203,
+          "at": "2026-09-27T14:34:04.178Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5209,
+          "at": "2026-09-27T14:34:35.148Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5281,
+          "at": "2026-09-27T14:35:26.182Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "network"
+        },
+        {
+          "seq": 5295,
+          "at": "2026-09-27T14:35:36.848Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5299,
+          "at": "2026-09-27T14:35:38.621Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "network"
+        },
+        {
+          "seq": 5349,
+          "at": "2026-09-27T14:36:12.148Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5359,
+          "at": "2026-09-27T14:36:18.879Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5412,
+          "at": "2026-09-27T14:36:52.251Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5452,
+          "at": "2026-09-27T14:37:14.794Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5458,
+          "at": "2026-09-27T14:37:19.373Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5467,
+          "at": "2026-09-27T14:37:25.476Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5477,
+          "at": "2026-09-27T14:37:32.105Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5511,
+          "at": "2026-09-27T14:37:45.563Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5516,
+          "at": "2026-09-27T14:37:49.905Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5547,
+          "at": "2026-09-27T14:38:09.447Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5564,
+          "at": "2026-09-27T14:38:20.986Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5618,
+          "at": "2026-09-27T14:38:57.582Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5624,
+          "at": "2026-09-27T14:39:01.179Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5660,
+          "at": "2026-09-27T14:39:17.191Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5666,
+          "at": "2026-09-27T14:39:20.553Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5674,
+          "at": "2026-09-27T14:39:27.194Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5680,
+          "at": "2026-09-27T14:39:32.808Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5687,
+          "at": "2026-09-27T14:39:39.091Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5694,
+          "at": "2026-09-27T14:39:44.595Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5740,
+          "at": "2026-09-27T14:40:03.189Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 5796,
+          "at": "2026-09-27T14:40:43.587Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5836,
+          "at": "2026-09-27T14:40:57.368Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5860,
+          "at": "2026-09-27T14:41:13.414Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5934,
+          "at": "2026-09-27T14:41:58.434Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5940,
+          "at": "2026-09-27T14:42:03.001Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5969,
+          "at": "2026-09-27T14:42:14.979Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5982,
+          "at": "2026-09-27T14:42:23.208Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5990,
+          "at": "2026-09-27T14:42:30.416Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6014,
+          "at": "2026-09-27T14:42:44.522Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6097,
+          "at": "2026-09-27T14:43:37.931Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6104,
+          "at": "2026-09-27T14:43:42.757Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6166,
+          "at": "2026-09-27T14:44:21.718Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6176,
+          "at": "2026-09-27T14:44:26.492Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6263,
+          "at": "2026-09-27T14:45:16.918Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6271,
+          "at": "2026-09-27T14:45:21.778Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6296,
+          "at": "2026-09-27T14:45:33.737Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6303,
+          "at": "2026-09-27T14:45:37.310Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6335,
+          "at": "2026-09-27T14:45:54.949Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6341,
+          "at": "2026-09-27T14:45:57.632Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6402,
+          "at": "2026-09-27T14:46:29.260Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6415,
+          "at": "2026-09-27T14:46:36.410Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "click"
+        },
+        {
+          "seq": 6476,
+          "at": "2026-09-27T14:47:14.622Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6529,
+          "at": "2026-09-27T14:47:45.012Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6537,
+          "at": "2026-09-27T14:47:51.595Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6560,
+          "at": "2026-09-27T14:48:11.363Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6600,
+          "at": "2026-09-27T14:48:27.922Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6615,
+          "at": "2026-09-27T14:48:36.453Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6710,
+          "at": "2026-09-27T14:49:32.072Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6716,
+          "at": "2026-09-27T14:49:36.168Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6745,
+          "at": "2026-09-27T14:49:48.363Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6753,
+          "at": "2026-09-27T14:49:54.083Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6767,
+          "at": "2026-09-27T14:50:00.123Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6775,
+          "at": "2026-09-27T14:50:04.327Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6868,
+          "at": "2026-09-27T14:51:09.814Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6876,
+          "at": "2026-09-27T14:51:14.210Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
         }
       ],
       "event_type_counts": {
         "session-start": 1,
-        "snapshot": 2296,
-        "click": 832,
-        "blocked-action": 705,
-        "network": 1285
+        "snapshot": 3137,
+        "click": 1497,
+        "blocked-action": 755,
+        "network": 1510
       },
       "network_status_counts": {
-        "200": 1271,
+        "200": 1496,
         "409": 3,
         "502": 4,
         "429": 5,
         "406": 2
       },
       "endpoint_counts": {
-        "POST /player/me": 34,
-        "GET /premium": 9,
-        "GET /tutorial": 9,
-        "GET /leaderboards/view": 10,
-        "GET /business_items": 13,
-        "GET /bonuses/view": 13,
-        "GET /client_config": 21,
-        "GET /shop/view": 21,
-        "GET /loading_data": 3,
-        "GET /player/passiveIncome": 5,
-        "POST /player/passiveIncome/apply": 5,
+        "POST /player/me": 36,
+        "GET /premium": 11,
+        "GET /tutorial": 11,
+        "GET /leaderboards/view": 12,
+        "GET /business_items": 15,
+        "GET /bonuses/view": 15,
+        "GET /client_config": 23,
+        "GET /shop/view": 25,
+        "GET /loading_data": 4,
+        "GET /player/passiveIncome": 6,
+        "POST /player/passiveIncome/apply": 6,
         "GET /business/values": 9,
         "POST /player/business/speedUp": 105,
         "POST /player/business/activate_and_remove": 1,
         "POST /player/business/insert": 106,
         "POST /player/business/transfigure": 1,
-        "GET /quests": 1,
+        "GET /quests": 2,
         "POST /player/energy": 1,
-        "GET /celebrities": 2,
+        "GET /celebrities": 3,
         "POST /leaderboard": 18,
         "POST /idler/claim": 3,
         "GET /idler/view": 1,
@@ -178,10 +658,10 @@
         "GET /league": 1,
         "GET /pit_pve/view": 2,
         "GET /clan/v2": 5,
-        "POST /shop/buy": 58,
+        "POST /shop/buy": 227,
         "POST /hk_maps/rumor_coordinator.php": 2,
         "POST /rumors/search": 27,
-        "POST /quest/claim": 11,
+        "POST /quest/claim": 12,
         "POST /leaderboard/reward": 1,
         "GET /battlepass": 2,
         "POST /hk_maps/buildings_api.php": 3,
@@ -200,12 +680,13 @@
         "POST /player/boxes/open": 17,
         "POST /player/hamster/lvlUp": 275,
         "POST /player/hamster/upgrade": 2,
-        "POST /player/hamster/lvlUp/view": 158
+        "POST /player/hamster/lvlUp/view": 158,
+        "POST /fair/reroll": 32
       },
       "blocked_reason_counts": {
-        "no-state-change": 399,
-        "pointer-events-none": 183,
-        "locked-or-unavailable": 86,
+        "no-state-change": 436,
+        "pointer-events-none": 188,
+        "locked-or-unavailable": 94,
         "insufficient-resource": 20,
         "http-409-conflict": 3,
         "http-5xx-server-error": 4,
@@ -220,17 +701,17 @@
       "started_at": "2026-09-27T07:06:10.593Z",
       "player_id": "552583086",
       "capture_id_min": 20788,
-      "capture_id_max": 20946,
-      "captures": 46,
-      "batches": 46,
+      "capture_id_max": 23550,
+      "captures": 89,
+      "batches": 89,
       "batch_min": 1,
-      "batch_max": 46,
+      "batch_max": 89,
       "revisions": [
         "treasure-run-recorder-20260926-r1"
       ],
-      "events": 622,
+      "events": 1245,
       "first_event_at": "2026-09-27T07:06:10.594Z",
-      "last_event_at": "2026-09-27T07:14:47.910Z",
+      "last_event_at": "2026-09-27T14:20:10.021Z",
       "screen_sequence": [
         "trader",
         "treasure-map",
@@ -248,7 +729,20 @@
         "treasure-map",
         "battle",
         "treasure-map",
-        "fishing"
+        "fishing",
+        "lights",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "battle"
       ],
       "screen_transitions": [
         {
@@ -369,26 +863,118 @@
           "from": "treasure-map",
           "to": "fishing",
           "event": "snapshot"
+        },
+        {
+          "seq": 624,
+          "at": "2026-09-27T14:10:36.072Z",
+          "from": "fishing",
+          "to": "lights",
+          "event": "click"
+        },
+        {
+          "seq": 658,
+          "at": "2026-09-27T14:10:52.174Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 684,
+          "at": "2026-09-27T14:11:08.180Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 803,
+          "at": "2026-09-27T14:13:10.478Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 812,
+          "at": "2026-09-27T14:13:14.913Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 865,
+          "at": "2026-09-27T14:13:47.752Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 875,
+          "at": "2026-09-27T14:13:52.358Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 912,
+          "at": "2026-09-27T14:14:08.443Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 930,
+          "at": "2026-09-27T14:14:21.677Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1020,
+          "at": "2026-09-27T14:15:53.304Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1039,
+          "at": "2026-09-27T14:16:08.282Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1170,
+          "at": "2026-09-27T14:18:06.371Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1190,
+          "at": "2026-09-27T14:18:19.206Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
         }
       ],
       "event_type_counts": {
         "session-start": 1,
-        "snapshot": 331,
-        "click": 204,
-        "network": 64,
-        "blocked-action": 22
+        "snapshot": 686,
+        "click": 397,
+        "network": 125,
+        "blocked-action": 35,
+        "session-stop": 1
       },
       "network_status_counts": {
-        "200": 64
+        "200": 125
       },
       "endpoint_counts": {
-        "POST /shop/buy": 55,
-        "POST /fair/reroll": 7,
+        "POST /shop/buy": 110,
+        "POST /fair/reroll": 13,
         "GET /business/values": 1,
         "GET /shop/view": 1
       },
       "blocked_reason_counts": {
-        "no-state-change": 17,
+        "no-state-change": 30,
         "insufficient-resource": 5
       }
     },
