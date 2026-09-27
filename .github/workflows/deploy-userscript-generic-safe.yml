@@ -98,6 +98,7 @@ jobs:
           python3 deploy/topking/verify_treasure_lights_outer_modal_contract.py /tmp/candidate.user.js
           python3 deploy/topking/verify_treasure_chest_fast_pacing_contract.py /tmp/candidate.user.js
           python3 deploy/topking/verify_treasure_battle_full_clear_contract.py /tmp/candidate.user.js
+          python3 deploy/topking/verify_treasure_battle_achievement_contract.py /tmp/candidate.user.js
 
           sha256sum /tmp/candidate.user.js | awk '{print $1}' > /tmp/candidate.sha
 
@@ -136,6 +137,7 @@ jobs:
           python3 deploy/topking/verify_treasure_lights_outer_modal_contract.py /tmp/live.user.js
           python3 deploy/topking/verify_treasure_chest_fast_pacing_contract.py /tmp/live.user.js
           python3 deploy/topking/verify_treasure_battle_full_clear_contract.py /tmp/live.user.js
+          python3 deploy/topking/verify_treasure_battle_achievement_contract.py /tmp/live.user.js
 
           sha256sum /tmp/live.user.js | awk '{print $1}' > /tmp/source.sha
 
@@ -295,6 +297,7 @@ jobs:
             echo "treasure_lights_outer_modal_contract=PASS"
             echo "treasure_chest_fast_pacing_contract=PASS"
             echo "treasure_battle_full_clear_contract=PASS"
+            echo "treasure_battle_achievement_contract=PASS"
             echo "ci_game_mutations=NONE"
           } > "$AUDIT_STATUS_PATH"
 
