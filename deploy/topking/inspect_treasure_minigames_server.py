@@ -19,7 +19,7 @@ keywords=(
     "lights_out","light","lamp","storage","reward",
     "fishing","fish","water","reservoir","rod",
     "enemy","sword","battle","defeated",
-    "chest","digging_spot","treasurelot"
+    "chest","digging_spot","treasurelot","trader","merchant"
 )
 
 lots={}
