@@ -94,6 +94,7 @@ jobs:
           # any previously fixed map/chest/modal/handoff behavior is rejected
           # before it can reach the live server.
           python3 deploy/topking/verify_treasure_autopilot_contract.py /tmp/candidate.user.js
+          python3 deploy/topking/verify_treasure_lights_resume_contract.py /tmp/candidate.user.js
 
           sha256sum /tmp/candidate.user.js | awk '{print $1}' > /tmp/candidate.sha
 
@@ -128,6 +129,7 @@ jobs:
           PY
 
           python3 deploy/topking/verify_treasure_autopilot_contract.py /tmp/live.user.js
+          python3 deploy/topking/verify_treasure_lights_resume_contract.py /tmp/live.user.js
 
           sha256sum /tmp/live.user.js | awk '{print $1}' > /tmp/source.sha
 
@@ -283,6 +285,7 @@ jobs:
             echo "server_rollback_guard=ENABLED"
             echo "public_verify_rollback=ENABLED"
             echo "treasure_regression_contract=PASS"
+            echo "treasure_lights_resume_contract=PASS"
             echo "ci_game_mutations=NONE"
           } > "$AUDIT_STATUS_PATH"
 
