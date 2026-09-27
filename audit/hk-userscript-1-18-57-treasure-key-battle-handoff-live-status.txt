@@ -1,0 +1,17 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.56
+target_version=1.18.57
+marker=treasure-key-battle-handoff-20260928-r1
+source_sha256=ca22c374693dbae54e815a1979fa2d9ed3bc3721e70d9d886d983e1dc55b49b6
+candidate_sha256=8e3195b4571e23ced241e51483567b43eed9c8930ebf6f29c2467875debad295
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+treasure_regression_contract=PASS
+treasure_lights_resume_contract=PASS
+treasure_lights_outer_modal_contract=PASS
+treasure_chest_fast_pacing_contract=PASS
+treasure_treasury_loop_contract=PASS
+treasure_battle_full_clear_contract=PASS
+treasure_battle_achievement_contract=PASS
+ci_game_mutations=NONE
