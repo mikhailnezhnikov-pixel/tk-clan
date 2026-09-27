@@ -1,4 +1,5 @@
 name: Build Userscript 1.18.49 Treasure Lights Outer Modal
+# contract-retry: behavior-based lights resume
 
 on:
   push:
