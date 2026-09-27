@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.36
+// @version      1.18.37
+// @release-note Лампочки: исправлена причина цикла между двумя состояниями. После успешного переключения поля скрипт теперь обязательно закрывает старое окно лампы (Понятно/X) и только после этого открывает следующую лампу; уже открытая модалка больше никогда не подтверждается как новый ход. Несовпадение рассчитанного перехода/цикл теперь останавливают Автолампы вместо бесконечных повторов.
 // @release-note Лампочки/Автокарта: завершение комнаты теперь определяется не только временным JS-флагом, но и реальным состоянием центральной награды «Активировано», поэтому возврат работает после перерисовки/перезапуска раннера. Зависший раннер Автоламп после забора награды принудительно отпускается. Для выхода приоритет отдан нижней золотой кнопке возврата в игровом футере; правый плавающий Back/HK-контрол исключён.
 // @release-note Лампочки/Автокарта: после подтверждённого получения центральной награды комната считается завершённой и больше не запускает Автолампы повторно. Автокарта получает строгий handoff «основная награда забрана → кнопка возврата из мини-игры → Карта Сокровищ → продолжить активные клетки». Для выхода добавлен отдельный поиск текстового или иконочного Back/Exit-контрола с проверкой фактического возврата на карту.
 // @release-note Лабиринт: финальное «Активированное хранилище» теперь подтверждается только нижней центральной кнопкой действия. Иконки ресурсов внутри окна явно исключены из кандидатов, а глобальная кнопка «Понятно» под модалкой больше не может быть нажата как подтверждение награды. После клика скрипт ждёт фактического закрытия/смены модалки перед передачей управления Автокарте.
@@ -148,7 +149,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.36';
+  const BUILD_VERSION = '1.18.37';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17828,6 +17829,7 @@
   const HK_LIGHTS_REWARD_CLAIM_REV = 'lights-reward-bottom-action-20260927-r1';
   const HK_LIGHTS_MAP_RETURN_REV = 'lights-map-return-after-main-reward-20260927-r1';
   const HK_LIGHTS_COMPLETED_RETURN_REV = 'lights-completed-dom-return-20260927-r2';
+  const HK_LIGHTS_MODAL_STEP_REV = 'lights-close-modal-between-steps-20260927-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -19269,19 +19271,193 @@
       return {button:null,changed:lightsBoardSignature()!==before};
     }
 
+    function lightsModalCloseButton(root) {
+      if (!root) return null;
+      const rr=root.getBoundingClientRect?.();
+      if (!rr) return null;
+      const candidates=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>
+          element &&
+          element!==lightsAutoToggle &&
+          !element.disabled &&
+          element.getAttribute?.('aria-disabled')!=='true' &&
+          visible(element)
+        )
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const aria=clean(
+            element.getAttribute?.('aria-label') ||
+            element.getAttribute?.('title') ||
+            ''
+          ).trim();
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          const style=getComputedStyle(element);
+          const actionable=
+            element.matches?.('button,[role="button"],a,[onclick]') ||
+            !!element.onclick ||
+            style.cursor==='pointer';
+          const cx=rect.left+rect.width/2;
+          const cy=rect.top+rect.height/2;
+          const nearTop=cy<=rr.top+rr.height*0.24;
+          const nearRight=cx>=rr.left+rr.width*0.72;
+          const small=rect.width>0 && rect.width<=90 && rect.height>0 && rect.height<=90;
+          let score=0;
+          if (actionable) score+=80;
+          if (/^(?:×|✕|x)$/i.test(text)) score+=300;
+          if (/close|закрыть/i.test(text+' '+aria)) score+=260;
+          if (nearTop) score+=100;
+          if (nearRight) score+=100;
+          if (small) score+=60;
+          if (text==='1' || /(?:🫐|🍒|🍓)?\s*1$/u.test(text)) score-=600;
+          if (/^(?:понятно|got it|understood|ok|okay)$/i.test(text)) score-=200;
+          return {element,score,rect};
+        })
+        .filter(row=>row.score>=240)
+        .sort((a,b)=>b.score-a.score || a.rect.width*a.rect.height-b.rect.width*b.rect.height);
+      return candidates[0]?.element || null;
+    }
+
+    async function closeLightsModalAfterStateChange(runId,before,slot,timeoutMs=4200) {
+      const started=Date.now();
+      let lastActionAt=0;
+      let coordinateFallbackUsed=false;
+
+      while (Date.now()-started<timeoutMs) {
+        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
+
+        const changed=lightsBoardSignature()!==before;
+        const root=lightsModalRoot();
+        if (!root) return changed;
+
+        // Never close/advance before the game actually accepted this lamp press.
+        if (!changed) {
+          await new Promise(resolve=>setTimeout(resolve,90));
+          continue;
+        }
+
+        if (Date.now()-lastActionAt<320) {
+          await new Promise(resolve=>setTimeout(resolve,90));
+          continue;
+        }
+
+        const ack=lightsAcknowledgeButton(root);
+        if (ack) {
+          if (dispatchBattleTap(ack,'lights-understood-after-change-'+slot)) {
+            lastActionAt=Date.now();
+            recordDiagnostic('lights-modal-drain',{
+              revision:HK_LIGHTS_MODAL_STEP_REV,
+              slot,
+              action:'ack'
+            });
+            await new Promise(resolve=>setTimeout(resolve,220));
+            continue;
+          }
+        }
+
+        const close=lightsModalCloseButton(root);
+        if (close) {
+          if (dispatchBattleTap(close,'lights-close-after-change-'+slot)) {
+            lastActionAt=Date.now();
+            recordDiagnostic('lights-modal-drain',{
+              revision:HK_LIGHTS_MODAL_STEP_REV,
+              slot,
+              action:'close'
+            });
+            await new Promise(resolve=>setTimeout(resolve,220));
+            continue;
+          }
+        }
+
+        if (!coordinateFallbackUsed) {
+          const rr=root.getBoundingClientRect?.();
+          if (rr && rr.width>120 && rr.height>120) {
+            coordinateFallbackUsed=true;
+            const x=rr.left+rr.width-18;
+            const y=rr.top+18;
+            if (dispatchBattleTapAt(x,y,'lights-close-corner-after-change-'+slot)) {
+              lastActionAt=Date.now();
+              recordDiagnostic('lights-modal-drain',{
+                revision:HK_LIGHTS_MODAL_STEP_REV,
+                slot,
+                action:'corner-fallback'
+              });
+              await new Promise(resolve=>setTimeout(resolve,260));
+              continue;
+            }
+          }
+        }
+
+        await new Promise(resolve=>setTimeout(resolve,100));
+      }
+
+      return lightsBoardSignature()!==before && !lightsModalRoot();
+    }
+
+    async function clearStaleLightsModalBeforeStep(runId,slot,timeoutMs=2200) {
+      const started=Date.now();
+      while (Date.now()-started<timeoutMs) {
+        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
+        const root=lightsModalRoot();
+        if (!root) return true;
+
+        const ack=lightsAcknowledgeButton(root);
+        if (ack && dispatchBattleTap(ack,'lights-clear-stale-ack-'+slot)) {
+          recordDiagnostic('lights-stale-modal-cleared',{
+            revision:HK_LIGHTS_MODAL_STEP_REV,
+            slot,
+            method:'ack'
+          });
+          await new Promise(resolve=>setTimeout(resolve,240));
+          continue;
+        }
+
+        const close=lightsModalCloseButton(root);
+        if (close && dispatchBattleTap(close,'lights-clear-stale-close-'+slot)) {
+          recordDiagnostic('lights-stale-modal-cleared',{
+            revision:HK_LIGHTS_MODAL_STEP_REV,
+            slot,
+            method:'close'
+          });
+          await new Promise(resolve=>setTimeout(resolve,240));
+          continue;
+        }
+
+        const rr=root.getBoundingClientRect?.();
+        if (rr && rr.width>120 && rr.height>120) {
+          if (dispatchBattleTapAt(rr.left+rr.width-18,rr.top+18,'lights-clear-stale-corner-'+slot)) {
+            recordDiagnostic('lights-stale-modal-cleared',{
+              revision:HK_LIGHTS_MODAL_STEP_REV,
+              slot,
+              method:'corner-fallback'
+            });
+            await new Promise(resolve=>setTimeout(resolve,260));
+            continue;
+          }
+        }
+
+        await new Promise(resolve=>setTimeout(resolve,100));
+      }
+      return !lightsModalRoot();
+    }
+
     async function runLightsModalStep(before,target,slot,runId) {
       if (!target || !target.isConnected) return {ok:false,reason:'target-missing'};
 
-      // Recover an already-open purchase window first. This is important after a
-      // transient selector/timing failure: do not tap the lamp a second time.
-      let purchaseModal=lightsModalRoot();
-
-      if (!purchaseModal) {
-        const opened=dispatchAutoMapTap(target,'lights-open-'+slot);
-        if (!opened) return {ok:false,reason:'target-tap-failed'};
-        purchaseModal=await waitLightsModal(runId);
+      // A modal left from the previous lamp must never be interpreted as the
+      // confirmation window for this new lamp. Drain it first, without pressing 1.
+      if (lightsModalRoot()) {
+        const cleared=await clearStaleLightsModalBeforeStep(runId,slot);
+        if (!cleared) return {ok:false,reason:'stale-modal-blocking'};
       }
 
+      if (runId!==lightsAutoRunId || !lightsAutoEnabled()) {
+        return {ok:false,reason:'cancelled'};
+      }
+
+      const opened=dispatchAutoMapTap(target,'lights-open-'+slot);
+      if (!opened) return {ok:false,reason:'target-tap-failed'};
+
+      const purchaseModal=await waitLightsModal(runId);
       if (!purchaseModal) return {ok:false,reason:'purchase-modal-missing'};
 
       const purchaseButton=await waitLightsPurchaseButton(purchaseModal,runId);
@@ -19289,17 +19465,14 @@
       let confirmMode='none';
 
       if (purchaseButton) {
-        const target=lightsPurchaseClickTarget(purchaseButton,purchaseModal) || purchaseButton;
-        fired=dispatchAutoMapTap(target,'lights-confirm-cost-'+slot);
+        const clickTarget=lightsPurchaseClickTarget(purchaseButton,purchaseModal) || purchaseButton;
+        fired=dispatchAutoMapTap(clickTarget,'lights-confirm-cost-'+slot);
         if (fired) confirmMode='single-clickable-target';
 
-        // Native/coordinate fallbacks are allowed only when no click event could
-        // be dispatched at all. Never retry merely because the server is slow:
-        // a second accepted purchase would toggle the same lamp twice.
         if (!fired) {
           try {
-            if (typeof target.click==='function') {
-              target.click();
+            if (typeof clickTarget.click==='function') {
+              clickTarget.click();
               fired=true;
               confirmMode='single-native-click';
             }
@@ -19307,7 +19480,7 @@
         }
 
         if (!fired) {
-          const rect=target.getBoundingClientRect?.();
+          const rect=clickTarget.getBoundingClientRect?.();
           if (rect && rect.width>0 && rect.height>0) {
             fired=dispatchBattleTapAt(
               rect.left+rect.width/2,
@@ -19322,50 +19495,32 @@
         if (fired) confirmMode='single-modal-fallback';
       }
 
-      if (!fired) {
-        return {ok:false,reason:'purchase-tap-failed'};
-      }
+      if (!fired) return {ok:false,reason:'purchase-tap-failed'};
 
       recordDiagnostic('lights-purchase-attempt',{
-        revision:HK_LIGHTS_STABLE_PLAN_REV,
+        revision:HK_LIGHTS_MODAL_STEP_REV,
         slot,
         mode:confirmMode,
         singleAttempt:true
       });
 
-      // One dispatched purchase gets one server-response window. No second click
-      // is sent while the same modal is still waiting for the first request.
-      let acknowledgement=await waitLightsAcknowledge(runId,before,8000);
-      if (!acknowledgement.button && !acknowledgement.changed) {
-        const current=lightsModalRoot();
-        if (current && current===purchaseModal && lightsBoardSignature()===before) {
-          return {ok:false,reason:'purchase-no-response'};
-        }
-        acknowledgement={
-          button:lightsAcknowledgeButton(current),
-          changed:lightsBoardSignature()!==before
-        };
-      }
-
-      recordDiagnostic('lights-purchase-confirmed',{
-        revision:HK_LIGHTS_STABLE_PLAN_REV,
-        slot,
-        selector:purchaseButton?'element':'coordinate-fallback',
-        mode:confirmMode,
-        changed:!!acknowledgement.changed,
-        hasAcknowledge:!!acknowledgement.button
-      });
-      if (acknowledgement.button) {
-        if (!dispatchBattleTap(acknowledgement.button,'lights-understood-'+slot)) {
-          return {ok:false,reason:'ack-tap-failed'};
-        }
-        await new Promise(resolve=>setTimeout(resolve,180));
-      }
-
-      if (acknowledgement.changed) return {ok:true,reason:'changed-before-ack'};
-
+      // First wait only for the board itself to change. Do not return to the
+      // planner while any lamp modal is still open.
       const changed=await waitLightsBoardChange(before,runId);
-      return changed ? {ok:true,reason:'field-changed'} : {ok:false,reason:'field-no-change'};
+      if (!changed) return {ok:false,reason:'field-no-change'};
+
+      const drained=await closeLightsModalAfterStateChange(runId,before,slot);
+      if (!drained) {
+        return {ok:false,reason:'modal-not-closed-after-change'};
+      }
+
+      recordDiagnostic('lights-auto-step-ui-complete',{
+        revision:HK_LIGHTS_MODAL_STEP_REV,
+        slot,
+        mode:confirmMode,
+        state:lightsBoardSignature()
+      });
+      return {ok:true,reason:'field-changed-modal-closed'};
     }
 
     function lightsRewardElement() {
@@ -19595,27 +19750,36 @@
       lightsAutoRunId += 1;
       lightsAutoRunning=false;
 
-      if (autoMapOwnsLights) {
-        // A single DOM timing miss must not permanently disable the module while
-        // full AutoMap is responsible for the room. Keep it armed and retry after
-        // a human-sized pause; runLightsModalStep can resume an already-open modal.
+      const fatalReasons=new Set([
+        'state-cycle',
+        'transition-mismatch',
+        'plan-state-drift',
+        'plan-exhausted-not-solved',
+        'step-limit',
+        'stale-modal-blocking',
+        'modal-not-closed-after-change'
+      ]);
+
+      if (autoMapOwnsLights && !fatalReasons.has(reason)) {
+        // Timing/network misses may be retried, but mathematical/state-machine
+        // mismatches must never spend berries in an endless two-state loop.
         try { localStorage.setItem(LIGHTS_AUTO_STORAGE_KEY,'1'); } catch (_) {}
         updateLightsAutoToggle();
         recordDiagnostic('lights-auto-recover',{
-          revision:HK_LIGHTS_CONFIRM_RECOVERY_REV,
+          revision:HK_LIGHTS_MODAL_STEP_REV,
           reason,
           ...data
         });
         setTimeout(()=>{
           lastSignature='';
           checkPuzzle();
-        },minigameRandomMs(900,1400));
+        },minigameRandomMs(1100,1700));
         return false;
       }
 
       try { localStorage.setItem(LIGHTS_AUTO_STORAGE_KEY,'0'); } catch (_) {}
       updateLightsAutoToggle();
-      recordDiagnostic('lights-auto-stop',{revision:HK_LIGHTS_AUTO_REV,reason,...data});
+      recordDiagnostic('lights-auto-stop',{revision:HK_LIGHTS_MODAL_STEP_REV,reason,...data});
       return false;
     }
 
@@ -22293,6 +22457,7 @@
       lightsRewardClaimRevision:HK_LIGHTS_REWARD_CLAIM_REV,
       lightsMapReturnRevision:HK_LIGHTS_MAP_RETURN_REV,
       lightsCompletedReturnRevision:HK_LIGHTS_COMPLETED_RETURN_REV,
+      lightsModalStepRevision:HK_LIGHTS_MODAL_STEP_REV,
       start,
       stop,
       check:checkPuzzle,

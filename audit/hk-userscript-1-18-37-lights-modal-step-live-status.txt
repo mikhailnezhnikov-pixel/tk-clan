@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.36
+target_version=1.18.37
+marker=lights-close-modal-between-steps-20260927-r1
+source_sha256=cca63dbc63adfe1035e6ff1ef6a94afc4976ef817d907aee1227ff6accf4b6a9
+candidate_sha256=40c00317703e0eb7d791fafe4e5b29b43ebcf63a75c5a39ee96b8688e3682143
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
