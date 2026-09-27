@@ -103,5 +103,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-39-treasury-exit-live-status.txt",
-  "commit_message": "fix: deploy treasury exit after claimed chest in userscript 1.18.39"
+  "commit_message": "fix: deploy treasury exit after claimed chest in userscript 1.18.39",
+  "trigger_revision": 1
 }
