@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.52
+// @version      1.18.53
+// @release-note Сражения: строгий запрет выхода теперь работает даже когда окно «Покинуть локацию» перекрывает поле. Проверка боя использует сырой DOM врагов, а не только визуально видимые карточки. Пока есть хотя бы один враг с HP не больше остатка мечей, выход блокируется и окно закрывается через «Назад». Атака на мобильном выполняется полноценным pointer/touch tap вместо обычного element.click().
 // @release-note Сражения: введено строгое правило выхода. Покинуть боевую локацию можно только после получения финального сундука либо когда среди оставшихся врагов нет ни одного, кого можно атаковать текущим запасом мечей. Невозможность полной зачистки больше не является причиной выхода. Если окно выхода открылось преждевременно, Автокарта сама нажимает «Назад» и продолжает бой.
 // @release-note Сражения на Автокарте снова проходят автоматически. Полный пропуск боя удалён: если текущего запаса мечей хватает на полную зачистку по решателю, Автосражение атакует врагов до победы и забирает награду. Выход из локации остаётся только запасным сценарием, когда полной зачистки действительно не хватает по мечам/решению.
 // @release-note Сундуки: немного ускорены только задержки режима Автосундуков — поиск цели, открытие карточки, подтверждение, ожидание результата и сбор награды. Логика выбора сундуков, проверки доступности, защита от ложных сундуков на карте и таймауты подтверждения не менялись.
@@ -164,7 +165,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.52';
+  const BUILD_VERSION = '1.18.53';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3756,6 +3757,7 @@
   const HK_TREASURE_CHEST_FAST_PACING_REV='treasure-chest-fast-pacing-20260927-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
+  const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
@@ -21308,18 +21310,49 @@
         const expectedCost=battleCostForElement(element);
         const before=getSignature();
 
-        // First tap only opens the enemy card in the mobile UI.
-        element.click();
-        recordDiagnostic('battle-auto-open-card',{revision:HK_BATTLE_MODAL_CONFIRM_REV,slot,expectedCost});
-
-        // The actual attack is a second tap on the cost/action button in the modal.
-        const actionButton=await waitBattleActionButton(expectedCost,runId);
-        if (!actionButton) {
-          recordDiagnostic('battle-auto-stop',{revision:HK_BATTLE_MODAL_CONFIRM_REV,reason:'attack-button-missing',slot,expectedCost});
+        // Mobile Safari/game handlers are not guaranteed to react to a raw
+        // HTMLElement.click(). Use the same complete pointer/touch sequence that
+        // already works for other Treasure Map actions.
+        if (!dispatchBattleTap(element,'battle-open-card')) {
+          recordDiagnostic('battle-auto-stop',{
+            revision:HK_BATTLE_RAW_CONTEXT_REV,
+            reason:'target-tap-failed',
+            slot,
+            expectedCost
+          });
           return false;
         }
-        actionButton.click();
-        recordDiagnostic('battle-auto-confirm-attack',{revision:HK_BATTLE_MODAL_CONFIRM_REV,slot,expectedCost});
+        recordDiagnostic('battle-auto-open-card',{
+          revision:HK_BATTLE_RAW_CONTEXT_REV,
+          slot,
+          expectedCost
+        });
+
+        // The actual attack is a second mobile tap on the cost/action button.
+        const actionButton=await waitBattleActionButton(expectedCost,runId);
+        if (!actionButton) {
+          recordDiagnostic('battle-auto-stop',{
+            revision:HK_BATTLE_RAW_CONTEXT_REV,
+            reason:'attack-button-missing',
+            slot,
+            expectedCost
+          });
+          return false;
+        }
+        if (!dispatchBattleTap(actionButton,'battle-confirm-attack')) {
+          recordDiagnostic('battle-auto-stop',{
+            revision:HK_BATTLE_RAW_CONTEXT_REV,
+            reason:'attack-confirm-tap-failed',
+            slot,
+            expectedCost
+          });
+          return false;
+        }
+        recordDiagnostic('battle-auto-confirm-attack',{
+          revision:HK_BATTLE_RAW_CONTEXT_REV,
+          slot,
+          expectedCost
+        });
 
         const changed=await waitBattleSignatureChange(before,runId);
         if (!changed) {
@@ -21705,7 +21738,11 @@
     function battleExitState() {
       const signature=String(getSignature()||'');
       const board=getBattleBoard();
-      const enemies=board.filter(enemy=>enemy && visible(enemy.element));
+      // Do not use visual visibility here. A leave-confirm modal covers the
+      // battle grid, so visible(enemy.element) becomes false exactly when the
+      // exit guard is most important. Raw enemy DOM is the authoritative room
+      // state until the battle actually mutates/removes those lots.
+      const enemies=board.filter(enemy=>enemy!==null);
       const swords=getBattleAttack();
       const rewardPending=!!battleVictoryElement() || !!battleVictoryModalRoot();
       const inBattle=
@@ -22954,7 +22991,7 @@
 
       const battleGate=battleExitState();
       if (battleGate.inBattle && !battleGate.allowed) {
-        const back=battleLeaveBackButton(modal);
+        const back=battleLeaveBackButton(modal) || autoMapModalCloseButton(modal);
         recordDiagnostic('battle-leave-modal-blocked',{
           revision:HK_BATTLE_STRICT_EXIT_REV,
           source,
@@ -23950,6 +23987,7 @@
       treasureChestFastPacingRevision:HK_TREASURE_CHEST_FAST_PACING_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
+      battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
