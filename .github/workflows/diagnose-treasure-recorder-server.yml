@@ -1,0 +1,54 @@
+name: Diagnose Treasure Recorder Server
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/diagnose_treasure_recorder_server.py'
+      - '.github/workflows/diagnose-treasure-recorder-server.yml'
+      - 'deploy/topking/diagnose-treasure-recorder-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Diagnose recorder storage
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            deploy/topking/diagnose_treasure_recorder_server.py \
+            root@89.125.1.71:/tmp/diagnose_treasure_recorder_server.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "python3 /tmp/diagnose_treasure_recorder_server.py" \
+            > /tmp/treasure-recorder-server-diagnostic.json
+          python3 -m json.tool /tmp/treasure-recorder-server-diagnostic.json >/dev/null
+      - name: Persist diagnostic
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          cp /tmp/treasure-recorder-server-diagnostic.json audit/treasure-recorder-server-diagnostic.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/treasure-recorder-server-diagnostic.json
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: persist Treasure recorder server diagnostic"
+            git push origin HEAD:main
+          fi
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/treasure-recorder-server-diagnostic.json
