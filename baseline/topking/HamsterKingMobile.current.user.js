@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.46
+// @version      1.18.47
+// @release-note Автокарта теперь является владельцем дочерних автоматизаций на время прохождения. Если Автолампы/Автосундуки/Авторыбалка/Автоторговец сами выключились из-за временного UI-сбоя, Автокарта поднимет нужный модуль обратно и продолжит комнату. Для лампочек ошибки закрытия модалки переведены из фатальных в восстанавливаемые; математические ошибки плана по-прежнему блокируют повторные траты. Добавлен обязательный regression contract для уже исправленных этапов Карты сокровищ.
 // @release-note Карта сокровищ: исправлено зависание «ЖДУ ОКНО» после выбора клетки. Для модалки входа в локацию HK теперь сначала определяет реальный центральный диалог по геометрии и кнопке действия (например стоимость 20), а не случайный контейнер вокруг картинки. Поэтому кнопка входа подтверждается сразу, после чего Автокарта продолжает маршрут.
 // @release-note Карта сокровищ: клетки карты больше не принимаются за мини-игру «Сундуки». Пока реальная активная клетка карты находится на переднем плане, детектор сундуков блокируется, Автосундуки не стартуют и Автокарта продолжает маршрут. При входе в настоящую комнату сундуков защита автоматически снимается.
 // @release-note Сокровищница: путь теперь выбирается строго по фактической позиции на экране — всегда левый видимый вариант, а не по номеру lot-id. Также исправлено зависание на окне «Покинуть локацию»: уже открытая модалка подхватывается без повторного нажатия выхода, кнопка стоимости 10 ищется отдельно и подтверждается один раз, после чего HK ждёт возврата на Карту сокровищ.
@@ -158,7 +159,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.46';
+  const BUILD_VERSION = '1.18.47';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3744,6 +3745,7 @@
   const HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV='treasure-auto-map-stale-runner-20260927-r2';
   const HK_TREASURE_CHEST_MAP_GUARD_REV='treasure-chest-map-foreground-guard-20260927-r1';
   const HK_TREASURE_LOCATION_MODAL_ROOT_REV='treasure-location-modal-root-20260927-r1';
+  const HK_TREASURE_AUTOMAP_OWNERSHIP_REV='treasure-automap-module-ownership-20260927-r1';
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
@@ -20125,10 +20127,12 @@
         'transition-mismatch',
         'plan-state-drift',
         'plan-exhausted-not-solved',
-        'step-limit',
-        'stale-modal-blocking',
-        'modal-not-closed-after-change'
+        'step-limit'
       ]);
+
+      if (autoMapOwnsLights && fatalReasons.has(reason)) {
+        autoMapBlockOwnedModule('lights',reason,30000);
+      }
 
       if (autoMapOwnsLights && !fatalReasons.has(reason)) {
         // Timing/network misses may be retried, but mathematical/state-machine
@@ -21655,6 +21659,97 @@
       return cancelled;
     }
 
+    function autoMapEnsureOwnedModule(signature=getSignature()) {
+      if (!autoMapEnabled()) return false;
+
+      const sig=String(signature||'');
+      let name='';
+      let enabled=null;
+      let enable=null;
+
+      if (sig.startsWith('LIGHTS|')) {
+        name='lights';
+        enabled=lightsAutoEnabled;
+        enable=()=>setLightsAutoEnabled(true);
+      } else if (sig.startsWith('CHESTS|')) {
+        name='chests';
+        enabled=chestAutoEnabled;
+        enable=()=>setChestAutoEnabled(true);
+      } else if (sig.startsWith('FISHING|')) {
+        name='fishing';
+        enabled=fishingAutoEnabled;
+        enable=()=>setFishingAutoEnabled(true);
+      } else if (sig.startsWith('TRADER|')) {
+        name='trader';
+        enabled=traderAutoEnabled;
+        enable=()=>setTraderAutoEnabled(true);
+      } else {
+        return false;
+      }
+
+      const state=autoMapEnsureOwnedModule.state || (autoMapEnsureOwnedModule.state={
+        rearmedAt:Object.create(null),
+        blockedUntil:Object.create(null),
+        blockReason:Object.create(null)
+      });
+      const now=Date.now();
+      const blockedUntil=Number(state.blockedUntil[name]||0);
+      if (blockedUntil>now) {
+        autoMapStatus(name+' · защита',{
+          revision:HK_TREASURE_AUTOMAP_OWNERSHIP_REV,
+          module:name,
+          reason:String(state.blockReason[name]||'hard-failure'),
+          waitMs:blockedUntil-now
+        });
+        return false;
+      }
+      if (blockedUntil) {
+        delete state.blockedUntil[name];
+        delete state.blockReason[name];
+      }
+
+      if (enabled()) return false;
+
+      const last=Number(state.rearmedAt[name]||0);
+      if (now-last<1000) return false;
+      state.rearmedAt[name]=now;
+
+      enable();
+      lastSignature='';
+      recordDiagnostic('treasure-automap-module-rearm',{
+        revision:HK_TREASURE_AUTOMAP_OWNERSHIP_REV,
+        module:name,
+        signature:sig.slice(0,180)
+      });
+      autoMapStatus(name+' · восстановление',{
+        revision:HK_TREASURE_AUTOMAP_OWNERSHIP_REV,
+        module:name
+      });
+      setTimeout(()=>{
+        lastSignature='';
+        checkPuzzle();
+      },80);
+      return true;
+    }
+
+    function autoMapBlockOwnedModule(name,reason,ms=30000) {
+      const key=String(name||'');
+      if (!key) return;
+      const state=autoMapEnsureOwnedModule.state || (autoMapEnsureOwnedModule.state={
+        rearmedAt:Object.create(null),
+        blockedUntil:Object.create(null),
+        blockReason:Object.create(null)
+      });
+      state.blockedUntil[key]=Date.now()+Math.max(1000,Number(ms)||30000);
+      state.blockReason[key]=String(reason||'hard-failure');
+      recordDiagnostic('treasure-automap-module-block',{
+        revision:HK_TREASURE_AUTOMAP_OWNERSHIP_REV,
+        module:key,
+        reason:String(reason||'hard-failure'),
+        waitMs:Math.max(1000,Number(ms)||30000)
+      });
+    }
+
     function autoMapCaptureModes() {
       if (autoMapPreviousModes) return;
       autoMapPreviousModes={
@@ -22994,6 +23089,11 @@
         });
       }
 
+      const ownedSignature=getSignature();
+      if (autoMapEnsureOwnedModule(ownedSignature)) {
+        return false;
+      }
+
       if (autoMapModulesRunning()) {
         const minigameForeground=autoMapMiniGameForeground();
         const mapForeground=autoMapMapIsForeground();
@@ -23379,6 +23479,12 @@
       ensureFishingAutoToggle(isFishing);
       ensureTraderAutoToggle(isTrader);
       if (!isTrader) traderSessionPurchases=0;
+
+      // AutoMap is the parent controller. Child toggles are implementation
+      // details while a room is owned by AutoMap and may not remain OFF after a
+      // recoverable UI failure.
+      if (autoMapEnsureOwnedModule(signature)) return;
+
       if (battleAutoRunning || chestAutoRunning || lightsAutoRunning || fishingAutoRunning || traderAutoRunning) return;
       if (signature === lastSignature) return;
       lastSignature = signature;
@@ -23482,6 +23588,7 @@
       treasureAutoMapStaleRunnerRevision:HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV,
       treasureChestMapGuardRevision:HK_TREASURE_CHEST_MAP_GUARD_REV,
       treasureLocationModalRootRevision:HK_TREASURE_LOCATION_MODAL_ROOT_REV,
+      treasureAutoMapOwnershipRevision:HK_TREASURE_AUTOMAP_OWNERSHIP_REV,
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
