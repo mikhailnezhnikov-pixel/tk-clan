@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.32
+// @version      1.18.33
+// @release-note Лампочки: убран повторный клик подтверждения при медленном ответе сервера — одна покупка теперь отправляется только один раз и затем ждёт ответ до 8 секунд. Автолампы больше не пересчитывают новый маршрут после каждого хода: фиксируется один кратчайший план, каждый фактический переход сверяется с ожидаемой моделью 3×3, а при расхождении автоматизация останавливается вместо кликов туда‑сюда.
 // @release-note Лампочки: подтверждение покупки теперь считается успешным только после реального изменения интерфейса. Скрипт поднимается от вложенного текста 1 к настоящему кликабельному контейнеру, проверяет результат после каждого нажатия и только при отсутствии реакции пробует native click и точечный fallback по центру кнопки. Повторная покупка не выполняется, если модалка уже сменилась или поле изменилось.
 // @release-note Лампочки: подтверждение покупки восстановлено. После появления модалки скрипт отдельно ждёт готовность кнопки стоимости 1, умеет продолжить уже из открытого окна и использует безопасный fallback по нижней центральной кнопке. При включённой Автокарте временная ошибка подтверждения больше не выключает Автолампы навсегда.
 // @release-note Рыбалка: при 0 забросов больше не открывает следующий слот. Обычный wallet полностью исключён из расчёта бюджета рыбалки — источник только реальный счётчик забросов. Если счётчик исчез после последней покупки или модалка уже открыта с недоступной кнопкой, окно закрывается и Автокарта штатно выходит из комнаты.
@@ -144,7 +145,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.32';
+  const BUILD_VERSION = '1.18.33';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3739,6 +3740,7 @@
   const HK_FISHING_ZERO_CAST_EXIT_REV='fishing-zero-cast-exit-20260927-r1';
   const HK_LIGHTS_CONFIRM_RECOVERY_REV='lights-confirm-recovery-20260927-r1';
   const HK_LIGHTS_CONFIRM_VERIFIED_REV='lights-confirm-verified-20260927-r2';
+  const HK_LIGHTS_STABLE_PLAN_REV='lights-stable-plan-20260927-r1';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -18997,6 +18999,53 @@
       return Array.isArray(solution) && solution.length>0;
     }
 
+    function lightsState(board = null) {
+      const source=board || getLightsBoard();
+      if (!Array.isArray(source) || source.length!==9 || source.some(cell=>!cell)) return null;
+      return source.map(cell=>!!cell.on);
+    }
+
+    function lightsStateKey(state) {
+      return Array.isArray(state) && state.length===9
+        ? state.map(value=>value?'1':'0').join('')
+        : 'INVALID';
+    }
+
+    function lightsChangedPositions(beforeState,afterState) {
+      const changed=[];
+      if (!Array.isArray(beforeState) || !Array.isArray(afterState)) return changed;
+      for (let i=0;i<Math.min(beforeState.length,afterState.length);i++) {
+        if (!!beforeState[i]!==!!afterState[i]) changed.push(i+1);
+      }
+      return changed;
+    }
+
+    async function waitLightsStableBoard(runId,timeoutMs=2600,stableMs=360) {
+      const started=Date.now();
+      let lastKey='';
+      let stableSince=0;
+      while (Date.now()-started<timeoutMs) {
+        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return null;
+        const board=getLightsBoard();
+        const state=lightsState(board);
+        if (!state) {
+          await new Promise(resolve=>setTimeout(resolve,90));
+          continue;
+        }
+        const key=lightsStateKey(state);
+        if (key!==lastKey) {
+          lastKey=key;
+          stableSince=Date.now();
+        } else if (Date.now()-stableSince>=stableMs) {
+          return {board,state,key};
+        }
+        await new Promise(resolve=>setTimeout(resolve,90));
+      }
+      const board=getLightsBoard();
+      const state=lightsState(board);
+      return state ? {board,state,key:lightsStateKey(state)} : null;
+    }
+
     async function waitLightsBoardChange(before,runId) {
       const started=Date.now();
       while (Date.now()-started<LIGHTS_AUTO_CHANGE_TIMEOUT_MS) {
@@ -19228,94 +19277,76 @@
       if (!purchaseModal) return {ok:false,reason:'purchase-modal-missing'};
 
       const purchaseButton=await waitLightsPurchaseButton(purchaseModal,runId);
-      let acknowledgement=null;
+      let fired=false;
       let confirmMode='none';
 
       if (purchaseButton) {
-        const target=lightsPurchaseClickTarget(purchaseButton,purchaseModal);
-        acknowledgement=await tryLightsPurchaseAction(
-          ()=>dispatchAutoMapTap(target || purchaseButton,'lights-confirm-cost-'+slot),
-          purchaseModal,
-          before,
-          runId,
-          slot,
-          'clickable-target'
-        );
-        if (acknowledgement) confirmMode='clickable-target';
-      }
+        const target=lightsPurchaseClickTarget(purchaseButton,purchaseModal) || purchaseButton;
+        fired=dispatchAutoMapTap(target,'lights-confirm-cost-'+slot);
+        if (fired) confirmMode='single-clickable-target';
 
-      // Dispatching an event is not proof that the game accepted the purchase.
-      // Retry only while the same modal remains and the board is unchanged.
-      if (!acknowledgement && runId===lightsAutoRunId && lightsAutoEnabled()) {
-        const current=lightsModalRoot();
-        if (current && current===purchaseModal && lightsBoardSignature()===before) {
-          const fresh=lightsPurchaseButton(current) || purchaseButton;
-          const target=lightsPurchaseClickTarget(fresh,current);
-          if (target) {
-            acknowledgement=await tryLightsPurchaseAction(
-              ()=>{
-                try {
-                  if (typeof target.click!=='function') return false;
-                  target.click();
-                  return true;
-                } catch (_) {
-                  return false;
-                }
-              },
-              purchaseModal,
-              before,
-              runId,
-              slot,
-              'native-click'
+        // Native/coordinate fallbacks are allowed only when no click event could
+        // be dispatched at all. Never retry merely because the server is slow:
+        // a second accepted purchase would toggle the same lamp twice.
+        if (!fired) {
+          try {
+            if (typeof target.click==='function') {
+              target.click();
+              fired=true;
+              confirmMode='single-native-click';
+            }
+          } catch (_) {}
+        }
+
+        if (!fired) {
+          const rect=target.getBoundingClientRect?.();
+          if (rect && rect.width>0 && rect.height>0) {
+            fired=dispatchBattleTapAt(
+              rect.left+rect.width/2,
+              rect.top+rect.height/2,
+              'lights-confirm-center-'+slot
             );
-            if (acknowledgement) confirmMode='native-click';
+            if (fired) confirmMode='single-center-fallback';
           }
         }
+      } else {
+        fired=tapLightsPurchaseFallback(purchaseModal,slot);
+        if (fired) confirmMode='single-modal-fallback';
       }
 
-      if (!acknowledgement && runId===lightsAutoRunId && lightsAutoEnabled()) {
+      if (!fired) {
+        return {ok:false,reason:'purchase-tap-failed'};
+      }
+
+      recordDiagnostic('lights-purchase-attempt',{
+        revision:HK_LIGHTS_STABLE_PLAN_REV,
+        slot,
+        mode:confirmMode,
+        singleAttempt:true
+      });
+
+      // One dispatched purchase gets one server-response window. No second click
+      // is sent while the same modal is still waiting for the first request.
+      let acknowledgement=await waitLightsAcknowledge(runId,before,8000);
+      if (!acknowledgement.button && !acknowledgement.changed) {
         const current=lightsModalRoot();
         if (current && current===purchaseModal && lightsBoardSignature()===before) {
-          const fresh=lightsPurchaseButton(current) || purchaseButton;
-          const rect=fresh?.getBoundingClientRect?.();
-          const tap=()=>{
-            if (rect && rect.width>0 && rect.height>0) {
-              return dispatchBattleTapAt(
-                rect.left+rect.width/2,
-                rect.top+rect.height/2,
-                'lights-confirm-center-'+slot
-              );
-            }
-            return tapLightsPurchaseFallback(current,slot);
-          };
-          acknowledgement=await tryLightsPurchaseAction(
-            tap,
-            purchaseModal,
-            before,
-            runId,
-            slot,
-            'center-fallback'
-          );
-          if (acknowledgement) confirmMode='center-fallback';
+          return {ok:false,reason:'purchase-no-response'};
         }
-      }
-
-      if (!acknowledgement) {
-        return {ok:false,reason:'purchase-not-accepted'};
+        acknowledgement={
+          button:lightsAcknowledgeButton(current),
+          changed:lightsBoardSignature()!==before
+        };
       }
 
       recordDiagnostic('lights-purchase-confirmed',{
-        revision:HK_LIGHTS_CONFIRM_VERIFIED_REV,
+        revision:HK_LIGHTS_STABLE_PLAN_REV,
         slot,
         selector:purchaseButton?'element':'coordinate-fallback',
         mode:confirmMode,
         changed:!!acknowledgement.changed,
         hasAcknowledge:!!acknowledgement.button
       });
-
-      if (!acknowledgement.button && !acknowledgement.changed) {
-        acknowledgement=await waitLightsAcknowledge(runId,before);
-      }
       if (acknowledgement.button) {
         if (!dispatchBattleTap(acknowledgement.button,'lights-understood-'+slot)) {
           return {ok:false,reason:'ack-tap-failed'};
@@ -19485,9 +19516,12 @@
       if (!lightsAutoEnabled() || lightsAutoRunning || battleAutoRunning || chestAutoRunning) return false;
       lightsAutoRunning=true;
       const runId=++lightsAutoRunId;
-      const seen=new Set();
       let steps=0;
-      recordDiagnostic('lights-auto-start',{revision:HK_LIGHTS_AUTO_REV});
+      let plan=null;
+      let planIndex=0;
+      let expectedState=null;
+
+      recordDiagnostic('lights-auto-start',{revision:HK_LIGHTS_STABLE_PLAN_REV});
 
       try {
         while (runId===lightsAutoRunId && lightsAutoEnabled()) {
@@ -19516,67 +19550,134 @@
             }
             if (!getSignature().startsWith('LIGHTS|')) {
               clearNumbers();
-              recordDiagnostic('lights-auto-complete',{revision:HK_LIGHTS_AUTO_REV,steps,reason:'board-closed'});
+              recordDiagnostic('lights-auto-complete',{revision:HK_LIGHTS_STABLE_PLAN_REV,steps,reason:'board-closed'});
               return true;
             }
             return failLightsAuto('board-invalid',{valid:valid.length,steps});
           }
 
+          const currentState=lightsState(board);
+          if (!currentState) return failLightsAuto('state-invalid',{steps});
           const before=lightsBoardSignature(board);
-          if (seen.has(before)) {
-            return failLightsAuto('state-cycle',{state:before,steps});
-          }
-          seen.add(before);
 
-          const solution=solveLights(board);
-          drawLightsSolution(board,solution);
-
-          if (solution===null) {
-            return failLightsAuto('solution-missing',{state:before,steps});
-          }
-
-          if (solution.length===0) {
-            const rewardResult=await runLightsFinalReward(runId,steps);
-            if (!rewardResult.ok) {
-              if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
-              return failLightsAuto(rewardResult.reason,{steps});
+          if (plan===null) {
+            plan=solveLights(board);
+            if (plan===null) {
+              return failLightsAuto('solution-missing',{state:before,steps});
             }
-            recordDiagnostic('lights-auto-complete',{
-              revision:HK_LIGHTS_AUTO_REV,
-              steps,
-              reason:rewardResult.claimed?'solved-and-reward-claimed':'solved'
+            if (plan.length===0) {
+              const rewardResult=await runLightsFinalReward(runId,steps);
+              if (!rewardResult.ok) {
+                if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
+                return failLightsAuto(rewardResult.reason,{steps});
+              }
+              recordDiagnostic('lights-auto-complete',{
+                revision:HK_LIGHTS_STABLE_PLAN_REV,
+                steps,
+                reason:rewardResult.claimed?'solved-and-reward-claimed':'solved'
+              });
+              return true;
+            }
+
+            planIndex=0;
+            expectedState=currentState.slice();
+            drawLightsSolution(board,plan);
+            recordDiagnostic('lights-plan-fixed',{
+              revision:HK_LIGHTS_STABLE_PLAN_REV,
+              state:lightsStateKey(expectedState),
+              plan:plan.map(pos=>pos+1),
+              length:plan.length
             });
-            return true;
+          } else {
+            if (lightsStateKey(currentState)!==lightsStateKey(expectedState)) {
+              return failLightsAuto('plan-state-drift',{
+                steps,
+                expected:lightsStateKey(expectedState),
+                actual:lightsStateKey(currentState),
+                remainingPlan:plan.slice(planIndex).map(pos=>pos+1)
+              });
+            }
+            drawLightsSolution(board,plan.slice(planIndex));
           }
 
-          const position=solution[0];
+          if (planIndex>=plan.length) {
+            if (!allLightsOn(currentState)) {
+              return failLightsAuto('plan-exhausted-not-solved',{
+                steps,
+                state:lightsStateKey(currentState)
+              });
+            }
+            plan=null;
+            continue;
+          }
+
+          const position=plan[planIndex];
           const target=board[position]?.element;
           if (!target || !target.isConnected) {
             return failLightsAuto('target-missing',{position,steps});
           }
 
+          const predicted=applyLightPress(currentState,position);
           steps+=1;
           recordDiagnostic('lights-auto-click',{
-            revision:HK_LIGHTS_AUTO_REV,
+            revision:HK_LIGHTS_STABLE_PLAN_REV,
             step:steps,
             slot:position+1,
-            remainingPlan:solution.map(pos=>pos+1),
-            flow:'tile>cost1>ack>field-change'
+            planIndex,
+            fixedPlan:plan.map(pos=>pos+1),
+            expectedAfter:lightsStateKey(predicted),
+            flow:'fixed-shortest-plan>single-purchase>verify-transition'
           });
 
           const result=await runLightsModalStep(before,target,position+1,runId);
           if (!result.ok) {
             if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
-            return failLightsAuto(result.reason,{position,slot:position+1,steps,state:before});
+            return failLightsAuto(result.reason,{
+              position,
+              slot:position+1,
+              steps,
+              state:before,
+              plan:plan.map(pos=>pos+1)
+            });
           }
 
+          await new Promise(resolve=>setTimeout(resolve,LIGHTS_AUTO_SETTLE_MS));
+          const stable=await waitLightsStableBoard(runId);
+          if (!stable) {
+            return failLightsAuto('field-not-stable',{position,slot:position+1,steps});
+          }
+
+          const observed=stable.state;
+          if (lightsStateKey(observed)!==lightsStateKey(predicted)) {
+            return failLightsAuto('transition-mismatch',{
+              position,
+              slot:position+1,
+              steps,
+              before:lightsStateKey(currentState),
+              expected:lightsStateKey(predicted),
+              observed:lightsStateKey(observed),
+              expectedChanged:lightsChangedPositions(currentState,predicted),
+              observedChanged:lightsChangedPositions(currentState,observed),
+              plan:plan.map(pos=>pos+1)
+            });
+          }
+
+          expectedState=predicted;
+          planIndex+=1;
+
           recordDiagnostic('lights-auto-step-complete',{
-            revision:HK_LIGHTS_AUTO_REV,
+            revision:HK_LIGHTS_STABLE_PLAN_REV,
             step:steps,
             slot:position+1,
+            planIndex,
+            remainingPlan:plan.slice(planIndex).map(pos=>pos+1),
+            state:lightsStateKey(observed),
             result:result.reason
           });
-          await new Promise(resolve=>setTimeout(resolve,LIGHTS_AUTO_SETTLE_MS));
+
+          if (planIndex>=plan.length && allLightsOn(observed)) {
+            plan=null;
+          }
         }
         return false;
       } finally {
@@ -21831,6 +21932,7 @@
       fishingZeroCastExitRevision:HK_FISHING_ZERO_CAST_EXIT_REV,
       lightsConfirmRecoveryRevision:HK_LIGHTS_CONFIRM_RECOVERY_REV,
       lightsConfirmVerifiedRevision:HK_LIGHTS_CONFIRM_VERIFIED_REV,
+      lightsStablePlanRevision:HK_LIGHTS_STABLE_PLAN_REV,
       start,
       stop,
       check:checkPuzzle,
