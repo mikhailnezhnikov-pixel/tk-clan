@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.50
+// @version      1.18.51
+// @release-note Сражения на Автокарте снова проходят автоматически. Полный пропуск боя удалён: если текущего запаса мечей хватает на полную зачистку по решателю, Автосражение атакует врагов до победы и забирает награду. Выход из локации остаётся только запасным сценарием, когда полной зачистки действительно не хватает по мечам/решению.
 // @release-note Сундуки: немного ускорены только задержки режима Автосундуков — поиск цели, открытие карточки, подтверждение, ожидание результата и сбор награды. Логика выбора сундуков, проверки доступности, защита от ложных сундуков на карте и таймауты подтверждения не менялись.
 // @release-note Лабиринт: исправлена настоящая причина зависания на окне лампочки. Предыдущий фикс всё ещё выбирал внутреннюю чёрную панель, потому что общий поиск модалки специально предпочитал самый маленький контейнер. Теперь для Лабиринта есть отдельный поиск ВНЕШНЕЙ золотой модалки через подъём по предкам и наличие реального X в правом верхнем углу. Очистка зависшей лампы закрывает именно внешнее окно и только после этого продолжает решение.
 // @release-note Лабиринт: исправлено зависание Автокарты на уже открытом окне «Включенная/Выключенная лампочка». Детектор ламп теперь предпочитает внешний центральный диалог целиком (включая X и кнопку 1), а очистка старой модалки перед следующим ходом умеет закрывать внешний контейнер и его правый верхний угол без повторной траты ягоды. Добавлен отдельный regression contract для запуска/возобновления Автокарты с открытой модалкой лампы.
@@ -162,7 +163,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.50';
+  const BUILD_VERSION = '1.18.51';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3752,6 +3753,7 @@
   const HK_TREASURE_LIGHTS_RESUME_REV='treasure-lights-resume-open-modal-20260927-r1';
   const HK_TREASURE_LIGHTS_OUTER_MODAL_REV='treasure-lights-outer-modal-20260927-r1';
   const HK_TREASURE_CHEST_FAST_PACING_REV='treasure-chest-fast-pacing-20260927-r1';
+  const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
@@ -21664,12 +21666,15 @@
     }
 
     function runBattle() {
+      // AutoMap owns orchestration, but it must not suppress the battle solver.
+      // Fight whenever a complete clear is possible. The existing
+      // runBattleInsufficientExit() remains the only route that leaves without
+      // fighting, and only after the solver proves that a full clear is not
+      // possible with the current sword budget.
       if (autoMapEnabled()) {
-        recordDiagnostic('battle-auto-skip-owned-by-map',{
-          revision:HK_BATTLE_SKIP_CANON_REV
+        autoMapStatus('сражение',{
+          revision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV
         });
-        setTimeout(()=>void runAutoMapTick('battle-skip-owned-by-map'),20);
-        return true;
       }
 
       const maxAttack = getBattleAttack();
@@ -21824,7 +21829,11 @@
       let enabled=null;
       let enable=null;
 
-      if (sig.startsWith('LIGHTS|')) {
+      if (sig.startsWith('BATTLE|') || sig.startsWith('BATTLE_REWARD')) {
+        name='battle';
+        enabled=battleAutoEnabled;
+        enable=()=>setBattleAutoEnabled(true);
+      } else if (sig.startsWith('LIGHTS|')) {
         name='lights';
         enabled=lightsAutoEnabled;
         enable=()=>setLightsAutoEnabled(true);
@@ -23449,16 +23458,21 @@
           return true;
         }
         if (signature.startsWith('BATTLE')) {
-          // Canon from recording #9: do not perform any fight while AutoMap owns
-          // the room. Acknowledge the intro, leave the location, pay 10, resume map.
-          if (battleAutoRunning) {
-            battleAutoRunId+=1;
-            battleAutoRunning=false;
-            recordDiagnostic('battle-auto-cancel-for-skip',{
-              revision:HK_BATTLE_SKIP_CANON_REV
-            });
+          // Battle is a normal child module of AutoMap. Let the solver perform a
+          // complete clear whenever possible; only runBattleInsufficientExit()
+          // may leave the room without fighting.
+          autoMapStatus('сражение',{
+            revision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV
+          });
+          if (!battleAutoEnabled()) {
+            setBattleAutoEnabled(true);
+            lastSignature='';
           }
-          return await autoMapSkipBattleWithoutFight();
+          if (!battleAutoRunning) {
+            lastSignature='';
+            setTimeout(checkPuzzle,20);
+          }
+          return true;
         }
         if (signature.startsWith('FISHING|')) {
           autoMapStatus('рыбалка');
@@ -23660,13 +23674,6 @@
         return;
       }
       if (isBattle) {
-        if (autoMapEnabled()) {
-          recordDiagnostic('battle-skip-dispatch',{
-            revision:HK_BATTLE_SKIP_CANON_REV
-          });
-          setTimeout(()=>void runAutoMapTick('battle-skip-check-puzzle'),20);
-          return;
-        }
         runBattle();
         return;
       }
@@ -23749,6 +23756,7 @@
       treasureLightsResumeRevision:HK_TREASURE_LIGHTS_RESUME_REV,
       treasureLightsOuterModalRevision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
       treasureChestFastPacingRevision:HK_TREASURE_CHEST_FAST_PACING_REV,
+      battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
