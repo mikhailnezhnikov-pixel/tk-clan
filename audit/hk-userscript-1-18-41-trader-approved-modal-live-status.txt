@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.40
+target_version=1.18.41
+marker=trader-approved-modal-buy-20260927-r1
+source_sha256=b4c6ba5b3eb0308ee09745e8faa09fad5d0a12ed9016cbfd5e4454c55d32f66d
+candidate_sha256=0d9b431d6c50ae56ef4a4b17ba10613d687e1664d71188764044619dc35cf908
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
