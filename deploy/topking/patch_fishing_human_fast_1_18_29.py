@@ -98,3 +98,5 @@ for marker in [
 
 p.write_text(s,encoding="utf-8")
 print("FISHING_HUMAN_FAST_1_18_29=PASS")
+
+# build-trigger: fishing-human-fast-r1
