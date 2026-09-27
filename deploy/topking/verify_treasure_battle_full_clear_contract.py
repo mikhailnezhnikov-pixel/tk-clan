@@ -58,7 +58,7 @@ if "battle-strict-exit-gate-20260927-r1" in s:
     for marker in [
         "battleVictoryElement()",
         "battleVictoryModalRoot()",
-        "enemy.hp<=swords",
+        "Number(enemy.hp)<=swords",
         "reason:'attack-available'",
         "reason:'no-attack-available'",
     ]:
