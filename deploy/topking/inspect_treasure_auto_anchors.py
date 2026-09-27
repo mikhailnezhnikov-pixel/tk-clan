@@ -59,7 +59,11 @@ terms=[
   "function fishingTarget(",
   "function fishingAffordable(",
   "let fishingAutoRunning",
-  "function fishingVisibleCasts("
+  "function fishingVisibleCasts(",
+  "async function runLightsModalStep(",
+  "async function waitLightsModal(",
+  "function lightsActionButton(",
+  "function lightsModalRoot("
 ]
 
 out={"path":str(p),"chars":len(s),"lines":len(lines),"hits":{}}
@@ -107,6 +111,12 @@ for key in ["let fishingAutoRunning","function fishingVisibleCasts(","function f
 
 print("PRINT_LIGHTS_CURRENT_CONTEXT")
 for key in ["function lightsAutoEnabled(","function setLightsAutoEnabled(","function treasureActionButton(","async function runLightsAuto(","function lightsShouldAuto("]:
+    print("=== "+key+" ===")
+    for hit in out["hits"].get(key,[])[:1]:
+        print(hit["context"])
+
+print("PRINT_LIGHTS_MODAL_CONTEXT")
+for key in ["async function runLightsModalStep(","async function waitLightsModal(","function lightsActionButton(","function lightsModalRoot("]:
     print("=== "+key+" ===")
     for hit in out["hits"].get(key,[])[:1]:
         print(hit["context"])
