@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.39
+target_version=1.18.40
+marker=treasury-visual-exit-20260927-r2
+source_sha256=4a6e9443bc7b0214d84ca00bb37ce29151a33240f8b1a6458ee44609fbed7f8d
+candidate_sha256=b4c6ba5b3eb0308ee09745e8faa09fad5d0a12ed9016cbfd5e4454c55d32f66d
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
