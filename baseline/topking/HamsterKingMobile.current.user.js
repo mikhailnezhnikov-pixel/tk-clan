@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.44
+// @version      1.18.45
+// @release-note Карта сокровищ: клетки карты больше не принимаются за мини-игру «Сундуки». Пока реальная активная клетка карты находится на переднем плане, детектор сундуков блокируется, Автосундуки не стартуют и Автокарта продолжает маршрут. При входе в настоящую комнату сундуков защита автоматически снимается.
 // @release-note Сокровищница: путь теперь выбирается строго по фактической позиции на экране — всегда левый видимый вариант, а не по номеру lot-id. Также исправлено зависание на окне «Покинуть локацию»: уже открытая модалка подхватывается без повторного нажатия выхода, кнопка стоимости 10 ищется отдельно и подтверждается один раз, после чего HK ждёт возврата на Карту сокровищ.
 // @release-note Сражение/Автокарта: по записи #9 сражения теперь пропускаются без проведения боя. После входа в комнату HK закрывает стартовое «Понятно», нажимает «Покинуть локацию», подтверждает стоимость 10 и ждёт возврата на Карту сокровищ. Пока Автокарта включена, боевой решатель не делает ни одного удара.
 // @release-note Тайный торговец/Карта сокровищ: после выкупа всех разрешённых лотов Автокарта сразу передаёт управление выходу из комнаты и нажимает широкую нижнюю кнопку 10, затем продолжает маршрут. Поиск нижней кнопки исправлен для мобильной ширины. После выхода из события кнопки «Автокарта» и «Запись карты» скрываются вне экранов Карты сокровищ/её мини-игр, даже если режимы остаются включёнными.
@@ -156,7 +157,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.44';
+  const BUILD_VERSION = '1.18.45';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3740,6 +3741,7 @@
   const HK_TREASURE_AUTO_MAP_FOREGROUND_TRUTH_REV='treasure-auto-map-foreground-truth-20260926-r7';
   const HK_TREASURE_CHEST_ELEMENT_STATE_REV='treasure-chest-element-state-20260927-r1';
   const HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV='treasure-auto-map-stale-runner-20260927-r2';
+  const HK_TREASURE_CHEST_MAP_GUARD_REV='treasure-chest-map-foreground-guard-20260927-r1';
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
@@ -20597,7 +20599,12 @@
             y:Math.round(rect.top+rect.height/2)
           };
         })
-        .filter(row=>row.lotId && !row.lotId.includes('_empty_spot') && !row.lotId.includes('_bought_'));
+        .filter(row=>
+          row.lotId &&
+          !row.lotId.includes('_empty_spot') &&
+          !row.lotId.includes('_bought_') &&
+          !row.element.closest?.('[data-lot-id^="mf_treasurelot_active_sl"]')
+        );
     }
 
     function treasureChestSignature() {
@@ -20784,10 +20791,20 @@
 
     async function runTreasureChestAuto() {
       if (!chestAutoEnabled() || chestAutoRunning || battleAutoRunning) return false;
+      if (treasureChestBlockedByForegroundMap()) {
+        lastSignature='';
+        if (autoMapEnabled()) setTimeout(()=>void runAutoMapTick('chest-map-guard-pre'),20);
+        return false;
+      }
       let target=treasureChestTarget();
       if (!target) return false;
       await minigameHumanPause('scan',{module:'chests'});
       if (!chestAutoEnabled()) return false;
+      if (treasureChestBlockedByForegroundMap()) {
+        lastSignature='';
+        if (autoMapEnabled()) setTimeout(()=>void runAutoMapTick('chest-map-guard-post'),20);
+        return false;
+      }
       target=treasureChestTarget();
       if (!target) return false;
 
@@ -21732,6 +21749,34 @@
       });
     }
 
+    function treasureChestBlockedByForegroundMap(chestRows=treasureChestElements()) {
+      if (!treasureGuideScreenVisible()) return false;
+
+      const mapRows=[...document.querySelectorAll('[data-lot-id^="mf_treasurelot_active_sl"]')]
+        .filter(visible)
+        .filter(autoMapElementIsForeground);
+
+      if (!mapRows.length) return false;
+
+      const now=Date.now();
+      const last=Number(treasureChestBlockedByForegroundMap.lastLoggedAt||0);
+      if (now-last>=3000) {
+        treasureChestBlockedByForegroundMap.lastLoggedAt=now;
+        recordDiagnostic('treasure-chest-map-false-positive-blocked',{
+          revision:HK_TREASURE_CHEST_MAP_GUARD_REV,
+          activeMapLots:mapRows
+            .map(element=>String(element.getAttribute('data-lot-id')||''))
+            .filter(Boolean)
+            .slice(0,16),
+          chestLikeLots:(Array.isArray(chestRows)?chestRows:[])
+            .map(row=>String(row?.lotId||''))
+            .filter(Boolean)
+            .slice(0,24)
+        });
+      }
+      return true;
+    }
+
     function autoMapMiniGameForeground() {
       const signature=getSignature();
       let elements=[];
@@ -21743,7 +21788,9 @@
           ...document.querySelectorAll('[data-lot-id^="mf_treasurelot_sword_"]')
         ];
       } else if (signature.startsWith('CHESTS|')) {
-        elements=treasureChestElements().map(row=>row.element);
+        const chestRows=treasureChestElements();
+        if (treasureChestBlockedByForegroundMap(chestRows)) return false;
+        elements=chestRows.map(row=>row.element);
       } else if (signature.startsWith('FISHING|')) {
         elements=fishingElements().map(row=>row.element);
       } else if (signature.startsWith('TRADER|')) {
@@ -23183,7 +23230,10 @@
       if (traderRows.length>=1) return traderSignature();
 
       const chestRows=treasureChestElements();
-      if (chestRows.length>=3) return treasureChestSignature();
+      if (chestRows.length>=3) {
+        if (treasureChestBlockedByForegroundMap(chestRows)) return 'NONE';
+        return treasureChestSignature();
+      }
       return 'NONE';
     }
 
@@ -23324,6 +23374,7 @@
       treasureAutoMapForegroundTruthRevision:HK_TREASURE_AUTO_MAP_FOREGROUND_TRUTH_REV,
       treasureChestElementStateRevision:HK_TREASURE_CHEST_ELEMENT_STATE_REV,
       treasureAutoMapStaleRunnerRevision:HK_TREASURE_AUTO_MAP_STALE_RUNNER_REV,
+      treasureChestMapGuardRevision:HK_TREASURE_CHEST_MAP_GUARD_REV,
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
