@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source_version": "1.18.53",
+  "source_version": "1.18.54",
   "target_version": "1.18.54",
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.54.treasure-battle-achievements.candidate.user.js",
   "primary_marker": "battle-achievement-priority-20260927-r1",
@@ -118,6 +118,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-54-treasure-battle-achievements-live-status.txt",
-  "commit_message": "feat: deploy one-time Treasure battle achievement planning in userscript 1.18.54",
-  "trigger_revision": 1
+  "commit_message": "ci: normalize userscript release manifest at 1.18.54",
+  "trigger_revision": 2
 }
