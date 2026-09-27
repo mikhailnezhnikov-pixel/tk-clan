@@ -8,3 +8,5 @@ inspect run 5 battle labyrinth fishing 2026-09-27
 2026-09-27T20:35+09 inspect current lights stall after 1.18.47
 
 2026-09-27T22:34+09 inspect current lights stall after 1.18.48
+
+2026-09-27T23:51+09 inspect treasury wrong-room repeat after 1.18.50
