@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.43
+target_version=1.18.44
+marker=treasury-left-path-exit-recovery-20260927-r1
+source_sha256=79cd83196fc951785bb431e504442a21505afb90e15999f5684f9da90c1997e6
+candidate_sha256=d8fe4ef28b48011d8261ebc44ad5ddd87cd2cbccc6e1eb636bafe6d8fd25ffbe
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

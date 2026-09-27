@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.43
+// @version      1.18.44
+// @release-note Сокровищница: путь теперь выбирается строго по фактической позиции на экране — всегда левый видимый вариант, а не по номеру lot-id. Также исправлено зависание на окне «Покинуть локацию»: уже открытая модалка подхватывается без повторного нажатия выхода, кнопка стоимости 10 ищется отдельно и подтверждается один раз, после чего HK ждёт возврата на Карту сокровищ.
 // @release-note Сражение/Автокарта: по записи #9 сражения теперь пропускаются без проведения боя. После входа в комнату HK закрывает стартовое «Понятно», нажимает «Покинуть локацию», подтверждает стоимость 10 и ждёт возврата на Карту сокровищ. Пока Автокарта включена, боевой решатель не делает ни одного удара.
 // @release-note Тайный торговец/Карта сокровищ: после выкупа всех разрешённых лотов Автокарта сразу передаёт управление выходу из комнаты и нажимает широкую нижнюю кнопку 10, затем продолжает маршрут. Поиск нижней кнопки исправлен для мобильной ширины. После выхода из события кнопки «Автокарта» и «Запись карты» скрываются вне экранов Карты сокровищ/её мини-игр, даже если режимы остаются включёнными.
 // @release-note Тайный торговец: в автопокупку добавлены Вкусняшки для питомца, Необычные/другие ключи сокровищ, Походные припасы и Смена навыка питомца. Подтверждение покупки теперь нажимает реальный кликабельный контейнер нижней кнопки цены, а не вложенный текст/иконку; уже открытая одобренная модалка также подхватывается и подтверждается автоматически. Яйца питомцев по-прежнему исключены.
@@ -155,7 +156,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.43';
+  const BUILD_VERSION = '1.18.44';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17864,6 +17865,7 @@
   const HK_TRADER_EXIT_HANDOFF_REV = 'trader-exit-handoff-20260927-r1';
   const HK_TREASURE_EVENT_UI_SCOPE_REV = 'treasure-event-ui-scope-20260927-r1';
   const HK_BATTLE_SKIP_CANON_REV = 'battle-skip-run9-20260927-r1';
+  const HK_TREASURY_LEFT_PATH_REV = 'treasury-left-path-exit-recovery-20260927-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -22140,16 +22142,43 @@
     }
 
     function autoMapTreasuryChoice() {
-      return [...document.querySelectorAll('[data-lot-id^="mf_fair_treasury_room_choose_way_"]')]
+      const rows=[...document.querySelectorAll('[data-lot-id^="mf_fair_treasury_room_choose_way_"]')]
         .filter(visible)
         .map(element=>{
           const lotId=String(element.getAttribute('data-lot-id')||'');
           const m=lotId.match(/choose_way_(\d+)/);
           const text=clean(element.innerText||element.textContent||'').trim();
           const costMatch=text.match(/(?:^|\s)(\d{1,4})(?:\s|$)/);
-          return {element,lotId,index:m?Number(m[1]):999,cost:costMatch?Number(costMatch[1]):null};
+          const rect=element.getBoundingClientRect?.() || {left:99999,top:99999,width:0,height:0};
+          return {
+            element,
+            lotId,
+            index:m?Number(m[1]):999,
+            cost:costMatch?Number(costMatch[1]):null,
+            x:rect.left+rect.width/2,
+            y:rect.top+rect.height/2
+          };
         })
-        .sort((a,b)=>a.index-b.index)[0] || null;
+        .filter(row=>Number.isFinite(row.x) && row.x>=0)
+        .sort((a,b)=>a.x-b.x || a.y-b.y || a.index-b.index);
+
+      const choice=rows[0] || null;
+      if (choice) {
+        recordDiagnostic('treasury-left-path-selected',{
+          revision:HK_TREASURY_LEFT_PATH_REV,
+          lotId:choice.lotId,
+          index:choice.index,
+          x:Math.round(choice.x),
+          y:Math.round(choice.y),
+          visibleChoices:rows.map(row=>({
+            lotId:row.lotId,
+            index:row.index,
+            x:Math.round(row.x),
+            y:Math.round(row.y)
+          }))
+        });
+      }
+      return choice;
     }
 
     function autoMapTreasuryChestRows() {
@@ -22209,6 +22238,11 @@
 
     async function autoMapDirectTreasuryExit() {
       if (!autoMapEnabled() || !autoMapTreasuryDone()) return false;
+
+      if (autoMapLeaveModalRoot()) {
+        return await autoMapRecoverOpenLeaveModal('treasury-preopen');
+      }
+
       const exit=autoMapExitButton();
       if (!exit) return false;
 
@@ -22274,15 +22308,16 @@
         }
 
         if (!modalConfirmed) {
-          const modal=treasureModalRoot(null);
+          const modal=autoMapLeaveModalRoot() || treasureModalRoot(null);
           if (modal) {
-            const action=autoMapModalPrimaryButton(modal,null);
+            const action=autoMapLeaveConfirmButton(modal,10) || autoMapModalPrimaryButton(modal,10);
             if (action) {
-              modalConfirmed=dispatchAutoMapTap(action,'treasury-leave-confirm-direct');
+              modalConfirmed=dispatchAutoMapTap(action,'treasury-leave-confirm-direct-10');
               if (modalConfirmed) {
                 autoMapLastActionAt=Date.now();
                 recordDiagnostic('treasury-exit-confirm',{
-                  revision:HK_TREASURY_VISUAL_EXIT_REV
+                  revision:HK_TREASURY_LEFT_PATH_REV,
+                  cost:10
                 });
               }
             }
@@ -22321,6 +22356,121 @@
         exit?'EXIT':'',
         journey?'DONE':''
       ].join('|');
+    }
+
+    function autoMapLeaveModalRoot() {
+      const roots=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
+        .filter(visible)
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() || {width:0,height:0};
+          return {element,text,rect,area:rect.width*rect.height};
+        })
+        .filter(row=>/Покинуть локацию|Leave location|Exit location/i.test(row.text))
+        .filter(row=>/Продолжить\?|Continue\?|10|Назад|Back/i.test(row.text))
+        .filter(row=>row.rect.width>=Math.min(260,window.innerWidth*0.50) && row.rect.height>=180)
+        .sort((a,b)=>a.area-b.area);
+      return roots[0]?.element || null;
+    }
+
+    function autoMapLeaveConfirmButton(root=autoMapLeaveModalRoot(),cost=10) {
+      if (!root) return null;
+
+      const shared=treasureActionButton(root,{id:'',quantity:Number(cost)});
+      if (shared && visible(shared) && !shared.disabled) return shared;
+
+      const rr=root.getBoundingClientRect?.();
+      if (!rr) return null;
+      const centerX=rr.left+rr.width/2;
+
+      const candidates=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && !element.disabled && visible(element))
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          const cx=rect.left+rect.width/2;
+          let actionable=false;
+          try {
+            actionable=
+              element.matches?.('button,[role="button"],a,[onclick]') ||
+              !!element.onclick ||
+              getComputedStyle(element).cursor==='pointer';
+          } catch (_) {}
+
+          let score=0;
+          if (text===String(cost)) score+=500;
+          else if (new RegExp('(?:^|\\s)'+String(cost)+'(?:\\s|$)').test(text) && text.length<=12) score+=280;
+          if (rect.top>=rr.top+rr.height*0.48) score+=180;
+          if (Math.abs(cx-centerX)<=rr.width*0.30) score+=160;
+          if (rect.width>=rr.width*0.36 && rect.width<=rr.width*0.92) score+=140;
+          if (rect.height>=36 && rect.height<=130) score+=90;
+          if (actionable) score+=100;
+          if (/Назад|Back|Закрыть|Close|×|✕/i.test(text)) score-=900;
+
+          return {element,score,rect};
+        })
+        .filter(row=>row.score>=650)
+        .sort((a,b)=>b.score-a.score || b.rect.width*b.rect.height-a.rect.width*a.rect.height);
+
+      return candidates[0]?.element || null;
+    }
+
+    async function autoMapRecoverOpenLeaveModal(source='leave-modal-recovery') {
+      if (!autoMapEnabled()) return false;
+      const modal=autoMapLeaveModalRoot();
+      if (!modal) return false;
+
+      const button=autoMapLeaveConfirmButton(modal,10);
+      if (!button) {
+        autoMapStatus('жду подтверждение выхода',{
+          revision:HK_TREASURY_LEFT_PATH_REV,
+          source
+        });
+        return false;
+      }
+
+      const before=autoMapStateFingerprint();
+      const rect=button.getBoundingClientRect?.();
+      autoMapStatus('подтверждаю выход 10',{
+        revision:HK_TREASURY_LEFT_PATH_REV,
+        source
+      });
+      recordDiagnostic('leave-modal-confirm-target',{
+        revision:HK_TREASURY_LEFT_PATH_REV,
+        source,
+        text:clean(button.innerText||button.textContent||'').trim(),
+        left:Math.round(rect?.left||0),
+        top:Math.round(rect?.top||0),
+        width:Math.round(rect?.width||0),
+        height:Math.round(rect?.height||0)
+      });
+
+      autoMapLastActionAt=Date.now();
+      if (!dispatchAutoMapTap(button,'leave-modal-confirm-10-'+source)) return false;
+
+      const started=Date.now();
+      while (Date.now()-started<4500) {
+        if (!autoMapEnabled()) return false;
+        if (!autoMapLeaveModalRoot()) {
+          if (treasureGuideScreenVisible() || autoMapStateFingerprint()!==before) {
+            autoMapRetryNotBefore=0;
+            autoMapCurrentLot='';
+            lastSignature='';
+            autoMapReturnNotBefore=Date.now()+300;
+            recordDiagnostic('leave-modal-confirm-complete',{
+              revision:HK_TREASURY_LEFT_PATH_REV,
+              source,
+              result:'closed'
+            });
+            setTimeout(()=>void runAutoMapTick('leave-modal-confirm-complete'),360);
+            return true;
+          }
+        }
+        await new Promise(resolve=>setTimeout(resolve,90));
+      }
+
+      autoMapRetryNotBefore=Date.now()+800;
+      return false;
     }
 
     function autoMapModalPrimaryButton(root,costHint=null) {
@@ -22637,6 +22787,18 @@
         return false;
       }
       ensureAutoMapToggle();
+
+      // A leave-confirmation modal can survive a redraw/retry. It is always
+      // higher priority than route selection or generic cooldowns.
+      if (autoMapLeaveModalRoot()) {
+        autoMapRunning=true;
+        const modalRunId=autoMapRunId;
+        try {
+          return await autoMapRecoverOpenLeaveModal('tick-preflight');
+        } finally {
+          if (modalRunId===autoMapRunId) autoMapRunning=false;
+        }
+      }
 
       // A completed Treasury is a navigation handoff, not another chest
       // purchase. Detect it from the visible screen even if the claimed chest's
@@ -23187,6 +23349,7 @@
       traderExitHandoffRevision:HK_TRADER_EXIT_HANDOFF_REV,
       treasureEventUiScopeRevision:HK_TREASURE_EVENT_UI_SCOPE_REV,
       battleSkipCanonRevision:HK_BATTLE_SKIP_CANON_REV,
+      treasuryLeftPathRevision:HK_TREASURY_LEFT_PATH_REV,
       start,
       stop,
       check:checkPuzzle,
