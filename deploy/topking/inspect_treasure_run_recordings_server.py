@@ -13,10 +13,8 @@ with server.db_session() as db:
       SELECT id,capture_key,player_id,path,payload_json,captured_at
       FROM treasure_guide_captures
       WHERE capture_key LIKE 'trace:%'
-         OR path LIKE 'trace/%'
-         OR payload_json LIKE '%"schema":"treasure-run-trace-v1"%'
       ORDER BY id DESC
-      LIMIT 6000
+      LIMIT 3000
     """)]
 
 sessions=defaultdict(list)
