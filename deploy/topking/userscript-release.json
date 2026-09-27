@@ -107,5 +107,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-43-battle-skip-run9-live-status.txt",
-  "commit_message": "fix: deploy Treasure Map battle skip from recording 9 in userscript 1.18.43"
+  "commit_message": "fix: deploy Treasure Map battle skip from recording 9 in userscript 1.18.43",
+  "trigger_revision": 1
 }
