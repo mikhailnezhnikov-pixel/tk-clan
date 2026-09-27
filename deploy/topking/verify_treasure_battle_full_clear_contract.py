@@ -134,7 +134,7 @@ if "battle-raw-context-mobile-tap-20260927-r1" in s:
 if "treasure-key-battle-handoff-20260928-r1" in s:
     gate=section("function battleExitState()","function battleLeaveBackButton")
     for marker in [
-        "rewardConfirmPending=!!battleRewardDismissButton()",
+        "rewardConfirmPending=enemies.length===0 && !!battleRewardDismissButton()",
         "|| rewardConfirmPending",
         "reason:'waiting-final-reward'",
     ]:
@@ -172,16 +172,17 @@ if "treasure-key-battle-handoff-20260928-r1" in s:
 
     tick=section("async function runAutoMapTick","function setAutoMapEnabled")
     for marker in [
-        "battlePreflightSignature.startsWith('BATTLE') && battleIntroAcknowledgeButton()",
-        "runBattleIntroAcknowledge()",
         "battlePreflightSignature.startsWith('BATTLE_REWARD')",
         "runBattleVictoryClaim()",
+        "battlePreflightSignature.startsWith('BATTLE|')",
+        "battlePreflightSignature.startsWith('BATTLE_PREVIEW|')",
+        "runBattleIntroAcknowledge()",
     ]:
         if marker not in tick:
             raise SystemExit(f"AutoMap battle preflight broken: {marker}")
 
     check=section("function checkPuzzle()","function start()")
-    if "isBattle && battleIntroAcknowledgeButton()" not in check:
+    if "isBattle || isBattlePreview" not in check or "battleIntroAcknowledgeButton()" not in check:
         raise SystemExit("battle intro must be acknowledged before normal solver dispatch")
 
 print("TREASURE_BATTLE_FULL_CLEAR_CONTRACT=PASS")
