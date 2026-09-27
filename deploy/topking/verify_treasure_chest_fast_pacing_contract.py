@@ -21,7 +21,7 @@ if "treasure-chest-fast-pacing-20260927-r1" in s:
         "confirm:[650,1050]":"confirm",
         "settle:[950,1500]":"settle",
         "reward:[420,700]":"reward",
-        "treasure-chest-fast-pacing-20260927-r1":"revision",
+        "HK_TREASURE_CHEST_FAST_PACING_REV":"revision",
     }
     for marker,label in required.items():
         if marker not in helper:
