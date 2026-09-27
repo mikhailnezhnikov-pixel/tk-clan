@@ -1,0 +1,119 @@
+name: Build Userscript 1.18.56 Device Neutral Minigames
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_device_neutral_minigame_1_18_56.py'
+      - 'deploy/topking/verify_device_neutral_minigame_contract.py'
+      - '.github/workflows/build-userscript-1-18-56-device-neutral-minigame.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-topking-userscript-1-18-56
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build and validate candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.55" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasury-left-once-continuous-map-20260927-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_device_neutral_minigame_1_18_56.py /tmp/HamsterKingMobile.user.js
+          node --check /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.56" /tmp/HamsterKingMobile.user.js
+          grep -Fq "const BUILD_VERSION = '1.18.56';" /tmp/HamsterKingMobile.user.js
+          grep -Fq "device-neutral-minigame-20260928-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "lights-purchase-confirmed-device-neutral" /tmp/HamsterKingMobile.user.js
+          grep -Fq "field-changed-modal-closed-device-neutral" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/verify_device_neutral_minigame_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_autopilot_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_resume_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_outer_modal_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_chest_fast_pacing_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_treasury_loop_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_full_clear_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_achievement_contract.py /tmp/HamsterKingMobile.user.js
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.56.device-neutral-minigame.candidate.user.js
+          audit=audit/hk-userscript-1-18-56-device-neutral-minigame-predeploy.txt
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.55':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+
+          out={
+              'schema':1,
+              'source_version':'1.18.55',
+              'target_version':'1.18.56',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.56.device-neutral-minigame.candidate.user.js',
+              'primary_marker':'device-neutral-minigame-20260928-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-56-device-neutral-minigame-live-status.txt',
+              'commit_message':'fix: deploy device-neutral minigame logic in userscript 1.18.56',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          {
+            echo "USERSCRIPT_1_18_56_DEVICE_NEUTRAL_PREDEPLOY=PASS"
+            echo "source_version=1.18.55"
+            echo "target_version=1.18.56"
+            echo "desktop_tablet_mobile_state_machine=ONE"
+            echo "normal_pacing=DEVICE_NEUTRAL"
+            echo "lights_confirmation=STATE_VERIFIED"
+            echo "native_click_then_common_fallback=YES"
+            echo "existing_treasure_contracts=PASS"
+            echo "syntax=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.56 device-neutral minigames"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
