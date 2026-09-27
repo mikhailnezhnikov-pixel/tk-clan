@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.42
+// @version      1.18.43
+// @release-note Сражение/Автокарта: по записи #9 сражения теперь пропускаются без проведения боя. После входа в комнату HK закрывает стартовое «Понятно», нажимает «Покинуть локацию», подтверждает стоимость 10 и ждёт возврата на Карту сокровищ. Пока Автокарта включена, боевой решатель не делает ни одного удара.
 // @release-note Тайный торговец/Карта сокровищ: после выкупа всех разрешённых лотов Автокарта сразу передаёт управление выходу из комнаты и нажимает широкую нижнюю кнопку 10, затем продолжает маршрут. Поиск нижней кнопки исправлен для мобильной ширины. После выхода из события кнопки «Автокарта» и «Запись карты» скрываются вне экранов Карты сокровищ/её мини-игр, даже если режимы остаются включёнными.
 // @release-note Тайный торговец: в автопокупку добавлены Вкусняшки для питомца, Необычные/другие ключи сокровищ, Походные припасы и Смена навыка питомца. Подтверждение покупки теперь нажимает реальный кликабельный контейнер нижней кнопки цены, а не вложенный текст/иконку; уже открытая одобренная модалка также подхватывается и подтверждается автоматически. Яйца питомцев по-прежнему исключены.
 // @release-note Сокровищница: завершение теперь определяется и по фактическому экрану — заголовок «Сокровищница» + видимое «Активировано» + кнопка «Покинуть локацию». После этого Автокарта больше не трогает сундук и выполняет отдельный одноразовый клик по нижней кнопке выхода, ждёт реального возврата на Карту Сокровищ и только затем продолжает маршрут.
@@ -154,7 +155,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.42';
+  const BUILD_VERSION = '1.18.43';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17862,6 +17863,7 @@
   const HK_TRADER_APPROVED_MODAL_REV = 'trader-approved-modal-buy-20260927-r1';
   const HK_TRADER_EXIT_HANDOFF_REV = 'trader-exit-handoff-20260927-r1';
   const HK_TREASURE_EVENT_UI_SCOPE_REV = 'treasure-event-ui-scope-20260927-r1';
+  const HK_BATTLE_SKIP_CANON_REV = 'battle-skip-run9-20260927-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -21391,6 +21393,14 @@
     }
 
     function runBattle() {
+      if (autoMapEnabled()) {
+        recordDiagnostic('battle-auto-skip-owned-by-map',{
+          revision:HK_BATTLE_SKIP_CANON_REV
+        });
+        setTimeout(()=>void runAutoMapTick('battle-skip-owned-by-map'),20);
+        return true;
+      }
+
       const maxAttack = getBattleAttack();
       if (maxAttack === null) return false;
       const board = getBattleBoard();
@@ -22498,6 +22508,99 @@
       return ok;
     }
 
+    function battleIntroAcknowledgeButton() {
+      const exact=/^(?:Понятно|Got it|Understood|OK|Okay)$/i;
+      const rows=[...document.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && !element.disabled && visible(element))
+        .map(element=>({
+          element,
+          text:clean(element.innerText||element.textContent||'').trim(),
+          rect:element.getBoundingClientRect?.()
+        }))
+        .filter(row=>exact.test(row.text))
+        .filter(row=>row.rect && row.rect.width>0 && row.rect.height>0)
+        .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height);
+      return rows[0]?.element || null;
+    }
+
+    async function autoMapSkipBattleWithoutFight() {
+      if (!autoMapEnabled()) return false;
+      const signature=getSignature();
+      if (!signature.startsWith('BATTLE')) return false;
+
+      // Record #9 canonical sequence:
+      // enter battle -> acknowledge intro -> Leave location -> confirm 10 -> map.
+      const ack=battleIntroAcknowledgeButton();
+      if (ack) {
+        autoMapStatus('сражение → пропуск',{
+          revision:HK_BATTLE_SKIP_CANON_REV,
+          step:'ack'
+        });
+        dispatchAutoMapTap(ack,'battle-skip-intro-ack');
+        autoMapLastActionAt=Date.now();
+        await new Promise(resolve=>setTimeout(resolve,260));
+      }
+
+      if (!autoMapEnabled()) return false;
+
+      let exit=autoMapExitButton();
+      if (!exit) {
+        const started=Date.now();
+        while (Date.now()-started<1800) {
+          if (!autoMapEnabled()) return false;
+          exit=autoMapExitButton();
+          if (exit) break;
+          await new Promise(resolve=>setTimeout(resolve,80));
+        }
+      }
+
+      if (!exit) {
+        autoMapRetryNotBefore=Date.now()+700;
+        autoMapStatus('сражение → жду выход',{
+          revision:HK_BATTLE_SKIP_CANON_REV
+        });
+        setTimeout(()=>void runAutoMapTick('battle-skip-exit-retry'),780);
+        return false;
+      }
+
+      autoMapStatus('сражение → выход',{
+        revision:HK_BATTLE_SKIP_CANON_REV
+      });
+
+      const left=await autoMapTapAndConfirm(exit,'battle-skip-leave-location',10);
+      if (!left) {
+        autoMapRetryNotBefore=Math.max(autoMapRetryNotBefore,Date.now()+700);
+        setTimeout(()=>void runAutoMapTick('battle-skip-confirm-retry'),820);
+        return false;
+      }
+
+      const waitStarted=Date.now();
+      while (Date.now()-waitStarted<4200) {
+        if (!autoMapEnabled()) return false;
+        if (treasureGuideScreenVisible() && !getSignature().startsWith('BATTLE')) {
+          autoMapCurrentLot='';
+          autoMapReturnNotBefore=Date.now()+300;
+          lastSignature='';
+          recordDiagnostic('battle-skip-complete',{
+            revision:HK_BATTLE_SKIP_CANON_REV,
+            result:'returned-to-map'
+          });
+          setTimeout(()=>{
+            checkPuzzle();
+            void runAutoMapTick('battle-skip-map-visible');
+          },360);
+          return true;
+        }
+        await new Promise(resolve=>setTimeout(resolve,90));
+      }
+
+      recordDiagnostic('battle-skip-complete',{
+        revision:HK_BATTLE_SKIP_CANON_REV,
+        result:'action-confirmed-waiting-map'
+      });
+      return true;
+    }
+
     function autoMapCurrentModuleComplete() {
       const signature=getSignature();
       if (signature.startsWith('LIGHTS|')) return !lightsShouldAuto();
@@ -22774,14 +22877,16 @@
           return true;
         }
         if (signature.startsWith('BATTLE')) {
-          // Battle module owns the room. It may leave the location itself when
-          // the full-clear guard proves that the remaining swords cannot clear all mobs.
-          // AutoMap must not press the persistent exit button independently.
-          autoMapReturnNotBefore=Date.now()+AUTO_MAP_RETURN_SETTLE_MS;
-          autoMapStatus('сражение');
-          lastSignature='';
-          setTimeout(checkPuzzle,20);
-          return true;
+          // Canon from recording #9: do not perform any fight while AutoMap owns
+          // the room. Acknowledge the intro, leave the location, pay 10, resume map.
+          if (battleAutoRunning) {
+            battleAutoRunId+=1;
+            battleAutoRunning=false;
+            recordDiagnostic('battle-auto-cancel-for-skip',{
+              revision:HK_BATTLE_SKIP_CANON_REV
+            });
+          }
+          return await autoMapSkipBattleWithoutFight();
         }
         if (signature.startsWith('FISHING|')) {
           autoMapStatus('рыбалка');
@@ -22974,6 +23079,13 @@
         return;
       }
       if (isBattle) {
+        if (autoMapEnabled()) {
+          recordDiagnostic('battle-skip-dispatch',{
+            revision:HK_BATTLE_SKIP_CANON_REV
+          });
+          setTimeout(()=>void runAutoMapTick('battle-skip-check-puzzle'),20);
+          return;
+        }
         runBattle();
         return;
       }
@@ -23074,6 +23186,7 @@
       traderApprovedModalRevision:HK_TRADER_APPROVED_MODAL_REV,
       traderExitHandoffRevision:HK_TRADER_EXIT_HANDOFF_REV,
       treasureEventUiScopeRevision:HK_TREASURE_EVENT_UI_SCOPE_REV,
+      battleSkipCanonRevision:HK_BATTLE_SKIP_CANON_REV,
       start,
       stop,
       check:checkPuzzle,
