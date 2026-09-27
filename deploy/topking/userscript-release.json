@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source_version": "1.18.49",
+  "source_version": "1.18.50",
   "target_version": "1.18.50",
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.50.treasure-chest-fast-pacing.candidate.user.js",
   "primary_marker": "treasure-chest-fast-pacing-20260927-r1",
@@ -114,6 +114,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-50-treasure-chest-fast-pacing-live-status.txt",
-  "commit_message": "perf: deploy slightly faster Treasure chest pacing in userscript 1.18.50",
-  "trigger_revision": 1
+  "commit_message": "ci: normalize userscript release manifest at 1.18.50",
+  "trigger_revision": 2
 }
