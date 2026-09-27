@@ -120,5 +120,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-56-treasure-key-battle-handoff-live-status.txt",
-  "commit_message": "fix: deploy unusual key and strict battle handoff in userscript 1.18.56"
+  "commit_message": "fix: deploy unusual key and strict battle handoff in userscript 1.18.56 r2"
 }
