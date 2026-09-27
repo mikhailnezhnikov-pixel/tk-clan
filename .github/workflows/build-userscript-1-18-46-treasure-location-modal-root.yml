@@ -1,0 +1,126 @@
+name: Build Userscript 1.18.46 Treasure Location Modal Root
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_treasure_location_modal_root_1_18_46.py'
+      - '.github/workflows/build-userscript-1-18-46-treasure-location-modal-root.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.45" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-chest-map-foreground-guard-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasury-left-path-exit-recovery-20260927-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_treasure_location_modal_root_1_18_46.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.46" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-location-modal-root-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function treasureCenteredModalRoot()" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-location-modal-action-recovered" /tmp/HamsterKingMobile.user.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+
+          helper=s[s.index('function treasureCenteredModalRoot()'):s.index('function treasureModalRoot(cost)')]
+          assert "document.elementFromPoint?.(vw/2,vh/2)" in helper
+          assert "actionScore" in helper
+          assert "treasure-location-modal-root" in helper
+          assert "/^\\d{1,4}$/" in helper
+
+          root=s[s.index('function treasureModalRoot(cost)'):s.index('function treasureActionButton')]
+          assert "if (!cost)" in root
+          assert "const centered=treasureCenteredModalRoot();" in root
+          assert "if (centered) return centered;" in root
+
+          tap=s[s.index('async function autoMapTapAndConfirm'):s.index('async function autoMapDismissReward')]
+          assert "treasure-location-modal-action-recovered" in tap
+          assert "centeredAction" in tap
+
+          print("TREASURE_LOCATION_MODAL_ROOT_STATIC_SMOKE=PASS")
+          PY
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.46.treasure-location-modal-root.candidate.user.js
+          audit=audit/hk-userscript-1-18-46-treasure-location-modal-root-predeploy.txt
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.45':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+
+          out={
+              'schema':1,
+              'source_version':'1.18.45',
+              'target_version':'1.18.46',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.46.treasure-location-modal-root.candidate.user.js',
+              'primary_marker':'treasure-location-modal-root-20260927-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-46-treasure-location-modal-root-live-status.txt',
+              'commit_message':'fix: deploy Treasure Map location modal root in userscript 1.18.46',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          {
+            echo "USERSCRIPT_1_18_46_TREASURE_LOCATION_MODAL_ROOT_PREDEPLOY=PASS"
+            echo "source_version=1.18.45"
+            echo "target_version=1.18.46"
+            echo "location_modal_root=CENTERPOINT_GEOMETRY"
+            echo "location_action=RECOVERED_FROM_CENTERED_DIALOG"
+            echo "stale_close_semantics=PRESERVED"
+            echo "syntax=PASS"
+            echo "static_smoke=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.46 treasure location modal root"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
