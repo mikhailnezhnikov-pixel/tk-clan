@@ -1,0 +1,135 @@
+name: Build Userscript 1.18.41 Trader Approved Modal Buy
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_trader_approved_modal_buy_1_18_41.py'
+      - '.github/workflows/build-userscript-1-18-41-trader-approved-modal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.40" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasury-visual-exit-20260927-r2" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_trader_approved_modal_buy_1_18_41.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.41" /tmp/HamsterKingMobile.user.js
+          grep -Fq "trader-approved-modal-buy-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function traderApprovedRow(row)" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function traderPurchaseButton(root,cost=null)" /tmp/HamsterKingMobile.user.js
+          grep -Fq "async function traderResumeApprovedModal()" /tmp/HamsterKingMobile.user.js
+          grep -Fq "trader-approved-modal-confirm" /tmp/HamsterKingMobile.user.js
+          grep -Fq "trader-confirm-center-" /tmp/HamsterKingMobile.user.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          # New approved categories.
+          for needle in [
+              "item_treasurehunt_key_",
+              "походн.*припас",
+              "вкусняшк.*питом",
+              "смена\\\\s+навыка\\\\s+питомца",
+          ]:
+              assert needle in s, needle
+
+          # Eggs must remain excluded.
+          approved_start=s.index("function traderApprovedLot")
+          approved_end=s.index("function traderValueTier",approved_start)
+          approved=s[approved_start:approved_end]
+          assert "fish_egg|pet_egg" in approved
+
+          # Trader confirmation must use the dedicated clickable-target resolver.
+          run=s.index("async function runTraderAuto()")
+          run_block=s[run:run+12000]
+          assert "traderPurchaseButton(modal,target.cost.primary)" in run_block
+          assert "traderClickableTarget(action,modal)" in run_block
+          assert "dispatchBattleTapAt(" in run_block
+
+          # Already-open approved modal must be handled before retry cooldown.
+          modal_branch=run_block.index("const approvedModal=traderApprovedOpenModal()")
+          cooldown=run_block.index("if (Date.now()<traderRetryNotBefore)")
+          assert modal_branch < cooldown
+          print("TRADER_APPROVED_MODAL_STATIC_SMOKE=PASS")
+          PY
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.41.trader-approved-modal.candidate.user.js
+          audit=audit/hk-userscript-1-18-41-trader-approved-modal-predeploy.txt
+          git fetch origin main
+          git reset --hard origin/main
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.40':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.40',
+              'target_version':'1.18.41',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.41.trader-approved-modal.candidate.user.js',
+              'primary_marker':'trader-approved-modal-buy-20260927-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-41-trader-approved-modal-live-status.txt',
+              'commit_message':'fix: deploy approved trader modal purchases in userscript 1.18.41',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          {
+            echo "USERSCRIPT_1_18_41_TRADER_APPROVED_MODAL_PREDEPLOY=PASS"
+            echo "source_version=1.18.40"
+            echo "target_version=1.18.41"
+            echo "approved_pet_treats=ENABLED"
+            echo "approved_treasure_keys=ENABLED"
+            echo "approved_hiking_supplies=ENABLED"
+            echo "approved_pet_skill_change=ENABLED"
+            echo "pet_eggs=AUTO_BUY_DISABLED"
+            echo "already_open_modal=RESUME_AND_CONFIRM"
+            echo "purchase_target=CLICKABLE_ANCESTOR_WITH_CENTER_FALLBACK"
+            echo "syntax=PASS"
+            echo "static_smoke=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.41 trader approved modal"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
