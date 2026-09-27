@@ -104,3 +104,9 @@ for key in ["let fishingAutoRunning","function fishingVisibleCasts(","function f
     print("=== "+key+" ===")
     for hit in out["hits"].get(key,[])[:1]:
         print(hit["context"])
+
+print("PRINT_LIGHTS_CURRENT_CONTEXT")
+for key in ["function lightsAutoEnabled(","function setLightsAutoEnabled(","function treasureActionButton(","async function runLightsAuto(","function lightsShouldAuto("]:
+    print("=== "+key+" ===")
+    for hit in out["hits"].get(key,[])[:1]:
+        print(hit["context"])
