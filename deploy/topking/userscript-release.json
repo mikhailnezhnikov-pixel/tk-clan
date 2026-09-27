@@ -107,5 +107,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-42-trader-exit-ui-scope-live-status.txt",
-  "commit_message": "fix: deploy trader exit handoff and treasure UI scope in userscript 1.18.42"
+  "commit_message": "fix: deploy trader exit handoff and treasure UI scope in userscript 1.18.42",
+  "trigger_revision": 1
 }
