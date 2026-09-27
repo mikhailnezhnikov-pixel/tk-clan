@@ -98,5 +98,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-34-lights-reward-bottom-action-live-status.txt",
-  "commit_message": "fix: deploy lights reward bottom action in userscript 1.18.34"
+  "commit_message": "fix: deploy lights reward bottom action in userscript 1.18.34",
+  "trigger_revision": 1
 }
