@@ -1,8 +1,8 @@
 GENERIC_USERSCRIPT_DEPLOY=PASS
-source_version=1.18.51
+source_version=1.18.52
 target_version=1.18.52
 marker=battle-strict-exit-gate-20260927-r1
-source_sha256=ef0558a65925160fc4710c94b19daf6cfd2f65b7d416112026b6117f37ae5cf4
+source_sha256=e9b8f6b3f9a7784d46fb1e0e5874495ecb61d8c311a428f50708de92d074f558
 candidate_sha256=e9b8f6b3f9a7784d46fb1e0e5874495ecb61d8c311a428f50708de92d074f558
 public_exact_match=PASS
 server_rollback_guard=ENABLED
