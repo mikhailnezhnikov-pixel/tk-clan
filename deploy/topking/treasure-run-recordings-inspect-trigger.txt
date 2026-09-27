@@ -4,3 +4,5 @@ inspect run 5 battle labyrinth fishing 2026-09-27
 2026-09-27T14:55+09 inspect recent runs after user run #6/#8
 
 2026-09-27T16:11+09 inspect run #9 battle-without-fights
+
+2026-09-27T20:35+09 inspect current lights stall after 1.18.47
