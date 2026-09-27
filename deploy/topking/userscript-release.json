@@ -116,5 +116,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-52-treasure-battle-strict-exit-live-status.txt",
-  "commit_message": "fix: deploy strict Treasure battle exit gate in userscript 1.18.52"
+  "commit_message": "fix: deploy strict Treasure battle exit gate in userscript 1.18.52",
+  "trigger_revision": 1
 }
