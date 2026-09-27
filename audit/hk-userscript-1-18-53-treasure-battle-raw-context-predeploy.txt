@@ -1,0 +1,14 @@
+USERSCRIPT_1_18_53_TREASURE_BATTLE_RAW_CONTEXT_PREDEPLOY=PASS
+source_version=1.18.52
+target_version=1.18.53
+battle_exit_guard=RAW_DOM_ENEMIES
+premature_leave_modal=AUTO_BACK_OR_CLOSE
+battle_attack=MOBILE_POINTER_TAP
+treasure_regression_contract=PASS
+lights_resume_contract=PASS
+lights_outer_modal_contract=PASS
+chest_fast_pacing_contract=PASS
+battle_full_clear_contract=PASS
+syntax=PASS
+base_sha256=e9b8f6b3f9a7784d46fb1e0e5874495ecb61d8c311a428f50708de92d074f558
+candidate_sha256=1b232f4c9e660aced1721091690b9416bebe6d7298f210a6c85184b0ee7f886b
