@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.42",
-  "target_version": "1.18.43",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.43.battle-skip-run9.candidate.user.js",
-  "primary_marker": "battle-skip-run9-20260927-r1",
+  "source_version": "1.18.43",
+  "target_version": "1.18.44",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.44.treasury-left-exit.candidate.user.js",
+  "primary_marker": "treasury-left-path-exit-recovery-20260927-r1",
   "preserve_markers": [
+    "battle-skip-run9-20260927-r1",
     "trader-exit-handoff-20260927-r1",
     "trader-approved-modal-buy-20260927-r1",
     "treasury-visual-exit-20260927-r2",
@@ -106,7 +107,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-43-battle-skip-run9-live-status.txt",
-  "commit_message": "fix: deploy Treasure Map battle skip from recording 9 in userscript 1.18.43",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-44-treasury-left-exit-live-status.txt",
+  "commit_message": "fix: deploy left treasury path and leave-modal recovery in userscript 1.18.44"
 }
