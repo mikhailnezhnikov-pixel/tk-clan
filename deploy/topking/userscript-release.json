@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source_version": "1.18.50",
+  "source_version": "1.18.51",
   "target_version": "1.18.51",
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.51.treasure-battle-full-clear.candidate.user.js",
   "primary_marker": "battle-automap-full-clear-20260927-r1",
@@ -115,6 +115,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-51-treasure-battle-full-clear-live-status.txt",
-  "commit_message": "fix: deploy AutoMap battle full-clear automation in userscript 1.18.51",
-  "trigger_revision": 1
+  "commit_message": "ci: normalize userscript release manifest at 1.18.51",
+  "trigger_revision": 2
 }
