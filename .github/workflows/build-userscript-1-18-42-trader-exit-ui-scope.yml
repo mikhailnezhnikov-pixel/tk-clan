@@ -1,0 +1,114 @@
+name: Build Userscript 1.18.42 Trader Exit UI Scope
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_trader_exit_ui_scope_1_18_42.py'
+      - '.github/workflows/build-userscript-1-18-42-trader-exit-ui-scope.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.41" /tmp/HamsterKingMobile.user.js
+          grep -Fq "trader-approved-modal-buy-20260927-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_trader_exit_ui_scope_1_18_42.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.42" /tmp/HamsterKingMobile.user.js
+          grep -Fq "trader-exit-handoff-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-event-ui-scope-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "function treasureEventContextVisible()" /tmp/HamsterKingMobile.user.js
+          grep -Fq "торговец → выход" /tmp/HamsterKingMobile.user.js
+          grep -Fq "rect.width>=vw*0.26 && rect.width<=vw*0.92" /tmp/HamsterKingMobile.user.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          assert "const show=treasureEventContextVisible();" in s
+          assert "? treasureEventContextVisible()" in s
+          assert "traderScheduleExitHandoff('no-approved-target')" in s
+          assert "traderScheduleExitHandoff('purchase-complete')" in s
+          assert "traderScheduleExitHandoff('direct-purchase-complete')" in s
+          assert "setTimeout(()=>void runAutoMapTick('trader-exit-retry'),760)" in s
+          # Mobile cost button must accept the wide footer and still reject the small left square.
+          assert "rect.width>=vw*0.26 && rect.width<=vw*0.92" in s
+          assert "if (rect.width<vw*0.20) score-=900;" in s
+          print("TRADER_EXIT_UI_SCOPE_STATIC_SMOKE=PASS")
+          PY
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.42.trader-exit-ui-scope.candidate.user.js
+          audit=audit/hk-userscript-1-18-42-trader-exit-ui-scope-predeploy.txt
+          git fetch origin main
+          git reset --hard origin/main
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.41':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.41',
+              'target_version':'1.18.42',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.42.trader-exit-ui-scope.candidate.user.js',
+              'primary_marker':'trader-exit-handoff-20260927-r1',
+              'preserve_markers':['treasure-event-ui-scope-20260927-r1',*preserve],
+              'audit_status_path':'audit/hk-userscript-1-18-42-trader-exit-ui-scope-live-status.txt',
+              'commit_message':'fix: deploy trader exit handoff and treasure UI scope in userscript 1.18.42',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          {
+            echo "USERSCRIPT_1_18_42_TRADER_EXIT_UI_SCOPE_PREDEPLOY=PASS"
+            echo "source_version=1.18.41"
+            echo "target_version=1.18.42"
+            echo "trader_complete=AUTO_EXIT_HANDOFF"
+            echo "mobile_footer_10=WIDE_BUTTON_SUPPORTED"
+            echo "automap_button=HIDDEN_OUTSIDE_TREASURE_EVENT"
+            echo "recorder_button=HIDDEN_OUTSIDE_TREASURE_EVENT"
+            echo "syntax=PASS"
+            echo "static_smoke=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.42 trader exit UI scope"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
