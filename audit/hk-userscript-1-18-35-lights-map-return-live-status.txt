@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.34
+target_version=1.18.35
+marker=lights-map-return-after-main-reward-20260927-r1
+source_sha256=3f02849b53ad1988291c887fab81bade2ea66956663db11d79aca708243ca110
+candidate_sha256=a47be2831b86d802bc0fd6500429c3598fab150bd9d130dd9bc82072fa0e6879
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
