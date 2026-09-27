@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.41
+target_version=1.18.42
+marker=trader-exit-handoff-20260927-r1
+source_sha256=0d9b431d6c50ae56ef4a4b17ba10613d687e1664d71188764044619dc35cf908
+candidate_sha256=08fdc9e9f2739d38342cdf310b8ce39294f8d847c90fb216a07f8388045a6731
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

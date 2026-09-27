@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.41
+// @version      1.18.42
+// @release-note Тайный торговец/Карта сокровищ: после выкупа всех разрешённых лотов Автокарта сразу передаёт управление выходу из комнаты и нажимает широкую нижнюю кнопку 10, затем продолжает маршрут. Поиск нижней кнопки исправлен для мобильной ширины. После выхода из события кнопки «Автокарта» и «Запись карты» скрываются вне экранов Карты сокровищ/её мини-игр, даже если режимы остаются включёнными.
 // @release-note Тайный торговец: в автопокупку добавлены Вкусняшки для питомца, Необычные/другие ключи сокровищ, Походные припасы и Смена навыка питомца. Подтверждение покупки теперь нажимает реальный кликабельный контейнер нижней кнопки цены, а не вложенный текст/иконку; уже открытая одобренная модалка также подхватывается и подтверждается автоматически. Яйца питомцев по-прежнему исключены.
 // @release-note Сокровищница: завершение теперь определяется и по фактическому экрану — заголовок «Сокровищница» + видимое «Активировано» + кнопка «Покинуть локацию». После этого Автокарта больше не трогает сундук и выполняет отдельный одноразовый клик по нижней кнопке выхода, ждёт реального возврата на Карту Сокровищ и только затем продолжает маршрут.
 // @release-note Сокровищница: после получения большого сундука Автокарта больше не пытается нажимать уже «Активировано». Завершённая центральная награда имеет приоритет над оставшимся DOM комнаты: скрипт сразу находит реальную нижнюю кнопку «Покинуть локацию», нажимает её и возвращается на Карту Сокровищ.
@@ -153,7 +154,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.41';
+  const BUILD_VERSION = '1.18.42';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3764,6 +3765,25 @@
     return /Карта\s+Сокровищ|Treasure\s+Map|نقشه\s+گنج/i.test(text);
   }
 
+  function treasureEventContextVisible() {
+    if (treasureGuideScreenVisible()) return true;
+    try {
+      const selectors=[
+        '[data-lot-id^="mf_fairlot_minigame_trader_"]',
+        '[data-lot-id^="mf_fairlot_lights_out_sl"]',
+        '[data-lot-id*="mf_treasurelot_is_fishing_"]',
+        '[data-lot-id*="mf_treasurelot_chest_"]',
+        '[data-lot-id*="mf_treasurelot_enemy_type_"]',
+        '[data-lot-id^="mf_treasurelot_sword_"]',
+        '[data-lot-id*="mf_fairlot_minigame_treasury_room_big_chest"]',
+        '[data-lot-id^="mf_fair_treasury_room_choose_way_"]'
+      ];
+      return selectors.some(selector=>[...document.querySelectorAll(selector)].some(visible));
+    } catch (_) {
+      return false;
+    }
+  }
+
   function treasureGuideAssetUrls() {
     const urls=new Set();
     const add=value=>{
@@ -4640,7 +4660,7 @@
   function treasureRunRecorderUpdateButton() {
     if(!treasureRunRecorderButton)return;
     const active=treasureRunRecorderActive();
-    const show=active || treasureGuideScreenVisible();
+    const show=treasureEventContextVisible();
     const display=show?'block':'none';
     const label=active
       ? 'Запись карты: ВКЛ #'+String(treasureRunRecorderState?.runIndex||'')
@@ -17840,6 +17860,8 @@
   const HK_TREASURY_EXIT_AFTER_CLAIM_REV = 'treasury-exit-after-claim-20260927-r1';
   const HK_TREASURY_VISUAL_EXIT_REV = 'treasury-visual-exit-20260927-r2';
   const HK_TRADER_APPROVED_MODAL_REV = 'trader-approved-modal-buy-20260927-r1';
+  const HK_TRADER_EXIT_HANDOFF_REV = 'trader-exit-handoff-20260927-r1';
+  const HK_TREASURE_EVENT_UI_SCOPE_REV = 'treasure-event-ui-scope-20260927-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -19028,6 +19050,27 @@
       return false;
     }
 
+    function traderRoomComplete() {
+      const signature=getSignature();
+      if (!signature.startsWith('TRADER|')) return false;
+      if (traderApprovedOpenModal()) return false;
+      return !traderTarget();
+    }
+
+    function traderScheduleExitHandoff(reason='trader-complete') {
+      if (!autoMapEnabled()) return false;
+      if (!traderRoomComplete()) return false;
+      traderRetryNotBefore=0;
+      lastSignature='';
+      recordDiagnostic('trader-exit-handoff',{
+        revision:HK_TRADER_EXIT_HANDOFF_REV,
+        reason,
+        purchases:traderSessionPurchases
+      });
+      setTimeout(()=>void runAutoMapTick('trader-exit-handoff-'+reason),120);
+      return true;
+    }
+
     function traderBackoff(reason,data={}) {
       const error=minigameRecentHttpError(data?.startedAt||0);
       traderFailureStreak+=1;
@@ -19076,11 +19119,12 @@
       if (!target) {
         const visible=traderElements().filter(row=>!row.activated);
         recordDiagnostic('trader-auto-complete',{
-          revision:HK_TRADER_WHITELIST_REV,
+          revision:HK_TRADER_EXIT_HANDOFF_REV,
           purchases:traderSessionPurchases,
           reason:'no-approved-affordable-lots',
           skipped:visible.filter(row=>!traderApprovedRow(row)).map(row=>row.lotId).slice(0,24)
         });
+        traderScheduleExitHandoff('no-approved-target');
         return false;
       }
 
@@ -19129,6 +19173,7 @@
               mode:'direct',
               purchases:traderSessionPurchases
             });
+            traderScheduleExitHandoff('direct-purchase-complete');
             return true;
           }
           await new Promise(resolve=>setTimeout(resolve,80));
@@ -19217,6 +19262,7 @@
           rewardsDismissed:rewards,
           purchases:traderSessionPurchases
         });
+        traderScheduleExitHandoff('purchase-complete');
         return true;
       } finally {
         if (runId===traderAutoRunId) traderAutoRunning=false;
@@ -21538,8 +21584,8 @@
       if (!autoMapToggle) return;
       const enabled=autoMapEnabled();
       const show=showOverride===null
-        ? (enabled || treasureGuideScreenVisible())
-        : !!showOverride;
+        ? treasureEventContextVisible()
+        : (!!showOverride && treasureEventContextVisible());
       const display=show?'block':'none';
       const label=enabled
         ? 'Автокарта: ВКЛ'+(autoMapLastStatus?' · '+autoMapLastStatus:'')
@@ -22031,15 +22077,15 @@
           if (text===wanted) score+=500;
           else if (new RegExp('(?:^|\\s)'+wanted+'(?:\\s|$)').test(text) && text.length<=12) score+=300;
 
-          if (cy>=vh*0.84) score+=260;
-          if (Math.abs(cx-centerX)<=vw*0.22) score+=220;
-          if (rect.width>=vw*0.12 && rect.width<=vw*0.48) score+=220;
-          if (rect.height>=30 && rect.height<=110) score+=100;
+          if (cy>=vh*0.78) score+=260;
+          if (Math.abs(cx-centerX)<=vw*0.18) score+=240;
+          if (rect.width>=vw*0.26 && rect.width<=vw*0.92) score+=260;
+          if (rect.height>=30 && rect.height<=120) score+=100;
           if (actionable) score+=120;
 
-          if (rect.width<vw*0.08) score-=700;
-          if (rect.width>vw*0.60) score-=500;
-          if (cx<=vw*0.28 || cx>=vw*0.78) score-=320;
+          if (rect.width<vw*0.20) score-=900;
+          if (rect.width>vw*0.96) score-=500;
+          if (cx<=vw*0.25 || cx>=vw*0.75) score-=420;
           if (/правила|инструкц|help|rules|info/i.test(text+' '+String(element.getAttribute?.('aria-label')||''))) score-=900;
           if (/^hk$/i.test(text)) score-=900;
 
@@ -22748,12 +22794,19 @@
           return true;
         }
         if (signature.startsWith('TRADER|')) {
-          autoMapStatus('торговец');
-          if (traderTarget()) {
+          if (traderTarget() || traderApprovedOpenModal()) {
+            autoMapStatus('торговец');
             lastSignature='';
             setTimeout(checkPuzzle,20);
           } else {
-            await autoMapHandleExitOrContinue();
+            autoMapStatus('торговец → выход',{
+              revision:HK_TRADER_EXIT_HANDOFF_REV
+            });
+            const left=await autoMapHandleExitOrContinue();
+            if (!left) {
+              autoMapRetryNotBefore=Date.now()+650;
+              setTimeout(()=>void runAutoMapTick('trader-exit-retry'),760);
+            }
           }
           return true;
         }
@@ -23019,6 +23072,8 @@
       treasuryExitAfterClaimRevision:HK_TREASURY_EXIT_AFTER_CLAIM_REV,
       treasuryVisualExitRevision:HK_TREASURY_VISUAL_EXIT_REV,
       traderApprovedModalRevision:HK_TRADER_APPROVED_MODAL_REV,
+      traderExitHandoffRevision:HK_TRADER_EXIT_HANDOFF_REV,
+      treasureEventUiScopeRevision:HK_TREASURE_EVENT_UI_SCOPE_REV,
       start,
       stop,
       check:checkPuzzle,
