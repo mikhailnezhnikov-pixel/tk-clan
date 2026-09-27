@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.48
+// @version      1.18.49
+// @release-note Лабиринт: исправлена настоящая причина зависания на окне лампочки. Предыдущий фикс всё ещё выбирал внутреннюю чёрную панель, потому что общий поиск модалки специально предпочитал самый маленький контейнер. Теперь для Лабиринта есть отдельный поиск ВНЕШНЕЙ золотой модалки через подъём по предкам и наличие реального X в правом верхнем углу. Очистка зависшей лампы закрывает именно внешнее окно и только после этого продолжает решение.
 // @release-note Лабиринт: исправлено зависание Автокарты на уже открытом окне «Включенная/Выключенная лампочка». Детектор ламп теперь предпочитает внешний центральный диалог целиком (включая X и кнопку 1), а очистка старой модалки перед следующим ходом умеет закрывать внешний контейнер и его правый верхний угол без повторной траты ягоды. Добавлен отдельный regression contract для запуска/возобновления Автокарты с открытой модалкой лампы.
 // @release-note Автокарта теперь является владельцем дочерних автоматизаций на время прохождения. Если Автолампы/Автосундуки/Авторыбалка/Автоторговец сами выключились из-за временного UI-сбоя, Автокарта поднимет нужный модуль обратно и продолжит комнату. Для лампочек ошибки закрытия модалки переведены из фатальных в восстанавливаемые; математические ошибки плана по-прежнему блокируют повторные траты. Добавлен обязательный regression contract для уже исправленных этапов Карты сокровищ.
 // @release-note Карта сокровищ: исправлено зависание «ЖДУ ОКНО» после выбора клетки. Для модалки входа в локацию HK теперь сначала определяет реальный центральный диалог по геометрии и кнопке действия (например стоимость 20), а не случайный контейнер вокруг картинки. Поэтому кнопка входа подтверждается сразу, после чего Автокарта продолжает маршрут.
@@ -160,7 +161,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.48';
+  const BUILD_VERSION = '1.18.49';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3748,6 +3749,7 @@
   const HK_TREASURE_LOCATION_MODAL_ROOT_REV='treasure-location-modal-root-20260927-r1';
   const HK_TREASURE_AUTOMAP_OWNERSHIP_REV='treasure-automap-module-ownership-20260927-r1';
   const HK_TREASURE_LIGHTS_RESUME_REV='treasure-lights-resume-open-modal-20260927-r1';
+  const HK_TREASURE_LIGHTS_OUTER_MODAL_REV='treasure-lights-outer-modal-20260927-r1';
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
@@ -19368,20 +19370,99 @@
       return clean(element?.innerText || element?.textContent || '').toLowerCase();
     }
 
-    function lightsModalRoot() {
-      // A lamp dialog is composed from several nested panels. The historical
-      // scorer could pick the inner black content panel, which contains the
-      // text/cost but not the top-right close control. When AutoMap resumed
-      // with that modal already open, stale-modal cleanup could never dismiss
-      // it and remained forever on "мини-игра". Prefer the real centered outer
-      // action dialog first.
+    function lightsOuterModalRoot() {
+      const vw=Math.max(1,window.innerWidth);
+      const vh=Math.max(1,window.innerHeight);
+      const seeds=[];
+
       const centered=treasureCenteredModalRoot();
-      if (centered) {
-        const centeredText=lightsModalText(centered);
-        if (/лампоч|light\s*bulb|bulb|lights?\s*out/.test(centeredText)) {
-          return centered;
+      if (centered) seeds.push(centered);
+
+      [...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]')]
+        .filter(visible)
+        .filter(element=>/лампоч|light\s*bulb|bulb|lights?\s*out/.test(lightsModalText(element)))
+        .forEach(element=>seeds.push(element));
+
+      const rows=[];
+      const seen=new Set();
+
+      for (const seed of seeds) {
+        const seedRect=seed?.getBoundingClientRect?.();
+        let node=seed;
+        for (let depth=0;node && depth<12;depth++,node=node.parentElement) {
+          if (!node || seen.has(node) || !visible(node)) continue;
+          seen.add(node);
+
+          const rect=node.getBoundingClientRect?.();
+          if (!rect) continue;
+          if (rect.width<Math.min(300,vw*0.30) || rect.height<180) continue;
+          if (rect.width>vw*0.96 || rect.height>vh*0.96) continue;
+
+          const text=lightsModalText(node);
+          if (!/лампоч|light\s*bulb|bulb|lights?\s*out/.test(text)) continue;
+
+          const cx=rect.left+rect.width/2;
+          const cy=rect.top+rect.height/2;
+          if (Math.abs(cx-vw/2)>vw*0.22 || Math.abs(cy-vh/2)>vh*0.25) continue;
+
+          const close=lightsModalCloseButton(node) || autoMapModalCloseButton(node);
+          const expandsAbove=seedRect ? (seedRect.top-rect.top)>=18 : false;
+          const expandsSides=seedRect ? (
+            (seedRect.left-rect.left)>=6 ||
+            ((rect.left+rect.width)-(seedRect.left+seedRect.width))>=6
+          ) : false;
+
+          let score=0;
+          if (close) score+=1000;
+          if (expandsAbove) score+=220;
+          if (expandsSides) score+=120;
+          if (depth>0) score+=80;
+          if (rect.height>=240) score+=60;
+          if (rect.width>=420) score+=40;
+
+          rows.push({
+            element:node,
+            close,
+            score,
+            area:rect.width*rect.height,
+            depth,
+            rect
+          });
         }
       }
+
+      rows.sort((a,b)=>
+        b.score-a.score ||
+        a.area-b.area ||
+        a.depth-b.depth
+      );
+
+      const selected=rows.find(row=>row.close)?.element ||
+        rows.find(row=>row.score>=300)?.element ||
+        null;
+
+      if (selected) {
+        const rect=selected.getBoundingClientRect?.();
+        recordDiagnostic('treasure-lights-outer-modal-root',{
+          revision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
+          left:Math.round(rect?.left||0),
+          top:Math.round(rect?.top||0),
+          width:Math.round(rect?.width||0),
+          height:Math.round(rect?.height||0),
+          hasClose:!!(lightsModalCloseButton(selected) || autoMapModalCloseButton(selected))
+        });
+      }
+
+      return selected;
+    }
+
+    function lightsModalRoot() {
+      // The generic centered-modal helper intentionally chooses the smallest
+      // actionable container. For the lamp UI that is the inner black panel,
+      // not the gold frame that owns the X control. Use the dedicated outer
+      // dialog resolver first.
+      const outer=lightsOuterModalRoot();
+      if (outer) return outer;
 
       const rows=[];
       const add=(element,bonus=0)=>{
@@ -19733,42 +19814,40 @@
           continue;
         }
 
-        // If the scored lamp root is still an inner panel, escalate to the
-        // actual centered outer dialog. Important: stale cleanup NEVER presses
-        // the cost button; it only dismisses the old modal, then the solver
-        // recalculates and opens the correct next lamp.
-        const outer=treasureCenteredModalRoot();
+        // Escalate to the real outer gold frame. Stale cleanup NEVER presses
+        // the berry/cost button; it only dismisses the old modal and lets the
+        // solver recalculate from the unchanged 3x3 board.
+        const outer=lightsOuterModalRoot();
         if (outer) {
-          const outerText=lightsModalText(outer);
-          if (/лампоч|light\s*bulb|bulb|lights?\s*out/.test(outerText)) {
-            const outerClose=
-              lightsModalCloseButton(outer) ||
-              autoMapModalCloseButton(outer);
-            if (outerClose && dispatchBattleTap(outerClose,'lights-clear-stale-outer-close-'+slot)) {
-              recordDiagnostic('lights-stale-modal-cleared',{
-                revision:HK_TREASURE_LIGHTS_RESUME_REV,
-                slot,
-                method:'outer-close'
-              });
-              await new Promise(resolve=>setTimeout(resolve,260));
-              continue;
-            }
+          const outerClose=
+            lightsModalCloseButton(outer) ||
+            autoMapModalCloseButton(outer);
+          if (outerClose && dispatchBattleTap(outerClose,'lights-clear-stale-outer-close-'+slot)) {
+            recordDiagnostic('lights-stale-modal-cleared',{
+              revision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
+              slot,
+              method:'outer-close'
+            });
+            await new Promise(resolve=>setTimeout(resolve,300));
+            if (!lightsModalRoot()) return true;
+            continue;
+          }
 
-            const orr=outer.getBoundingClientRect?.();
-            if (orr && orr.width>180 && orr.height>180) {
-              if (dispatchBattleTapAt(
-                orr.left+orr.width-20,
-                orr.top+20,
-                'lights-clear-stale-outer-corner-'+slot
-              )) {
-                recordDiagnostic('lights-stale-modal-cleared',{
-                  revision:HK_TREASURE_LIGHTS_RESUME_REV,
-                  slot,
-                  method:'outer-corner'
-                });
-                await new Promise(resolve=>setTimeout(resolve,300));
-                continue;
-              }
+          const orr=outer.getBoundingClientRect?.();
+          if (orr && orr.width>180 && orr.height>180) {
+            if (dispatchBattleTapAt(
+              orr.left+orr.width-26,
+              orr.top+26,
+              'lights-clear-stale-outer-corner-'+slot
+            )) {
+              recordDiagnostic('lights-stale-modal-cleared',{
+                revision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
+                slot,
+                method:'outer-corner'
+              });
+              await new Promise(resolve=>setTimeout(resolve,340));
+              if (!lightsModalRoot()) return true;
+              continue;
             }
           }
         }
@@ -23646,6 +23725,7 @@
       treasureLocationModalRootRevision:HK_TREASURE_LOCATION_MODAL_ROOT_REV,
       treasureAutoMapOwnershipRevision:HK_TREASURE_AUTOMAP_OWNERSHIP_REV,
       treasureLightsResumeRevision:HK_TREASURE_LIGHTS_RESUME_REV,
+      treasureLightsOuterModalRevision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
