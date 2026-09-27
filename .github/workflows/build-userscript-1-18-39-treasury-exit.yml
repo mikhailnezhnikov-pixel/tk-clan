@@ -41,7 +41,8 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
-          assert "autoMapTreasuryChestRows().find(row=>!row.activated)" in s.replace('\n','')
+          compact=''.join(s.split())
+          assert "autoMapTreasuryChestRows().find(row=>!row.activated)" in compact
           start=s.index("// Treasury room after the boss.")
           block=s[start:start+2600]
           assert "if (autoMapTreasuryCompleted())" in block
