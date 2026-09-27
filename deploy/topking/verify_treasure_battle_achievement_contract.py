@@ -15,8 +15,9 @@ def section(start,end):
 
 if "battle-achievement-priority-20260927-r1" in s:
     core=section("function battleAchievementStorageKey()","function runBattle()")
+    if "hk:treasure:battle-achievements:v1" not in s:
+        raise SystemExit("battle achievement storage key missing")
     for marker in [
-        "hk:treasure:battle-achievements:v1",
         "function battleAchievementRemoteComplete(",
         "function battleAchievementDone(",
         "function battleAchievementMark(",
