@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.30
+target_version=1.18.31
+marker=lights-confirm-recovery-20260927-r1
+source_sha256=099d485b014d4f3e5ed3df610879db7d43f22928839a2ace675ae8869a2e41da
+candidate_sha256=6ad9d877ed16c9f07bd274468000700a73973adecee1018af08e995585140701
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
