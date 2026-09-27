@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.28
+target_version=1.18.29
+marker=fishing-human-fast-20260927-r1
+source_sha256=2e4d6ec05a08f67fde2599a3edbd5b8eb85608e63dad5f897e6ef0ddd9217476
+candidate_sha256=e969f193d1561ed84a735aaa29f4b07ef0149f241e963db5d3b2d9de7b9f2d40
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

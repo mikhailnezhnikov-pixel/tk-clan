@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.28
+// @version      1.18.29
+// @release-note Рыбалка: ускорен только темп покупки слотов. Сохраняется последовательность «перескан → выбор → открытие → пауза → подтверждение → ответ сервера → следующий слот», но без избыточных общих задержек. Целевой темп — около 2–3 секунд на слот при нормальном ответе сервера.
 // @release-note Карта Сокровищ: исправлены три перехода мини-игр по записи прохода #5. Сражение теперь забирает реальный Сундук победителя (mf_fairlot_minigame_fight_room_big_chest) и после награды передаёт управление Автокарте; Лабиринт/лампочки забирают mf_fairlot_lights_out_reward_slot до перехода в следующую комнату; Рыбалка использует фактические «забросы» из mf_treasurelot_fishing_rod_* как бюджет и больше не выходит при наличии попыток.
 // @release-note Мини-игры: мобильный tap больше не генерирует два click подряд. Убрано дублирование synthetic click + element.click(), которое вызывало лишние 409 Shop lot cannot be bought.
 // @release-note Сражение: если оставшегося запаса мечей недостаточно для полной зачистки всех мобов, автобой больше не тратит мечи частично. Перед следующим ударом HK сравнивает суммарный HP с остатком мечей и дополнительно проверяет полный план решателем; при невозможности зачистки автоматически нажимает «Покинуть локацию».
@@ -140,7 +141,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.28';
+  const BUILD_VERSION = '1.18.29';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3731,6 +3732,7 @@
   const HK_TREASURE_FINAL_REWARD_HANDOFF_REV='treasure-final-reward-handoff-20260927-r1';
   const HK_FISHING_VISIBLE_CASTS_REV='fishing-visible-casts-20260927-r1';
   const HK_MINIGAME_SINGLE_TAP_REV='minigame-single-tap-20260927-r1';
+  const HK_FISHING_HUMAN_FAST_REV='fishing-human-fast-20260927-r1';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -17856,7 +17858,7 @@
     let lightsAutoToggle = null;
     const FISHING_AUTO_STORAGE_KEY = 'hk:fishing:auto-click:v1';
     const FISHING_ACTION_TIMEOUT_MS = 5200;
-    const FISHING_MIN_NEXT_ACTION_GAP_MS = 2800;
+    const FISHING_MIN_NEXT_ACTION_GAP_MS = 1100;
     const FISHING_RECONCILE_WAIT_MS = 2800;
     let fishingAutoRunning = false;
     let fishingAutoRunId = 0;
@@ -18082,6 +18084,26 @@
       const waitMs=minigameRandomMs(range[0],range[1]);
       recordDiagnostic('minigame-human-pause',{
         revision:HK_MINIGAME_HUMAN_PACING_REV,
+        stage,
+        waitMs,
+        ...data
+      });
+      await new Promise(resolve=>setTimeout(resolve,waitMs));
+      return waitMs;
+    }
+
+    async function fishingHumanPause(stage='scan',data={}) {
+      const ranges={
+        scan:[250,450],
+        aim:[180,320],
+        confirm:[350,650],
+        settle:[600,900],
+        reward:[300,500]
+      };
+      const range=ranges[stage] || ranges.scan;
+      const waitMs=minigameRandomMs(range[0],range[1]);
+      recordDiagnostic('fishing-human-pause',{
+        revision:HK_FISHING_HUMAN_FAST_REV,
         stage,
         waitMs,
         ...data
@@ -18376,10 +18398,10 @@
           button=treasureRewardButton();
           if (!button) break;
         }
-        await minigameHumanPause('reward',{module:'fishing',index:i+1});
+        await fishingHumanPause('reward',{module:'fishing',index:i+1});
         if (!dispatchAutoMapTap(button,'fishing-reward-'+(i+1))) break;
         clicked+=1;
-        await minigameHumanPause('settle',{module:'fishing-reward',index:i+1});
+        await fishingHumanPause('settle',{module:'fishing-reward',index:i+1});
       }
       return clicked;
     }
@@ -18401,7 +18423,7 @@
 
       await waitMutationGap(fishingLastMutationAt,FISHING_MIN_NEXT_ACTION_GAP_MS);
       if (!fishingAutoEnabled()) return false;
-      await minigameHumanPause('scan',{module:'fishing'});
+      await fishingHumanPause('scan',{module:'fishing'});
       if (!fishingAutoEnabled()) return false;
       target=fishingTarget();
       if (!target) return false;
@@ -18430,7 +18452,7 @@
       });
 
       try {
-        await minigameHumanPause('aim',{module:'fishing',lotId:target.lotId});
+        await fishingHumanPause('aim',{module:'fishing',lotId:target.lotId});
         if (runId!==fishingAutoRunId || !fishingAutoEnabled()) return false;
         if (!fishingAffordable(target.cost)) return false;
         if (!dispatchAutoMapTap(target.element,'fishing-open-'+target.lotId)) {
@@ -18492,7 +18514,7 @@
           return null;
         })();
 
-        await minigameHumanPause('confirm',{module:'fishing',lotId:target.lotId});
+        await fishingHumanPause('confirm',{module:'fishing',lotId:target.lotId});
         if (runId!==fishingAutoRunId || !fishingAutoEnabled()) return false;
 
         if (!fishingAffordable(target.cost)) {
@@ -18525,7 +18547,7 @@
 
         fishingFailureStreak=0;
         fishingRetryNotBefore=0;
-        await minigameHumanPause('settle',{module:'fishing',lotId:target.lotId});
+        await fishingHumanPause('settle',{module:'fishing',lotId:target.lotId});
         await waitMutationGap(fishingLastMutationAt,FISHING_MIN_NEXT_ACTION_GAP_MS);
         recordDiagnostic('fishing-auto-complete',{
           revision:HK_FISHING_STABILITY_REV,
@@ -21513,6 +21535,7 @@
       treasureFinalRewardHandoffRevision:HK_TREASURE_FINAL_REWARD_HANDOFF_REV,
       fishingVisibleCastsRevision:HK_FISHING_VISIBLE_CASTS_REV,
       minigameSingleTapRevision:HK_MINIGAME_SINGLE_TAP_REV,
+      fishingHumanFastRevision:HK_FISHING_HUMAN_FAST_REV,
       start,
       stop,
       check:checkPuzzle,
