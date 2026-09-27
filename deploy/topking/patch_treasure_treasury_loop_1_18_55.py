@@ -192,7 +192,7 @@ new_block="""    function autoMapTreasuryChoiceRowsRaw() {
 s=s[:start]+new_block+s[end:]
 
 # Helper to start first or subsequent journeys with the same lock/session semantics.
-anchor3="""    async function runAutoMapTick(source='interval') {
+anchor3="""    async function runAutoMapTick(source='loop') {
 """
 journey_helper="""    async function autoMapStartJourney(label='new-journey') {
       const lockAt=autoMapStartLockAt();
