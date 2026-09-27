@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.51
+// @version      1.18.52
+// @release-note Сражения: введено строгое правило выхода. Покинуть боевую локацию можно только после получения финального сундука либо когда среди оставшихся врагов нет ни одного, кого можно атаковать текущим запасом мечей. Невозможность полной зачистки больше не является причиной выхода. Если окно выхода открылось преждевременно, Автокарта сама нажимает «Назад» и продолжает бой.
 // @release-note Сражения на Автокарте снова проходят автоматически. Полный пропуск боя удалён: если текущего запаса мечей хватает на полную зачистку по решателю, Автосражение атакует врагов до победы и забирает награду. Выход из локации остаётся только запасным сценарием, когда полной зачистки действительно не хватает по мечам/решению.
 // @release-note Сундуки: немного ускорены только задержки режима Автосундуков — поиск цели, открытие карточки, подтверждение, ожидание результата и сбор награды. Логика выбора сундуков, проверки доступности, защита от ложных сундуков на карте и таймауты подтверждения не менялись.
 // @release-note Лабиринт: исправлена настоящая причина зависания на окне лампочки. Предыдущий фикс всё ещё выбирал внутреннюю чёрную панель, потому что общий поиск модалки специально предпочитал самый маленький контейнер. Теперь для Лабиринта есть отдельный поиск ВНЕШНЕЙ золотой модалки через подъём по предкам и наличие реального X в правом верхнем углу. Очистка зависшей лампы закрывает именно внешнее окно и только после этого продолжает решение.
@@ -163,7 +164,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.51';
+  const BUILD_VERSION = '1.18.52';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3754,6 +3755,7 @@
   const HK_TREASURE_LIGHTS_OUTER_MODAL_REV='treasure-lights-outer-modal-20260927-r1';
   const HK_TREASURE_CHEST_FAST_PACING_REV='treasure-chest-fast-pacing-20260927-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
+  const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
@@ -17916,6 +17918,8 @@
     let battleAutoRunId = 0;
     let battleAutoToggle = null;
     let battleInsufficientExitNotBefore = 0;
+    let battleFinalRewardClaimed = false;
+    let battleFinalRewardClaimedAt = 0;
     let chestAutoRunning = false;
     let chestAutoRunId = 0;
     let chestAutoToggle = null;
@@ -21262,6 +21266,10 @@
         await new Promise(resolve=>setTimeout(resolve,300));
         await dismissBattleRewardIfPresent(runId);
         const success=!battleVictoryModalRoot();
+        if (success) {
+          battleFinalRewardClaimed=true;
+          battleFinalRewardClaimedAt=Date.now();
+        }
         recordDiagnostic('battle-victory-claim-complete',{
           revision:HK_TREASURE_FINAL_REWARD_HANDOFF_REV,
           success,
@@ -21336,6 +21344,22 @@
 
     async function runBattleInsufficientExit(info={}) {
       if (!battleAutoEnabled() || battleAutoRunning || Date.now()<battleInsufficientExitNotBefore) return false;
+
+      let gate=battleExitState();
+      if (!gate.allowed) {
+        recordDiagnostic('battle-insufficient-exit-blocked',{
+          revision:HK_BATTLE_STRICT_EXIT_REV,
+          reason:gate.reason,
+          swords:gate.swords,
+          enemies:gate.enemies,
+          attackable:gate.attackable
+        });
+        battleInsufficientExitNotBefore=Date.now()+900;
+        lastSignature='';
+        setTimeout(checkPuzzle,120);
+        return false;
+      }
+
       const exit=autoMapExitButton();
       if (!exit) {
         battleInsufficientExitNotBefore=Date.now()+1800;
@@ -21368,6 +21392,19 @@
           totalHp:Number(info.totalHp||0)
         });
         if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
+
+        gate=battleExitState();
+        if (!gate.allowed) {
+          recordDiagnostic('battle-insufficient-exit-blocked',{
+            revision:HK_BATTLE_STRICT_EXIT_REV,
+            reason:gate.reason,
+            swords:gate.swords,
+            enemies:gate.enemies,
+            attackable:gate.attackable,
+            phase:'post-pause'
+          });
+          return false;
+        }
 
         if (autoMapEnabled()) {
           autoMapStatus('не хватает мечей',{
@@ -21665,15 +21702,115 @@
       return dfs(initialState,maxAttack);
     }
 
+    function battleExitState() {
+      const signature=String(getSignature()||'');
+      const board=getBattleBoard();
+      const enemies=board.filter(enemy=>enemy && visible(enemy.element));
+      const swords=getBattleAttack();
+      const rewardPending=!!battleVictoryElement() || !!battleVictoryModalRoot();
+      const inBattle=
+        signature.startsWith('BATTLE') ||
+        enemies.length>0 ||
+        rewardPending;
+
+      if (enemies.length>0 && battleFinalRewardClaimed) {
+        battleFinalRewardClaimed=false;
+        battleFinalRewardClaimedAt=0;
+      }
+
+      if (!inBattle) {
+        return {inBattle:false,allowed:true,reason:'not-battle',swords,enemies:0,attackable:0};
+      }
+
+      if (rewardPending) {
+        return {
+          inBattle:true,
+          allowed:false,
+          reason:'final-reward-pending',
+          swords,
+          enemies:enemies.length,
+          attackable:0
+        };
+      }
+
+      if (battleFinalRewardClaimed) {
+        return {
+          inBattle:true,
+          allowed:true,
+          reason:'final-reward-claimed',
+          swords,
+          enemies:enemies.length,
+          attackable:0,
+          claimedAt:battleFinalRewardClaimedAt
+        };
+      }
+
+      if (!enemies.length) {
+        return {
+          inBattle:true,
+          allowed:false,
+          reason:'waiting-final-reward',
+          swords,
+          enemies:0,
+          attackable:0
+        };
+      }
+
+      if (!Number.isFinite(swords)) {
+        return {
+          inBattle:true,
+          allowed:false,
+          reason:'swords-unknown',
+          swords:null,
+          enemies:enemies.length,
+          attackable:0
+        };
+      }
+
+      const attackable=enemies.filter(enemy=>Number(enemy.hp)>0 && Number(enemy.hp)<=swords);
+      if (attackable.length>0) {
+        return {
+          inBattle:true,
+          allowed:false,
+          reason:'attack-available',
+          swords,
+          enemies:enemies.length,
+          attackable:attackable.length,
+          slots:attackable.map(enemy=>enemy.slot).slice(0,12)
+        };
+      }
+
+      return {
+        inBattle:true,
+        allowed:true,
+        reason:'no-attack-available',
+        swords,
+        enemies:enemies.length,
+        attackable:0
+      };
+    }
+
+    function battleLeaveBackButton(root=autoMapLeaveModalRoot()) {
+      if (!root) return null;
+      const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && !element.disabled && visible(element))
+        .map(element=>({
+          element,
+          text:clean(element.innerText||element.textContent||'').trim(),
+          rect:element.getBoundingClientRect?.() || {width:0,height:0}
+        }))
+        .filter(row=>/^(?:Назад|Back|Отмена|Cancel)$/i.test(row.text))
+        .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height);
+      return rows[0]?.element || null;
+    }
+
     function runBattle() {
-      // AutoMap owns orchestration, but it must not suppress the battle solver.
-      // Fight whenever a complete clear is possible. The existing
-      // runBattleInsufficientExit() remains the only route that leaves without
-      // fighting, and only after the solver proves that a full clear is not
-      // possible with the current sword budget.
+      // AutoMap owns orchestration, but battle always keeps attacking while at
+      // least one legal target exists. It is NOT necessary to prove that the
+      // whole room can be cleared before starting/continuing the fight.
       if (autoMapEnabled()) {
         autoMapStatus('сражение',{
-          revision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV
+          revision:HK_BATTLE_STRICT_EXIT_REV
         });
       }
 
@@ -21682,26 +21819,24 @@
       const board = getBattleBoard();
       const enemies = board.filter(enemy => enemy !== null);
       if (enemies.length === 0) return false;
+
+      battleFinalRewardClaimed=false;
+      battleFinalRewardClaimedAt=0;
+
       clearNumbers();
       const state = board.map(enemy => enemy ? {type:enemy.type,hp:enemy.hp,alive:true} : null);
       const totalHp=state.reduce((sum,enemy)=>sum+(enemy&&enemy.alive?Math.max(0,Number(enemy.hp)||0):0),0);
       const solution = solveBattle(state,maxAttack);
       const solverKilled=Number(solution?.killed||0);
-      const insufficientByHp=totalHp>maxAttack;
-      const insufficientBySolver=solverKilled<enemies.length;
 
-      if (insufficientByHp || insufficientBySolver) {
-        console.log('HK BATTLE: полная зачистка невозможна — выходим');
-        console.log('HK BATTLE мечей:',maxAttack,'HP:',totalHp,'решатель:',solverKilled,'из',enemies.length);
-        recordDiagnostic('battle-full-clear-insufficient',{
-          revision:HK_BATTLE_FULL_CLEAR_EXIT_REV,
+      if (!solution || solution.order.length===0) {
+        console.log('HK BATTLE: доступных атак больше нет — разрешён выход');
+        recordDiagnostic('battle-no-legal-attack',{
+          revision:HK_BATTLE_STRICT_EXIT_REV,
           swords:maxAttack,
           totalHp,
           enemies:enemies.length,
-          solverKilled,
-          solutionCost:Number(solution?.cost||0),
-          insufficientByHp,
-          insufficientBySolver
+          solverKilled
         });
         if (battleAutoEnabled() && !battleAutoRunning) {
           void runBattleInsufficientExit({
@@ -21709,13 +21844,11 @@
             totalHp,
             enemies:enemies.length,
             solverKilled,
-            reason:insufficientByHp?'hp-over-swords':'solver-no-full-clear'
+            reason:'no-legal-attack'
           });
         }
         return true;
       }
-
-      if (!solution || solution.order.length === 0) return true;
       solution.order.forEach((position,index) => {
         const enemy = board[position];
         if (enemy?.element) addNumber(enemy.element,index + 1);
@@ -22819,6 +22952,33 @@
       const modal=autoMapLeaveModalRoot();
       if (!modal) return false;
 
+      const battleGate=battleExitState();
+      if (battleGate.inBattle && !battleGate.allowed) {
+        const back=battleLeaveBackButton(modal);
+        recordDiagnostic('battle-leave-modal-blocked',{
+          revision:HK_BATTLE_STRICT_EXIT_REV,
+          source,
+          reason:battleGate.reason,
+          swords:battleGate.swords,
+          enemies:battleGate.enemies,
+          attackable:battleGate.attackable,
+          hasBack:!!back
+        });
+        autoMapStatus('бой продолжается',{
+          reason:battleGate.reason,
+          swords:battleGate.swords,
+          attackable:battleGate.attackable
+        });
+        if (back && dispatchAutoMapTap(back,'battle-exit-blocked-back')) {
+          autoMapLastActionAt=Date.now();
+          await new Promise(resolve=>setTimeout(resolve,280));
+          lastSignature='';
+          setTimeout(checkPuzzle,80);
+          return true;
+        }
+        return false;
+      }
+
       const button=autoMapLeaveConfirmButton(modal,10);
       if (!button) {
         autoMapStatus('жду подтверждение выхода',{
@@ -22950,6 +23110,27 @@
 
     async function autoMapTapAndConfirm(element,label,costHint=null) {
       if (!element || !visible(element) || !autoMapEnabled()) return false;
+
+      if (/(?:leave|exit)/i.test(String(label||''))) {
+        const battleGate=battleExitState();
+        if (battleGate.inBattle && !battleGate.allowed) {
+          recordDiagnostic('battle-exit-guard',{
+            revision:HK_BATTLE_STRICT_EXIT_REV,
+            label:String(label||''),
+            reason:battleGate.reason,
+            swords:battleGate.swords,
+            enemies:battleGate.enemies,
+            attackable:battleGate.attackable
+          });
+          autoMapStatus('бой продолжается',{
+            reason:battleGate.reason,
+            swords:battleGate.swords,
+            attackable:battleGate.attackable
+          });
+          return false;
+        }
+      }
+
       await autoMapWaitActionGap();
       if (!autoMapEnabled()) return false;
       if (autoMapActionCount>=AUTO_MAP_MAX_ACTIONS) {
@@ -23091,6 +23272,17 @@
       if (!autoMapEnabled()) return false;
       const signature=getSignature();
       if (!signature.startsWith('BATTLE')) return false;
+      const strictGate=battleExitState();
+      if (!strictGate.allowed) {
+        recordDiagnostic('battle-legacy-skip-blocked',{
+          revision:HK_BATTLE_STRICT_EXIT_REV,
+          reason:strictGate.reason,
+          swords:strictGate.swords,
+          enemies:strictGate.enemies,
+          attackable:strictGate.attackable
+        });
+        return false;
+      }
 
       // Record #9 canonical sequence:
       // enter battle -> acknowledge intro -> Leave location -> confirm 10 -> map.
@@ -23757,6 +23949,7 @@
       treasureLightsOuterModalRevision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
       treasureChestFastPacingRevision:HK_TREASURE_CHEST_FAST_PACING_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
+      battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,
