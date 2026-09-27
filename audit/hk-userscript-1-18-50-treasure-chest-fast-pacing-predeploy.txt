@@ -1,0 +1,13 @@
+USERSCRIPT_1_18_50_TREASURE_CHEST_FAST_PACING_PREDEPLOY=PASS
+source_version=1.18.49
+target_version=1.18.50
+chest_pacing=SLIGHTLY_FASTER
+global_minigame_pacing=UNCHANGED
+chest_safety_guards=PRESERVED
+treasure_regression_contract=PASS
+lights_resume_contract=PASS
+lights_outer_modal_contract=PASS
+chest_fast_pacing_contract=PASS
+syntax=PASS
+base_sha256=5579bc89eb803b1b536091532ba995b634d6c170d1147d7554f07a85b85dfe4f
+candidate_sha256=dad15008aa0ea2a6b3fa0ec39d76c485107ecdaa42b123b307d07702d58675a7
