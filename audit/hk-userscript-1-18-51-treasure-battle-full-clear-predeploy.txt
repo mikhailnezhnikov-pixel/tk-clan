@@ -1,0 +1,13 @@
+USERSCRIPT_1_18_51_TREASURE_BATTLE_FULL_CLEAR_PREDEPLOY=PASS
+source_version=1.18.50
+target_version=1.18.51
+automap_battle=FULL_CLEAR_WHEN_POSSIBLE
+battle_insufficient=EXIT_ONLY
+treasure_regression_contract=PASS
+lights_resume_contract=PASS
+lights_outer_modal_contract=PASS
+chest_fast_pacing_contract=PASS
+battle_full_clear_contract=PASS
+syntax=PASS
+base_sha256=dad15008aa0ea2a6b3fa0ec39d76c485107ecdaa42b123b307d07702d58675a7
+candidate_sha256=ef0558a65925160fc4710c94b19daf6cfd2f65b7d416112026b6117f37ae5cf4
