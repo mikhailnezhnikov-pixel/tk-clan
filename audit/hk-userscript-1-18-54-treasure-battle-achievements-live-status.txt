@@ -1,0 +1,16 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.53
+target_version=1.18.54
+marker=battle-achievement-priority-20260927-r1
+source_sha256=1b232f4c9e660aced1721091690b9416bebe6d7298f210a6c85184b0ee7f886b
+candidate_sha256=a458c247861b302eda8ac9c2f26864c392fdcd784eb25317da97f7cfd6a80bd1
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+treasure_regression_contract=PASS
+treasure_lights_resume_contract=PASS
+treasure_lights_outer_modal_contract=PASS
+treasure_chest_fast_pacing_contract=PASS
+treasure_battle_full_clear_contract=PASS
+treasure_battle_achievement_contract=PASS
+ci_game_mutations=NONE
