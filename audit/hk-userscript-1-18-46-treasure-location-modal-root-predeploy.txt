@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_46_TREASURE_LOCATION_MODAL_ROOT_PREDEPLOY=PASS
+source_version=1.18.45
+target_version=1.18.46
+location_modal_root=CENTERPOINT_GEOMETRY
+location_action=RECOVERED_FROM_CENTERED_DIALOG
+stale_close_semantics=PRESERVED
+syntax=PASS
+static_smoke=PASS
+base_sha256=af7a841e785fe0bdb45f36123af43c469df5156fb063ca13def04fcd0b4096ee
+candidate_sha256=319c6c87036904eb2a47e6686e73d87d86929be867e4723d3c6258d7241c5f86

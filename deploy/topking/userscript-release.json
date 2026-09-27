@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.44",
-  "target_version": "1.18.45",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.45.treasure-chest-map-guard.candidate.user.js",
-  "primary_marker": "treasure-chest-map-foreground-guard-20260927-r1",
+  "source_version": "1.18.45",
+  "target_version": "1.18.46",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.46.treasure-location-modal-root.candidate.user.js",
+  "primary_marker": "treasure-location-modal-root-20260927-r1",
   "preserve_markers": [
+    "treasure-chest-map-foreground-guard-20260927-r1",
     "treasury-left-path-exit-recovery-20260927-r1",
     "battle-skip-run9-20260927-r1",
     "trader-exit-handoff-20260927-r1",
@@ -108,7 +109,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-45-treasure-chest-map-guard-live-status.txt",
-  "commit_message": "fix: deploy treasure chest foreground map guard in userscript 1.18.45",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-46-treasure-location-modal-root-live-status.txt",
+  "commit_message": "fix: deploy Treasure Map location modal root in userscript 1.18.46"
 }
