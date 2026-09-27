@@ -105,5 +105,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-41-trader-approved-modal-live-status.txt",
-  "commit_message": "fix: deploy approved trader modal purchases in userscript 1.18.41"
+  "commit_message": "fix: deploy approved trader modal purchases in userscript 1.18.41",
+  "trigger_revision": 1
 }
