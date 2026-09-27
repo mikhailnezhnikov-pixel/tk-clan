@@ -1,0 +1,134 @@
+name: Build Userscript 1.18.38 Fast Lights Trader Keys Cost10 Exit
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_lights_cost10_exit_1_18_38.py'
+      - 'deploy/topking/patch_fast_lights_trader_keys_1_18_38.py'
+      - '.github/workflows/build-userscript-1-18-38-fast-lights-trader-keys.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.37" /tmp/HamsterKingMobile.user.js
+          grep -Fq "lights-close-modal-between-steps-20260927-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_lights_cost10_exit_1_18_38.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_fast_lights_trader_keys_1_18_38.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.38" /tmp/HamsterKingMobile.user.js
+          grep -Fq "lights-cost10-exit-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "lights-fast-confirm-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "trader-keys-fast-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "TRADER_MIN_NEXT_ACTION_GAP_MS = 1200" /tmp/HamsterKingMobile.user.js
+          grep -Fq "LIGHTS_AUTO_SETTLE_MS = 450" /tmp/HamsterKingMobile.user.js
+          grep -Fq "field-changed-modal-closed-fast" /tmp/HamsterKingMobile.user.js
+          grep -Fq "key_(?:common|uncommon|rare|epic|legendary)4coins" /tmp/HamsterKingMobile.user.js
+          grep -Fq "method:'cost10-footer'" /tmp/HamsterKingMobile.user.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
+          start=s.index('    async function autoMapReturnFromCompletedLights() {')
+          end=s.index('\n    function autoMapBottomContinueButton',start)
+          block=s[start:end]
+          assert 'autoMapCompletedLightsBackButton()' not in block
+          assert "autoMapBottomContinueButton(10)" in block
+          assert "lights-return-map-cost10" in block
+
+          tstart=s.index('    async function runTraderAuto() {')
+          tend=s.index('\n    function lightsBoardSignature',tstart)
+          trader=s[tstart:tend]
+          assert "traderHumanPause('scan'" in trader
+          assert "traderHumanPause('aim'" in trader
+          assert "traderHumanPause('confirm'" in trader
+          assert "traderHumanPause('settle'" in trader
+          assert "minigameHumanPause('confirm',{module:'trader'" not in trader
+
+          lstart=s.index('    async function runLightsModalStep(')
+          lend=s.index('\n    function lightsRewardElement()',lstart)
+          lights=s[lstart:lend]
+          assert "lights-fast-confirm-ui" in lights
+          assert "waitLightsBoardChange(before,runId,2600)" in lights
+          assert "lights-confirm-cost-" in lights
+          print('USERSCRIPT_1_18_38_STATIC_SMOKE=PASS')
+          PY
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.38.fast-lights-trader-keys-cost10.candidate.user.js
+          audit=audit/hk-userscript-1-18-38-fast-lights-trader-keys-predeploy.txt
+          git fetch origin main
+          git reset --hard origin/main
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.37':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.37',
+              'target_version':'1.18.38',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.38.fast-lights-trader-keys-cost10.candidate.user.js',
+              'primary_marker':'lights-fast-confirm-20260927-r1',
+              'preserve_markers':['lights-cost10-exit-20260927-r1','trader-keys-fast-20260927-r1',*preserve],
+              'audit_status_path':'audit/hk-userscript-1-18-38-fast-lights-trader-keys-live-status.txt',
+              'commit_message':'fix: deploy fast lights trader keys and cost10 exit in userscript 1.18.38',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          {
+            echo "USERSCRIPT_1_18_38_FAST_LIGHTS_TRADER_KEYS_PREDEPLOY=PASS"
+            echo "source_version=1.18.37"
+            echo "target_version=1.18.38"
+            echo "lights_confirm=FAST_SINGLE_PURCHASE"
+            echo "lights_settle_ms=450"
+            echo "trader_gap_ms=1200"
+            echo "trader_keys=ENABLED"
+            echo "lights_exit=COST10_FOOTER"
+            echo "instruction_button=EXCLUDED"
+            echo "syntax=PASS"
+            echo "static_smoke=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.38 fast lights trader keys"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
