@@ -1,0 +1,113 @@
+name: Build Userscript 1.18.54 Treasure Battle Achievements
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_treasure_battle_achievements_1_18_54.py'
+      - 'deploy/topking/verify_treasure_battle_achievement_contract.py'
+      - '.github/workflows/build-userscript-1-18-54-treasure-battle-achievements.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.53" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-raw-context-mobile-tap-20260927-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-strict-exit-gate-20260927-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_treasure_battle_achievements_1_18_54.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.54" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-achievement-priority-20260927-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/verify_treasure_autopilot_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_resume_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_outer_modal_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_chest_fast_pacing_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_full_clear_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_achievement_contract.py /tmp/HamsterKingMobile.user.js
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.54.treasure-battle-achievements.candidate.user.js
+          audit=audit/hk-userscript-1-18-54-treasure-battle-achievements-predeploy.txt
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.53':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.53',
+              'target_version':'1.18.54',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.54.treasure-battle-achievements.candidate.user.js',
+              'primary_marker':'battle-achievement-priority-20260927-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-54-treasure-battle-achievements-live-status.txt',
+              'commit_message':'feat: deploy one-time Treasure battle achievement planning in userscript 1.18.54',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          {
+            echo "USERSCRIPT_1_18_54_TREASURE_BATTLE_ACHIEVEMENTS_PREDEPLOY=PASS"
+            echo "source_version=1.18.53"
+            echo "target_version=1.18.54"
+            echo "battle_achievement_hp16=ONE_TIME_PRIORITY"
+            echo "battle_achievement_total68=ONE_TIME_PRIORITY"
+            echo "battle_achievement_unavailable=NORMAL_BATTLE_FALLBACK"
+            echo "battle_exit_gate=PRESERVED"
+            echo "battle_mobile_tap=PRESERVED"
+            echo "treasure_regression_contract=PASS"
+            echo "lights_resume_contract=PASS"
+            echo "lights_outer_modal_contract=PASS"
+            echo "chest_fast_pacing_contract=PASS"
+            echo "battle_full_clear_contract=PASS"
+            echo "battle_achievement_contract=PASS"
+            echo "syntax=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.54 Treasure battle achievements"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
