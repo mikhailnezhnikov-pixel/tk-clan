@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.38
+target_version=1.18.39
+marker=treasury-exit-after-claim-20260927-r1
+source_sha256=2ca0858a248d8a14af773b23dfc6dba8a00ab709c3684c7cf289f49c4981d9f1
+candidate_sha256=4a6e9443bc7b0214d84ca00bb37ce29151a33240f8b1a6458ee44609fbed7f8d
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE

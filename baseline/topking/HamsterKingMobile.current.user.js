@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.38
+// @version      1.18.39
+// @release-note Сокровищница: после получения большого сундука Автокарта больше не пытается нажимать уже «Активировано». Завершённая центральная награда имеет приоритет над оставшимся DOM комнаты: скрипт сразу находит реальную нижнюю кнопку «Покинуть локацию», нажимает её и возвращается на Карту Сокровищ.
 // @release-note Автокарта/Лабиринт: выход после основной награды — через широкую кнопку 10, маленькая кнопка инструкции исключена. Лампочки подтверждаются быстрее: один клик 1, короткое ожидание ответа, закрытие модалки и проверка поля без повторной покупки. Торговец работает быстрее с защитой от 429 и теперь покупает также ключи common/uncommon/rare/epic/legendary.
 // @release-note Лампочки: исправлена причина цикла между двумя состояниями. После успешного переключения поля скрипт теперь обязательно закрывает старое окно лампы (Понятно/X) и только после этого открывает следующую лампу; уже открытая модалка больше никогда не подтверждается как новый ход. Несовпадение рассчитанного перехода/цикл теперь останавливают Автолампы вместо бесконечных повторов.
 // @release-note Лампочки/Автокарта: завершение комнаты теперь определяется не только временным JS-флагом, но и реальным состоянием центральной награды «Активировано», поэтому возврат работает после перерисовки/перезапуска раннера. Зависший раннер Автоламп после забора награды принудительно отпускается. Для выхода приоритет отдан нижней золотой кнопке возврата в игровом футере; правый плавающий Back/HK-контрол исключён.
@@ -150,7 +151,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.38';
+  const BUILD_VERSION = '1.18.39';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17834,6 +17835,7 @@
   const HK_LIGHTS_COST_EXIT_REV = 'lights-cost10-exit-20260927-r1';
   const HK_LIGHTS_FAST_CONFIRM_REV = 'lights-fast-confirm-20260927-r1';
   const HK_TRADER_KEYS_FAST_REV = 'trader-keys-fast-20260927-r1';
+  const HK_TREASURY_EXIT_AFTER_CLAIM_REV = 'treasury-exit-after-claim-20260927-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -21542,7 +21544,45 @@
     }
 
     function autoMapExitButton() {
-      return autoMapFindTextButton(/^(?:Покинуть локацию|Покинуть локацию\s*›?|Leave location|Exit location)$/i);
+      const pattern=/^(?:Покинуть локацию|Leave location|Exit location)(?:\s*[›>»→])?$/i;
+      const nodes=[...document.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && element!==autoMapToggle && !element.disabled && visible(element));
+
+      const rows=[];
+      for (const element of nodes) {
+        const text=clean(element.innerText||element.textContent||'').trim();
+        if (!pattern.test(text)) continue;
+
+        let target=element;
+        let node=element;
+        for (let depth=0;node && depth<6;depth++,node=node.parentElement) {
+          if (!visible(node)) continue;
+          let actionable=false;
+          try {
+            actionable=
+              node.matches?.('button,[role="button"],a,[onclick]') ||
+              !!node.onclick ||
+              getComputedStyle(node).cursor==='pointer';
+          } catch (_) {}
+          if (actionable) {
+            target=node;
+            break;
+          }
+        }
+
+        const rect=target.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+        const cx=rect.left+rect.width/2;
+        const cy=rect.top+rect.height/2;
+        let score=0;
+        if (rect.width>=window.innerWidth*0.28) score+=160;
+        if (rect.height>=38 && rect.height<=150) score+=80;
+        if (cy>=window.innerHeight*0.65) score+=120;
+        if (Math.abs(cx-window.innerWidth/2)<=window.innerWidth*0.32) score+=80;
+        rows.push({element:target,score,area:rect.width*rect.height});
+      }
+
+      rows.sort((a,b)=>b.score-a.score || b.area-a.area);
+      return rows[0]?.element || null;
     }
 
     function autoMapCompletedLightsBackButton() {
@@ -21847,16 +21887,37 @@
         .sort((a,b)=>a.index-b.index)[0] || null;
     }
 
-    function autoMapTreasuryChest() {
+    function autoMapTreasuryChestRows() {
       return [...document.querySelectorAll('[data-lot-id*="mf_fairlot_minigame_treasury_room_big_chest"]')]
-        .filter(visible)[0] || null;
+        .filter(visible)
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const cls=String(element.className||'');
+          const activated=
+            /(?:^|\s)(?:Активировано|Activated|Получено|Claimed)(?:\s|$)/i.test(text) ||
+            /activated|claimed|completed|bought/i.test(cls);
+          return {element,text,cls,activated};
+        });
+    }
+
+    function autoMapTreasuryChest() {
+      return autoMapTreasuryChestRows()
+        .find(row=>!row.activated)?.element || null;
+    }
+
+    function autoMapTreasuryCompleted() {
+      return autoMapTreasuryChestRows().some(row=>row.activated);
     }
 
     function autoMapStateFingerprint() {
       const active=autoMapMapCards().map(row=>row.lotId).join(',');
       const treasury=[
         ...document.querySelectorAll('[data-lot-id^="mf_fair_treasury_room_choose_way_"],[data-lot-id*="mf_fairlot_minigame_treasury_room_big_chest"]')
-      ].filter(visible).map(el=>el.getAttribute('data-lot-id')).join(',');
+      ].filter(visible).map(el=>[
+        el.getAttribute('data-lot-id'),
+        clean(el.innerText||el.textContent||'').trim(),
+        clean(el.className||'')
+      ].join('#')).join(',');
       const reward=treasureRewardButton();
       const exit=autoMapExitButton();
       const journey=autoMapJourneyButton();
@@ -22278,8 +22339,35 @@
           setAutoMapSessionStarted(true);
         }
 
-        // Treasury room after the boss: first choose route 1 (recorded canonical run),
-        // then open the big chest, collect reward and leave normally.
+        // Treasury room after the boss. Once the big chest is visibly Activated,
+        // the room is complete even if its DOM tile remains present. Exit must
+        // win before route/chest selectors so the claimed chest is never re-opened.
+        if (autoMapTreasuryCompleted()) {
+          const exit=autoMapExitButton();
+          if (exit) {
+            autoMapStatus('treasury выход',{
+              revision:HK_TREASURY_EXIT_AFTER_CLAIM_REV
+            });
+            const left=await autoMapTapAndConfirm(exit,'treasury-leave-location',null);
+            if (left) {
+              autoMapCurrentLot='';
+              lastSignature='';
+              autoMapReturnNotBefore=Date.now()+350;
+              recordDiagnostic('treasury-exit-after-claim',{
+                revision:HK_TREASURY_EXIT_AFTER_CLAIM_REV,
+                result:'clicked'
+              });
+              setTimeout(()=>void runAutoMapTick('treasury-left-location'),420);
+            }
+            return left;
+          }
+
+          autoMapStatus('treasury жду выход',{
+            revision:HK_TREASURY_EXIT_AFTER_CLAIM_REV
+          });
+          return false;
+        }
+
         const choice=autoMapTreasuryChoice();
         if (choice) {
           autoMapStatus('treasury путь');
@@ -22592,6 +22680,7 @@
       lightsCostExitRevision:HK_LIGHTS_COST_EXIT_REV,
       lightsFastConfirmRevision:HK_LIGHTS_FAST_CONFIRM_REV,
       traderKeysFastRevision:HK_TRADER_KEYS_FAST_REV,
+      treasuryExitAfterClaimRevision:HK_TREASURY_EXIT_AFTER_CLAIM_REV,
       start,
       stop,
       check:checkPuzzle,
