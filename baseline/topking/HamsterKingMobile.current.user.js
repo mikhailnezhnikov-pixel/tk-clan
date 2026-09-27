@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.55
+// @version      1.18.56
+// @release-note Устройства и темп: компьютер, планшет и телефон теперь используют один и тот же сценарий действий и детерминированные паузы без случайного ускорения/замедления. Лабиринт дополнительно проверяет, что нажатие кнопки 1 действительно принято интерфейсом; если обычный DOM-click не сработал, включается единый fallback и только после подтверждённого изменения состояния выполняется следующий шаг.
 // @release-note Сокровищница: левый путь теперь одноразовый на одно посещение — после входа в левую комнату остальные пути заблокированы до возврата на карту. После получения награды Автокарта выходит из локации и продолжает маршрут. Когда активных клеток больше нет, Автокарта не выключается, а автоматически начинает новую Карту сокровищ и продолжает цикл.
 // @release-note Сражения: добавлен разовый приоритет двух достижений. Пока достижение не отмечено выполненным, Автобой заранее моделирует цепочки зелёных/синих врагов и, если это достижимо текущими мечами, сначала пытается довести HP одного живого врага до 16+ и отдельно общую сумму HP живых врагов до 68+. После фактического достижения условие запоминается для аккаунта; если игра уже показывает достижение выполненным, специальный режим пропускается. Если подходящей цепочки нет, бой идёт обычным оптимальным маршрутом.
 // @release-note Сражения: строгий запрет выхода теперь работает даже когда окно «Покинуть локацию» перекрывает поле. Проверка боя использует сырой DOM врагов, а не только визуально видимые карточки. Пока есть хотя бы один враг с HP не больше остатка мечей, выход блокируется и окно закрывается через «Назад». Атака на мобильном выполняется полноценным pointer/touch tap вместо обычного element.click().
@@ -167,7 +168,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.55';
+  const BUILD_VERSION = '1.18.56';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17888,6 +17889,7 @@
   const HK_BATTLE_SKIP_CANON_REV = 'battle-skip-run9-20260927-r1';
   const HK_TREASURY_LEFT_PATH_REV = 'treasury-left-path-exit-recovery-20260927-r1';
   const HK_TREASURY_LOOP_REV = 'treasury-left-once-continuous-map-20260927-r1';
+  const HK_DEVICE_NEUTRAL_MINIGAME_REV = 'device-neutral-minigame-20260928-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -17911,10 +17913,10 @@
     const BATTLE_ACHIEVEMENT_STORAGE_KEY = 'hk:treasure:battle-achievements:v1';
     const CHEST_AUTO_STORAGE_KEY = 'hk:chests:auto-open:v1';
     const LIGHTS_AUTO_STORAGE_KEY = 'hk:lights:auto-click:v1';
-    const BATTLE_AUTO_SETTLE_MS = 1200;
+    const BATTLE_AUTO_SETTLE_MS = 700;
     const BATTLE_AUTO_CHANGE_TIMEOUT_MS = 4500;
     const CHEST_ACTION_TIMEOUT_MS = 3600;
-    const LIGHTS_AUTO_SETTLE_MS = 450;
+    const LIGHTS_AUTO_SETTLE_MS = 700;
     const LIGHTS_AUTO_CHANGE_TIMEOUT_MS = 3200;
     const LIGHTS_AUTO_MAX_STEPS = 24;
 
@@ -17937,7 +17939,7 @@
     let lightsFinalRewardClaimedAt = 0;
     const FISHING_AUTO_STORAGE_KEY = 'hk:fishing:auto-click:v1';
     const FISHING_ACTION_TIMEOUT_MS = 5200;
-    const FISHING_MIN_NEXT_ACTION_GAP_MS = 1100;
+    const FISHING_MIN_NEXT_ACTION_GAP_MS = 1200;
     const FISHING_RECONCILE_WAIT_MS = 2800;
     let fishingAutoRunning = false;
     let fishingAutoRunId = 0;
@@ -18151,6 +18153,7 @@
     }
 
     async function minigameHumanPause(stage='scan',data={}) {
+      return minigameDevicePause(stage,{...data,deviceNeutralModule:'general'});
       const ranges={
         scan:[850,1450],
         aim:[550,950],
@@ -18172,6 +18175,7 @@
     }
 
     async function chestHumanPause(stage='scan',data={}) {
+      return minigameDevicePause(stage,{...data,deviceNeutralModule:'chests'});
       const ranges={
         scan:[600,950],
         aim:[380,650],
@@ -18192,6 +18196,7 @@
     }
 
     async function traderHumanPause(stage='scan',data={}) {
+      return minigameDevicePause(stage,{...data,deviceNeutralModule:'trader'});
       const ranges={
         scan:[250,450],
         aim:[180,320],
@@ -18212,6 +18217,7 @@
     }
 
     async function fishingHumanPause(stage='scan',data={}) {
+      return minigameDevicePause(stage,{...data,deviceNeutralModule:'fishing'});
       const ranges={
         scan:[250,450],
         aim:[180,320],
@@ -18229,6 +18235,78 @@
       });
       await new Promise(resolve=>setTimeout(resolve,waitMs));
       return waitMs;
+    }
+
+    async function minigameDevicePause(stage='scan',data={}) {
+      // One deterministic pacing table for desktop/tablet/mobile. Do not use
+      // viewport, user-agent, touch support or random jitter for normal actions.
+      const waits={
+        scan:350,
+        aim:250,
+        confirm:450,
+        settle:700,
+        reward:350,
+        map:450
+      };
+      const waitMs=Number(waits[stage] ?? waits.scan);
+      recordDiagnostic('minigame-device-neutral-pause',{
+        revision:HK_DEVICE_NEUTRAL_MINIGAME_REV,
+        stage,
+        waitMs,
+        ...data
+      });
+      await new Promise(resolve=>setTimeout(resolve,waitMs));
+      return waitMs;
+    }
+
+    async function waitDeviceNeutralCondition(predicate,timeoutMs=900,pollMs=60) {
+      const started=Date.now();
+      while (Date.now()-started<timeoutMs) {
+        try {
+          if (predicate()) return true;
+        } catch (_) {}
+        await new Promise(resolve=>setTimeout(resolve,pollMs));
+      }
+      try { return !!predicate(); } catch (_) { return false; }
+    }
+
+    async function deviceNeutralActivate(element,label,accepted,timeoutMs=900) {
+      if (!element || !element.isConnected) return false;
+
+      // Native DOM activation is deliberately first on every device. It gives
+      // desktop/mobile/tablet the same primary path instead of branching by UA.
+      let nativeSent=false;
+      try {
+        if (typeof element.click==='function') {
+          element.click();
+          nativeSent=true;
+          recordDiagnostic('device-neutral-activate',{
+            revision:HK_DEVICE_NEUTRAL_MINIGAME_REV,
+            label,
+            mode:'native-click'
+          });
+        }
+      } catch (_) {}
+
+      if (nativeSent && await waitDeviceNeutralCondition(accepted,timeoutMs,60)) {
+        return true;
+      }
+
+      // Only if the UI demonstrably did not accept the native activation, use
+      // the existing robust pointer/touch dispatcher as the common fallback.
+      if (!element.isConnected) {
+        try { return !!accepted(); } catch (_) { return false; }
+      }
+
+      const fallbackSent=dispatchAutoMapTap(element,label+'-fallback');
+      if (!fallbackSent) return false;
+
+      recordDiagnostic('device-neutral-activate',{
+        revision:HK_DEVICE_NEUTRAL_MINIGAME_REV,
+        label,
+        mode:'pointer-fallback'
+      });
+      return await waitDeviceNeutralCondition(accepted,timeoutMs,60);
     }
 
     function minigameRecentHttpError(since=0,windowMs=8000) {
@@ -19908,8 +19986,8 @@
     async function runLightsModalStep(before,target,slot,runId) {
       if (!target || !target.isConnected) return {ok:false,reason:'target-missing'};
 
-      // A modal left from the previous lamp must never be interpreted as the
-      // confirmation window for this new lamp. Drain it first, without pressing 1.
+      // Never inherit the previous lamp's dialog as a new purchase. Drain it,
+      // then open the current target from a clean board state.
       if (lightsModalRoot()) {
         const cleared=await clearStaleLightsModalBeforeStep(runId,slot);
         if (!cleared) return {ok:false,reason:'stale-modal-blocking'};
@@ -19919,150 +19997,64 @@
         return {ok:false,reason:'cancelled'};
       }
 
-      const opened=dispatchAutoMapTap(target,'lights-open-'+slot);
+      const opened=await deviceNeutralActivate(
+        target,
+        'lights-open-'+slot,
+        ()=>!!lightsModalRoot(),
+        900
+      );
       if (!opened) return {ok:false,reason:'target-tap-failed'};
 
-      const purchaseModal=await waitLightsModal(runId);
+      const purchaseModal=lightsModalRoot() || await waitLightsModal(runId);
       if (!purchaseModal) return {ok:false,reason:'purchase-modal-missing'};
 
       const purchaseButton=await waitLightsPurchaseButton(purchaseModal,runId);
-      let fired=false;
-      let confirmMode='none';
+      if (!purchaseButton) return {ok:false,reason:'purchase-button-missing'};
 
-      if (purchaseButton) {
-        const clickTarget=lightsPurchaseClickTarget(purchaseButton,purchaseModal) || purchaseButton;
-        fired=dispatchAutoMapTap(clickTarget,'lights-confirm-cost-'+slot);
-        if (fired) confirmMode='single-clickable-target';
+      const clickTarget=lightsPurchaseClickTarget(purchaseButton,purchaseModal) || purchaseButton;
+      const accepted=()=> {
+        if (lightsBoardSignature()!==before) return true;
+        const current=lightsModalRoot();
+        if (!current) return true;
+        if (lightsAcknowledgeButton(current)) return true;
+        const currentPurchase=lightsPurchaseButton(current);
+        return !currentPurchase;
+      };
 
-        if (!fired) {
-          try {
-            if (typeof clickTarget.click==='function') {
-              clickTarget.click();
-              fired=true;
-              confirmMode='single-native-click';
-            }
-          } catch (_) {}
-        }
+      const confirmed=await deviceNeutralActivate(
+        clickTarget,
+        'lights-confirm-cost-'+slot,
+        accepted,
+        1100
+      );
+      if (!confirmed) return {ok:false,reason:'purchase-tap-failed'};
 
-        if (!fired) {
-          const rect=clickTarget.getBoundingClientRect?.();
-          if (rect && rect.width>0 && rect.height>0) {
-            fired=dispatchBattleTapAt(
-              rect.left+rect.width/2,
-              rect.top+rect.height/2,
-              'lights-confirm-center-'+slot
-            );
-            if (fired) confirmMode='single-center-fallback';
-          }
-        }
-      } else {
-        fired=tapLightsPurchaseFallback(purchaseModal,slot);
-        if (fired) confirmMode='single-modal-fallback';
-      }
-
-      if (!fired) return {ok:false,reason:'purchase-tap-failed'};
-
-      recordDiagnostic('lights-purchase-attempt',{
-        revision:HK_LIGHTS_MODAL_STEP_REV,
+      recordDiagnostic('lights-purchase-confirmed-device-neutral',{
+        revision:HK_DEVICE_NEUTRAL_MINIGAME_REV,
         slot,
-        mode:confirmMode,
-        singleAttempt:true
+        stateBefore:before
       });
 
-      // Fast path: the purchase is sent only once. For ~0.8s watch for either
-      // an immediate field mutation or an acknowledgement/close affordance.
-      // If the game keeps the purchase modal open, close that modal (never press
-      // the cost button again) and then wait for the already-sent purchase to
-      // settle on the 3x3 board.
+      // Server/render speed may differ, but the algorithm does not. Advance
+      // only after the board has actually changed.
       let changed=lightsBoardSignature()!==before;
-      const fastStarted=Date.now();
-      let fastCloseSent=false;
-
-      while (!changed && Date.now()-fastStarted<820) {
-        if (runId!==lightsAutoRunId || !lightsAutoEnabled()) {
-          return {ok:false,reason:'cancelled'};
-        }
-
-        changed=lightsBoardSignature()!==before;
-        if (changed) break;
-
-        const current=lightsModalRoot();
-        if (!current) {
-          await new Promise(resolve=>setTimeout(resolve,70));
-          continue;
-        }
-
-        const ack=lightsAcknowledgeButton(current);
-        if (ack) {
-          if (dispatchBattleTap(ack,'lights-fast-ack-'+slot)) {
-            fastCloseSent=true;
-            recordDiagnostic('lights-fast-confirm-ui',{
-              revision:HK_LIGHTS_FAST_CONFIRM_REV,
-              slot,
-              action:'ack'
-            });
-            await new Promise(resolve=>setTimeout(resolve,150));
-            break;
-          }
-        }
-
-        await new Promise(resolve=>setTimeout(resolve,70));
-      }
-
-      changed=changed || lightsBoardSignature()!==before;
-
-      if (!changed && !fastCloseSent) {
-        const current=lightsModalRoot();
-        if (current) {
-          const close=lightsModalCloseButton(current);
-          if (close && dispatchBattleTap(close,'lights-fast-close-'+slot)) {
-            fastCloseSent=true;
-            recordDiagnostic('lights-fast-confirm-ui',{
-              revision:HK_LIGHTS_FAST_CONFIRM_REV,
-              slot,
-              action:'close'
-            });
-          } else {
-            const rr=current.getBoundingClientRect?.();
-            if (rr && rr.width>120 && rr.height>120) {
-              fastCloseSent=dispatchBattleTapAt(
-                rr.left+rr.width-18,
-                rr.top+18,
-                'lights-fast-close-corner-'+slot
-              );
-              if (fastCloseSent) {
-                recordDiagnostic('lights-fast-confirm-ui',{
-                  revision:HK_LIGHTS_FAST_CONFIRM_REV,
-                  slot,
-                  action:'corner'
-                });
-              }
-            }
-          }
-          if (fastCloseSent) await new Promise(resolve=>setTimeout(resolve,180));
-        }
-      }
-
       if (!changed) {
-        changed=await waitLightsBoardChange(before,runId,2600);
+        changed=await waitLightsBoardChange(before,runId,3200);
       }
       if (!changed) return {ok:false,reason:'field-no-change'};
 
       if (lightsModalRoot()) {
-        const drained=await closeLightsModalAfterStateChange(runId,before,slot,1100);
-        if (!drained) {
-          return {ok:false,reason:'modal-not-closed-after-change'};
-        }
+        const drained=await closeLightsModalAfterStateChange(runId,before,slot,1800);
+        if (!drained) return {ok:false,reason:'modal-not-closed-after-change'};
       }
 
       recordDiagnostic('lights-auto-step-ui-complete',{
-        revision:HK_LIGHTS_FAST_CONFIRM_REV,
+        revision:HK_DEVICE_NEUTRAL_MINIGAME_REV,
         slot,
-        mode:confirmMode,
-        fastCloseSent,
-        state:lightsBoardSignature()
+        state:lightsBoardSignature(),
+        deviceNeutral:true
       });
-      return {ok:true,reason:'field-changed-modal-closed-fast'};
+      return {ok:true,reason:'field-changed-modal-closed-device-neutral'};
     }
 
     function lightsRewardElement() {
@@ -22193,7 +22185,7 @@
     const AUTO_MAP_NO_ACTIVE_COMPLETE_MS=4500;
     const AUTO_MAP_RETURN_SETTLE_MS=1600;
     const AUTO_MAP_LOOP_MS=420;
-    const AUTO_MAP_ACTION_GAP_MS=2400;
+    const AUTO_MAP_ACTION_GAP_MS=1200;
     const AUTO_MAP_MODAL_TIMEOUT_MS=2600;
     const AUTO_MAP_SETTLE_TIMEOUT_MS=5200;
     const AUTO_MAP_MAX_ACTIONS=240;
@@ -24394,6 +24386,7 @@
       battleSkipCanonRevision:HK_BATTLE_SKIP_CANON_REV,
       treasuryLeftPathRevision:HK_TREASURY_LEFT_PATH_REV,
       treasuryLoopRevision:HK_TREASURY_LOOP_REV,
+      deviceNeutralMinigameRevision:HK_DEVICE_NEUTRAL_MINIGAME_REV,
       start,
       stop,
       check:checkPuzzle,

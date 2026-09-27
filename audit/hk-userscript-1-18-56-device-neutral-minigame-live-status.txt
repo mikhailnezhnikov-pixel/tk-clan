@@ -1,0 +1,17 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.55
+target_version=1.18.56
+marker=device-neutral-minigame-20260928-r1
+source_sha256=4d83dc6fd39a0fa843c6a90de7bf8812cc47e1218b3856e198f582881ba1156f
+candidate_sha256=ca22c374693dbae54e815a1979fa2d9ed3bc3721e70d9d886d983e1dc55b49b6
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+treasure_regression_contract=PASS
+treasure_lights_resume_contract=PASS
+treasure_lights_outer_modal_contract=PASS
+treasure_chest_fast_pacing_contract=PASS
+treasure_treasury_loop_contract=PASS
+treasure_battle_full_clear_contract=PASS
+treasure_battle_achievement_contract=PASS
+ci_game_mutations=NONE
