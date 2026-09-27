@@ -89,6 +89,12 @@ jobs:
               assert marker in s, f'missing candidate marker: {marker}'
           PY
 
+          # Hard regression gate for the Treasure Map autopilot. This checks
+          # behavior/invariants, not only revision strings. A release that drops
+          # any previously fixed map/chest/modal/handoff behavior is rejected
+          # before it can reach the live server.
+          python3 deploy/topking/verify_treasure_autopilot_contract.py /tmp/candidate.user.js
+
           sha256sum /tmp/candidate.user.js | awk '{print $1}' > /tmp/candidate.sha
 
       - name: Fetch exact current live
@@ -120,6 +126,8 @@ jobs:
           for marker in m.get('preserve_markers',[]):
               assert marker in s, f'missing source marker: {marker}'
           PY
+
+          python3 deploy/topking/verify_treasure_autopilot_contract.py /tmp/live.user.js
 
           sha256sum /tmp/live.user.js | awk '{print $1}' > /tmp/source.sha
 
@@ -274,6 +282,7 @@ jobs:
             echo "public_exact_match=PASS"
             echo "server_rollback_guard=ENABLED"
             echo "public_verify_rollback=ENABLED"
+            echo "treasure_regression_contract=PASS"
             echo "ci_game_mutations=NONE"
           } > "$AUDIT_STATUS_PATH"
 
