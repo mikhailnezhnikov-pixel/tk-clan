@@ -42,7 +42,7 @@ for sid,group in sessions.items():
         allruns.append((str(meta.get("started_at") or ""),sid,events,meta))
 allruns.sort(reverse=True)
 
-print("LATEST_AUTOMAP_CHESTS_POINTER_R5")
+print("LATEST_FISHING_ZERO_BALANCE_TRACE")
 for started,sid,events,meta in allruns[:1]:
     print(json.dumps({"session_id":sid,"started_at":started,"run_index":meta.get("run_index"),"events":len(events)},ensure_ascii=False))
     prev_screen=None
@@ -79,3 +79,5 @@ for started,sid,events,meta in allruns[:1]:
                 "reason":d.get("reason"),"status":d.get("status"),"path":d.get("path")
             },ensure_ascii=False))
     print("END_LATEST_TRANSITION_SESSION")
+
+# FISHING_ZERO_FOCUS
