@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source_version": "1.18.48",
+  "source_version": "1.18.49",
   "target_version": "1.18.49",
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.49.treasure-lights-outer-modal.candidate.user.js",
   "primary_marker": "treasure-lights-outer-modal-20260927-r1",
@@ -113,6 +113,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-49-treasure-lights-outer-modal-live-status.txt",
-  "commit_message": "fix: deploy true outer lamp modal recovery in userscript 1.18.49",
-  "trigger_revision": 1
+  "commit_message": "ci: normalize userscript release manifest at 1.18.49",
+  "trigger_revision": 2
 }
