@@ -17,10 +17,15 @@ if "battle-automap-full-clear-20260927-r1" in s:
     run_battle=section("function runBattle()","// ----- Full Treasure Map orchestrator -----")
     if "battle-auto-skip-owned-by-map" in run_battle:
         raise SystemExit("battle contract broken: runBattle still skips fights under AutoMap")
-    for marker in [
-        "const solution = solveBattle(state,maxAttack);",
-        "void runBattleAuto(solution);",
-    ]:
+    required=["void runBattleAuto(solution);"]
+    if "battle-achievement-priority-20260927-r1" in s:
+        required += [
+            "let solution=battleAchievementPlan(state,maxAttack);",
+            "if (!solution) solution=solveBattle(state,maxAttack);",
+        ]
+    else:
+        required += ["const solution = solveBattle(state,maxAttack);"]
+    for marker in required:
         if marker not in run_battle:
             raise SystemExit(f"battle contract broken in runBattle: {marker}")
 
