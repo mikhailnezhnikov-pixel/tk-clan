@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.28",
-  "target_version": "1.18.29",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.29.fishing-human-fast.candidate.user.js",
-  "primary_marker": "fishing-human-fast-20260927-r1",
+  "source_version": "1.18.29",
+  "target_version": "1.18.30",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.30.fishing-zero-cast-exit.candidate.user.js",
+  "primary_marker": "fishing-zero-cast-exit-20260927-r1",
   "preserve_markers": [
+    "fishing-human-fast-20260927-r1",
     "treasure-final-reward-handoff-20260927-r1",
     "battle-full-clear-exit-20260927-r1",
     "minigame-human-pacing-20260927-r1",
@@ -92,7 +93,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-29-fishing-human-fast-live-status.txt",
-  "commit_message": "fix: deploy faster human-paced fishing in userscript 1.18.29",
-  "trigger_revision": 1
+  "audit_status_path": "audit/hk-userscript-1-18-30-fishing-zero-cast-exit-live-status.txt",
+  "commit_message": "fix: deploy fishing zero-cast exit in userscript 1.18.30"
 }
