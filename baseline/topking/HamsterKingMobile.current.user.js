@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.49
+// @version      1.18.50
+// @release-note Сундуки: немного ускорены только задержки режима Автосундуков — поиск цели, открытие карточки, подтверждение, ожидание результата и сбор награды. Логика выбора сундуков, проверки доступности, защита от ложных сундуков на карте и таймауты подтверждения не менялись.
 // @release-note Лабиринт: исправлена настоящая причина зависания на окне лампочки. Предыдущий фикс всё ещё выбирал внутреннюю чёрную панель, потому что общий поиск модалки специально предпочитал самый маленький контейнер. Теперь для Лабиринта есть отдельный поиск ВНЕШНЕЙ золотой модалки через подъём по предкам и наличие реального X в правом верхнем углу. Очистка зависшей лампы закрывает именно внешнее окно и только после этого продолжает решение.
 // @release-note Лабиринт: исправлено зависание Автокарты на уже открытом окне «Включенная/Выключенная лампочка». Детектор ламп теперь предпочитает внешний центральный диалог целиком (включая X и кнопку 1), а очистка старой модалки перед следующим ходом умеет закрывать внешний контейнер и его правый верхний угол без повторной траты ягоды. Добавлен отдельный regression contract для запуска/возобновления Автокарты с открытой модалкой лампы.
 // @release-note Автокарта теперь является владельцем дочерних автоматизаций на время прохождения. Если Автолампы/Автосундуки/Авторыбалка/Автоторговец сами выключились из-за временного UI-сбоя, Автокарта поднимет нужный модуль обратно и продолжит комнату. Для лампочек ошибки закрытия модалки переведены из фатальных в восстанавливаемые; математические ошибки плана по-прежнему блокируют повторные траты. Добавлен обязательный regression contract для уже исправленных этапов Карты сокровищ.
@@ -161,7 +162,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.49';
+  const BUILD_VERSION = '1.18.50';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3750,6 +3751,7 @@
   const HK_TREASURE_AUTOMAP_OWNERSHIP_REV='treasure-automap-module-ownership-20260927-r1';
   const HK_TREASURE_LIGHTS_RESUME_REV='treasure-lights-resume-open-modal-20260927-r1';
   const HK_TREASURE_LIGHTS_OUTER_MODAL_REV='treasure-lights-outer-modal-20260927-r1';
+  const HK_TREASURE_CHEST_FAST_PACING_REV='treasure-chest-fast-pacing-20260927-r1';
   const HK_TRADER_WHITELIST_REV='trader-approved-lots-20260927-r1';
   const HK_FISHING_BUDGET_REV='fishing-live-budget-20260927-r1';
   const HK_MINIGAME_HUMAN_PACING_REV='minigame-human-pacing-20260927-r1';
@@ -18156,6 +18158,26 @@
       return waitMs;
     }
 
+    async function chestHumanPause(stage='scan',data={}) {
+      const ranges={
+        scan:[600,950],
+        aim:[380,650],
+        confirm:[650,1050],
+        settle:[950,1500],
+        reward:[420,700]
+      };
+      const range=ranges[stage] || ranges.scan;
+      const waitMs=minigameRandomMs(range[0],range[1]);
+      recordDiagnostic('treasure-chest-human-pause',{
+        revision:HK_TREASURE_CHEST_FAST_PACING_REV,
+        stage,
+        waitMs,
+        ...data
+      });
+      await new Promise(resolve=>setTimeout(resolve,waitMs));
+      return waitMs;
+    }
+
     async function traderHumanPause(stage='scan',data={}) {
       const ranges={
         scan:[250,450],
@@ -20996,10 +21018,10 @@
           if (!treasureRewardButton()) break;
           continue;
         }
-        await minigameHumanPause('reward',{module:'chests',index:i+1});
+        await chestHumanPause('reward',{module:'chests',index:i+1});
         dispatchAutoMapTap(button,'chest-reward-'+(i+1));
         clicked+=1;
-        await minigameHumanPause('settle',{module:'chest-reward',index:i+1});
+        await chestHumanPause('settle',{module:'chest-reward',index:i+1});
       }
       return clicked;
     }
@@ -21028,7 +21050,7 @@
       }
       let target=treasureChestTarget();
       if (!target) return false;
-      await minigameHumanPause('scan',{module:'chests'});
+      await chestHumanPause('scan',{module:'chests'});
       if (!chestAutoEnabled()) return false;
       if (treasureChestBlockedByForegroundMap()) {
         lastSignature='';
@@ -21051,7 +21073,7 @@
       });
       try {
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
-        await minigameHumanPause('aim',{module:'chests',lotId:target.lotId});
+        await chestHumanPause('aim',{module:'chests',lotId:target.lotId});
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
         dispatchAutoMapTap(target.element,target.digging?'chest-dig-spot':'chest-open-card');
 
@@ -21062,7 +21084,7 @@
         }
 
         let action=await waitTreasureActionButton(modal,target.cost,runId);
-        await minigameHumanPause('confirm',{module:'chests',lotId:target.lotId});
+        await chestHumanPause('confirm',{module:'chests',lotId:target.lotId});
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
         let tapped=false;
         if (action) tapped=dispatchAutoMapTap(action,target.digging?'chest-dig-confirm':'chest-open-confirm');
@@ -21081,7 +21103,7 @@
           await new Promise(resolve=>setTimeout(resolve,100));
         }
 
-        await minigameHumanPause('settle',{module:'chests',lotId:target.lotId});
+        await chestHumanPause('settle',{module:'chests',lotId:target.lotId});
         const rewards=await dismissTreasureRewards(runId);
         recordDiagnostic('chest-auto-complete',{
           revision:HK_CHEST_AUTO_REV,
@@ -21095,7 +21117,7 @@
       } finally {
         if (runId===chestAutoRunId) chestAutoRunning=false;
         lastSignature='';
-        setTimeout(checkPuzzle,minigameRandomMs(1400,2200));
+        setTimeout(checkPuzzle,minigameRandomMs(950,1450));
       }
     }
 
@@ -23726,6 +23748,7 @@
       treasureAutoMapOwnershipRevision:HK_TREASURE_AUTOMAP_OWNERSHIP_REV,
       treasureLightsResumeRevision:HK_TREASURE_LIGHTS_RESUME_REV,
       treasureLightsOuterModalRevision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
+      treasureChestFastPacingRevision:HK_TREASURE_CHEST_FAST_PACING_REV,
       traderWhitelistRevision:HK_TRADER_WHITELIST_REV,
       fishingBudgetRevision:HK_FISHING_BUDGET_REV,
       minigameHumanPacingRevision:HK_MINIGAME_HUMAN_PACING_REV,

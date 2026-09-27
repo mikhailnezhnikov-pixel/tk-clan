@@ -1,0 +1,13 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.49
+target_version=1.18.50
+marker=treasure-chest-fast-pacing-20260927-r1
+source_sha256=5579bc89eb803b1b536091532ba995b634d6c170d1147d7554f07a85b85dfe4f
+candidate_sha256=dad15008aa0ea2a6b3fa0ec39d76c485107ecdaa42b123b307d07702d58675a7
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+treasure_regression_contract=PASS
+treasure_lights_resume_contract=PASS
+treasure_lights_outer_modal_contract=PASS
+ci_game_mutations=NONE
