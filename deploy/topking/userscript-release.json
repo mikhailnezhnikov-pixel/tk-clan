@@ -99,5 +99,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-35-lights-map-return-live-status.txt",
-  "commit_message": "fix: deploy lights map return after main reward in userscript 1.18.35"
+  "commit_message": "fix: deploy lights map return after main reward in userscript 1.18.35",
+  "trigger_revision": 1
 }
