@@ -141,7 +141,7 @@ if "treasure-key-battle-handoff-20260928-r1" in s:
         if marker not in gate:
             raise SystemExit(f"battle final-reward gate broken: {marker}")
 
-    dismiss=section("async function dismissBattleRewardIfPresent","function battleElementForSlot")
+    dismiss=section("async function dismissBattleRewardIfPresent","function dispatchBattleTap")
     for marker in [
         "dispatchBattleTap(button,'battle-dismiss-reward-'",
         "for (let i=0;i<3;i++)",
