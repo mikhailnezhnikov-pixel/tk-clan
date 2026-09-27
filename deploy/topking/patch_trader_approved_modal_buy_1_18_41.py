@@ -367,7 +367,7 @@ for marker in [
     "function traderApprovedOpenModal()",
     "async function traderResumeApprovedModal()",
     "Вкусняшк",
-    "Походн.*припас",
+    "походн.*припас",
     "Смена",
     "fish_egg|pet_egg",
     "trader-approved-modal-confirm",
