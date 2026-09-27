@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.29
+// @version      1.18.30
+// @release-note Рыбалка: при 0 забросов больше не открывает следующий слот. Обычный wallet полностью исключён из расчёта бюджета рыбалки — источник только реальный счётчик забросов. Если счётчик исчез после последней покупки или модалка уже открыта с недоступной кнопкой, окно закрывается и Автокарта штатно выходит из комнаты.
 // @release-note Рыбалка: ускорен только темп покупки слотов. Сохраняется последовательность «перескан → выбор → открытие → пауза → подтверждение → ответ сервера → следующий слот», но без избыточных общих задержек. Целевой темп — около 2–3 секунд на слот при нормальном ответе сервера.
 // @release-note Карта Сокровищ: исправлены три перехода мини-игр по записи прохода #5. Сражение теперь забирает реальный Сундук победителя (mf_fairlot_minigame_fight_room_big_chest) и после награды передаёт управление Автокарте; Лабиринт/лампочки забирают mf_fairlot_lights_out_reward_slot до перехода в следующую комнату; Рыбалка использует фактические «забросы» из mf_treasurelot_fishing_rod_* как бюджет и больше не выходит при наличии попыток.
 // @release-note Мини-игры: мобильный tap больше не генерирует два click подряд. Убрано дублирование synthetic click + element.click(), которое вызывало лишние 409 Shop lot cannot be bought.
@@ -141,7 +142,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.29';
+  const BUILD_VERSION = '1.18.30';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3733,6 +3734,7 @@
   const HK_FISHING_VISIBLE_CASTS_REV='fishing-visible-casts-20260927-r1';
   const HK_MINIGAME_SINGLE_TAP_REV='minigame-single-tap-20260927-r1';
   const HK_FISHING_HUMAN_FAST_REV='fishing-human-fast-20260927-r1';
+  const HK_FISHING_ZERO_CAST_EXIT_REV='fishing-zero-cast-exit-20260927-r1';
   let treasureGuideDomTimer=null;
   let treasureGuideLastDomFingerprint='';
   const treasureGuideSentKeys=new Set();
@@ -18266,26 +18268,67 @@
       const quantity=Math.max(0,Number(cost?.quantity||0));
       if (!(quantity>0)) return false;
 
+      // Fishing casts are NOT a normal wallet currency. When the last cast is
+      // consumed the rod counter may disappear for a short time; treating that
+      // as wallet fallback incorrectly re-opens another slot.
       const casts=fishingVisibleCasts();
-      if (casts!==null) return casts>=quantity;
-
-      const id=String(cost?.id||'');
-      if (!id) return false;
-      const amount=walletAmount(id);
-      return amount!==null && Number(amount)>=quantity;
+      return casts!==null && casts>=quantity;
     }
 
     function fishingBudgetSnapshot(cost) {
       const id=String(cost?.id||'');
-      const amount=id ? walletAmount(id) : null;
       const casts=fishingVisibleCasts();
       return {
         id,
-        balance:casts!==null ? casts : (amount===null ? null : Number(amount)),
+        balance:casts,
         casts,
-        source:casts!==null ? 'visible-rod' : (amount===null ? 'unknown' : 'wallet'),
+        source:casts!==null ? 'visible-rod' : 'no-cast-counter',
         cost:Math.max(0,Number(cost?.quantity||0))
       };
+    }
+
+    function fishingClosePurchaseModal(reason='no-casts') {
+      const modal=treasureModalRoot(null);
+      if (!modal) return false;
+      const close=[...modal.querySelectorAll('button,[role="button"],a,div,span')]
+        .filter(el=>el && !el.disabled && visible(el))
+        .map(el=>({
+          el,
+          text:clean(el.innerText||el.textContent||'').trim(),
+          aria:clean(el.getAttribute?.('aria-label')||'').trim(),
+          rect:el.getBoundingClientRect?.() || {width:0,height:0,top:0,left:0}
+        }))
+        .filter(row=>
+          /^(?:×|✕|Назад|Back|Закрыть|Close)$/i.test(row.text) ||
+          /close|закрыть|back|назад/i.test(row.aria)
+        )
+        .sort((a,b)=>(a.rect.width*a.rect.height)-(b.rect.width*b.rect.height))[0]?.el || null;
+      if (!close) return false;
+      const ok=dispatchAutoMapTap(close,'fishing-'+reason+'-close');
+      if (ok) {
+        recordDiagnostic('fishing-auto-modal-close',{
+          revision:HK_FISHING_ZERO_CAST_EXIT_REV,
+          reason,
+          casts:fishingVisibleCasts()
+        });
+      }
+      return ok;
+    }
+
+    function fishingScheduleExit(reason='no-casts') {
+      fishingRetryNotBefore=0;
+      fishingFailureStreak=0;
+      lastSignature='';
+      recordDiagnostic('fishing-auto-exit-ready',{
+        revision:HK_FISHING_ZERO_CAST_EXIT_REV,
+        reason,
+        casts:fishingVisibleCasts()
+      });
+      if (autoMapEnabled()) {
+        setTimeout(()=>void runAutoMapTick('fishing-'+reason),minigameRandomMs(450,750));
+      } else {
+        setTimeout(checkPuzzle,minigameRandomMs(450,750));
+      }
     }
 
     function fishingValueTier(lotId,hasCurseTrigger=false) {
@@ -18414,10 +18457,27 @@
       }
       let target=fishingTarget();
       if (!target) {
+        let casts=fishingVisibleCasts();
+
+        // The counter may be between DOM updates for a few hundred ms.
+        if (casts===null) {
+          await new Promise(resolve=>setTimeout(resolve,420));
+          casts=fishingVisibleCasts();
+        }
+
         recordDiagnostic('fishing-auto-budget-empty',{
-          revision:HK_FISHING_BUDGET_REV,
-          candidates:fishingElements().filter(row=>!row.activated).length
+          revision:HK_FISHING_ZERO_CAST_EXIT_REV,
+          candidates:fishingElements().filter(row=>!row.activated).length,
+          casts
         });
+
+        if (casts===null || casts<=0) {
+          fishingClosePurchaseModal('budget-empty');
+          fishingScheduleExit(casts===0?'zero-casts':'counter-gone');
+        } else {
+          lastSignature='';
+          setTimeout(checkPuzzle,120);
+        }
         return false;
       }
 
@@ -18426,7 +18486,14 @@
       await fishingHumanPause('scan',{module:'fishing'});
       if (!fishingAutoEnabled()) return false;
       target=fishingTarget();
-      if (!target) return false;
+      if (!target) {
+        const casts=fishingVisibleCasts();
+        if (casts===null || casts<=0) {
+          fishingClosePurchaseModal('post-scan-empty');
+          fishingScheduleExit(casts===0?'zero-casts-post-scan':'counter-gone-post-scan');
+        }
+        return false;
+      }
       if (!fishingAffordable(target.cost)) {
         recordDiagnostic('fishing-auto-budget-changed',{
           revision:HK_FISHING_BUDGET_REV,
@@ -18518,15 +18585,16 @@
         if (runId!==fishingAutoRunId || !fishingAutoEnabled()) return false;
 
         if (!fishingAffordable(target.cost)) {
-          const close=[...modal.querySelectorAll('button,[role="button"],a,div,span')]
-            .filter(el=>el && !el.disabled && visible(el))
-            .find(el=>/^(?:×|✕|Назад|Back|Закрыть|Close)$/i.test(clean(el.innerText||el.textContent||'').trim()));
-          if (close) dispatchAutoMapTap(close,'fishing-insufficient-close');
+          fishingClosePurchaseModal('insufficient-before-confirm');
           recordDiagnostic('fishing-auto-insufficient-before-confirm',{
-            revision:HK_FISHING_BUDGET_REV,
+            revision:HK_FISHING_ZERO_CAST_EXIT_REV,
             lotId:target.lotId,
             ...fishingBudgetSnapshot(target.cost)
           });
+          const casts=fishingVisibleCasts();
+          if (casts===null || casts<=0) {
+            fishingScheduleExit(casts===0?'zero-casts-modal':'counter-gone-modal');
+          }
           return false;
         }
 
@@ -21536,6 +21604,7 @@
       fishingVisibleCastsRevision:HK_FISHING_VISIBLE_CASTS_REV,
       minigameSingleTapRevision:HK_MINIGAME_SINGLE_TAP_REV,
       fishingHumanFastRevision:HK_FISHING_HUMAN_FAST_REV,
+      fishingZeroCastExitRevision:HK_FISHING_ZERO_CAST_EXIT_REV,
       start,
       stop,
       check:checkPuzzle,

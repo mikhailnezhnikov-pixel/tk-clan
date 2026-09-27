@@ -1,0 +1,10 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.29
+target_version=1.18.30
+marker=fishing-zero-cast-exit-20260927-r1
+source_sha256=e969f193d1561ed84a735aaa29f4b07ef0149f241e963db5d3b2d9de7b9f2d40
+candidate_sha256=099d485b014d4f3e5ed3df610879db7d43f22928839a2ace675ae8869a2e41da
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+ci_game_mutations=NONE
