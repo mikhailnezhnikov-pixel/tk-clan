@@ -115,5 +115,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-51-treasure-battle-full-clear-live-status.txt",
-  "commit_message": "fix: deploy AutoMap battle full-clear automation in userscript 1.18.51"
+  "commit_message": "fix: deploy AutoMap battle full-clear automation in userscript 1.18.51",
+  "trigger_revision": 1
 }
