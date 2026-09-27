@@ -243,3 +243,5 @@ for marker in [
 
 p.write_text(s,encoding="utf-8")
 print("LIGHTS_CONFIRM_RECOVERY_1_18_31=PASS")
+
+# build-trigger: lights-confirm-recovery-r1
