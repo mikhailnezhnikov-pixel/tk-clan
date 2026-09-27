@@ -58,7 +58,6 @@ if "battle-strict-exit-gate-20260927-r1" in s:
     for marker in [
         "battleVictoryElement()",
         "battleVictoryModalRoot()",
-        "const enemies=board.filter(enemy=>enemy!==null);",
         "Number(enemy.hp)<=swords",
         "reason:'attack-available'",
         "reason:'no-attack-available'",
@@ -76,20 +75,6 @@ if "battle-strict-exit-gate-20260927-r1" in s:
     ]:
         if marker not in run_battle:
             raise SystemExit(f"strict battle run logic missing: {marker}")
-
-    runner=section("async function runBattleAuto","async function runBattleInsufficientExit")
-    for marker in [
-        "dispatchBattleTap(element,'battle-open-card')",
-        "dispatchBattleTap(actionButton,'battle-confirm-attack')",
-    ]:
-        if marker not in runner:
-            raise SystemExit(f"battle mobile tap contract broken: {marker}")
-    for forbidden in [
-        "element.click();",
-        "actionButton.click();",
-    ]:
-        if forbidden in runner:
-            raise SystemExit(f"battle mobile tap regressed to raw click: {forbidden}")
 
     insufficient=section("async function runBattleInsufficientExit","function addNumber")
     for marker in [
@@ -116,5 +101,28 @@ if "battle-strict-exit-gate-20260927-r1" in s:
     ]:
         if marker not in tap:
             raise SystemExit(f"strict battle generic-exit guard missing: {marker}")
+
+if "battle-raw-context-mobile-tap-20260927-r1" in s:
+    gate=section("function battleExitState()","function battleLeaveBackButton")
+    if "const enemies=board.filter(enemy=>enemy!==null);" not in gate:
+        raise SystemExit("raw battle context contract broken: covered enemies must still count")
+
+    recover=section("async function autoMapRecoverOpenLeaveModal","function autoMapModalPrimaryButton")
+    if "battleLeaveBackButton(modal) || autoMapModalCloseButton(modal)" not in recover:
+        raise SystemExit("raw battle context contract broken: premature leave modal needs close fallback")
+
+    runner=section("async function runBattleAuto","async function runBattleInsufficientExit")
+    for marker in [
+        "dispatchBattleTap(element,'battle-open-card')",
+        "dispatchBattleTap(actionButton,'battle-confirm-attack')",
+    ]:
+        if marker not in runner:
+            raise SystemExit(f"battle mobile tap contract broken: {marker}")
+    for forbidden in [
+        "element.click();",
+        "actionButton.click();",
+    ]:
+        if forbidden in runner:
+            raise SystemExit(f"battle mobile tap regressed to raw click: {forbidden}")
 
 print("TREASURE_BATTLE_FULL_CLEAR_CONTRACT=PASS")
