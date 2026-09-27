@@ -96,5 +96,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-32-lights-confirm-verified-live-status.txt",
-  "commit_message": "fix: deploy verified lights confirmation in userscript 1.18.32"
+  "commit_message": "fix: deploy verified lights confirmation in userscript 1.18.32",
+  "trigger_revision": 1
 }
