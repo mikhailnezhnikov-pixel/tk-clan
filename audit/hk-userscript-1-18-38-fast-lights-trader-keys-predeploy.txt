@@ -1,0 +1,13 @@
+USERSCRIPT_1_18_38_FAST_LIGHTS_TRADER_KEYS_PREDEPLOY=PASS
+source_version=1.18.37
+target_version=1.18.38
+lights_confirm=FAST_SINGLE_PURCHASE
+lights_settle_ms=450
+trader_gap_ms=1200
+trader_keys=ENABLED
+lights_exit=COST10_FOOTER
+instruction_button=EXCLUDED
+syntax=PASS
+static_smoke=PASS
+base_sha256=40c00317703e0eb7d791fafe4e5b29b43ebcf63a75c5a39ee96b8688e3682143
+candidate_sha256=2ca0858a248d8a14af773b23dfc6dba8a00ab709c3684c7cf289f49c4981d9f1
