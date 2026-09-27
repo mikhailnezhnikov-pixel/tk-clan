@@ -1,0 +1,11 @@
+USERSCRIPT_1_18_49_TREASURE_LIGHTS_OUTER_MODAL_PREDEPLOY=PASS
+source_version=1.18.48
+target_version=1.18.49
+lights_outer_modal=ANCESTOR_WITH_CLOSE
+stale_modal_spend=FORBIDDEN
+treasure_regression_contract=PASS
+lights_resume_contract=PASS
+lights_outer_modal_contract=PASS
+syntax=PASS
+base_sha256=8b781b05b857786b7f96e1c7f5a9573ec4da4ea0af9e8de0a5a1f88ed90a06d2
+candidate_sha256=5579bc89eb803b1b536091532ba995b634d6c170d1147d7554f07a85b85dfe4f
