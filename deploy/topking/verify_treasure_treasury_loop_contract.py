@@ -33,7 +33,8 @@ if "treasury-left-once-continuous-map-20260927-r1" in s:
     enter=section("async function autoMapEnterTreasuryLeftPath","function autoMapTreasuryChestRows()")
     for marker in [
         "setAutoMapTreasuryLeftSelected(true",
-        "autoMapTapAndConfirm(choice.element",
+        "const ok=await autoMapTapAndConfirm(",
+        "choice.element,",
         "setAutoMapTreasuryLeftSelected(false",
     ]:
         if marker not in enter:
