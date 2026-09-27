@@ -277,3 +277,5 @@ for marker in [
 
 p.write_text(s,encoding="utf-8")
 print("FAST_LIGHTS_TRADER_KEYS_1_18_38=PASS")
+
+# trigger build after workflow installation
