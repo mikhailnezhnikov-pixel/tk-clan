@@ -40,14 +40,14 @@ jobs:
           s=Path('/tmp/HamsterKingMobile.user.js').read_text(encoding='utf-8')
           run=s[s.index('function runBattle()'):s.index('// ----- Full Treasure Map orchestrator -----')]
           assert "if (autoMapEnabled())" in run
+          assert "battle-auto-skip-owned-by-map" in run
           assert "runBattleAuto(solution)" in run
-          branch=s[s.index("if (signature.startsWith('BATTLE')) {"):s.index("if (signature.startsWith('FISHING|'))")]
-          assert "autoMapSkipBattleWithoutFight()" in branch
-          assert "runBattleAuto(" not in branch
           helper=s[s.index("async function autoMapSkipBattleWithoutFight()"):s.index("function autoMapCurrentModuleComplete()")]
           assert "battle-skip-intro-ack" in helper
           assert "battle-skip-leave-location" in helper
-          assert "10" in helper
+          assert "autoMapTapAndConfirm(exit,'battle-skip-leave-location',10)" in helper
+          assert "battle-auto-cancel-for-skip" in s
+          assert "battle-skip-dispatch" in s
           print("BATTLE_SKIP_RUN9_STATIC_SMOKE=PASS")
           PY
 
