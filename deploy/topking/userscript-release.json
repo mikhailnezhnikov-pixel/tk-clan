@@ -118,5 +118,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-54-treasure-battle-achievements-live-status.txt",
-  "commit_message": "feat: deploy one-time Treasure battle achievement planning in userscript 1.18.54"
+  "commit_message": "feat: deploy one-time Treasure battle achievement planning in userscript 1.18.54",
+  "trigger_revision": 1
 }
