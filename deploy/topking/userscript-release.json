@@ -145,5 +145,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-80-battle-safe-scroll-live-status.txt",
-  "commit_message": "fix: scroll lower battle targets safely in userscript 1.18.80"
+  "commit_message": "fix: scroll lower battle targets safely in userscript 1.18.80 r1"
 }
