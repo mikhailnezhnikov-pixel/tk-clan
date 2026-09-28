@@ -1,10 +1,10 @@
-name: Build Userscript 1.18.77 Chest Key Offer
+name: Build Userscript 1.18.78 Visible Chest Claim
 
 on:
   push:
     paths:
-      - 'deploy/topking/patch_chest_key_offer_1_18_77.py'
-      - 'deploy/topking/verify_chest_key_offer_contract.py'
+      - 'deploy/topking/patch_chest_visible_claim_1_18_78.py'
+      - 'deploy/topking/patch_chest_visible_claim_1_18_78.py'
       - '.github/workflows/build-userscript-1-18-77-chest-key-offer.yml'
   workflow_dispatch:
 
@@ -31,11 +31,14 @@ jobs:
           sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
           cp "$base" /tmp/HamsterKingMobile.user.js
 
-          grep -Fq "// @version      1.18.76" /tmp/HamsterKingMobile.user.js
-          grep -Fq "trader-gold-currency-skip-20260928-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.78" /tmp/HamsterKingMobile.user.js
+          grep -Fq "chest-visible-claim-priority-20260928-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "let priority=digging ? 1000 : 1500;" /tmp/HamsterKingMobile.user.js
+          grep -Fq "if (digging && unbought===0) return;" /tmp/HamsterKingMobile.user.js
+          grep -Fq "item_treasurehunt_key_legendary" /tmp/HamsterKingMobile.user.js
           grep -Fq "treasure-key-any-rarity-20260928-r1" /tmp/HamsterKingMobile.user.js
 
-          python3 deploy/topking/patch_chest_key_offer_1_18_77.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_chest_visible_claim_1_18_78.py /tmp/HamsterKingMobile.user.js
 
           node --check /tmp/HamsterKingMobile.user.js
           grep -Fq "// @version      1.18.77" /tmp/HamsterKingMobile.user.js
@@ -64,8 +67,8 @@ jobs:
       - name: Publish candidate
         run: |
           set -euo pipefail
-          candidate=deploy/topking/HamsterKingMobile.1.18.77.chest-key-offer.candidate.user.js
-          audit=audit/hk-userscript-1-18-77-chest-key-offer-predeploy.txt
+          candidate=deploy/topking/HamsterKingMobile.1.18.78.visible-chest-claim.candidate.user.js
+          audit=audit/hk-userscript-1-18-78-visible-chest-claim-predeploy.txt
 
           git fetch origin main
           git reset --hard origin/main
@@ -78,7 +81,7 @@ jobs:
           from pathlib import Path
           path=Path('deploy/topking/userscript-release.json')
           m=json.loads(path.read_text(encoding='utf-8'))
-          if m.get('target_version') != '1.18.76':
+          if m.get('target_version') != '1.18.77':
               raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
           preserve=[]
           for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
@@ -86,25 +89,25 @@ jobs:
                   preserve.append(marker)
           out={
               'schema':1,
-              'source_version':'1.18.76',
-              'target_version':'1.18.77',
-              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.77.chest-key-offer.candidate.user.js',
-              'primary_marker':'chest-key-offer-buy-20260928-r1',
+              'source_version':'1.18.77',
+              'target_version':'1.18.78',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.78.visible-chest-claim.candidate.user.js',
+              'primary_marker':'chest-visible-claim-priority-20260928-r1',
               'preserve_markers':preserve,
-              'audit_status_path':'audit/hk-userscript-1-18-77-chest-key-offer-live-status.txt',
-              'commit_message':'fix: buy Treasure Key offer in Chest Hunt in userscript 1.18.77',
+              'audit_status_path':'audit/hk-userscript-1-18-78-visible-chest-claim-live-status.txt',
+              'commit_message':'fix: claim visible mystery chests in userscript 1.18.78',
           }
           path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
 
           {
-            echo "USERSCRIPT_1_18_77_CHEST_KEY_OFFER_PREDEPLOY=PASS"
-            echo "source_version=1.18.76"
-            echo "target_version=1.18.77"
-            echo "key_offer_detection=ITEM_OR_ICON_OR_TEXT"
-            echo "visual_cost_fallback=item_treasurehunt_energy"
-            echo "key_offer_priority=1400"
-            echo "chest_key_offer_contract=PASS"
+            echo "USERSCRIPT_1_18_78_VISIBLE_CHEST_CLAIM_PREDEPLOY=PASS"
+            echo "source_version=1.18.77"
+            echo "target_version=1.18.78"
+            echo "visible_chest_priority=1500+"
+            echo "backend_is_bought_gate=IGNORED_FOR_VISIBLE_CHESTS"
+            echo "new_key_rarities=SUPPORTED"
+            echo "visible_chest_claim_contract=PASS"
             echo "syntax=PASS"
             echo "base_sha256=$(cat /tmp/base.sha)"
             echo "candidate_sha256=$(cat /tmp/candidate.sha)"
@@ -113,7 +116,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$candidate" deploy/topking/userscript-release.json "$audit"
-          git commit -m "build: prepare userscript 1.18.77 Chest Hunt key offer"
+          git commit -m "build: prepare userscript 1.18.78 visible chest claim"
           git push origin HEAD:main
 
       - name: Cleanup
