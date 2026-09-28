@@ -24,8 +24,8 @@ for marker in required:
         raise SystemExit("battle safe-scroll contract broken: "+marker)
 
 for forbidden in [
-  "battle-native-offscreen-click",
   "battleScrollTargetIntoViewport(element,label);",
+  "element.click?.();",
 ]:
     if forbidden in s:
         raise SystemExit("unsafe/synchronous battle target handling remains: "+forbidden)
