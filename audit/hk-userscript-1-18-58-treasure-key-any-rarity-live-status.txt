@@ -1,0 +1,17 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.57
+target_version=1.18.58
+marker=treasure-key-any-rarity-20260928-r1
+source_sha256=8e3195b4571e23ced241e51483567b43eed9c8930ebf6f29c2467875debad295
+candidate_sha256=08ce2ee0f61cc76bf636f46f4794c5bcb5eeb1f4011c848cb2111bb42246af16
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+treasure_regression_contract=PASS
+treasure_lights_resume_contract=PASS
+treasure_lights_outer_modal_contract=PASS
+treasure_chest_fast_pacing_contract=PASS
+treasure_treasury_loop_contract=PASS
+treasure_battle_full_clear_contract=PASS
+treasure_battle_achievement_contract=PASS
+ci_game_mutations=NONE
