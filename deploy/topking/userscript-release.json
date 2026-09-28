@@ -135,5 +135,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-71-trader-receipt-ack-live-status.txt",
-  "commit_message": "fix: acknowledge trader purchase receipts in userscript 1.18.71"
+  "commit_message": "fix: acknowledge trader purchase receipts in userscript 1.18.71 r1"
 }
