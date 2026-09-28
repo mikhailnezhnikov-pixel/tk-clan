@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.59",
-  "target_version": "1.18.60",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.60.battle-overlay-safe-targeting.candidate.user.js",
-  "primary_marker": "battle-overlay-safe-targeting-20260928-r1",
+  "source_version": "1.18.60",
+  "target_version": "1.18.61",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.61.battle-activated-exit.candidate.user.js",
+  "primary_marker": "battle-activated-final-reward-exit-20260928-r1",
   "preserve_markers": [
+    "battle-overlay-safe-targeting-20260928-r1",
     "battle-reward-state-machine-20260928-r1",
     "treasure-key-any-rarity-20260928-r1",
     "treasure-key-battle-handoff-20260928-r1",
@@ -123,6 +124,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-60-battle-overlay-safe-targeting-live-status.txt",
-  "commit_message": "fix: deploy overlay-safe 5hp guardian battle targeting in userscript 1.18.60"
+  "audit_status_path": "audit/hk-userscript-1-18-61-battle-activated-exit-live-status.txt",
+  "commit_message": "fix: deploy activated battle reward exit recovery in userscript 1.18.61"
 }
