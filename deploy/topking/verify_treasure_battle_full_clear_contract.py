@@ -312,4 +312,55 @@ if "battle-overlay-safe-targeting-20260928-r1" in s:
         if marker not in run_battle:
             raise SystemExit(f"battle guardian plan diagnostic missing: {marker}")
 
+
+if "battle-activated-final-reward-exit-20260928-r1" in s:
+    reward=section("function battleFinalRewardElements","function battleVictoryModalRoot")
+    for marker in [
+        "function battleFinalRewardActivatedElement",
+        "function battleFinalRewardSettled",
+        "function battleRecoverFinalRewardClaimed",
+        "Активировано|Activated",
+        ".filter(element=>!battleFinalRewardActivatedText(element))",
+        "battle-final-reward-recovered",
+    ]:
+        if marker not in reward:
+            raise SystemExit(f"battle activated reward recovery broken: {marker}")
+
+    if "!battleVictoryModalRoot()" not in reward or "!battleRewardDismissButton()" not in reward:
+        raise SystemExit("activated reward must not count as settled while reward confirmation is open")
+
+    signature=section("function getSignature()","function checkPuzzle()")
+    for marker in [
+        "battleRecoverFinalRewardClaimed('signature')",
+        "BATTLE_COMPLETE|mf_fairlot_minigame_fight_room_big_chest",
+    ]:
+        if marker not in signature:
+            raise SystemExit(f"battle activated completion signature broken: {marker}")
+    complete_pos=signature.find("battleRecoverFinalRewardClaimed('signature')")
+    victory_pos=signature.find("const victory=battleVictoryElement();")
+    sword_pos=signature.find("const sword = battleSwordElement();")
+    if complete_pos<0 or victory_pos<0 or sword_pos<0 or not (complete_pos < victory_pos < sword_pos):
+        raise SystemExit("activated final reward must outrank pending reward and stale battle DOM")
+
+    gate=section("function battleExitState()","function battleLeaveBackButton")
+    for marker in [
+        "activatedSettled=battleRecoverFinalRewardClaimed('exit-state')",
+        "reason:'final-reward-activated'",
+        "allowed:true",
+    ]:
+        if marker not in gate:
+            raise SystemExit(f"battle activated exit gate broken: {marker}")
+
+    tick=section("async function runAutoMapTick","function setAutoMapEnabled")
+    for marker in [
+        "battleRecoverFinalRewardClaimed('automap-preflight')",
+        "battleAutoRunId+=1",
+        "battleAutoRunning=false",
+        "battle-activated-stale-runner-release",
+        "autoMapHandleExitOrContinue()",
+        "battle-activated-exit-retry",
+    ]:
+        if marker not in tick:
+            raise SystemExit(f"battle activated AutoMap exit handoff broken: {marker}")
+
 print("TREASURE_BATTLE_FULL_CLEAR_CONTRACT=PASS")
