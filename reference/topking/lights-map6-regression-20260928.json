@@ -1,0 +1,45 @@
+{
+  "schema": "hk-lights-regression-fixture-v1",
+  "name": "map-6-2026-09-28-slot3-repeat",
+  "source": "audit/treasure-run-recordings-latest.json",
+  "source_run_index": 6,
+  "source_started_at": "2026-09-28T08:02:07.823Z",
+  "version_observed": "1.18.63",
+  "initial_board": {
+    "1": true,
+    "2": false,
+    "3": true,
+    "4": true,
+    "5": true,
+    "6": false,
+    "7": false,
+    "8": false,
+    "9": true
+  },
+  "canonical_hint_plan": [
+    1,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "observed_bad_sequence": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+  ],
+  "invariant": [
+    "freeze the canonical hint plan from the current 3x3 board",
+    "each planned slot may be executed at most once in a run",
+    "resolve a fresh DOM target by exact slot immediately before opening its modal",
+    "dismiss any pre-existing lamp modal before executing the next planned slot",
+    "after purchase and acknowledgement, verify the observed board equals the predicted board",
+    "when all nine lamps are on, claim the reward chest/storage and acknowledge the reward before leaving"
+  ]
+}
