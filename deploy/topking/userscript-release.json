@@ -1,17 +1,18 @@
 {
   "schema": 1,
-  "source_version": "1.18.81",
-  "target_version": "1.18.82",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.82.battle-visible-point.candidate.user.js",
-  "primary_marker": "battle-visible-point-truth-20260929-r1",
+  "source_version": "1.18.82",
+  "target_version": "1.18.83",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.83.trader-gold-stale-modal.candidate.user.js",
+  "primary_marker": "trader-gold-stale-modal-reset-20260929-r1",
   "preserve_markers": [
+    "battle-visible-point-truth-20260929-r1",
+    "trader-gold-currency-skip-20260928-r1",
     "clan-crest-launcher-20260928-r1",
     "battle-target-safe-scroll-20260928-r1",
     "battle-full-fair-state-20260928-r1",
     "battle-egg-one-berry-buy-20260928-r1",
     "chest-visible-claim-priority-20260928-r1",
     "chest-key-offer-buy-20260928-r1",
-    "trader-gold-currency-skip-20260928-r1",
     "fishing-modal-budget-ownership-20260928-r1",
     "treasure-recorder-ui-removed-20260928-r1",
     "purchase-confirm-fast-global-20260928-r1",
@@ -146,6 +147,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-82-battle-visible-point-live-status.txt",
-  "commit_message": "fix: allow visible lower battle rows in userscript 1.18.82 r1"
+  "audit_status_path": "audit/hk-userscript-1-18-83-trader-gold-stale-modal-live-status.txt",
+  "commit_message": "fix: reset forbidden gold trader modal in userscript 1.18.83"
 }
