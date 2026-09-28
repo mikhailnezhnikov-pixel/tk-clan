@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.71",
-  "target_version": "1.18.72",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.72.treasure-dig-fast.candidate.user.js",
-  "primary_marker": "treasure-dig-fast-pacing-20260928-r1",
+  "source_version": "1.18.72",
+  "target_version": "1.18.73",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.73.global-fast-purchase-confirm.candidate.user.js",
+  "primary_marker": "purchase-confirm-fast-global-20260928-r1",
   "preserve_markers": [
+    "treasure-dig-fast-pacing-20260928-r1",
     "trader-receipt-ack-20260928-r1",
     "daily-release-notes-20260928-r1",
     "shop-fast-pacing-restore-20260928-r1",
@@ -135,6 +136,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-72-treasure-dig-fast-live-status.txt",
-  "commit_message": "perf: speed up Treasure digging spots in userscript 1.18.72 r1"
+  "audit_status_path": "audit/hk-userscript-1-18-73-global-fast-purchase-confirm-live-status.txt",
+  "commit_message": "perf: make all minigame purchase confirmations fast in userscript 1.18.73"
 }

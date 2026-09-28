@@ -1,0 +1,15 @@
+USERSCRIPT_1_18_73_GLOBAL_FAST_PURCHASE_CONFIRM_PREDEPLOY=PASS
+source_version=1.18.72
+target_version=1.18.73
+purchase_confirm_ms=100-180
+digging=FAST
+chests=FAST_CONFIRM
+trader=FAST_CONFIRM
+fishing=FAST_CONFIRM
+automap_generic=FAST_CONFIRM
+server_backoff=PRESERVED
+state_verification=PRESERVED
+global_fast_purchase_confirm_contract=PASS
+syntax=PASS
+base_sha256=753ad579be5dd901ef3cff97115a1d4ee498bd6c77df4a00012f7fe6ddaf0cfe
+candidate_sha256=73cc5412884fd8af345867b137b1bd108dec7f1757bb48872ea7f5e96bb0c39d
