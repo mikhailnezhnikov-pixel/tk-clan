@@ -4,12 +4,13 @@ import sys
 p=Path(sys.argv[1] if len(sys.argv)>1 else "/tmp/HamsterKingMobile.user.js")
 s=p.read_text(encoding="utf-8")
 
+global_fast_confirm="purchase-confirm-fast-global-20260928-r1" in s
 required=[
   "treasure-dig-fast-pacing-20260928-r1",
   "async function chestDigPause",
   "scan:[90,160]",
   "aim:[70,130]",
-  "confirm:[110,190]",
+  ("confirm:[100,180]" if global_fast_confirm else "confirm:[110,190]"),
   "settle:[180,300]",
   "target?.digging ? chestDigPause('scan'",
   "target.digging ? chestDigPause('aim'",
@@ -37,7 +38,6 @@ for marker in [
 
 # Ordinary chest scan/aim/settle stay unchanged. Confirm may use the global
 # 100–180 ms purchase-confirm path introduced after 1.18.72.
-global_fast_confirm="purchase-confirm-fast-global-20260928-r1" in s
 for marker in [
   "scan:[600,950]",
   "aim:[380,650]",
