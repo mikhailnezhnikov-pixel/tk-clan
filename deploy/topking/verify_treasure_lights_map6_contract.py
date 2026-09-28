@@ -49,7 +49,7 @@ for token in [
     "lightsTargetForSlot(slot)",
     "target-slot-mismatch",
     "executedSlots.add(slot)",
-    "initial-stale-modal-blocking",
+    "initial-modal-cannot-close",
 ]:
     if token not in runner:
         raise SystemExit(f"map6 canonical runner missing: {token}")
