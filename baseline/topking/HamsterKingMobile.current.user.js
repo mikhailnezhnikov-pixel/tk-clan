@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.74
+// @version      1.18.75
+// @release-note Рыбалка: исправлен преждевременный выход из локации при открытом окне покупки. Во время модалки счётчик забросов может исчезать из видимого DOM; это больше не трактуется как 0. Если слот был доступен до открытия окна, подтверждение покупки завершается, и только после закрытия окна/награды разрешён выход.
 // @release-note Карта сокровищ: убрана служебная плавающая кнопка «Запись карты». Рекордер больше не занимает место на экране; остальная логика Автокарты и мини-игр не менялась.
 // @release-note Покупки в мини-играх: подтверждение любого покупаемого слота теперь отправляется через единый быстрый интервал 0,10–0,18 с после появления кнопки подтверждения. Это касается раскопок, сундуков, Тайного торговца, рыбалки и общих подтверждений Автокарты. Проверка результата, защита от двойного клика и cooldown после 409/429/5xx сохранены.
 // @release-note Карта сокровищ — Место раскопок: убраны длинные искусственные паузы только для раскопок. Открытие клетки, подтверждение стоимости 5 ягод, ожидание результата и переход к следующему действию теперь выполняются быстрым отдельным темпом; обычные сундуки и защитные таймауты не ускорялись.
@@ -20,7 +21,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.74';
+  const BUILD_VERSION = '1.18.75';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3633,6 +3634,7 @@
   const HK_TREASURE_DIG_FAST_REV='treasure-dig-fast-pacing-20260928-r1';
   const HK_PURCHASE_CONFIRM_FAST_GLOBAL_REV='purchase-confirm-fast-global-20260928-r1';
   const HK_TREASURE_RECORDER_UI_REMOVED_REV='treasure-recorder-ui-removed-20260928-r1';
+  const HK_FISHING_MODAL_BUDGET_REV='fishing-modal-budget-ownership-20260928-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -18429,6 +18431,22 @@
       };
     }
 
+    function fishingPurchaseModalOpen() {
+      return !!treasureModalRoot(null);
+    }
+
+    function fishingAffordableInsideOpenModal(cost) {
+      const quantity=Math.max(0,Number(cost?.quantity||0));
+      if (!(quantity>0)) return false;
+      const casts=fishingVisibleCasts();
+
+      // The game hides the cast counter behind the purchase modal on some
+      // layouts/devices. A null value here is UNKNOWN, not zero. The target was
+      // already checked as affordable before the modal was opened.
+      if (casts===null && fishingPurchaseModalOpen()) return true;
+      return casts!==null && casts>=quantity;
+    }
+
     function fishingClosePurchaseModal(reason='no-casts') {
       const modal=treasureModalRoot(null);
       if (!modal) return false;
@@ -18458,6 +18476,17 @@
     }
 
     function fishingScheduleExit(reason='no-casts') {
+      if (fishingPurchaseModalOpen()) {
+        lastSignature='';
+        recordDiagnostic('fishing-auto-exit-blocked-modal',{
+          revision:HK_FISHING_MODAL_BUDGET_REV,
+          reason,
+          casts:fishingVisibleCasts()
+        });
+        setTimeout(checkPuzzle,120);
+        return false;
+      }
+
       fishingRetryNotBefore=0;
       fishingFailureStreak=0;
       lastSignature='';
@@ -18471,6 +18500,7 @@
       } else {
         setTimeout(checkPuzzle,minigameRandomMs(450,750));
       }
+      return true;
     }
 
     function fishingValueTier(lotId,hasCurseTrigger=false) {
@@ -18613,7 +18643,15 @@
           casts
         });
 
-        if (casts===null || casts<=0) {
+        if (casts===null && fishingPurchaseModalOpen()) {
+          recordDiagnostic('fishing-auto-modal-owns-flow',{
+            revision:HK_FISHING_MODAL_BUDGET_REV,
+            phase:'budget-empty',
+            casts
+          });
+          lastSignature='';
+          setTimeout(checkPuzzle,120);
+        } else if (casts===null || casts<=0) {
           fishingClosePurchaseModal('budget-empty');
           fishingScheduleExit(casts===0?'zero-casts':'counter-gone');
         } else {
@@ -18630,7 +18668,15 @@
       target=fishingTarget();
       if (!target) {
         const casts=fishingVisibleCasts();
-        if (casts===null || casts<=0) {
+        if (casts===null && fishingPurchaseModalOpen()) {
+          recordDiagnostic('fishing-auto-modal-owns-flow',{
+            revision:HK_FISHING_MODAL_BUDGET_REV,
+            phase:'post-scan',
+            casts
+          });
+          lastSignature='';
+          setTimeout(checkPuzzle,120);
+        } else if (casts===null || casts<=0) {
           fishingClosePurchaseModal('post-scan-empty');
           fishingScheduleExit(casts===0?'zero-casts-post-scan':'counter-gone-post-scan');
         }
@@ -18715,7 +18761,7 @@
           const started=Date.now();
           while (Date.now()-started<1800) {
             if (runId!==fishingAutoRunId || !fishingAutoEnabled()) return null;
-            if (!fishingAffordable(target.cost)) return null;
+            if (!fishingAffordableInsideOpenModal(target.cost)) return null;
             const button=treasureActionButton(modal,target.cost);
             if (button) return button;
             await new Promise(resolve=>setTimeout(resolve,80));
@@ -18726,16 +18772,16 @@
         await fishingHumanPause('confirm',{module:'fishing',lotId:target.lotId});
         if (runId!==fishingAutoRunId || !fishingAutoEnabled()) return false;
 
-        if (!fishingAffordable(target.cost)) {
+        if (!fishingAffordableInsideOpenModal(target.cost)) {
           fishingClosePurchaseModal('insufficient-before-confirm');
           recordDiagnostic('fishing-auto-insufficient-before-confirm',{
-            revision:HK_FISHING_ZERO_CAST_EXIT_REV,
+            revision:HK_FISHING_MODAL_BUDGET_REV,
             lotId:target.lotId,
             ...fishingBudgetSnapshot(target.cost)
           });
           const casts=fishingVisibleCasts();
-          if (casts===null || casts<=0) {
-            fishingScheduleExit(casts===0?'zero-casts-modal':'counter-gone-modal');
+          if (casts!==null && casts<=0) {
+            fishingScheduleExit('zero-casts-modal');
           }
           return false;
         }
@@ -25295,6 +25341,7 @@
       treasureDigFastRevision:HK_TREASURE_DIG_FAST_REV,
       purchaseConfirmFastGlobalRevision:HK_PURCHASE_CONFIRM_FAST_GLOBAL_REV,
       treasureRecorderUiRemovedRevision:HK_TREASURE_RECORDER_UI_REMOVED_REV,
+      fishingModalBudgetRevision:HK_FISHING_MODAL_BUDGET_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
