@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.60
+// @version      1.18.61
+// @release-note Сражение: после получения Сундука победителя игра оставляет его центральную клетку в состоянии «Активировано» вместе со старыми костями и мечом. Скрипт раньше снова считал эту уже полученную награду незабранным сундуком и зависал на «бой продолжается». Теперь «Активировано» считается подтверждённым финалом только когда закрыты все окна награды; старый боевой runner снимается, после чего Автокарта обязательно нажимает «Покинуть локацию», подтверждает выход и продолжает карту.
 // @release-note Сражение: золотой Хранитель сокровищ type_04 с 5 HP уже входил в расчёт, но на правой нижней карточке его номер мог полностью скрываться под плавающими кнопками «Автокарта/Автобой», а эти же кнопки могли перехватить программный tap. Номер шага теперь рисуется поверх служебных кнопок, а боевые tap'ы временно игнорируют HK-оверлеи и попадают в реальную карточку/кнопку под ними.
 // @release-note Сражение на Карте сокровищ: исправлена единая цепочка входа и финала. Окно «Сражение → Понятно» теперь распознаётся независимо от скрытого под ним поля и обязательно подтверждается до запуска атак. Сундук победителя и его окно имеют приоритет над остаточным DOM меча/врагов; финальный сундук нажимается по реальной нижней action-кнопке, затем забирается награда и подтверждается «Понятно». После подтверждённой награды старые элементы боя больше не возвращают статус «бой продолжается», и Автокарта может покинуть локацию.
 // @release-note Карта сокровищ — ключи: автопокупка больше не привязана только к «Необычному ключу» и цене 10. Любое окно «… ключ сокровищ» (включая Обычный за 5 ягод) распознаётся по заголовку; кнопка покупки и её фактическая цена определяются из открытого окна, после чего выполняется единый подтверждённый tap и Автокарта продолжает маршрут.
@@ -172,7 +173,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.60';
+  const BUILD_VERSION = '1.18.61';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17898,6 +17899,7 @@
   const HK_TREASURE_KEY_ANY_RARITY_REV = 'treasure-key-any-rarity-20260928-r1';
   const HK_BATTLE_REWARD_STATE_MACHINE_REV = 'battle-reward-state-machine-20260928-r1';
   const HK_BATTLE_OVERLAY_SAFE_TARGETING_REV = 'battle-overlay-safe-targeting-20260928-r1';
+  const HK_BATTLE_ACTIVATED_EXIT_REV = 'battle-activated-final-reward-exit-20260928-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -21181,11 +21183,47 @@
       }
     }
 
-    function battleVictoryElement() {
-      const exact=[...document.querySelectorAll(
+    function battleFinalRewardElements() {
+      return [...document.querySelectorAll(
         '[data-lot-id="mf_fairlot_minigame_fight_room_big_chest"],[data-lot-id*="minigame_fight_room_big_chest"]'
-      )]
+      )];
+    }
+
+    function battleFinalRewardActivatedText(element) {
+      if (!element) return false;
+      const text=clean(element.innerText||element.textContent||'').trim();
+      return /(?:^|\s)(?:Активировано|Activated)(?:\s|$)/i.test(text);
+    }
+
+    function battleFinalRewardActivatedElement() {
+      return battleFinalRewardElements()
         .filter(visible)
+        .find(element=>battleFinalRewardActivatedText(element)) || null;
+    }
+
+    function battleFinalRewardSettled() {
+      return !!battleFinalRewardActivatedElement() &&
+        !battleVictoryModalRoot() &&
+        !battleRewardDismissButton();
+    }
+
+    function battleRecoverFinalRewardClaimed(source='visual-activated') {
+      if (!battleFinalRewardSettled()) return false;
+      if (!battleFinalRewardClaimed) {
+        battleFinalRewardClaimed=true;
+        battleFinalRewardClaimedAt=Date.now();
+        recordDiagnostic('battle-final-reward-recovered',{
+          revision:HK_BATTLE_ACTIVATED_EXIT_REV,
+          source
+        });
+      }
+      return true;
+    }
+
+    function battleVictoryElement() {
+      const exact=battleFinalRewardElements()
+        .filter(visible)
+        .filter(element=>!battleFinalRewardActivatedText(element))
         .map(element=>({
           element,
           foreground:autoMapElementIsForeground(element),
@@ -21953,6 +21991,7 @@
       // state until the battle actually mutates/removes those lots.
       const enemies=board.filter(enemy=>enemy!==null);
       const swords=getBattleAttack();
+      const activatedSettled=battleRecoverFinalRewardClaimed('exit-state');
       const rewardConfirmPending=battleRewardConfirmOnlyPending();
       const rewardPending=!!battleVictoryElement() || !!battleVictoryModalRoot() || rewardConfirmPending;
       const inBattle=
@@ -21962,6 +22001,18 @@
 
       if (!inBattle) {
         return {inBattle:false,allowed:true,reason:'not-battle',swords,enemies:0,attackable:0};
+      }
+
+      if (activatedSettled) {
+        return {
+          inBattle:true,
+          allowed:true,
+          reason:'final-reward-activated',
+          swords,
+          enemies:enemies.length,
+          attackable:0,
+          claimedAt:battleFinalRewardClaimedAt
+        };
       }
 
       if (rewardPending) {
@@ -24281,6 +24332,39 @@
         }
         return false;
       }
+
+      // After the reward dialog is fully closed the game leaves the big chest
+      // visibly "Активировано" and keeps sword/bones mounted. Recover that
+      // completed state even if the in-memory claim flag was missed/reloaded.
+      if (battleRecoverFinalRewardClaimed('automap-preflight')) {
+        if (battleAutoRunning) {
+          battleAutoRunId+=1;
+          battleAutoRunning=false;
+          lastSignature='';
+          recordDiagnostic('battle-activated-stale-runner-release',{
+            revision:HK_BATTLE_ACTIVATED_EXIT_REV
+          });
+        }
+
+        autoMapStatus('сражение → выход',{
+          revision:HK_BATTLE_ACTIVATED_EXIT_REV,
+          claimedAt:battleFinalRewardClaimedAt
+        });
+
+        autoMapRunning=true;
+        const exitRunId=autoMapRunId;
+        try {
+          const left=await autoMapHandleExitOrContinue();
+          if (!left) {
+            autoMapRetryNotBefore=Math.max(autoMapRetryNotBefore,Date.now()+450);
+            setTimeout(()=>void runAutoMapTick('battle-activated-exit-retry'),560);
+          }
+          return left;
+        } finally {
+          if (exitRunId===autoMapRunId) autoMapRunning=false;
+        }
+      }
+
       // A completed Treasury is a navigation handoff, not another chest
       // purchase. Detect it from the visible screen even if the claimed chest's
       // lot-id changed after activation. During a previous retry cooldown we do
@@ -24652,6 +24736,12 @@
       const lights = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')].filter(visible);
       if (lights.length === 9) return 'LIGHTS|' + lights.map(element => element.getAttribute('data-lot-id')).join('|');
 
+      // A settled "Активировано" final chest is stronger evidence than the
+      // stale sword/bones DOM the game keeps mounted after reward collection.
+      if (battleRecoverFinalRewardClaimed('signature')) {
+        return 'BATTLE_COMPLETE|mf_fairlot_minigame_fight_room_big_chest';
+      }
+
       // Reward state is authoritative and must outrank stale sword/enemy DOM.
       // The game keeps battle elements mounted while the victory chest is shown.
       const victory=battleVictoryElement();
@@ -24886,6 +24976,7 @@
       treasureKeyAnyRarityRevision:HK_TREASURE_KEY_ANY_RARITY_REV,
       battleRewardStateMachineRevision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
       battleOverlaySafeTargetingRevision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
+      battleActivatedExitRevision:HK_BATTLE_ACTIVATED_EXIT_REV,
       start,
       stop,
       check:checkPuzzle,

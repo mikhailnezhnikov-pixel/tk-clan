@@ -1,0 +1,17 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.60
+target_version=1.18.61
+marker=battle-activated-final-reward-exit-20260928-r1
+source_sha256=0f6baeff13769e53db3de44377b6b5717adc435c018b1136766cbc541aee4506
+candidate_sha256=dc4af0d2d758386b38b8ba32449880e968f9bec6be869553721b4ba7f7d1f965
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+treasure_regression_contract=PASS
+treasure_lights_resume_contract=PASS
+treasure_lights_outer_modal_contract=PASS
+treasure_chest_fast_pacing_contract=PASS
+treasure_treasury_loop_contract=PASS
+treasure_battle_full_clear_contract=PASS
+treasure_battle_achievement_contract=PASS
+ci_game_mutations=NONE
