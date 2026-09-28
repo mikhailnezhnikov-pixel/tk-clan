@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.78
+// @version      1.18.79
+// @release-note Сражение: яйцо mf_fight_egg_* за 1 ягоду теперь выкупается до атак. Поле боя рассчитывается по полному состоянию fair_mini_game_fight, а не только по видимым карточкам мобильного экрана; поэтому порядок ударов строится сразу по всей сетке 4×3. Для цели, которая ещё не смонтирована в DOM, скрипт сам доводит её до viewport только в момент клика.
 // @release-note Охота за сундуками: видимый неактивированный сундук теперь всегда считается незавершённой целью. Красный/таинственный и другие найденные сундуки забираются раньше оставшихся раскопок; backend-флаг is_bought больше не может ошибочно скрыть уже открытый на поле сундук. Добавлено распознавание новых типов ключей и стоимости прямо с карточки.
 // @release-note Охота за сундуками: добавлен выкуп отдельного лота ключа сокровищ за ягоды. Карточка ключа теперь распознаётся по ключевому предмету/иконке, стоимость берётся из каталога или с карточки, и при достаточном балансе покупка имеет приоритет перед раскопками и сундуками.
 // @release-note Тайный торговец: «Золотые монеты» полностью исключены из автопокупки. Лоты verse_gold4coins / verse_gold4food больше не выбираются и не подтверждаются; если такое окно уже открыто, автомат закрывает его и продолжает с разрешёнными товарами.
@@ -24,7 +25,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.78';
+  const BUILD_VERSION = '1.18.79';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3641,6 +3642,8 @@
   const HK_TRADER_GOLD_SKIP_REV='trader-gold-currency-skip-20260928-r1';
   const HK_CHEST_KEY_OFFER_REV='chest-key-offer-buy-20260928-r1';
   const HK_CHEST_VISIBLE_CLAIM_REV='chest-visible-claim-priority-20260928-r1';
+  const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
+  const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -20697,12 +20700,79 @@
     }
 
     function battleElementForSlot(slot) {
+      const wanted=Number(slot);
+      const boardRow=getBattleBoard()[wanted-BATTLE_FIRST_SLOT];
+      if (boardRow?.element?.isConnected) return boardRow.element;
+
       const elements=[...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_type_"]')];
       return elements.find(element=>{
         const id=element.getAttribute('data-lot-id')||'';
         const match=id.match(/enemy_type_(01|02|03|04)_(\d+)_sl(\d+)/);
-        return !!match && Number(match[3])===Number(slot);
+        return !!match && Number(match[3])===wanted;
       }) || null;
+    }
+
+    function battleScrollHost() {
+      const seed=document.querySelector(
+        '[data-lot-id^="mf_treasurelot_sword_"],[data-lot-id*="mf_treasurelot_enemy_type_"],[data-lot-id^="mf_fight_egg_"]'
+      );
+      let node=seed?.parentElement || null;
+      for (let depth=0;node && depth<10;depth++,node=node.parentElement) {
+        try {
+          const style=getComputedStyle(node);
+          if (/(auto|scroll)/.test(style.overflowY||'') && node.scrollHeight>node.clientHeight+80) return node;
+        } catch (_) {}
+      }
+      return document.scrollingElement || document.documentElement;
+    }
+
+    async function battleEnsureLotElement(lotId,slot,runId) {
+      let element=battleFindLotElement(lotId);
+      if (element) return element;
+
+      const host=battleScrollHost();
+      if (!host) return null;
+      const isWindowHost=host===document.scrollingElement || host===document.documentElement || host===document.body;
+      const max=Math.max(0,(isWindowHost?document.documentElement.scrollHeight:host.scrollHeight)-
+        (isWindowHost?window.innerHeight:host.clientHeight));
+      const original=isWindowHost ? window.scrollY : host.scrollTop;
+      const row=Math.max(0,Math.min(BATTLE_ROWS-1,Math.floor((Number(slot)-BATTLE_FIRST_SLOT)/BATTLE_COLS)));
+      const preferred=max*(row/Math.max(1,BATTLE_ROWS-1));
+      const positions=[preferred,0,max*0.34,max*0.67,max];
+
+      for (const position of positions) {
+        if (runId!==battleAutoRunId || !battleAutoEnabled()) return null;
+        try {
+          if (isWindowHost) window.scrollTo(0,Math.max(0,position));
+          else host.scrollTop=Math.max(0,position);
+        } catch (_) {}
+        await new Promise(resolve=>setTimeout(resolve,90));
+        element=battleFindLotElement(lotId);
+        if (element) {
+          recordDiagnostic('battle-target-auto-mounted',{
+            revision:HK_BATTLE_FULL_STATE_REV,
+            lotId,
+            slot:Number(slot)||0,
+            scrollPosition:Math.round(position)
+          });
+          return element;
+        }
+      }
+
+      try {
+        if (isWindowHost) window.scrollTo(0,original);
+        else host.scrollTop=original;
+      } catch (_) {}
+      return null;
+    }
+
+    async function battleEnsureElementForSlot(slot,runId) {
+      const row=getBattleBoard()[Number(slot)-BATTLE_FIRST_SLOT];
+      const lotId=String(row?.lotId||'');
+      let element=battleElementForSlot(slot);
+      if (element) return element;
+      if (!lotId) return null;
+      return await battleEnsureLotElement(lotId,slot,runId);
     }
 
     function battleSwordElement() {
@@ -21938,9 +22008,9 @@
       });
       try {
         if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
-        const element=battleElementForSlot(slot);
+        const element=await battleEnsureElementForSlot(slot,runId);
         if (!element) {
-          recordDiagnostic('battle-auto-stop',{revision:HK_BATTLE_MODAL_CONFIRM_REV,reason:'target-missing',slot});
+          recordDiagnostic('battle-auto-stop',{revision:HK_BATTLE_FULL_STATE_REV,reason:'target-missing-after-auto-mount',slot});
           return false;
         }
         const expectedCost=battleCostForElement(element);
@@ -22336,7 +22406,39 @@
       return true;
     }
 
+    function battleFairState() {
+      return fairState('fair_mini_game_fight',playerDocument)
+        || fairState('fair_mini_game_fight',fairDocument)
+        || null;
+    }
+
+    function battleFairSlots() {
+      const state=battleFairState();
+      const rows=state?.fair_slots || state?.slots || [];
+      return Array.isArray(rows) ? rows : [];
+    }
+
+    function battleFindLotElement(lotId) {
+      const wanted=String(lotId||'');
+      if (!wanted) return null;
+      return [...document.querySelectorAll('[data-lot-id]')]
+        .find(element=>element?.isConnected && String(element.getAttribute('data-lot-id')||'')===wanted) || null;
+    }
+
+    function battleRawContextPresent() {
+      return !!document.querySelector(
+        '[data-lot-id^="mf_treasurelot_sword_"],[data-lot-id*="mf_treasurelot_enemy_type_"],[data-lot-id^="mf_fight_egg_"]'
+      );
+    }
+
     function getBattleAttack() {
+      for (const slot of battleFairSlots()) {
+        if (slot?.is_bought===true) continue;
+        const id=String(slot?.shop_lot_id||'');
+        const match=id.match(/mf_treasurelot_sword_\d+_(\d+)/);
+        if (match) return Number(match[1]);
+      }
+
       const sword = document.querySelector('[data-lot-id^="mf_treasurelot_sword_"]');
       if (!sword) return null;
       const id = sword.getAttribute('data-lot-id') || '';
@@ -22346,6 +22448,45 @@
 
     function getBattleBoard() {
       const board = new Array(BATTLE_SIZE).fill(null);
+      let fairEnemies=0;
+
+      // Canonical source: full fight fair state. Mobile Safari may only mount a
+      // viewport-sized subset of the 4x3 field, but fair_mini_game_fight always
+      // carries every slot and therefore must drive the solver.
+      for (const row of battleFairSlots()) {
+        if (row?.is_bought===true) continue;
+        const id=String(row?.shop_lot_id||'');
+        const match=id.match(/enemy_type_(01|02|03|04)_(\d+)_sl(\d+)/);
+        if (!match) continue;
+        const type=match[1];
+        const hp=Number(match[2]);
+        const slot=Number(match[3]);
+        const position=slot-BATTLE_FIRST_SLOT;
+        if (position<0 || position>=BATTLE_SIZE) continue;
+        board[position]={
+          type,
+          hp,
+          alive:true,
+          element:battleFindLotElement(id),
+          slot,
+          lotId:id,
+          source:'fair'
+        };
+        fairEnemies+=1;
+      }
+
+      if (fairEnemies>0) {
+        recordDiagnostic('battle-full-board-state',{
+          revision:HK_BATTLE_FULL_STATE_REV,
+          source:'fair_mini_game_fight',
+          enemies:fairEnemies,
+          slots:board.map(enemy=>enemy?.slot||null)
+        });
+        return board;
+      }
+
+      // DOM fallback for the short interval before the current fair state is
+      // captured. Do not filter by viewport visibility.
       const enemies = [...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_type_"]')];
       enemies.forEach(element => {
         const id = element.getAttribute('data-lot-id') || '';
@@ -22356,9 +22497,62 @@
         const slot = Number(match[3]);
         const position = slot - BATTLE_FIRST_SLOT;
         if (position < 0 || position >= BATTLE_SIZE) return;
-        board[position] = {type,hp,alive:true,element,slot};
+        board[position] = {type,hp,alive:true,element,slot,lotId:id,source:'dom'};
       });
       return board;
+    }
+
+    function battleEggOfferCost(lotId,element=null) {
+      const id=String(lotId||'');
+      if (!/^mf_fight_egg_/i.test(id)) return null;
+
+      const catalog=fairCatalog.find(row=>String(row?.lotId||'')===id) || null;
+      const parts=costParts(catalog?.cost).filter(part=>part.quantity>0);
+      if (parts.length===1 &&
+          String(parts[0].id)==='item_treasurehunt_energy' &&
+          Number(parts[0].quantity)===1) {
+        return {id:'item_treasurehunt_energy',quantity:1};
+      }
+
+      // Known fight-egg cards are the one-berry bonus. When shop/view metadata
+      // is not loaded, verify the live card where possible and use the canonical
+      // one-berry cost for this exact lot family.
+      if (element) {
+        const text=clean(element.innerText||element.textContent||'');
+        const assets=[...element.querySelectorAll?.('img')||[]]
+          .map(img=>String(img.alt||'')+' '+String(img.src||'')).join(' ').toLowerCase();
+        const hasOne=/(?:^|\s)1(?:\s|$)/.test(text);
+        const hasBerry=/treasurehunt_energy|berry|ягод/i.test(assets+' '+text);
+        if (hasOne && hasBerry) return {id:'item_treasurehunt_energy',quantity:1};
+      }
+
+      return {id:'item_treasurehunt_energy',quantity:1};
+    }
+
+    function battleEggOfferTarget() {
+      for (const row of battleFairSlots()) {
+        if (row?.is_bought===true) continue;
+        const lotId=String(row?.shop_lot_id||'');
+        if (!/^mf_fight_egg_/i.test(lotId)) continue;
+        const slot=Number(row?.id ?? lotId.match(/_sl(\d+)$/)?.[1]);
+        const element=battleFindLotElement(lotId);
+        const cost=battleEggOfferCost(lotId,element);
+        if (!cost) continue;
+        const balance=walletAmount(cost.id);
+        if (balance!==null && balance<cost.quantity) continue;
+        return {lotId,slot,element,cost};
+      }
+
+      // DOM fallback if the fair response has not reached the shared store yet.
+      const element=[...document.querySelectorAll('[data-lot-id^="mf_fight_egg_"]')]
+        .find(node=>node?.isConnected) || null;
+      if (!element) return null;
+      const lotId=String(element.getAttribute('data-lot-id')||'');
+      const cost=battleEggOfferCost(lotId,element);
+      const balance=walletAmount(cost?.id);
+      if (!cost || (balance!==null && balance<cost.quantity)) return null;
+      const slot=Number(lotId.match(/_sl(\d+)$/)?.[1]||0);
+      return {lotId,slot,element,cost};
     }
 
     function battleNeighbours(position) {
@@ -22467,6 +22661,7 @@
       // state until the battle actually mutates/removes those lots.
       const enemies=board.filter(enemy=>enemy!==null);
       const swords=getBattleAttack();
+      const eggOffer=battleEggOfferTarget();
       const activatedSettled=battleRecoverFinalRewardClaimed('exit-state');
       const rewardConfirmPending=battleRewardConfirmOnlyPending();
       const rewardPending=!!battleVictoryElement() || !!battleVictoryModalRoot() || rewardConfirmPending;
@@ -22488,6 +22683,19 @@
           enemies:enemies.length,
           attackable:0,
           claimedAt:battleFinalRewardClaimedAt
+        };
+      }
+
+      if (eggOffer) {
+        return {
+          inBattle:true,
+          allowed:false,
+          reason:'one-berry-egg-pending',
+          swords,
+          enemies:enemies.length,
+          attackable:0,
+          eggLotId:eggOffer.lotId,
+          eggSlot:eggOffer.slot
         };
       }
 
@@ -22842,6 +23050,92 @@
       return null;
     }
 
+    async function runBattleEggOffer(target) {
+      if (!target || !battleAutoEnabled() || battleAutoRunning) return false;
+      battleAutoRunning=true;
+      const runId=++battleAutoRunId;
+      const beforeSignature=getSignature();
+
+      try {
+        let element=target.element;
+        if (!element?.isConnected) {
+          element=await battleEnsureLotElement(target.lotId,target.slot,runId);
+        }
+        if (!element) {
+          recordDiagnostic('battle-egg-buy-stop',{
+            revision:HK_BATTLE_EGG_BERRY_REV,
+            reason:'egg-card-not-mounted',
+            lotId:target.lotId,
+            slot:target.slot
+          });
+          return false;
+        }
+
+        if (!dispatchBattleOverlaySafeTap(element,'battle-egg-one-berry-card')) return false;
+
+        let modal=null;
+        const openedAt=Date.now();
+        while (Date.now()-openedAt<2200 && runId===battleAutoRunId && battleAutoEnabled()) {
+          modal=treasureModalRoot(target.cost);
+          if (modal) break;
+          const current=battleEggOfferTarget();
+          if (!current || current.lotId!==target.lotId) break;
+          await new Promise(resolve=>setTimeout(resolve,70));
+        }
+
+        if (modal) {
+          let action=null;
+          const actionAt=Date.now();
+          while (Date.now()-actionAt<1800 && runId===battleAutoRunId && battleAutoEnabled()) {
+            action=treasureActionButton(modal,target.cost);
+            if (action) break;
+            await new Promise(resolve=>setTimeout(resolve,70));
+          }
+          if (!action) {
+            recordDiagnostic('battle-egg-buy-stop',{
+              revision:HK_BATTLE_EGG_BERRY_REV,
+              reason:'purchase-button-missing',
+              lotId:target.lotId
+            });
+            return false;
+          }
+          await new Promise(resolve=>setTimeout(resolve,minigameRandomMs(100,180)));
+          if (!dispatchBattleOverlaySafeTap(action,'battle-egg-one-berry-confirm')) return false;
+        }
+
+        const settledAt=Date.now();
+        let bought=false;
+        while (Date.now()-settledAt<3600 && runId===battleAutoRunId && battleAutoEnabled()) {
+          const current=battleEggOfferTarget();
+          if (!current || current.lotId!==target.lotId) { bought=true; break; }
+          const reward=battleRewardDismissButton();
+          if (reward) break;
+          if (getSignature()!==beforeSignature && !battleFindLotElement(target.lotId)) { bought=true; break; }
+          await new Promise(resolve=>setTimeout(resolve,90));
+        }
+
+        const reward=await waitBattleRewardDismissButton(runId,900);
+        if (reward) {
+          dispatchBattleOverlaySafeTap(reward,'battle-egg-one-berry-reward');
+          await new Promise(resolve=>setTimeout(resolve,180));
+          bought=true;
+        }
+
+        recordDiagnostic('battle-egg-buy-complete',{
+          revision:HK_BATTLE_EGG_BERRY_REV,
+          lotId:target.lotId,
+          slot:target.slot,
+          cost:target.cost,
+          success:!!bought
+        });
+        return !!bought;
+      } finally {
+        if (runId===battleAutoRunId) battleAutoRunning=false;
+        lastSignature='';
+        setTimeout(checkPuzzle,120);
+      }
+    }
+
     function runBattle() {
       // AutoMap owns orchestration, but battle always keeps attacking while at
       // least one legal target exists. It is NOT necessary to prove that the
@@ -22850,6 +23144,19 @@
         autoMapStatus('сражение',{
           revision:HK_BATTLE_STRICT_EXIT_REV
         });
+      }
+
+      const eggOffer=battleEggOfferTarget();
+      if (eggOffer) {
+        if (autoMapEnabled()) {
+          autoMapStatus('сражение → яйцо за 1 ягоду',{
+            revision:HK_BATTLE_EGG_BERRY_REV,
+            lotId:eggOffer.lotId,
+            slot:eggOffer.slot
+          });
+        }
+        if (battleAutoEnabled() && !battleAutoRunning) void runBattleEggOffer(eggOffer);
+        return true;
       }
 
       const maxAttack = getBattleAttack();
@@ -25323,14 +25630,15 @@
       if (battleRewardConfirmOnlyPending()) return 'BATTLE_REWARD_CONFIRM|final';
 
       const sword = battleSwordElement();
-      const enemies = [...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_type_"]')].filter(visible);
-      if (sword && enemies.length > 0) {
-        const battleIds='|' + sword.getAttribute('data-lot-id') + '|' +
-          enemies.map(element => element.getAttribute('data-lot-id')).join('|');
-        // Once the user has entered the battle, unopened/covered enemy cards are
-        // still part of the real board. Their visual "bones" state must never
-        // downgrade the screen back to preview.
-        return 'BATTLE' + battleIds;
+      const rawBattleContext=battleRawContextPresent();
+      const battleBoard=getBattleBoard();
+      const fullEnemies=battleBoard.filter(enemy=>enemy!==null);
+      const swords=getBattleAttack();
+      if (rawBattleContext && Number.isFinite(swords) && fullEnemies.length > 0) {
+        const battleIds='|SWORDS='+String(swords)+'|' +
+          fullEnemies.map(enemy=>enemy.lotId || (enemy.type+':'+enemy.hp+':sl'+enemy.slot)).join('|');
+        const egg=battleEggOfferTarget();
+        return 'BATTLE' + battleIds + (egg ? '|EGG='+egg.lotId : '');
       }
 
       // Preview/entry card may exist in DOM before the real enemy grid is visible.
@@ -25536,6 +25844,8 @@
       traderGoldSkipRevision:HK_TRADER_GOLD_SKIP_REV,
       chestKeyOfferRevision:HK_CHEST_KEY_OFFER_REV,
       chestVisibleClaimRevision:HK_CHEST_VISIBLE_CLAIM_REV,
+      battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
+      battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
