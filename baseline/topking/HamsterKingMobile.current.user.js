@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.81
+// @version      1.18.82
+// @release-note Сражение: убран ошибочный запрет на атаки нижних рядов на больших экранах. Если центр карточки врага реально видим и elementFromPoint подтверждает, что клик попадает именно в неё, атака разрешается независимо от процента высоты экрана. Прокрутка выполняется только когда цель вне viewport или реально перекрыта нижней панелью.
 // @release-note 28.09 · Интерфейс: вместо оранжевого кружка HK плавающая кнопка панели теперь показывает каноничный герб Top King из репозитория.
 // @release-note Сражение: исправлен мобильный клик по нижним врагам. Перед ударом выбранная карточка теперь обязательно прокручивается в безопасную центральную область, скрипт ждёт завершения прокрутки и проверяет, что точка клика действительно принадлежит карточке врага, а не закреплённой кнопке «Покинуть локацию».
 // @release-note Сражение: яйцо mf_fight_egg_* за 1 ягоду теперь выкупается до атак. Поле боя рассчитывается по полному состоянию fair_mini_game_fight, а не только по видимым карточкам мобильного экрана; поэтому порядок ударов строится сразу по всей сетке 4×3. Для цели, которая ещё не смонтирована в DOM, скрипт сам доводит её до viewport только в момент клика.
@@ -27,7 +28,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.81';
+  const BUILD_VERSION = '1.18.82';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3649,6 +3650,7 @@
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
   const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
   const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
+  const HK_BATTLE_VISIBLE_POINT_TRUTH_REV='battle-visible-point-truth-20260929-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -21105,15 +21107,13 @@
     }
 
     function battleTargetSafeBand(element) {
+      // The real clickability test is elementFromPoint ownership, not an
+      // arbitrary percentage of viewport height. On desktop and tall phones a
+      // perfectly clickable last row can naturally sit below 68% of the screen.
+      // If the game footer truly covers it, battleElementTapProbe() reports the
+      // footer as the leaf and returns ready:false.
       const probe=battleElementTapProbe(element);
-      if (!probe.ready) return false;
-      const cy=probe.y;
-      // Keep enemy cards away from the sticky game footer / Safari toolbar and
-      // away from the top navigation. The middle of the visual viewport is the
-      // only device-neutral click area shared by iPhone, tablet and desktop.
-      const top=Math.max(90,window.innerHeight*0.24);
-      const bottom=Math.min(window.innerHeight-140,window.innerHeight*0.68);
-      return cy>=top && cy<=Math.max(top+40,bottom);
+      return !!probe.ready;
     }
 
     function battleNextPaint() {
@@ -21128,7 +21128,16 @@
 
     async function battleScrollTargetIntoViewportAsync(element,label='battle-target',runId=null) {
       if (!element || !element.isConnected) return false;
-      if (battleTargetSafeBand(element)) return true;
+      const initialProbe=battleElementTapProbe(element);
+      if (initialProbe.ready) {
+        recordDiagnostic('battle-target-already-clickable',{
+          revision:HK_BATTLE_VISIBLE_POINT_TRUTH_REV,
+          label,
+          centerY:Math.round(initialProbe.y||0),
+          viewportHeight:window.innerHeight
+        });
+        return true;
+      }
 
       const before=element.getBoundingClientRect?.();
       try {
@@ -21141,7 +21150,7 @@
       if (runId!==null && (runId!==battleAutoRunId || !battleAutoEnabled())) return false;
 
       let probe=battleElementTapProbe(element);
-      if (!probe.ready || !battleTargetSafeBand(element)) {
+      if (!probe.ready) {
         const host=battleScrollHost();
         const isWindowHost=!host ||
           host===document.scrollingElement ||
@@ -21169,7 +21178,7 @@
         probe=battleElementTapProbe(element);
       }
 
-      const success=probe.ready && battleTargetSafeBand(element);
+      const success=!!probe.ready;
       const after=element.getBoundingClientRect?.();
       recordDiagnostic('battle-target-safe-scroll',{
         revision:HK_BATTLE_TARGET_SCROLL_REV,
@@ -22140,10 +22149,10 @@
         }
         const expectedCost=battleCostForElement(element);
         const targetProbe=battleElementTapProbe(element);
-        if (!targetProbe.ready || !battleTargetSafeBand(element)) {
+        if (!targetProbe.ready) {
           recordDiagnostic('battle-auto-stop',{
             revision:HK_BATTLE_TARGET_SCROLL_REV,
-            reason:'target-not-safe-after-scroll',
+            reason:'target-not-clickable-after-scroll',
             slot,
             expectedCost,
             probeReason:targetProbe.reason,
@@ -25985,6 +25994,7 @@
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
       battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
       battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
+      battleVisiblePointTruthRevision:HK_BATTLE_VISIBLE_POINT_TRUTH_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
