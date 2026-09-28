@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.71
+// @version      1.18.72
+// @release-note Карта сокровищ — Место раскопок: убраны длинные искусственные паузы только для раскопок. Открытие клетки, подтверждение стоимости 5 ягод, ожидание результата и переход к следующему действию теперь выполняются быстрым отдельным темпом; обычные сундуки и защитные таймауты не ускорялись.
 // @release-note Тайный торговец: после успешной покупки окно получения награды с кнопкой «Понятно» теперь является обязательным этапом. Автомат находит реальный кликабельный контейнер кнопки, подтверждает награду с touch/click fallback и только после закрытия окна продолжает покупки или выходит из комнаты.
 // @release-day  2026-09-28
 // @release-note 28.09 · Магазин ресурсов: оставлены крупные пакеты, добавлен выбор 10–100% от доступного максимума.
@@ -17,7 +18,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.71';
+  const BUILD_VERSION = '1.18.72';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3627,6 +3628,7 @@
   const HK_TREASURE_LIGHTS_RESUME_REV='treasure-lights-resume-open-modal-20260927-r1';
   const HK_TREASURE_LIGHTS_OUTER_MODAL_REV='treasure-lights-outer-modal-20260927-r1';
   const HK_TREASURE_CHEST_FAST_PACING_REV='treasure-chest-fast-pacing-20260927-r1';
+  const HK_TREASURE_DIG_FAST_REV='treasure-dig-fast-pacing-20260928-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -18127,6 +18129,26 @@
       return waitMs;
     }
 
+    async function chestDigPause(stage='scan',data={}) {
+      const ranges={
+        scan:[90,160],
+        aim:[70,130],
+        confirm:[110,190],
+        settle:[180,300],
+        reward:[100,180]
+      };
+      const range=ranges[stage] || ranges.scan;
+      const waitMs=minigameRandomMs(range[0],range[1]);
+      recordDiagnostic('treasure-dig-fast-pause',{
+        revision:HK_TREASURE_DIG_FAST_REV,
+        stage,
+        waitMs,
+        ...data
+      });
+      await new Promise(resolve=>setTimeout(resolve,waitMs));
+      return waitMs;
+    }
+
     async function chestHumanPause(stage='scan',data={}) {
       return minigameDevicePause(stage,{...data,deviceNeutralModule:'chests'});
       const ranges={
@@ -21270,7 +21292,7 @@
       }
       let target=treasureChestTarget();
       if (!target) return false;
-      await chestHumanPause('scan',{module:'chests'});
+      await (target?.digging ? chestDigPause('scan',{module:'chests',lotId:target.lotId}) : chestHumanPause('scan',{module:'chests'}));
       if (!chestAutoEnabled()) return false;
       if (treasureChestBlockedByForegroundMap()) {
         lastSignature='';
@@ -21293,7 +21315,7 @@
       });
       try {
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
-        await chestHumanPause('aim',{module:'chests',lotId:target.lotId});
+        await (target.digging ? chestDigPause('aim',{module:'chests',lotId:target.lotId}) : chestHumanPause('aim',{module:'chests',lotId:target.lotId}));
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
         dispatchAutoMapTap(target.element,target.digging?'chest-dig-spot':'chest-open-card');
 
@@ -21304,7 +21326,7 @@
         }
 
         let action=await waitTreasureActionButton(modal,target.cost,runId);
-        await chestHumanPause('confirm',{module:'chests',lotId:target.lotId});
+        await (target.digging ? chestDigPause('confirm',{module:'chests',lotId:target.lotId}) : chestHumanPause('confirm',{module:'chests',lotId:target.lotId}));
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
         let tapped=false;
         if (action) tapped=dispatchAutoMapTap(action,target.digging?'chest-dig-confirm':'chest-open-confirm');
@@ -21323,7 +21345,7 @@
           await new Promise(resolve=>setTimeout(resolve,100));
         }
 
-        await chestHumanPause('settle',{module:'chests',lotId:target.lotId});
+        await (target.digging ? chestDigPause('settle',{module:'chests',lotId:target.lotId}) : chestHumanPause('settle',{module:'chests',lotId:target.lotId}));
         const rewards=await dismissTreasureRewards(runId);
         recordDiagnostic('chest-auto-complete',{
           revision:HK_CHEST_AUTO_REV,
@@ -21337,7 +21359,7 @@
       } finally {
         if (runId===chestAutoRunId) chestAutoRunning=false;
         lastSignature='';
-        setTimeout(checkPuzzle,minigameRandomMs(950,1450));
+        setTimeout(checkPuzzle,target?.digging ? minigameRandomMs(180,320) : minigameRandomMs(950,1450));
       }
     }
 
@@ -25298,6 +25320,7 @@
       treasureLightsResumeRevision:HK_TREASURE_LIGHTS_RESUME_REV,
       treasureLightsOuterModalRevision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
       treasureChestFastPacingRevision:HK_TREASURE_CHEST_FAST_PACING_REV,
+      treasureDigFastRevision:HK_TREASURE_DIG_FAST_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
