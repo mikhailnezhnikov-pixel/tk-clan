@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.67
+// @version      1.18.68
+// @release-note Карта сокровищ: сражение само прокручивает выбранного врага/кнопку атаки в видимую область перед кликом и возобновляет цикл после возврата во вкладку/на экран. Торговец: после покупки ключа окно «... ключ сокровищ → Понятно» теперь является отдельным обязательным этапом — подтверждается и Автокарта продолжает маршрут.
 // @release-note Магазин: процент 10–100% для крупных ресурсных лотов теперь реально виден в карточке. Убрано старое CSS-правило, скрывавшее блок количества у покупок за крышки; добавлено явное оформление селектора и расчётного количества.
 // @release-note Магазин: в Обычном магазине → Ресурсы оставлены только крупнейшие пакеты ×100 для Тиров 1–5; для каждого доступен выбор 10–100% текущего максимума с шагом 10. Выбранный процент пересчитывается по свежему балансу перед покупкой.
 // @release-note Лабиринт — лампочки: автомат исполняет неизменный план первоначального hint-only решателя. Исправлен цикл карты №6: после «Понятно» старый поиск мог принять контейнер поля за модалку, а координатный fallback повторно нажимал третью лампу. Модалка определяется только по точному заголовку, контейнеры с 3×3 полем исключены, одна плановая клетка не может быть исполнена дважды. Сундук и подтверждение награды обязательны до выхода.
@@ -179,7 +180,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.67';
+  const BUILD_VERSION = '1.18.68';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17991,6 +17992,8 @@
   const HK_DEVICE_NEUTRAL_MINIGAME_REV = 'device-neutral-minigame-20260928-r1';
   const HK_TREASURE_KEY_BATTLE_HANDOFF_REV = 'treasure-key-battle-handoff-20260928-r1';
   const HK_TREASURE_KEY_ANY_RARITY_REV = 'treasure-key-any-rarity-20260928-r1';
+  const HK_TREASURE_KEY_ACK_REV = 'treasure-key-ack-after-purchase-20260928-r1';
+  const HK_BATTLE_VIEWPORT_RESUME_REV = 'battle-viewport-scroll-resume-20260928-r1';
   const HK_BATTLE_REWARD_STATE_MACHINE_REV = 'battle-reward-state-machine-20260928-r1';
   const HK_BATTLE_OVERLAY_SAFE_TARGETING_REV = 'battle-overlay-safe-targeting-20260928-r1';
   const HK_BATTLE_ACTIVATED_EXIT_REV = 'battle-activated-final-reward-exit-20260928-r1';
@@ -20875,13 +20878,54 @@
       }
     }
 
-    function dispatchBattleOverlaySafeTap(element,label='battle-overlay-safe-tap') {
-      if (!element || !visible(element)) return false;
+    function battleElementInViewport(element) {
+      if (!element || !element.isConnected) return false;
       const rect=element.getBoundingClientRect?.();
       if (!rect || rect.width<=0 || rect.height<=0) return false;
+      const cx=rect.left+rect.width/2;
+      const cy=rect.top+rect.height/2;
+      return cx>=1 && cx<=window.innerWidth-1 && cy>=1 && cy<=window.innerHeight-1;
+    }
+
+    function battleScrollTargetIntoViewport(element,label='battle-target') {
+      if (!element || !element.isConnected) return false;
+      if (battleElementInViewport(element)) return true;
+      try {
+        element.scrollIntoView({behavior:'auto',block:'center',inline:'center'});
+      } catch (_) {
+        try { element.scrollIntoView(); } catch (_) {}
+      }
+      const inViewport=battleElementInViewport(element);
+      recordDiagnostic('battle-target-scroll',{
+        revision:HK_BATTLE_VIEWPORT_RESUME_REV,
+        label,
+        success:inViewport
+      });
+      return inViewport;
+    }
+
+    function dispatchBattleOverlaySafeTap(element,label='battle-overlay-safe-tap') {
+      if (!element || !element.isConnected) return false;
+      battleScrollTargetIntoViewport(element,label);
+      const rect=element.getBoundingClientRect?.();
+      if (!rect || rect.width<=0 || rect.height<=0) return false;
+
+      if (!battleElementInViewport(element)) {
+        try {
+          element.click?.();
+          recordDiagnostic('battle-native-offscreen-click',{
+            revision:HK_BATTLE_VIEWPORT_RESUME_REV,
+            label
+          });
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+
       const x=Math.max(1,Math.min(window.innerWidth-1,rect.left+rect.width/2));
       const y=Math.max(1,Math.min(window.innerHeight-1,rect.top+rect.height/2));
-      const leaf=battleElementFromPointIgnoringOverlays(x,y,element);
+      const leaf=battleElementFromPointIgnoringOverlays(x,y,element) || element;
       if (!leaf) return false;
       const options={bubbles:true,cancelable:true,clientX:x,clientY:y,screenX:x,screenY:y,button:0,buttons:1,pointerId:1,pointerType:'touch',isPrimary:true};
       try { leaf.dispatchEvent(new PointerEvent('pointerdown',options)); } catch (_) {}
@@ -20890,12 +20934,13 @@
       try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
       try { leaf.click?.(); } catch (_) {}
       recordDiagnostic('battle-overlay-safe-tap',{
-        revision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
+        revision:HK_BATTLE_VIEWPORT_RESUME_REV,
         label,
         x:Math.round(x),
         y:Math.round(y),
         tag:leaf.tagName||'',
-        overlaysIgnored:overlays.length
+        overlaysIgnored:battleUiOverlays().length,
+        autoScrolled:true
       });
       return true;
     }
@@ -23999,6 +24044,66 @@
       return rows[0]?.element || null;
     }
 
+    function autoMapTreasureKeyAcknowledgeButton(root=autoMapTreasureKeyModalRoot()) {
+      if (!root) return null;
+      const exact=/^(?:Понятно|Got it|Understood|OK|Okay)$/i;
+      const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && element!==autoMapToggle && !element.disabled && visible(element))
+        .map(element=>({
+          element,
+          text:clean(element.innerText||element.textContent||'').trim(),
+          rect:element.getBoundingClientRect?.() || {width:0,height:0}
+        }))
+        .filter(row=>exact.test(row.text))
+        .filter(row=>row.rect.width>0 && row.rect.height>0)
+        .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height);
+      return rows[0]?.element || null;
+    }
+
+    async function autoMapAcknowledgeTreasureKey(root=autoMapTreasureKeyModalRoot(),source='key-modal') {
+      if (!autoMapEnabled() || !root) return false;
+      const ack=autoMapTreasureKeyAcknowledgeButton(root);
+      if (!ack) return false;
+
+      await autoMapWaitActionGap();
+      if (!autoMapEnabled()) return false;
+      const beforeRoot=root;
+      autoMapActionCount+=1;
+      autoMapLastActionAt=Date.now();
+      autoMapStatus('ключ · подтверждаю',{
+        revision:HK_TREASURE_KEY_ACK_REV,
+        source
+      });
+
+      const accepted=()=> {
+        const current=autoMapTreasureKeyModalRoot();
+        return !current || current!==beforeRoot || !autoMapTreasureKeyAcknowledgeButton(current);
+      };
+
+      let ok=await deviceNeutralActivate(ack,'treasure-key-ack-'+source,accepted,1400);
+      if (!ok && ack.isConnected) {
+        const sent=dispatchAutoMapTap(ack,'treasure-key-ack-fallback-'+source);
+        if (sent) ok=await waitDeviceNeutralCondition(accepted,1600,70);
+      }
+
+      recordDiagnostic('treasure-key-acknowledged',{
+        revision:HK_TREASURE_KEY_ACK_REV,
+        source,
+        success:!!ok
+      });
+
+      if (ok) {
+        autoMapRetryNotBefore=0;
+        autoMapCurrentLot='';
+        lastSignature='';
+        setTimeout(()=>{
+          checkPuzzle();
+          void runAutoMapTick('treasure-key-acknowledged');
+        },180);
+      }
+      return !!ok;
+    }
+
     function autoMapTreasureKeyPurchaseButton(root=autoMapTreasureKeyModalRoot()) {
       if (!root) return null;
       const rr=root.getBoundingClientRect?.();
@@ -24046,16 +24151,24 @@
 
     async function autoMapBuyTreasureKeyIfPresent() {
       if (!autoMapEnabled()) return false;
-      const root=autoMapTreasureKeyModalRoot();
+      let root=autoMapTreasureKeyModalRoot();
       if (!root) return false;
-      const target=autoMapTreasureKeyPurchaseButton(root);
+
+      const initialAck=autoMapTreasureKeyAcknowledgeButton(root);
+      const initialTarget=autoMapTreasureKeyPurchaseButton(root);
+      if (initialAck && !initialTarget?.element) {
+        return await autoMapAcknowledgeTreasureKey(root,'already-received');
+      }
+
+      const target=initialTarget;
       if (!target?.element) {
         autoMapStatus('ключ · жду кнопку',{
           revision:HK_TREASURE_KEY_ANY_RARITY_REV
         });
         recordDiagnostic('treasure-key-buy-button-missing',{
           revision:HK_TREASURE_KEY_ANY_RARITY_REV,
-          title:clean(root.innerText||root.textContent||'').slice(0,120)
+          title:clean(root.innerText||root.textContent||'').slice(0,120),
+          acknowledgementVisible:!!initialAck
         });
         return false;
       }
@@ -24076,14 +24189,28 @@
       if (!dispatchAutoMapTap(target.element,'treasure-key-buy-'+String(cost??'unknown'))) return false;
 
       const started=Date.now();
-      while (Date.now()-started<4500) {
+      while (Date.now()-started<5000) {
         if (runId!==autoMapRunId || !autoMapEnabled()) return false;
         const error=autoMapTransientError(startedAt);
         if (error) {
           autoMapBackoff(error,'treasure-key-buy-http-error');
           return false;
         }
-        if (!autoMapTreasureKeyModalRoot() || autoMapStateFingerprint()!==before) {
+
+        root=autoMapTreasureKeyModalRoot();
+        if (root) {
+          const ack=autoMapTreasureKeyAcknowledgeButton(root);
+          const purchase=autoMapTreasureKeyPurchaseButton(root);
+          if (ack && !purchase?.element) {
+            recordDiagnostic('treasure-key-receipt-visible',{
+              revision:HK_TREASURE_KEY_ACK_REV,
+              cost
+            });
+            return await autoMapAcknowledgeTreasureKey(root,'after-purchase');
+          }
+        }
+
+        if (!root || autoMapStateFingerprint()!==before) {
           recordDiagnostic('treasure-key-purchased',{
             revision:HK_TREASURE_KEY_ANY_RARITY_REV,
             cost
@@ -24095,11 +24222,12 @@
         await new Promise(resolve=>setTimeout(resolve,90));
       }
 
-      autoMapRetryNotBefore=Date.now()+1400;
+      autoMapRetryNotBefore=Date.now()+900;
       autoMapStatus('ключ · пересканирую',{
-        revision:HK_TREASURE_KEY_ANY_RARITY_REV,
+        revision:HK_TREASURE_KEY_ACK_REV,
         cost
       });
+      setTimeout(()=>void runAutoMapTick('treasure-key-post-buy-rescan'),980);
       return false;
     }
 
@@ -25111,6 +25239,21 @@
       if (isChests && chestAutoEnabled()) void runTreasureChestAuto();
     }
 
+    function resumePuzzleAutomation(source='resume-event') {
+      lastSignature='';
+      recordDiagnostic('minigame-automation-resume',{
+        revision:HK_BATTLE_VIEWPORT_RESUME_REV,
+        source,
+        hidden:!!document.hidden,
+        autoMap:autoMapEnabled(),
+        autoBattle:battleAutoEnabled()
+      });
+      setTimeout(()=>{
+        checkPuzzle();
+        if (autoMapEnabled()) void runAutoMapTick(source);
+      },80);
+    }
+
     function start() {
       if (intervalId !== null) return;
       initialTimerId = setTimeout(checkPuzzle,300);
@@ -25118,6 +25261,14 @@
       if (autoMapIntervalId!==null) clearInterval(autoMapIntervalId);
       autoMapIntervalId=setInterval(()=>void runAutoMapTick('interval'),AUTO_MAP_LOOP_MS);
       ensureAutoMapToggle();
+      if (!start.resumeListenersInstalled) {
+        start.resumeListenersInstalled=true;
+        document.addEventListener('visibilitychange',()=>{
+          if (!document.hidden) resumePuzzleAutomation('visibilitychange');
+        },{passive:true});
+        window.addEventListener('focus',()=>resumePuzzleAutomation('focus'),{passive:true});
+        window.addEventListener('pageshow',()=>resumePuzzleAutomation('pageshow'),{passive:true});
+      }
       if (autoMapEnabled()) {
         autoMapEnableModules();
         setTimeout(()=>void runAutoMapTick('resume'),120);
@@ -25227,6 +25378,8 @@
       lightsHintCanonExecRevision:HK_LIGHTS_HINT_CANON_EXEC_REV,
       lightsStrictModalRevision:HK_LIGHTS_STRICT_MODAL_REV,
       lightsRewardAckGateRevision:HK_LIGHTS_REWARD_ACK_GATE_REV,
+      treasureKeyAckRevision:HK_TREASURE_KEY_ACK_REV,
+      battleViewportResumeRevision:HK_BATTLE_VIEWPORT_RESUME_REV,
       start,
       stop,
       check:checkPuzzle,
