@@ -140,5 +140,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-76-trader-gold-skip-live-status.txt",
-  "commit_message": "fix: skip regular gold trader lots in userscript 1.18.76"
+  "commit_message": "fix: skip regular gold trader lots in userscript 1.18.76 r1"
 }
