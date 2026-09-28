@@ -35,11 +35,13 @@ for marker in [
     if marker not in s:
         raise SystemExit("required preserved marker missing: "+marker)
 
-# Ordinary chests must keep their established pacing.
+# Ordinary chest scan/aim/settle stay unchanged. Confirm may use the global
+# 100–180 ms purchase-confirm path introduced after 1.18.72.
+global_fast_confirm="purchase-confirm-fast-global-20260928-r1" in s
 for marker in [
   "scan:[600,950]",
   "aim:[380,650]",
-  "confirm:[650,1050]",
+  ("confirm:[100,180]" if global_fast_confirm else "confirm:[650,1050]"),
   "settle:[950,1500]",
 ]:
     if marker not in s:
