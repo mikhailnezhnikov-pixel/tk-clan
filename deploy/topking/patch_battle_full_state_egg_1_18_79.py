@@ -302,7 +302,8 @@ old_sig=r'''      const sword = battleSwordElement();
         return 'BATTLE' + battleIds;
       }
 '''
-new_sig=r'''      const rawBattleContext=battleRawContextPresent();
+new_sig=r'''      const sword = battleSwordElement();
+      const rawBattleContext=battleRawContextPresent();
       const battleBoard=getBattleBoard();
       const fullEnemies=battleBoard.filter(enemy=>enemy!==null);
       const swords=getBattleAttack();
