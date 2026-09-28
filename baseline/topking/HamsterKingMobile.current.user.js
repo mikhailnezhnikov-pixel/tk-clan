@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.82
+// @version      1.18.83
+// @release-note Тайный торговец: «Золотые монеты» теперь блокируются по итоговому товару (cur_gold/название/иконка), а не только по lotId. Если запрещённое окно каким-либо образом уже открылось и даже сохранилось после возврата на Карту сокровищ, Автокарта закрывает его как приоритетный stale-overlay, сбрасывает зависшее состояние и только потом продолжает маршрут.
 // @release-note Сражение: убран ошибочный запрет на атаки нижних рядов на больших экранах. Если центр карточки врага реально видим и elementFromPoint подтверждает, что клик попадает именно в неё, атака разрешается независимо от процента высоты экрана. Прокрутка выполняется только когда цель вне viewport или реально перекрыта нижней панелью.
 // @release-note 28.09 · Интерфейс: вместо оранжевого кружка HK плавающая кнопка панели теперь показывает каноничный герб Top King из репозитория.
 // @release-note Сражение: исправлен мобильный клик по нижним врагам. Перед ударом выбранная карточка теперь обязательно прокручивается в безопасную центральную область, скрипт ждёт завершения прокрутки и проверяет, что точка клика действительно принадлежит карточке врага, а не закреплённой кнопке «Покинуть локацию».
@@ -28,7 +29,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.82';
+  const BUILD_VERSION = '1.18.83';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3645,6 +3646,7 @@
   const HK_TREASURE_RECORDER_UI_REMOVED_REV='treasure-recorder-ui-removed-20260928-r1';
   const HK_FISHING_MODAL_BUDGET_REV='fishing-modal-budget-ownership-20260928-r1';
   const HK_TRADER_GOLD_SKIP_REV='trader-gold-currency-skip-20260928-r1';
+  const HK_TRADER_GOLD_STALE_MODAL_REV='trader-gold-stale-modal-reset-20260929-r1';
   const HK_CHEST_KEY_OFFER_REV='chest-key-offer-buy-20260928-r1';
   const HK_CHEST_VISIBLE_CLAIM_REV='chest-visible-claim-priority-20260928-r1';
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
@@ -18948,7 +18950,36 @@
       // These trader offers convert Treasure resources into the regular
       // account gold currency (cur_gold). They are intentionally never bought.
       return /verse_gold4(?:coins|food)/.test(id) ||
-        /(?:^|_)gold4(?:coins|food)(?:_|$)/.test(id);
+        /(?:^|_)gold4(?:coins|food)(?:_|$)/.test(id) ||
+        /(?:^|_)cur_gold(?:_|$)/.test(id);
+    }
+
+    function traderForbiddenGoldRow(row) {
+      if (!row) return false;
+      const catalog=traderCatalogRow(row.lotId);
+      const assets=[...row.element?.querySelectorAll?.('img')||[]]
+        .map(img=>[
+          img.getAttribute?.('src')||'',
+          img.getAttribute?.('alt')||'',
+          img.getAttribute?.('title')||''
+        ].join(' '))
+        .join(' ');
+      const blob=[
+        row.lotId,
+        row.text,
+        catalog?.rewardId,
+        catalog?.name,
+        catalog?.description,
+        catalog?.icon,
+        catalog?.image,
+        JSON.stringify(catalog?.reward||{}),
+        JSON.stringify(catalog?.content||{}),
+        assets
+      ].map(value=>String(value||'').toLowerCase()).join(' ');
+
+      return traderForbiddenGoldLot(row.lotId) ||
+        /(?:^|[_\s-])cur_gold(?:[_\s-]|$)/i.test(blob) ||
+        /золотые\s+монеты|gold(?:en)?\s+coins/i.test(blob);
     }
 
     function traderApprovedLot(lotId) {
@@ -18985,6 +19016,15 @@
 
     function traderApprovedRow(row) {
       if (!row) return false;
+
+      // Deny by the actual reward/name/icon BEFORE any permissive lot-id rule.
+      // This prevents a gold lot whose id also contains "food" or "coins" from
+      // being accepted by a generic resource whitelist.
+      if (traderForbiddenGoldRow(row)) {
+        try { row.element.dataset.hkTraderSkip='1'; } catch (_) {}
+        return false;
+      }
+
       if (traderApprovedLot(row.lotId)) return true;
 
       const catalog=traderCatalogRow(row.lotId);
@@ -19095,39 +19135,139 @@
     }
 
     function traderForbiddenGoldModalRoot() {
-      const candidates=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]')]
+      const candidates=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
         .filter(visible)
-        .map(element=>({element,rect:element.getBoundingClientRect?.()}))
-        .filter(row=>row.rect && row.rect.width>=Math.min(240,window.innerWidth*0.46) && row.rect.height>=180)
-        .filter(row=>/золотые\s+монеты|gold(?:en)?\s+coins|cur_gold/i.test(clean(row.element.innerText||row.element.textContent||'')))
+        .map(element=>{
+          const rect=element.getBoundingClientRect?.();
+          const text=clean(element.innerText||element.textContent||'');
+          const assets=[...element.querySelectorAll?.('img')||[]]
+            .map(img=>String(img.src||'')+' '+String(img.alt||'')+' '+String(img.title||''))
+            .join(' ');
+          return {element,rect,blob:(text+' '+assets).toLowerCase()};
+        })
+        .filter(row=>row.rect && row.rect.width>=Math.min(240,window.innerWidth*0.35) && row.rect.height>=180)
+        .filter(row=>
+          /золотые\s+монеты|gold(?:en)?\s+coins/i.test(row.blob) ||
+          /(?:^|[_\s/-])cur_gold(?:[_\s/.-]|$)/i.test(row.blob)
+        )
+        .filter(row=>row.rect.width<=window.innerWidth*0.99 && row.rect.height<=window.innerHeight*0.98)
         .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height);
       return candidates[0]?.element || null;
     }
 
-    function traderCloseForbiddenGoldModal(root=traderForbiddenGoldModalRoot()) {
-      if (!root) return false;
+    function traderForbiddenGoldCloseButton(root=traderForbiddenGoldModalRoot()) {
+      if (!root) return null;
       const rr=root.getBoundingClientRect?.();
-      const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+      if (!rr) return null;
+
+      const generic=autoMapModalCloseButton(root);
+      if (generic && visible(generic) && !generic.disabled) return generic;
+
+      const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span,svg')]
         .filter(element=>element && !element.disabled && visible(element))
         .map(element=>{
           const text=clean(element.innerText||element.textContent||'').trim();
-          const aria=clean(element.getAttribute?.('aria-label')||'').trim();
+          const aria=clean(
+            element.getAttribute?.('aria-label') ||
+            element.getAttribute?.('title') ||
+            element.getAttribute?.('data-tooltip') ||
+            ''
+          ).trim();
           const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          let actionable=false;
+          try {
+            actionable=
+              element.matches?.('button,[role="button"],a,[onclick]') ||
+              !!element.onclick ||
+              getComputedStyle(element).cursor==='pointer';
+          } catch (_) {}
+          const topRight=
+            rect.top<=rr.top+rr.height*0.28 &&
+            rect.left>=rr.left+rr.width*0.66;
+          const small=
+            rect.width>0 && rect.width<=110 &&
+            rect.height>0 && rect.height<=110;
           let score=0;
-          if (/^(?:×|✕|Закрыть|Close|Назад|Back)$/i.test(text)) score+=500;
-          if (/close|закрыть|back|назад/i.test(aria)) score+=450;
-          if (rr && rect.top<=rr.top+rr.height*0.24) score+=100;
-          if (rr && rect.left>=rr.left+rr.width*0.68) score+=100;
-          if (rect.width>0 && rect.width<=100 && rect.height>0 && rect.height<=100) score+=80;
-          return {element:traderClickableTarget(element,root)||element,score,rect};
+          if (/^(?:×|✕|✖|Закрыть|Close|Назад|Back)$/i.test(text)) score+=800;
+          if (/close|закрыть|back|назад/i.test(aria)) score+=700;
+          if (topRight) score+=260;
+          if (small) score+=140;
+          if (actionable) score+=180;
+          if (element.querySelector?.('svg,img,use,path')) score+=80;
+          if (/^\d{1,5}$/.test(text)) score-=900;
+          return {
+            element:traderClickableTarget(element,root)||element,
+            score,
+            rect
+          };
         })
-        .filter(row=>row.score>=450)
+        .filter(row=>row.score>=500)
         .sort((a,b)=>b.score-a.score || a.rect.width*a.rect.height-b.rect.width*b.rect.height);
-      const close=rows[0]?.element || null;
+      return rows[0]?.element || null;
+    }
+
+    async function traderDismissForbiddenGoldModal(source='trader') {
+      const root=traderForbiddenGoldModalRoot();
+      if (!root) return false;
+      const close=traderForbiddenGoldCloseButton(root);
+      const accepted=()=>!traderForbiddenGoldModalRoot();
+      let ok=false;
+
+      if (close) {
+        try {
+          ok=await deviceNeutralActivate(
+            close,
+            'trader-forbidden-gold-close-'+source,
+            accepted,
+            1200
+          );
+        } catch (_) {}
+        if (!ok && close.isConnected) {
+          const sent=dispatchAutoMapTap(close,'trader-forbidden-gold-close-fallback-'+source);
+          if (sent) {
+            try { ok=await waitDeviceNeutralCondition(accepted,1300,70); } catch (_) {}
+          }
+        }
+      }
+
+      // Icon-only X can be rendered as a pseudo-element with no actionable
+      // child node. Last-resort tap the modal's own top-right close zone.
+      if (!ok && root.isConnected) {
+        const rr=root.getBoundingClientRect?.();
+        if (rr && rr.width>0 && rr.height>0) {
+          const x=rr.right-Math.max(18,Math.min(28,rr.width*0.04));
+          const y=rr.top+Math.max(18,Math.min(28,rr.height*0.06));
+          const sent=dispatchBattleTapAt(x,y,'trader-forbidden-gold-close-corner-'+source);
+          if (sent) {
+            try { ok=await waitDeviceNeutralCondition(accepted,1500,70); } catch (_) {}
+          }
+        }
+      }
+
+      recordDiagnostic('trader-forbidden-gold-modal-reset',{
+        revision:HK_TRADER_GOLD_STALE_MODAL_REV,
+        source,
+        success:!!ok,
+        hasClose:!!close
+      });
+
+      if (ok) {
+        traderRetryNotBefore=0;
+        autoMapRetryNotBefore=0;
+        autoMapCurrentLot='';
+        lastSignature='';
+        await new Promise(resolve=>setTimeout(resolve,100));
+      }
+      return !!ok;
+    }
+
+    function traderCloseForbiddenGoldModal(root=traderForbiddenGoldModalRoot()) {
+      if (!root) return false;
+      const close=traderForbiddenGoldCloseButton(root);
       if (!close) return false;
       const ok=dispatchAutoMapTap(close,'trader-forbidden-gold-close');
       recordDiagnostic('trader-forbidden-gold-modal',{
-        revision:HK_TRADER_GOLD_SKIP_REV,
+        revision:HK_TRADER_GOLD_STALE_MODAL_REV,
         action:ok?'closed':'close-failed'
       });
       return !!ok;
@@ -19401,14 +19541,20 @@
 
       const forbiddenGoldModal=traderForbiddenGoldModalRoot();
       if (forbiddenGoldModal) {
-        const closed=traderCloseForbiddenGoldModal(forbiddenGoldModal);
-        lastSignature='';
-        recordDiagnostic('trader-forbidden-gold-skip',{
-          revision:HK_TRADER_GOLD_SKIP_REV,
-          closed:!!closed
-        });
-        setTimeout(checkPuzzle,closed?120:300);
-        return false;
+        traderAutoRunning=true;
+        const blockedRunId=++traderAutoRunId;
+        try {
+          const closed=await traderDismissForbiddenGoldModal('trader-runner');
+          recordDiagnostic('trader-forbidden-gold-skip',{
+            revision:HK_TRADER_GOLD_STALE_MODAL_REV,
+            closed:!!closed
+          });
+          return !!closed;
+        } finally {
+          if (blockedRunId===traderAutoRunId) traderAutoRunning=false;
+          lastSignature='';
+          setTimeout(checkPuzzle,120);
+        }
       }
 
       const receiptModal=traderReceiptModalRoot();
@@ -24982,6 +25128,18 @@
         await new Promise(resolve=>setTimeout(resolve,80));
       }
 
+      const forbiddenGoldModal=traderForbiddenGoldModalRoot();
+      if (forbiddenGoldModal) {
+        recordDiagnostic('auto-map-forbidden-gold-confirm-blocked',{
+          revision:HK_TRADER_GOLD_STALE_MODAL_REV,
+          label:String(label||'')
+        });
+        await traderDismissForbiddenGoldModal('auto-map-confirm-guard');
+        autoMapCurrentLot='';
+        lastSignature='';
+        return false;
+      }
+
       if (!modal) {
         // No modal + no observed change: do not retry the same element immediately.
         autoMapRetryNotBefore=Date.now()+1400;
@@ -25307,6 +25465,35 @@
         return false;
       }
       ensureAutoMapToggle();
+
+      const forbiddenGoldModal=traderForbiddenGoldModalRoot();
+      if (forbiddenGoldModal) {
+        autoMapRunning=true;
+        const blockedRunId=autoMapRunId;
+        traderAutoRunId+=1;
+        traderAutoRunning=false;
+        autoMapCurrentLot='';
+        autoMapRetryNotBefore=0;
+        lastSignature='';
+        autoMapStatus('закрываю Золотые монеты',{
+          revision:HK_TRADER_GOLD_STALE_MODAL_REV,
+          source
+        });
+        try {
+          const closed=await traderDismissForbiddenGoldModal('auto-map-preflight');
+          if (!closed) {
+            setTimeout(()=>void runAutoMapTick('forbidden-gold-modal-retry'),300);
+          } else {
+            setTimeout(()=>{
+              checkPuzzle();
+              void runAutoMapTick('forbidden-gold-modal-cleared');
+            },140);
+          }
+          return !!closed;
+        } finally {
+          if (blockedRunId===autoMapRunId) autoMapRunning=false;
+        }
+      }
 
       // A leave-confirmation modal can survive a redraw/retry. It is always
       // higher priority than route selection or generic cooldowns.
@@ -25812,6 +25999,19 @@
     function checkPuzzle() {
       ensureAutoMapToggle();
 
+      const forbiddenGoldModal=traderForbiddenGoldModalRoot();
+      if (forbiddenGoldModal) {
+        lastSignature='';
+        if (autoMapEnabled() && !autoMapRunning) {
+          void runAutoMapTick('forbidden-gold-overlay');
+          return;
+        }
+        if (traderAutoEnabled() && !traderAutoRunning) {
+          void traderDismissForbiddenGoldModal('check-puzzle');
+          return;
+        }
+      }
+
       // The intro overlay can hide the board completely, so its handling must
       // not depend on BATTLE/BATTLE_PREVIEW signature detection.
       if (
@@ -25989,6 +26189,7 @@
       treasureRecorderUiRemovedRevision:HK_TREASURE_RECORDER_UI_REMOVED_REV,
       fishingModalBudgetRevision:HK_FISHING_MODAL_BUDGET_REV,
       traderGoldSkipRevision:HK_TRADER_GOLD_SKIP_REV,
+      traderGoldStaleModalRevision:HK_TRADER_GOLD_STALE_MODAL_REV,
       chestKeyOfferRevision:HK_CHEST_KEY_OFFER_REV,
       chestVisibleClaimRevision:HK_CHEST_VISIBLE_CLAIM_REV,
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
