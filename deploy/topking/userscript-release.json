@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.57",
-  "target_version": "1.18.58",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.58.treasure-key-any-rarity.candidate.user.js",
-  "primary_marker": "treasure-key-any-rarity-20260928-r1",
+  "source_version": "1.18.58",
+  "target_version": "1.18.59",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.59.battle-reward-state-machine.candidate.user.js",
+  "primary_marker": "battle-reward-state-machine-20260928-r1",
   "preserve_markers": [
+    "treasure-key-any-rarity-20260928-r1",
     "treasure-key-battle-handoff-20260928-r1",
     "device-neutral-minigame-20260928-r1",
     "treasury-left-once-continuous-map-20260927-r1",
@@ -121,6 +122,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-58-treasure-key-any-rarity-live-status.txt",
-  "commit_message": "fix: deploy generic treasure key purchase in userscript 1.18.58"
+  "audit_status_path": "audit/hk-userscript-1-18-59-battle-reward-state-machine-live-status.txt",
+  "commit_message": "fix: deploy strict battle intro and reward state machine in userscript 1.18.59"
 }
