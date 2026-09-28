@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.62
+// @version      1.18.63
+// @release-note Лабиринт — лампочки: восстановлена обязательная цепочка «нажать лампу → оплатить 1 → подтвердить окно → дождаться реального изменения 3×3». Подсказки и клики теперь строятся только по актуальному видимому полю, а дубли скрытой/адаптивной верстки не могут подменить состояние. Финальная награда стала жёстким барьером выхода: «Активировано» больше не считается полученной наградой — сначала сундук/хранилище забирается, затем подтверждается, и только после этого Автокарта может покинуть локацию.
 // @release-note Регрессия Лабиринта: восстановлена изоляция модулей. В 1.18.60 боевой overlay-safe tap был внедрён в общий обработчик, которым пользуются и лампочки; на некоторых раскладках это ломало подтверждение цены «1». Общий tap возвращён к прежней нейтральной логике, а игнорирование HK-оверлеев теперь применяется только внутри боя. Для лампочки добавлен отдельный подтверждённый coordinate-fallback по нижней кнопке цены, без изменения математического решения поля.
 // @release-note Сражение: после получения Сундука победителя игра оставляет его центральную клетку в состоянии «Активировано» вместе со старыми костями и мечом. Скрипт раньше снова считал эту уже полученную награду незабранным сундуком и зависал на «бой продолжается». Теперь «Активировано» считается подтверждённым финалом только когда закрыты все окна награды; старый боевой runner снимается, после чего Автокарта обязательно нажимает «Покинуть локацию», подтверждает выход и продолжает карту.
 // @release-note Сражение: золотой Хранитель сокровищ type_04 с 5 HP уже входил в расчёт, но на правой нижней карточке его номер мог полностью скрываться под плавающими кнопками «Автокарта/Автобой», а эти же кнопки могли перехватить программный tap. Номер шага теперь рисуется поверх служебных кнопок, а боевые tap'ы временно игнорируют HK-оверлеи и попадают в реальную карточку/кнопку под ними.
@@ -174,7 +175,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.62';
+  const BUILD_VERSION = '1.18.63';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17902,6 +17903,8 @@
   const HK_BATTLE_OVERLAY_SAFE_TARGETING_REV = 'battle-overlay-safe-targeting-20260928-r1';
   const HK_BATTLE_ACTIVATED_EXIT_REV = 'battle-activated-final-reward-exit-20260928-r1';
   const HK_MINIGAME_TAP_ISOLATION_REV = 'minigame-tap-isolation-lights-recovery-20260928-r1';
+  const HK_LIGHTS_CONFIRM_STATE_MACHINE_REV = 'lights-confirm-ack-before-board-reward-gate-20260928-r1';
+  const HK_REWARD_CLAIM_BEFORE_EXIT_REV = 'reward-claim-before-exit-20260928-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -19764,14 +19767,46 @@
       );
     }
 
-    function lightsAcknowledgeButton(root = null) {
-      const scope=root || document;
-      const exact=/^(?:понятно|got it|understood|ok|okay)$/i;
-      const candidates=[...scope.querySelectorAll('button,[role="button"],a')]
-        .filter(element=>element && element!==lightsAutoToggle && !element.disabled && visible(element))
-        .map(element=>({element,text:clean(element.innerText||element.textContent||'').trim()}))
-        .filter(row=>exact.test(row.text));
-      return candidates[0]?.element || null;
+    function lightsAcknowledgeButton(root = null,allowGlobal = false) {
+      const exact=/^(?:понятно|got it|understood|ok|okay|подтвердить|confirm|да|yes|продолжить|continue)$/i;
+      const scopes=[];
+      if (root) scopes.push(root);
+      if (!root || allowGlobal) scopes.push(document);
+
+      const rows=[];
+      const seen=new Set();
+      for (const scope of scopes) {
+        const candidates=[...scope.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+          .filter(element=>
+            element &&
+            element!==lightsAutoToggle &&
+            !element.disabled &&
+            element.getAttribute?.('aria-disabled')!=='true' &&
+            visible(element)
+          );
+        for (const element of candidates) {
+          if (seen.has(element)) continue;
+          seen.add(element);
+          const text=clean(element.innerText||element.textContent||'').trim();
+          if (!exact.test(text)) continue;
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          if (!(rect.width>0 && rect.height>0)) continue;
+
+          let score=0;
+          if (root && (root===element || root.contains?.(element))) score+=500;
+          const dialog=element.closest?.('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]');
+          if (dialog && visible(dialog)) score+=260;
+          const cx=rect.left+rect.width/2;
+          const cy=rect.top+rect.height/2;
+          if (Math.abs(cx-window.innerWidth/2)<=window.innerWidth*0.32) score+=120;
+          if (Math.abs(cy-window.innerHeight/2)<=window.innerHeight*0.38) score+=90;
+          if (/^(?:понятно|got it|understood|ok|okay)$/i.test(text)) score+=80;
+          rows.push({element,score,area:rect.width*rect.height});
+        }
+      }
+
+      rows.sort((a,b)=>b.score-a.score || b.area-a.area);
+      return rows[0]?.element || null;
     }
 
     async function waitLightsAcknowledge(runId,before,timeoutMs=3000) {
@@ -19780,7 +19815,7 @@
         if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return {button:null,changed:false};
         const changed=lightsBoardSignature()!==before;
         const root=lightsModalRoot();
-        const button=lightsAcknowledgeButton(root);
+        const button=lightsAcknowledgeButton(root,true);
         if (button) return {button,changed};
         if (changed && !root) return {button:null,changed:true};
         await new Promise(resolve=>setTimeout(resolve,90));
@@ -19998,8 +20033,9 @@
     async function runLightsModalStep(before,target,slot,runId) {
       if (!target || !target.isConnected) return {ok:false,reason:'target-missing'};
 
-      // Never inherit the previous lamp's dialog as a new purchase. Drain it,
-      // then open the current target from a clean board state.
+      // One lamp press is a transaction. A previous dialog is drained first;
+      // the current transaction cannot advance until cost + acknowledgement +
+      // the actual 3x3 mutation are all observed in this order.
       if (lightsModalRoot()) {
         const cleared=await clearStaleLightsModalBeforeStep(runId,slot);
         if (!cleared) return {ok:false,reason:'stale-modal-blocking'};
@@ -20013,74 +20049,127 @@
         target,
         'lights-open-'+slot,
         ()=>!!lightsModalRoot(),
-        900
+        1000
       );
       if (!opened) return {ok:false,reason:'target-tap-failed'};
 
       const purchaseModal=lightsModalRoot() || await waitLightsModal(runId);
       if (!purchaseModal) return {ok:false,reason:'purchase-modal-missing'};
 
+      recordDiagnostic('lights-state-machine',{
+        revision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
+        slot,
+        state:'lamp_modal_open',
+        board:before
+      });
+
       const purchaseButton=await waitLightsPurchaseButton(purchaseModal,runId);
       if (!purchaseButton) return {ok:false,reason:'purchase-button-missing'};
 
       const clickTarget=lightsPurchaseClickTarget(purchaseButton,purchaseModal) || purchaseButton;
-      const accepted=()=> {
+      const purchaseAccepted=()=>{
         if (lightsBoardSignature()!==before) return true;
         const current=lightsModalRoot();
         if (!current) return true;
-        if (lightsAcknowledgeButton(current)) return true;
+        if (lightsAcknowledgeButton(current,true)) return true;
         const currentPurchase=lightsPurchaseButton(current);
         return !currentPurchase;
       };
 
-      let confirmed=await deviceNeutralActivate(
+      let purchaseConfirmed=await deviceNeutralActivate(
         clickTarget,
         'lights-confirm-cost-'+slot,
-        accepted,
-        1100
+        purchaseAccepted,
+        1200
       );
 
-      if (!confirmed && lightsModalRoot()) {
+      if (!purchaseConfirmed && lightsModalRoot()) {
         const fallbackRoot=lightsModalRoot() || purchaseModal;
         const sent=tapLightsPurchaseFallback(fallbackRoot,slot);
         if (sent) {
-          confirmed=await waitDeviceNeutralCondition(accepted,1400,60);
+          purchaseConfirmed=await waitDeviceNeutralCondition(purchaseAccepted,1600,60);
           recordDiagnostic('lights-purchase-coordinate-fallback',{
-            revision:HK_MINIGAME_TAP_ISOLATION_REV,
+            revision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
             slot,
-            confirmed
+            confirmed:purchaseConfirmed
+          });
+        }
+      }
+      if (!purchaseConfirmed) return {ok:false,reason:'purchase-tap-failed'};
+
+      recordDiagnostic('lights-state-machine',{
+        revision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
+        slot,
+        state:'cost_accepted',
+        board:lightsBoardSignature()
+      });
+
+      // The game may require a second confirmation after the cost button.
+      // This was the regression: 1.18.62 waited for board mutation first and
+      // therefore could sit forever behind "Понятно/Подтвердить".
+      let changed=lightsBoardSignature()!==before;
+      let acknowledged=false;
+      if (!changed) {
+        const acknowledgement=await waitLightsAcknowledge(runId,before,1900);
+        changed=!!acknowledgement.changed || lightsBoardSignature()!==before;
+
+        if (acknowledgement.button) {
+          const ackButton=acknowledgement.button;
+          const ackAccepted=()=> {
+            if (lightsBoardSignature()!==before) return true;
+            if (!ackButton.isConnected || !visible(ackButton)) return true;
+            const current=lightsModalRoot();
+            return !lightsAcknowledgeButton(current,true);
+          };
+
+          acknowledged=await deviceNeutralActivate(
+            ackButton,
+            'lights-confirm-ack-'+slot,
+            ackAccepted,
+            1300
+          );
+
+          if (!acknowledged && ackButton.isConnected) {
+            const sent=dispatchBattleTap(ackButton,'lights-confirm-ack-fallback-'+slot);
+            if (sent) acknowledged=await waitDeviceNeutralCondition(ackAccepted,1300,60);
+          }
+
+          if (!acknowledged) return {ok:false,reason:'acknowledge-tap-failed'};
+
+          recordDiagnostic('lights-state-machine',{
+            revision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
+            slot,
+            state:'ack_confirmed',
+            board:lightsBoardSignature()
           });
         }
       }
 
-      if (!confirmed) return {ok:false,reason:'purchase-tap-failed'};
-
-      recordDiagnostic('lights-purchase-confirmed-device-neutral',{
-        revision:HK_DEVICE_NEUTRAL_MINIGAME_REV,
-        slot,
-        stateBefore:before
-      });
-
-      // Server/render speed may differ, but the algorithm does not. Advance
-      // only after the board has actually changed.
-      let changed=lightsBoardSignature()!==before;
-      if (!changed) {
-        changed=await waitLightsBoardChange(before,runId,3200);
-      }
+      if (!changed) changed=await waitLightsBoardChange(before,runId,3600);
       if (!changed) return {ok:false,reason:'field-no-change'};
 
+      recordDiagnostic('lights-state-machine',{
+        revision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
+        slot,
+        state:'board_changed',
+        acknowledged,
+        before,
+        after:lightsBoardSignature()
+      });
+
       if (lightsModalRoot()) {
-        const drained=await closeLightsModalAfterStateChange(runId,before,slot,1800);
+        const drained=await closeLightsModalAfterStateChange(runId,before,slot,2200);
         if (!drained) return {ok:false,reason:'modal-not-closed-after-change'};
       }
 
       recordDiagnostic('lights-auto-step-ui-complete',{
-        revision:HK_DEVICE_NEUTRAL_MINIGAME_REV,
+        revision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
         slot,
         state:lightsBoardSignature(),
-        deviceNeutral:true
+        deviceNeutral:true,
+        acknowledged
       });
-      return {ok:true,reason:'field-changed-modal-closed-device-neutral'};
+      return {ok:true,reason:'cost-ack-board-confirmed'};
     }
 
     function lightsRewardElement() {
@@ -20103,7 +20192,10 @@
     }
 
     function lightsRoomCompleted() {
-      return !!(lightsFinalRewardClaimed || lightsRewardActivated());
+      // "Активировано" means the final storage/chest is available, not that
+      // its contents were claimed. Exit is allowed only after the claim action
+      // and any acknowledgement have completed in this runtime.
+      return lightsFinalRewardClaimed===true;
     }
 
     function lightsRewardModalRoot() {
@@ -21839,16 +21931,87 @@
 
     function getLightsBoard() {
       const board = new Array(9).fill(null);
-      const elements = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')];
-      elements.forEach(element => {
-        const id = element.getAttribute('data-lot-id') || '';
-        const match = id.match(/mf_fairlot_lights_out_sl(\d+)_(true|false)/);
+      const candidatesBySlot=Array.from({length:9},()=>[]);
+      const elements=[...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')];
+
+      elements.forEach(element=>{
+        const id=element.getAttribute('data-lot-id') || '';
+        const match=id.match(/mf_fairlot_lights_out_sl(\d+)_(true|false)/);
         if (!match) return;
-        const slot = Number(match[1]);
-        const isOn = match[2] === 'true';
-        if (slot < 1 || slot > 9) return;
-        board[slot - 1] = {slot,on:isOn,element};
+
+        const slot=Number(match[1]);
+        const isOn=match[2]==='true';
+        if (slot<1 || slot>9) return;
+
+        const rect=element.getBoundingClientRect?.() || {left:0,top:0,right:0,bottom:0,width:0,height:0};
+        const cssVisible=visible(element);
+        const hasBox=rect.width>0 && rect.height>0;
+        const intersectsViewport=
+          hasBox &&
+          rect.right>0 &&
+          rect.bottom>0 &&
+          rect.left<window.innerWidth &&
+          rect.top<window.innerHeight;
+        const centerInViewport=
+          hasBox &&
+          rect.left+rect.width/2>=0 &&
+          rect.left+rect.width/2<=window.innerWidth &&
+          rect.top+rect.height/2>=0 &&
+          rect.top+rect.height/2<=window.innerHeight;
+        const area=Math.max(0,rect.width*rect.height);
+
+        // Responsive desktop/mobile layouts can leave stale copies of the same
+        // slot in the DOM. Never let an off-screen/hidden duplicate overwrite
+        // the board that the player actually sees.
+        let score=0;
+        if (element.isConnected) score+=1000;
+        if (cssVisible) score+=5000;
+        if (intersectsViewport) score+=3000;
+        if (centerInViewport) score+=1200;
+        score+=Math.min(1800,Math.sqrt(area)*12);
+
+        candidatesBySlot[slot-1].push({
+          slot,
+          on:isOn,
+          element,
+          score,
+          area,
+          cssVisible,
+          intersectsViewport,
+          centerInViewport
+        });
       });
+
+      for (let index=0;index<9;index++) {
+        const rows=candidatesBySlot[index]
+          .sort((a,b)=>
+            b.score-a.score ||
+            Number(b.cssVisible)-Number(a.cssVisible) ||
+            Number(b.intersectsViewport)-Number(a.intersectsViewport) ||
+            b.area-a.area
+          );
+        const selected=rows[0] || null;
+        if (selected) {
+          board[index]={slot:selected.slot,on:selected.on,element:selected.element};
+        }
+      }
+
+      const duplicateSlots=candidatesBySlot
+        .map((rows,index)=>rows.length>1 ? index+1 : null)
+        .filter(Boolean);
+      if (duplicateSlots.length) {
+        const now=Date.now();
+        if (now-Number(getLightsBoard.lastDuplicateDiagnosticAt||0)>=2000) {
+          getLightsBoard.lastDuplicateDiagnosticAt=now;
+          recordDiagnostic('lights-board-responsive-duplicates-filtered',{
+            revision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
+            totalCandidates:elements.length,
+            duplicateSlots,
+            selected:board.map(cell=>cell?cell.slot:null)
+          });
+        }
+      }
+
       return board;
     }
 
@@ -23179,13 +23342,27 @@
     async function autoMapReturnFromCompletedLights() {
       if (!autoMapEnabled() || !lightsRoomCompleted()) return false;
 
-      if (!lightsFinalRewardClaimed && lightsRewardActivated()) {
-        lightsFinalRewardClaimed=true;
-        lightsFinalRewardClaimedAt=Date.now();
-        recordDiagnostic('lights-final-reward-recovered',{
-          revision:HK_LIGHTS_COMPLETED_RETURN_REV,
-          source:'activated-reward-dom'
+      // Hard invariant: never leave this room merely because the final tile
+      // says "Активировано". The reward must have been claimed and its final
+      // acknowledgement must be gone first.
+      if (!lightsFinalRewardClaimed) {
+        autoMapStatus('награда → забрать и подтвердить',{
+          revision:HK_REWARD_CLAIM_BEFORE_EXIT_REV
         });
+        recordDiagnostic('lights-exit-blocked-final-reward',{
+          revision:HK_REWARD_CLAIM_BEFORE_EXIT_REV,
+          rewardVisible:!!lightsRewardElement(),
+          rewardModal:!!lightsRewardModalRoot(),
+          rewardAck:!!lightsRewardAckButton(),
+          activated:lightsRewardActivated()
+        });
+        return false;
+      }
+      if (lightsRewardModalRoot() || lightsRewardAckButton()) {
+        recordDiagnostic('lights-exit-blocked-reward-confirmation',{
+          revision:HK_REWARD_CLAIM_BEFORE_EXIT_REV
+        });
+        return false;
       }
 
       autoMapStatus('выход за 10',{
@@ -25038,6 +25215,8 @@
       battleOverlaySafeTargetingRevision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
       battleActivatedExitRevision:HK_BATTLE_ACTIVATED_EXIT_REV,
       minigameTapIsolationRevision:HK_MINIGAME_TAP_ISOLATION_REV,
+      lightsConfirmStateMachineRevision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
+      rewardClaimBeforeExitRevision:HK_REWARD_CLAIM_BEFORE_EXIT_REV,
       start,
       stop,
       check:checkPuzzle,

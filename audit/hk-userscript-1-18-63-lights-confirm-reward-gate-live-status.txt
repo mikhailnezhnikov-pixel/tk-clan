@@ -1,0 +1,17 @@
+GENERIC_USERSCRIPT_DEPLOY=PASS
+source_version=1.18.62
+target_version=1.18.63
+marker=lights-confirm-ack-before-board-reward-gate-20260928-r1
+source_sha256=528be45e859269b0bc3cd045ff8b194822c3db5a2fe2914e68ae95bdf9b546e9
+candidate_sha256=8829aab5e2cfa4854fdbf41748d7d8cbff6c941afbdda86eaa13cb74769d85a0
+public_exact_match=PASS
+server_rollback_guard=ENABLED
+public_verify_rollback=ENABLED
+treasure_regression_contract=PASS
+treasure_lights_resume_contract=PASS
+treasure_lights_outer_modal_contract=PASS
+treasure_chest_fast_pacing_contract=PASS
+treasure_treasury_loop_contract=PASS
+treasure_battle_full_clear_contract=PASS
+treasure_battle_achievement_contract=PASS
+ci_game_mutations=NONE
