@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.68
+// @version      1.18.69
+// @release-note Магазин: восстановлен прежний быстрый темп последовательных /shop/buy — без искусственной паузы 700 мс между успешными покупками. После 429 сохраняются cooldown, автоматическое продолжение и замедленный режим.
 // @release-note Карта сокровищ: сражение само прокручивает выбранного врага/кнопку атаки в видимую область перед кликом и возобновляет цикл после возврата во вкладку/на экран. Торговец: после покупки ключа окно «... ключ сокровищ → Понятно» теперь является отдельным обязательным этапом — подтверждается и Автокарта продолжает маршрут.
 // @release-note Магазин: процент 10–100% для крупных ресурсных лотов теперь реально виден в карточке. Убрано старое CSS-правило, скрывавшее блок количества у покупок за крышки; добавлено явное оформление селектора и расчётного количества.
 // @release-note Магазин: в Обычном магазине → Ресурсы оставлены только крупнейшие пакеты ×100 для Тиров 1–5; для каждого доступен выбор 10–100% текущего максимума с шагом 10. Выбранный процент пересчитывается по свежему балансу перед покупкой.
@@ -180,7 +181,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.68';
+  const BUILD_VERSION = '1.18.69';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -189,7 +190,8 @@
   const HK_SHOP_TODAY_DEDUP_REV = 'shop-today-dedup-20260923-r1';
   const HK_SHOP_BUY_FAST_PATH_REV = 'shop-buy-fast-path-20260923-r1';
   const HK_SHOP_RATE_LIMIT_RESUME_REV = 'shop-rate-limit-resume-20260925-r1';
-  const SHOP_BUY_MIN_GAP_MS = 700;
+  const HK_SHOP_FAST_PACING_RESTORE_REV = 'shop-fast-pacing-restore-20260928-r1';
+  const SHOP_BUY_MIN_GAP_MS = 0;
   const SHOP_BUY_POST_429_GAP_MS = 1500;
   const HK_SHOP_SHARED_LIMITS_UI_REV = 'shop-shared-limits-ui-20260923-r1';
   const HK_SHOP_RESOURCE_PERCENT_REV = 'shop-resource-largest-percent-20260928-r1';
