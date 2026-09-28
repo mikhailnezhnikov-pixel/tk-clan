@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.61",
-  "target_version": "1.18.62",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.62.minigame-tap-isolation.candidate.user.js",
-  "primary_marker": "minigame-tap-isolation-lights-recovery-20260928-r1",
+  "source_version": "1.18.62",
+  "target_version": "1.18.63",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.63.lights-confirm-reward-gate.candidate.user.js",
+  "primary_marker": "lights-confirm-ack-before-board-reward-gate-20260928-r1",
   "preserve_markers": [
+    "minigame-tap-isolation-lights-recovery-20260928-r1",
     "battle-activated-final-reward-exit-20260928-r1",
     "battle-overlay-safe-targeting-20260928-r1",
     "battle-reward-state-machine-20260928-r1",
@@ -125,6 +126,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-62-minigame-tap-isolation-live-status.txt",
-  "commit_message": "fix: deploy isolated battle taps and lamp purchase recovery in userscript 1.18.62 r2"
+  "audit_status_path": "audit/hk-userscript-1-18-63-lights-confirm-reward-gate-live-status.txt",
+  "commit_message": "fix: deploy lamp confirm state machine and reward-before-exit gate in userscript 1.18.63"
 }
