@@ -166,7 +166,7 @@ new_scroll=r'''    function battleElementInViewport(element) {
 
       const before=element.getBoundingClientRect?.();
       try {
-        element.scrollIntoView({behavior:'auto',block:'center',inline:'nearest'});
+        element.scrollIntoView({behavior:'auto',block:'center',inline:'center'});
       } catch (_) {
         try { element.scrollIntoView(); } catch (_) {}
       }
