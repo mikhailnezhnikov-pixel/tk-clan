@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_78_VISIBLE_CHEST_CLAIM_PREDEPLOY=PASS
+source_version=1.18.77
+target_version=1.18.78
+visible_chest_priority=1500+
+backend_is_bought_gate=IGNORED_FOR_VISIBLE_CHESTS
+new_key_rarities=SUPPORTED
+visible_chest_claim_contract=PASS
+syntax=PASS
+base_sha256=cfb65fbdd4a09954ebe9aec2c17c7864b4a6452181d7d7450e658a042d1046fb
+candidate_sha256=c82d69c58aa7a1607f1eaa26b4e2187dc9a2a30a9a5bae9e5be3df377ec98268
