@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.63
+// @version      1.18.64
+// @release-note Ресурсы: Ореховая/Инструментовая/Жетоновая больше не зависят от предварительного ручного входа в исходное здание. Автопоиск проверяет все ID, которые реально отдаёт карта района (building_id/buildingId/id), и сохраняет станцию только после подтверждения её типа через /player/building.
 // @release-note Лабиринт — лампочки: восстановлена обязательная цепочка «нажать лампу → оплатить 1 → подтвердить окно → дождаться реального изменения 3×3». Подсказки и клики теперь строятся только по актуальному видимому полю, а дубли скрытой/адаптивной верстки не могут подменить состояние. Финальная награда стала жёстким барьером выхода: «Активировано» больше не считается полученной наградой — сначала сундук/хранилище забирается, затем подтверждается, и только после этого Автокарта может покинуть локацию.
 // @release-note Регрессия Лабиринта: восстановлена изоляция модулей. В 1.18.60 боевой overlay-safe tap был внедрён в общий обработчик, которым пользуются и лампочки; на некоторых раскладках это ломало подтверждение цены «1». Общий tap возвращён к прежней нейтральной логике, а игнорирование HK-оверлеев теперь применяется только внутри боя. Для лампочки добавлен отдельный подтверждённый coordinate-fallback по нижней кнопке цены, без изменения математического решения поля.
 // @release-note Сражение: после получения Сундука победителя игра оставляет его центральную клетку в состоянии «Активировано» вместе со старыми костями и мечом. Скрипт раньше снова считал эту уже полученную награду незабранным сундуком и зависал на «бой продолжается». Теперь «Активировано» считается подтверждённым финалом только когда закрыты все окна награды; старый боевой runner снимается, после чего Автокарта обязательно нажимает «Покинуть локацию», подтверждает выход и продолжает карту.
@@ -175,7 +176,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.63';
+  const BUILD_VERSION = '1.18.64';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -1259,6 +1260,7 @@
   const HK_RESOURCE_MAXIMUM_RUN_REV='resource-maximum-run-stable-20260925-r1';
   const HK_RESOURCE_KOKKARAS_CANON_REV='resources-kokkaras-5.3.22-20260925-r1';
   const HK_RESOURCE_MAXIMUM_DIRECT_RUN_REV='resource-maximum-direct-run-20260925-r1';
+  const HK_RESOURCE_STATELESS_DISCOVERY_REV='resource-station-stateless-discovery-20260928-r1';
   const RESOURCE_CANONICAL_TIERS=[0,1,2,3,5];
   let resourceMaximumMode = false;
   let resourceSelectedKind = String(load().resourceSelectedKind || 'nut');
@@ -2026,21 +2028,34 @@
         .sort((left,right)=>Number(exactResourceBuildingDefinition(right,String(right?.meta?.resource || '').toLowerCase()))-Number(exactResourceBuildingDefinition(left,String(left?.meta?.resource || '').toLowerCase())));
       for (const row of candidates) {
         const kind=String(row?.meta?.resource || '').toLowerCase();
-        // `row.id` is the catalog/template id on some game responses. Only
-        // `building_id` identifies the building owned by this player.
-        const buildingId=String(row?.building_id || '');
-        if (!RESOURCE_BUILDING_TYPES[kind] || !buildingId || ids[kind]) continue;
-        mapBuildingAreas.set(buildingId,areaIds[index]);
-        // Several unrelated buildings may generate the same resource. Confirm
-        // the building by its own main event or its exact resource generator.
-        try {
-          const documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(buildingId)}`, 'POST');
-          const exactGenerator=exactResourceBuildingDefinition(row,kind);
-          if (exactResourceBuildingData(documentValue,kind,exactGenerator)) {
-            ids[kind]=buildingId;
-            proofs[kind]=buildingId;
-          }
-        } catch (_) {}
+        if (!RESOURCE_BUILDING_TYPES[kind] || ids[kind]) continue;
+        // Game-area responses are not schema-stable: depending on the client
+        // build the owned instance may be exposed as building_id/buildingId or
+        // only as id. Never trust a fallback ID blindly — every candidate is
+        // verified through /player/building before it becomes persistent state.
+        const candidateIds=[
+          row?.building_id,
+          row?.buildingId,
+          row?.meta?.building_id,
+          row?.meta?.buildingId,
+          row?.id
+        ].map(value=>String(value || '')).filter((value,index,rows)=>value && rows.indexOf(value)===index);
+        if (!candidateIds.length) continue;
+        const exactGenerator=exactResourceBuildingDefinition(row,kind);
+        for (const candidateId of candidateIds) {
+          if (ids[kind]) break;
+          try {
+            const documentValue=await apiJson(`/player/building?building_id=${encodeURIComponent(candidateId)}`, 'POST');
+            const resourceBuilding=exactResourceBuildingData(documentValue,kind,exactGenerator);
+            if (!resourceBuilding || resourceBuilding.kind!==kind) continue;
+            const building=resourceBuilding.building || {};
+            const resolvedId=String(building?.id || building?.building_id || candidateId);
+            if (!resolvedId) continue;
+            ids[kind]=resolvedId;
+            proofs[kind]=resolvedId;
+            mapBuildingAreas.set(resolvedId,areaIds[index]);
+          } catch (_) {}
+        }
       }
     }
     save({resourceBuildingIds:ids,resourceBuildingProofs:proofs, ...(ids.nut?{resourceNutBuildingId:ids.nut}:{})});
