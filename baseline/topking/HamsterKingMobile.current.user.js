@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.75
+// @version      1.18.76
+// @release-note Тайный торговец: «Золотые монеты» полностью исключены из автопокупки. Лоты verse_gold4coins / verse_gold4food больше не выбираются и не подтверждаются; если такое окно уже открыто, автомат закрывает его и продолжает с разрешёнными товарами.
 // @release-note Рыбалка: исправлен преждевременный выход из локации при открытом окне покупки. Во время модалки счётчик забросов может исчезать из видимого DOM; это больше не трактуется как 0. Если слот был доступен до открытия окна, подтверждение покупки завершается, и только после закрытия окна/награды разрешён выход.
 // @release-note Карта сокровищ: убрана служебная плавающая кнопка «Запись карты». Рекордер больше не занимает место на экране; остальная логика Автокарты и мини-игр не менялась.
 // @release-note Покупки в мини-играх: подтверждение любого покупаемого слота теперь отправляется через единый быстрый интервал 0,10–0,18 с после появления кнопки подтверждения. Это касается раскопок, сундуков, Тайного торговца, рыбалки и общих подтверждений Автокарты. Проверка результата, защита от двойного клика и cooldown после 409/429/5xx сохранены.
@@ -21,7 +22,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.75';
+  const BUILD_VERSION = '1.18.76';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3635,6 +3636,7 @@
   const HK_PURCHASE_CONFIRM_FAST_GLOBAL_REV='purchase-confirm-fast-global-20260928-r1';
   const HK_TREASURE_RECORDER_UI_REMOVED_REV='treasure-recorder-ui-removed-20260928-r1';
   const HK_FISHING_MODAL_BUDGET_REV='fishing-modal-budget-ownership-20260928-r1';
+  const HK_TRADER_GOLD_SKIP_REV='trader-gold-currency-skip-20260928-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -18922,9 +18924,22 @@
       return true;
     }
 
+    function traderForbiddenGoldLot(lotId) {
+      const id=String(lotId||'').toLowerCase();
+      if (!id) return false;
+
+      // These trader offers convert Treasure resources into the regular
+      // account gold currency (cur_gold). They are intentionally never bought.
+      return /verse_gold4(?:coins|food)/.test(id) ||
+        /(?:^|_)gold4(?:coins|food)(?:_|$)/.test(id);
+    }
+
     function traderApprovedLot(lotId) {
       const id=String(lotId||'').toLowerCase();
       if (!id) return false;
+
+      // Never buy regular account gold with Treasure resources.
+      if (traderForbiddenGoldLot(id)) return false;
 
       // Never buy pet/fish eggs automatically.
       if (/fish_egg|pet_egg|egg_/.test(id)) return false;
@@ -18960,6 +18975,11 @@
       const name=String(catalog?.name||'').toLowerCase();
       const text=String(row.text||'').toLowerCase();
       const blob=[row.lotId,rewardId,name,text].join(' ');
+
+      // Explicit deny-list: regular account gold / «Золотые монеты».
+      // The exact live lot families are verse_gold4coins and verse_gold4food.
+      if (traderForbiddenGoldLot(row.lotId) ||
+          /(?:^|[_\s])cur_gold(?:[_\s]|$)|золотые\s+монеты|gold(?:en)?\s+coins/i.test(blob)) return false;
 
       // Keep the historical egg exclusion even when another field contains
       // generic words like pet/food.
@@ -19029,6 +19049,10 @@
       if (!root) return false;
       const text=clean(root.innerText||root.textContent||'').toLowerCase();
 
+      // Never confirm the regular gold-currency offer even if a modal was
+      // opened manually or survived from an older script run.
+      if (/золотые\s+монеты|gold(?:en)?\s+coins|cur_gold/i.test(text)) return false;
+
       // Exact user-approved item families. This is intentionally narrower than
       // "any trader modal" so an already-open egg/HK-coin modal cannot be bought.
       return /вкусняшк.*питом|лакомств.*питом|pet\s*(?:treat|snack)/i.test(text) ||
@@ -19051,6 +19075,45 @@
         if (node===root) break;
       }
       return element;
+    }
+
+    function traderForbiddenGoldModalRoot() {
+      const candidates=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]')]
+        .filter(visible)
+        .map(element=>({element,rect:element.getBoundingClientRect?.()}))
+        .filter(row=>row.rect && row.rect.width>=Math.min(240,window.innerWidth*0.46) && row.rect.height>=180)
+        .filter(row=>/золотые\s+монеты|gold(?:en)?\s+coins|cur_gold/i.test(clean(row.element.innerText||row.element.textContent||'')))
+        .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height);
+      return candidates[0]?.element || null;
+    }
+
+    function traderCloseForbiddenGoldModal(root=traderForbiddenGoldModalRoot()) {
+      if (!root) return false;
+      const rr=root.getBoundingClientRect?.();
+      const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && !element.disabled && visible(element))
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const aria=clean(element.getAttribute?.('aria-label')||'').trim();
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          let score=0;
+          if (/^(?:×|✕|Закрыть|Close|Назад|Back)$/i.test(text)) score+=500;
+          if (/close|закрыть|back|назад/i.test(aria)) score+=450;
+          if (rr && rect.top<=rr.top+rr.height*0.24) score+=100;
+          if (rr && rect.left>=rr.left+rr.width*0.68) score+=100;
+          if (rect.width>0 && rect.width<=100 && rect.height>0 && rect.height<=100) score+=80;
+          return {element:traderClickableTarget(element,root)||element,score,rect};
+        })
+        .filter(row=>row.score>=450)
+        .sort((a,b)=>b.score-a.score || a.rect.width*a.rect.height-b.rect.width*b.rect.height);
+      const close=rows[0]?.element || null;
+      if (!close) return false;
+      const ok=dispatchAutoMapTap(close,'trader-forbidden-gold-close');
+      recordDiagnostic('trader-forbidden-gold-modal',{
+        revision:HK_TRADER_GOLD_SKIP_REV,
+        action:ok?'closed':'close-failed'
+      });
+      return !!ok;
     }
 
     function traderPurchaseButton(root,cost=null) {
@@ -19282,6 +19345,7 @@
       const signature=getSignature();
       if (!signature.startsWith('TRADER|')) return false;
       if (traderApprovedOpenModal()) return false;
+      if (traderForbiddenGoldModalRoot()) return false;
       return !traderTarget();
     }
 
@@ -19317,6 +19381,18 @@
 
     async function runTraderAuto() {
       if (!traderAutoEnabled() || traderAutoRunning || fishingAutoRunning || battleAutoRunning || chestAutoRunning || lightsAutoRunning) return false;
+
+      const forbiddenGoldModal=traderForbiddenGoldModalRoot();
+      if (forbiddenGoldModal) {
+        const closed=traderCloseForbiddenGoldModal(forbiddenGoldModal);
+        lastSignature='';
+        recordDiagnostic('trader-forbidden-gold-skip',{
+          revision:HK_TRADER_GOLD_SKIP_REV,
+          closed:!!closed
+        });
+        setTimeout(checkPuzzle,closed?120:300);
+        return false;
+      }
 
       const receiptModal=traderReceiptModalRoot();
       if (receiptModal) {
@@ -25342,6 +25418,7 @@
       purchaseConfirmFastGlobalRevision:HK_PURCHASE_CONFIRM_FAST_GLOBAL_REV,
       treasureRecorderUiRemovedRevision:HK_TREASURE_RECORDER_UI_REMOVED_REV,
       fishingModalBudgetRevision:HK_FISHING_MODAL_BUDGET_REV,
+      traderGoldSkipRevision:HK_TRADER_GOLD_SKIP_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
