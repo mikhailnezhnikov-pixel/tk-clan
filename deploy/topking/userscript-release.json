@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.69",
-  "target_version": "1.18.70",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.70.daily-release-notes-reset.candidate.user.js",
-  "primary_marker": "daily-release-notes-20260928-r1",
+  "source_version": "1.18.70",
+  "target_version": "1.18.71",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.71.trader-receipt-ack.candidate.user.js",
+  "primary_marker": "trader-receipt-ack-20260928-r1",
   "preserve_markers": [
+    "daily-release-notes-20260928-r1",
     "shop-fast-pacing-restore-20260928-r1",
     "battle-viewport-scroll-resume-20260928-r1",
     "shop-resource-percent-visible-20260928-r1",
@@ -133,6 +134,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-70-daily-release-notes-reset-live-status.txt",
-  "commit_message": "fix: reset update notes to current day in userscript 1.18.70"
+  "audit_status_path": "audit/hk-userscript-1-18-71-trader-receipt-ack-live-status.txt",
+  "commit_message": "fix: acknowledge trader purchase receipts in userscript 1.18.71"
 }

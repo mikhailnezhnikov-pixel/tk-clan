@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_71_TRADER_RECEIPT_ACK_PREDEPLOY=PASS
+source_version=1.18.70
+target_version=1.18.71
+receipt_ack=MANDATORY
+clickable_container=SUPPORTED
+touch_click_fallback=SUPPORTED
+trader_receipt_ack_contract=PASS
+syntax=PASS
+base_sha256=413b6f5619ea25a5d6f05ebcd3d6c3548f42b0df821c766e095a181aa304281d
+candidate_sha256=4dbd5ade392dafd45e81710fcab189c3072d5a1afd23fdb2d1f46a455d287a96
