@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.74",
-  "target_version": "1.18.75",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.75.fishing-modal-budget.candidate.user.js",
-  "primary_marker": "fishing-modal-budget-ownership-20260928-r1",
+  "source_version": "1.18.75",
+  "target_version": "1.18.76",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.76.trader-gold-skip.candidate.user.js",
+  "primary_marker": "trader-gold-currency-skip-20260928-r1",
   "preserve_markers": [
+    "fishing-modal-budget-ownership-20260928-r1",
     "treasure-recorder-ui-removed-20260928-r1",
     "purchase-confirm-fast-global-20260928-r1",
     "treasure-dig-fast-pacing-20260928-r1",
@@ -138,6 +139,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-75-fishing-modal-budget-live-status.txt",
-  "commit_message": "fix: keep fishing purchase modal until confirmation in userscript 1.18.75 r1"
+  "audit_status_path": "audit/hk-userscript-1-18-76-trader-gold-skip-live-status.txt",
+  "commit_message": "fix: skip regular gold trader lots in userscript 1.18.76"
 }

@@ -1,0 +1,11 @@
+USERSCRIPT_1_18_76_TRADER_GOLD_SKIP_PREDEPLOY=PASS
+source_version=1.18.75
+target_version=1.18.76
+forbidden_lots=verse_gold4coins,verse_gold4food
+gold_modal_confirm=BLOCKED
+gold_modal_auto_close=ENABLED
+approved_trader_items=PRESERVED
+trader_gold_skip_contract=PASS
+syntax=PASS
+base_sha256=bf4a67ac7f0af58e9412cc2b09ca409dac3a28977abbb192987855188d3a83c5
+candidate_sha256=79b433264bad29581f66647054366da19836e18cdf7084ef65bde3dd903c6020
