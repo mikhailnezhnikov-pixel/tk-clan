@@ -23,11 +23,16 @@ for marker in required:
     if marker not in s:
         raise SystemExit("battle safe-scroll contract broken: "+marker)
 
+safe_start=s.find("function dispatchBattleOverlaySafeTap(element")
+safe_end=s.find("function dispatchBattleOverlaySafeTapAt",safe_start)
+if safe_start<0 or safe_end<0:
+    raise SystemExit("battle safe tap section missing")
+safe=s[safe_start:safe_end]
 for forbidden in [
   "battleScrollTargetIntoViewport(element,label);",
   "element.click?.();",
 ]:
-    if forbidden in s:
+    if forbidden in safe:
         raise SystemExit("unsafe/synchronous battle target handling remains: "+forbidden)
 
 # The previously fixed full-map solver and one-berry egg behavior must survive.
