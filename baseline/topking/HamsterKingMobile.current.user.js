@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.61
+// @version      1.18.62
+// @release-note Регрессия Лабиринта: восстановлена изоляция модулей. В 1.18.60 боевой overlay-safe tap был внедрён в общий обработчик, которым пользуются и лампочки; на некоторых раскладках это ломало подтверждение цены «1». Общий tap возвращён к прежней нейтральной логике, а игнорирование HK-оверлеев теперь применяется только внутри боя. Для лампочки добавлен отдельный подтверждённый coordinate-fallback по нижней кнопке цены, без изменения математического решения поля.
 // @release-note Сражение: после получения Сундука победителя игра оставляет его центральную клетку в состоянии «Активировано» вместе со старыми костями и мечом. Скрипт раньше снова считал эту уже полученную награду незабранным сундуком и зависал на «бой продолжается». Теперь «Активировано» считается подтверждённым финалом только когда закрыты все окна награды; старый боевой runner снимается, после чего Автокарта обязательно нажимает «Покинуть локацию», подтверждает выход и продолжает карту.
 // @release-note Сражение: золотой Хранитель сокровищ type_04 с 5 HP уже входил в расчёт, но на правой нижней карточке его номер мог полностью скрываться под плавающими кнопками «Автокарта/Автобой», а эти же кнопки могли перехватить программный tap. Номер шага теперь рисуется поверх служебных кнопок, а боевые tap'ы временно игнорируют HK-оверлеи и попадают в реальную карточку/кнопку под ними.
 // @release-note Сражение на Карте сокровищ: исправлена единая цепочка входа и финала. Окно «Сражение → Понятно» теперь распознаётся независимо от скрытого под ним поля и обязательно подтверждается до запуска атак. Сундук победителя и его окно имеют приоритет над остаточным DOM меча/врагов; финальный сундук нажимается по реальной нижней action-кнопке, затем забирается награда и подтверждается «Понятно». После подтверждённой награды старые элементы боя больше не возвращают статус «бой продолжается», и Автокарта может покинуть локацию.
@@ -173,7 +174,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.61';
+  const BUILD_VERSION = '1.18.62';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17900,6 +17901,7 @@
   const HK_BATTLE_REWARD_STATE_MACHINE_REV = 'battle-reward-state-machine-20260928-r1';
   const HK_BATTLE_OVERLAY_SAFE_TARGETING_REV = 'battle-overlay-safe-targeting-20260928-r1';
   const HK_BATTLE_ACTIVATED_EXIT_REV = 'battle-activated-final-reward-exit-20260928-r1';
+  const HK_MINIGAME_TAP_ISOLATION_REV = 'minigame-tap-isolation-lights-recovery-20260928-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -20031,12 +20033,26 @@
         return !currentPurchase;
       };
 
-      const confirmed=await deviceNeutralActivate(
+      let confirmed=await deviceNeutralActivate(
         clickTarget,
         'lights-confirm-cost-'+slot,
         accepted,
         1100
       );
+
+      if (!confirmed && lightsModalRoot()) {
+        const fallbackRoot=lightsModalRoot() || purchaseModal;
+        const sent=tapLightsPurchaseFallback(fallbackRoot,slot);
+        if (sent) {
+          confirmed=await waitDeviceNeutralCondition(accepted,1400,60);
+          recordDiagnostic('lights-purchase-coordinate-fallback',{
+            revision:HK_MINIGAME_TAP_ISOLATION_REV,
+            slot,
+            confirmed
+          });
+        }
+      }
+
       if (!confirmed) return {ok:false,reason:'purchase-tap-failed'};
 
       recordDiagnostic('lights-purchase-confirmed-device-neutral',{
@@ -20586,7 +20602,7 @@
       battleAutoRunning=true;
       const runId=++battleAutoRunId;
       try {
-        if (!dispatchBattleTap(button,'battle-enter-minigame')) {
+        if (!dispatchBattleOverlaySafeTap(button,'battle-enter-minigame')) {
           recordDiagnostic('battle-entry-stop',{revision:HK_BATTLE_ENTRY_GUARD_REV,reason:'entry-tap-failed'});
           return false;
         }
@@ -20700,6 +20716,50 @@
       return clicked>0;
     }
 
+    function dispatchBattleTap(element,label='tap') {
+      if (!element || !visible(element)) return false;
+      const rect=element.getBoundingClientRect?.();
+      if (!rect || rect.width<=0 || rect.height<=0) return false;
+      const x=Math.max(1,Math.min(window.innerWidth-1,rect.left+rect.width/2));
+      const y=Math.max(1,Math.min(window.innerHeight-1,rect.top+rect.height/2));
+      const leaf=document.elementFromPoint(x,y) || element;
+      const options={bubbles:true,cancelable:true,clientX:x,clientY:y,screenX:x,screenY:y,button:0,buttons:1,pointerId:1,pointerType:'touch',isPrimary:true};
+      try { leaf.dispatchEvent(new PointerEvent('pointerdown',options)); } catch (_) {}
+      try { leaf.dispatchEvent(new MouseEvent('mousedown',{...options,buttons:1})); } catch (_) {}
+      try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
+      try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
+      try { leaf.click?.(); } catch (_) {}
+      recordDiagnostic('battle-mobile-tap',{
+        revision:HK_MINIGAME_SINGLE_TAP_REV,
+        label,
+        x:Math.round(x),
+        y:Math.round(y),
+        tag:leaf.tagName||''
+      });
+      return true;
+    }
+
+    function dispatchBattleTapAt(x,y,label='tap-at') {
+      const px=Math.max(1,Math.min(window.innerWidth-1,Number(x)||1));
+      const py=Math.max(1,Math.min(window.innerHeight-1,Number(y)||1));
+      const leaf=document.elementFromPoint(px,py);
+      if (!leaf) return false;
+      const options={bubbles:true,cancelable:true,clientX:px,clientY:py,screenX:px,screenY:py,button:0,buttons:1,pointerId:1,pointerType:'touch',isPrimary:true};
+      try { leaf.dispatchEvent(new PointerEvent('pointerdown',options)); } catch (_) {}
+      try { leaf.dispatchEvent(new MouseEvent('mousedown',{...options,buttons:1})); } catch (_) {}
+      try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
+      try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
+      try { leaf.click?.(); } catch (_) {}
+      recordDiagnostic('battle-mobile-tap',{
+        revision:HK_MINIGAME_SINGLE_TAP_REV,
+        label,
+        x:Math.round(px),
+        y:Math.round(py),
+        tag:leaf.tagName||''
+      });
+      return true;
+    }
+
     function battleUiOverlays() {
       return [
         autoMapToggle,
@@ -20725,7 +20785,7 @@
       }
     }
 
-    function dispatchBattleTap(element,label='tap') {
+    function dispatchBattleOverlaySafeTap(element,label='battle-overlay-safe-tap') {
       if (!element || !visible(element)) return false;
       const rect=element.getBoundingClientRect?.();
       if (!rect || rect.width<=0 || rect.height<=0) return false;
@@ -20739,18 +20799,18 @@
       try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
       try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
       try { leaf.click?.(); } catch (_) {}
-      recordDiagnostic('battle-mobile-tap',{
+      recordDiagnostic('battle-overlay-safe-tap',{
         revision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
         label,
         x:Math.round(x),
         y:Math.round(y),
         tag:leaf.tagName||'',
-        overlaysIgnored:battleUiOverlays().length
+        overlaysIgnored:overlays.length
       });
       return true;
     }
 
-    function dispatchBattleTapAt(x,y,label='tap-at') {
+    function dispatchBattleOverlaySafeTapAt(x,y,label='battle-overlay-safe-tap-at') {
       const px=Math.max(1,Math.min(window.innerWidth-1,Number(x)||1));
       const py=Math.max(1,Math.min(window.innerHeight-1,Number(y)||1));
       const leaf=battleElementFromPointIgnoringOverlays(px,py,null);
@@ -20761,7 +20821,7 @@
       try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
       try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
       try { leaf.click?.(); } catch (_) {}
-      recordDiagnostic('battle-mobile-tap',{
+      recordDiagnostic('battle-overlay-safe-tap',{
         revision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
         label,
         x:Math.round(px),
@@ -21288,7 +21348,7 @@
     async function tapVictoryTile(root,runId) {
       if (!root || runId!==battleAutoRunId || !battleAutoEnabled()) return false;
       const action=battleVictoryTileAction(root);
-      if (action && dispatchBattleTap(action,'victory-tile-action')) {
+      if (action && dispatchBattleOverlaySafeTap(action,'victory-tile-action')) {
         recordDiagnostic('battle-victory-tile-click',{
           revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
           mode:'action-element'
@@ -21301,7 +21361,7 @@
       const x=rr.left+rr.width/2;
       for (const fraction of [0.84,0.90,0.76]) {
         if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
-        if (dispatchBattleTapAt(x,rr.top+rr.height*fraction,'victory-tile-fallback-'+fraction)) {
+        if (dispatchBattleOverlaySafeTapAt(x,rr.top+rr.height*fraction,'victory-tile-fallback-'+fraction)) {
           recordDiagnostic('battle-victory-tile-click',{
             revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
             mode:'coordinate',
@@ -21560,7 +21620,7 @@
         // Mobile Safari/game handlers are not guaranteed to react to a raw
         // HTMLElement.click(). Use the same complete pointer/touch sequence that
         // already works for other Treasure Map actions.
-        if (!dispatchBattleTap(element,'battle-open-card')) {
+        if (!dispatchBattleOverlaySafeTap(element,'battle-open-card')) {
           recordDiagnostic('battle-auto-stop',{
             revision:HK_BATTLE_RAW_CONTEXT_REV,
             reason:'target-tap-failed',
@@ -21586,7 +21646,7 @@
           });
           return false;
         }
-        if (!dispatchBattleTap(actionButton,'battle-confirm-attack')) {
+        if (!dispatchBattleOverlaySafeTap(actionButton,'battle-confirm-attack')) {
           recordDiagnostic('battle-auto-stop',{
             revision:HK_BATTLE_RAW_CONTEXT_REV,
             reason:'attack-confirm-tap-failed',
@@ -24977,6 +25037,7 @@
       battleRewardStateMachineRevision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
       battleOverlaySafeTargetingRevision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
       battleActivatedExitRevision:HK_BATTLE_ACTIVATED_EXIT_REV,
+      minigameTapIsolationRevision:HK_MINIGAME_TAP_ISOLATION_REV,
       start,
       stop,
       check:checkPuzzle,
