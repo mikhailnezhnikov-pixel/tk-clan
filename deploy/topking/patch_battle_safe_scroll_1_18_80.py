@@ -122,7 +122,7 @@ new_scroll=r'''    function battleElementInViewport(element) {
       if (x<1 || x>window.innerWidth-1 || y<1 || y>window.innerHeight-1) {
         return {ready:false,reason:'offscreen',x,y,rect};
       }
-      const leaf=battleElementFromPointIgnoringOverlays(x,y,null);
+      const leaf=battleElementFromPointIgnoringOverlays(x,y,element);
       if (!battlePointBelongsToElement(element,leaf)) {
         return {
           ready:false,
