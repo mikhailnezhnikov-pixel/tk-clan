@@ -229,7 +229,8 @@ new_scroll=r'''    function battleElementInViewport(element) {
           label,
           reason:probe.reason,
           blockerTag:probe.leafTag||'',
-          blockerText:probe.leafText||''
+          blockerText:probe.leafText||'',
+          legacyGuard:'battle-native-offscreen-click-disabled'
         });
         return false;
       }
@@ -250,7 +251,8 @@ new_scroll=r'''    function battleElementInViewport(element) {
         y:Math.round(y),
         tag:leaf.tagName||'',
         overlaysIgnored:battleUiOverlays().length,
-        verifiedTarget:true
+        verifiedTarget:true,
+        autoScrolled:true
       });
       return true;
     }
@@ -432,7 +434,7 @@ for marker in [
     if marker not in s:
         raise SystemExit("missing marker: "+marker)
 
-if "battle-native-offscreen-click" in s:
+if "element.click?.();" in s[s.find("function dispatchBattleOverlaySafeTap(element"):s.find("function dispatchBattleOverlaySafeTapAt")]:
     raise SystemExit("unsafe native offscreen click fallback still present")
 
 p.write_text(s,encoding="utf-8")
