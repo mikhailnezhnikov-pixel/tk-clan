@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.73
+// @version      1.18.74
+// @release-note Карта сокровищ: убрана служебная плавающая кнопка «Запись карты». Рекордер больше не занимает место на экране; остальная логика Автокарты и мини-игр не менялась.
 // @release-note Покупки в мини-играх: подтверждение любого покупаемого слота теперь отправляется через единый быстрый интервал 0,10–0,18 с после появления кнопки подтверждения. Это касается раскопок, сундуков, Тайного торговца, рыбалки и общих подтверждений Автокарты. Проверка результата, защита от двойного клика и cooldown после 409/429/5xx сохранены.
 // @release-note Карта сокровищ — Место раскопок: убраны длинные искусственные паузы только для раскопок. Открытие клетки, подтверждение стоимости 5 ягод, ожидание результата и переход к следующему действию теперь выполняются быстрым отдельным темпом; обычные сундуки и защитные таймауты не ускорялись.
 // @release-note Тайный торговец: после успешной покупки окно получения награды с кнопкой «Понятно» теперь является обязательным этапом. Автомат находит реальный кликабельный контейнер кнопки, подтверждает награду с touch/click fallback и только после закрытия окна продолжает покупки или выходит из комнаты.
@@ -19,7 +20,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.73';
+  const BUILD_VERSION = '1.18.74';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3631,6 +3632,7 @@
   const HK_TREASURE_CHEST_FAST_PACING_REV='treasure-chest-fast-pacing-20260927-r1';
   const HK_TREASURE_DIG_FAST_REV='treasure-dig-fast-pacing-20260928-r1';
   const HK_PURCHASE_CONFIRM_FAST_GLOBAL_REV='purchase-confirm-fast-global-20260928-r1';
+  const HK_TREASURE_RECORDER_UI_REMOVED_REV='treasure-recorder-ui-removed-20260928-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -4555,21 +4557,12 @@
   }
 
   function treasureRunRecorderUpdateButton() {
-    if(!treasureRunRecorderButton)return;
-    const active=treasureRunRecorderActive();
-    const show=treasureEventContextVisible();
-    const display=show?'block':'none';
-    const label=active
-      ? 'Запись карты: ВКЛ #'+String(treasureRunRecorderState?.runIndex||'')
-      : 'Запись карты: ВЫКЛ';
-    const background=active?'#d13b3b':'#292929';
-    const borderColor=active?'#ffd5d5':'rgba(255,255,255,.8)';
-
-    if(treasureRunRecorderButton.style.display!==display)treasureRunRecorderButton.style.display=display;
-    if(treasureRunRecorderButton.textContent!==label)treasureRunRecorderButton.textContent=label;
-    if(treasureRunRecorderButton.style.background!==background)treasureRunRecorderButton.style.background=background;
-    if(treasureRunRecorderButton.style.color!=='rgb(255, 255, 255)' && treasureRunRecorderButton.style.color!=='#fff')treasureRunRecorderButton.style.color='#fff';
-    if(treasureRunRecorderButton.style.borderColor!==borderColor)treasureRunRecorderButton.style.borderColor=borderColor;
+    // Recorder UI is retired. Keep the recorder internals available for
+    // diagnostics/API use, but never leave a floating control on the game UI.
+    try {
+      if(treasureRunRecorderButton?.isConnected) treasureRunRecorderButton.remove();
+      document.getElementById('hkTreasureRunRecorderToggle')?.remove();
+    } catch (_) {}
   }
 
   function treasureRunRecorderStart() {
@@ -4648,32 +4641,9 @@
 
     const start=()=>{
       if(!document.body){setTimeout(start,300);return;}
-      if(!treasureRunRecorderButton){
-        treasureRunRecorderButton=document.createElement('button');
-        treasureRunRecorderButton.id='hkTreasureRunRecorderToggle';
-        treasureRunRecorderButton.type='button';
-        Object.assign(treasureRunRecorderButton.style,{
-          position:'fixed',
-          left:'12px',
-          bottom:'154px',
-          zIndex:'2147483646',
-          border:'2px solid rgba(255,255,255,.8)',
-          borderRadius:'18px',
-          padding:'8px 11px',
-          fontSize:'12px',
-          fontWeight:'900',
-          lineHeight:'1',
-          boxShadow:'0 4px 14px rgba(0,0,0,.55)',
-          WebkitTapHighlightColor:'transparent',
-          touchAction:'manipulation'
-        });
-        treasureRunRecorderButton.addEventListener('click',event=>{
-          event.preventDefault();
-          event.stopPropagation();
-          treasureRunRecorderToggle();
-        },true);
-        document.body.appendChild(treasureRunRecorderButton);
-      }
+      // Floating recorder control retired in 1.18.74.
+      // Remove a stale control left by an older injected build, if present.
+      try { document.getElementById('hkTreasureRunRecorderToggle')?.remove(); } catch (_) {}
 
       document.addEventListener('click',treasureRunRecorderObserveClick,true);
       if(!treasureRunRecorderObserver){
@@ -25324,6 +25294,7 @@
       treasureChestFastPacingRevision:HK_TREASURE_CHEST_FAST_PACING_REV,
       treasureDigFastRevision:HK_TREASURE_DIG_FAST_REV,
       purchaseConfirmFastGlobalRevision:HK_PURCHASE_CONFIRM_FAST_GLOBAL_REV,
+      treasureRecorderUiRemovedRevision:HK_TREASURE_RECORDER_UI_REMOVED_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
