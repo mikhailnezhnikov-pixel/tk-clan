@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.65",
-  "target_version": "1.18.66",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.66.shop-resource-largest-percent.candidate.user.js",
-  "primary_marker": "shop-resource-largest-percent-20260928-r1",
+  "source_version": "1.18.66",
+  "target_version": "1.18.67",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.67.shop-resource-percent-visible.candidate.user.js",
+  "primary_marker": "shop-resource-percent-visible-20260928-r1",
   "preserve_markers": [
+    "shop-resource-largest-percent-20260928-r1",
     "lights-hint-canon-fixed-plan-map6-20260928-r1",
     "resource-station-stateless-discovery-20260928-r1",
     "lights-confirm-ack-before-board-reward-gate-20260928-r1",
@@ -129,6 +130,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-66-shop-resource-largest-percent-live-status.txt",
-  "commit_message": "fix: deploy resource shop largest lots and percentage selection in userscript 1.18.66"
+  "audit_status_path": "audit/hk-userscript-1-18-67-shop-resource-percent-visible-live-status.txt",
+  "commit_message": "fix: show resource shop percentage selector in userscript 1.18.67"
 }
