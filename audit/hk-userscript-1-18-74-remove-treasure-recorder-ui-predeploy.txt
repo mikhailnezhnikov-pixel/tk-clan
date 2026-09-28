@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_74_REMOVE_TREASURE_RECORDER_UI_PREDEPLOY=PASS
+source_version=1.18.73
+target_version=1.18.74
+recorder_button=REMOVED
+recorder_internals=PRESERVED
+gameplay_logic=UNCHANGED
+recorder_ui_removal_contract=PASS
+syntax=PASS
+base_sha256=73cc5412884fd8af345867b137b1bd108dec7f1757bb48872ea7f5e96bb0c39d
+candidate_sha256=30f97bd82dd3e5cfcce53805c9a62c865440522c60f94634d8d8ff414408570d

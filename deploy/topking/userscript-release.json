@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.72",
-  "target_version": "1.18.73",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.73.global-fast-purchase-confirm.candidate.user.js",
-  "primary_marker": "purchase-confirm-fast-global-20260928-r1",
+  "source_version": "1.18.73",
+  "target_version": "1.18.74",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.74.remove-treasure-recorder-ui.candidate.user.js",
+  "primary_marker": "treasure-recorder-ui-removed-20260928-r1",
   "preserve_markers": [
+    "purchase-confirm-fast-global-20260928-r1",
     "treasure-dig-fast-pacing-20260928-r1",
     "trader-receipt-ack-20260928-r1",
     "daily-release-notes-20260928-r1",
@@ -136,6 +137,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-73-global-fast-purchase-confirm-live-status.txt",
-  "commit_message": "perf: make all minigame purchase confirmations fast in userscript 1.18.73 r1"
+  "audit_status_path": "audit/hk-userscript-1-18-74-remove-treasure-recorder-ui-live-status.txt",
+  "commit_message": "ui: remove Treasure map recorder button in userscript 1.18.74"
 }
