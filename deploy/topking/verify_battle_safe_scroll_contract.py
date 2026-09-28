@@ -11,7 +11,7 @@ required=[
   "function battleElementTapProbe",
   "function battleTargetSafeBand",
   "async function battleScrollTargetIntoViewportAsync",
-  "element.scrollIntoView({behavior:'auto',block:'center',inline:'nearest'})",
+  "element.scrollIntoView({behavior:'auto',block:'center',inline:'center'})",
   "window.scrollBy({top:center-desired,left:0,behavior:'auto'})",
   "blockerText:probe.leafText||''",
   "await battleScrollTargetIntoViewportAsync(",
