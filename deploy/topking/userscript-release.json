@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.62",
-  "target_version": "1.18.63",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.63.lights-confirm-reward-gate.candidate.user.js",
-  "primary_marker": "lights-confirm-ack-before-board-reward-gate-20260928-r1",
+  "source_version": "1.18.63",
+  "target_version": "1.18.64",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.64.resource-station-stateless-discovery.candidate.user.js",
+  "primary_marker": "resource-station-stateless-discovery-20260928-r1",
   "preserve_markers": [
+    "lights-confirm-ack-before-board-reward-gate-20260928-r1",
     "minigame-tap-isolation-lights-recovery-20260928-r1",
     "battle-activated-final-reward-exit-20260928-r1",
     "battle-overlay-safe-targeting-20260928-r1",
@@ -126,6 +127,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-63-lights-confirm-reward-gate-live-status.txt",
-  "commit_message": "fix: deploy lamp confirm state machine and reward-before-exit gate in userscript 1.18.63 r2"
+  "audit_status_path": "audit/hk-userscript-1-18-64-resource-station-stateless-discovery-live-status.txt",
+  "commit_message": "fix: deploy stateless resource station discovery in userscript 1.18.64"
 }
