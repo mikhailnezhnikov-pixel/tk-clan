@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.59
+// @version      1.18.60
+// @release-note Сражение: золотой Хранитель сокровищ type_04 с 5 HP уже входил в расчёт, но на правой нижней карточке его номер мог полностью скрываться под плавающими кнопками «Автокарта/Автобой», а эти же кнопки могли перехватить программный tap. Номер шага теперь рисуется поверх служебных кнопок, а боевые tap'ы временно игнорируют HK-оверлеи и попадают в реальную карточку/кнопку под ними.
 // @release-note Сражение на Карте сокровищ: исправлена единая цепочка входа и финала. Окно «Сражение → Понятно» теперь распознаётся независимо от скрытого под ним поля и обязательно подтверждается до запуска атак. Сундук победителя и его окно имеют приоритет над остаточным DOM меча/врагов; финальный сундук нажимается по реальной нижней action-кнопке, затем забирается награда и подтверждается «Понятно». После подтверждённой награды старые элементы боя больше не возвращают статус «бой продолжается», и Автокарта может покинуть локацию.
 // @release-note Карта сокровищ — ключи: автопокупка больше не привязана только к «Необычному ключу» и цене 10. Любое окно «… ключ сокровищ» (включая Обычный за 5 ягод) распознаётся по заголовку; кнопка покупки и её фактическая цена определяются из открытого окна, после чего выполняется единый подтверждённый tap и Автокарта продолжает маршрут.
 // @release-note Карта сокровищ: найденный «Необычный ключ сокровищ» автоматически выкупается за 10 ягод. В сражении после входа сначала автоматически подтверждается окно «Понятно», затем запускается бой. После полной зачистки обязательно забирается Сундук победителя и подтверждается итоговая награда; выход из локации разрешается только после завершения этой цепочки.
@@ -171,7 +172,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.59';
+  const BUILD_VERSION = '1.18.60';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17896,6 +17897,7 @@
   const HK_TREASURE_KEY_BATTLE_HANDOFF_REV = 'treasure-key-battle-handoff-20260928-r1';
   const HK_TREASURE_KEY_ANY_RARITY_REV = 'treasure-key-any-rarity-20260928-r1';
   const HK_BATTLE_REWARD_STATE_MACHINE_REV = 'battle-reward-state-machine-20260928-r1';
+  const HK_BATTLE_OVERLAY_SAFE_TARGETING_REV = 'battle-overlay-safe-targeting-20260928-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -20696,27 +20698,60 @@
       return clicked>0;
     }
 
+    function battleUiOverlays() {
+      return [
+        autoMapToggle,
+        battleAutoToggle,
+        chestAutoToggle,
+        lightsAutoToggle,
+        fishingAutoToggle,
+        traderAutoToggle
+      ].filter(Boolean);
+    }
+
+    function battleElementFromPointIgnoringOverlays(x,y,fallback=null) {
+      const overlays=battleUiOverlays();
+      const saved=overlays.map(element=>({
+        element,
+        pointerEvents:element.style.pointerEvents
+      }));
+      try {
+        overlays.forEach(element=>{ element.style.pointerEvents='none'; });
+        return document.elementFromPoint(x,y) || fallback || null;
+      } finally {
+        saved.forEach(row=>{ row.element.style.pointerEvents=row.pointerEvents; });
+      }
+    }
+
     function dispatchBattleTap(element,label='tap') {
       if (!element || !visible(element)) return false;
       const rect=element.getBoundingClientRect?.();
       if (!rect || rect.width<=0 || rect.height<=0) return false;
       const x=Math.max(1,Math.min(window.innerWidth-1,rect.left+rect.width/2));
       const y=Math.max(1,Math.min(window.innerHeight-1,rect.top+rect.height/2));
-      const leaf=document.elementFromPoint(x,y) || element;
+      const leaf=battleElementFromPointIgnoringOverlays(x,y,element);
+      if (!leaf) return false;
       const options={bubbles:true,cancelable:true,clientX:x,clientY:y,screenX:x,screenY:y,button:0,buttons:1,pointerId:1,pointerType:'touch',isPrimary:true};
       try { leaf.dispatchEvent(new PointerEvent('pointerdown',options)); } catch (_) {}
       try { leaf.dispatchEvent(new MouseEvent('mousedown',{...options,buttons:1})); } catch (_) {}
       try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
       try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
       try { leaf.click?.(); } catch (_) {}
-      recordDiagnostic('battle-mobile-tap',{revision:HK_MINIGAME_SINGLE_TAP_REV,label,x:Math.round(x),y:Math.round(y),tag:leaf.tagName||''});
+      recordDiagnostic('battle-mobile-tap',{
+        revision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
+        label,
+        x:Math.round(x),
+        y:Math.round(y),
+        tag:leaf.tagName||'',
+        overlaysIgnored:battleUiOverlays().length
+      });
       return true;
     }
 
     function dispatchBattleTapAt(x,y,label='tap-at') {
       const px=Math.max(1,Math.min(window.innerWidth-1,Number(x)||1));
       const py=Math.max(1,Math.min(window.innerHeight-1,Number(y)||1));
-      const leaf=document.elementFromPoint(px,py);
+      const leaf=battleElementFromPointIgnoringOverlays(px,py,null);
       if (!leaf) return false;
       const options={bubbles:true,cancelable:true,clientX:px,clientY:py,screenX:px,screenY:py,button:0,buttons:1,pointerId:1,pointerType:'touch',isPrimary:true};
       try { leaf.dispatchEvent(new PointerEvent('pointerdown',options)); } catch (_) {}
@@ -20724,7 +20759,14 @@
       try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
       try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
       try { leaf.click?.(); } catch (_) {}
-      recordDiagnostic('battle-mobile-tap',{revision:HK_MINIGAME_SINGLE_TAP_REV,label,x:Math.round(px),y:Math.round(py),tag:leaf.tagName||''});
+      recordDiagnostic('battle-mobile-tap',{
+        revision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
+        label,
+        x:Math.round(px),
+        y:Math.round(py),
+        tag:leaf.tagName||'',
+        overlaysIgnored:battleUiOverlays().length
+      });
       return true;
     }
 
@@ -21689,7 +21731,7 @@
         fontWeight:'900',
         lineHeight:'32px',
         textAlign:'center',
-        zIndex:'9999999',
+        zIndex:'2147483647',
         boxShadow:'0 2px 8px rgba(0,0,0,.9)',
         pointerEvents:'none',
         userSelect:'none'
@@ -22343,6 +22385,24 @@
         const enemy = board[position];
         if (enemy?.element) addNumber(enemy.element,index + 1);
       });
+      const selectedSlots=new Set(solution.order.map(position=>position+BATTLE_FIRST_SLOT));
+      const guardianRows=enemies
+        .filter(enemy=>enemy.type==='04')
+        .map(enemy=>({
+          slot:enemy.slot,
+          hp:enemy.hp,
+          selected:selectedSlots.has(enemy.slot),
+          step:solution.order.indexOf(enemy.slot-BATTLE_FIRST_SLOT)+1
+        }));
+      if (guardianRows.length) {
+        recordDiagnostic('battle-guardian-plan-coverage',{
+          revision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
+          swords:maxAttack,
+          mode:solutionMode,
+          guardians:guardianRows,
+          order:solution.order.map(position=>position+BATTLE_FIRST_SLOT)
+        });
+      }
       console.log('HK BATTLE ATK:',maxAttack);
       console.log('HK BATTLE HP:',totalHp);
       console.log('HK BATTLE режим:',solution.mode||'normal');
@@ -24825,6 +24885,7 @@
       treasureKeyBattleHandoffRevision:HK_TREASURE_KEY_BATTLE_HANDOFF_REV,
       treasureKeyAnyRarityRevision:HK_TREASURE_KEY_ANY_RARITY_REV,
       battleRewardStateMachineRevision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+      battleOverlaySafeTargetingRevision:HK_BATTLE_OVERLAY_SAFE_TARGETING_REV,
       start,
       stop,
       check:checkPuzzle,
