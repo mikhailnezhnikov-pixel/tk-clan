@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.82",
-  "target_version": "1.18.83",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.83.trader-gold-stale-modal.candidate.user.js",
-  "primary_marker": "trader-gold-stale-modal-reset-20260929-r1",
+  "source_version": "1.18.83",
+  "target_version": "1.18.84",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.84.clan-crest-transparent-mask.candidate.user.js",
+  "primary_marker": "clan-crest-transparent-mask-20260928-r1",
   "preserve_markers": [
+    "trader-gold-stale-modal-reset-20260929-r1",
     "battle-visible-point-truth-20260929-r1",
     "trader-gold-currency-skip-20260928-r1",
     "clan-crest-launcher-20260928-r1",
@@ -147,6 +148,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-83-trader-gold-stale-modal-live-status.txt",
-  "commit_message": "fix: reset forbidden gold trader modal in userscript 1.18.83 r1"
+  "audit_status_path": "audit/hk-userscript-1-18-84-clan-crest-transparent-mask-live-status.txt",
+  "commit_message": "fix: make clan crest launcher background transparent in userscript 1.18.84"
 }
