@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.75",
-  "target_version": "1.18.76",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.76.trader-gold-skip.candidate.user.js",
-  "primary_marker": "trader-gold-currency-skip-20260928-r1",
+  "source_version": "1.18.76",
+  "target_version": "1.18.77",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.77.chest-key-offer.candidate.user.js",
+  "primary_marker": "chest-key-offer-buy-20260928-r1",
   "preserve_markers": [
+    "trader-gold-currency-skip-20260928-r1",
     "fishing-modal-budget-ownership-20260928-r1",
     "treasure-recorder-ui-removed-20260928-r1",
     "purchase-confirm-fast-global-20260928-r1",
@@ -139,6 +140,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-76-trader-gold-skip-live-status.txt",
-  "commit_message": "fix: skip regular gold trader lots in userscript 1.18.76 r1"
+  "audit_status_path": "audit/hk-userscript-1-18-77-chest-key-offer-live-status.txt",
+  "commit_message": "fix: buy Treasure Key offer in Chest Hunt in userscript 1.18.77"
 }

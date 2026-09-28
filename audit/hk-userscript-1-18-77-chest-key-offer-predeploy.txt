@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_77_CHEST_KEY_OFFER_PREDEPLOY=PASS
+source_version=1.18.76
+target_version=1.18.77
+key_offer_detection=ITEM_OR_ICON_OR_TEXT
+visual_cost_fallback=item_treasurehunt_energy
+key_offer_priority=1400
+chest_key_offer_contract=PASS
+syntax=PASS
+base_sha256=79b433264bad29581f66647054366da19836e18cdf7084ef65bde3dd903c6020
+candidate_sha256=cfb65fbdd4a09954ebe9aec2c17c7864b4a6452181d7d7450e658a042d1046fb
