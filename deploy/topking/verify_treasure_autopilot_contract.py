@@ -112,15 +112,35 @@ if "treasure-automap-module-ownership-20260927-r1" in s:
 if "treasure-key-battle-handoff-20260928-r1" in s:
     key_helpers=section("function autoMapTreasureKeyModalRoot","async function autoMapWaitModal")
     for marker in [
-        "Необычный ключ сокровищ",
-        "Unusual treasure key",
-        "quantity:10",
-        "treasure-unusual-key-buy-10",
         "autoMapTreasureKeyModalRoot()",
         "autoMapTreasureKeyPurchaseButton(root)",
+        "autoMapBuyTreasureKeyIfPresent()",
     ]:
         if marker not in key_helpers:
             raise SystemExit(f"treasure key purchase contract broken: {marker}")
+
+    # 1.18.58+: any rarity/price must use the same modal path. Never regress
+    # to a hardcoded Unusual/10-only purchase.
+    if "treasure-key-any-rarity-20260928-r1" in s:
+        for marker in [
+            "ключ\\s+сокровищ",
+            "treasure\\s+key",
+            "const costMatch=text.match(",
+            "Number.isFinite(cost)",
+            "treasure-key-buy-button-found",
+            "treasure-key-buy-'+String(cost??'unknown')",
+            "treasure-key-purchased",
+        ]:
+            if marker not in key_helpers:
+                raise SystemExit(f"generic treasure key contract broken: {marker}")
+        for forbidden in [
+            "quantity:10}) || autoMapModalPrimaryButton(root,10)",
+            "treasure-unusual-key-buy-10",
+            "ключ · жду 10 ягод",
+            "cost:10",
+        ]:
+            if forbidden in key_helpers:
+                raise SystemExit(f"generic treasure key contract regressed to fixed rarity/price: {forbidden}")
 
     tick=section("async function runAutoMapTick","function setAutoMapEnabled")
     key_pos=tick.find("const keyModal=autoMapTreasureKeyModalRoot();")
@@ -130,7 +150,6 @@ if "treasure-key-battle-handoff-20260928-r1" in s:
     for marker in [
         "autoMapBuyTreasureKeyIfPresent()",
         "autoMapStatus('выкупаю ключ'",
-        "cost:10",
     ]:
         if marker not in tick and marker not in key_helpers:
             raise SystemExit(f"treasure key AutoMap handoff broken: {marker}")
