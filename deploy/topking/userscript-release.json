@@ -144,5 +144,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-79-battle-full-state-egg-live-status.txt",
-  "commit_message": "fix: read full battle state and buy one-berry egg in userscript 1.18.79"
+  "commit_message": "fix: read full battle state and buy one-berry egg in userscript 1.18.79 r1"
 }
