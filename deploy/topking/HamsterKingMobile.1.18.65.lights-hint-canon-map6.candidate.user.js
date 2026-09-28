@@ -20308,7 +20308,7 @@
         'repeated-planned-slot',
         'canonical-plan-has-duplicates',
         'target-slot-mismatch',
-        'initial-stale-modal-blocking'
+        'initial-modal-cannot-close'
       ]);
 
       if (autoMapOwnsLights && fatalReasons.has(reason)) {
@@ -20353,7 +20353,7 @@
       try {
         if (lightsModalRoot()) {
           const cleared=await clearStaleLightsModalBeforeStep(runId,0,3200);
-          if (!cleared) return failLightsAuto('initial-stale-modal-blocking',{phase:'before-plan'});
+          if (!cleared) return failLightsAuto('initial-modal-cannot-close',{phase:'before-plan'});
         }
         while (runId===lightsAutoRunId && lightsAutoEnabled()) {
           if (steps>=LIGHTS_AUTO_MAX_STEPS) {
