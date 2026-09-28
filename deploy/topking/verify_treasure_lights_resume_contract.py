@@ -74,4 +74,61 @@ if "treasure-lights-resume-open-modal-20260927-r1" in s:
         if recoverable in fatal:
             raise SystemExit(f"lights resume contract made UI recovery fatal: {recoverable}")
 
+
+
+# 1.18.63+: lamp presses are a strict transaction and leaving the labyrinth is
+# forbidden until the final reward is actually claimed and acknowledged.
+if "lights-confirm-ack-before-board-reward-gate-20260928-r1" in s:
+    board=section("function getLightsBoard()","function lightNeighbours(position)")
+    step=section("async function runLightsModalStep","function lightsRewardElement()")
+    completed=section("function lightsRoomCompleted()","function lightsRewardModalRoot()")
+    exit_flow=section("async function autoMapReturnFromCompletedLights()","function autoMapBottomContinueButton")
+
+    for marker in [
+        "candidatesBySlot",
+        "intersectsViewport",
+        "lights-board-responsive-duplicates-filtered",
+    ]:
+        if marker not in board:
+            raise SystemExit(f"lights confirmed-state contract lost visible-board selection: {marker}")
+
+    for marker in [
+        "lights-confirm-ack-",
+        "state:'ack_confirmed'",
+        "state:'board_changed'",
+        "waitLightsAcknowledge(runId,before",
+        "waitLightsBoardChange(before,runId",
+    ]:
+        if marker not in step:
+            raise SystemExit(f"lights confirmed-state contract lost transaction stage: {marker}")
+
+    ack_pos=step.find("lights-confirm-ack-")
+    board_wait_pos=step.find("waitLightsBoardChange(before,runId")
+    if ack_pos < 0 or board_wait_pos < 0 or ack_pos > board_wait_pos:
+        raise SystemExit("lights confirmed-state contract waits for board before acknowledgement")
+
+    if "return lightsFinalRewardClaimed===true;" not in completed:
+        raise SystemExit("lights reward contract allows Activated to masquerade as claimed")
+    if "lightsRewardActivated()" in completed:
+        raise SystemExit("lights reward contract still treats Activated as completed")
+
+    for marker in [
+        "HK_REWARD_CLAIM_BEFORE_EXIT_REV",
+        "lights-exit-blocked-final-reward",
+        "lights-exit-blocked-reward-confirmation",
+        "if (!lightsFinalRewardClaimed)",
+        "lightsRewardModalRoot() || lightsRewardAckButton()",
+    ]:
+        if marker not in exit_flow:
+            raise SystemExit(f"lights reward-before-exit contract broken: {marker}")
+
+    unsafe_recovery=[
+        "source:'activated-reward-dom'",
+        "lightsFinalRewardClaimed=true",
+    ]
+    prefix=exit_flow[:exit_flow.find("autoMapStatus('выход за 10'")]
+    for marker in unsafe_recovery:
+        if marker in prefix:
+            raise SystemExit(f"lights reward-before-exit contract has unsafe recovery: {marker}")
+
 print("TREASURE_LIGHTS_RESUME_CONTRACT=PASS")
