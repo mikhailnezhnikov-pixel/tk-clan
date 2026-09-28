@@ -123,7 +123,7 @@ old_target="""      // A purchasable Treasure Key offer in Chest Hunt is a resou
 new_target=r'''      // A purchasable Treasure Key offer is useful, but an already revealed
       // chest is the most urgent unfinished state in this room.
       treasureChestKeyOfferElements().forEach((row,index)=>{
-        candidates.push({...row,priority:1450,index:-1000+index});
+        candidates.push({...row,priority:1400,index:-1000+index});
       });
 
       rows.forEach((row,index)=>{
