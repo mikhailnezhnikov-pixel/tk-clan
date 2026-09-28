@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.67",
-  "target_version": "1.18.68",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.68.battle-viewport-key-ack.candidate.user.js",
-  "primary_marker": "battle-viewport-scroll-resume-20260928-r1",
+  "source_version": "1.18.68",
+  "target_version": "1.18.69",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.69.shop-fast-pacing-restore.candidate.user.js",
+  "primary_marker": "shop-fast-pacing-restore-20260928-r1",
   "preserve_markers": [
+    "battle-viewport-scroll-resume-20260928-r1",
     "shop-resource-percent-visible-20260928-r1",
     "shop-resource-largest-percent-20260928-r1",
     "lights-hint-canon-fixed-plan-map6-20260928-r1",
@@ -131,6 +132,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-68-battle-viewport-key-ack-live-status.txt",
-  "commit_message": "fix: deploy battle viewport resume and treasure key acknowledgement in userscript 1.18.68 r2"
+  "audit_status_path": "audit/hk-userscript-1-18-69-shop-fast-pacing-restore-live-status.txt",
+  "commit_message": "fix: restore fast shop pacing in userscript 1.18.69"
 }
