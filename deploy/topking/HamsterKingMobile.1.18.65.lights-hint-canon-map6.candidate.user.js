@@ -20277,7 +20277,14 @@
           return {ok:false,claimed:true,reason:'reward-ack-tap-failed'};
         }
         acknowledged=true;
-        await new Promise(resolve=>setTimeout(resolve,260));
+        const ackGone=await waitDeviceNeutralCondition(
+          ()=>!lightsRewardAckButton(),
+          2200,
+          80
+        );
+        if (!ackGone) {
+          return {ok:false,claimed:true,reason:'reward-ack-still-visible'};
+        }
       }
 
       lightsFinalRewardClaimed=true;
@@ -25053,13 +25060,6 @@
           revision:HK_LIGHTS_COMPLETED_RETURN_REV,
           reason:'left-lights-screen'
         });
-      } else if (isLights && !lightsFinalRewardClaimed && lightsRewardActivated()) {
-        lightsFinalRewardClaimed=true;
-        lightsFinalRewardClaimedAt=Date.now();
-        recordDiagnostic('lights-final-reward-recovered',{
-          revision:HK_LIGHTS_COMPLETED_RETURN_REV,
-          source:'check-puzzle-activated-dom'
-        });
       }
       const isBattle=signature.startsWith('BATTLE|');
       const isBattlePreview=signature.startsWith('BATTLE_PREVIEW|');
@@ -25220,6 +25220,9 @@
       minigameTapIsolationRevision:HK_MINIGAME_TAP_ISOLATION_REV,
       lightsConfirmStateMachineRevision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
       rewardClaimBeforeExitRevision:HK_REWARD_CLAIM_BEFORE_EXIT_REV,
+      lightsHintCanonExecRevision:HK_LIGHTS_HINT_CANON_EXEC_REV,
+      lightsStrictModalRevision:HK_LIGHTS_STRICT_MODAL_REV,
+      lightsRewardAckGateRevision:HK_LIGHTS_REWARD_ACK_GATE_REV,
       start,
       stop,
       check:checkPuzzle,
@@ -28312,13 +28315,6 @@
         recordDiagnostic('lights-final-reward-reset',{
           revision:HK_LIGHTS_COMPLETED_RETURN_REV,
           reason:'left-lights-screen'
-        });
-      } else if (isLights && !lightsFinalRewardClaimed && lightsRewardActivated()) {
-        lightsFinalRewardClaimed=true;
-        lightsFinalRewardClaimedAt=Date.now();
-        recordDiagnostic('lights-final-reward-recovered',{
-          revision:HK_LIGHTS_COMPLETED_RETURN_REV,
-          source:'check-puzzle-activated-dom'
         });
       }
       const isBattle=signature.startsWith('BATTLE|');
