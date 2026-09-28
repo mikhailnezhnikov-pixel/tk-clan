@@ -148,5 +148,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-83-trader-gold-stale-modal-live-status.txt",
-  "commit_message": "fix: reset forbidden gold trader modal in userscript 1.18.83"
+  "commit_message": "fix: reset forbidden gold trader modal in userscript 1.18.83 r1"
 }
