@@ -1,10 +1,12 @@
 {
   "schema": 1,
-  "source_version": "1.18.66",
-  "target_version": "1.18.67",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.67.shop-resource-percent-visible.candidate.user.js",
-  "primary_marker": "shop-resource-percent-visible-20260928-r1",
+  "source_version": "1.18.67",
+  "target_version": "1.18.68",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.68.battle-viewport-key-ack.candidate.user.js",
+  "primary_marker": "battle-viewport-scroll-resume-20260928-r1",
   "preserve_markers": [
+    "treasure-key-ack-after-purchase-20260928-r1",
+    "shop-resource-percent-visible-20260928-r1",
     "shop-resource-largest-percent-20260928-r1",
     "lights-hint-canon-fixed-plan-map6-20260928-r1",
     "resource-station-stateless-discovery-20260928-r1",
@@ -130,6 +132,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-67-shop-resource-percent-visible-live-status.txt",
-  "commit_message": "fix: show resource shop percentage selector in userscript 1.18.67"
+  "audit_status_path": "audit/hk-userscript-1-18-68-battle-viewport-key-ack-live-status.txt",
+  "commit_message": "fix: deploy battle viewport resume and treasure key acknowledgement in userscript 1.18.68"
 }
