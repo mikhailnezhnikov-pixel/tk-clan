@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.70
+// @version      1.18.71
+// @release-note Тайный торговец: после успешной покупки окно получения награды с кнопкой «Понятно» теперь является обязательным этапом. Автомат находит реальный кликабельный контейнер кнопки, подтверждает награду с touch/click fallback и только после закрытия окна продолжает покупки или выходит из комнаты.
 // @release-day  2026-09-28
 // @release-note 28.09 · Магазин ресурсов: оставлены крупные пакеты, добавлен выбор 10–100% от доступного максимума.
 // @release-note 28.09 · Магазин: восстановлен быстрый последовательный выкуп без искусственной паузы между успешными покупками; защита 429 сохранена.
@@ -16,7 +17,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.70';
+  const BUILD_VERSION = '1.18.71';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17822,6 +17823,7 @@
   const HK_TREASURY_EXIT_AFTER_CLAIM_REV = 'treasury-exit-after-claim-20260927-r1';
   const HK_TREASURY_VISUAL_EXIT_REV = 'treasury-visual-exit-20260927-r2';
   const HK_TRADER_APPROVED_MODAL_REV = 'trader-approved-modal-buy-20260927-r1';
+  const HK_TRADER_RECEIPT_ACK_REV = 'trader-receipt-ack-20260928-r1';
   const HK_TRADER_EXIT_HANDOFF_REV = 'trader-exit-handoff-20260927-r1';
   const HK_TREASURE_EVENT_UI_SCOPE_REV = 'treasure-event-ui-scope-20260927-r1';
   const HK_BATTLE_SKIP_CANON_REV = 'battle-skip-run9-20260927-r1';
@@ -19061,6 +19063,114 @@
       return candidates[0]?.element || null;
     }
 
+    function traderReceiptAcknowledgeButton(root) {
+      if (!root) return null;
+      const exact=/^(?:Понятно|Got it|Understood|OK|Okay)$/i;
+      const rr=root.getBoundingClientRect?.();
+      const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && !element.disabled && visible(element))
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          let actionable=false;
+          try {
+            actionable=
+              element.matches?.('button,[role="button"],a,[onclick]') ||
+              !!element.onclick ||
+              getComputedStyle(element).cursor==='pointer';
+          } catch (_) {}
+          let score=0;
+          if (exact.test(text)) score+=600;
+          if (actionable) score+=220;
+          if (rr && rect.top>=rr.top+rr.height*0.55) score+=140;
+          if (rect.width>=80 && rect.height>=32) score+=80;
+          return {
+            element:traderClickableTarget(element,root) || element,
+            text,
+            rect,
+            score
+          };
+        })
+        .filter(row=>exact.test(row.text) && row.rect.width>0 && row.rect.height>0)
+        .sort((a,b)=>b.score-a.score || a.rect.width*a.rect.height-b.rect.width*b.rect.height);
+      return rows[0]?.element || null;
+    }
+
+    function traderReceiptModalRoot() {
+      const candidates=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]')]
+        .filter(visible)
+        .map(element=>({
+          element,
+          rect:element.getBoundingClientRect?.()
+        }))
+        .filter(row=>row.rect && row.rect.width>=Math.min(240,window.innerWidth*0.46) && row.rect.height>=180)
+        .filter(row=>!!traderReceiptAcknowledgeButton(row.element))
+        .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height);
+      return candidates[0]?.element || null;
+    }
+
+    async function traderAcknowledgeReceipt(source='trader-purchase') {
+      if (!traderAutoEnabled()) return false;
+      const root=traderReceiptModalRoot();
+      if (!root) return false;
+      const ack=traderReceiptAcknowledgeButton(root);
+      if (!ack) return false;
+
+      await traderHumanPause('reward',{module:'trader',mode:'receipt-ack',source});
+      if (!traderAutoEnabled()) return false;
+
+      const accepted=()=> {
+        const current=traderReceiptModalRoot();
+        return !current || current!==root || !traderReceiptAcknowledgeButton(current);
+      };
+
+      const clickTarget=traderClickableTarget(ack,root) || ack;
+      let ok=false;
+      try {
+        ok=await deviceNeutralActivate(
+          clickTarget,
+          'trader-receipt-ack-'+source,
+          accepted,
+          1500
+        );
+      } catch (_) {}
+
+      if (!ok && clickTarget?.isConnected) {
+        const sent=dispatchAutoMapTap(clickTarget,'trader-receipt-ack-fallback-'+source);
+        if (sent) {
+          try { ok=await waitDeviceNeutralCondition(accepted,1600,70); } catch (_) {}
+        }
+      }
+
+      if (!ok && clickTarget?.isConnected) {
+        const rect=clickTarget.getBoundingClientRect?.();
+        if (rect && rect.width>0 && rect.height>0) {
+          const sent=dispatchBattleTapAt(
+            rect.left+rect.width/2,
+            rect.top+rect.height/2,
+            'trader-receipt-ack-center-'+source
+          );
+          if (sent) {
+            try { ok=await waitDeviceNeutralCondition(accepted,1600,70); } catch (_) {}
+          }
+        }
+      }
+
+      recordDiagnostic('trader-receipt-acknowledged',{
+        revision:HK_TRADER_RECEIPT_ACK_REV,
+        source,
+        success:!!ok
+      });
+
+      if (ok) {
+        traderFailureStreak=0;
+        traderRetryNotBefore=0;
+        lastSignature='';
+        await new Promise(resolve=>setTimeout(resolve,120));
+      }
+      return !!ok;
+    }
+
     async function traderResumeApprovedModal() {
       if (!traderAutoEnabled()) return false;
       const modal=traderApprovedOpenModal();
@@ -19167,6 +19277,20 @@
 
     async function runTraderAuto() {
       if (!traderAutoEnabled() || traderAutoRunning || fishingAutoRunning || battleAutoRunning || chestAutoRunning || lightsAutoRunning) return false;
+
+      const receiptModal=traderReceiptModalRoot();
+      if (receiptModal) {
+        traderAutoRunning=true;
+        const receiptRunId=++traderAutoRunId;
+        try {
+          return await traderAcknowledgeReceipt('resume');
+        } finally {
+          if (receiptRunId===traderAutoRunId) traderAutoRunning=false;
+          lastSignature='';
+          setTimeout(checkPuzzle,120);
+        }
+      }
+
 
       const approvedModal=traderApprovedOpenModal();
       if (approvedModal) {
@@ -19318,6 +19442,7 @@
         const changed=await waitTraderChange(before,target,runId);
         await new Promise(resolve=>setTimeout(resolve,240));
         const rewards=await dismissTreasureRewards(runId);
+        await traderAcknowledgeReceipt('post-purchase');
 
         if (!changed && rewards===0) {
           await new Promise(resolve=>setTimeout(resolve,1200));
@@ -25199,6 +25324,7 @@
       treasuryExitAfterClaimRevision:HK_TREASURY_EXIT_AFTER_CLAIM_REV,
       treasuryVisualExitRevision:HK_TREASURY_VISUAL_EXIT_REV,
       traderApprovedModalRevision:HK_TRADER_APPROVED_MODAL_REV,
+      traderReceiptAckRevision:HK_TRADER_RECEIPT_ACK_REV,
       traderExitHandoffRevision:HK_TRADER_EXIT_HANDOFF_REV,
       treasureEventUiScopeRevision:HK_TREASURE_EVENT_UI_SCOPE_REV,
       battleSkipCanonRevision:HK_BATTLE_SKIP_CANON_REV,
