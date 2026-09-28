@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.58
+// @version      1.18.59
+// @release-note Сражение на Карте сокровищ: исправлена единая цепочка входа и финала. Окно «Сражение → Понятно» теперь распознаётся независимо от скрытого под ним поля и обязательно подтверждается до запуска атак. Сундук победителя и его окно имеют приоритет над остаточным DOM меча/врагов; финальный сундук нажимается по реальной нижней action-кнопке, затем забирается награда и подтверждается «Понятно». После подтверждённой награды старые элементы боя больше не возвращают статус «бой продолжается», и Автокарта может покинуть локацию.
 // @release-note Карта сокровищ — ключи: автопокупка больше не привязана только к «Необычному ключу» и цене 10. Любое окно «… ключ сокровищ» (включая Обычный за 5 ягод) распознаётся по заголовку; кнопка покупки и её фактическая цена определяются из открытого окна, после чего выполняется единый подтверждённый tap и Автокарта продолжает маршрут.
 // @release-note Карта сокровищ: найденный «Необычный ключ сокровищ» автоматически выкупается за 10 ягод. В сражении после входа сначала автоматически подтверждается окно «Понятно», затем запускается бой. После полной зачистки обязательно забирается Сундук победителя и подтверждается итоговая награда; выход из локации разрешается только после завершения этой цепочки.
 // @release-note Устройства и темп: компьютер, планшет и телефон теперь используют один и тот же сценарий действий и детерминированные паузы без случайного ускорения/замедления. Лабиринт дополнительно проверяет, что нажатие кнопки 1 действительно принято интерфейсом; если обычный DOM-click не сработал, включается единый fallback и только после подтверждённого изменения состояния выполняется следующий шаг.
@@ -170,7 +171,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.58';
+  const BUILD_VERSION = '1.18.59';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17894,6 +17895,7 @@
   const HK_DEVICE_NEUTRAL_MINIGAME_REV = 'device-neutral-minigame-20260928-r1';
   const HK_TREASURE_KEY_BATTLE_HANDOFF_REV = 'treasure-key-battle-handoff-20260928-r1';
   const HK_TREASURE_KEY_ANY_RARITY_REV = 'treasure-key-any-rarity-20260928-r1';
+  const HK_BATTLE_REWARD_STATE_MACHINE_REV = 'battle-reward-state-machine-20260928-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -21138,17 +21140,107 @@
     }
 
     function battleVictoryElement() {
-      const exact=[...document.querySelectorAll('[data-lot-id="mf_fairlot_minigame_fight_room_big_chest"]')]
-        .find(element=>visible(element));
+      const exact=[...document.querySelectorAll(
+        '[data-lot-id="mf_fairlot_minigame_fight_room_big_chest"],[data-lot-id*="minigame_fight_room_big_chest"]'
+      )]
+        .filter(visible)
+        .map(element=>({
+          element,
+          foreground:autoMapElementIsForeground(element),
+          area:(element.getBoundingClientRect?.().width||0)*(element.getBoundingClientRect?.().height||0)
+        }))
+        .sort((a,b)=>Number(b.foreground)-Number(a.foreground) || b.area-a.area)[0]?.element;
       if (exact) return exact;
 
-      // Compatibility fallback for older layouts: only a defeated tile with an
-      // explicit action marker may be treated as the final reward.
+      // Compatibility fallback for layouts where the final reward reuses a
+      // defeated-enemy slot. Prefer a visible card with an explicit action/play
+      // marker or reward/chest asset.
       const elements=[...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_defeated"]')].filter(visible);
       return elements
-        .filter(element=>/▷|▶|►|claim|collect|забрать|получить/i.test(clean(element.innerText||element.textContent||'')))
-        .map(element=>({element,area:(element.getBoundingClientRect?.().width||0)*(element.getBoundingClientRect?.().height||0)}))
-        .sort((a,b)=>b.area-a.area)[0]?.element || null;
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'');
+          const assets=[...element.querySelectorAll?.('img')||[]]
+            .map(img=>String(img.alt||'')+' '+String(img.src||'')).join(' ');
+          const rect=element.getBoundingClientRect?.() || {width:0,height:0};
+          let score=0;
+          if (/▷|▶|►|claim|collect|забрать|получить/i.test(text)) score+=160;
+          if (/chest|reward|victory|winner|сундук|награ/i.test(assets+' '+text)) score+=120;
+          if (autoMapElementIsForeground(element)) score+=80;
+          return {element,score,area:rect.width*rect.height};
+        })
+        .filter(row=>row.score>=120)
+        .sort((a,b)=>b.score-a.score || b.area-a.area)[0]?.element || null;
+    }
+
+    function battleVictoryTileAction(root=battleVictoryElement()) {
+      if (!root) return null;
+      const rr=root.getBoundingClientRect?.();
+      if (!rr) return null;
+      const centerX=rr.left+rr.width/2;
+      const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && element!==root && !element.disabled && visible(element))
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const assets=[...element.querySelectorAll?.('img')||[]]
+            .map(img=>String(img.alt||'')+' '+String(img.src||'')).join(' ');
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          const cx=rect.left+rect.width/2;
+          let actionable=false;
+          try {
+            actionable=
+              element.matches?.('button,[role="button"],a,[onclick]') ||
+              !!element.onclick ||
+              getComputedStyle(element).cursor==='pointer';
+          } catch (_) {}
+          let score=actionable?80:0;
+          if (/▷|▶|►|play|claim|collect|забрать|получить|open|открыть/i.test(text+' '+assets)) score+=180;
+          if (rect.top>=rr.top+rr.height*0.58) score+=120;
+          if (rect.width>=rr.width*0.32 && rect.width<=rr.width*1.02) score+=80;
+          if (rect.height>=28 && rect.height<=rr.height*0.45) score+=45;
+          if (Math.abs(cx-centerX)<=rr.width*0.34) score+=55;
+          return {element,score,area:rect.width*rect.height};
+        })
+        .filter(row=>row.score>=200)
+        .sort((a,b)=>b.score-a.score || b.area-a.area);
+      return rows[0]?.element || null;
+    }
+
+    async function tapVictoryTile(root,runId) {
+      if (!root || runId!==battleAutoRunId || !battleAutoEnabled()) return false;
+      const action=battleVictoryTileAction(root);
+      if (action && dispatchBattleTap(action,'victory-tile-action')) {
+        recordDiagnostic('battle-victory-tile-click',{
+          revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+          mode:'action-element'
+        });
+        return true;
+      }
+
+      const rr=root.getBoundingClientRect?.();
+      if (!rr) return false;
+      const x=rr.left+rr.width/2;
+      for (const fraction of [0.84,0.90,0.76]) {
+        if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
+        if (dispatchBattleTapAt(x,rr.top+rr.height*fraction,'victory-tile-fallback-'+fraction)) {
+          recordDiagnostic('battle-victory-tile-click',{
+            revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+            mode:'coordinate',
+            fraction
+          });
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function battleDefeatedVisibleCount() {
+      return [...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_defeated"]')]
+        .filter(visible)
+        .length;
+    }
+
+    function battleRewardConfirmOnlyPending() {
+      return battleDefeatedVisibleCount()>0 && !!battleRewardDismissButton();
     }
 
     function battleVictoryModalRoot() {
@@ -21230,30 +21322,85 @@
       if (!battleAutoEnabled() || battleAutoRunning) return false;
       let victory=battleVictoryElement();
       let modal=battleVictoryModalRoot();
-      if (!victory && !modal) return false;
+      let confirmOnly=battleRewardConfirmOnlyPending();
+      if (!victory && !modal && !confirmOnly) return false;
 
       battleAutoRunning=true;
       const runId=++battleAutoRunId;
       recordDiagnostic('battle-victory-claim-start',{
-        revision:HK_BATTLE_VICTORY_TAP_REV,
+        revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
         hasVictoryLot:!!victory,
-        hasModal:!!modal
+        hasModal:!!modal,
+        confirmOnly
       });
       try {
+        // If the chest was already claimed manually and only the final
+        // "Понятно" reward dialog remains, finish that exact pending stage.
+        if (!victory && !modal && confirmOnly) {
+          const dismissed=await dismissBattleRewardIfPresent(runId);
+          await new Promise(resolve=>setTimeout(resolve,220));
+          const success=dismissed && !battleRewardConfirmOnlyPending();
+          if (success) {
+            battleFinalRewardClaimed=true;
+            battleFinalRewardClaimedAt=Date.now();
+          }
+          recordDiagnostic('battle-victory-confirm-only-complete',{
+            revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+            success,
+            dismissed
+          });
+          if (success && autoMapEnabled()) {
+            setTimeout(()=>void runAutoMapTick('battle-victory-confirmed'),250);
+          }
+          return success;
+        }
+
         if (!modal && victory) {
-          dispatchBattleTap(victory,'victory-tile');
-          recordDiagnostic('battle-victory-open',{revision:HK_BATTLE_VICTORY_TAP_REV});
+          const opened=await tapVictoryTile(victory,runId);
+          recordDiagnostic('battle-victory-open',{
+            revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+            opened
+          });
+          if (!opened) return false;
+
           const started=Date.now();
-          while (Date.now()-started<2600 && runId===battleAutoRunId && battleAutoEnabled()) {
+          while (Date.now()-started<3200 && runId===battleAutoRunId && battleAutoEnabled()) {
             modal=battleVictoryModalRoot();
-            if (modal) break;
+            confirmOnly=battleRewardConfirmOnlyPending();
+            if (modal || confirmOnly) break;
             await new Promise(resolve=>setTimeout(resolve,90));
           }
         }
 
+        // Some layouts can transition directly from the chest tile to the
+        // final reward confirmation. Handle that without requiring the
+        // intermediate victory modal to remain mounted.
         modal=battleVictoryModalRoot();
+        confirmOnly=battleRewardConfirmOnlyPending();
+        if (!modal && confirmOnly) {
+          const dismissed=await dismissBattleRewardIfPresent(runId);
+          await new Promise(resolve=>setTimeout(resolve,220));
+          const success=dismissed && !battleRewardConfirmOnlyPending();
+          if (success) {
+            battleFinalRewardClaimed=true;
+            battleFinalRewardClaimedAt=Date.now();
+          }
+          recordDiagnostic('battle-victory-direct-confirm-complete',{
+            revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+            success,
+            dismissed
+          });
+          if (success && autoMapEnabled()) {
+            setTimeout(()=>void runAutoMapTick('battle-victory-confirmed'),250);
+          }
+          return success;
+        }
+
         if (!modal) {
-          recordDiagnostic('battle-victory-claim-stop',{revision:HK_BATTLE_VICTORY_TAP_REV,reason:'victory-modal-missing'});
+          recordDiagnostic('battle-victory-claim-stop',{
+            revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+            reason:'victory-modal-missing'
+          });
           return false;
         }
 
@@ -21262,13 +21409,20 @@
         let tapped=false;
         if (claimButton) {
           tapped=dispatchBattleTap(claimButton,'victory-claim-button');
-          recordDiagnostic('battle-victory-claim-click',{revision:HK_BATTLE_VICTORY_TAP_REV,mode:'element'});
+          recordDiagnostic('battle-victory-claim-click',{
+            revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+            mode:'element'
+          });
         }
         if (!tapped || getSignature()===before) {
           await new Promise(resolve=>setTimeout(resolve,180));
           if (battleVictoryModalRoot()) {
             tapped=await tapVictoryFallback(battleVictoryModalRoot(),runId) || tapped;
-            recordDiagnostic('battle-victory-claim-click',{revision:HK_BATTLE_VICTORY_TAP_REV,mode:'fallback',tapped});
+            recordDiagnostic('battle-victory-claim-click',{
+              revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+              mode:'fallback',
+              tapped
+            });
           }
         }
 
@@ -21276,27 +21430,27 @@
         await new Promise(resolve=>setTimeout(resolve,300));
         const dismissed=await dismissBattleRewardIfPresent(runId);
         await new Promise(resolve=>setTimeout(resolve,220));
-        const confirmPending=!!battleRewardDismissButton();
+        const confirmPending=battleRewardConfirmOnlyPending();
         const success=!battleVictoryModalRoot() && !confirmPending;
         if (success) {
           battleFinalRewardClaimed=true;
           battleFinalRewardClaimedAt=Date.now();
         }
         recordDiagnostic('battle-victory-claim-complete',{
-          revision:HK_TREASURE_FINAL_REWARD_HANDOFF_REV,
+          revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
           success,
           dismissed,
           confirmPending,
           lotId:'mf_fairlot_minigame_fight_room_big_chest'
         });
         if (success && autoMapEnabled()) {
-          setTimeout(()=>void runAutoMapTick('battle-victory-claimed'),minigameRandomMs(700,1200));
+          setTimeout(()=>void runAutoMapTick('battle-victory-claimed'),250);
         }
         return success;
       } finally {
         if (runId===battleAutoRunId) battleAutoRunning=false;
         lastSignature='';
-        setTimeout(checkPuzzle,350);
+        setTimeout(checkPuzzle,250);
       }
     }
 
@@ -21757,17 +21911,12 @@
       // state until the battle actually mutates/removes those lots.
       const enemies=board.filter(enemy=>enemy!==null);
       const swords=getBattleAttack();
-      const rewardConfirmPending=enemies.length===0 && !!battleRewardDismissButton();
+      const rewardConfirmPending=battleRewardConfirmOnlyPending();
       const rewardPending=!!battleVictoryElement() || !!battleVictoryModalRoot() || rewardConfirmPending;
       const inBattle=
         signature.startsWith('BATTLE') ||
         enemies.length>0 ||
         rewardPending;
-
-      if (enemies.length>0 && battleFinalRewardClaimed) {
-        battleFinalRewardClaimed=false;
-        battleFinalRewardClaimedAt=0;
-      }
 
       if (!inBattle) {
         return {inBattle:false,allowed:true,reason:'not-battle',swords,enemies:0,attackable:0};
@@ -22140,8 +22289,19 @@
       const enemies = board.filter(enemy => enemy !== null);
       if (enemies.length === 0) return false;
 
-      battleFinalRewardClaimed=false;
-      battleFinalRewardClaimedAt=0;
+      if (battleFinalRewardClaimed) {
+        recordDiagnostic('battle-stale-dom-after-reward',{
+          revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+          enemies:enemies.length,
+          swords:maxAttack
+        });
+        if (autoMapEnabled()) {
+          autoMapStatus('сражение → выход',{
+            revision:HK_BATTLE_REWARD_STATE_MACHINE_REV
+          });
+        }
+        return false;
+      }
 
       clearNumbers();
       const state = board.map(enemy => enemy ? {type:enemy.type,hp:enemy.hp,alive:true} : null);
@@ -23767,9 +23927,31 @@
       return ok;
     }
 
-    function battleIntroAcknowledgeButton() {
+    function battleIntroModalRoot() {
+      const rows=[...document.querySelectorAll('[role="dialog"],[class*="modal"],[class*="popup"],div')]
+        .filter(element=>visible(element))
+        .filter(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          if (!/(?:^|\s)(?:Сражение|Battle)(?:\s|$)/i.test(text)) return false;
+          if (/Сундук победителя|Victory chest|Winner chest/i.test(text)) return false;
+          const ack=[...element.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+            .some(child=>/^(?:Понятно|Got it|Understood|OK|Okay)$/i.test(clean(child.innerText||child.textContent||'').trim()) && visible(child));
+          return ack;
+        })
+        .map(element=>{
+          const rect=element.getBoundingClientRect?.() || {width:0,height:0};
+          return {element,rect,area:rect.width*rect.height};
+        })
+        .filter(row=>row.rect.width>=Math.min(240,window.innerWidth*0.35) && row.rect.height>=140)
+        .filter(row=>row.rect.width<=window.innerWidth*0.99 && row.rect.height<=window.innerHeight*0.96)
+        .sort((a,b)=>a.area-b.area);
+      return rows[0]?.element || null;
+    }
+
+    function battleIntroAcknowledgeButton(root=battleIntroModalRoot()) {
+      if (!root) return null;
       const exact=/^(?:Понятно|Got it|Understood|OK|Okay)$/i;
-      const rows=[...document.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+      const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
         .filter(element=>element && !element.disabled && visible(element))
         .map(element=>({
           element,
@@ -23784,14 +23966,18 @@
 
     async function runBattleIntroAcknowledge() {
       if (!battleAutoEnabled() || battleAutoRunning) return false;
-      const button=battleIntroAcknowledgeButton();
-      if (!button) return false;
+      const root=battleIntroModalRoot();
+      const button=battleIntroAcknowledgeButton(root);
+      if (!root || !button) return false;
 
+      battleFinalRewardClaimed=false;
+      battleFinalRewardClaimedAt=0;
       battleAutoRunning=true;
       const runId=++battleAutoRunId;
       try {
         recordDiagnostic('battle-intro-ack-start',{
-          revision:HK_TREASURE_KEY_BATTLE_HANDOFF_REV
+          revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+          hasModal:true
         });
         if (!dispatchBattleTap(button,'battle-intro-ack')) return false;
 
@@ -23801,7 +23987,7 @@
           if (!battleIntroAcknowledgeButton()) {
             lastSignature='';
             recordDiagnostic('battle-intro-ack-complete',{
-              revision:HK_TREASURE_KEY_BATTLE_HANDOFF_REV,
+              revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
               success:true
             });
             setTimeout(checkPuzzle,80);
@@ -23810,7 +23996,7 @@
           await new Promise(resolve=>setTimeout(resolve,90));
         }
         recordDiagnostic('battle-intro-ack-complete',{
-          revision:HK_TREASURE_KEY_BATTLE_HANDOFF_REV,
+          revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
           success:false
         });
         return false;
@@ -23916,7 +24102,7 @@
       if (signature.startsWith('FISHING|')) return !fishingTarget();
       if (signature.startsWith('TRADER|')) return !traderTarget();
       if (signature.startsWith('CHESTS|')) return !treasureChestTarget();
-      if (signature.startsWith('BATTLE')) return false;
+      if (signature.startsWith('BATTLE')) return battleFinalRewardClaimed;
       if (signature==='NONE' && !treasureGuideScreenVisible()) return true;
       return false;
     }
@@ -23924,7 +24110,7 @@
     async function autoMapHandleExitOrContinue() {
       if (autoMapModulesRunning()) return false;
       const signature=getSignature();
-      if (signature.startsWith('BATTLE')) return false;
+      if (signature.startsWith('BATTLE') && !battleFinalRewardClaimed) return false;
       const exit=autoMapExitButton();
       if (exit) {
         autoMapStatus('выход');
@@ -24009,8 +24195,21 @@
         }
       }
 
-      // Battle overlays are part of the battle state machine. Final reward has
-      // priority over the intro acknowledgement because both may use "Понятно".
+      // Battle intro is a modal state of its own. It can cover every battle
+      // card, so handle it before asking getSignature() about the board.
+      const introModal=battleIntroModalRoot();
+      if (introModal) {
+        if (!battleAutoEnabled()) setBattleAutoEnabled(true);
+        if (!battleAutoRunning) {
+          autoMapStatus('сражение → понятно',{
+            revision:HK_BATTLE_REWARD_STATE_MACHINE_REV
+          });
+          return await runBattleIntroAcknowledge();
+        }
+        return false;
+      }
+
+      // Reward state has absolute priority over residual battle DOM.
       const battlePreflightSignature=getSignature();
       if (battlePreflightSignature.startsWith('BATTLE_REWARD')) {
         if (!battleAutoEnabled()) setBattleAutoEnabled(true);
@@ -24022,21 +24221,6 @@
         }
         return false;
       }
-      if (
-        (battlePreflightSignature.startsWith('BATTLE|') ||
-         battlePreflightSignature.startsWith('BATTLE_PREVIEW|')) &&
-        battleIntroAcknowledgeButton()
-      ) {
-        if (!battleAutoEnabled()) setBattleAutoEnabled(true);
-        if (!battleAutoRunning) {
-          autoMapStatus('сражение → начать',{
-            revision:HK_TREASURE_KEY_BATTLE_HANDOFF_REV
-          });
-          return await runBattleIntroAcknowledge();
-        }
-        return false;
-      }
-
       // A completed Treasury is a navigation handoff, not another chest
       // purchase. Detect it from the visible screen even if the claimed chest's
       // lot-id changed after activation. During a previous retry cooldown we do
@@ -24275,6 +24459,18 @@
           return true;
         }
         if (signature.startsWith('BATTLE')) {
+          if (battleFinalRewardClaimed) {
+            autoMapStatus('сражение → выход',{
+              revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
+              claimedAt:battleFinalRewardClaimedAt
+            });
+            const left=await autoMapHandleExitOrContinue();
+            if (!left) {
+              setTimeout(()=>void runAutoMapTick('battle-claimed-exit-retry'),500);
+            }
+            return true;
+          }
+
           // Battle is a normal child module of AutoMap. Let the solver perform a
           // complete clear whenever possible; only runBattleInsufficientExit()
           // may leave the room without fighting.
@@ -24396,6 +24592,13 @@
       const lights = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')].filter(visible);
       if (lights.length === 9) return 'LIGHTS|' + lights.map(element => element.getAttribute('data-lot-id')).join('|');
 
+      // Reward state is authoritative and must outrank stale sword/enemy DOM.
+      // The game keeps battle elements mounted while the victory chest is shown.
+      const victory=battleVictoryElement();
+      if (battleVictoryModalRoot()) return 'BATTLE_REWARD_MODAL|mf_fairlot_minigame_fight_room_big_chest';
+      if (victory) return 'BATTLE_REWARD|' + (victory.getAttribute('data-lot-id') || 'mf_fairlot_minigame_fight_room_big_chest');
+      if (battleRewardConfirmOnlyPending()) return 'BATTLE_REWARD_CONFIRM|final';
+
       const sword = battleSwordElement();
       const enemies = [...document.querySelectorAll('[data-lot-id*="mf_treasurelot_enemy_type_"]')].filter(visible);
       if (sword && enemies.length > 0) {
@@ -24414,10 +24617,6 @@
         return 'BATTLE_PREVIEW|' + (previewSword.getAttribute('data-lot-id') || 'sword');
       }
 
-      const victory=battleVictoryElement();
-      if (battleVictoryModalRoot()) return 'BATTLE_REWARD_MODAL|mf_treasurelot_enemy_defeated';
-      if (victory) return 'BATTLE_REWARD|' + (victory.getAttribute('data-lot-id') || 'mf_treasurelot_enemy_defeated');
-
       const fishingRows=fishingElements();
       if (fishingRows.length>=3) return fishingSignature();
 
@@ -24434,6 +24633,19 @@
 
     function checkPuzzle() {
       ensureAutoMapToggle();
+
+      // The intro overlay can hide the board completely, so its handling must
+      // not depend on BATTLE/BATTLE_PREVIEW signature detection.
+      if (
+        battleIntroModalRoot() &&
+        (autoMapEnabled() || battleAutoEnabled()) &&
+        !battleAutoRunning
+      ) {
+        if (autoMapEnabled() && !battleAutoEnabled()) setBattleAutoEnabled(true);
+        if (battleAutoEnabled()) void runBattleIntroAcknowledge();
+        return;
+      }
+
       if (autoMapEnabled() && !autoMapModulesRunning() && autoMapTreasureKeyModalRoot()) {
         void runAutoMapTick('treasure-key-overlay');
         return;
@@ -24472,16 +24684,6 @@
       ensureFishingAutoToggle(isFishing);
       ensureTraderAutoToggle(isTrader);
       if (!isTrader) traderSessionPurchases=0;
-
-      if (
-        (isBattle || isBattlePreview) &&
-        battleIntroAcknowledgeButton() &&
-        battleAutoEnabled() &&
-        !battleAutoRunning
-      ) {
-        void runBattleIntroAcknowledge();
-        return;
-      }
 
       // AutoMap is the parent controller. Child toggles are implementation
       // details while a room is owned by AutoMap and may not remain OFF after a
@@ -24622,6 +24824,7 @@
       deviceNeutralMinigameRevision:HK_DEVICE_NEUTRAL_MINIGAME_REV,
       treasureKeyBattleHandoffRevision:HK_TREASURE_KEY_BATTLE_HANDOFF_REV,
       treasureKeyAnyRarityRevision:HK_TREASURE_KEY_ANY_RARITY_REV,
+      battleRewardStateMachineRevision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
       start,
       stop,
       check:checkPuzzle,
