@@ -141,5 +141,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-77-chest-key-offer-live-status.txt",
-  "commit_message": "fix: buy Treasure Key offer in Chest Hunt in userscript 1.18.77"
+  "commit_message": "fix: buy Treasure Key offer in Chest Hunt in userscript 1.18.77 r1"
 }
