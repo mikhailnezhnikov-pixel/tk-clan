@@ -24,7 +24,23 @@ if "treasure-lights-resume-open-modal-20260927-r1" in s:
     root=section("function lightsModalRoot()","async function waitLightsModal")
     stale=section("async function clearStaleLightsModalBeforeStep","async function runLightsModalStep")
 
-    if "treasure-lights-outer-modal-20260927-r1" in s:
+    if "lights-strict-modal-no-board-fallback-20260928-r1" in s:
+        for marker in [
+            "titlePattern",
+            "mf_fairlot_lights_out_sl",
+            "lights-strict-modal-root",
+        ]:
+            if marker not in root:
+                raise SystemExit(f"lights resume contract broken in strict modal root: {marker}")
+        for forbidden_marker in [
+            "dispatchBattleTapAt(",
+            "lightsPurchaseButton(",
+            "tapLightsPurchaseFallback(",
+            "lights-confirm-cost",
+        ]:
+            if forbidden_marker in stale:
+                raise SystemExit(f"lights resume contract unsafe strict stale cleanup: {forbidden_marker}")
+    elif "treasure-lights-outer-modal-20260927-r1" in s:
         for marker in [
             "lightsOuterModalRoot()",
             "if (outer) return outer;",
