@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.65
+// @version      1.18.66
+// @release-note Магазин: в Обычном магазине → Ресурсы оставлены только крупнейшие пакеты ×100 для Тиров 1–5; для каждого доступен выбор 10–100% текущего максимума с шагом 10. Выбранный процент пересчитывается по свежему балансу перед покупкой.
 // @release-note Лабиринт — лампочки: автомат исполняет неизменный план первоначального hint-only решателя. Исправлен цикл карты №6: после «Понятно» старый поиск мог принять контейнер поля за модалку, а координатный fallback повторно нажимал третью лампу. Модалка определяется только по точному заголовку, контейнеры с 3×3 полем исключены, одна плановая клетка не может быть исполнена дважды. Сундук и подтверждение награды обязательны до выхода.
 // @release-note Ресурсы: Ореховая/Инструментовая/Жетоновая больше не зависят от предварительного ручного входа в исходное здание. Автопоиск проверяет все ID, которые реально отдаёт карта района (building_id/buildingId/id), и сохраняет станцию только после подтверждения её типа через /player/building.
 // @release-note Лабиринт — лампочки: восстановлена обязательная цепочка «нажать лампу → оплатить 1 → подтвердить окно → дождаться реального изменения 3×3». Подсказки и клики теперь строятся только по актуальному видимому полю, а дубли скрытой/адаптивной верстки не могут подменить состояние. Финальная награда стала жёстким барьером выхода: «Активировано» больше не считается полученной наградой — сначала сундук/хранилище забирается, затем подтверждается, и только после этого Автокарта может покинуть локацию.
@@ -177,7 +178,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.65';
+  const BUILD_VERSION = '1.18.66';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -189,6 +190,8 @@
   const SHOP_BUY_MIN_GAP_MS = 700;
   const SHOP_BUY_POST_429_GAP_MS = 1500;
   const HK_SHOP_SHARED_LIMITS_UI_REV = 'shop-shared-limits-ui-20260923-r1';
+  const HK_SHOP_RESOURCE_PERCENT_REV = 'shop-resource-largest-percent-20260928-r1';
+  const SHOP_PERCENT_OPTIONS = [10,20,30,40,50,60,70,80,90,100];
   const HK_FAIR_SINGLE_PREFLIGHT_REV = 'fair-single-preflight-20260923-r1';
   const HK_FAIR_UNIFIED_NAV_REV = 'fair-unified-nav-20260923-r1';
   const HK_FAIR_TIERED_COMBO_REV = 'fair-tiered-combo-20260923-r1';
@@ -845,6 +848,7 @@
   let shopRows = [];
   let selectedShopLots = new Set();
   let selectedShopCounts = new Map();
+  let selectedShopPercents = new Map();
   let selectedShopSection = 'ordinary';
   let selectedShopGroup = 'resources';
   let shopRunning = false;
@@ -10984,6 +10988,28 @@
     return row?.section==='ordinary'&&row?.group==='resources'&&parts.length===1&&parts[0]?.kind==='currencies'&&parts[0]?.id==='cur_cap'&&Number(parts[0]?.quantity||0)>0;
   }
 
+  function shopIsPrimaryCapsSweepLot(row) {
+    return shopIsCapsSweep(row) && /_100$/i.test(String(row?.lotId || ''));
+  }
+
+  function shopCapsSweepPercentValue(row) {
+    const value=Math.trunc(Number(selectedShopPercents.get(String(row?.lotId || '')) || 100));
+    return SHOP_PERCENT_OPTIONS.includes(value) ? value : 100;
+  }
+
+  function shopCapsSweepCountForPercent(row, maximumCount = shopPurchasableCount(row), percent = shopCapsSweepPercentValue(row)) {
+    const maximum=Math.max(0,Math.trunc(Number(maximumCount || 0)));
+    const safePercent=SHOP_PERCENT_OPTIONS.includes(Math.trunc(Number(percent))) ? Math.trunc(Number(percent)) : 100;
+    return Math.max(0,Math.min(maximum,Math.floor(maximum * safePercent / 100)));
+  }
+
+  function shopSelectedCount(row, maximumCount = shopPurchasableCount(row)) {
+    const maximum=Math.max(0,Math.trunc(Number(maximumCount || 0)));
+    if (!maximum || !selectedShopLots.has(String(row?.lotId || ''))) return 0;
+    if (shopIsPrimaryCapsSweepLot(row)) return shopCapsSweepCountForPercent(row,maximum);
+    return Math.min(maximum,Math.max(0,Math.trunc(Number(selectedShopCounts.get(String(row?.lotId || '')) || 0))));
+  }
+
   function shopDisplayName(row) {
     const candidates=[row?.name,row?.rewardName,row?.rewardId].map(value=>String(value||'')).filter(Boolean);
     for(const key of candidates){
@@ -10996,7 +11022,11 @@
 
   function shopRowInActiveView(row) {
     if (row?.section !== selectedShopSection) return false;
-    if (selectedShopSection === 'ordinary') return row.group === selectedShopGroup;
+    if (selectedShopSection === 'ordinary') {
+      if (row.group !== selectedShopGroup) return false;
+      if (selectedShopGroup === 'resources' && shopIsCapsSweep(row)) return shopIsPrimaryCapsSweepLot(row);
+      return true;
+    }
     if (selectedShopSection === 'clan') return row.clanGroup === selectedShopGroup;
     return true;
   }
@@ -11058,14 +11088,18 @@
       groupBar.style.display = groups.length ? '' : 'none';
       groupBar.innerHTML = groups.map(([id, label]) => `<button class="${selectedShopGroup === id ? 'active' : ''}" data-shop-group="${id}" data-i18n="${label}">${tr(label)}</button>`).join('');
       groupBar.querySelectorAll('[data-shop-group]').forEach(button => button.onclick = () => {
-        selectedShopGroup = button.dataset.shopGroup; selectedShopLots.clear(); selectedShopCounts.clear(); renderShop();
+        selectedShopGroup = button.dataset.shopGroup; selectedShopLots.clear(); selectedShopCounts.clear();
+      selectedShopPercents.clear(); renderShop();
       });
     }
     const visibleRows = shopRows.filter(shopRowInActiveView);
+    const bulkSelect = root?.querySelector('#hk-shop-select');
+    if (bulkSelect) bulkSelect.style.display = selectedShopSection === 'ordinary' && selectedShopGroup === 'resources' ? 'none' : '';
     shopCards.innerHTML = visibleRows.map(row => {
       const maximumCount = shopPurchasableCount(row);
       const selectable = maximumCount > 0 && (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0);
-      const count = selectable ? Math.min(maximumCount, Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0))) : 0;
+      const count = selectable ? shopSelectedCount(row, maximumCount) : 0;
+      const capsPercent = shopIsPrimaryCapsSweepLot(row) ? shopCapsSweepPercentValue(row) : 100;
       const shownRewardQuantity = count && row.group === 'renovation' ? row.rewardQuantity * count : row.rewardQuantity;
       const selectedBatches = isRenovationBatch(row) ? renovationBatchCount(row, count) : 0;
       const maximumBatches = isRenovationBatch(row) ? renovationBatchMaximum(row) : 0;
@@ -11076,7 +11110,9 @@
         ${row.section === 'clan' && row.clanGroup === 'shared' ? `<small class="hk-shop-shared-limits">${escapeHtml(shopSharedLimitText(row))}</small>` : ''}
         ${isRenovationBatch(row)
           ? `<label class="hk-shop-quantity"><span>${either('Пакетов ×500','×500 packages')}</span><select data-shop-batches="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>${Array.from({length:maximumBatches + 1}, (_, n) => `<option value="${n}" ${n === selectedBatches ? 'selected' : ''}>${n} × 500</option>`).join('')}</select></label>`
-          : `<label class="hk-shop-quantity"><span>${tr('quantity')}</span><input data-shop-qty="${escapeHtml(row.lotId)}" type="number" inputmode="numeric" min="0" max="${maximumCount}" value="${count}" ${selectable ? '' : 'disabled'}><button type="button" data-shop-max="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>MAX</button></label>`}</div>`;
+          : shopIsPrimaryCapsSweepLot(row)
+            ? `<label class="hk-shop-quantity"><span>${either('Доля покупки','Purchase share')}</span><select data-shop-percent="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>${SHOP_PERCENT_OPTIONS.map(value => `<option value="${value}" ${value === capsPercent ? 'selected' : ''}>${value}%</option>`).join('')}</select><small>${either('К покупке','To buy')}: <b>${count.toLocaleString(locale())}</b></small></label>`
+            : `<label class="hk-shop-quantity"><span>${tr('quantity')}</span><input data-shop-qty="${escapeHtml(row.lotId)}" type="number" inputmode="numeric" min="0" max="${maximumCount}" value="${count}" ${selectable ? '' : 'disabled'}><button type="button" data-shop-max="${escapeHtml(row.lotId)}" ${selectable ? '' : 'disabled'}>MAX</button></label>`}</div>`;
     }).join('') || `<p class="hk-muted">${tr('noLots')}</p>`;
     shopCards.querySelectorAll('[data-shop-lot]').forEach(input => input.onchange = () => {
       const id = input.dataset.shopLot;
@@ -11087,9 +11123,34 @@
           if(other.lotId!==id&&shopIsCapsSweep(other)){selectedShopLots.delete(other.lotId);selectedShopCounts.delete(other.lotId);}
         }
       }
-      const count = input.checked ? (shopIsCapsSweep(row)?maximum:Math.max(defaultShopPurchaseCount(row), Number(selectedShopCounts.get(id) || 0))) : 0;
+      const count = input.checked
+        ? (shopIsPrimaryCapsSweepLot(row) ? shopCapsSweepCountForPercent(row,maximum) : Math.max(defaultShopPurchaseCount(row), Number(selectedShopCounts.get(id) || 0)))
+        : 0;
       if (count && maximum > 0) { selectedShopLots.add(id); selectedShopCounts.set(id, Math.min(maximum, count)); }
       else { selectedShopLots.delete(id); selectedShopCounts.delete(id); }
+      renderShop();
+    });
+    shopCards.querySelectorAll('[data-shop-percent]').forEach(select => select.onchange = () => {
+      const id = select.dataset.shopPercent;
+      const row = visibleRows.find(value => value.lotId === id);
+      const percent = Math.trunc(Number(select.value || 100));
+      if (!row || !SHOP_PERCENT_OPTIONS.includes(percent)) return;
+      selectedShopPercents.set(id,percent);
+      for (const other of visibleRows) {
+        if (other.lotId !== id && shopIsCapsSweep(other)) {
+          selectedShopLots.delete(other.lotId);
+          selectedShopCounts.delete(other.lotId);
+        }
+      }
+      const maximum = shopPurchasableCount(row);
+      const count = shopCapsSweepCountForPercent(row,maximum,percent);
+      if (count > 0) {
+        selectedShopLots.add(id);
+        selectedShopCounts.set(id,count);
+      } else {
+        selectedShopLots.delete(id);
+        selectedShopCounts.delete(id);
+      }
       renderShop();
     });
     shopCards.querySelectorAll('[data-shop-qty]').forEach(input => input.onchange = () => {
@@ -11118,7 +11179,10 @@
       renderShop();
     });
     const selected = visibleRows.filter(row => selectedShopLots.has(row.lotId) && shopPurchasableCount(row) > 0)
-      .map(row => ({row, count:Math.min(shopPurchasableCount(row), Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+      .map(row => {
+        const maximum=shopPurchasableCount(row);
+        return {row,count:shopSelectedCount(row,maximum)};
+      }).filter(item => item.count > 0);
     const purchaseCount = selected.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
     const totals = new Map();
     for (const row of visibleRows) for (const part of costParts(row.cost)) addProjectedCost(totals, part, 0);
@@ -11182,7 +11246,13 @@
     }
     const plan = shopRows.filter(row => shopRowInActiveView(row) &&
       selectedShopLots.has(row.lotId) && row.safe && row.remaining > 0)
-      .map(row => ({row, count:Math.min(shopPurchasableCount(row, playerDocument), Math.max(0, Number(selectedShopCounts.get(row.lotId) || 0)))})).filter(item => item.count > 0);
+      .map(row => {
+        const maximum=shopPurchasableCount(row,playerDocument);
+        const count=shopIsPrimaryCapsSweepLot(row)
+          ? shopCapsSweepCountForPercent(row,maximum)
+          : Math.min(maximum,Math.max(0,Number(selectedShopCounts.get(row.lotId) || 0)));
+        return {row,count};
+      }).filter(item => item.count > 0);
     if (!plan.length) return;
     const count = plan.reduce((sum, item) => sum + (isRenovationBatch(item.row) ? renovationBatchCount(item.row, item.count) : item.count), 0);
     const budgetSection = selectedShopSection === 'clan' ? 'clan' : 'shop';
@@ -11206,7 +11276,7 @@
         if (hkRunner.signal?.aborted) throw new DOMException('Aborted','AbortError');
         await hkRunner.waitIfPaused();
         hkRunner.setStep(either('Покупка товаров','Buying items'), completed, count);
-        const requestCount = shopIsCapsSweep(row) ? shopPurchasableCount(row,playerDocument) : Math.min(rowCount,row.remaining);
+        const requestCount = Math.min(rowCount,shopPurchasableCount(row,playerDocument),Math.max(0,Number(row.remaining || 0)));
         const before = new Map(costParts(row.cost).map(part => [part.id, walletAmount(part.id, playerDocument)]));
         const requestBody = {shop_lot_id:row.lotId, payment_type:'INTERNAL', lotName:row.name, lotDescription:''};
         let purchasedRow = 0;
@@ -11257,6 +11327,7 @@
       hkRunner.finish(either('Покупки завершены','Purchases completed'));
       selectedShopLots.clear();
       selectedShopCounts.clear();
+      selectedShopPercents.clear();
       log(either(`Покупки завершены: ${completed}`, `Purchases completed: ${completed}`), 'ok');
     } catch (error) {
       if (error?.name === 'AbortError') { hkRunner.reset(); log(either('Магазин остановлен','Shop stopped'),'warn'); }
@@ -17650,6 +17721,7 @@
     root.querySelector('#hk-shop-select').onclick = () => {
       selectedShopLots.clear();
       selectedShopCounts.clear();
+      selectedShopPercents.clear();
       shopRows.filter(row => shopRowInActiveView(row) && shopPurchasableCount(row) > 0 &&
         (!isRenovationBatch(row) || renovationBatchMaximum(row) > 0))
         .forEach(row => {
@@ -17664,6 +17736,7 @@
       selectedShopGroup = selectedShopSection === 'ordinary' ? 'resources' : selectedShopSection === 'clan' ? 'shared' : '';
       selectedShopLots.clear();
       selectedShopCounts.clear();
+      selectedShopPercents.clear();
       root.querySelectorAll('[data-shop-section]').forEach(element => element.classList.toggle('active', element === button));
       renderShop();
     });
@@ -17671,6 +17744,7 @@
       selectedShopGroup = button.dataset.shopGroup;
       selectedShopLots.clear();
       selectedShopCounts.clear();
+      selectedShopPercents.clear();
       root.querySelectorAll('[data-shop-group]').forEach(element => element.classList.toggle('active', element === button));
       renderShop();
     });
