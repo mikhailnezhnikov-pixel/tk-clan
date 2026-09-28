@@ -127,5 +127,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-63-lights-confirm-reward-gate-live-status.txt",
-  "commit_message": "fix: deploy lamp confirm state machine and reward-before-exit gate in userscript 1.18.63"
+  "commit_message": "fix: deploy lamp confirm state machine and reward-before-exit gate in userscript 1.18.63 r2"
 }
