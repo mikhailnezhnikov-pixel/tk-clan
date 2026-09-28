@@ -1,0 +1,14 @@
+USERSCRIPT_1_18_82_BATTLE_VISIBLE_POINT_PREDEPLOY=PASS
+source_version=1.18.81
+target_version=1.18.82
+fixed_height_gate=REMOVED
+clickability_source=ELEMENT_FROM_POINT
+desktop_lower_rows=ALLOWED
+mobile_footer_occlusion=PROTECTED
+full_battle_solver=PRESERVED
+one_berry_egg=PRESERVED
+clan_crest=PRESERVED
+battle_visible_point_contract=PASS
+syntax=PASS
+base_sha256=a10a3c2b055390b9e92d516a3f923d1a69005b2ef5875df44f62d8f16b5ca47e
+candidate_sha256=7701d402e29ee0c4fe19327f04107e5eb09d4beb09130125b800078a44be1faf

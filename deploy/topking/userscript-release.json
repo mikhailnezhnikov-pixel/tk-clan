@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "source_version": "1.18.80",
-  "target_version": "1.18.81",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.81.clan-crest-launcher.candidate.user.js",
-  "primary_marker": "clan-crest-launcher-20260928-r1",
+  "source_version": "1.18.81",
+  "target_version": "1.18.82",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.82.battle-visible-point.candidate.user.js",
+  "primary_marker": "battle-visible-point-truth-20260929-r1",
   "preserve_markers": [
+    "clan-crest-launcher-20260928-r1",
     "battle-target-safe-scroll-20260928-r1",
     "battle-full-fair-state-20260928-r1",
     "battle-egg-one-berry-buy-20260928-r1",
@@ -145,6 +146,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-81-clan-crest-launcher-live-status.txt",
-  "commit_message": "fix: replace HK launcher with clan crest in userscript 1.18.81"
+  "audit_status_path": "audit/hk-userscript-1-18-82-battle-visible-point-live-status.txt",
+  "commit_message": "fix: allow visible lower battle rows in userscript 1.18.82"
 }
