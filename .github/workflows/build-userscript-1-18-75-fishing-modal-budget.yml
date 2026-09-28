@@ -1,0 +1,119 @@
+name: Build Userscript 1.18.75 Fishing Modal Budget
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_fishing_modal_budget_1_18_75.py'
+      - 'deploy/topking/verify_fishing_modal_budget_contract.py'
+      - '.github/workflows/build-userscript-1-18-75-fishing-modal-budget.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.74" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-recorder-ui-removed-20260928-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "purchase-confirm-fast-global-20260928-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_fishing_modal_budget_1_18_75.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.75" /tmp/HamsterKingMobile.user.js
+          grep -Fq "fishing-modal-budget-ownership-20260928-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/verify_treasure_autopilot_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_resume_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_outer_modal_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_map6_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_key_ack_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_viewport_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_chest_fast_pacing_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_treasury_loop_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_full_clear_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_achievement_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_trader_receipt_ack_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_dig_fast_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_purchase_confirm_fast_global_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_recorder_ui_removed_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_fishing_modal_budget_contract.py /tmp/HamsterKingMobile.user.js
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.75.fishing-modal-budget.candidate.user.js
+          audit=audit/hk-userscript-1-18-75-fishing-modal-budget-predeploy.txt
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.74':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [m.get('primary_marker'), *m.get('preserve_markers', [])]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.74',
+              'target_version':'1.18.75',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.75.fishing-modal-budget.candidate.user.js',
+              'primary_marker':'fishing-modal-budget-ownership-20260928-r1',
+              'preserve_markers':preserve,
+              'audit_status_path':'audit/hk-userscript-1-18-75-fishing-modal-budget-live-status.txt',
+              'commit_message':'fix: keep fishing purchase modal until confirmation in userscript 1.18.75',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          {
+            echo "USERSCRIPT_1_18_75_FISHING_MODAL_BUDGET_PREDEPLOY=PASS"
+            echo "source_version=1.18.74"
+            echo "target_version=1.18.75"
+            echo "modal_hidden_casts=UNKNOWN_NOT_ZERO"
+            echo "exit_with_open_modal=BLOCKED"
+            echo "purchase_confirmation=REQUIRED"
+            echo "fishing_modal_budget_contract=PASS"
+            echo "syntax=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.75 fishing modal budget fix"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
