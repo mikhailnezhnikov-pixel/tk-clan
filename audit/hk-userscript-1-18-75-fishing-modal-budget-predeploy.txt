@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_75_FISHING_MODAL_BUDGET_PREDEPLOY=PASS
+source_version=1.18.74
+target_version=1.18.75
+modal_hidden_casts=UNKNOWN_NOT_ZERO
+exit_with_open_modal=BLOCKED
+purchase_confirmation=REQUIRED
+fishing_modal_budget_contract=PASS
+syntax=PASS
+base_sha256=30f97bd82dd3e5cfcce53805c9a62c865440522c60f94634d8d8ff414408570d
+candidate_sha256=bf4a67ac7f0af58e9412cc2b09ca409dac3a28977abbb192987855188d3a83c5
