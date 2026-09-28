@@ -138,5 +138,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-74-remove-treasure-recorder-ui-live-status.txt",
-  "commit_message": "ui: remove Treasure map recorder button in userscript 1.18.74"
+  "commit_message": "ui: remove Treasure map recorder button in userscript 1.18.74 r1"
 }
