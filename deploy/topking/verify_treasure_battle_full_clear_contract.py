@@ -117,10 +117,17 @@ if "battle-raw-context-mobile-tap-20260927-r1" in s:
         raise SystemExit("raw battle context contract broken: premature leave modal needs close fallback")
 
     runner=section("async function runBattleAuto","async function runBattleInsufficientExit")
-    for marker in [
-        "dispatchBattleTap(element,'battle-open-card')",
-        "dispatchBattleTap(actionButton,'battle-confirm-attack')",
-    ]:
+    if "minigame-tap-isolation-lights-recovery-20260928-r1" in s:
+        required_taps=[
+            "dispatchBattleOverlaySafeTap(element,'battle-open-card')",
+            "dispatchBattleOverlaySafeTap(actionButton,'battle-confirm-attack')",
+        ]
+    else:
+        required_taps=[
+            "dispatchBattleTap(element,'battle-open-card')",
+            "dispatchBattleTap(actionButton,'battle-confirm-attack')",
+        ]
+    for marker in required_taps:
         if marker not in runner:
             raise SystemExit(f"battle mobile tap contract broken: {marker}")
     for forbidden in [
@@ -290,12 +297,28 @@ if "battle-overlay-safe-targeting-20260928-r1" in s:
     for marker in [
         "function battleElementFromPointIgnoringOverlays",
         "element.style.pointerEvents='none'",
-        "battleElementFromPointIgnoringOverlays(x,y,element)",
-        "battleElementFromPointIgnoringOverlays(px,py,null)",
         "HK_BATTLE_OVERLAY_SAFE_TARGETING_REV",
     ]:
         if marker not in tap:
             raise SystemExit(f"battle overlay-safe tap contract broken: {marker}")
+
+    if "minigame-tap-isolation-lights-recovery-20260928-r1" in s:
+        for marker in [
+            "function dispatchBattleOverlaySafeTap(",
+            "function dispatchBattleOverlaySafeTapAt(",
+            "battleElementFromPointIgnoringOverlays(x,y,element)",
+            "battleElementFromPointIgnoringOverlays(px,py,null)",
+        ]:
+            if marker not in tap:
+                raise SystemExit(f"battle isolated overlay-safe tap contract broken: {marker}")
+
+        generic=section("function dispatchBattleTap(element","function battleUiOverlays")
+        if "battleElementFromPointIgnoringOverlays" in generic:
+            raise SystemExit("shared minigame tap regressed into battle-only overlay filtering")
+        if "document.elementFromPoint(x,y) || element" not in generic:
+            raise SystemExit("shared minigame element tap must keep neutral elementFromPoint behavior")
+        if "document.elementFromPoint(px,py)" not in generic:
+            raise SystemExit("shared minigame coordinate tap must keep neutral elementFromPoint behavior")
 
     badge=section("function addNumber","function getLightsBoard")
     if "zIndex:'2147483647'" not in badge:
