@@ -50,12 +50,23 @@ if "treasure-lights-outer-modal-20260927-r1" in s:
 
 if "minigame-tap-isolation-lights-recovery-20260928-r1" in s:
     step=section("async function runLightsModalStep","function lightsRewardElement")
-    for marker in [
-        "tapLightsPurchaseFallback(fallbackRoot,slot)",
-        "waitDeviceNeutralCondition(accepted,1400,60)",
-        "lights-purchase-coordinate-fallback",
-        "HK_MINIGAME_TAP_ISOLATION_REV",
-    ]:
+    if "lights-confirm-ack-before-board-reward-gate-20260928-r1" in s:
+        recovery_markers=[
+            "tapLightsPurchaseFallback(fallbackRoot,slot)",
+            "waitDeviceNeutralCondition(purchaseAccepted,1600,60)",
+            "lights-purchase-coordinate-fallback",
+            "HK_LIGHTS_CONFIRM_STATE_MACHINE_REV",
+            "lights-confirm-ack-",
+        ]
+    else:
+        recovery_markers=[
+            "tapLightsPurchaseFallback(fallbackRoot,slot)",
+            "waitDeviceNeutralCondition(accepted,1400,60)",
+            "lights-purchase-coordinate-fallback",
+            "HK_MINIGAME_TAP_ISOLATION_REV",
+        ]
+
+    for marker in recovery_markers:
         if marker not in step:
             raise SystemExit(f"lights purchase recovery contract broken: {marker}")
 
