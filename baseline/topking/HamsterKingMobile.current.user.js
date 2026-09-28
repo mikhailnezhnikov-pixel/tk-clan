@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.79
+// @version      1.18.80
+// @release-note Сражение: исправлен мобильный клик по нижним врагам. Перед ударом выбранная карточка теперь обязательно прокручивается в безопасную центральную область, скрипт ждёт завершения прокрутки и проверяет, что точка клика действительно принадлежит карточке врага, а не закреплённой кнопке «Покинуть локацию».
 // @release-note Сражение: яйцо mf_fight_egg_* за 1 ягоду теперь выкупается до атак. Поле боя рассчитывается по полному состоянию fair_mini_game_fight, а не только по видимым карточкам мобильного экрана; поэтому порядок ударов строится сразу по всей сетке 4×3. Для цели, которая ещё не смонтирована в DOM, скрипт сам доводит её до viewport только в момент клика.
 // @release-note Охота за сундуками: видимый неактивированный сундук теперь всегда считается незавершённой целью. Красный/таинственный и другие найденные сундуки забираются раньше оставшихся раскопок; backend-флаг is_bought больше не может ошибочно скрыть уже открытый на поле сундук. Добавлено распознавание новых типов ключей и стоимости прямо с карточки.
 // @release-note Охота за сундуками: добавлен выкуп отдельного лота ключа сокровищ за ягоды. Карточка ключа теперь распознаётся по ключевому предмету/иконке, стоимость берётся из каталога или с карточки, и при достаточном балансе покупка имеет приоритет перед раскопками и сундуками.
@@ -25,7 +26,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.79';
+  const BUILD_VERSION = '1.18.80';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3644,6 +3645,7 @@
   const HK_CHEST_VISIBLE_CLAIM_REV='chest-visible-claim-priority-20260928-r1';
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
   const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
+  const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -20728,7 +20730,14 @@
 
     async function battleEnsureLotElement(lotId,slot,runId) {
       let element=battleFindLotElement(lotId);
-      if (element) return element;
+      if (element) {
+        const ready=await battleScrollTargetIntoViewportAsync(
+          element,
+          'battle-lot-'+String(slot||''),
+          runId
+        );
+        return ready ? element : null;
+      }
 
       const host=battleScrollHost();
       if (!host) return null;
@@ -20738,7 +20747,7 @@
       const original=isWindowHost ? window.scrollY : host.scrollTop;
       const row=Math.max(0,Math.min(BATTLE_ROWS-1,Math.floor((Number(slot)-BATTLE_FIRST_SLOT)/BATTLE_COLS)));
       const preferred=max*(row/Math.max(1,BATTLE_ROWS-1));
-      const positions=[preferred,0,max*0.34,max*0.67,max];
+      const positions=[preferred,max*0.34,max*0.67,max,0];
 
       for (const position of positions) {
         if (runId!==battleAutoRunId || !battleAutoEnabled()) return null;
@@ -20746,16 +20755,23 @@
           if (isWindowHost) window.scrollTo(0,Math.max(0,position));
           else host.scrollTop=Math.max(0,position);
         } catch (_) {}
+        await battleNextPaint();
         await new Promise(resolve=>setTimeout(resolve,90));
         element=battleFindLotElement(lotId);
         if (element) {
+          const ready=await battleScrollTargetIntoViewportAsync(
+            element,
+            'battle-mounted-'+String(slot||''),
+            runId
+          );
           recordDiagnostic('battle-target-auto-mounted',{
-            revision:HK_BATTLE_FULL_STATE_REV,
+            revision:HK_BATTLE_TARGET_SCROLL_REV,
             lotId,
             slot:Number(slot)||0,
-            scrollPosition:Math.round(position)
+            scrollPosition:Math.round(position),
+            ready
           });
-          return element;
+          if (ready) return element;
         }
       }
 
@@ -20770,7 +20786,14 @@
       const row=getBattleBoard()[Number(slot)-BATTLE_FIRST_SLOT];
       const lotId=String(row?.lotId||'');
       let element=battleElementForSlot(slot);
-      if (element) return element;
+      if (element) {
+        const ready=await battleScrollTargetIntoViewportAsync(
+          element,
+          'battle-enemy-slot-'+String(slot),
+          runId
+        );
+        if (ready) return element;
+      }
       if (!lotId) return null;
       return await battleEnsureLotElement(lotId,slot,runId);
     }
@@ -21040,46 +21063,141 @@
       return cx>=1 && cx<=window.innerWidth-1 && cy>=1 && cy<=window.innerHeight-1;
     }
 
-    function battleScrollTargetIntoViewport(element,label='battle-target') {
+    function battlePointBelongsToElement(element,leaf) {
+      if (!element || !leaf) return false;
+      if (leaf===element) return true;
+      try {
+        if (element.contains?.(leaf)) return true;
+        if (leaf.contains?.(element)) return true;
+      } catch (_) {}
+      return false;
+    }
+
+    function battleElementTapProbe(element) {
+      if (!element || !element.isConnected) return {ready:false,reason:'missing'};
+      const rect=element.getBoundingClientRect?.();
+      if (!rect || rect.width<=0 || rect.height<=0) return {ready:false,reason:'no-box'};
+      const x=rect.left+rect.width/2;
+      const y=rect.top+rect.height/2;
+      if (x<1 || x>window.innerWidth-1 || y<1 || y>window.innerHeight-1) {
+        return {ready:false,reason:'offscreen',x,y,rect};
+      }
+      const leaf=battleElementFromPointIgnoringOverlays(x,y,element);
+      if (!battlePointBelongsToElement(element,leaf)) {
+        return {
+          ready:false,
+          reason:'occluded',
+          x,
+          y,
+          rect,
+          leaf,
+          leafTag:leaf?.tagName||'',
+          leafText:clean(leaf?.innerText||leaf?.textContent||'').slice(0,80)
+        };
+      }
+      return {ready:true,reason:'ready',x,y,rect,leaf};
+    }
+
+    function battleTargetSafeBand(element) {
+      const probe=battleElementTapProbe(element);
+      if (!probe.ready) return false;
+      const cy=probe.y;
+      // Keep enemy cards away from the sticky game footer / Safari toolbar and
+      // away from the top navigation. The middle of the visual viewport is the
+      // only device-neutral click area shared by iPhone, tablet and desktop.
+      const top=Math.max(90,window.innerHeight*0.24);
+      const bottom=Math.min(window.innerHeight-140,window.innerHeight*0.68);
+      return cy>=top && cy<=Math.max(top+40,bottom);
+    }
+
+    function battleNextPaint() {
+      return new Promise(resolve=>{
+        try {
+          requestAnimationFrame(()=>requestAnimationFrame(resolve));
+        } catch (_) {
+          setTimeout(resolve,40);
+        }
+      });
+    }
+
+    async function battleScrollTargetIntoViewportAsync(element,label='battle-target',runId=null) {
       if (!element || !element.isConnected) return false;
-      if (battleElementInViewport(element)) return true;
+      if (battleTargetSafeBand(element)) return true;
+
+      const before=element.getBoundingClientRect?.();
       try {
         element.scrollIntoView({behavior:'auto',block:'center',inline:'center'});
       } catch (_) {
         try { element.scrollIntoView(); } catch (_) {}
       }
-      const inViewport=battleElementInViewport(element);
-      recordDiagnostic('battle-target-scroll',{
-        revision:HK_BATTLE_VIEWPORT_RESUME_REV,
+      await battleNextPaint();
+      await new Promise(resolve=>setTimeout(resolve,120));
+      if (runId!==null && (runId!==battleAutoRunId || !battleAutoEnabled())) return false;
+
+      let probe=battleElementTapProbe(element);
+      if (!probe.ready || !battleTargetSafeBand(element)) {
+        const host=battleScrollHost();
+        const isWindowHost=!host ||
+          host===document.scrollingElement ||
+          host===document.documentElement ||
+          host===document.body;
+
+        try {
+          const rect=element.getBoundingClientRect?.();
+          if (rect) {
+            const center=rect.top+rect.height/2;
+            if (isWindowHost) {
+              const desired=Math.max(120,Math.min(window.innerHeight-180,window.innerHeight*0.48));
+              window.scrollBy({top:center-desired,left:0,behavior:'auto'});
+            } else {
+              const hostRect=host.getBoundingClientRect?.();
+              const desired=(hostRect?.top||0)+Math.max(80,Math.min((hostRect?.height||window.innerHeight)*0.48,window.innerHeight*0.52));
+              host.scrollTop+=center-desired;
+            }
+          }
+        } catch (_) {}
+
+        await battleNextPaint();
+        await new Promise(resolve=>setTimeout(resolve,120));
+        if (runId!==null && (runId!==battleAutoRunId || !battleAutoEnabled())) return false;
+        probe=battleElementTapProbe(element);
+      }
+
+      const success=probe.ready && battleTargetSafeBand(element);
+      const after=element.getBoundingClientRect?.();
+      recordDiagnostic('battle-target-safe-scroll',{
+        revision:HK_BATTLE_TARGET_SCROLL_REV,
         label,
-        success:inViewport
+        success,
+        reason:probe.reason,
+        beforeTop:Math.round(before?.top||0),
+        afterTop:Math.round(after?.top||0),
+        centerY:Math.round(probe.y||0),
+        viewportHeight:window.innerHeight,
+        blockerTag:probe.leafTag||'',
+        blockerText:probe.leafText||''
       });
-      return inViewport;
+      return success;
     }
 
     function dispatchBattleOverlaySafeTap(element,label='battle-overlay-safe-tap') {
       if (!element || !element.isConnected) return false;
-      battleScrollTargetIntoViewport(element,label);
-      const rect=element.getBoundingClientRect?.();
-      if (!rect || rect.width<=0 || rect.height<=0) return false;
-
-      if (!battleElementInViewport(element)) {
-        try {
-          element.click?.();
-          recordDiagnostic('battle-native-offscreen-click',{
-            revision:HK_BATTLE_VIEWPORT_RESUME_REV,
-            label
-          });
-          return true;
-        } catch (_) {
-          return false;
-        }
+      const probe=battleElementTapProbe(element);
+      if (!probe.ready) {
+        recordDiagnostic('battle-overlay-safe-tap-blocked',{
+          revision:HK_BATTLE_TARGET_SCROLL_REV,
+          label,
+          reason:probe.reason,
+          blockerTag:probe.leafTag||'',
+          blockerText:probe.leafText||'',
+          legacyGuard:'battle-native-offscreen-click-disabled'
+        });
+        return false;
       }
 
-      const x=Math.max(1,Math.min(window.innerWidth-1,rect.left+rect.width/2));
-      const y=Math.max(1,Math.min(window.innerHeight-1,rect.top+rect.height/2));
-      const leaf=battleElementFromPointIgnoringOverlays(x,y,element) || element;
-      if (!leaf) return false;
+      const x=Math.max(1,Math.min(window.innerWidth-1,probe.x));
+      const y=Math.max(1,Math.min(window.innerHeight-1,probe.y));
+      const leaf=probe.leaf || element;
       const options={bubbles:true,cancelable:true,clientX:x,clientY:y,screenX:x,screenY:y,button:0,buttons:1,pointerId:1,pointerType:'touch',isPrimary:true};
       try { leaf.dispatchEvent(new PointerEvent('pointerdown',options)); } catch (_) {}
       try { leaf.dispatchEvent(new MouseEvent('mousedown',{...options,buttons:1})); } catch (_) {}
@@ -21087,12 +21205,13 @@
       try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
       try { leaf.click?.(); } catch (_) {}
       recordDiagnostic('battle-overlay-safe-tap',{
-        revision:HK_BATTLE_VIEWPORT_RESUME_REV,
+        revision:HK_BATTLE_TARGET_SCROLL_REV,
         label,
         x:Math.round(x),
         y:Math.round(y),
         tag:leaf.tagName||'',
         overlaysIgnored:battleUiOverlays().length,
+        verifiedTarget:true,
         autoScrolled:true
       });
       return true;
@@ -22014,6 +22133,19 @@
           return false;
         }
         const expectedCost=battleCostForElement(element);
+        const targetProbe=battleElementTapProbe(element);
+        if (!targetProbe.ready || !battleTargetSafeBand(element)) {
+          recordDiagnostic('battle-auto-stop',{
+            revision:HK_BATTLE_TARGET_SCROLL_REV,
+            reason:'target-not-safe-after-scroll',
+            slot,
+            expectedCost,
+            probeReason:targetProbe.reason,
+            blockerTag:targetProbe.leafTag||'',
+            blockerText:targetProbe.leafText||''
+          });
+          return false;
+        }
         const before=getSignature();
 
         // Mobile Safari/game handlers are not guaranteed to react to a raw
@@ -25846,6 +25978,7 @@
       chestVisibleClaimRevision:HK_CHEST_VISIBLE_CLAIM_REV,
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
       battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
+      battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
