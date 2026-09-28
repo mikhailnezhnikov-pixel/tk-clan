@@ -137,5 +137,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-73-global-fast-purchase-confirm-live-status.txt",
-  "commit_message": "perf: make all minigame purchase confirmations fast in userscript 1.18.73"
+  "commit_message": "perf: make all minigame purchase confirmations fast in userscript 1.18.73 r1"
 }
