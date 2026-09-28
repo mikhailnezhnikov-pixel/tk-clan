@@ -72,10 +72,17 @@ if "battle-achievement-priority-20260927-r1" in s:
             raise SystemExit(f"achievement patch weakened battle exit gate: {marker}")
 
     auto=section("async function runBattleAuto","async function runBattleInsufficientExit")
-    for marker in [
-        "dispatchBattleTap(element,'battle-open-card')",
-        "dispatchBattleTap(actionButton,'battle-confirm-attack')",
-    ]:
+    if "minigame-tap-isolation-lights-recovery-20260928-r1" in s:
+        required_taps=[
+            "dispatchBattleOverlaySafeTap(element,'battle-open-card')",
+            "dispatchBattleOverlaySafeTap(actionButton,'battle-confirm-attack')",
+        ]
+    else:
+        required_taps=[
+            "dispatchBattleTap(element,'battle-open-card')",
+            "dispatchBattleTap(actionButton,'battle-confirm-attack')",
+        ]
+    for marker in required_taps:
         if marker not in auto:
             raise SystemExit(f"achievement patch weakened mobile battle tap: {marker}")
 
