@@ -47,4 +47,27 @@ if "treasure-lights-outer-modal-20260927-r1" in s:
         if forbidden in stale:
             raise SystemExit(f"outer lamp stale cleanup regressed: {forbidden}")
 
+
+if "minigame-tap-isolation-lights-recovery-20260928-r1" in s:
+    step=section("async function runLightsModalStep","function lightsRewardElement")
+    for marker in [
+        "tapLightsPurchaseFallback(fallbackRoot,slot)",
+        "waitDeviceNeutralCondition(accepted,1400,60)",
+        "lights-purchase-coordinate-fallback",
+        "HK_MINIGAME_TAP_ISOLATION_REV",
+    ]:
+        if marker not in step:
+            raise SystemExit(f"lights purchase recovery contract broken: {marker}")
+
+    shared=section("function dispatchBattleTap(element","function battleUiOverlays")
+    if "battleElementFromPointIgnoringOverlays" in shared:
+        raise SystemExit("lights regression: shared minigame tap still uses battle overlay filtering")
+    for marker in [
+        "document.elementFromPoint(x,y) || element",
+        "document.elementFromPoint(px,py)",
+        "HK_MINIGAME_SINGLE_TAP_REV",
+    ]:
+        if marker not in shared:
+            raise SystemExit(f"lights shared tap contract broken: {marker}")
+
 print("TREASURE_LIGHTS_OUTER_MODAL_CONTRACT=PASS")
