@@ -126,5 +126,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-62-minigame-tap-isolation-live-status.txt",
-  "commit_message": "fix: deploy isolated battle taps and lamp purchase recovery in userscript 1.18.62"
+  "commit_message": "fix: deploy isolated battle taps and lamp purchase recovery in userscript 1.18.62 r2"
 }
