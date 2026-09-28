@@ -1,0 +1,12 @@
+USERSCRIPT_1_18_79_BATTLE_FULL_STATE_EGG_PREDEPLOY=PASS
+source_version=1.18.78
+target_version=1.18.79
+battle_board_source=FULL_FAIR_STATE
+mobile_viewport_dependency=REMOVED
+fight_egg_one_berry=AUTO_BUY
+egg_before_attacks=ENABLED
+exit_with_pending_egg=BLOCKED
+battle_full_state_egg_contract=PASS
+syntax=PASS
+base_sha256=c82d69c58aa7a1607f1eaa26b4e2187dc9a2a30a9a5bae9e5be3df377ec98268
+candidate_sha256=d97c31e385bc8e4dc4da969869efd20b191081c4bfaf6bd0840e9963adba77c6

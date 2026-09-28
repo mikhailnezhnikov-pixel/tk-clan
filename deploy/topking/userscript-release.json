@@ -1,10 +1,12 @@
 {
   "schema": 1,
-  "source_version": "1.18.77",
-  "target_version": "1.18.78",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.78.visible-chest-claim.candidate.user.js",
-  "primary_marker": "chest-visible-claim-priority-20260928-r1",
+  "source_version": "1.18.78",
+  "target_version": "1.18.79",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.79.battle-full-state-egg.candidate.user.js",
+  "primary_marker": "battle-full-fair-state-20260928-r1",
   "preserve_markers": [
+    "battle-egg-one-berry-buy-20260928-r1",
+    "chest-visible-claim-priority-20260928-r1",
     "chest-key-offer-buy-20260928-r1",
     "trader-gold-currency-skip-20260928-r1",
     "fishing-modal-budget-ownership-20260928-r1",
@@ -141,6 +143,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-78-visible-chest-claim-live-status.txt",
-  "commit_message": "fix: claim visible mystery chests before digging in userscript 1.18.78 r2"
+  "audit_status_path": "audit/hk-userscript-1-18-79-battle-full-state-egg-live-status.txt",
+  "commit_message": "fix: read full battle state and buy one-berry egg in userscript 1.18.79"
 }
