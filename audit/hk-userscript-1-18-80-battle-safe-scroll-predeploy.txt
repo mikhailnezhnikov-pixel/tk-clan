@@ -1,0 +1,12 @@
+USERSCRIPT_1_18_80_BATTLE_SAFE_SCROLL_PREDEPLOY=PASS
+source_version=1.18.79
+target_version=1.18.80
+full_battle_solver=PRESERVED
+one_berry_egg=PRESERVED
+lower_enemy_scroll=ASYNC_CENTER
+sticky_footer_occlusion=BLOCKED
+verified_target_click=ENABLED
+battle_safe_scroll_contract=PASS
+syntax=PASS
+base_sha256=d97c31e385bc8e4dc4da969869efd20b191081c4bfaf6bd0840e9963adba77c6
+candidate_sha256=78bf06e16791814168f9b5ed934fb8cd6855a28383d899652b312b068b911fad
