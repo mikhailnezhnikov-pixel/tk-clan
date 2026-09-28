@@ -5,7 +5,6 @@
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.79.battle-full-state-egg.candidate.user.js",
   "primary_marker": "battle-full-fair-state-20260928-r1",
   "preserve_markers": [
-    "battle-egg-one-berry-buy-20260928-r1",
     "chest-visible-claim-priority-20260928-r1",
     "chest-key-offer-buy-20260928-r1",
     "trader-gold-currency-skip-20260928-r1",
@@ -144,5 +143,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-79-battle-full-state-egg-live-status.txt",
-  "commit_message": "fix: read full battle state and buy one-berry egg in userscript 1.18.79 r1"
+  "commit_message": "fix: read full battle state and buy one-berry egg in userscript 1.18.79 r2"
 }
