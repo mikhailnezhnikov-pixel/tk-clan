@@ -133,5 +133,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-69-shop-fast-pacing-restore-live-status.txt",
-  "commit_message": "fix: restore fast shop pacing in userscript 1.18.69"
+  "commit_message": "fix: deploy canonical lamp plan and map 6 regression guard in userscript 1.18.65 r3"
 }
