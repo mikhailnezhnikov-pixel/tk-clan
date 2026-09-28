@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.64
+// @version      1.18.65
+// @release-note Лабиринт — лампочки: автомат исполняет неизменный план первоначального hint-only решателя. Исправлен цикл карты №6: после «Понятно» старый поиск мог принять контейнер поля за модалку, а координатный fallback повторно нажимал третью лампу. Модалка определяется только по точному заголовку, контейнеры с 3×3 полем исключены, одна плановая клетка не может быть исполнена дважды. Сундук и подтверждение награды обязательны до выхода.
 // @release-note Ресурсы: Ореховая/Инструментовая/Жетоновая больше не зависят от предварительного ручного входа в исходное здание. Автопоиск проверяет все ID, которые реально отдаёт карта района (building_id/buildingId/id), и сохраняет станцию только после подтверждения её типа через /player/building.
 // @release-note Лабиринт — лампочки: восстановлена обязательная цепочка «нажать лампу → оплатить 1 → подтвердить окно → дождаться реального изменения 3×3». Подсказки и клики теперь строятся только по актуальному видимому полю, а дубли скрытой/адаптивной верстки не могут подменить состояние. Финальная награда стала жёстким барьером выхода: «Активировано» больше не считается полученной наградой — сначала сундук/хранилище забирается, затем подтверждается, и только после этого Автокарта может покинуть локацию.
 // @release-note Регрессия Лабиринта: восстановлена изоляция модулей. В 1.18.60 боевой overlay-safe tap был внедрён в общий обработчик, которым пользуются и лампочки; на некоторых раскладках это ломало подтверждение цены «1». Общий tap возвращён к прежней нейтральной логике, а игнорирование HK-оверлеев теперь применяется только внутри боя. Для лампочки добавлен отдельный подтверждённый coordinate-fallback по нижней кнопке цены, без изменения математического решения поля.
@@ -176,7 +177,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.64';
+  const BUILD_VERSION = '1.18.65';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -17920,6 +17921,9 @@
   const HK_MINIGAME_TAP_ISOLATION_REV = 'minigame-tap-isolation-lights-recovery-20260928-r1';
   const HK_LIGHTS_CONFIRM_STATE_MACHINE_REV = 'lights-confirm-ack-before-board-reward-gate-20260928-r1';
   const HK_REWARD_CLAIM_BEFORE_EXIT_REV = 'reward-claim-before-exit-20260928-r1';
+  const HK_LIGHTS_HINT_CANON_EXEC_REV = 'lights-hint-canon-fixed-plan-map6-20260928-r1';
+  const HK_LIGHTS_STRICT_MODAL_REV = 'lights-strict-modal-no-board-fallback-20260928-r1';
+  const HK_LIGHTS_REWARD_ACK_GATE_REV = 'lights-reward-ack-before-exit-20260928-r1';
   const HK_CHEST_FULL_DIG_REV = 'chest-full-dig-first-20260926-r1';
   const HK_BATTLE_ENTRY_GUARD_REV = 'battle-entry-before-auto-20260926-r1';
   const HK_FISHING_AUTO_REV = 'fishing-value-priority-auto-20260926-r1';
@@ -19600,48 +19604,41 @@
     }
 
     function lightsModalRoot() {
-      // The generic centered-modal helper intentionally chooses the smallest
-      // actionable container. For the lamp UI that is the inner black panel,
-      // not the gold frame that owns the X control. Use the dedicated outer
-      // dialog resolver first.
-      const outer=lightsOuterModalRoot();
-      if (outer) return outer;
-
-      const rows=[];
-      const add=(element,bonus=0)=>{
-        if (!element || !visible(element)) return;
-        const rect=element.getBoundingClientRect?.();
-        if (!rect || rect.width<Math.min(260,window.innerWidth*0.42) || rect.height<160) return;
-        if (rect.width>window.innerWidth*0.99 || rect.height>window.innerHeight*0.98) return;
-        const text=lightsModalText(element);
-        let score=bonus;
-        if (/лампоч|light\s*bulb|bulb|lights?\s*out/.test(text)) score+=180;
-        if (/понятно|got\s*it|understood|okay|\bok\b/.test(text)) score+=80;
-        const style=getComputedStyle(element);
-        const z=parseInt(style.zIndex,10);
-        if (style.position==='fixed') score+=90;
-        else if (style.position==='absolute') score+=45;
-        if (Number.isFinite(z) && z>=100) score+=Math.min(100,Math.log10(z+1)*20);
-        const cx=rect.left+rect.width/2;
-        const cy=rect.top+rect.height/2;
-        const dist=Math.hypot(cx-window.innerWidth/2,cy-window.innerHeight/2);
-        score+=Math.max(0,80-dist/8);
-        rows.push({element,score,area:rect.width*rect.height});
-      };
-
-      [...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]')]
-        .forEach(element=>add(element,90));
-
-      const buttons=[...document.querySelectorAll('button,[role="button"],a')].filter(visible);
-      for (const button of buttons) {
-        const text=clean(button.innerText||button.textContent||'').trim();
-        if (!(text==='1' || /^(?:понятно|got it|understood|ok|okay)$/i.test(text))) continue;
-        let node=button.parentElement;
-        for (let depth=0;node && depth<9;depth++,node=node.parentElement) add(node,50-depth*3);
+      const titlePattern=/^(?:(?:Включенная|Выключенная)\s+лампочка|(?:Lit|Unlit|On|Off)\s+(?:light\s*)?bulb|Light\s+bulb)$/i;
+      const seeds=[...document.querySelectorAll('h1,h2,h3,h4,[role="heading"],strong,b,p,div,span')]
+        .filter(element=>element && visible(element))
+        .filter(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          return text.length<=90 && titlePattern.test(text);
+        });
+      const rows=[],seen=new Set();
+      const vw=Math.max(1,window.innerWidth),vh=Math.max(1,window.innerHeight);
+      for (const seed of seeds) {
+        let node=seed;
+        for (let depth=0;node && depth<10;depth++,node=node.parentElement) {
+          if (!node || seen.has(node) || !visible(node)) continue;
+          seen.add(node);
+          // Map #6 regression guard: page ancestors containing 3x3 lots are never modals.
+          if (node.querySelector?.('[data-lot-id^="mf_fairlot_lights_out_sl"]')) continue;
+          const rect=node.getBoundingClientRect?.();
+          if (!rect || rect.width<260 || rect.height<150 || rect.width>vw*0.92 || rect.height>vh*0.88) continue;
+          const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+          if (Math.abs(cx-vw/2)>vw*0.30 || Math.abs(cy-vh/2)>vh*0.34) continue;
+          const text=clean(node.innerText||node.textContent||'');
+          if (!/(?:Включенная|Выключенная)\s+лампочка|light\s*bulb|\b(?:lit|unlit)\s+bulb\b/i.test(text)) continue;
+          const buttons=[...node.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+            .filter(el=>el&&visible(el)&&!el.disabled);
+          const hasClose=buttons.some(el=>/^(?:×|✕|Закрыть|Close)$/i.test(clean(el.innerText||el.textContent||'').trim()) || /close|закрыть/i.test(clean(el.getAttribute?.('aria-label')||el.getAttribute?.('title')||'')));
+          const hasCost=buttons.some(el=>clean(el.innerText||el.textContent||'').trim()==='1');
+          const hasAck=buttons.some(el=>/^(?:Понятно|Got it|Understood|OK|Okay|Подтвердить|Confirm)$/i.test(clean(el.innerText||el.textContent||'').trim()));
+          if (!hasClose && !hasCost && !hasAck) continue;
+          rows.push({element:node,score:(hasClose?500:0)+(hasCost?250:0)+(hasAck?250:0)+(depth?60:0),area:rect.width*rect.height,depth});
+        }
       }
-
-      rows.sort((a,b)=>b.score-a.score || a.area-b.area);
-      return rows[0]?.score>=100 ? rows[0].element : null;
+      rows.sort((a,b)=>b.score-a.score || b.area-a.area || a.depth-b.depth);
+      const root=rows[0]?.element || null;
+      if(root) recordDiagnostic('lights-strict-modal-root',{revision:HK_LIGHTS_STRICT_MODAL_REV});
+      return root;
     }
 
     async function waitLightsModal(runId,timeoutMs=2600) {
@@ -19884,79 +19881,25 @@
       return candidates[0]?.element || null;
     }
 
-    async function closeLightsModalAfterStateChange(runId,before,slot,timeoutMs=4200) {
+    async function closeLightsModalAfterStateChange(runId,before,slot,timeoutMs=2600) {
       const started=Date.now();
-      let lastActionAt=0;
-      let coordinateFallbackUsed=false;
-
       while (Date.now()-started<timeoutMs) {
         if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
-
         const changed=lightsBoardSignature()!==before;
         const root=lightsModalRoot();
         if (!root) return changed;
-
-        // Never close/advance before the game actually accepted this lamp press.
-        if (!changed) {
-          await new Promise(resolve=>setTimeout(resolve,90));
-          continue;
-        }
-
-        if (Date.now()-lastActionAt<320) {
-          await new Promise(resolve=>setTimeout(resolve,90));
-          continue;
-        }
-
+        if (!changed) { await new Promise(r=>setTimeout(r,80)); continue; }
         const ack=lightsAcknowledgeButton(root);
-        if (ack) {
-          if (dispatchBattleTap(ack,'lights-understood-after-change-'+slot)) {
-            lastActionAt=Date.now();
-            recordDiagnostic('lights-modal-drain',{
-              revision:HK_LIGHTS_MODAL_STEP_REV,
-              slot,
-              action:'ack'
-            });
-            await new Promise(resolve=>setTimeout(resolve,220));
-            continue;
-          }
+        if (ack && dispatchBattleTap(ack,'lights-understood-after-change-'+slot)) {
+          await new Promise(r=>setTimeout(r,180)); continue;
         }
-
         const close=lightsModalCloseButton(root);
-        if (close) {
-          if (dispatchBattleTap(close,'lights-close-after-change-'+slot)) {
-            lastActionAt=Date.now();
-            recordDiagnostic('lights-modal-drain',{
-              revision:HK_LIGHTS_MODAL_STEP_REV,
-              slot,
-              action:'close'
-            });
-            await new Promise(resolve=>setTimeout(resolve,220));
-            continue;
-          }
+        if (close && dispatchBattleTap(close,'lights-close-after-change-'+slot)) {
+          await new Promise(r=>setTimeout(r,180)); continue;
         }
-
-        if (!coordinateFallbackUsed) {
-          const rr=root.getBoundingClientRect?.();
-          if (rr && rr.width>120 && rr.height>120) {
-            coordinateFallbackUsed=true;
-            const x=rr.left+rr.width-18;
-            const y=rr.top+18;
-            if (dispatchBattleTapAt(x,y,'lights-close-corner-after-change-'+slot)) {
-              lastActionAt=Date.now();
-              recordDiagnostic('lights-modal-drain',{
-                revision:HK_LIGHTS_MODAL_STEP_REV,
-                slot,
-                action:'corner-fallback'
-              });
-              await new Promise(resolve=>setTimeout(resolve,260));
-              continue;
-            }
-          }
-        }
-
-        await new Promise(resolve=>setTimeout(resolve,100));
+        recordDiagnostic('lights-modal-drain-wait',{revision:HK_LIGHTS_STRICT_MODAL_REV,slot,reason:'strict-dialog-has-no-safe-dismiss'});
+        await new Promise(r=>setTimeout(r,100));
       }
-
       return lightsBoardSignature()!==before && !lightsModalRoot();
     }
 
@@ -19966,84 +19909,20 @@
         if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
         const root=lightsModalRoot();
         if (!root) return true;
-
         const ack=lightsAcknowledgeButton(root);
         if (ack && dispatchBattleTap(ack,'lights-clear-stale-ack-'+slot)) {
-          recordDiagnostic('lights-stale-modal-cleared',{
-            revision:HK_TREASURE_LIGHTS_RESUME_REV,
-            slot,
-            method:'ack'
-          });
-          await new Promise(resolve=>setTimeout(resolve,240));
-          continue;
+          await new Promise(r=>setTimeout(r,220)); continue;
         }
-
         const close=lightsModalCloseButton(root);
         if (close && dispatchBattleTap(close,'lights-clear-stale-close-'+slot)) {
-          recordDiagnostic('lights-stale-modal-cleared',{
-            revision:HK_TREASURE_LIGHTS_RESUME_REV,
-            slot,
-            method:'close'
-          });
-          await new Promise(resolve=>setTimeout(resolve,240));
-          continue;
+          await new Promise(r=>setTimeout(r,220)); continue;
         }
-
-        // Escalate to the real outer gold frame. Stale cleanup NEVER presses
-        // the berry/cost button; it only dismisses the old modal and lets the
-        // solver recalculate from the unchanged 3x3 board.
-        const outer=lightsOuterModalRoot();
-        if (outer) {
-          const outerClose=
-            lightsModalCloseButton(outer) ||
-            autoMapModalCloseButton(outer);
-          if (outerClose && dispatchBattleTap(outerClose,'lights-clear-stale-outer-close-'+slot)) {
-            recordDiagnostic('lights-stale-modal-cleared',{
-              revision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
-              slot,
-              method:'outer-close'
-            });
-            await new Promise(resolve=>setTimeout(resolve,300));
-            if (!lightsModalRoot()) return true;
-            continue;
-          }
-
-          const orr=outer.getBoundingClientRect?.();
-          if (orr && orr.width>180 && orr.height>180) {
-            if (dispatchBattleTapAt(
-              orr.left+orr.width-26,
-              orr.top+26,
-              'lights-clear-stale-outer-corner-'+slot
-            )) {
-              recordDiagnostic('lights-stale-modal-cleared',{
-                revision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
-                slot,
-                method:'outer-corner'
-              });
-              await new Promise(resolve=>setTimeout(resolve,340));
-              if (!lightsModalRoot()) return true;
-              continue;
-            }
-          }
-        }
-
-        const rr=root.getBoundingClientRect?.();
-        if (rr && rr.width>120 && rr.height>120) {
-          if (dispatchBattleTapAt(rr.left+rr.width-18,rr.top+18,'lights-clear-stale-corner-'+slot)) {
-            recordDiagnostic('lights-stale-modal-cleared',{
-              revision:HK_TREASURE_LIGHTS_RESUME_REV,
-              slot,
-              method:'corner-fallback'
-            });
-            await new Promise(resolve=>setTimeout(resolve,260));
-            continue;
-          }
-        }
-
-        await new Promise(resolve=>setTimeout(resolve,100));
+        recordDiagnostic('lights-stale-modal-blocked',{revision:HK_LIGHTS_STRICT_MODAL_REV,slot,reason:'no-safe-dismiss'});
+        await new Promise(r=>setTimeout(r,100));
       }
       return !lightsModalRoot();
     }
+
 
     async function runLightsModalStep(before,target,slot,runId) {
       if (!target || !target.isConnected) return {ok:false,reason:'target-missing'};
@@ -20383,7 +20262,10 @@
           return {ok:false,claimed:true,reason:'reward-ack-tap-failed'};
         }
         acknowledged=true;
-        await new Promise(resolve=>setTimeout(resolve,260));
+        const ackGone=await waitDeviceNeutralCondition(()=>!lightsRewardAckButton(),2200,80);
+        if (!ackGone) {
+          return {ok:false,claimed:true,reason:'reward-ack-still-visible'};
+        }
       }
 
       lightsFinalRewardClaimed=true;
@@ -20422,7 +20304,11 @@
         'transition-mismatch',
         'plan-state-drift',
         'plan-exhausted-not-solved',
-        'step-limit'
+        'step-limit',
+        'repeated-planned-slot',
+        'canonical-plan-has-duplicates',
+        'target-slot-mismatch',
+        'initial-modal-cannot-close'
       ]);
 
       if (autoMapOwnsLights && fatalReasons.has(reason)) {
@@ -20460,10 +20346,15 @@
       let plan=null;
       let planIndex=0;
       let expectedState=null;
+      const executedSlots=new Set();
 
-      recordDiagnostic('lights-auto-start',{revision:HK_LIGHTS_STABLE_PLAN_REV});
+      recordDiagnostic('lights-auto-start',{revision:HK_LIGHTS_HINT_CANON_EXEC_REV,source:'reference/topking/lights-hint-only-canon-1.18.04.js'});
 
       try {
+        if (lightsModalRoot()) {
+          const cleared=await clearStaleLightsModalBeforeStep(runId,0,3200);
+          if (!cleared) return failLightsAuto('initial-modal-cannot-close',{phase:'before-plan'});
+        }
         while (runId===lightsAutoRunId && lightsAutoEnabled()) {
           if (steps>=LIGHTS_AUTO_MAX_STEPS) {
             return failLightsAuto('step-limit',{steps});
@@ -20519,11 +20410,15 @@
               return true;
             }
 
+            if (new Set(plan).size!==plan.length) {
+              return failLightsAuto('canonical-plan-has-duplicates',{plan:plan.map(pos=>pos+1)});
+            }
             planIndex=0;
             expectedState=currentState.slice();
             drawLightsSolution(board,plan);
             recordDiagnostic('lights-plan-fixed',{
-              revision:HK_LIGHTS_STABLE_PLAN_REV,
+              revision:HK_LIGHTS_HINT_CANON_EXEC_REV,
+              source:'hint-only-canon-1.18.04',
               state:lightsStateKey(expectedState),
               plan:plan.map(pos=>pos+1),
               length:plan.length
@@ -20552,24 +20447,34 @@
           }
 
           const position=plan[planIndex];
-          const target=board[position]?.element;
+          const slot=position+1;
+          if (executedSlots.has(slot)) {
+            return failLightsAuto('repeated-planned-slot',{slot,planIndex,executedSlots:[...executedSlots]});
+          }
+          const target=lightsTargetForSlot(slot);
           if (!target || !target.isConnected) {
-            return failLightsAuto('target-missing',{position,steps});
+            return failLightsAuto('target-missing',{position,slot,steps});
+          }
+          const targetLotId=String(target.getAttribute('data-lot-id')||'');
+          const expectedPrefix='mf_fairlot_lights_out_sl'+slot+'_';
+          if (targetLotId!==expectedPrefix+'true' && targetLotId!==expectedPrefix+'false') {
+            return failLightsAuto('target-slot-mismatch',{slot,targetLotId});
           }
 
           const predicted=applyLightPress(currentState,position);
           steps+=1;
           recordDiagnostic('lights-auto-click',{
-            revision:HK_LIGHTS_STABLE_PLAN_REV,
+            revision:HK_LIGHTS_HINT_CANON_EXEC_REV,
             step:steps,
-            slot:position+1,
+            slot,
+            targetLotId,
             planIndex,
             fixedPlan:plan.map(pos=>pos+1),
             expectedAfter:lightsStateKey(predicted),
             flow:'fixed-shortest-plan>single-purchase>verify-transition'
           });
 
-          const result=await runLightsModalStep(before,target,position+1,runId);
+          const result=await runLightsModalStep(before,target,slot,runId);
           if (!result.ok) {
             if (runId!==lightsAutoRunId || !lightsAutoEnabled()) return false;
             return failLightsAuto(result.reason,{
@@ -20602,13 +20507,15 @@
             });
           }
 
+          executedSlots.add(slot);
           expectedState=predicted;
           planIndex+=1;
 
           recordDiagnostic('lights-auto-step-complete',{
-            revision:HK_LIGHTS_STABLE_PLAN_REV,
+            revision:HK_LIGHTS_HINT_CANON_EXEC_REV,
             step:steps,
-            slot:position+1,
+            slot,
+            executedSlots:[...executedSlots],
             planIndex,
             remainingPlan:plan.slice(planIndex).map(pos=>pos+1),
             state:lightsStateKey(observed),
@@ -22028,6 +21935,22 @@
       }
 
       return board;
+    }
+
+    function lightsTargetForSlot(slot) {
+      const wanted=Number(slot);
+      if (!(wanted>=1 && wanted<=9)) return null;
+      const prefix='mf_fairlot_lights_out_sl'+wanted+'_';
+      const rows=[...document.querySelectorAll('[data-lot-id^="'+prefix+'"]')]
+        .filter(element=>element&&element.isConnected&&visible(element))
+        .map(element=>{
+          const lotId=String(element.getAttribute('data-lot-id')||'');
+          const rect=element.getBoundingClientRect?.()||{width:0,height:0};
+          return {element,lotId,area:rect.width*rect.height};
+        })
+        .filter(row=>row.lotId===prefix+'true' || row.lotId===prefix+'false')
+        .sort((a,b)=>b.area-a.area);
+      return rows[0]?.element || null;
     }
 
     function lightNeighbours(position) {
@@ -25065,13 +24988,6 @@
           revision:HK_LIGHTS_COMPLETED_RETURN_REV,
           reason:'left-lights-screen'
         });
-      } else if (isLights && !lightsFinalRewardClaimed && lightsRewardActivated()) {
-        lightsFinalRewardClaimed=true;
-        lightsFinalRewardClaimedAt=Date.now();
-        recordDiagnostic('lights-final-reward-recovered',{
-          revision:HK_LIGHTS_COMPLETED_RETURN_REV,
-          source:'check-puzzle-activated-dom'
-        });
       }
       const isBattle=signature.startsWith('BATTLE|');
       const isBattlePreview=signature.startsWith('BATTLE_PREVIEW|');
@@ -25232,6 +25148,9 @@
       minigameTapIsolationRevision:HK_MINIGAME_TAP_ISOLATION_REV,
       lightsConfirmStateMachineRevision:HK_LIGHTS_CONFIRM_STATE_MACHINE_REV,
       rewardClaimBeforeExitRevision:HK_REWARD_CLAIM_BEFORE_EXIT_REV,
+      lightsHintCanonExecRevision:HK_LIGHTS_HINT_CANON_EXEC_REV,
+      lightsStrictModalRevision:HK_LIGHTS_STRICT_MODAL_REV,
+      lightsRewardAckGateRevision:HK_LIGHTS_REWARD_ACK_GATE_REV,
       start,
       stop,
       check:checkPuzzle,
