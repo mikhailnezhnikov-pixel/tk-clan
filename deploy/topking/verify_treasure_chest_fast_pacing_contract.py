@@ -15,10 +15,11 @@ def section(start,end):
 
 if "treasure-chest-fast-pacing-20260927-r1" in s:
     helper=section("async function chestHumanPause","async function traderHumanPause")
+    global_fast_confirm="purchase-confirm-fast-global-20260928-r1" in s
     required={
         "scan:[600,950]":"scan",
         "aim:[380,650]":"aim",
-        "confirm:[650,1050]":"confirm",
+        ("confirm:[100,180]" if global_fast_confirm else "confirm:[650,1050]"):"confirm",
         "settle:[950,1500]":"settle",
         "reward:[420,700]":"reward",
         "HK_TREASURE_CHEST_FAST_PACING_REV":"revision",
@@ -31,7 +32,7 @@ if "treasure-chest-fast-pacing-20260927-r1" in s:
     for marker in [
         "scan:[850,1450]",
         "aim:[550,950]",
-        "confirm:[950,1650]",
+        ("confirm:[100,180]" if global_fast_confirm else "confirm:[950,1650]"),
         "settle:[1500,2400]",
         "reward:[650,1050]",
     ]:
