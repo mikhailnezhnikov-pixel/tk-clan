@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.83
+// @version      1.18.84
+// @release-note 28.09 · Интерфейс: у герба плавающей кнопки убран чёрный квадрат. Чёрный фон исходного JPG теперь вырезается в прозрачность мягкой маской прямо в браузере.
 // @release-note Тайный торговец: «Золотые монеты» теперь блокируются по итоговому товару (cur_gold/название/иконка), а не только по lotId. Если запрещённое окно каким-либо образом уже открылось и даже сохранилось после возврата на Карту сокровищ, Автокарта закрывает его как приоритетный stale-overlay, сбрасывает зависшее состояние и только потом продолжает маршрут.
 // @release-note Сражение: убран ошибочный запрет на атаки нижних рядов на больших экранах. Если центр карточки врага реально видим и elementFromPoint подтверждает, что клик попадает именно в неё, атака разрешается независимо от процента высоты экрана. Прокрутка выполняется только когда цель вне viewport или реально перекрыта нижней панелью.
 // @release-note 28.09 · Интерфейс: вместо оранжевого кружка HK плавающая кнопка панели теперь показывает каноничный герб Top King из репозитория.
@@ -29,7 +30,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.83';
+  const BUILD_VERSION = '1.18.84';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -192,6 +193,7 @@
   const VERSION = BUILD_VERSION;
   const HK_LAUNCHER_REV = 'launcher-hotfix-20260920-r1';
   const HK_CLAN_CREST_LAUNCHER_REV = 'clan-crest-launcher-20260928-r1';
+  const HK_CLAN_CREST_TRANSPARENT_REV = 'clan-crest-transparent-mask-20260928-r1';
   const CLAN_CREST_URL = 'https://tk-clan.ru/assets/brand/topking-clan-crest-canon.jpg';
   const MENU_ICONS_BASE = 'https://tk-clan.ru/assets/menu';
   // Event offers are identified from the live /shop/view response. The game
@@ -17137,10 +17139,10 @@
     style.textContent = `
       #hk-mobile-root{position:fixed;z-index:2147483647;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f7f9fc}
       #hk-fab{display:block!important;visibility:visible!important;opacity:1!important;width:64px;height:64px;border:0;border-radius:0;padding:0;background:transparent;box-shadow:none;color:transparent;font-size:0;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab;overflow:visible}
-      #hk-fab .hk-fab-crest{display:block;width:64px;height:64px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 8px 14px rgba(0,0,0,.55))}
+      #hk-fab .hk-fab-crest{display:block;width:64px;height:64px;object-fit:contain;pointer-events:none;filter:url(#hk-crest-black-key) drop-shadow(0 8px 14px rgba(0,0,0,.55));-webkit-filter:url(#hk-crest-black-key) drop-shadow(0 8px 14px rgba(0,0,0,.55))}
       #hk-fab .hk-fab-fallback{display:none;width:58px;height:58px;border-radius:50%;place-items:center;background:linear-gradient(145deg,#ffb627,#ff7b00);box-shadow:0 8px 28px #0008;color:#15100a;font:900 24px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;pointer-events:none}
       #hk-fab.dragging{cursor:grabbing;transform:scale(1.05)}
-      #hk-fab.dragging .hk-fab-crest{filter:drop-shadow(0 10px 18px rgba(0,0,0,.65))}
+      #hk-fab.dragging .hk-fab-crest{filter:url(#hk-crest-black-key) drop-shadow(0 10px 18px rgba(0,0,0,.65));-webkit-filter:url(#hk-crest-black-key) drop-shadow(0 10px 18px rgba(0,0,0,.65))}
       #hk-panel{position:fixed;inset:0;background:#0b1018ee;backdrop-filter:blur(16px);display:none;overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));box-sizing:border-box}
       #hk-panel.open{display:block} .hk-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.hk-head h2{margin:0;font-size:22px;flex:1}.hk-close{border:0;background:#253044;color:white;border-radius:12px;padding:10px 14px;font-size:20px}.hk-lang{display:flex;gap:5px}.hk-lang button{border:1px solid #34445c;background:#182230;border-radius:10px;padding:7px 8px;font-size:21px;line-height:1;opacity:.5}.hk-lang button.active{opacity:1;border-color:#ffad1f;background:#3a2b14;box-shadow:0 0 0 2px #ffad1f33}
       .hk-donation{width:100%;margin:12px 0 0;border:1px solid #ff6f91;border-radius:13px;padding:11px;background:linear-gradient(135deg,#7b2947,#b63863);color:#fff;font-weight:900;box-shadow:0 7px 18px #7b294744}.hk-donation:active{transform:scale(.99)}
@@ -17200,7 +17202,7 @@
     ];
     const menuTabs = NAV_GROUPS.map((group,index)=>`<button class="hk-tab${index===0?' active':''}" data-group="${group.id}" data-nav-ru="${escapeHtml(TEXT.ru[group.label])}" data-nav-en="${escapeHtml(TEXT.en[group.label])}"><span class="hk-tab-icon">${group.image?`<img src="${MENU_ICONS_BASE}/${group.image}" alt="" onerror="this.replaceWith(document.createTextNode('${group.icon||'•'}'))">`:(group.icon||'•')}</span><span class="hk-tab-label">${escapeHtml(tr(group.label))}</span><span class="hk-tab-hint">${escapeHtml(tr(group.hint))}</span></button>`).join('');
     root = document.createElement('div'); root.id = 'hk-mobile-root'; root.dataset.hkRevision = HK_CORE_REVISION;
-    root.innerHTML = `<button id="hk-fab" type="button" aria-label="Hamster King"><img class="hk-fab-crest" src="${CLAN_CREST_URL}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="hk-fab-fallback">HK</span></button><div id="hk-panel" class="hk-locked">
+    root.innerHTML = `<svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs><filter id="hk-crest-black-key" color-interpolation-filters="sRGB" x="-8%" y="-8%" width="116%" height="116%"><feColorMatrix in="SourceGraphic" result="hkCrestLuma" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.2126 0.7152 0.0722 0 0"/><feComponentTransfer in="hkCrestLuma" result="hkCrestMask"><feFuncA type="linear" slope="20" intercept="-0.15"/></feComponentTransfer><feComposite in="SourceGraphic" in2="hkCrestMask" operator="in"/></filter></defs></svg><button id="hk-fab" type="button" aria-label="Hamster King"><img class="hk-fab-crest" src="${CLAN_CREST_URL}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="hk-fab-fallback">HK</span></button><div id="hk-panel" class="hk-locked">
       <div id="hk-watermark" aria-hidden="true"></div><div class="hk-head"><h2>Hamster King Mobile <small style="font-size:12px;color:#9aa8bc">v${VERSION}</small></h2><div class="hk-lang"><button data-lang="ru" aria-label="Русский">🇷🇺</button><button data-lang="en" aria-label="English">🇬🇧</button></div><button class="hk-close">×</button></div>
       <button id="hk-donation" class="hk-donation">❤️ <span data-i18n="donation">${tr('donation')}</span></button>
       <div id="hk-license-gate" class="hk-license" data-i18n="checkingLicense">${tr('checkingLicense')}</div>
