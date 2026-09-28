@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.72
+// @version      1.18.73
+// @release-note Покупки в мини-играх: подтверждение любого покупаемого слота теперь отправляется через единый быстрый интервал 0,10–0,18 с после появления кнопки подтверждения. Это касается раскопок, сундуков, Тайного торговца, рыбалки и общих подтверждений Автокарты. Проверка результата, защита от двойного клика и cooldown после 409/429/5xx сохранены.
 // @release-note Карта сокровищ — Место раскопок: убраны длинные искусственные паузы только для раскопок. Открытие клетки, подтверждение стоимости 5 ягод, ожидание результата и переход к следующему действию теперь выполняются быстрым отдельным темпом; обычные сундуки и защитные таймауты не ускорялись.
 // @release-note Тайный торговец: после успешной покупки окно получения награды с кнопкой «Понятно» теперь является обязательным этапом. Автомат находит реальный кликабельный контейнер кнопки, подтверждает награду с touch/click fallback и только после закрытия окна продолжает покупки или выходит из комнаты.
 // @release-day  2026-09-28
@@ -18,7 +19,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.72';
+  const BUILD_VERSION = '1.18.73';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3629,6 +3630,7 @@
   const HK_TREASURE_LIGHTS_OUTER_MODAL_REV='treasure-lights-outer-modal-20260927-r1';
   const HK_TREASURE_CHEST_FAST_PACING_REV='treasure-chest-fast-pacing-20260927-r1';
   const HK_TREASURE_DIG_FAST_REV='treasure-dig-fast-pacing-20260928-r1';
+  const HK_PURCHASE_CONFIRM_FAST_GLOBAL_REV='purchase-confirm-fast-global-20260928-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -18112,7 +18114,7 @@
       const ranges={
         scan:[850,1450],
         aim:[550,950],
-        confirm:[950,1650],
+        confirm:[100,180],
         settle:[1500,2400],
         reward:[650,1050],
         map:[700,1250]
@@ -18133,7 +18135,7 @@
       const ranges={
         scan:[90,160],
         aim:[70,130],
-        confirm:[110,190],
+        confirm:[100,180],
         settle:[180,300],
         reward:[100,180]
       };
@@ -18154,7 +18156,7 @@
       const ranges={
         scan:[600,950],
         aim:[380,650],
-        confirm:[650,1050],
+        confirm:[100,180],
         settle:[950,1500],
         reward:[420,700]
       };
@@ -18175,7 +18177,7 @@
       const ranges={
         scan:[250,450],
         aim:[180,320],
-        confirm:[300,520],
+        confirm:[100,180],
         settle:[450,700],
         reward:[260,440]
       };
@@ -18196,7 +18198,7 @@
       const ranges={
         scan:[250,450],
         aim:[180,320],
-        confirm:[350,650],
+        confirm:[100,180],
         settle:[600,900],
         reward:[300,500]
       };
@@ -25321,6 +25323,7 @@
       treasureLightsOuterModalRevision:HK_TREASURE_LIGHTS_OUTER_MODAL_REV,
       treasureChestFastPacingRevision:HK_TREASURE_CHEST_FAST_PACING_REV,
       treasureDigFastRevision:HK_TREASURE_DIG_FAST_REV,
+      purchaseConfirmFastGlobalRevision:HK_PURCHASE_CONFIRM_FAST_GLOBAL_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
