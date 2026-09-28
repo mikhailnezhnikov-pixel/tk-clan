@@ -129,5 +129,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-65-lights-hint-canon-map6-live-status.txt",
-  "commit_message": "fix: deploy canonical lamp plan and map 6 regression guard in userscript 1.18.65 r2"
+  "commit_message": "fix: deploy canonical lamp plan and map 6 regression guard in userscript 1.18.65 r3"
 }
