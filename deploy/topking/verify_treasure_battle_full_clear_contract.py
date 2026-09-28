@@ -133,13 +133,25 @@ if "battle-raw-context-mobile-tap-20260927-r1" in s:
 
 if "treasure-key-battle-handoff-20260928-r1" in s:
     gate=section("function battleExitState()","function battleLeaveBackButton")
-    for marker in [
-        "rewardConfirmPending=enemies.length===0 && !!battleRewardDismissButton()",
-        "|| rewardConfirmPending",
-        "reason:'waiting-final-reward'",
-    ]:
-        if marker not in gate:
-            raise SystemExit(f"battle final-reward gate broken: {marker}")
+    if "battle-reward-state-machine-20260928-r1" in s:
+        for marker in [
+            "rewardConfirmPending=battleRewardConfirmOnlyPending()",
+            "|| rewardConfirmPending",
+            "reason:'waiting-final-reward'",
+            "if (battleFinalRewardClaimed)",
+        ]:
+            if marker not in gate:
+                raise SystemExit(f"battle final-reward gate broken: {marker}")
+        if "enemies.length>0 && battleFinalRewardClaimed" in gate:
+            raise SystemExit("battle reward state regressed: stale enemy DOM resets claimed state")
+    else:
+        for marker in [
+            "rewardConfirmPending=enemies.length===0 && !!battleRewardDismissButton()",
+            "|| rewardConfirmPending",
+            "reason:'waiting-final-reward'",
+        ]:
+            if marker not in gate:
+                raise SystemExit(f"battle final-reward gate broken: {marker}")
 
     dismiss=section("async function dismissBattleRewardIfPresent","function dispatchBattleTap")
     for marker in [
@@ -153,7 +165,6 @@ if "treasure-key-battle-handoff-20260928-r1" in s:
 
     intro=section("async function runBattleIntroAcknowledge","async function autoMapSkipBattleWithoutFight")
     for marker in [
-        "battleIntroAcknowledgeButton()",
         "dispatchBattleTap(button,'battle-intro-ack')",
         "setTimeout(checkPuzzle,80)",
     ]:
@@ -161,28 +172,104 @@ if "treasure-key-battle-handoff-20260928-r1" in s:
             raise SystemExit(f"battle intro acknowledgement broken: {marker}")
 
     victory=section("async function runBattleVictoryClaim","async function runBattleAuto")
-    for marker in [
-        "const dismissed=await dismissBattleRewardIfPresent(runId);",
-        "const confirmPending=!!battleRewardDismissButton();",
-        "const success=!battleVictoryModalRoot() && !confirmPending;",
-        "battleFinalRewardClaimed=true;",
-    ]:
-        if marker not in victory:
-            raise SystemExit(f"battle final chest handoff broken: {marker}")
+    if "battle-reward-state-machine-20260928-r1" in s:
+        for marker in [
+            "tapVictoryTile(victory,runId)",
+            "battleRewardConfirmOnlyPending()",
+            "const dismissed=await dismissBattleRewardIfPresent(runId);",
+            "battleFinalRewardClaimed=true;",
+            "battle-victory-confirm-only-complete",
+        ]:
+            if marker not in victory:
+                raise SystemExit(f"battle final chest state machine broken: {marker}")
+
+        reward_section=section("function battleVictoryElement()","async function runBattleAuto")
+        for marker in [
+            "function battleVictoryTileAction",
+            "async function tapVictoryTile",
+            "function battleRewardConfirmOnlyPending",
+            "victory-tile-action",
+        ]:
+            if marker not in reward_section:
+                raise SystemExit(f"battle reward tile action contract broken: {marker}")
+
+        signature=section("function getSignature()","function checkPuzzle()")
+        victory_pos=signature.find("const victory=battleVictoryElement();")
+        sword_pos=signature.find("const sword = battleSwordElement();")
+        if victory_pos<0 or sword_pos<0 or victory_pos>=sword_pos:
+            raise SystemExit("battle reward priority broken: victory must outrank sword/enemy DOM")
+        for marker in [
+            "BATTLE_REWARD_CONFIRM|final",
+            "battleRewardConfirmOnlyPending()",
+        ]:
+            if marker not in signature:
+                raise SystemExit(f"battle reward signature contract broken: {marker}")
+
+        run_battle=section("function runBattle()","// ----- Full Treasure Map orchestrator -----")
+        for marker in [
+            "if (battleFinalRewardClaimed)",
+            "battle-stale-dom-after-reward",
+        ]:
+            if marker not in run_battle:
+                raise SystemExit(f"stale battle DOM guard broken: {marker}")
+        if "battleFinalRewardClaimed=false;" in run_battle:
+            raise SystemExit("stale battle DOM guard broken: runBattle resets claimed state")
+
+        intro_root=section("function battleIntroModalRoot","async function runBattleIntroAcknowledge")
+        for marker in [
+            "Сражение|Battle",
+            "battleIntroAcknowledgeButton(root=battleIntroModalRoot())",
+        ]:
+            if marker not in intro_root:
+                raise SystemExit(f"battle intro modal contract broken: {marker}")
+    else:
+        for marker in [
+            "const dismissed=await dismissBattleRewardIfPresent(runId);",
+            "const confirmPending=!!battleRewardDismissButton();",
+            "const success=!battleVictoryModalRoot() && !confirmPending;",
+            "battleFinalRewardClaimed=true;",
+        ]:
+            if marker not in victory:
+                raise SystemExit(f"battle final chest handoff broken: {marker}")
 
     tick=section("async function runAutoMapTick","function setAutoMapEnabled")
     for marker in [
         "battlePreflightSignature.startsWith('BATTLE_REWARD')",
         "runBattleVictoryClaim()",
-        "battlePreflightSignature.startsWith('BATTLE|')",
-        "battlePreflightSignature.startsWith('BATTLE_PREVIEW|')",
         "runBattleIntroAcknowledge()",
     ]:
         if marker not in tick:
             raise SystemExit(f"AutoMap battle preflight broken: {marker}")
 
-    check=section("function checkPuzzle()","function start()")
-    if "isBattle || isBattlePreview" not in check or "battleIntroAcknowledgeButton()" not in check:
-        raise SystemExit("battle intro must be acknowledged before normal solver dispatch")
+    if "battle-reward-state-machine-20260928-r1" in s:
+        for marker in [
+            "const introModal=battleIntroModalRoot();",
+            "battleFinalRewardClaimed",
+            "battle-claimed-exit-retry",
+        ]:
+            if marker not in tick:
+                raise SystemExit(f"AutoMap battle state machine broken: {marker}")
+
+        complete=section("function autoMapCurrentModuleComplete","async function autoMapHandleExitOrContinue")
+        if "return battleFinalRewardClaimed;" not in complete:
+            raise SystemExit("battle claimed state must mark the module complete")
+        exit_logic=section("async function autoMapHandleExitOrContinue","async function autoMapStartJourney")
+        if "signature.startsWith('BATTLE') && !battleFinalRewardClaimed" not in exit_logic:
+            raise SystemExit("battle claimed state must be allowed to exit")
+
+        check=section("function checkPuzzle()","function start()")
+        for marker in [
+            "battleIntroModalRoot()",
+            "(autoMapEnabled() || battleAutoEnabled())",
+            "runBattleIntroAcknowledge()",
+        ]:
+            if marker not in check:
+                raise SystemExit(f"battle intro independent dispatch broken: {marker}")
+    else:
+        if "battlePreflightSignature.startsWith('BATTLE|')" not in tick or "battlePreflightSignature.startsWith('BATTLE_PREVIEW|')" not in tick:
+            raise SystemExit("legacy battle intro signature gate missing")
+        check=section("function checkPuzzle()","function start()")
+        if "isBattle || isBattlePreview" not in check or "battleIntroAcknowledgeButton()" not in check:
+            raise SystemExit("battle intro must be acknowledged before normal solver dispatch")
 
 print("TREASURE_BATTLE_FULL_CLEAR_CONTRACT=PASS")
