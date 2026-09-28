@@ -272,4 +272,44 @@ if "treasure-key-battle-handoff-20260928-r1" in s:
         if "isBattle || isBattlePreview" not in check or "battleIntroAcknowledgeButton()" not in check:
             raise SystemExit("battle intro must be acknowledged before normal solver dispatch")
 
+
+if "battle-overlay-safe-targeting-20260928-r1" in s:
+    board=section("function getBattleBoard()","function battleNeighbours")
+    if "enemy_type_(01|02|03|04)" not in board:
+        raise SystemExit("battle guardian contract broken: type_04 parser missing")
+
+    element=section("function battleElementForSlot","function battleSwordElement")
+    if "enemy_type_(01|02|03|04)" not in element:
+        raise SystemExit("battle guardian contract broken: type_04 slot lookup missing")
+
+    cost=section("function battleCostForElement","function battleActionButton")
+    if "enemy_type_(?:01|02|03|04)" not in cost:
+        raise SystemExit("battle guardian contract broken: type_04 cost parser missing")
+
+    tap=section("function battleUiOverlays","function treasureChestCost")
+    for marker in [
+        "function battleElementFromPointIgnoringOverlays",
+        "element.style.pointerEvents='none'",
+        "battleElementFromPointIgnoringOverlays(x,y,element)",
+        "battleElementFromPointIgnoringOverlays(px,py,null)",
+        "HK_BATTLE_OVERLAY_SAFE_TARGETING_REV",
+    ]:
+        if marker not in tap:
+            raise SystemExit(f"battle overlay-safe tap contract broken: {marker}")
+
+    badge=section("function addNumber","function getLightsBoard")
+    if "zIndex:'2147483647'" not in badge:
+        raise SystemExit("battle solver badge must render above HK fixed toggles")
+    if "zIndex:'9999999'" in badge:
+        raise SystemExit("battle solver badge regressed below HK fixed toggles")
+
+    run_battle=section("function runBattle()","// ----- Full Treasure Map orchestrator -----")
+    for marker in [
+        "battle-guardian-plan-coverage",
+        "enemy.type==='04'",
+        "selected:selectedSlots.has(enemy.slot)",
+    ]:
+        if marker not in run_battle:
+            raise SystemExit(f"battle guardian plan diagnostic missing: {marker}")
+
 print("TREASURE_BATTLE_FULL_CLEAR_CONTRACT=PASS")
