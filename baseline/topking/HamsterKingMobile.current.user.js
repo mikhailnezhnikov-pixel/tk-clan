@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.76
+// @version      1.18.77
+// @release-note Охота за сундуками: добавлен выкуп отдельного лота ключа сокровищ за ягоды. Карточка ключа теперь распознаётся по ключевому предмету/иконке, стоимость берётся из каталога или с карточки, и при достаточном балансе покупка имеет приоритет перед раскопками и сундуками.
 // @release-note Тайный торговец: «Золотые монеты» полностью исключены из автопокупки. Лоты verse_gold4coins / verse_gold4food больше не выбираются и не подтверждаются; если такое окно уже открыто, автомат закрывает его и продолжает с разрешёнными товарами.
 // @release-note Рыбалка: исправлен преждевременный выход из локации при открытом окне покупки. Во время модалки счётчик забросов может исчезать из видимого DOM; это больше не трактуется как 0. Если слот был доступен до открытия окна, подтверждение покупки завершается, и только после закрытия окна/награды разрешён выход.
 // @release-note Карта сокровищ: убрана служебная плавающая кнопка «Запись карты». Рекордер больше не занимает место на экране; остальная логика Автокарты и мини-игр не менялась.
@@ -22,7 +23,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.76';
+  const BUILD_VERSION = '1.18.77';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3637,6 +3638,7 @@
   const HK_TREASURE_RECORDER_UI_REMOVED_REV='treasure-recorder-ui-removed-20260928-r1';
   const HK_FISHING_MODAL_BUDGET_REV='fishing-modal-budget-ownership-20260928-r1';
   const HK_TRADER_GOLD_SKIP_REV='trader-gold-currency-skip-20260928-r1';
+  const HK_CHEST_KEY_OFFER_REV='chest-key-offer-buy-20260928-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -21079,6 +21081,63 @@
       return balance!==null && balance>=cost.quantity;
     }
 
+    function treasureChestKeyOfferElements() {
+      const rows=[...document.querySelectorAll('[data-lot-id]')]
+        .filter(visible)
+        .map(element=>{
+          const lotId=String(element.getAttribute('data-lot-id')||'');
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const catalogRow=fairCatalog.find(row=>String(row?.lotId||'')===lotId) || null;
+          const catalogText=JSON.stringify(catalogRow||{});
+          const assets=[...element.querySelectorAll?.('img')||[]]
+            .map(img=>String(img.alt||'')+' '+String(img.src||'')).join(' ');
+          const blob=[lotId,text,catalogText,assets].join(' ').toLowerCase();
+
+          // This is the standalone key purchase card, not a chest that consumes
+          // a key. The screenshot/card uses the Treasure Key item artwork.
+          const keyOffer=
+            /item_treasurehunt_key_(?:common|uncommon|rare|epic|legendary)/.test(blob) ||
+            /(?:^|[_-])key_(?:common|uncommon|rare|epic|legendary)(?:[_-]|$)/.test(lotId.toLowerCase()) ||
+            /ключs+сокровищ|treasures+key/i.test(text);
+
+          const chestCard=/^mf_treasurelot_chest_type_/.test(lotId);
+          const digging=/^mf_treasurelot_chest_digging_spot_/.test(lotId);
+          if (!keyOffer || chestCard || digging) return null;
+
+          const parts=costParts(catalogRow?.cost).filter(part=>part.quantity>0);
+          let cost=parts.length===1 ? {id:parts[0].id,quantity:parts[0].quantity} : null;
+
+          // Fallback for the visual card shown in Chest Hunt: berry icon + 10.
+          if (!cost) {
+            const m=text.match(/(?:^|s)(d{1,4})(?:s|$)/);
+            const quantity=m?Number(m[1]):null;
+            if (Number.isFinite(quantity) && quantity>0) {
+              cost={id:'item_treasurehunt_energy',quantity};
+            }
+          }
+
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          const activated=/активировано|activated|куплено|purchased|получено|taken|выкуплено|solds*out/i.test(text);
+          return {
+            element,
+            lotId,
+            text,
+            cost,
+            activated,
+            keyOffer:true,
+            digging:false,
+            chest:false,
+            x:Math.round(rect.left+rect.width/2),
+            y:Math.round(rect.top+rect.height/2)
+          };
+        })
+        .filter(Boolean)
+        .filter(row=>row.lotId && !row.activated && row.cost && treasureChestAffordable(row.cost))
+        .filter(row=>!row.element.closest?.('[data-lot-id^="mf_treasurelot_active_sl"]'));
+
+      return rows;
+    }
+
     function treasureChestElements() {
       const selector='[data-lot-id*="mf_treasurelot_chest_"]';
       return [...document.querySelectorAll(selector)]
@@ -21113,18 +21172,29 @@
           return row.lotId+'@'+Math.round(rect.left)+','+Math.round(rect.top)+'#'+clean(row.element.className||'')+'#'+row.text+'#'+(row.activated?'A':'N');
         })
         .sort();
+      const keyOffers=treasureChestKeyOfferElements()
+        .map(row=>row.lotId+'#'+row.text+'#'+String(row.cost?.id||'')+'='+String(row.cost?.quantity||0))
+        .sort()
+        .join(',');
       const balances=[
         'item_treasurehunt_energy',
         'item_treasurehunt_key_common',
         'item_treasurehunt_key_uncommon',
         'item_treasurehunt_key_epic'
       ].map(id=>id+'='+String(walletAmount(id))).join(',');
-      return 'CHESTS|'+rows.join('|')+'|'+balances;
+      return 'CHESTS|'+rows.join('|')+'|KEY_OFFERS='+keyOffers+'|'+balances;
     }
 
     function treasureChestTarget() {
       const rows=treasureChestElements();
       const candidates=[];
+
+      // A purchasable Treasure Key offer in Chest Hunt is a resource source for
+      // later chests. Buy it before spending actions on digging/chests.
+      treasureChestKeyOfferElements().forEach((row,index)=>{
+        candidates.push({...row,priority:1400,index:-1000+index});
+      });
+
       rows.forEach((row,index)=>{
         const lotId=row.lotId;
         if (row.activated) return;
@@ -21144,7 +21214,7 @@
         else if (lotId==='mf_treasurelot_chest_type_02') priority+=30;
         else if (lotId==='mf_treasurelot_chest_type_015') priority+=20;
         else if (lotId==='mf_treasurelot_chest_type_01') priority=180;
-        candidates.push({...row,cost,digging,chest,priority,index});
+        candidates.push({...row,cost,digging,chest,keyOffer:false,priority,index});
       });
       candidates.sort((a,b)=>b.priority-a.priority || a.index-b.index);
       const selected=candidates[0] || null;
@@ -21401,17 +21471,18 @@
       const beforeSignature=treasureChestSignature();
       const beforeBalance=walletAmount(target.cost.id);
       recordDiagnostic('chest-auto-start',{
-        revision:HK_CHEST_AUTO_REV,
+        revision:target.keyOffer?HK_CHEST_KEY_OFFER_REV:HK_CHEST_AUTO_REV,
         lotId:target.lotId,
         cost:target.cost,
         balance:beforeBalance,
-        digging:target.digging
+        digging:target.digging,
+        keyOffer:!!target.keyOffer
       });
       try {
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
         await (target.digging ? chestDigPause('aim',{module:'chests',lotId:target.lotId}) : chestHumanPause('aim',{module:'chests',lotId:target.lotId}));
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
-        dispatchAutoMapTap(target.element,target.digging?'chest-dig-spot':'chest-open-card');
+        dispatchAutoMapTap(target.element,target.keyOffer?'chest-buy-key-card':(target.digging?'chest-dig-spot':'chest-open-card'));
 
         const modal=await waitTreasureModal(target.cost,runId);
         if (!modal) {
@@ -21423,7 +21494,7 @@
         await (target.digging ? chestDigPause('confirm',{module:'chests',lotId:target.lotId}) : chestHumanPause('confirm',{module:'chests',lotId:target.lotId}));
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
         let tapped=false;
-        if (action) tapped=dispatchAutoMapTap(action,target.digging?'chest-dig-confirm':'chest-open-confirm');
+        if (action) tapped=dispatchAutoMapTap(action,target.keyOffer?'chest-buy-key-confirm':(target.digging?'chest-dig-confirm':'chest-open-confirm'));
         if (!tapped) tapped=await tapTreasureActionFallback(modal,runId);
         if (!tapped) {
           recordDiagnostic('chest-auto-stop',{revision:HK_CHEST_AUTO_REV,reason:'action-missing',lotId:target.lotId});
@@ -21442,9 +21513,10 @@
         await (target.digging ? chestDigPause('settle',{module:'chests',lotId:target.lotId}) : chestHumanPause('settle',{module:'chests',lotId:target.lotId}));
         const rewards=await dismissTreasureRewards(runId);
         recordDiagnostic('chest-auto-complete',{
-          revision:HK_CHEST_AUTO_REV,
+          revision:target.keyOffer?HK_CHEST_KEY_OFFER_REV:HK_CHEST_AUTO_REV,
           lotId:target.lotId,
           digging:target.digging,
+          keyOffer:!!target.keyOffer,
           rewardsDismissed:rewards,
           beforeBalance,
           afterBalance:walletAmount(target.cost.id)
@@ -25419,6 +25491,7 @@
       treasureRecorderUiRemovedRevision:HK_TREASURE_RECORDER_UI_REMOVED_REV,
       fishingModalBudgetRevision:HK_FISHING_MODAL_BUDGET_REV,
       traderGoldSkipRevision:HK_TRADER_GOLD_SKIP_REV,
+      chestKeyOfferRevision:HK_CHEST_KEY_OFFER_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
