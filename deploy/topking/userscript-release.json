@@ -139,5 +139,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-75-fishing-modal-budget-live-status.txt",
-  "commit_message": "fix: keep fishing purchase modal until confirmation in userscript 1.18.75"
+  "commit_message": "fix: keep fishing purchase modal until confirmation in userscript 1.18.75 r1"
 }
