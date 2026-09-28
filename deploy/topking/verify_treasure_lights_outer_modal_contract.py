@@ -14,38 +14,56 @@ def section(start,end):
     return s[a:b]
 
 if "treasure-lights-outer-modal-20260927-r1" in s:
-    helper=section("function lightsOuterModalRoot()","function lightsModalRoot()")
-    for marker in [
-        "let node=seed;",
-        "node=node.parentElement",
-        "lightsModalCloseButton(node) || autoMapModalCloseButton(node)",
-        "rows.find(row=>row.close)",
-        "treasure-lights-outer-modal-root",
-    ]:
-        if marker not in helper:
-            raise SystemExit(f"outer lamp modal contract broken: {marker}")
+    if "lights-strict-modal-no-board-fallback-20260928-r1" in s:
+        root=section("function lightsModalRoot()","async function waitLightsModal")
+        for marker in [
+            "titlePattern",
+            "mf_fairlot_lights_out_sl",
+            "lights-strict-modal-root",
+        ]:
+            if marker not in root:
+                raise SystemExit(f"strict lamp modal contract broken: {marker}")
+        stale=section("async function clearStaleLightsModalBeforeStep","async function runLightsModalStep")
+        for forbidden in [
+            "dispatchBattleTapAt(",
+            "tapLightsPurchaseFallback(",
+            "lightsPurchaseButton(",
+        ]:
+            if forbidden in stale:
+                raise SystemExit(f"strict stale cleanup regressed: {forbidden}")
+    else:
+        helper=section("function lightsOuterModalRoot()","function lightsModalRoot()")
+        for marker in [
+            "let node=seed;",
+            "node=node.parentElement",
+            "lightsModalCloseButton(node) || autoMapModalCloseButton(node)",
+            "rows.find(row=>row.close)",
+            "treasure-lights-outer-modal-root",
+        ]:
+            if marker not in helper:
+                raise SystemExit(f"outer lamp modal contract broken: {marker}")
 
-    root=section("function lightsModalRoot()","async function waitLightsModal")
-    if "const outer=lightsOuterModalRoot();" not in root or "if (outer) return outer;" not in root:
-        raise SystemExit("outer lamp modal contract broken: lightsModalRoot must prefer outer dialog")
+        root=section("function lightsModalRoot()","async function waitLightsModal")
+        if "const outer=lightsOuterModalRoot();" not in root or "if (outer) return outer;" not in root:
+            raise SystemExit("outer lamp modal contract broken: lightsModalRoot must prefer outer dialog")
 
-    stale=section("async function clearStaleLightsModalBeforeStep","async function runLightsModalStep")
-    for marker in [
-        "const outer=lightsOuterModalRoot();",
-        "lights-clear-stale-outer-close",
-        "lights-clear-stale-outer-corner",
-        "if (!lightsModalRoot()) return true;",
-    ]:
-        if marker not in stale:
-            raise SystemExit(f"outer lamp stale cleanup contract broken: {marker}")
+        stale=section("async function clearStaleLightsModalBeforeStep","async function runLightsModalStep")
+        for marker in [
+            "const outer=lightsOuterModalRoot();",
+            "lights-clear-stale-outer-close",
+            "lights-clear-stale-outer-corner",
+            "if (!lightsModalRoot()) return true;",
+        ]:
+            if marker not in stale:
+                raise SystemExit(f"outer lamp stale cleanup contract broken: {marker}")
 
-    for forbidden in [
-        "const outer=treasureCenteredModalRoot();",
-        "lightsPurchaseButton(",
-        "tapLightsPurchaseFallback(",
-    ]:
-        if forbidden in stale:
-            raise SystemExit(f"outer lamp stale cleanup regressed: {forbidden}")
+        for forbidden in [
+            "const outer=treasureCenteredModalRoot();",
+            "lightsPurchaseButton(",
+            "tapLightsPurchaseFallback(",
+        ]:
+            if forbidden in stale:
+                raise SystemExit(f"outer lamp stale cleanup regressed: {forbidden}")
 
 
 if "minigame-tap-isolation-lights-recovery-20260928-r1" in s:
