@@ -1,9 +1,1646 @@
 {
   "schema": "treasure-run-recordings-review-v3",
-  "generated_at_utc": "2026-09-27T14:52:41Z",
-  "source_trace_rows": 1507,
-  "session_count": 20,
+  "generated_at_utc": "2026-09-28T08:04:51Z",
+  "source_trace_rows": 1902,
+  "session_count": 28,
   "sessions": [
+    {
+      "session_id": "tr-6-mukylsun-im4xg1",
+      "run_index": 6,
+      "started_at": "2026-09-28T08:02:07.823Z",
+      "player_id": "552583086",
+      "capture_id_min": 26285,
+      "capture_id_max": 26301,
+      "captures": 5,
+      "batches": 5,
+      "batch_min": 1,
+      "batch_max": 5,
+      "revisions": [
+        "treasure-run-recorder-20260926-r1"
+      ],
+      "events": 70,
+      "first_event_at": "2026-09-28T08:02:07.823Z",
+      "last_event_at": "2026-09-28T08:02:34.162Z",
+      "screen_sequence": [
+        "lights"
+      ],
+      "screen_transitions": [
+        {
+          "seq": 1,
+          "at": "2026-09-28T08:02:07.823Z",
+          "from": null,
+          "to": "lights",
+          "event": "session-start"
+        }
+      ],
+      "event_type_counts": {
+        "session-start": 1,
+        "snapshot": 18,
+        "click": 37,
+        "network": 12,
+        "blocked-action": 1,
+        "session-stop": 1
+      },
+      "network_status_counts": {
+        "200": 12
+      },
+      "endpoint_counts": {
+        "POST /shop/buy": 12
+      },
+      "blocked_reason_counts": {
+        "no-state-change": 1
+      }
+    },
+    {
+      "session_id": "tr-7-mukspv9h-o4m3gb",
+      "run_index": 7,
+      "started_at": "2026-09-28T05:17:19.877Z",
+      "player_id": "5272510640",
+      "capture_id_min": 25208,
+      "capture_id_max": 26278,
+      "captures": 339,
+      "batches": 339,
+      "batch_min": 1,
+      "batch_max": 339,
+      "revisions": [
+        "treasure-run-recorder-20260926-r1"
+      ],
+      "events": 5322,
+      "first_event_at": "2026-09-28T05:17:19.878Z",
+      "last_event_at": "2026-09-28T08:01:11.365Z",
+      "screen_sequence": [
+        "battle",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "battle",
+        "chests",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "lights",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "chests",
+        "fishing",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "trader",
+        "treasure-map",
+        "battle",
+        "treasure-map",
+        "other",
+        "treasure-map"
+      ],
+      "screen_transitions": [
+        {
+          "seq": 1,
+          "at": "2026-09-28T05:17:19.878Z",
+          "from": null,
+          "to": "battle",
+          "event": "session-start"
+        },
+        {
+          "seq": 48,
+          "at": "2026-09-28T05:17:44.963Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 53,
+          "at": "2026-09-28T05:17:48.623Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 72,
+          "at": "2026-09-28T05:18:00.321Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 77,
+          "at": "2026-09-28T05:18:02.167Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 116,
+          "at": "2026-09-28T05:18:28.716Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 136,
+          "at": "2026-09-28T05:20:34.829Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "click"
+        },
+        {
+          "seq": 145,
+          "at": "2026-09-28T05:20:39.810Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 167,
+          "at": "2026-09-28T05:20:55.072Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 186,
+          "at": "2026-09-28T05:21:03.040Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 191,
+          "at": "2026-09-28T05:21:05.699Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "click"
+        },
+        {
+          "seq": 247,
+          "at": "2026-09-28T05:21:33.923Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 253,
+          "at": "2026-09-28T05:21:36.680Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "click"
+        },
+        {
+          "seq": 321,
+          "at": "2026-09-28T05:25:20.634Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 330,
+          "at": "2026-09-28T05:25:29.604Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 388,
+          "at": "2026-09-28T05:26:06.945Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 392,
+          "at": "2026-09-28T05:26:09.126Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 416,
+          "at": "2026-09-28T05:26:18.167Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 422,
+          "at": "2026-09-28T05:26:20.336Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 458,
+          "at": "2026-09-28T05:26:41.662Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 462,
+          "at": "2026-09-28T05:26:43.486Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 509,
+          "at": "2026-09-28T05:27:09.975Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 519,
+          "at": "2026-09-28T05:27:14.891Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 550,
+          "at": "2026-09-28T05:27:25.985Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 556,
+          "at": "2026-09-28T05:27:28.981Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 641,
+          "at": "2026-09-28T05:28:14.241Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 644,
+          "at": "2026-09-28T05:28:15.455Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 681,
+          "at": "2026-09-28T05:28:38.611Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 684,
+          "at": "2026-09-28T05:28:39.829Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 741,
+          "at": "2026-09-28T05:29:13.465Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 745,
+          "at": "2026-09-28T05:29:16.063Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 776,
+          "at": "2026-09-28T05:29:31.006Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 786,
+          "at": "2026-09-28T05:29:36.142Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 927,
+          "at": "2026-09-28T05:30:36.318Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 937,
+          "at": "2026-09-28T05:30:43.113Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 979,
+          "at": "2026-09-28T05:31:08.037Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 983,
+          "at": "2026-09-28T05:31:09.711Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 997,
+          "at": "2026-09-28T05:31:17.614Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1026,
+          "at": "2026-09-28T05:31:36.117Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1042,
+          "at": "2026-09-28T05:31:41.952Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1055,
+          "at": "2026-09-28T05:31:47.631Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1338,
+          "at": "2026-09-28T05:34:15.808Z",
+          "from": "battle",
+          "to": "chests",
+          "event": "click"
+        },
+        {
+          "seq": 1385,
+          "at": "2026-09-28T05:34:40.637Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1394,
+          "at": "2026-09-28T05:34:45.407Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "click"
+        },
+        {
+          "seq": 1397,
+          "at": "2026-09-28T05:34:46.635Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1406,
+          "at": "2026-09-28T05:34:50.696Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1431,
+          "at": "2026-09-28T05:35:04.553Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 1434,
+          "at": "2026-09-28T05:35:06.252Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "click"
+        },
+        {
+          "seq": 1525,
+          "at": "2026-09-28T05:41:32.549Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1532,
+          "at": "2026-09-28T05:41:35.598Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1553,
+          "at": "2026-09-28T05:41:46.417Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 1557,
+          "at": "2026-09-28T05:41:49.145Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1565,
+          "at": "2026-09-28T05:41:54.454Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1573,
+          "at": "2026-09-28T05:41:58.049Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1596,
+          "at": "2026-09-28T05:42:11.638Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1600,
+          "at": "2026-09-28T05:42:13.814Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "click"
+        },
+        {
+          "seq": 1636,
+          "at": "2026-09-28T05:42:30.646Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1641,
+          "at": "2026-09-28T05:42:32.360Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1686,
+          "at": "2026-09-28T05:42:49.518Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1691,
+          "at": "2026-09-28T05:42:52.303Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "click"
+        },
+        {
+          "seq": 1713,
+          "at": "2026-09-28T05:43:02.939Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1719,
+          "at": "2026-09-28T07:20:24.723Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1722,
+          "at": "2026-09-28T07:23:03.355Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1736,
+          "at": "2026-09-28T07:23:10.719Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1788,
+          "at": "2026-09-28T07:23:36.364Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1805,
+          "at": "2026-09-28T07:23:44.208Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1853,
+          "at": "2026-09-28T07:24:08.543Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1857,
+          "at": "2026-09-28T07:24:10.126Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1911,
+          "at": "2026-09-28T07:24:38.647Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1918,
+          "at": "2026-09-28T07:24:42.329Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1930,
+          "at": "2026-09-28T07:24:48.866Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1935,
+          "at": "2026-09-28T07:24:50.664Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1956,
+          "at": "2026-09-28T07:25:06.370Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 1960,
+          "at": "2026-09-28T07:25:07.870Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2047,
+          "at": "2026-09-28T07:25:53.846Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2051,
+          "at": "2026-09-28T07:25:55.626Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2108,
+          "at": "2026-09-28T07:26:15.833Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 2111,
+          "at": "2026-09-28T07:26:17.058Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2191,
+          "at": "2026-09-28T07:26:59.795Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2205,
+          "at": "2026-09-28T07:27:06.669Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "click"
+        },
+        {
+          "seq": 2268,
+          "at": "2026-09-28T07:27:51.851Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 2271,
+          "at": "2026-09-28T07:27:53.063Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2319,
+          "at": "2026-09-28T07:28:18.664Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2324,
+          "at": "2026-09-28T07:28:20.223Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2359,
+          "at": "2026-09-28T07:28:41.460Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 2363,
+          "at": "2026-09-28T07:28:43.375Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2366,
+          "at": "2026-09-28T07:28:44.024Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 2370,
+          "at": "2026-09-28T07:28:45.219Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "click"
+        },
+        {
+          "seq": 2430,
+          "at": "2026-09-28T07:29:15.667Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2443,
+          "at": "2026-09-28T07:29:20.891Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2493,
+          "at": "2026-09-28T07:30:02.649Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2497,
+          "at": "2026-09-28T07:30:04.271Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2509,
+          "at": "2026-09-28T07:30:10.370Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2515,
+          "at": "2026-09-28T07:30:12.368Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2518,
+          "at": "2026-09-28T07:30:13.868Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2525,
+          "at": "2026-09-28T07:30:16.523Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "click"
+        },
+        {
+          "seq": 2526,
+          "at": "2026-09-28T07:30:17.370Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2532,
+          "at": "2026-09-28T07:30:19.367Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2544,
+          "at": "2026-09-28T07:30:25.660Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 2547,
+          "at": "2026-09-28T07:30:26.878Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2600,
+          "at": "2026-09-28T07:30:59.607Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 2603,
+          "at": "2026-09-28T07:31:00.829Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2623,
+          "at": "2026-09-28T07:31:09.522Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2640,
+          "at": "2026-09-28T07:31:26.671Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2694,
+          "at": "2026-09-28T07:32:20.243Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 2706,
+          "at": "2026-09-28T07:32:26.935Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "click"
+        },
+        {
+          "seq": 2738,
+          "at": "2026-09-28T07:32:41.325Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2742,
+          "at": "2026-09-28T07:32:42.881Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2828,
+          "at": "2026-09-28T07:33:25.363Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2838,
+          "at": "2026-09-28T07:33:31.400Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "click"
+        },
+        {
+          "seq": 2912,
+          "at": "2026-09-28T07:34:03.667Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2916,
+          "at": "2026-09-28T07:34:05.643Z",
+          "from": "treasure-map",
+          "to": "lights",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2953,
+          "at": "2026-09-28T07:34:19.767Z",
+          "from": "lights",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 2959,
+          "at": "2026-09-28T07:34:22.558Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3031,
+          "at": "2026-09-28T07:35:09.084Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 3034,
+          "at": "2026-09-28T07:35:10.305Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3111,
+          "at": "2026-09-28T07:35:57.811Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 3115,
+          "at": "2026-09-28T07:35:59.026Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3233,
+          "at": "2026-09-28T07:37:06.661Z",
+          "from": "chests",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3257,
+          "at": "2026-09-28T07:37:22.646Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 3267,
+          "at": "2026-09-28T07:37:27.348Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3333,
+          "at": "2026-09-28T07:38:02.113Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 3343,
+          "at": "2026-09-28T07:38:06.815Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3370,
+          "at": "2026-09-28T07:38:17.166Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 3392,
+          "at": "2026-09-28T07:38:30.923Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "click"
+        },
+        {
+          "seq": 3503,
+          "at": "2026-09-28T07:39:28.884Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3535,
+          "at": "2026-09-28T07:40:11.400Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "click"
+        },
+        {
+          "seq": 3681,
+          "at": "2026-09-28T07:41:34.885Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3686,
+          "at": "2026-09-28T07:41:36.900Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "click"
+        },
+        {
+          "seq": 3760,
+          "at": "2026-09-28T07:42:19.289Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3770,
+          "at": "2026-09-28T07:42:24.820Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3802,
+          "at": "2026-09-28T07:42:38.215Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3807,
+          "at": "2026-09-28T07:42:40.134Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 3885,
+          "at": "2026-09-28T07:43:26.368Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 3888,
+          "at": "2026-09-28T07:43:27.588Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5023,
+          "at": "2026-09-28T07:54:52.642Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 5036,
+          "at": "2026-09-28T07:55:00.149Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5087,
+          "at": "2026-09-28T07:55:30.668Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5091,
+          "at": "2026-09-28T07:55:32.085Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5171,
+          "at": "2026-09-28T07:56:17.903Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5175,
+          "at": "2026-09-28T07:56:19.148Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5207,
+          "at": "2026-09-28T07:56:42.136Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5215,
+          "at": "2026-09-28T07:56:46.640Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5242,
+          "at": "2026-09-28T07:56:59.873Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5247,
+          "at": "2026-09-28T07:57:01.939Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5314,
+          "at": "2026-09-28T07:57:46.088Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5330,
+          "at": "2026-09-28T07:57:53.621Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "click"
+        },
+        {
+          "seq": 5401,
+          "at": "2026-09-28T07:58:44.879Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5409,
+          "at": "2026-09-28T07:58:49.205Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5440,
+          "at": "2026-09-28T07:59:04.865Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5452,
+          "at": "2026-09-28T07:59:10.262Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5456,
+          "at": "2026-09-28T07:59:11.805Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5462,
+          "at": "2026-09-28T07:59:13.954Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "click"
+        },
+        {
+          "seq": 5463,
+          "at": "2026-09-28T07:59:14.094Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5470,
+          "at": "2026-09-28T07:59:16.870Z",
+          "from": "treasure-map",
+          "to": "trader",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5494,
+          "at": "2026-09-28T07:59:30.362Z",
+          "from": "trader",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5500,
+          "at": "2026-09-28T07:59:33.884Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5607,
+          "at": "2026-09-28T08:00:26.516Z",
+          "from": "battle",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5612,
+          "at": "2026-09-28T08:00:28.659Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 5629,
+          "at": "2026-09-28T08:00:36.354Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "snapshot"
+        }
+      ],
+      "event_type_counts": {
+        "session-start": 1,
+        "snapshot": 2487,
+        "click": 1944,
+        "blocked-action": 368,
+        "network": 522
+      },
+      "network_status_counts": {
+        "200": 521,
+        "429": 1
+      },
+      "endpoint_counts": {
+        "POST /shop/buy": 448,
+        "POST /fair/reroll": 74
+      },
+      "blocked_reason_counts": {
+        "no-state-change": 363,
+        "http-429-rate-limit": 1,
+        "pointer-events-none": 3,
+        "insufficient-resource": 1
+      }
+    },
+    {
+      "session_id": "tr-6-muksiff9-f2usgv",
+      "run_index": 6,
+      "started_at": "2026-09-28T05:11:32.757Z",
+      "player_id": "5272510640",
+      "capture_id_min": 25112,
+      "capture_id_max": 25112,
+      "captures": 1,
+      "batches": 1,
+      "batch_min": 1,
+      "batch_max": 1,
+      "revisions": [
+        "treasure-run-recorder-20260926-r1"
+      ],
+      "events": 13,
+      "first_event_at": "2026-09-28T05:11:32.757Z",
+      "last_event_at": "2026-09-28T05:11:37.422Z",
+      "screen_sequence": [
+        "battle"
+      ],
+      "screen_transitions": [
+        {
+          "seq": 1,
+          "at": "2026-09-28T05:11:32.757Z",
+          "from": null,
+          "to": "battle",
+          "event": "session-start"
+        }
+      ],
+      "event_type_counts": {
+        "session-start": 1,
+        "snapshot": 8,
+        "click": 2,
+        "blocked-action": 1,
+        "session-stop": 1
+      },
+      "network_status_counts": {},
+      "endpoint_counts": {},
+      "blocked_reason_counts": {
+        "no-state-change": 1
+      }
+    },
+    {
+      "session_id": "tr-5-muksicho-gced0b",
+      "run_index": 5,
+      "started_at": "2026-09-28T05:11:28.956Z",
+      "player_id": "5272510640",
+      "capture_id_min": 25111,
+      "capture_id_max": 25111,
+      "captures": 1,
+      "batches": 1,
+      "batch_min": 1,
+      "batch_max": 1,
+      "revisions": [
+        "treasure-run-recorder-20260926-r1"
+      ],
+      "events": 10,
+      "first_event_at": "2026-09-28T05:11:28.956Z",
+      "last_event_at": "2026-09-28T05:11:30.227Z",
+      "screen_sequence": [
+        "battle"
+      ],
+      "screen_transitions": [
+        {
+          "seq": 1,
+          "at": "2026-09-28T05:11:28.956Z",
+          "from": null,
+          "to": "battle",
+          "event": "session-start"
+        }
+      ],
+      "event_type_counts": {
+        "session-start": 1,
+        "snapshot": 4,
+        "click": 2,
+        "blocked-action": 2,
+        "session-stop": 1
+      },
+      "network_status_counts": {},
+      "endpoint_counts": {},
+      "blocked_reason_counts": {
+        "no-state-change": 2
+      }
+    },
+    {
+      "session_id": "tr-4-muksiav5-emcvhd",
+      "run_index": 4,
+      "started_at": "2026-09-28T05:11:26.849Z",
+      "player_id": "5272510640",
+      "capture_id_min": 25110,
+      "capture_id_max": 25110,
+      "captures": 1,
+      "batches": 1,
+      "batch_min": 1,
+      "batch_max": 1,
+      "revisions": [
+        "treasure-run-recorder-20260926-r1"
+      ],
+      "events": 9,
+      "first_event_at": "2026-09-28T05:11:26.849Z",
+      "last_event_at": "2026-09-28T05:11:28.133Z",
+      "screen_sequence": [
+        "battle"
+      ],
+      "screen_transitions": [
+        {
+          "seq": 1,
+          "at": "2026-09-28T05:11:26.849Z",
+          "from": null,
+          "to": "battle",
+          "event": "session-start"
+        }
+      ],
+      "event_type_counts": {
+        "session-start": 1,
+        "snapshot": 4,
+        "click": 2,
+        "blocked-action": 1,
+        "session-stop": 1
+      },
+      "network_status_counts": {},
+      "endpoint_counts": {},
+      "blocked_reason_counts": {
+        "no-state-change": 1
+      }
+    },
+    {
+      "session_id": "tr-3-muksi33z-w7vvfo",
+      "run_index": 3,
+      "started_at": "2026-09-28T05:11:16.799Z",
+      "player_id": "5272510640",
+      "capture_id_min": 25109,
+      "capture_id_max": 25109,
+      "captures": 1,
+      "batches": 1,
+      "batch_min": 1,
+      "batch_max": 1,
+      "revisions": [
+        "treasure-run-recorder-20260926-r1"
+      ],
+      "events": 11,
+      "first_event_at": "2026-09-28T05:11:16.799Z",
+      "last_event_at": "2026-09-28T05:11:21.829Z",
+      "screen_sequence": [
+        "battle"
+      ],
+      "screen_transitions": [
+        {
+          "seq": 1,
+          "at": "2026-09-28T05:11:16.799Z",
+          "from": null,
+          "to": "battle",
+          "event": "session-start"
+        }
+      ],
+      "event_type_counts": {
+        "session-start": 1,
+        "snapshot": 7,
+        "click": 1,
+        "blocked-action": 1,
+        "session-stop": 1
+      },
+      "network_status_counts": {},
+      "endpoint_counts": {},
+      "blocked_reason_counts": {
+        "no-state-change": 1
+      }
+    },
+    {
+      "session_id": "tr-2-muksh6pe-z3zcwv",
+      "run_index": 2,
+      "started_at": "2026-09-28T05:10:34.802Z",
+      "player_id": "5272510640",
+      "capture_id_min": 25100,
+      "capture_id_max": 25108,
+      "captures": 5,
+      "batches": 5,
+      "batch_min": 1,
+      "batch_max": 5,
+      "revisions": [
+        "treasure-run-recorder-20260926-r1"
+      ],
+      "events": 78,
+      "first_event_at": "2026-09-28T05:10:34.802Z",
+      "last_event_at": "2026-09-28T05:11:14.380Z",
+      "screen_sequence": [
+        "battle"
+      ],
+      "screen_transitions": [
+        {
+          "seq": 1,
+          "at": "2026-09-28T05:10:34.802Z",
+          "from": null,
+          "to": "battle",
+          "event": "session-start"
+        }
+      ],
+      "event_type_counts": {
+        "session-start": 1,
+        "snapshot": 39,
+        "click": 27,
+        "network": 5,
+        "blocked-action": 5,
+        "session-stop": 1
+      },
+      "network_status_counts": {
+        "200": 5
+      },
+      "endpoint_counts": {
+        "POST /shop/buy": 5
+      },
+      "blocked_reason_counts": {
+        "no-state-change": 5
+      }
+    },
+    {
+      "session_id": "tr-1-muksfm84-7bfqyv",
+      "run_index": 1,
+      "started_at": "2026-09-28T05:09:21.604Z",
+      "player_id": "5272510640",
+      "capture_id_min": 25095,
+      "capture_id_max": 25098,
+      "captures": 4,
+      "batches": 4,
+      "batch_min": 1,
+      "batch_max": 4,
+      "revisions": [
+        "treasure-run-recorder-20260926-r1"
+      ],
+      "events": 56,
+      "first_event_at": "2026-09-28T05:09:21.605Z",
+      "last_event_at": "2026-09-28T05:09:58.318Z",
+      "screen_sequence": [
+        "treasure-map",
+        "battle"
+      ],
+      "screen_transitions": [
+        {
+          "seq": 1,
+          "at": "2026-09-28T05:09:21.605Z",
+          "from": null,
+          "to": "treasure-map",
+          "event": "session-start"
+        },
+        {
+          "seq": 6,
+          "at": "2026-09-28T05:09:22.868Z",
+          "from": "treasure-map",
+          "to": "battle",
+          "event": "click"
+        }
+      ],
+      "event_type_counts": {
+        "session-start": 1,
+        "snapshot": 32,
+        "click": 20,
+        "network": 2,
+        "session-stop": 1
+      },
+      "network_status_counts": {
+        "200": 2
+      },
+      "endpoint_counts": {
+        "POST /shop/buy": 2
+      },
+      "blocked_reason_counts": {}
+    },
     {
       "session_id": "tr-5-mujqruoe-n9pxxv",
       "run_index": 5,
@@ -48,17 +1685,17 @@
       "started_at": "2026-09-27T07:54:38.728Z",
       "player_id": "5112494832",
       "capture_id_min": 21259,
-      "capture_id_max": 24130,
-      "captures": 464,
-      "batches": 463,
+      "capture_id_max": 24417,
+      "captures": 502,
+      "batches": 501,
       "batch_min": 1,
-      "batch_max": 463,
+      "batch_max": 501,
       "revisions": [
         "treasure-run-recorder-20260926-r1"
       ],
-      "events": 6900,
+      "events": 7479,
       "first_event_at": "2026-09-27T07:54:38.728Z",
-      "last_event_at": "2026-09-27T14:52:05.048Z",
+      "last_event_at": "2026-09-27T14:57:43.236Z",
       "screen_sequence": [
         "treasure-map",
         "other",
@@ -127,7 +1764,23 @@
         "treasure-map",
         "chests",
         "treasure-map",
-        "chests"
+        "chests",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "chests",
+        "treasure-map",
+        "fishing",
+        "treasure-map",
+        "other",
+        "treasure-map",
+        "other"
       ],
       "screen_transitions": [
         {
@@ -605,17 +2258,129 @@
           "from": "treasure-map",
           "to": "chests",
           "event": "snapshot"
+        },
+        {
+          "seq": 6967,
+          "at": "2026-09-27T14:52:16.718Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 6973,
+          "at": "2026-09-27T14:52:21.121Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7037,
+          "at": "2026-09-27T14:52:53.167Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 7043,
+          "at": "2026-09-27T14:52:56.857Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7123,
+          "at": "2026-09-27T14:53:45.666Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7135,
+          "at": "2026-09-27T14:53:52.653Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7204,
+          "at": "2026-09-27T14:54:37.236Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7209,
+          "at": "2026-09-27T14:54:41.512Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7292,
+          "at": "2026-09-27T14:55:25.802Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7301,
+          "at": "2026-09-27T14:55:30.511Z",
+          "from": "treasure-map",
+          "to": "chests",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7389,
+          "at": "2026-09-27T14:56:09.153Z",
+          "from": "chests",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7407,
+          "at": "2026-09-27T14:56:20.024Z",
+          "from": "treasure-map",
+          "to": "fishing",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7460,
+          "at": "2026-09-27T14:56:54.065Z",
+          "from": "fishing",
+          "to": "treasure-map",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7467,
+          "at": "2026-09-27T14:56:58.606Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
+        },
+        {
+          "seq": 7494,
+          "at": "2026-09-27T14:57:10.304Z",
+          "from": "other",
+          "to": "treasure-map",
+          "event": "click"
+        },
+        {
+          "seq": 7500,
+          "at": "2026-09-27T14:57:17.511Z",
+          "from": "treasure-map",
+          "to": "other",
+          "event": "snapshot"
         }
       ],
       "event_type_counts": {
         "session-start": 1,
-        "snapshot": 3137,
-        "click": 1497,
-        "blocked-action": 755,
-        "network": 1510
+        "snapshot": 3416,
+        "click": 1720,
+        "blocked-action": 763,
+        "network": 1579
       },
       "network_status_counts": {
-        "200": 1496,
+        "200": 1565,
         "409": 3,
         "502": 4,
         "429": 5,
@@ -629,11 +2394,11 @@
         "GET /business_items": 15,
         "GET /bonuses/view": 15,
         "GET /client_config": 23,
-        "GET /shop/view": 25,
+        "GET /shop/view": 26,
         "GET /loading_data": 4,
         "GET /player/passiveIncome": 6,
         "POST /player/passiveIncome/apply": 6,
-        "GET /business/values": 9,
+        "GET /business/values": 10,
         "POST /player/business/speedUp": 105,
         "POST /player/business/activate_and_remove": 1,
         "POST /player/business/insert": 106,
@@ -658,7 +2423,7 @@
         "GET /league": 1,
         "GET /pit_pve/view": 2,
         "GET /clan/v2": 5,
-        "POST /shop/buy": 227,
+        "POST /shop/buy": 285,
         "POST /hk_maps/rumor_coordinator.php": 2,
         "POST /rumors/search": 27,
         "POST /quest/claim": 12,
@@ -681,11 +2446,11 @@
         "POST /player/hamster/lvlUp": 275,
         "POST /player/hamster/upgrade": 2,
         "POST /player/hamster/lvlUp/view": 158,
-        "POST /fair/reroll": 32
+        "POST /fair/reroll": 41
       },
       "blocked_reason_counts": {
-        "no-state-change": 436,
-        "pointer-events-none": 188,
+        "no-state-change": 443,
+        "pointer-events-none": 189,
         "locked-or-unavailable": 94,
         "insufficient-resource": 20,
         "http-409-conflict": 3,
@@ -1357,2157 +3122,28 @@
       "blocked_reason_counts": {
         "no-state-change": 3
       }
-    },
-    {
-      "session_id": "tr-4-mujast0g-qb43lj",
-      "run_index": 4,
-      "started_at": "2026-09-27T04:07:57.664Z",
-      "player_id": "552583086",
-      "capture_id_min": 19763,
-      "capture_id_max": 22167,
-      "captures": 468,
-      "batches": 464,
-      "batch_min": 1,
-      "batch_max": 464,
-      "revisions": [
-        "treasure-run-recorder-20260926-r1"
-      ],
-      "events": 7052,
-      "first_event_at": "2026-09-27T04:07:57.664Z",
-      "last_event_at": "2026-09-27T11:35:05.949Z",
-      "screen_sequence": [
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "trader",
-        "fishing",
-        "treasure-map",
-        "other",
-        "fishing",
-        "other",
-        "fishing",
-        "other",
-        "fishing",
-        "other",
-        "treasure-map",
-        "other",
-        "treasure-map",
-        "lights"
-      ],
-      "screen_transitions": [
-        {
-          "seq": 1,
-          "at": "2026-09-27T04:07:57.664Z",
-          "from": null,
-          "to": "treasure-map",
-          "event": "session-start"
-        },
-        {
-          "seq": 22,
-          "at": "2026-09-27T04:08:09.512Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2522,
-          "at": "2026-09-27T04:53:14.963Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2550,
-          "at": "2026-09-27T04:53:36.405Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2766,
-          "at": "2026-09-27T04:56:13.577Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2782,
-          "at": "2026-09-27T04:56:26.651Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3120,
-          "at": "2026-09-27T05:03:35.612Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3126,
-          "at": "2026-09-27T05:03:39.192Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3136,
-          "at": "2026-09-27T05:03:47.306Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3145,
-          "at": "2026-09-27T05:03:54.311Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6252,
-          "at": "2026-09-27T10:40:41.297Z",
-          "from": "trader",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6302,
-          "at": "2026-09-27T10:41:11.450Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6311,
-          "at": "2026-09-27T10:41:17.525Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6340,
-          "at": "2026-09-27T10:41:29.459Z",
-          "from": "other",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6472,
-          "at": "2026-09-27T10:42:57.484Z",
-          "from": "fishing",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6476,
-          "at": "2026-09-27T10:43:02.505Z",
-          "from": "other",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6521,
-          "at": "2026-09-27T10:43:51.024Z",
-          "from": "fishing",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6523,
-          "at": "2026-09-27T10:43:51.612Z",
-          "from": "other",
-          "to": "fishing",
-          "event": "blocked-action"
-        },
-        {
-          "seq": 6529,
-          "at": "2026-09-27T10:43:53.323Z",
-          "from": "fishing",
-          "to": "other",
-          "event": "click"
-        },
-        {
-          "seq": 6531,
-          "at": "2026-09-27T10:43:53.992Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6645,
-          "at": "2026-09-27T10:59:54.992Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6911,
-          "at": "2026-09-27T11:11:02.824Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 6965,
-          "at": "2026-09-27T11:12:47.398Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        }
-      ],
-      "event_type_counts": {
-        "session-start": 1,
-        "snapshot": 4142,
-        "click": 1937,
-        "network": 275,
-        "blocked-action": 696,
-        "session-stop": 1
-      },
-      "network_status_counts": {
-        "200": 275
-      },
-      "endpoint_counts": {
-        "POST /shop/buy": 260,
-        "POST /fair/reroll": 8,
-        "GET /player/area_boss_battle_preview": 3,
-        "GET /bosses/view": 1,
-        "GET /battlepass": 1,
-        "GET /player/passiveIncome": 1,
-        "POST /player/passiveIncome/apply": 1
-      },
-      "blocked_reason_counts": {
-        "no-state-change": 690,
-        "pointer-events-none": 4,
-        "locked-or-unavailable": 2
-      }
-    },
-    {
-      "session_id": "tr-3-muj9nzs3-xt8cla",
-      "run_index": 3,
-      "started_at": "2026-09-27T03:36:13.539Z",
-      "player_id": "552583086",
-      "capture_id_min": 19732,
-      "capture_id_max": 19743,
-      "captures": 3,
-      "batches": 3,
-      "batch_min": 1,
-      "batch_max": 3,
-      "revisions": [
-        "treasure-run-recorder-20260926-r1"
-      ],
-      "events": 43,
-      "first_event_at": "2026-09-27T03:36:13.539Z",
-      "last_event_at": "2026-09-27T04:06:12.763Z",
-      "screen_sequence": [
-        "treasure-map",
-        "lights"
-      ],
-      "screen_transitions": [
-        {
-          "seq": 1,
-          "at": "2026-09-27T03:36:13.539Z",
-          "from": null,
-          "to": "treasure-map",
-          "event": "session-start"
-        },
-        {
-          "seq": 11,
-          "at": "2026-09-27T03:36:17.889Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        }
-      ],
-      "event_type_counts": {
-        "session-start": 1,
-        "snapshot": 31,
-        "click": 8,
-        "network": 1,
-        "blocked-action": 1,
-        "session-stop": 1
-      },
-      "network_status_counts": {
-        "200": 1
-      },
-      "endpoint_counts": {
-        "POST /shop/buy": 1
-      },
-      "blocked_reason_counts": {
-        "no-state-change": 1
-      }
-    },
-    {
-      "session_id": "tr-2-muj9idqn-tuu4dx",
-      "run_index": 2,
-      "started_at": "2026-09-27T03:31:51.695Z",
-      "player_id": "552583086",
-      "capture_id_min": 19698,
-      "capture_id_max": 19721,
-      "captures": 10,
-      "batches": 10,
-      "batch_min": 1,
-      "batch_max": 10,
-      "revisions": [
-        "treasure-run-recorder-20260926-r1"
-      ],
-      "events": 147,
-      "first_event_at": "2026-09-27T03:31:51.695Z",
-      "last_event_at": "2026-09-27T03:33:51.348Z",
-      "screen_sequence": [
-        "treasure-map",
-        "fishing"
-      ],
-      "screen_transitions": [
-        {
-          "seq": 1,
-          "at": "2026-09-27T03:31:51.695Z",
-          "from": null,
-          "to": "treasure-map",
-          "event": "session-start"
-        },
-        {
-          "seq": 11,
-          "at": "2026-09-27T03:31:56.462Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        }
-      ],
-      "event_type_counts": {
-        "session-start": 1,
-        "snapshot": 100,
-        "click": 32,
-        "network": 8,
-        "blocked-action": 5,
-        "session-stop": 1
-      },
-      "network_status_counts": {
-        "200": 8
-      },
-      "endpoint_counts": {
-        "POST /shop/buy": 8
-      },
-      "blocked_reason_counts": {
-        "no-state-change": 5
-      }
-    },
-    {
-      "session_id": "tr-2-muijurai-fg9o9l",
-      "run_index": 2,
-      "started_at": "2026-09-26T15:33:39.114Z",
-      "player_id": "566546686",
-      "capture_id_min": 18249,
-      "capture_id_max": 19684,
-      "captures": 62,
-      "batches": 61,
-      "batch_min": 1,
-      "batch_max": 61,
-      "revisions": [
-        "treasure-run-recorder-20260926-r1"
-      ],
-      "events": 976,
-      "first_event_at": "2026-09-26T15:33:39.114Z",
-      "last_event_at": "2026-09-26T15:43:31.290Z",
-      "screen_sequence": [
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "lights",
-        "other",
-        "lights",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "chests",
-        "trader",
-        "treasure-map",
-        "trader",
-        "other",
-        "trader",
-        "other",
-        "trader",
-        "other",
-        "trader",
-        "other",
-        "treasure-map"
-      ],
-      "screen_transitions": [
-        {
-          "seq": 1,
-          "at": "2026-09-26T15:33:39.114Z",
-          "from": null,
-          "to": "treasure-map",
-          "event": "session-start"
-        },
-        {
-          "seq": 14,
-          "at": "2026-09-26T15:33:46.795Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "click"
-        },
-        {
-          "seq": 60,
-          "at": "2026-09-26T15:34:02.330Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 67,
-          "at": "2026-09-26T15:34:05.410Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 109,
-          "at": "2026-09-26T15:34:22.159Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 112,
-          "at": "2026-09-26T15:34:23.825Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 147,
-          "at": "2026-09-26T15:34:38.017Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 151,
-          "at": "2026-09-26T15:34:40.363Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 231,
-          "at": "2026-09-26T15:34:55.174Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 242,
-          "at": "2026-09-26T15:34:59.784Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "click"
-        },
-        {
-          "seq": 291,
-          "at": "2026-09-26T15:35:13.126Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 295,
-          "at": "2026-09-26T15:35:15.466Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 342,
-          "at": "2026-09-26T15:35:39.581Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 359,
-          "at": "2026-09-26T15:35:47.889Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 448,
-          "at": "2026-09-26T15:36:13.332Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 455,
-          "at": "2026-09-26T15:36:16.377Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 581,
-          "at": "2026-09-26T15:36:51.738Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 587,
-          "at": "2026-09-26T15:36:54.174Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 632,
-          "at": "2026-09-26T15:37:05.685Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 637,
-          "at": "2026-09-26T15:37:07.932Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "click"
-        },
-        {
-          "seq": 696,
-          "at": "2026-09-26T15:37:23.455Z",
-          "from": "lights",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 699,
-          "at": "2026-09-26T15:37:24.940Z",
-          "from": "other",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 705,
-          "at": "2026-09-26T15:37:27.082Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 712,
-          "at": "2026-09-26T15:37:30.527Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 716,
-          "at": "2026-09-26T15:37:35.774Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 720,
-          "at": "2026-09-26T15:37:38.188Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "click"
-        },
-        {
-          "seq": 721,
-          "at": "2026-09-26T15:37:38.746Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 725,
-          "at": "2026-09-26T15:37:40.650Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 735,
-          "at": "2026-09-26T15:37:46.681Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 742,
-          "at": "2026-09-26T15:37:50.183Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 765,
-          "at": "2026-09-26T15:38:03.007Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 771,
-          "at": "2026-09-26T15:38:05.844Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 860,
-          "at": "2026-09-26T15:38:27.917Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 872,
-          "at": "2026-09-26T15:38:32.983Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1498,
-          "at": "2026-09-26T15:42:43.055Z",
-          "from": "chests",
-          "to": "trader",
-          "event": "click"
-        },
-        {
-          "seq": 1520,
-          "at": "2026-09-26T15:42:53.668Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 1523,
-          "at": "2026-09-26T15:42:55.837Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1526,
-          "at": "2026-09-26T15:42:57.588Z",
-          "from": "trader",
-          "to": "other",
-          "event": "click"
-        },
-        {
-          "seq": 1527,
-          "at": "2026-09-26T15:42:58.157Z",
-          "from": "other",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1537,
-          "at": "2026-09-26T15:43:03.420Z",
-          "from": "trader",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1540,
-          "at": "2026-09-26T15:43:04.317Z",
-          "from": "other",
-          "to": "trader",
-          "event": "click"
-        },
-        {
-          "seq": 1548,
-          "at": "2026-09-26T15:43:09.052Z",
-          "from": "trader",
-          "to": "other",
-          "event": "click"
-        },
-        {
-          "seq": 1549,
-          "at": "2026-09-26T15:43:09.661Z",
-          "from": "other",
-          "to": "trader",
-          "event": "click"
-        },
-        {
-          "seq": 1583,
-          "at": "2026-09-26T15:43:26.564Z",
-          "from": "trader",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1588,
-          "at": "2026-09-26T15:43:29.081Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        }
-      ],
-      "event_type_counts": {
-        "session-start": 1,
-        "snapshot": 273,
-        "click": 490,
-        "network": 163,
-        "blocked-action": 48,
-        "session-stop": 1
-      },
-      "network_status_counts": {
-        "200": 127,
-        "409": 32,
-        "500": 4
-      },
-      "endpoint_counts": {
-        "POST /shop/buy": 143,
-        "POST /fair/reroll": 19,
-        "GET /shop/view": 1
-      },
-      "blocked_reason_counts": {
-        "http-409-conflict": 32,
-        "http-5xx-server-error": 4,
-        "no-state-change": 10,
-        "target-disabled": 2
-      }
-    },
-    {
-      "session_id": "tr-1-muijm22q-g6xfs5",
-      "run_index": 1,
-      "started_at": "2026-09-26T15:26:53.186Z",
-      "player_id": "566546686",
-      "capture_id_min": 17962,
-      "capture_id_max": 17969,
-      "captures": 2,
-      "batches": 2,
-      "batch_min": 1,
-      "batch_max": 2,
-      "revisions": [
-        "treasure-run-recorder-20260926-r1"
-      ],
-      "events": 25,
-      "first_event_at": "2026-09-26T15:26:53.186Z",
-      "last_event_at": "2026-09-26T15:27:00.098Z",
-      "screen_sequence": [
-        "treasure-map",
-        "battle",
-        "treasure-map"
-      ],
-      "screen_transitions": [
-        {
-          "seq": 1,
-          "at": "2026-09-26T15:26:53.186Z",
-          "from": null,
-          "to": "treasure-map",
-          "event": "session-start"
-        },
-        {
-          "seq": 5,
-          "at": "2026-09-26T15:26:54.124Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 17,
-          "at": "2026-09-26T15:26:57.161Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        }
-      ],
-      "event_type_counts": {
-        "session-start": 1,
-        "snapshot": 7,
-        "click": 11,
-        "network": 4,
-        "blocked-action": 1,
-        "session-stop": 1
-      },
-      "network_status_counts": {
-        "200": 3,
-        "409": 1
-      },
-      "endpoint_counts": {
-        "POST /shop/buy": 3,
-        "POST /fair/reroll": 1
-      },
-      "blocked_reason_counts": {
-        "http-409-conflict": 1
-      }
-    },
-    {
-      "session_id": "tr-5-muiispqu-wah7sr",
-      "run_index": 5,
-      "started_at": "2026-09-26T15:04:04.182Z",
-      "player_id": "552583086",
-      "capture_id_min": 17237,
-      "capture_id_max": 18831,
-      "captures": 88,
-      "batches": 88,
-      "batch_min": 1,
-      "batch_max": 88,
-      "revisions": [
-        "treasure-run-recorder-20260926-r1"
-      ],
-      "events": 1346,
-      "first_event_at": "2026-09-26T15:04:04.182Z",
-      "last_event_at": "2026-09-26T16:02:19.702Z",
-      "screen_sequence": [
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "other",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "other",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "other",
-        "treasure-map"
-      ],
-      "screen_transitions": [
-        {
-          "seq": 1,
-          "at": "2026-09-26T15:04:04.182Z",
-          "from": null,
-          "to": "treasure-map",
-          "event": "session-start"
-        },
-        {
-          "seq": 16,
-          "at": "2026-09-26T15:04:15.000Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "click"
-        },
-        {
-          "seq": 127,
-          "at": "2026-09-26T15:06:03.123Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 149,
-          "at": "2026-09-26T15:06:16.236Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "click"
-        },
-        {
-          "seq": 213,
-          "at": "2026-09-26T15:07:25.367Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 226,
-          "at": "2026-09-26T15:07:31.424Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 261,
-          "at": "2026-09-26T15:07:38.337Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 265,
-          "at": "2026-09-26T15:07:39.646Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 340,
-          "at": "2026-09-26T15:08:07.749Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 351,
-          "at": "2026-09-26T15:08:12.145Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 420,
-          "at": "2026-09-26T15:08:37.503Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 423,
-          "at": "2026-09-26T15:08:38.820Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 493,
-          "at": "2026-09-26T15:09:02.951Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 496,
-          "at": "2026-09-26T15:09:04.265Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 554,
-          "at": "2026-09-26T15:09:33.769Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 559,
-          "at": "2026-09-26T15:09:36.552Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 609,
-          "at": "2026-09-26T15:30:05.846Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 613,
-          "at": "2026-09-26T15:30:07.261Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 657,
-          "at": "2026-09-26T15:30:15.261Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 661,
-          "at": "2026-09-26T15:30:16.287Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "click"
-        },
-        {
-          "seq": 692,
-          "at": "2026-09-26T15:30:57.614Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 700,
-          "at": "2026-09-26T15:31:02.128Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 741,
-          "at": "2026-09-26T15:31:22.394Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 748,
-          "at": "2026-09-26T15:46:43.666Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 749,
-          "at": "2026-09-26T15:47:33.426Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 775,
-          "at": "2026-09-26T15:47:53.516Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 829,
-          "at": "2026-09-26T15:49:16.931Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 835,
-          "at": "2026-09-26T15:49:21.283Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 875,
-          "at": "2026-09-26T15:49:53.228Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 893,
-          "at": "2026-09-26T15:50:05.292Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 973,
-          "at": "2026-09-26T15:50:26.726Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 989,
-          "at": "2026-09-26T15:50:39.731Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 995,
-          "at": "2026-09-26T15:50:46.408Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1009,
-          "at": "2026-09-26T15:50:55.882Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1064,
-          "at": "2026-09-26T15:51:30.288Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1070,
-          "at": "2026-09-26T15:51:34.680Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1076,
-          "at": "2026-09-26T15:51:39.734Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 1334,
-          "at": "2026-09-26T16:02:09.100Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1336,
-          "at": "2026-09-26T16:02:11.130Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        }
-      ],
-      "event_type_counts": {
-        "session-start": 1,
-        "snapshot": 531,
-        "click": 588,
-        "blocked-action": 40,
-        "network": 186
-      },
-      "network_status_counts": {
-        "200": 170,
-        "409": 13,
-        "500": 1,
-        "429": 2
-      },
-      "endpoint_counts": {
-        "POST /shop/buy": 165,
-        "POST /fair/reroll": 20,
-        "GET /shop/view": 1
-      },
-      "blocked_reason_counts": {
-        "no-state-change": 22,
-        "http-409-conflict": 13,
-        "http-5xx-server-error": 1,
-        "pointer-events-none": 2,
-        "http-429-rate-limit": 2
-      }
-    },
-    {
-      "session_id": "tr-2-muiisa2j-co29cy",
-      "run_index": 2,
-      "started_at": "2026-09-26T15:03:43.867Z",
-      "player_id": "5112494832",
-      "capture_id_min": 17232,
-      "capture_id_max": 20067,
-      "captures": 179,
-      "batches": 176,
-      "batch_min": 1,
-      "batch_max": 176,
-      "revisions": [
-        "treasure-run-recorder-20260926-r1"
-      ],
-      "events": 2769,
-      "first_event_at": "2026-09-26T15:03:43.867Z",
-      "last_event_at": "2026-09-26T15:29:48.992Z",
-      "screen_sequence": [
-        "treasure-map",
-        "other",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "battle",
-        "chests",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "other",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "other",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "other",
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "other",
-        "treasure-map",
-        "battle",
-        "other",
-        "battle",
-        "treasure-map",
-        "battle",
-        "treasure-map",
-        "lights",
-        "other",
-        "lights",
-        "treasure-map",
-        "chests",
-        "treasure-map",
-        "lights",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "fishing",
-        "treasure-map",
-        "chests",
-        "lights",
-        "treasure-map",
-        "other",
-        "treasure-map",
-        "trader",
-        "treasure-map",
-        "other"
-      ],
-      "screen_transitions": [
-        {
-          "seq": 1,
-          "at": "2026-09-26T15:03:43.867Z",
-          "from": null,
-          "to": "treasure-map",
-          "event": "session-start"
-        },
-        {
-          "seq": 10,
-          "at": "2026-09-26T15:03:50.788Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 12,
-          "at": "2026-09-26T15:03:52.303Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 35,
-          "at": "2026-09-26T15:04:01.807Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 46,
-          "at": "2026-09-26T15:04:11.293Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 66,
-          "at": "2026-09-26T15:04:18.866Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 210,
-          "at": "2026-09-26T15:05:13.494Z",
-          "from": "battle",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 244,
-          "at": "2026-09-26T15:05:23.588Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 248,
-          "at": "2026-09-26T15:05:25.145Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 281,
-          "at": "2026-09-26T15:05:31.051Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 287,
-          "at": "2026-09-26T15:05:32.557Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 334,
-          "at": "2026-09-26T15:06:03.445Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 342,
-          "at": "2026-09-26T15:06:06.284Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 387,
-          "at": "2026-09-26T15:06:32.701Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 393,
-          "at": "2026-09-26T15:06:35.389Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 450,
-          "at": "2026-09-26T15:06:55.949Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 454,
-          "at": "2026-09-26T15:06:57.278Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 510,
-          "at": "2026-09-26T15:07:20.114Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 514,
-          "at": "2026-09-26T15:07:21.438Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 581,
-          "at": "2026-09-26T15:07:46.340Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 590,
-          "at": "2026-09-26T15:07:50.696Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 635,
-          "at": "2026-09-26T15:08:11.939Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 640,
-          "at": "2026-09-26T15:08:16.796Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 661,
-          "at": "2026-09-26T15:08:26.722Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 687,
-          "at": "2026-09-26T15:08:36.539Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 735,
-          "at": "2026-09-26T15:08:57.823Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 759,
-          "at": "2026-09-26T15:09:08.455Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 801,
-          "at": "2026-09-26T15:09:49.849Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 805,
-          "at": "2026-09-26T15:09:51.850Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 845,
-          "at": "2026-09-26T15:09:57.581Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 851,
-          "at": "2026-09-26T15:09:59.456Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 894,
-          "at": "2026-09-26T15:10:25.285Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 914,
-          "at": "2026-09-26T15:10:38.167Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1000,
-          "at": "2026-09-26T15:10:52.086Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 1011,
-          "at": "2026-09-26T15:10:56.431Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1014,
-          "at": "2026-09-26T15:10:57.896Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1022,
-          "at": "2026-09-26T15:11:03.511Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1024,
-          "at": "2026-09-26T15:11:06.350Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 1027,
-          "at": "2026-09-26T15:11:07.736Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "click"
-        },
-        {
-          "seq": 1034,
-          "at": "2026-09-26T15:11:13.210Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1046,
-          "at": "2026-09-26T15:11:17.587Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1083,
-          "at": "2026-09-26T15:11:39.056Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1088,
-          "at": "2026-09-26T15:11:40.625Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1158,
-          "at": "2026-09-26T15:12:12.901Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1163,
-          "at": "2026-09-26T15:12:14.334Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1188,
-          "at": "2026-09-26T15:12:24.647Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 1234,
-          "at": "2026-09-26T15:12:48.116Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1271,
-          "at": "2026-09-26T15:13:15.405Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1291,
-          "at": "2026-09-26T15:13:23.743Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1321,
-          "at": "2026-09-26T15:13:28.286Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "network"
-        },
-        {
-          "seq": 1333,
-          "at": "2026-09-26T15:13:33.370Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1380,
-          "at": "2026-09-26T15:13:58.295Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1396,
-          "at": "2026-09-26T15:14:08.463Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "click"
-        },
-        {
-          "seq": 1429,
-          "at": "2026-09-26T15:14:26.609Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1435,
-          "at": "2026-09-26T15:14:28.637Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1489,
-          "at": "2026-09-26T15:14:45.244Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 1502,
-          "at": "2026-09-26T15:14:50.369Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1585,
-          "at": "2026-09-26T15:15:25.628Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1604,
-          "at": "2026-09-26T15:15:37.276Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "click"
-        },
-        {
-          "seq": 1679,
-          "at": "2026-09-26T15:16:26.858Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1685,
-          "at": "2026-09-26T15:16:30.037Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1725,
-          "at": "2026-09-26T15:16:47.777Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1730,
-          "at": "2026-09-26T15:16:49.466Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1773,
-          "at": "2026-09-26T15:17:18.923Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1782,
-          "at": "2026-09-26T15:17:23.833Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1876,
-          "at": "2026-09-26T15:18:08.180Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 1880,
-          "at": "2026-09-26T15:18:09.878Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1950,
-          "at": "2026-09-26T15:18:44.657Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 1961,
-          "at": "2026-09-26T15:18:48.550Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2385,
-          "at": "2026-09-26T15:21:15.528Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2395,
-          "at": "2026-09-26T15:21:19.606Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "click"
-        },
-        {
-          "seq": 2396,
-          "at": "2026-09-26T15:21:19.990Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2406,
-          "at": "2026-09-26T15:21:24.606Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2433,
-          "at": "2026-09-26T15:21:43.758Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2440,
-          "at": "2026-09-26T15:21:47.980Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "click"
-        },
-        {
-          "seq": 2481,
-          "at": "2026-09-26T15:22:10.556Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2494,
-          "at": "2026-09-26T15:22:16.627Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "click"
-        },
-        {
-          "seq": 2568,
-          "at": "2026-09-26T15:23:21.107Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2573,
-          "at": "2026-09-26T15:23:23.615Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2617,
-          "at": "2026-09-26T15:23:48.371Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2630,
-          "at": "2026-09-26T15:23:55.363Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2672,
-          "at": "2026-09-26T15:24:09.508Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2687,
-          "at": "2026-09-26T15:24:16.044Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2733,
-          "at": "2026-09-26T15:24:41.408Z",
-          "from": "battle",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2743,
-          "at": "2026-09-26T15:24:50.475Z",
-          "from": "other",
-          "to": "battle",
-          "event": "network"
-        },
-        {
-          "seq": 2748,
-          "at": "2026-09-26T15:25:04.143Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2753,
-          "at": "2026-09-26T15:25:06.118Z",
-          "from": "treasure-map",
-          "to": "battle",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2799,
-          "at": "2026-09-26T15:25:54.617Z",
-          "from": "battle",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2818,
-          "at": "2026-09-26T15:26:02.069Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2860,
-          "at": "2026-09-26T15:26:07.932Z",
-          "from": "lights",
-          "to": "other",
-          "event": "network"
-        },
-        {
-          "seq": 2874,
-          "at": "2026-09-26T15:26:12.647Z",
-          "from": "other",
-          "to": "lights",
-          "event": "click"
-        },
-        {
-          "seq": 2876,
-          "at": "2026-09-26T15:26:13.291Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "network"
-        },
-        {
-          "seq": 2881,
-          "at": "2026-09-26T15:26:14.932Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 2942,
-          "at": "2026-09-26T15:26:57.193Z",
-          "from": "chests",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 2945,
-          "at": "2026-09-26T15:26:57.858Z",
-          "from": "treasure-map",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3036,
-          "at": "2026-09-26T15:27:15.215Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "network"
-        },
-        {
-          "seq": 3056,
-          "at": "2026-09-26T15:27:22.954Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3077,
-          "at": "2026-09-26T15:27:34.526Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3092,
-          "at": "2026-09-26T15:27:43.113Z",
-          "from": "treasure-map",
-          "to": "fishing",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3150,
-          "at": "2026-09-26T15:28:09.572Z",
-          "from": "fishing",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3155,
-          "at": "2026-09-26T15:28:11.585Z",
-          "from": "treasure-map",
-          "to": "chests",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3270,
-          "at": "2026-09-26T15:28:55.796Z",
-          "from": "chests",
-          "to": "lights",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3283,
-          "at": "2026-09-26T15:29:02.462Z",
-          "from": "lights",
-          "to": "treasure-map",
-          "event": "click"
-        },
-        {
-          "seq": 3287,
-          "at": "2026-09-26T15:29:03.396Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3306,
-          "at": "2026-09-26T15:29:12.382Z",
-          "from": "other",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3310,
-          "at": "2026-09-26T15:29:13.539Z",
-          "from": "treasure-map",
-          "to": "trader",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3349,
-          "at": "2026-09-26T15:29:36.584Z",
-          "from": "trader",
-          "to": "treasure-map",
-          "event": "snapshot"
-        },
-        {
-          "seq": 3361,
-          "at": "2026-09-26T15:29:44.779Z",
-          "from": "treasure-map",
-          "to": "other",
-          "event": "snapshot"
-        }
-      ],
-      "event_type_counts": {
-        "session-start": 1,
-        "snapshot": 932,
-        "click": 1347,
-        "blocked-action": 60,
-        "network": 428,
-        "session-stop": 1
-      },
-      "network_status_counts": {
-        "200": 404,
-        "409": 18,
-        "500": 4,
-        "429": 2
-      },
-      "endpoint_counts": {
-        "GET /shop/view": 3,
-        "POST /fair/reroll": 52,
-        "POST /shop/buy": 370,
-        "GET /player/passiveIncome": 1,
-        "POST /player/passiveIncome/apply": 1,
-        "GET /battlepass": 1
-      },
-      "blocked_reason_counts": {
-        "no-state-change": 32,
-        "http-409-conflict": 18,
-        "http-5xx-server-error": 4,
-        "http-429-rate-limit": 2,
-        "insufficient-resource": 1,
-        "pointer-events-none": 3
-      }
-    },
-    {
-      "session_id": "tr-4-muii6lcp-g93223",
-      "run_index": 4,
-      "started_at": "2026-09-26T14:46:52.057Z",
-      "player_id": "552583086",
-      "capture_id_min": 16938,
-      "capture_id_max": 16940,
-      "captures": 2,
-      "batches": 2,
-      "batch_min": 1,
-      "batch_max": 2,
-      "revisions": [
-        "treasure-run-recorder-20260926-r1"
-      ],
-      "events": 26,
-      "first_event_at": "2026-09-26T14:46:52.057Z",
-      "last_event_at": "2026-09-26T14:47:14.749Z",
-      "screen_sequence": [
-        "treasure-map"
-      ],
-      "screen_transitions": [
-        {
-          "seq": 1,
-          "at": "2026-09-26T14:46:52.057Z",
-          "from": null,
-          "to": "treasure-map",
-          "event": "session-start"
-        }
-      ],
-      "event_type_counts": {
-        "session-start": 1,
-        "snapshot": 17,
-        "click": 4,
-        "blocked-action": 3,
-        "session-stop": 1
-      },
-      "network_status_counts": {},
-      "endpoint_counts": {},
-      "blocked_reason_counts": {
-        "no-state-change": 3
-      }
     }
   ],
   "latest_detail": {
-    "session_id": "tr-5-mujqruoe-n9pxxv",
-    "run_index": 5,
-    "started_at": "2026-09-27T11:35:07.022Z",
+    "session_id": "tr-6-mukylsun-im4xg1",
+    "run_index": 6,
+    "started_at": "2026-09-28T08:02:07.823Z",
     "player_id": "552583086",
-    "events_total": 4,
-    "events_exported": 4,
+    "events_total": 70,
+    "events_exported": 70,
     "screen_sequence": [
       "lights"
     ],
     "timeline": [
       {
         "seq": 1,
-        "at": "2026-09-27T11:35:07.022Z",
+        "at": "2026-09-28T08:02:07.823Z",
         "t": 0,
         "screen": "lights",
         "type": "session-start",
         "data": {
           "revision": "treasure-run-recorder-20260926-r1",
-          "version": "1.18.47",
+          "version": "1.18.63",
           "pathname": "/app.html",
           "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:156.0) Gecko/20100101 Firefox/156.0",
           "language": "ru-RU"
@@ -3515,8 +3151,8 @@
       },
       {
         "seq": 2,
-        "at": "2026-09-27T11:35:07.026Z",
-        "t": 4,
+        "at": "2026-09-28T08:02:07.830Z",
+        "t": 7,
         "screen": "lights",
         "type": "snapshot",
         "snapshot": {
@@ -3525,15 +3161,15 @@
             "Лабиринт"
           ],
           "modals": [
-            "8530 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
-            "8530",
+            "8836 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8836",
             "Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
             "Включенная лампочка"
           ],
           "lots": [
             {
               "lotId": "mf_fairlot_lights_out_sl1_true",
-              "text": "1"
+              "text": "1 1"
             },
             {
               "lotId": "mf_fairlot_lights_out_sl2_false",
@@ -3541,30 +3177,30 @@
             },
             {
               "lotId": "mf_fairlot_lights_out_sl3_true",
-              "text": "1 1"
-            },
-            {
-              "lotId": "mf_fairlot_lights_out_sl4_false",
-              "text": "1"
-            },
-            {
-              "lotId": "mf_fairlot_lights_out_sl5_false",
-              "text": "1"
-            },
-            {
-              "lotId": "mf_fairlot_lights_out_sl6_true",
               "text": "1 2"
             },
             {
-              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "lotId": "mf_fairlot_lights_out_sl4_true",
               "text": "1 3"
             },
             {
-              "lotId": "mf_fairlot_lights_out_sl8_false",
-              "text": "1"
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 4"
             },
             {
-              "lotId": "mf_fairlot_lights_out_sl9_false",
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 7"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
               "text": "1"
             }
           ]
@@ -3572,8 +3208,1603 @@
       },
       {
         "seq": 3,
-        "at": "2026-09-27T11:35:07.843Z",
-        "t": 821,
+        "at": "2026-09-28T08:02:08.366Z",
+        "t": 543,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "mutation",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8836 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8836",
+            "Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "Включенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 7"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 4,
+        "at": "2026-09-28T08:02:10.711Z",
+        "t": 2888,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 5,
+        "at": "2026-09-28T08:02:11.208Z",
+        "t": 3385,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_true",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 6,
+        "at": "2026-09-28T08:02:11.315Z",
+        "t": 3492,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 7,
+        "at": "2026-09-28T08:02:11.560Z",
+        "t": 3737,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_false",
+        "text": "1 2",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 8,
+        "at": "2026-09-28T08:02:12.370Z",
+        "t": 4547,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "mutation",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8835 Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8835",
+            "Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "Выключенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_false",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_true",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 7"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 9,
+        "at": "2026-09-28T08:02:12.522Z",
+        "t": 4699,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8835 Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8835",
+            "Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "Выключенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_false",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_true",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 7"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 10,
+        "at": "2026-09-28T08:02:13.113Z",
+        "t": 5290,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 11,
+        "at": "2026-09-28T08:02:13.659Z",
+        "t": 5836,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_false",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 12,
+        "at": "2026-09-28T08:02:13.785Z",
+        "t": 5962,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 13,
+        "at": "2026-09-28T08:02:14.031Z",
+        "t": 6208,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_true",
+        "text": "1",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 14,
+        "at": "2026-09-28T08:02:14.671Z",
+        "t": 6848,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 15,
+        "at": "2026-09-28T08:02:15.241Z",
+        "t": 7418,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8834 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "8834",
+            "Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "Включенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 16,
+        "at": "2026-09-28T08:02:16.008Z",
+        "t": 8185,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_true",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 17,
+        "at": "2026-09-28T08:02:16.243Z",
+        "t": 8420,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 18,
+        "at": "2026-09-28T08:02:16.683Z",
+        "t": 8860,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_false",
+        "text": "1",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 19,
+        "at": "2026-09-28T08:02:17.147Z",
+        "t": 9324,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 20,
+        "at": "2026-09-28T08:02:17.891Z",
+        "t": 10068,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8833 Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "8833",
+            "Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "Выключенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 21,
+        "at": "2026-09-28T08:02:17.986Z",
+        "t": 10163,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_false",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 22,
+        "at": "2026-09-28T08:02:18.165Z",
+        "t": 10342,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 23,
+        "at": "2026-09-28T08:02:18.357Z",
+        "t": 10534,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8832 Выключенная лампочка Понятно",
+            "8832",
+            "Выключенная лампочка Понятно",
+            "Выключенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 24,
+        "at": "2026-09-28T08:02:18.414Z",
+        "t": 10591,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_true",
+        "text": "1",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 25,
+        "at": "2026-09-28T08:02:18.909Z",
+        "t": 11086,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 26,
+        "at": "2026-09-28T08:02:19.383Z",
+        "t": 11560,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8832 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "8832",
+            "Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "Включенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 27,
+        "at": "2026-09-28T08:02:19.604Z",
+        "t": 11781,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_true",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 28,
+        "at": "2026-09-28T08:02:19.689Z",
+        "t": 11866,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 29,
+        "at": "2026-09-28T08:02:19.936Z",
+        "t": 12113,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_false",
+        "text": "1 2",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 30,
+        "at": "2026-09-28T08:02:20.118Z",
+        "t": 12295,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8831 Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8831",
+            "Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "Выключенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_false",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_true",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 7"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 31,
+        "at": "2026-09-28T08:02:20.469Z",
+        "t": 12646,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 32,
+        "at": "2026-09-28T08:02:21.103Z",
+        "t": 13280,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_false",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 33,
+        "at": "2026-09-28T08:02:21.159Z",
+        "t": 13336,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 34,
+        "at": "2026-09-28T08:02:21.405Z",
+        "t": 13582,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_true",
+        "text": "1 2",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 35,
+        "at": "2026-09-28T08:02:21.934Z",
+        "t": 14111,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 36,
+        "at": "2026-09-28T08:02:22.368Z",
+        "t": 14545,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8830 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "8830",
+            "Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "Включенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 7"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 37,
+        "at": "2026-09-28T08:02:22.493Z",
+        "t": 14670,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_true",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 38,
+        "at": "2026-09-28T08:02:22.714Z",
+        "t": 14891,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 39,
+        "at": "2026-09-28T08:02:22.961Z",
+        "t": 15138,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_false",
+        "text": "1 2",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 40,
+        "at": "2026-09-28T08:02:23.141Z",
+        "t": 15318,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8829 Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8829",
+            "Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "Выключенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_false",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_true",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 7"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 41,
+        "at": "2026-09-28T08:02:23.199Z",
+        "t": 15376,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+        "tag": "div",
+        "x": 743,
+        "y": 483,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 42,
+        "at": "2026-09-28T08:02:24.459Z",
+        "t": 16636,
+        "screen": "lights",
+        "type": "blocked-action",
+        "reason": "no-state-change",
+        "path": "",
+        "status": null
+      },
+      {
+        "seq": 43,
+        "at": "2026-09-28T08:02:24.885Z",
+        "t": 17062,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 44,
+        "at": "2026-09-28T08:02:25.444Z",
+        "t": 17621,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_false",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 45,
+        "at": "2026-09-28T08:02:25.488Z",
+        "t": 17665,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 46,
+        "at": "2026-09-28T08:02:25.741Z",
+        "t": 17918,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_true",
+        "text": "1",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 47,
+        "at": "2026-09-28T08:02:26.103Z",
+        "t": 18280,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8828 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8828",
+            "Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "Включенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 48,
+        "at": "2026-09-28T08:02:26.233Z",
+        "t": 18410,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 49,
+        "at": "2026-09-28T08:02:26.662Z",
+        "t": 18839,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_true",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 50,
+        "at": "2026-09-28T08:02:26.747Z",
+        "t": 18924,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 51,
+        "at": "2026-09-28T08:02:27.001Z",
+        "t": 19178,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_false",
+        "text": "1",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 52,
+        "at": "2026-09-28T08:02:27.458Z",
+        "t": 19635,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8827 Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8827",
+            "Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "Выключенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 53,
+        "at": "2026-09-28T08:02:27.488Z",
+        "t": 19665,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 54,
+        "at": "2026-09-28T08:02:28.063Z",
+        "t": 20240,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_false",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 55,
+        "at": "2026-09-28T08:02:28.125Z",
+        "t": 20302,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 56,
+        "at": "2026-09-28T08:02:28.386Z",
+        "t": 20563,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_true",
+        "text": "1",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 57,
+        "at": "2026-09-28T08:02:28.860Z",
+        "t": 21037,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 58,
+        "at": "2026-09-28T08:02:29.342Z",
+        "t": 21519,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8826 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "8826",
+            "Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "Включенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 59,
+        "at": "2026-09-28T08:02:29.382Z",
+        "t": 21559,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_true",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 60,
+        "at": "2026-09-28T08:02:29.418Z",
+        "t": 21595,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 61,
+        "at": "2026-09-28T08:02:29.609Z",
+        "t": 21786,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8825 Включенная лампочка Понятно",
+            "8825",
+            "Включенная лампочка Понятно",
+            "Включенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 62,
+        "at": "2026-09-28T08:02:29.672Z",
+        "t": 21849,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_false",
+        "text": "1",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 63,
+        "at": "2026-09-28T08:02:30.187Z",
+        "t": 22364,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "1",
+        "tag": "button",
+        "x": 743,
+        "y": 563,
+        "pointerType": "mouse"
+      },
+      {
+        "seq": 64,
+        "at": "2026-09-28T08:02:30.637Z",
+        "t": 22814,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "after-click-settle",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8825 Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "8825",
+            "Выключенная лампочка Лампочка погасла. Нажми, чтобы зажечь её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта.",
+            "Выключенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_true",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 65,
+        "at": "2026-09-28T08:02:30.803Z",
+        "t": 22980,
+        "screen": "lights",
+        "type": "network",
+        "path": "/shop/buy",
+        "method": "POST",
+        "status": 200,
+        "request": {
+          "fair_id": "fair_lights_out",
+          "shop_lot_id": "mf_fairlot_lights_out_sl3_false",
+          "slot_id": 3
+        },
+        "response": {}
+      },
+      {
+        "seq": 66,
+        "at": "2026-09-28T08:02:30.862Z",
+        "t": 23039,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "",
+        "text": "Понятно",
+        "tag": "button",
+        "x": 743,
+        "y": 506,
+        "pointerType": ""
+      },
+      {
+        "seq": 67,
+        "at": "2026-09-28T08:02:31.321Z",
+        "t": 23498,
+        "screen": "lights",
+        "type": "click",
+        "lotId": "mf_fairlot_lights_out_sl3_true",
+        "text": "1 2",
+        "tag": "div",
+        "x": 890,
+        "y": 289,
+        "pointerType": ""
+      },
+      {
+        "seq": 68,
+        "at": "2026-09-28T08:02:33.451Z",
+        "t": 25628,
+        "screen": "lights",
+        "type": "snapshot",
+        "snapshot": {
+          "reason": "mutation",
+          "headings": [
+            "Лабиринт"
+          ],
+          "modals": [
+            "8824 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8824",
+            "Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "Включенная лампочка"
+          ],
+          "lots": [
+            {
+              "lotId": "mf_fairlot_lights_out_sl1_true",
+              "text": "1 1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl2_false",
+              "text": "1"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl3_true",
+              "text": "1 2"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl4_true",
+              "text": "1 3"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 4"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 7"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
+              "text": "1"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 69,
+        "at": "2026-09-28T08:02:34.161Z",
+        "t": 26338,
         "screen": "lights",
         "type": "snapshot",
         "snapshot": {
@@ -3582,15 +4813,15 @@
             "Лабиринт"
           ],
           "modals": [
-            "8530 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
-            "8530",
+            "8824 Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
+            "8824",
             "Включенная лампочка Лампочка горит. Нажми, чтобы погасить её и переключить соседние лампочки сверху, снизу, слева и справа: горящие погаснут, погасшие загорятся. Зажги все девять лампочек, чтобы открыть награду лабиринта. 1",
             "Включенная лампочка"
           ],
           "lots": [
             {
               "lotId": "mf_fairlot_lights_out_sl1_true",
-              "text": "1"
+              "text": "1 1"
             },
             {
               "lotId": "mf_fairlot_lights_out_sl2_false",
@@ -3598,44 +4829,44 @@
             },
             {
               "lotId": "mf_fairlot_lights_out_sl3_true",
-              "text": "1 1"
-            },
-            {
-              "lotId": "mf_fairlot_lights_out_sl4_false",
-              "text": "1"
-            },
-            {
-              "lotId": "mf_fairlot_lights_out_sl5_false",
-              "text": "1"
-            },
-            {
-              "lotId": "mf_fairlot_lights_out_sl6_true",
               "text": "1 2"
             },
             {
-              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "lotId": "mf_fairlot_lights_out_sl4_true",
               "text": "1 3"
             },
             {
-              "lotId": "mf_fairlot_lights_out_sl8_false",
-              "text": "1"
+              "lotId": "mf_fairlot_lights_out_sl5_true",
+              "text": "1 4"
             },
             {
-              "lotId": "mf_fairlot_lights_out_sl9_false",
+              "lotId": "mf_fairlot_lights_out_sl6_false",
+              "text": "1 5"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl7_false",
+              "text": "1 6"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl8_false",
+              "text": "1 7"
+            },
+            {
+              "lotId": "mf_fairlot_lights_out_sl9_true",
               "text": "1"
             }
           ]
         }
       },
       {
-        "seq": 4,
-        "at": "2026-09-27T11:35:07.844Z",
-        "t": 822,
+        "seq": 70,
+        "at": "2026-09-28T08:02:34.162Z",
+        "t": 26339,
         "screen": "lights",
         "type": "session-stop",
         "data": {
           "revision": "treasure-run-recorder-20260926-r1",
-          "durationMs": 822
+          "durationMs": 26339
         }
       }
     ]
