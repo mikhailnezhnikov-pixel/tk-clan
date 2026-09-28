@@ -142,5 +142,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-78-visible-chest-claim-live-status.txt",
-  "commit_message": "fix: claim visible mystery chests in userscript 1.18.78"
+  "commit_message": "fix: claim visible mystery chests before digging in userscript 1.18.78 r2"
 }
