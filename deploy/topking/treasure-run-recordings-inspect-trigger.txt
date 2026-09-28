@@ -10,3 +10,4 @@ inspect run 5 battle labyrinth fishing 2026-09-27
 2026-09-27T22:34+09 inspect current lights stall after 1.18.48
 
 2026-09-27T23:51+09 inspect treasury wrong-room repeat after 1.18.50
+2026-09-28T16:??+09 inspect fresh user map #6 lights unchanged after 1.18.63
