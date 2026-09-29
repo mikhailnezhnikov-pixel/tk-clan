@@ -225,9 +225,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          # The service can need more than 10 seconds after restart before the
+          # reverse proxy stops returning 502. Give it a real warm-up window
+          # before treating public verification as a release failure.
+          sleep 15
           curl -fsSL \
-            --retry 5 \
-            --retry-delay 2 \
+            --retry 12 \
+            --retry-delay 3 \
+            --retry-all-errors \
             "https://hk-license.89.125.1.71.sslip.io/panel.js?release=$(date +%s)" \
             -o /tmp/public.js
 
