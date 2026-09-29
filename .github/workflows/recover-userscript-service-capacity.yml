@@ -1,0 +1,75 @@
+name: Recover Userscript Service Capacity
+
+on:
+  push:
+    paths:
+      - '.github/workflows/recover-userscript-service-capacity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Reclaim system cache and restart service
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 bash -s <<'REMOTE'
+          set -euo pipefail
+          echo "CAPACITY_RECOVERY_START"
+          df -h /
+
+          # Reclaim only regenerable OS cache/log history; application data and
+          # Hamster King database backups are left untouched.
+          journalctl --vacuum-size=180M
+          apt-get clean
+          sync
+
+          echo "AFTER_SYSTEM_CLEANUP"
+          df -h /
+
+          systemctl reset-failed hamsterking-license.service || true
+          systemctl restart hamsterking-license.service
+
+          ready=0
+          for i in $(seq 1 30); do
+            if systemctl is-active --quiet hamsterking-license.service; then
+              if curl -fsS --max-time 5 "https://hk-license.89.125.1.71.sslip.io/panel.js?capacity=$i" -o /tmp/hk-panel-check.js; then
+                ready=1
+                break
+              fi
+            fi
+            sleep 2
+          done
+
+          echo "SERVICE_ACTIVE=$(systemctl is-active hamsterking-license.service || true)"
+          echo "SERVICE_SUBSTATE=$(systemctl show hamsterking-license.service -p SubState --value)"
+          df -h /
+
+          if [ "$ready" -ne 1 ]; then
+            echo "CAPACITY_RECOVERY_SERVICE_NOT_READY"
+            journalctl -u hamsterking-license.service --since "-3 min" --no-pager -n 80
+            exit 1
+          fi
+
+          echo "USERSCRIPT_CAPACITY_RECOVERY=PASS"
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
