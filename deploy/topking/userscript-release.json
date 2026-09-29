@@ -5,7 +5,6 @@
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.94.treasure-exit-battle-confirm.candidate.user.js",
   "primary_marker": "battle-open-modal-confirm-20260930-r1",
   "preserve_markers": [
-    "chest-exhausted-exit-20260930-r1",
     "chest-phase-order-20260929-r1",
     "chest-uncommitted-retry-20260929-r1",
     "treasure-map-target-scroll-20260929-r1",
