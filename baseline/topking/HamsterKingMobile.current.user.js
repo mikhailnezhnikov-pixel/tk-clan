@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.87
+// @version      1.18.88
+// @release-note Карта сокровищ: введены жёсткие транзакционные барьеры. Старая модалка всегда закрывается до новой клетки; бой прокручивает к врагу и к кнопке атаки даже ниже экрана; сундуки не переходят к следующему lot без подтверждения изменения/награды; найденный ключ блокирует любой модуль до завершения.
 // @release-note Карта сокровищ: исправлены зависания в окнах мини-игр на мобильном. Сражение теперь находит широкую кнопку атаки даже если игра рисует её как div/span, а системные кнопки Автокарты больше не перехватывают координатные клики по «Понятно» и кнопкам стоимости.
 // @release-note Карта сокровищ — Сражение: исправлен зависший предпросмотр. Фоновая модалка Золотых монет больше не перехватывает Автокарту; если окно Сражения уже открыто, Автокарта сама нажимает кнопку входа с ягодами и продолжает бой.
 // @release-note Автокарта: убрано ложное «закрываю Золотые монеты» на превью локаций. Сражение: «Понятно/OK» теперь жёстко блокирует выход до загрузки поля.
@@ -33,7 +34,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.87';
+  const BUILD_VERSION = '1.18.88';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3663,6 +3664,11 @@
   const HK_BATTLE_PREVIEW_RESUME_REV='battle-preview-resume-20260929-r1';
   const HK_MINIGAME_OVERLAY_PASSTHROUGH_REV='minigame-overlay-pass-through-20260929-r1';
   const HK_BATTLE_ACTION_MODAL_DIV_REV='battle-action-modal-div-20260929-r1';
+  const HK_TREASURE_TXN_GATE_REV='treasure-transaction-gate-20260929-r1';
+  const HK_STALE_MODAL_HARD_GATE_REV='treasure-stale-modal-hard-gate-20260929-r1';
+  const HK_CHEST_LOT_HARD_GATE_REV='chest-lot-hard-gate-20260929-r1';
+  const HK_TREASURE_KEY_GLOBAL_GATE_REV='treasure-key-global-gate-20260929-r1';
+  const HK_BATTLE_OFFSCREEN_ACTION_REV='battle-offscreen-action-scroll-20260929-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -17893,6 +17899,7 @@
     let chestAutoRunning = false;
     let chestAutoRunId = 0;
     let chestAutoToggle = null;
+    let chestPendingLotGate = null;
     let lightsAutoRunning = false;
     let lightsAutoRunId = 0;
     let lightsAutoToggle = null;
@@ -20918,8 +20925,8 @@
       }) || null;
     }
 
-    function battleScrollHost() {
-      const seed=document.querySelector(
+    function battleScrollHost(element=null) {
+      const seed=element || document.querySelector(
         '[data-lot-id^="mf_treasurelot_sword_"],[data-lot-id*="mf_treasurelot_enemy_type_"],[data-lot-id^="mf_fight_egg_"]'
       );
       let node=seed?.parentElement || null;
@@ -21423,7 +21430,7 @@
 
       let probe=battleElementTapProbe(element);
       if (!probe.ready) {
-        const host=battleScrollHost();
+        const host=battleScrollHost(element);
         const isWindowHost=!host ||
           host===document.scrollingElement ||
           host===document.documentElement ||
@@ -21966,8 +21973,132 @@
       return false;
     }
 
+    function treasureChestLotState(lotId) {
+      const wanted=String(lotId||'');
+      const rows=[...document.querySelectorAll('[data-lot-id]')]
+        .filter(element=>String(element.getAttribute('data-lot-id')||'')===wanted)
+        .map(element=>({
+          connected:!!element.isConnected,
+          text:clean(element.innerText||element.textContent||'').trim(),
+          cls:clean(element.className||''),
+          activated:/активировано|activated|куплено|purchased|получено|taken|выкуплено|sold\s*out/i.test(
+            clean(element.innerText||element.textContent||'')+' '+clean(element.className||'')
+          )
+        }));
+
+      let unbought=null;
+      try { unbought=treasureChestUnboughtCount(wanted); } catch (_) {}
+      const keyOffer=treasureChestKeyOfferElements().some(row=>row.lotId===wanted);
+      return JSON.stringify({lotId:wanted,rows,unbought,keyOffer});
+    }
+
+    function treasureChestPendingConfirmed(gate=chestPendingLotGate) {
+      if (!gate) return {ok:true,reason:'no-gate'};
+      if (autoMapTreasureKeyModalRoot()) return {ok:false,reason:'treasure-key-modal'};
+      if (treasureRewardButton()) return {ok:false,reason:'reward-visible'};
+      const current=treasureChestLotState(gate.lotId);
+      if (current!==gate.beforeLotState) return {ok:true,reason:'lot-state-changed',current};
+      return {ok:false,reason:'lot-state-unchanged',current};
+    }
+
+    function treasureChestClearPendingGate(reason='confirmed') {
+      const gate=chestPendingLotGate;
+      chestPendingLotGate=null;
+      recordDiagnostic('chest-lot-hard-gate-clear',{
+        revision:HK_CHEST_LOT_HARD_GATE_REV,
+        reason,
+        lotId:String(gate?.lotId||''),
+        ageMs:gate?.startedAt ? Date.now()-gate.startedAt : null
+      });
+    }
+
+    async function treasureChestResolveGlobalKeyGate(source='chests') {
+      const root=autoMapTreasureKeyModalRoot();
+      if (!root) return false;
+      recordDiagnostic('treasure-key-global-gate',{
+        revision:HK_TREASURE_KEY_GLOBAL_GATE_REV,
+        source,
+        module:'chests'
+      });
+      const ok=await autoMapBuyTreasureKeyIfPresent();
+      if (ok) {
+        recordDiagnostic('treasure-key-global-gate-complete',{
+          revision:HK_TREASURE_KEY_GLOBAL_GATE_REV,
+          source,
+          module:'chests'
+        });
+      }
+      return !!ok;
+    }
+
+    async function treasureChestReconcilePendingGate() {
+      const gate=chestPendingLotGate;
+      if (!gate) return true;
+
+      // Global key/reward overlays own the transaction before any other chest
+      // can be considered.
+      if (autoMapTreasureKeyModalRoot()) {
+        const keyDone=await treasureChestResolveGlobalKeyGate('pending-lot');
+        if (!keyDone) return false;
+        treasureChestClearPendingGate('key-reward-processed');
+        return true;
+      }
+
+      if (treasureRewardButton()) {
+        const rewards=await dismissTreasureRewards(chestAutoRunId);
+        if (rewards>0) {
+          treasureChestClearPendingGate('reward-processed');
+          return true;
+        }
+        return false;
+      }
+
+      const result=treasureChestPendingConfirmed(gate);
+      if (result.ok) {
+        treasureChestClearPendingGate(result.reason);
+        return true;
+      }
+
+      const age=Date.now()-gate.startedAt;
+      recordDiagnostic('chest-lot-hard-gate-wait',{
+        revision:HK_CHEST_LOT_HARD_GATE_REV,
+        lotId:gate.lotId,
+        ageMs:age,
+        reason:result.reason
+      });
+
+      // Do not silently move to another lot. After a long unresolved state,
+      // stop the owned module rather than spending on an unrelated target.
+      if (age>=15000 && autoMapEnabled()) {
+        autoMapBlockOwnedModule('chests','lot-state-unconfirmed',30000);
+        autoMapStatus('сундук · жду подтверждение',{
+          revision:HK_CHEST_LOT_HARD_GATE_REV,
+          lotId:gate.lotId
+        });
+      }
+      return false;
+    }
+
     async function runTreasureChestAuto() {
       if (!chestAutoEnabled() || chestAutoRunning || battleAutoRunning) return false;
+
+      if (chestPendingLotGate) {
+        const reconciled=await treasureChestReconcilePendingGate();
+        if (!reconciled) {
+          lastSignature='';
+          setTimeout(checkPuzzle,480);
+          return false;
+        }
+      }
+
+      if (autoMapTreasureKeyModalRoot()) {
+        const keyDone=await treasureChestResolveGlobalKeyGate('runner-preflight');
+        if (!keyDone) return false;
+        lastSignature='';
+        setTimeout(checkPuzzle,120);
+        return true;
+      }
+
       if (treasureChestBlockedByForegroundMap()) {
         lastSignature='';
         if (autoMapEnabled()) setTimeout(()=>void runAutoMapTick('chest-map-guard-pre'),20);
@@ -21988,6 +22119,7 @@
       chestAutoRunning=true;
       const runId=++chestAutoRunId;
       const beforeSignature=treasureChestSignature();
+      const beforeLotState=treasureChestLotState(target.lotId);
       const beforeBalance=walletAmount(target.cost.id);
       recordDiagnostic('chest-auto-start',{
         revision:target.keyOffer?HK_CHEST_KEY_OFFER_REV:HK_CHEST_AUTO_REV,
@@ -22020,17 +22152,86 @@
           return false;
         }
 
+        chestPendingLotGate={
+          lotId:target.lotId,
+          beforeLotState,
+          beforeSignature,
+          startedAt:Date.now(),
+          digging:!!target.digging,
+          chest:!!target.chest,
+          keyOffer:!!target.keyOffer
+        };
+        recordDiagnostic('chest-lot-hard-gate-set',{
+          revision:HK_CHEST_LOT_HARD_GATE_REV,
+          lotId:target.lotId,
+          digging:!!target.digging,
+          chest:!!target.chest,
+          keyOffer:!!target.keyOffer
+        });
+
+        let hardConfirmed=false;
+        let hardReason='';
         const started=Date.now();
-        while (Date.now()-started<CHEST_ACTION_TIMEOUT_MS) {
+        while (Date.now()-started<Math.max(CHEST_ACTION_TIMEOUT_MS,6500)) {
           if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
-          const changed=treasureChestSignature()!==beforeSignature;
-          const reward=treasureRewardButton();
-          if (changed || reward || !treasureModalRoot(target.cost)) break;
+
+          if (autoMapTreasureKeyModalRoot()) {
+            const keyDone=await treasureChestResolveGlobalKeyGate('post-action');
+            if (!keyDone) return false;
+            hardConfirmed=true;
+            hardReason='key-reward-processed';
+            break;
+          }
+
+          if (treasureRewardButton()) {
+            hardConfirmed=true;
+            hardReason='reward-visible';
+            break;
+          }
+
+          const lotState=treasureChestLotState(target.lotId);
+          if (lotState!==beforeLotState) {
+            hardConfirmed=true;
+            hardReason='lot-state-changed';
+            break;
+          }
+
+          // Whole-room changes are diagnostic only. They are not sufficient to
+          // unlock the next lot unless this exact lot or a reward changed.
+          const roomChanged=treasureChestSignature()!==beforeSignature;
+          if (roomChanged) {
+            recordDiagnostic('chest-room-changed-without-lot-confirm',{
+              revision:HK_CHEST_LOT_HARD_GATE_REV,
+              lotId:target.lotId
+            });
+          }
           await new Promise(resolve=>setTimeout(resolve,100));
+        }
+
+        if (!hardConfirmed) {
+          recordDiagnostic('chest-auto-stop',{
+            revision:HK_CHEST_LOT_HARD_GATE_REV,
+            reason:'lot-state-unconfirmed',
+            lotId:target.lotId
+          });
+          autoMapStatus('сундук · жду подтверждение',{
+            revision:HK_CHEST_LOT_HARD_GATE_REV,
+            lotId:target.lotId
+          });
+          return false;
         }
 
         await (target.digging ? chestDigPause('settle',{module:'chests',lotId:target.lotId}) : chestHumanPause('settle',{module:'chests',lotId:target.lotId}));
         const rewards=await dismissTreasureRewards(runId);
+        if (hardReason==='reward-visible' && rewards===0 && treasureRewardButton()) {
+          recordDiagnostic('chest-auto-stop',{
+            revision:HK_CHEST_LOT_HARD_GATE_REV,
+            reason:'reward-not-cleared',
+            lotId:target.lotId
+          });
+          return false;
+        }
+        treasureChestClearPendingGate(hardReason+(rewards?'-reward-cleared':''));
         recordDiagnostic('chest-auto-complete',{
           revision:target.keyOffer?HK_CHEST_KEY_OFFER_REV:HK_CHEST_AUTO_REV,
           lotId:target.lotId,
@@ -22459,6 +22660,25 @@
           recordDiagnostic('battle-auto-stop',{
             revision:HK_BATTLE_RAW_CONTEXT_REV,
             reason:'attack-button-missing',
+            slot,
+            expectedCost
+          });
+          return false;
+        }
+
+        // 4x3 does not fit on many phones. The action button may exist in DOM
+        // below the viewport; that is not a missing button. Scroll the correct
+        // modal/container until elementFromPoint proves the exact target is
+        // clickable, then and only then confirm the attack.
+        const actionReady=await battleScrollTargetIntoViewportAsync(
+          actionButton,
+          'battle-action-slot-'+String(slot),
+          runId
+        );
+        if (!actionReady) {
+          recordDiagnostic('battle-auto-stop',{
+            revision:HK_BATTLE_OFFSCREEN_ACTION_REV,
+            reason:'attack-button-not-clickable-after-scroll',
             slot,
             expectedCost
           });
@@ -23679,6 +23899,7 @@
     const AUTO_MAP_MODAL_TIMEOUT_MS=2600;
     const AUTO_MAP_SETTLE_TIMEOUT_MS=5200;
     const AUTO_MAP_MAX_ACTIONS=240;
+    const AUTO_MAP_TXN_PHASES=['IDLE','TARGET_FOUND','CARD_OPENED','ACTION_CONFIRMED','SERVER_UI_STATE_CHANGED','REWARD_CLEARED','ROOM_COMPLETE','EXIT_CONFIRMED','MAP_VISIBLE','NEXT_CELL'];
     let autoMapRunning=false;
     let autoMapRunId=0;
     let autoMapToggle=null;
@@ -23692,6 +23913,40 @@
     let autoMapLastStatus='';
     let autoMapNoActiveSince=0;
     let autoMapReturnNotBefore=0;
+    let autoMapTxn={phase:'IDLE',lotId:'',label:'',updatedAt:Date.now()};
+
+    function autoMapTxnSet(phase,data={}) {
+      const next=String(phase||'IDLE');
+      if (!AUTO_MAP_TXN_PHASES.includes(next)) return false;
+      const previous=autoMapTxn;
+      autoMapTxn={
+        phase:next,
+        lotId:String(data.lotId ?? previous?.lotId ?? ''),
+        label:String(data.label ?? previous?.label ?? ''),
+        updatedAt:Date.now()
+      };
+      recordDiagnostic('treasure-transaction-phase',{
+        revision:HK_TREASURE_TXN_GATE_REV,
+        from:String(previous?.phase||''),
+        to:next,
+        lotId:autoMapTxn.lotId,
+        label:autoMapTxn.label,
+        ...data
+      });
+      return true;
+    }
+
+    function autoMapTxnCanSelectNextCell() {
+      return ['IDLE','MAP_VISIBLE','NEXT_CELL'].includes(String(autoMapTxn?.phase||'IDLE'));
+    }
+
+    function autoMapTxnMarkMapVisible(source='map-visible') {
+      if (!treasureGuideScreenVisible()) return false;
+      if (autoMapMiniGameForeground()) return false;
+      if (treasureModalRoot(null)) return false;
+      autoMapTxnSet('MAP_VISIBLE',{source,lotId:'',label:''});
+      return true;
+    }
 
     function autoMapEnabled() {
       try{return localStorage.getItem(AUTO_MAP_STORAGE_KEY)==='1';}
@@ -24146,19 +24401,52 @@
       if (autoMapMiniGameForeground()) return false;
       const root=treasureModalRoot(null);
       if (!root) return false;
-      const close=autoMapModalCloseButton(root);
-      if (!close) {
+      let close=autoMapModalCloseButton(root);
+      let tapped=false;
+      if (close) {
+        tapped=dispatchAutoMapTap(close,'close-'+reason);
+      } else {
+        const rr=root.getBoundingClientRect?.();
+        if (rr && rr.width>0 && rr.height>0) {
+          tapped=dispatchMinigameOverlaySafeTapAt(
+            rr.right-Math.max(18,Math.min(30,rr.width*0.05)),
+            rr.top+Math.max(18,Math.min(30,rr.height*0.06)),
+            'close-corner-'+reason
+          );
+        }
+      }
+      if (!tapped) {
         autoMapStatus('жду окно',{reason});
         return false;
       }
-      dispatchAutoMapTap(close,'close-'+reason);
+
       autoMapLastActionAt=Date.now();
       recordDiagnostic('treasure-auto-map-modal-close',{
-        revision:HK_TREASURE_AUTO_MAP_HANDOFF_REV,
+        revision:HK_STALE_MODAL_HARD_GATE_REV,
         reason
       });
-      await new Promise(resolve=>setTimeout(resolve,420));
-      return true;
+
+      const started=Date.now();
+      while (Date.now()-started<2600) {
+        if (!autoMapEnabled()) return false;
+        const current=treasureModalRoot(null);
+        if (!current || current!==root) {
+          recordDiagnostic('treasure-stale-modal-hard-gate-clear',{
+            revision:HK_STALE_MODAL_HARD_GATE_REV,
+            reason,
+            elapsedMs:Date.now()-started
+          });
+          return true;
+        }
+        await new Promise(resolve=>setTimeout(resolve,90));
+      }
+
+      autoMapStatus('жду закрытие окна',{reason});
+      recordDiagnostic('treasure-stale-modal-hard-gate-block',{
+        revision:HK_STALE_MODAL_HARD_GATE_REV,
+        reason
+      });
+      return false;
     }
 
     function autoMapJourneyButton() {
@@ -25339,8 +25627,14 @@
           return false;
         }
         modal=treasureModalRoot(null);
-        if (modal) break;
-        if (autoMapStateFingerprint()!==before) return true;
+        if (modal) {
+          autoMapTxnSet('CARD_OPENED',{label:String(label||''),lotId:autoMapCurrentLot});
+          break;
+        }
+        if (autoMapStateFingerprint()!==before) {
+          autoMapTxnSet('SERVER_UI_STATE_CHANGED',{label:String(label||''),lotId:autoMapCurrentLot,mode:'direct'});
+          return true;
+        }
         await new Promise(resolve=>setTimeout(resolve,80));
       }
 
@@ -25399,6 +25693,7 @@
         autoMapRetryNotBefore=Date.now()+1400;
         return false;
       }
+      autoMapTxnSet('ACTION_CONFIRMED',{label:String(label||''),lotId:autoMapCurrentLot});
 
       const settleStarted=Date.now();
       while (Date.now()-settleStarted<AUTO_MAP_SETTLE_TIMEOUT_MS) {
@@ -25409,6 +25704,7 @@
           return false;
         }
         if (autoMapStateFingerprint()!==before) {
+          autoMapTxnSet('SERVER_UI_STATE_CHANGED',{label:String(label||''),lotId:autoMapCurrentLot});
           await minigameHumanPause('settle',{module:'auto-map',label});
           return true;
         }
@@ -25664,8 +25960,11 @@
       if (signature.startsWith('BATTLE') && !battleFinalRewardClaimed) return false;
       const exit=autoMapExitButton();
       if (exit) {
+        autoMapTxnSet('ROOM_COMPLETE',{label:'leave-location',lotId:autoMapCurrentLot});
         autoMapStatus('выход');
-        return autoMapTapAndConfirm(exit,'leave-location',10);
+        const left=await autoMapTapAndConfirm(exit,'leave-location',10);
+        if (left) autoMapTxnSet('EXIT_CONFIRMED',{label:'leave-location',lotId:autoMapCurrentLot});
+        return left;
       }
       if (!treasureGuideScreenVisible() && autoMapCurrentModuleComplete()) {
         const next=autoMapBottomContinueButton();
@@ -25795,11 +26094,23 @@
       // A found Unusual Treasure Key is an explicit 10-berry purchase. Handle
       // its already-open modal before route/module ownership can hide it.
       const keyModal=autoMapTreasureKeyModalRoot();
-      if (keyModal && !autoMapModulesRunning()) {
+      if (keyModal) {
+        const interrupted=autoMapCancelStaleRunners('treasure-key-global-gate');
         autoMapRunning=true;
         const keyRunId=autoMapRunId;
+        autoMapStatus('ключ · завершаю',{
+          revision:HK_TREASURE_KEY_GLOBAL_GATE_REV,
+          interrupted
+        });
+        recordDiagnostic('treasure-key-global-gate',{
+          revision:HK_TREASURE_KEY_GLOBAL_GATE_REV,
+          source,
+          interrupted
+        });
         try {
-          return await autoMapBuyTreasureKeyIfPresent();
+          const done=await autoMapBuyTreasureKeyIfPresent();
+          if (!done) setTimeout(()=>void runAutoMapTick('treasure-key-global-retry'),420);
+          return done;
         } finally {
           if (keyRunId===autoMapRunId) autoMapRunning=false;
         }
@@ -25885,6 +26196,30 @@
         } finally {
           if (treasuryRunId===autoMapRunId) autoMapRunning=false;
         }
+      }
+
+      // A leftover window from a previous action blocks the whole map. Never
+      // select another cell underneath it.
+      if (
+        treasureGuideScreenVisible() &&
+        !autoMapMiniGameForeground() &&
+        treasureModalRoot(null)
+      ) {
+        autoMapRunning=true;
+        const staleRunId=autoMapRunId;
+        try {
+          const closed=await autoMapCloseLingeringModal('global-map-preflight');
+          if (!closed) {
+            setTimeout(()=>void runAutoMapTick('global-stale-modal-retry'),360);
+          }
+          return !!closed;
+        } finally {
+          if (staleRunId===autoMapRunId) autoMapRunning=false;
+        }
+      }
+
+      if (treasureGuideScreenVisible() && !autoMapMiniGameForeground() && !treasureModalRoot(null)) {
+        autoMapTxnMarkMapVisible('tick-preflight');
       }
 
       if (Date.now()<autoMapRetryNotBefore) {
@@ -25988,6 +26323,14 @@
               return false;
             }
 
+            if (!autoMapTxnCanSelectNextCell()) {
+              autoMapStatus('жду завершение шага',{
+                revision:HK_TREASURE_TXN_GATE_REV,
+                phase:autoMapTxn.phase,
+                lotId:autoMapTxn.lotId
+              });
+              return false;
+            }
             const target=autoMapMapCards()[0];
             if (!target) {
               // Active cells may be temporarily skipped after 409; that is not completion.
@@ -25995,6 +26338,8 @@
               return false;
             }
 
+            autoMapTxnSet('NEXT_CELL',{lotId:target.lotId,label:'map-cell'});
+            autoMapTxnSet('TARGET_FOUND',{lotId:target.lotId,label:'map-cell'});
             autoMapCurrentLot=target.lotId;
             autoMapStatus('ячейка '+String(target.slot),{
               lotId:target.lotId,
@@ -26046,10 +26391,20 @@
 
         // Normal map traversal: lowest currently active slot first, then rescan.
         if (!autoMapMiniGameForeground() && !treasureModalRoot(null) && Date.now()>=autoMapReturnNotBefore && treasureGuideScreenVisible()) {
+          if (!autoMapTxnCanSelectNextCell()) {
+            autoMapStatus('жду завершение шага',{
+              revision:HK_TREASURE_TXN_GATE_REV,
+              phase:autoMapTxn.phase,
+              lotId:autoMapTxn.lotId
+            });
+            return false;
+          }
           const target=autoMapMapCards()[0];
           if (target) {
             if (!autoMapSessionStarted()) setAutoMapSessionStarted(true);
             setAutoMapStartLock(0);
+            autoMapTxnSet('NEXT_CELL',{lotId:target.lotId,label:'map-cell'});
+            autoMapTxnSet('TARGET_FOUND',{lotId:target.lotId,label:'map-cell'});
             autoMapCurrentLot=target.lotId;
             autoMapStatus('ячейка '+String(target.slot),{
               lotId:target.lotId,
@@ -26309,7 +26664,7 @@
         return;
       }
 
-      if (autoMapEnabled() && !autoMapModulesRunning() && autoMapTreasureKeyModalRoot()) {
+      if (autoMapEnabled() && autoMapTreasureKeyModalRoot()) {
         void runAutoMapTick('treasure-key-overlay');
         return;
       }
@@ -26486,6 +26841,11 @@
       battlePreviewResumeRevision:HK_BATTLE_PREVIEW_RESUME_REV,
       minigameOverlayPassthroughRevision:HK_MINIGAME_OVERLAY_PASSTHROUGH_REV,
       battleActionModalDivRevision:HK_BATTLE_ACTION_MODAL_DIV_REV,
+      treasureTransactionGateRevision:HK_TREASURE_TXN_GATE_REV,
+      staleModalHardGateRevision:HK_STALE_MODAL_HARD_GATE_REV,
+      chestLotHardGateRevision:HK_CHEST_LOT_HARD_GATE_REV,
+      treasureKeyGlobalGateRevision:HK_TREASURE_KEY_GLOBAL_GATE_REV,
+      battleOffscreenActionRevision:HK_BATTLE_OFFSCREEN_ACTION_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
