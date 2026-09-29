@@ -5,7 +5,6 @@ p=Path(sys.argv[1] if len(sys.argv)>1 else "/tmp/HamsterKingMobile.user.js")
 s=p.read_text(encoding="utf-8")
 
 required=[
-  "// @version      1.18.92",
   "treasure-map-target-scroll-20260929-r1",
   "treasure-exit-confirm-retry-20260929-r1",
   "battle-modal-action-recovery-20260929-r1",
