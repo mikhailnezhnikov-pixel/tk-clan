@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'deploy/topking/patch_map_preview_battle_intro_1_18_85.py'
+      - 'deploy/topking/patch_map_preview_battle_intro_1_18_85_v2.py'
       - 'deploy/topking/verify_map_preview_battle_intro_contract.py'
       - '.github/workflows/build-userscript-1-18-85-map-preview-battle-intro.yml'
   workflow_dispatch:
@@ -35,7 +36,7 @@ jobs:
           grep -Fq "clan-crest-transparent-mask-20260928-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "trader-gold-stale-modal-reset-20260929-r1" /tmp/HamsterKingMobile.user.js
 
-          python3 deploy/topking/patch_map_preview_battle_intro_1_18_85.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_map_preview_battle_intro_1_18_85_v2.py /tmp/HamsterKingMobile.user.js
 
           node --check /tmp/HamsterKingMobile.user.js
           grep -Fq "// @version      1.18.85" /tmp/HamsterKingMobile.user.js
