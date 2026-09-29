@@ -645,7 +645,7 @@ new_target_mark1=r'''            autoMapTxnSet('NEXT_CELL',{lotId:target.lotId,l
             autoMapCurrentLot=target.lotId;
             autoMapStatus('ячейка '+String(target.slot),{
 '''
-rep(old_target_mark1,new_target_mark1,"active target phase")
+rep(old_target_mark1,new_target_mark1,"map target phases",count=2)
 
 # There are two target blocks; patch the normal fallback separately.
 old_target2=r'''          const target=autoMapMapCards()[0];
@@ -665,18 +665,6 @@ new_target2=r'''          if (!autoMapTxnCanSelectNextCell()) {
             if (!autoMapSessionStarted()) setAutoMapSessionStarted(true);
 '''
 rep(old_target2,new_target2,"normal target gate")
-
-old_target_mark2=r'''            autoMapCurrentLot=target.lotId;
-            autoMapStatus('ячейка '+String(target.slot),{
-'''
-# First occurrence already replaced, so exactly one remains now.
-rep(old_target_mark2,
-    r'''            autoMapTxnSet('NEXT_CELL',{lotId:target.lotId,label:'map-cell'});
-            autoMapTxnSet('TARGET_FOUND',{lotId:target.lotId,label:'map-cell'});
-            autoMapCurrentLot=target.lotId;
-            autoMapStatus('ячейка '+String(target.slot),{''',
-    "normal target phase",
-    count=1)
 
 # Exit handoff phases.
 old_exit=r'''      const exit=autoMapExitButton();
