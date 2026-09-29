@@ -233,12 +233,21 @@ if "treasure-key-battle-handoff-20260928-r1" in s:
             raise SystemExit("stale battle DOM guard broken: runBattle resets claimed state")
 
         intro_root=section("function battleIntroModalRoot","async function runBattleIntroAcknowledge")
-        for marker in [
-            "Сражение|Battle",
-            "battleIntroAcknowledgeButton(root=battleIntroModalRoot())",
-        ]:
-            if marker not in intro_root:
-                raise SystemExit(f"battle intro modal contract broken: {marker}")
+        if "battle-intro-overlay-ack-20260930-r1" in s:
+            for marker in [
+                "battleIntroOwnTitle(element)",
+                "row.ack && row.ownTitle",
+                "battleIntroAcknowledgeButton(root=battleIntroModalRoot())",
+            ]:
+                if marker not in intro_root:
+                    raise SystemExit(f"battle intro overlay modal contract broken: {marker}")
+        else:
+            for marker in [
+                "Сражение|Battle",
+                "battleIntroAcknowledgeButton(root=battleIntroModalRoot())",
+            ]:
+                if marker not in intro_root:
+                    raise SystemExit(f"battle intro modal contract broken: {marker}")
     else:
         for marker in [
             "const dismissed=await dismissBattleRewardIfPresent(runId);",
