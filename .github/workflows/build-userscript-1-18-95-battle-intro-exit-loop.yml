@@ -5,6 +5,7 @@ on:
     paths:
       - 'deploy/topking/patch_battle_intro_exit_loop_1_18_95.py'
       - 'deploy/topking/verify_battle_intro_exit_loop_contract.py'
+      - 'deploy/topking/verify_treasure_battle_full_clear_contract.py'
       - '.github/workflows/build-userscript-1-18-95-battle-intro-exit-loop.yml'
   workflow_dispatch:
 
