@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.89
+// @version      1.18.90
+// @release-note Исправлено самопроизвольное выключение Автокарты/Автоламп/Автосундуков: служебные кнопки теперь реагируют только на реальный пользовательский тап. Все координатные fallback-клики торговца, сундуков и финальной награды проходят сквозь HK-оверлеи.
 // @release-note Автокарта: после возврата на карту введено окно тишины — новая ячейка не нажимается, пока карта не постоит без модалок 1.4 секунды. Зависшие окна (включая яйцо торговца) закрываются по внешней оболочке модалки и подтверждённому исчезновению.
 // @release-note Карта сокровищ: введены жёсткие транзакционные барьеры. Старая модалка всегда закрывается до новой клетки; бой прокручивает к врагу и к кнопке атаки даже ниже экрана; сундуки не переходят к следующему lot без подтверждения изменения/награды; найденный ключ блокирует любой модуль до завершения.
 // @release-note Карта сокровищ: исправлены зависания в окнах мини-игр на мобильном. Сражение теперь находит широкую кнопку атаки даже если игра рисует её как div/span, а системные кнопки Автокарты больше не перехватывают координатные клики по «Понятно» и кнопкам стоимости.
@@ -35,7 +36,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.89';
+  const BUILD_VERSION = '1.18.90';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3672,6 +3673,8 @@
   const HK_BATTLE_OFFSCREEN_ACTION_REV='battle-offscreen-action-scroll-20260929-r1';
   const HK_MAP_QUIET_GATE_REV='treasure-map-quiet-gate-20260929-r1';
   const HK_STALE_MODAL_SHELL_CLOSE_REV='stale-modal-shell-close-20260929-r1';
+  const HK_AUTOMATION_TOGGLE_TRUST_REV='automation-toggle-trusted-input-20260929-r1';
+  const HK_COORDINATE_OVERLAY_GUARD_REV='coordinate-overlay-guard-20260929-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -17988,6 +17991,13 @@
         battleAutoToggle.addEventListener('click',event=>{
           event.preventDefault();
           event.stopPropagation();
+          if (!event.isTrusted) {
+            recordDiagnostic('automation-toggle-synthetic-blocked',{
+              revision:HK_AUTOMATION_TOGGLE_TRUST_REV,
+              toggle:'battleAutoToggle'
+            });
+            return;
+          }
           setBattleAutoEnabled(!battleAutoEnabled());
         },true);
         (document.body || document.documentElement)?.appendChild(battleAutoToggle);
@@ -18050,6 +18060,13 @@
         chestAutoToggle.addEventListener('click',event=>{
           event.preventDefault();
           event.stopPropagation();
+          if (!event.isTrusted) {
+            recordDiagnostic('automation-toggle-synthetic-blocked',{
+              revision:HK_AUTOMATION_TOGGLE_TRUST_REV,
+              toggle:'chestAutoToggle'
+            });
+            return;
+          }
           setChestAutoEnabled(!chestAutoEnabled());
         },true);
         (document.body || document.documentElement)?.appendChild(chestAutoToggle);
@@ -18110,6 +18127,13 @@
         lightsAutoToggle.addEventListener('click',event=>{
           event.preventDefault();
           event.stopPropagation();
+          if (!event.isTrusted) {
+            recordDiagnostic('automation-toggle-synthetic-blocked',{
+              revision:HK_AUTOMATION_TOGGLE_TRUST_REV,
+              toggle:'lightsAutoToggle'
+            });
+            return;
+          }
           setLightsAutoEnabled(!lightsAutoEnabled());
         },true);
         (document.body || document.documentElement)?.appendChild(lightsAutoToggle);
@@ -18381,6 +18405,13 @@
         fishingAutoToggle.addEventListener('click',event=>{
           event.preventDefault();
           event.stopPropagation();
+          if (!event.isTrusted) {
+            recordDiagnostic('automation-toggle-synthetic-blocked',{
+              revision:HK_AUTOMATION_TOGGLE_TRUST_REV,
+              toggle:'fishingAutoToggle'
+            });
+            return;
+          }
           setFishingAutoEnabled(!fishingAutoEnabled());
         },true);
         (document.body || document.documentElement)?.appendChild(fishingAutoToggle);
@@ -18920,6 +18951,13 @@
         traderAutoToggle.addEventListener('click',event=>{
           event.preventDefault();
           event.stopPropagation();
+          if (!event.isTrusted) {
+            recordDiagnostic('automation-toggle-synthetic-blocked',{
+              revision:HK_AUTOMATION_TOGGLE_TRUST_REV,
+              toggle:'traderAutoToggle'
+            });
+            return;
+          }
           setTraderAutoEnabled(!traderAutoEnabled());
         },true);
         (document.body || document.documentElement)?.appendChild(traderAutoToggle);
@@ -19297,7 +19335,7 @@
         if (rr && rr.width>0 && rr.height>0) {
           const x=rr.right-Math.max(18,Math.min(28,rr.width*0.04));
           const y=rr.top+Math.max(18,Math.min(28,rr.height*0.06));
-          const sent=dispatchBattleTapAt(x,y,'trader-forbidden-gold-close-corner-'+source);
+          const sent=dispatchMinigameOverlaySafeTapAt(x,y,'trader-forbidden-gold-close-corner-'+source);
           if (sent) {
             try { ok=await waitDeviceNeutralCondition(accepted,1500,70); } catch (_) {}
           }
@@ -19465,7 +19503,7 @@
       if (!ok && clickTarget?.isConnected) {
         const rect=clickTarget.getBoundingClientRect?.();
         if (rect && rect.width>0 && rect.height>0) {
-          const sent=dispatchBattleTapAt(
+          const sent=dispatchMinigameOverlaySafeTapAt(
             rect.left+rect.width/2,
             rect.top+rect.height/2,
             'trader-receipt-ack-center-'+source
@@ -19514,7 +19552,7 @@
       if (!tapped) {
         const rect=target.getBoundingClientRect?.();
         if (rect && rect.width>0 && rect.height>0) {
-          tapped=dispatchBattleTapAt(
+          tapped=dispatchMinigameOverlaySafeTapAt(
             rect.left+rect.width/2,
             rect.top+rect.height/2,
             'trader-approved-modal-confirm-center'
@@ -19764,7 +19802,7 @@
           if (!actionTapped) {
             const rect=clickTarget.getBoundingClientRect?.();
             if (rect && rect.width>0 && rect.height>0) {
-              actionTapped=dispatchBattleTapAt(
+              actionTapped=dispatchMinigameOverlaySafeTapAt(
                 rect.left+rect.width/2,
                 rect.top+rect.height/2,
                 'trader-confirm-center-'+target.lotId
@@ -21968,7 +22006,7 @@
       const x=rr.left+rr.width/2;
       for (const fraction of [0.88,0.83,0.92]) {
         if (runId!==chestAutoRunId || !chestAutoEnabled()) return false;
-        if (dispatchBattleTapAt(x,rr.top+rr.height*fraction,'chest-action-fallback-'+fraction)) {
+        if (dispatchMinigameOverlaySafeTapAt(x,rr.top+rr.height*fraction,'chest-action-fallback-'+fraction)) {
           await new Promise(resolve=>setTimeout(resolve,360));
           if (!treasureModalRoot(null)) return true;
         }
@@ -22460,7 +22498,7 @@
       for (const fraction of [0.90,0.86,0.93]) {
         if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
         const before=getSignature();
-        dispatchBattleTapAt(x,rr.top+rr.height*fraction,'victory-fallback-'+fraction);
+        dispatchMinigameOverlaySafeTapAt(x,rr.top+rr.height*fraction,'victory-fallback-'+fraction);
         await new Promise(resolve=>setTimeout(resolve,520));
         if (getSignature()!==before || !battleVictoryModalRoot()) return true;
       }
@@ -24267,6 +24305,13 @@
       autoMapToggle.addEventListener('click',event=>{
         event.preventDefault();
         event.stopPropagation();
+        if (!event.isTrusted) {
+          recordDiagnostic('automation-toggle-synthetic-blocked',{
+            revision:HK_AUTOMATION_TOGGLE_TRUST_REV,
+            toggle:'autoMapToggle'
+          });
+          return;
+        }
         setAutoMapEnabled(!autoMapEnabled());
       },true);
       document.body.appendChild(autoMapToggle);
@@ -26944,6 +26989,8 @@
       battleOffscreenActionRevision:HK_BATTLE_OFFSCREEN_ACTION_REV,
       mapQuietGateRevision:HK_MAP_QUIET_GATE_REV,
       staleModalShellCloseRevision:HK_STALE_MODAL_SHELL_CLOSE_REV,
+      automationToggleTrustRevision:HK_AUTOMATION_TOGGLE_TRUST_REV,
+      coordinateOverlayGuardRevision:HK_COORDINATE_OVERLAY_GUARD_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
