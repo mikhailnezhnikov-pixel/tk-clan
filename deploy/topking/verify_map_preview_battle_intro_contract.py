@@ -60,3 +60,5 @@ for marker in [
 print("MAP_PREVIEW_BATTLE_INTRO_CONTRACT=PASS")
 
 # trigger build 1.18.85
+
+# trigger after battle-state anchor fix
