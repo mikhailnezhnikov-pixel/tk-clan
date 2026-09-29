@@ -39,7 +39,9 @@ if "treasure-key-ack-after-purchase-20260928-r1" in s:
 
     # A receipt modal with only "Понятно" must not fall through to the old
     # "жду кнопку" stall path.
-    ack_pos=buy.find("if (initialAck && !initialTarget?.element)")
+    ack_pos=buy.find("if (initialAck)")
+    if ack_pos<0:
+        ack_pos=buy.find("if (initialAck && !initialTarget?.element)")
     wait_pos=buy.find("ключ · жду кнопку")
     if ack_pos<0 or wait_pos<0 or ack_pos>=wait_pos:
         raise SystemExit("key acknowledgement must outrank missing purchase-button stall")
