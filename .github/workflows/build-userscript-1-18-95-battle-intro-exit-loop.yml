@@ -133,3 +133,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
+
+# rerun after battle intro regression verifier update
