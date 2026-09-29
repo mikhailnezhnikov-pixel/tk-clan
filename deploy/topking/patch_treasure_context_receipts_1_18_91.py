@@ -63,7 +63,7 @@ helper=r'''    function battleScreenVisiblyCurrent() {
 if s.count(anchor)!=1: raise SystemExit("battle intro anchor missing")
 s=s.replace(anchor,helper+anchor,1)
 
-old_legacy=r'''          if (!/(?:^|\\s)(?:Сражение|Battle)(?:\\s|$)/i.test(text)) return false;
+old_legacy=r'''          if (!/(?:^|\s)(?:Сражение|Battle)(?:\s|$)/i.test(text)) return false;
           if (/Сундук победителя|Victory chest|Winner chest/i.test(text)) return false;
 '''
 new_legacy=r'''          if (!battleIntroOwnTitle(element)) return false;
