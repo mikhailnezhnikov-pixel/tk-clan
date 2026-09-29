@@ -1,10 +1,16 @@
 {
   "schema": 1,
-  "source_version": "1.18.87",
-  "target_version": "1.18.88",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.88.treasure-transaction-gates.candidate.user.js",
-  "primary_marker": "treasure-transaction-gate-20260929-r1",
+  "source_version": "1.18.88",
+  "target_version": "1.18.89",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.89.map-quiet-stale-modal.candidate.user.js",
+  "primary_marker": "treasure-map-quiet-gate-20260929-r1",
   "preserve_markers": [
+    "stale-modal-shell-close-20260929-r1",
+    "treasure-transaction-gate-20260929-r1",
+    "treasure-stale-modal-hard-gate-20260929-r1",
+    "chest-lot-hard-gate-20260929-r1",
+    "treasure-key-global-gate-20260929-r1",
+    "battle-offscreen-action-scroll-20260929-r1",
     "battle-action-modal-div-20260929-r1",
     "battle-preview-resume-20260929-r1",
     "battle-intro-hard-gate-20260929-r1",
@@ -154,6 +160,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-88-treasure-transaction-gates-live-status.txt",
-  "commit_message": "fix: enforce treasure transaction gates in userscript 1.18.88"
+  "audit_status_path": "audit/hk-userscript-1-18-89-map-quiet-stale-modal-live-status.txt",
+  "commit_message": "fix: stabilize map return and stale modal close in userscript 1.18.89"
 }

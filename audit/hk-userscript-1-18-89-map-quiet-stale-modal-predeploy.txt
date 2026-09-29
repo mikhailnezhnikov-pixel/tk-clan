@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_89_MAP_QUIET_STALE_MODAL_PREDEPLOY=PASS
+source_version=1.18.88
+target_version=1.18.89
+map_quiet_ms=1400
+map_quiet_gate=ENABLED
+stale_modal_shell_close=ENABLED
+stale_modal_verified_disappear=ENABLED
+syntax=PASS
+base_sha256=b185dd872e851cb33b5c1ef3fa53ebb7722a84c01d28a914bae8e9eac4b4b610
+candidate_sha256=3c252e86c27b8c7adf39558b237ef54ced7630745ce6470b0d1d9347a23f6ecb
