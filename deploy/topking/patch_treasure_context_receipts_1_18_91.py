@@ -217,8 +217,7 @@ if s.count(preflight_anchor)!=1: raise SystemExit("preflight anchor missing")
 s=s.replace(preflight_anchor,preflight+preflight_anchor,1)
 
 # --- Real map/current-journey screen outranks stale battle/lights DOM.
-get_anchor="    function getSignature() {
-"
+get_anchor="    function getSignature() {\\n"
 get_insert=r'''    function getSignature() {
       const realMapForeground=autoMapMapIsForeground();
       const completedMapForeground=!!(
