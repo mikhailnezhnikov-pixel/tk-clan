@@ -5,7 +5,6 @@
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.93.chest-phase-order.candidate.user.js",
   "primary_marker": "chest-phase-order-20260929-r1",
   "preserve_markers": [
-    "chest-uncommitted-retry-20260929-r1",
     "treasure-exit-confirm-retry-20260929-r1",
     "battle-modal-action-recovery-20260929-r1",
     "treasure-key-purchase-activation-20260929-r1",
