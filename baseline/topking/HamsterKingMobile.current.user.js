@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.91
+// @version      1.18.92
+// @release-note Карта сокровищ: восстановление зависаний по полевым отчётам — бой дожимает открытую карточку бойца, выход из Лабиринта/Сражения подтверждается device-neutral с retry, выкуп найденного ключа подтверждается по фактической смене модалки, карта сама прокручивает активную ячейку в видимую область перед нажатием.
 // @release-note Карта сокровищ: исправлены ложные состояния боя на Сокровищнице/готовой карте; окна полученного ключа теперь всегда подтверждаются как чек, а не повторно трактуются как покупка; левый коридор Сокровищницы имеет собственный hard-gate «Понятно».
 // @release-note Исправлено самопроизвольное выключение Автокарты/Автоламп/Автосундуков: служебные кнопки теперь реагируют только на реальный пользовательский тап. Все координатные fallback-клики торговца, сундуков и финальной награды проходят сквозь HK-оверлеи.
 // @release-note Автокарта: после возврата на карту введено окно тишины — новая ячейка не нажимается, пока карта не постоит без модалок 1.4 секунды. Зависшие окна (включая яйцо торговца) закрываются по внешней оболочке модалки и подтверждённому исчезновению.
@@ -37,7 +38,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.91';
+  const BUILD_VERSION = '1.18.92';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3680,6 +3681,10 @@
   const HK_KEY_RECEIPT_PRIORITY_REV='treasure-key-receipt-priority-20260929-r1';
   const HK_TREASURY_CORRIDOR_ACK_REV='treasury-corridor-ack-20260929-r1';
   const HK_MAP_DOMINANCE_REV='treasure-map-dominates-stale-minigame-20260929-r1';
+  const HK_MAP_TARGET_SCROLL_REV='treasure-map-target-scroll-20260929-r1';
+  const HK_EXIT_CONFIRM_RETRY_REV='treasure-exit-confirm-retry-20260929-r1';
+  const HK_BATTLE_MODAL_ACTION_RECOVERY_REV='battle-modal-action-recovery-20260929-r1';
+  const HK_KEY_PURCHASE_ACTIVATION_REV='treasure-key-purchase-activation-20260929-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -21165,7 +21170,71 @@
       return match ? Number(match[1]) : null;
     }
 
+    function battleEnemyModalActionButton(expectedCost) {
+      const costText=String(expectedCost ?? '');
+      if (!costText || !battleScreenVisiblyCurrent()) return null;
+      const exactCost=new RegExp('(?:^|\\s)'+costText+'(?:\\s|$)');
+
+      const roots=[...document.querySelectorAll(
+        '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div'
+      )]
+        .filter(visible)
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          return {element,text,rect,area:rect.width*rect.height};
+        })
+        .filter(row=>/МОЖНО\s+ОТЫСКАТЬ|CAN\s+BE\s+FOUND/i.test(row.text))
+        .filter(row=>row.rect.width>=Math.min(260,window.innerWidth*0.40) && row.rect.height>=220)
+        .filter(row=>row.rect.width<=window.innerWidth*0.99 && row.rect.height<=window.innerHeight*0.98)
+        .sort((a,b)=>a.area-b.area);
+
+      const root=roots[0]?.element || null;
+      if (!root) return null;
+      const rr=root.getBoundingClientRect?.();
+      if (!rr) return null;
+
+      const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && !element.disabled && visible(element))
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          let actionable=false;
+          try {
+            actionable=
+              element.matches?.('button,[role="button"],a,[onclick]') ||
+              !!element.onclick ||
+              getComputedStyle(element).cursor==='pointer';
+          } catch (_) {}
+          const cx=rect.left+rect.width/2;
+          let score=0;
+          if (text===costText) score+=520;
+          else if (exactCost.test(text) && text.length<=16) score+=260;
+          if (rect.top>=rr.top+rr.height*0.60) score+=220;
+          if (Math.abs(cx-(rr.left+rr.width/2))<=rr.width*0.32) score+=150;
+          if (rect.width>=rr.width*0.28 && rect.width<=rr.width*0.90) score+=110;
+          if (rect.height>=34 && rect.height<=150) score+=90;
+          if (actionable) score+=120;
+          if (/закрыть|close|×|✕|назад|back|понятно|got it|understood/i.test(text)) score-=900;
+          return {element,score,rect,text};
+        })
+        .filter(row=>row.score>=650)
+        .sort((a,b)=>b.score-a.score || b.rect.width*b.rect.height-a.rect.width*a.rect.height);
+
+      const best=rows[0] || null;
+      if (best) {
+        recordDiagnostic('battle-modal-action-recovered',{
+          revision:HK_BATTLE_MODAL_ACTION_RECOVERY_REV,
+          expectedCost:Number(expectedCost),
+          text:best.text.slice(0,80)
+        });
+      }
+      return best?.element || null;
+    }
+
     function battleActionButton(expectedCost) {
+      const modalAction=battleEnemyModalActionButton(expectedCost);
+      if (modalAction) return modalAction;
       const costText=String(expectedCost ?? '');
       if (!costText) return null;
       const costPattern=new RegExp('(?:^|\\s)'+costText+'(?:\\s|$)');
@@ -25380,7 +25449,47 @@
       });
 
       autoMapLastActionAt=Date.now();
-      if (!dispatchAutoMapTap(button,'leave-modal-confirm-10-'+source)) return false;
+      const leaveAccepted=()=> {
+        const current=autoMapLeaveModalRoot();
+        return !current || current!==modal || autoMapStateFingerprint()!==before;
+      };
+
+      let leaveConfirmed=false;
+      try {
+        leaveConfirmed=await deviceNeutralActivate(
+          button,
+          'leave-modal-confirm-10-'+source,
+          leaveAccepted,
+          1700
+        );
+      } catch (_) {}
+
+      if (!leaveConfirmed && button.isConnected) {
+        const br=button.getBoundingClientRect?.();
+        if (br && br.width>0 && br.height>0) {
+          const sent=dispatchMinigameOverlaySafeTapAt(
+            br.left+br.width/2,
+            br.top+br.height/2,
+            'leave-modal-confirm-10-center-'+source
+          );
+          if (sent) {
+            try { leaveConfirmed=await waitDeviceNeutralCondition(leaveAccepted,1500,70); }
+            catch (_) {}
+          }
+        }
+      }
+
+      recordDiagnostic('leave-modal-confirm-activation',{
+        revision:HK_EXIT_CONFIRM_RETRY_REV,
+        source,
+        success:!!leaveConfirmed
+      });
+
+      if (!leaveConfirmed && autoMapLeaveModalRoot()) {
+        autoMapRetryNotBefore=Date.now()+480;
+        setTimeout(()=>void runAutoMapTick('leave-modal-confirm-retry'),560);
+        return false;
+      }
 
       const started=Date.now();
       while (Date.now()-started<4500) {
@@ -25695,7 +25804,49 @@
         revision:HK_TREASURE_KEY_ANY_RARITY_REV,
         cost
       });
-      if (!dispatchAutoMapTap(target.element,'treasure-key-buy-'+String(cost??'unknown'))) return false;
+      const purchaseRoot=root;
+      const purchaseAccepted=()=> {
+        const current=autoMapTreasureKeyModalRoot();
+        if (!current || current!==purchaseRoot) return true;
+        if (autoMapTreasureKeyAcknowledgeButton(current)) return true;
+        return autoMapStateFingerprint()!==before;
+      };
+
+      let purchaseSent=false;
+      try {
+        purchaseSent=await deviceNeutralActivate(
+          target.element,
+          'treasure-key-buy-'+String(cost??'unknown'),
+          purchaseAccepted,
+          1800
+        );
+      } catch (_) {}
+
+      if (!purchaseSent && target.element?.isConnected) {
+        const tr=target.element.getBoundingClientRect?.();
+        if (tr && tr.width>0 && tr.height>0) {
+          const sent=dispatchMinigameOverlaySafeTapAt(
+            tr.left+tr.width/2,
+            tr.top+tr.height/2,
+            'treasure-key-buy-center-'+String(cost??'unknown')
+          );
+          if (sent) {
+            try {
+              purchaseSent=await waitDeviceNeutralCondition(purchaseAccepted,1800,70);
+            } catch (_) {}
+          }
+        }
+      }
+
+      if (!purchaseSent) {
+        recordDiagnostic('treasure-key-purchase-activation-failed',{
+          revision:HK_KEY_PURCHASE_ACTIVATION_REV,
+          cost
+        });
+        autoMapRetryNotBefore=Date.now()+650;
+        setTimeout(()=>void runAutoMapTick('treasure-key-purchase-activation-retry'),720);
+        return false;
+      }
 
       const started=Date.now();
       while (Date.now()-started<5000) {
@@ -25787,6 +25938,36 @@
       return wait;
     }
 
+    async function autoMapPrepareMapTarget(element,label='map-target') {
+      if (!element || !element.isConnected) return false;
+      try {
+        element.scrollIntoView({block:'center',inline:'center',behavior:'auto'});
+      } catch (_) {
+        try { element.scrollIntoView(); } catch (_) {}
+      }
+
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      await new Promise(resolve=>setTimeout(resolve,100));
+
+      if (!element.isConnected || !visible(element)) return false;
+      const rect=element.getBoundingClientRect?.();
+      if (!rect || rect.width<=0 || rect.height<=0) return false;
+
+      const x=Math.max(1,Math.min(window.innerWidth-1,rect.left+rect.width/2));
+      const y=Math.max(1,Math.min(window.innerHeight-1,rect.top+rect.height/2));
+      const leaf=battleElementFromPointIgnoringOverlays(x,y,element);
+      const ready=!!leaf && (leaf===element || element.contains(leaf) || leaf.contains(element));
+
+      recordDiagnostic('treasure-map-target-prepared',{
+        revision:HK_MAP_TARGET_SCROLL_REV,
+        label:String(label||''),
+        ready,
+        x:Math.round(x),
+        y:Math.round(y)
+      });
+      return ready;
+    }
+
     async function autoMapTapAndConfirm(element,label,costHint=null) {
       if (!element || !visible(element) || !autoMapEnabled()) return false;
 
@@ -25828,8 +26009,29 @@
       if (runId!==autoMapRunId || !autoMapEnabled()) return false;
       autoMapLastActionAt=Date.now();
 
-      if (!dispatchAutoMapTap(element,'auto-map-'+label)) {
+      let firstTap=false;
+      if (/^map-/.test(String(label||''))) {
+        const ready=await autoMapPrepareMapTarget(element,label);
+        if (ready) {
+          const er=element.getBoundingClientRect?.();
+          if (er && er.width>0 && er.height>0) {
+            firstTap=dispatchMinigameOverlaySafeTapAt(
+              er.left+er.width/2,
+              er.top+er.height/2,
+              'auto-map-visible-'+label
+            );
+          }
+        }
+      } else {
+        firstTap=dispatchAutoMapTap(element,'auto-map-'+label);
+      }
+
+      if (!firstTap) {
         autoMapStatus('клик не прошёл',{label});
+        if (/^map-/.test(String(label||''))) {
+          autoMapRetryNotBefore=Date.now()+420;
+          setTimeout(()=>void runAutoMapTick('map-target-tap-retry'),520);
+        }
         return false;
       }
 
@@ -25907,8 +26109,51 @@
       await minigameHumanPause('confirm',{module:'auto-map',label});
       if (runId!==autoMapRunId || !autoMapEnabled()) return false;
       autoMapLastActionAt=Date.now();
-      if (!dispatchAutoMapTap(action,'auto-map-confirm-'+label)) {
-        autoMapRetryNotBefore=Date.now()+1400;
+
+      let confirmationSent=false;
+      if (/(?:leave|exit)/i.test(String(label||''))) {
+        const confirmationRoot=modal;
+        const accepted=()=> {
+          const current=treasureModalRoot(null);
+          return !current || current!==confirmationRoot || autoMapStateFingerprint()!==before;
+        };
+        try {
+          confirmationSent=await deviceNeutralActivate(
+            action,
+            'auto-map-confirm-'+label,
+            accepted,
+            1700
+          );
+        } catch (_) {}
+        if (!confirmationSent && action.isConnected) {
+          const ar=action.getBoundingClientRect?.();
+          if (ar && ar.width>0 && ar.height>0) {
+            const sent=dispatchMinigameOverlaySafeTapAt(
+              ar.left+ar.width/2,
+              ar.top+ar.height/2,
+              'auto-map-confirm-center-'+label
+            );
+            if (sent) {
+              try {
+                confirmationSent=await waitDeviceNeutralCondition(accepted,1500,70);
+              } catch (_) {}
+            }
+          }
+        }
+        recordDiagnostic('treasure-exit-confirm-activation',{
+          revision:HK_EXIT_CONFIRM_RETRY_REV,
+          label:String(label||''),
+          success:!!confirmationSent
+        });
+      } else {
+        confirmationSent=dispatchAutoMapTap(action,'auto-map-confirm-'+label);
+      }
+
+      if (!confirmationSent) {
+        autoMapRetryNotBefore=Date.now()+650;
+        if (/(?:leave|exit)/i.test(String(label||''))) {
+          setTimeout(()=>void runAutoMapTick('exit-confirm-retry'),740);
+        }
         return false;
       }
       autoMapTxnSet('ACTION_CONFIRMED',{label:String(label||''),lotId:autoMapCurrentLot});
@@ -27151,6 +27396,10 @@
       keyReceiptPriorityRevision:HK_KEY_RECEIPT_PRIORITY_REV,
       treasuryCorridorAckRevision:HK_TREASURY_CORRIDOR_ACK_REV,
       mapDominanceRevision:HK_MAP_DOMINANCE_REV,
+      mapTargetScrollRevision:HK_MAP_TARGET_SCROLL_REV,
+      exitConfirmRetryRevision:HK_EXIT_CONFIRM_RETRY_REV,
+      battleModalActionRecoveryRevision:HK_BATTLE_MODAL_ACTION_RECOVERY_REV,
+      keyPurchaseActivationRevision:HK_KEY_PURCHASE_ACTIVATION_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
