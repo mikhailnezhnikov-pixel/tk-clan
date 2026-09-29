@@ -1,0 +1,8 @@
+USERSCRIPT_1_18_95_BATTLE_INTRO_EXIT_LOOP_PREDEPLOY=PASS
+source_version=1.18.94
+target_version=1.18.95
+battle_intro_overlay_ack=ENABLED
+battle_complete_exit_loop=ENABLED
+syntax=PASS
+base_sha256=b48d7eb975bad7c3d1747f0fa1f12e4e2df49204399caaae3c66c7a8b20785af
+candidate_sha256=ac32f62efee26b50bd612f941ade8106308d3522f147c35a39ce09dba38a8d02
