@@ -1,10 +1,15 @@
 {
   "schema": 1,
-  "source_version": "1.18.89",
-  "target_version": "1.18.90",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.90.automation-toggle-guard.candidate.user.js",
-  "primary_marker": "automation-toggle-trusted-input-20260929-r1",
+  "source_version": "1.18.90",
+  "target_version": "1.18.91",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.91.treasure-context-receipts.candidate.user.js",
+  "primary_marker": "battle-context-foreground-20260929-r1",
   "preserve_markers": [
+    "treasure-key-receipt-priority-20260929-r1",
+    "treasury-corridor-ack-20260929-r1",
+    "treasure-map-dominates-stale-minigame-20260929-r1",
+    "automation-toggle-trusted-input-20260929-r1",
+    "coordinate-overlay-guard-20260929-r1",
     "treasure-map-quiet-gate-20260929-r1",
     "stale-modal-shell-close-20260929-r1",
     "treasure-transaction-gate-20260929-r1",
@@ -161,6 +166,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-90-automation-toggle-guard-live-status.txt",
-  "commit_message": "fix: prevent synthetic automation toggles in userscript 1.18.90"
+  "audit_status_path": "audit/hk-userscript-1-18-91-treasure-context-receipts-live-status.txt",
+  "commit_message": "fix: isolate treasure room context in userscript 1.18.91"
 }
