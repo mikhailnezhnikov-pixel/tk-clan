@@ -70,3 +70,41 @@ if rc==0:
     print("JOURNAL_FILTERED_BEGIN")
     print("\n".join(keep[-60:]) if keep else "(no matching lines)")
     print("JOURNAL_FILTERED_END")
+
+
+print("FILESYSTEM_DIAGNOSTICS_BEGIN")
+for args,label in [
+    (["findmnt","-no","SOURCE,FSTYPE,OPTIONS","/"],"ROOT_MOUNT"),
+    (["findmnt","-no","SOURCE,FSTYPE,OPTIONS","/opt"],"OPT_MOUNT"),
+    (["findmnt","-no","SOURCE,FSTYPE,OPTIONS","/var"],"VAR_MOUNT"),
+    (["df","-hT","/","/opt","/var","/tmp"],"DF"),
+    (["df","-i","/","/opt","/var","/tmp"],"DF_INODES"),
+    (["lsblk","-f"],"LSBLK"),
+    (["systemctl","show",SERVICE,"-p","ExecStart","--value"],"EXECSTART"),
+]:
+    rc,out=run(args,timeout=10)
+    print(label,"rc="+str(rc))
+    print(out[:5000])
+
+for directory in ["/tmp","/opt/hamsterking-license","/var/tmp"]:
+    probe=Path(directory)/".hk_write_probe"
+    try:
+        probe.write_text("probe",encoding="utf-8")
+        probe.unlink(missing_ok=True)
+        print("WRITE_PROBE",directory,"OK")
+    except Exception as exc:
+        print("WRITE_PROBE",directory,"FAIL",type(exc).__name__,str(exc)[:200])
+
+rc,out=run(["find","/opt/hamsterking-license","-maxdepth","3","-type","f","(","-name","*.db","-o","-name","*.sqlite","-o","-name","*.sqlite3",")","-printf","%p %s bytes %m mode\\n"],timeout=10)
+print("SQLITE_FILES rc="+str(rc))
+print(out[:5000] if out else "(none found)")
+
+rc,klog=run(["journalctl","-k","--since","-20 min","--no-pager","-n","300"],timeout=12)
+print("KERNEL_STORAGE_FILTER_BEGIN")
+if rc==0:
+    rows=[line for line in klog.splitlines() if re.search(r"I/O error|read-only|readonly|EXT4|XFS|BTRFS|buffer|filesystem|nvme|vda|sda",line,re.I)]
+    print("\n".join(rows[-100:]) if rows else "(no matching kernel lines)")
+else:
+    print(klog[:2000])
+print("KERNEL_STORAGE_FILTER_END")
+print("FILESYSTEM_DIAGNOSTICS_END")
