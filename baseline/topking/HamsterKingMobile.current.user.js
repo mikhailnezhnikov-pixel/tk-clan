@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.90
+// @version      1.18.91
+// @release-note Карта сокровищ: исправлены ложные состояния боя на Сокровищнице/готовой карте; окна полученного ключа теперь всегда подтверждаются как чек, а не повторно трактуются как покупка; левый коридор Сокровищницы имеет собственный hard-gate «Понятно».
 // @release-note Исправлено самопроизвольное выключение Автокарты/Автоламп/Автосундуков: служебные кнопки теперь реагируют только на реальный пользовательский тап. Все координатные fallback-клики торговца, сундуков и финальной награды проходят сквозь HK-оверлеи.
 // @release-note Автокарта: после возврата на карту введено окно тишины — новая ячейка не нажимается, пока карта не постоит без модалок 1.4 секунды. Зависшие окна (включая яйцо торговца) закрываются по внешней оболочке модалки и подтверждённому исчезновению.
 // @release-note Карта сокровищ: введены жёсткие транзакционные барьеры. Старая модалка всегда закрывается до новой клетки; бой прокручивает к врагу и к кнопке атаки даже ниже экрана; сундуки не переходят к следующему lot без подтверждения изменения/награды; найденный ключ блокирует любой модуль до завершения.
@@ -36,7 +37,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.90';
+  const BUILD_VERSION = '1.18.91';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3675,6 +3676,10 @@
   const HK_STALE_MODAL_SHELL_CLOSE_REV='stale-modal-shell-close-20260929-r1';
   const HK_AUTOMATION_TOGGLE_TRUST_REV='automation-toggle-trusted-input-20260929-r1';
   const HK_COORDINATE_OVERLAY_GUARD_REV='coordinate-overlay-guard-20260929-r1';
+  const HK_BATTLE_CONTEXT_FOREGROUND_REV='battle-context-foreground-20260929-r1';
+  const HK_KEY_RECEIPT_PRIORITY_REV='treasure-key-receipt-priority-20260929-r1';
+  const HK_TREASURY_CORRIDOR_ACK_REV='treasury-corridor-ack-20260929-r1';
+  const HK_MAP_DOMINANCE_REV='treasure-map-dominates-stale-minigame-20260929-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -25017,6 +25022,72 @@
       return ok;
     }
 
+    function autoMapTreasuryCorridorModalRoot() {
+      if (!autoMapTreasuryScreenVisible()) return null;
+      const title=/(?:Левый|Средний|Правый)\\s+коридор|(?:Left|Middle|Right)\\s+corridor/i;
+      const rows=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
+        .filter(visible)
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() || {width:0,height:0};
+          const ack=[...element.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+            .find(child=>/^(?:Понятно|Got it|Understood|OK|Okay)$/i.test(clean(child.innerText||child.textContent||'').trim()) && visible(child));
+          return {element,text,rect,ack,area:rect.width*rect.height};
+        })
+        .filter(row=>title.test(row.text) && row.ack)
+        .filter(row=>row.rect.width>=Math.min(240,window.innerWidth*0.35) && row.rect.height>=140)
+        .sort((a,b)=>a.area-b.area);
+      return rows[0]?.element || null;
+    }
+
+    async function autoMapAcknowledgeTreasuryCorridor() {
+      const root=autoMapTreasuryCorridorModalRoot();
+      if (!autoMapEnabled() || !root) return false;
+      const ack=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>element && !element.disabled && visible(element))
+        .find(element=>/^(?:Понятно|Got it|Understood|OK|Okay)$/i.test(clean(element.innerText||element.textContent||'').trim()));
+      if (!ack) return false;
+
+      autoMapStatus('treasury → понятно',{
+        revision:HK_TREASURY_CORRIDOR_ACK_REV
+      });
+      await autoMapWaitActionGap();
+      if (!autoMapEnabled()) return false;
+
+      const accepted=()=>!autoMapTreasuryCorridorModalRoot();
+      let ok=false;
+      try {
+        ok=await deviceNeutralActivate(
+          ack,
+          'treasury-corridor-ack',
+          accepted,
+          1600
+        );
+      } catch (_) {}
+      if (!ok && ack.isConnected) {
+        const rect=ack.getBoundingClientRect?.();
+        if (rect && rect.width>0 && rect.height>0) {
+          const sent=dispatchMinigameOverlaySafeTapAt(
+            rect.left+rect.width/2,
+            rect.top+rect.height/2,
+            'treasury-corridor-ack-center'
+          );
+          if (sent) ok=await waitDeviceNeutralCondition(accepted,1600,70);
+        }
+      }
+
+      recordDiagnostic('treasury-corridor-acknowledged',{
+        revision:HK_TREASURY_CORRIDOR_ACK_REV,
+        success:!!ok
+      });
+      if (ok) {
+        autoMapRetryNotBefore=0;
+        lastSignature='';
+        setTimeout(()=>void runAutoMapTick('treasury-corridor-acked'),160);
+      }
+      return !!ok;
+    }
+
     function autoMapTreasuryChestRows() {
       return [...document.querySelectorAll('[data-lot-id*="mf_fairlot_minigame_treasury_room_big_chest"]')]
         .filter(visible)
@@ -25590,7 +25661,11 @@
 
       const initialAck=autoMapTreasureKeyAcknowledgeButton(root);
       const initialTarget=autoMapTreasureKeyPurchaseButton(root);
-      if (initialAck && !initialTarget?.element) {
+      if (initialAck) {
+        autoMapStatus('ключ · подтверждаю',{
+          revision:HK_KEY_RECEIPT_PRIORITY_REV,
+          source:'already-received'
+        });
         return await autoMapAcknowledgeTreasureKey(root,'already-received');
       }
 
@@ -25635,10 +25710,16 @@
         if (root) {
           const ack=autoMapTreasureKeyAcknowledgeButton(root);
           const purchase=autoMapTreasureKeyPurchaseButton(root);
-          if (ack && !purchase?.element) {
-            recordDiagnostic('treasure-key-receipt-visible',{
-              revision:HK_TREASURE_KEY_ACK_REV,
+          if (ack) {
+            autoMapStatus('ключ · подтверждаю',{
+              revision:HK_KEY_RECEIPT_PRIORITY_REV,
+              source:'after-purchase',
               cost
+            });
+            recordDiagnostic('treasure-key-receipt-visible',{
+              revision:HK_KEY_RECEIPT_PRIORITY_REV,
+              cost,
+              purchaseHeuristic:!!purchase?.element
             });
             return await autoMapAcknowledgeTreasureKey(root,'after-purchase');
           }
@@ -25872,12 +25953,47 @@
       return ok;
     }
 
+    function battleScreenVisiblyCurrent() {
+      // The page-title bar is wide; the small navbar "Сражение" label is not.
+      const rows=[...document.querySelectorAll('h1,h2,h3,[role="heading"],header,div,span')]
+        .filter(visible)
+        .map(element=>({
+          element,
+          text:clean(element.innerText||element.textContent||'').trim(),
+          rect:element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0}
+        }))
+        .filter(row=>/^(?:Сражение|Battle)$/i.test(row.text))
+        .filter(row=>
+          row.rect.width>=window.innerWidth*0.30 &&
+          row.rect.height>=28 &&
+          row.rect.top>=0 &&
+          row.rect.top<=window.innerHeight*0.72
+        )
+        .filter(row=>autoMapElementIsForeground(row.element));
+      return rows.length>0;
+    }
+
+    function battleIntroOwnTitle(root) {
+      if (!root) return false;
+      const exact=/^(?:Сражение|Battle)$/i;
+      const direct=clean(root.firstElementChild?.innerText||root.firstElementChild?.textContent||'').trim();
+      if (exact.test(direct)) return true;
+      return [...root.querySelectorAll('h1,h2,h3,[role="heading"],strong,b,div,span')]
+        .filter(visible)
+        .some(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.();
+          return exact.test(text) && rect && rect.width>40 && rect.height>16;
+        });
+    }
+
     function battleIntroModalRootLegacy() {
       const rows=[...document.querySelectorAll('[role="dialog"],[class*="modal"],[class*="popup"],div')]
         .filter(element=>visible(element))
         .filter(element=>{
           const text=clean(element.innerText||element.textContent||'').trim();
-          if (!/(?:^|\s)(?:Сражение|Battle)(?:\s|$)/i.test(text)) return false;
+          if (!battleIntroOwnTitle(element)) return false;
+          if (!battleScreenVisiblyCurrent()) return false;
           if (/Сундук победителя|Victory chest|Winner chest/i.test(text)) return false;
           const ack=[...element.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
             .some(child=>/^(?:Понятно|Got it|Understood|OK|Okay)$/i.test(clean(child.innerText||child.textContent||'').trim()) && visible(child));
@@ -25901,6 +26017,11 @@
       }
 
       const exactAck=/^(?:Понятно|Got it|Understood|OK|Okay)$/i;
+      // Exact visible battle title contract: Сражение|Battle.
+      // Stale battle lots remain mounted while Treasury/Lights/Map are current.
+      // Never classify a generic "Понятно" as battle unless the visible page
+      // itself is the battle room.
+      if (!battleScreenVisiblyCurrent()) return null;
       let battleContext=battleRawContextPresent();
       try { battleContext=battleContext || !!battleFairState(); } catch (_) {}
       if (!battleContext) return null;
@@ -26186,6 +26307,19 @@
         }
       }
 
+      const treasuryCorridorModal=autoMapTreasuryCorridorModalRoot();
+      if (treasuryCorridorModal) {
+        autoMapRunning=true;
+        const treasuryAckRunId=autoMapRunId;
+        try {
+          const ok=await autoMapAcknowledgeTreasuryCorridor();
+          if (!ok) setTimeout(()=>void runAutoMapTick('treasury-corridor-ack-retry'),320);
+          return ok;
+        } finally {
+          if (treasuryAckRunId===autoMapRunId) autoMapRunning=false;
+        }
+      }
+
       const openBattlePreview=autoMapBattlePreviewRoot();
       if (openBattlePreview) {
         autoMapRunning=true;
@@ -26352,6 +26486,19 @@
           return !!closed;
         } finally {
           if (staleRunId===autoMapRunId) autoMapRunning=false;
+        }
+      }
+
+      const completedMapButtonPreflight=treasureGuideScreenVisible()?autoMapJourneyButton():null;
+      if (treasureGuideScreenVisible() && (autoMapMapIsForeground() || !!completedMapButtonPreflight) && !treasureModalRoot(null)) {
+        if (!battleScreenVisiblyCurrent()) {
+          battleIntroGateUntil=0;
+          if (battleAutoRunning) {
+            battleAutoRunId+=1;
+            battleAutoRunning=false;
+          }
+          battleFinalRewardClaimed=false;
+          battleFinalRewardClaimedAt=0;
         }
       }
 
@@ -26726,6 +26873,15 @@
     }
 
     function getSignature() {
+      const realMapForeground=autoMapMapIsForeground();
+      const completedMapForeground=!!(
+        treasureGuideScreenVisible() &&
+        autoMapJourneyButton() &&
+        autoMapElementIsForeground(autoMapJourneyButton())
+      );
+      if (realMapForeground || completedMapForeground) {
+        return 'NONE';
+      }
       const lightsReward=lightsRewardElement();
       if (lightsReward) return 'LIGHTS|REWARD|mf_fairlot_lights_out_reward_slot';
       const lights = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')].filter(visible);
@@ -26991,6 +27147,10 @@
       staleModalShellCloseRevision:HK_STALE_MODAL_SHELL_CLOSE_REV,
       automationToggleTrustRevision:HK_AUTOMATION_TOGGLE_TRUST_REV,
       coordinateOverlayGuardRevision:HK_COORDINATE_OVERLAY_GUARD_REV,
+      battleContextForegroundRevision:HK_BATTLE_CONTEXT_FOREGROUND_REV,
+      keyReceiptPriorityRevision:HK_KEY_RECEIPT_PRIORITY_REV,
+      treasuryCorridorAckRevision:HK_TREASURY_CORRIDOR_ACK_REV,
+      mapDominanceRevision:HK_MAP_DOMINANCE_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
