@@ -10,8 +10,8 @@ required=[
   "battle-action-modal-div-20260929-r1",
   "function battleActionButton(expectedCost)",
   "button,[role=\"button\"],a,[onclick],div,span",
-  "battleElementFromPointIgnoringOverlays(x,y,element)",
-  "battleElementFromPointIgnoringOverlays(px,py,null)",
+  "dispatchBattleOverlaySafeTap(ack,'lights-clear-stale-ack-'+slot)",
+  "dispatchMinigameOverlaySafeTapAt(",
   "function waitBattleActionButton(expectedCost,runId,timeoutMs=4200)",
   "battle-action-button-found",
 ]
@@ -19,14 +19,29 @@ for marker in required:
     if marker not in s:
         raise SystemExit("minigame modal actions contract broken: "+marker)
 
-# The old raw point dispatch must be gone from both generic mobile tap helpers.
+# Preserve the shared dispatcher contract; Lights-specific recovery must use
+# overlay-safe paths without changing generic minigame semantics.
 start=s.find("function dispatchBattleTap(element")
 end=s.find("function battleUiOverlays()",start)
 block=s[start:end]
-if "document.elementFromPoint(x,y) || element" in block:
-    raise SystemExit("dispatchBattleTap still lets HK overlays intercept")
-if "document.elementFromPoint(px,py)" in block:
-    raise SystemExit("dispatchBattleTapAt still lets HK overlays intercept")
+for marker in [
+    "document.elementFromPoint(x,y) || element",
+    "document.elementFromPoint(px,py)",
+]:
+    if marker not in block:
+        raise SystemExit("shared tap contract changed unexpectedly: "+marker)
+
+lights_start=s.find("async function clearStaleLightsModalBeforeStep")
+lights_end=s.find("function lightsRewardElement()",lights_start)
+lights=s[lights_start:lights_end]
+for marker in [
+    "dispatchBattleOverlaySafeTap(ack,'lights-clear-stale-ack-'+slot)",
+    "dispatchBattleOverlaySafeTap(close,'lights-clear-stale-close-'+slot)",
+    "dispatchBattleOverlaySafeTap(ackButton,'lights-confirm-ack-fallback-'+slot)",
+    "dispatchMinigameOverlaySafeTapAt(",
+]:
+    if marker not in s:
+        raise SystemExit("lights overlay-safe recovery missing: "+marker)
 
 # Battle action search must include non-semantic game controls while rejecting
 # huge modal containers and close/ack controls.
