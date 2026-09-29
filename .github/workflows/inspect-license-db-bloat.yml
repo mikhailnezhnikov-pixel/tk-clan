@@ -1,0 +1,63 @@
+name: Inspect License DB Bloat
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-license-db-bloat.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inspect database allocation
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 python3 - <<'PY'
+          import sqlite3, os
+          path="/var/lib/hamsterking-license/licenses.db"
+          uri="file:"+path+"?mode=ro"
+          db=sqlite3.connect(uri, uri=True, timeout=30)
+          print("LICENSE_DB_BLOAT_INSPECT=1")
+          print("DB_BYTES",os.path.getsize(path))
+          for pragma in ["page_size","page_count","freelist_count","journal_mode"]:
+              try:
+                  print(pragma.upper(),db.execute("PRAGMA "+pragma).fetchone()[0])
+              except Exception as exc:
+                  print(pragma.upper(),"ERROR",type(exc).__name__)
+          try:
+              rows=db.execute("""
+                SELECT name, SUM(pgsize) AS bytes, COUNT(*) AS pages
+                FROM dbstat
+                GROUP BY name
+                ORDER BY bytes DESC
+                LIMIT 30
+              """).fetchall()
+              print("DBSTAT_TOP_BEGIN")
+              for name,size,pages in rows:
+                  print(int(size or 0),int(pages or 0),name)
+              print("DBSTAT_TOP_END")
+          except Exception as exc:
+              print("DBSTAT_ERROR",type(exc).__name__,str(exc)[:200])
+          db.close()
+          PY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
