@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_86_BATTLE_PREVIEW_RESUME_PREDEPLOY=PASS
+source_version=1.18.85
+target_version=1.18.86
+gold_stale_background=BLOCKED
+battle_open_preview_resume=ENABLED
+battle_preview_primary_action=ENABLED
+battle_preview_resume_contract=PASS
+syntax=PASS
+base_sha256=3dae0c2055f7903db78b34815559d2ba42819db855988ef9a1f34411bf6f910b
+candidate_sha256=346ea0854b77a5c5dfacfb3b0b74dcc1d2909eeafd12fc086537f856ea1afe6c
