@@ -1,0 +1,40 @@
+name: Inspect Userscript Service Health
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/inspect_userscript_service_health.py'
+      - '.github/workflows/inspect-userscript-service-health.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inspect live service
+        run: |
+          set -euo pipefail
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            deploy/topking/inspect_userscript_service_health.py \
+            root@89.125.1.71:/tmp/inspect_userscript_service_health.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 'python3 /tmp/inspect_userscript_service_health.py'
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
