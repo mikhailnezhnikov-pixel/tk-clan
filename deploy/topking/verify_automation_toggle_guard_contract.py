@@ -5,7 +5,6 @@ p=Path(sys.argv[1] if len(sys.argv)>1 else "/tmp/HamsterKingMobile.user.js")
 s=p.read_text(encoding="utf-8")
 
 required=[
-  "// @version      1.18.90",
   "automation-toggle-trusted-input-20260929-r1",
   "coordinate-overlay-guard-20260929-r1",
   "automation-toggle-synthetic-blocked",
