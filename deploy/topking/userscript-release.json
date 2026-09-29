@@ -1,13 +1,14 @@
 {
   "schema": 1,
-  "source_version": "1.18.92",
-  "target_version": "1.18.93",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.93.chest-phase-order.candidate.user.js",
-  "primary_marker": "chest-phase-order-20260929-r1",
+  "source_version": "1.18.93",
+  "target_version": "1.18.94",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.94.treasure-exit-battle-confirm.candidate.user.js",
+  "primary_marker": "battle-open-modal-confirm-20260930-r1",
   "preserve_markers": [
-    "treasure-exit-confirm-retry-20260929-r1",
-    "battle-modal-action-recovery-20260929-r1",
-    "treasure-key-purchase-activation-20260929-r1",
+    "chest-exhausted-exit-20260930-r1",
+    "chest-phase-order-20260929-r1",
+    "chest-uncommitted-retry-20260929-r1",
+    "treasure-map-target-scroll-20260929-r1",
     "battle-context-foreground-20260929-r1",
     "treasure-key-receipt-priority-20260929-r1",
     "treasury-corridor-ack-20260929-r1",
@@ -20,7 +21,9 @@
     "chest-lot-hard-gate-20260929-r1",
     "treasure-key-global-gate-20260929-r1",
     "battle-offscreen-action-scroll-20260929-r1",
-    "treasure-map-target-scroll-20260929-r1",
+    "treasure-exit-confirm-retry-20260929-r1",
+    "battle-modal-action-recovery-20260929-r1",
+    "treasure-key-purchase-activation-20260929-r1",
     "treasure-stale-modal-hard-gate-20260929-r1",
     "battle-action-modal-div-20260929-r1",
     "battle-preview-resume-20260929-r1",
@@ -171,6 +174,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-93-chest-phase-order-live-status.txt",
-  "commit_message": "fix: enforce dig-first chest phase order in userscript 1.18.93"
+  "audit_status_path": "audit/hk-userscript-1-18-94-treasure-exit-battle-confirm-live-status.txt",
+  "commit_message": "fix: exit exhausted chests and confirm battle modal in userscript 1.18.94"
 }

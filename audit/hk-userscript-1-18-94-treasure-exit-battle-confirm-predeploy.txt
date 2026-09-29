@@ -1,0 +1,8 @@
+USERSCRIPT_1_18_94_TREASURE_EXIT_BATTLE_CONFIRM_PREDEPLOY=PASS
+source_version=1.18.93
+target_version=1.18.94
+chest_exhausted_exit=ENABLED
+battle_open_modal_confirm=ENABLED
+syntax=PASS
+base_sha256=8a4f60a38ae5fa031eef3c40ac52ba5ec41a692f09c567f295e888626879ad95
+candidate_sha256=b48d7eb975bad7c3d1747f0fa1f12e4e2df49204399caaae3c66c7a8b20785af
