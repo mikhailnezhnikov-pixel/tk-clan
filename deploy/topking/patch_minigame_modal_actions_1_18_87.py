@@ -128,17 +128,67 @@ new_action=r'''    function battleActionButton(expectedCost) {
 '''
 rep(old_action,new_action,"battle action selector")
 
-old_tap=r'''      const leaf=document.elementFromPoint(x,y) || element;'''
-rep(old_tap,
-    r'''      const leaf=battleElementFromPointIgnoringOverlays(x,y,element) || element;''',
-    "dispatch battle tap pass-through",
-    count=1)
+# Keep the shared minigame dispatcher unchanged (existing lights contract),
+# but route Lights-specific modal clicks through the already proven overlay-safe
+# battle dispatcher so floating HK controls cannot receive those taps.
+for old,new,label in [
+    ("dispatchBattleTap(ack,'lights-understood-after-change-'+slot)",
+     "dispatchBattleOverlaySafeTap(ack,'lights-understood-after-change-'+slot)",
+     "lights understood safe tap"),
+    ("dispatchBattleTap(close,'lights-close-after-change-'+slot)",
+     "dispatchBattleOverlaySafeTap(close,'lights-close-after-change-'+slot)",
+     "lights close safe tap"),
+    ("dispatchBattleTap(ack,'lights-clear-stale-ack-'+slot)",
+     "dispatchBattleOverlaySafeTap(ack,'lights-clear-stale-ack-'+slot)",
+     "lights stale ack safe tap"),
+    ("dispatchBattleTap(close,'lights-clear-stale-close-'+slot)",
+     "dispatchBattleOverlaySafeTap(close,'lights-clear-stale-close-'+slot)",
+     "lights stale close safe tap"),
+    ("dispatchBattleTap(ackButton,'lights-confirm-ack-fallback-'+slot)",
+     "dispatchBattleOverlaySafeTap(ackButton,'lights-confirm-ack-fallback-'+slot)",
+     "lights ack fallback safe tap"),
+    ("dispatchBattleTap(reward,'lights-final-reward-open')",
+     "dispatchBattleOverlaySafeTap(reward,'lights-final-reward-open')",
+     "lights reward open safe tap"),
+    ("dispatchBattleTap(claim,'lights-final-reward-claim-bottom-action')",
+     "dispatchBattleOverlaySafeTap(claim,'lights-final-reward-claim-bottom-action')",
+     "lights reward claim safe tap"),
+    ("dispatchBattleTap(result.ack,'lights-final-reward-understood')",
+     "dispatchBattleOverlaySafeTap(result.ack,'lights-final-reward-understood')",
+     "lights reward ack safe tap"),
+]:
+    rep(old,new,label)
 
-old_tap_at=r'''      const leaf=document.elementFromPoint(px,py);'''
-rep(old_tap_at,
-    r'''      const leaf=battleElementFromPointIgnoringOverlays(px,py,null);''',
-    "dispatch battle tap-at pass-through",
-    count=1)
+safe_anchor=r'''    function battleElementInViewport(element) {'''
+safe_helper=r'''    function dispatchMinigameOverlaySafeTapAt(x,y,label='minigame-overlay-safe-tap-at') {
+      const px=Math.max(1,Math.min(window.innerWidth-1,Number(x)||1));
+      const py=Math.max(1,Math.min(window.innerHeight-1,Number(y)||1));
+      const leaf=battleElementFromPointIgnoringOverlays(px,py,null);
+      if (!leaf) return false;
+      const options={bubbles:true,cancelable:true,clientX:px,clientY:py,screenX:px,screenY:py,button:0,buttons:1,pointerId:1,pointerType:'touch',isPrimary:true};
+      try { leaf.dispatchEvent(new PointerEvent('pointerdown',options)); } catch (_) {}
+      try { leaf.dispatchEvent(new MouseEvent('mousedown',{...options,buttons:1})); } catch (_) {}
+      try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
+      try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
+      try { leaf.click?.(); } catch (_) {}
+      recordDiagnostic('minigame-overlay-safe-tap',{
+        revision:HK_MINIGAME_OVERLAY_PASSTHROUGH_REV,
+        label,
+        x:Math.round(px),
+        y:Math.round(py),
+        tag:leaf.tagName||''
+      });
+      return true;
+    }
+
+'''
+if s.count(safe_anchor)!=1:
+    raise SystemExit("safe coordinate helper anchor missing")
+s=s.replace(safe_anchor,safe_helper+safe_anchor,1)
+
+rep("      return dispatchBattleTapAt(\n        rr.left+rr.width/2,\n        rr.top+rr.height*0.86,\n        'lights-confirm-cost-fallback-'+slot\n      );",
+    "      return dispatchMinigameOverlaySafeTapAt(\n        rr.left+rr.width/2,\n        rr.top+rr.height*0.86,\n        'lights-confirm-cost-fallback-'+slot\n      );",
+    "lights coordinate fallback pass-through")
 
 # Extend wait slightly for animated mobile modals.
 rep("    function waitBattleActionButton(expectedCost,runId,timeoutMs=2500) {",
@@ -155,8 +205,8 @@ for marker in [
     "minigame-overlay-pass-through-20260929-r1",
     "battle-action-modal-div-20260929-r1",
     "button,[role=\"button\"],a,[onclick],div,span",
-    "battleElementFromPointIgnoringOverlays(x,y,element)",
-    "battleElementFromPointIgnoringOverlays(px,py,null)",
+    "dispatchBattleOverlaySafeTap(ack,'lights-clear-stale-ack-'+slot)",
+    "dispatchMinigameOverlaySafeTapAt(",
     "timeoutMs=4200",
     "battle-preview-resume-20260929-r1",
     "battle-intro-hard-gate-20260929-r1",
