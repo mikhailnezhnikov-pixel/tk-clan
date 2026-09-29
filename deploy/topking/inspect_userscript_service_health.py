@@ -108,3 +108,33 @@ else:
     print(klog[:2000])
 print("KERNEL_STORAGE_FILTER_END")
 print("FILESYSTEM_DIAGNOSTICS_END")
+
+
+print("DISK_USAGE_DIAGNOSTICS_BEGIN")
+for directory in ["/","/var","/opt","/root","/home"]:
+    rc,out=run(["du","-x","-h","--max-depth=1",directory],timeout=25)
+    print("DU",directory,"rc="+str(rc))
+    if out:
+        lines=out.splitlines()
+        def size_key(line):
+            try:
+                val=line.split()[0].upper()
+                mult=1
+                if val.endswith("K"): mult=1024
+                elif val.endswith("M"): mult=1024**2
+                elif val.endswith("G"): mult=1024**3
+                elif val.endswith("T"): mult=1024**4
+                num=float(val[:-1]) if val[-1:] in "KMGT" else float(val)
+                return num*mult
+            except Exception:
+                return 0
+        print("\n".join(sorted(lines,key=size_key,reverse=True)[:20]))
+
+rc,out=run(["bash","-lc","find / -xdev -type f -size +100M -printf '%s %p\\n' 2>/dev/null | sort -nr | head -50"],timeout=35)
+print("LARGE_FILES rc="+str(rc))
+print(out[:12000] if out else "(none)")
+
+rc,out=run(["bash","-lc","grep -nE 'sqlite3|connect\\(|DB_|\.db|database' /opt/hamsterking-license/server.py | head -120"],timeout=8)
+print("SERVER_DB_REFERENCES rc="+str(rc))
+print(out[:8000] if out else "(none)")
+print("DISK_USAGE_DIAGNOSTICS_END")
