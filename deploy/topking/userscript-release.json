@@ -151,5 +151,5 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-85-map-preview-battle-intro-live-status.txt",
-  "commit_message": "fix: stop false gold preview stalls and gate battle intro in userscript 1.18.85"
+  "commit_message": "fix: stop false gold preview stalls and gate battle intro in userscript 1.18.85 r1"
 }
