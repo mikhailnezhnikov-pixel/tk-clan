@@ -5,6 +5,7 @@ on:
     paths:
       - 'deploy/topking/patch_treasure_chest_phase_order_1_18_93.py'
       - 'deploy/topking/verify_treasure_chest_phase_order_contract.py'
+      - 'deploy/topking/verify_treasure_context_receipts_contract.py'
       - '.github/workflows/build-userscript-1-18-93-chest-phase-order.yml'
   workflow_dispatch:
 
