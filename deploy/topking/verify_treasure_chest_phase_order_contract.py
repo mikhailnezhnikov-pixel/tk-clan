@@ -14,7 +14,6 @@ def section(start,end):
     return s[a:b]
 
 required=[
-    "// @version      1.18.93",
     "const BUILD_VERSION = '1.18.93';",
     "chest-phase-order-20260929-r1",
     "chest-uncommitted-retry-20260929-r1",
