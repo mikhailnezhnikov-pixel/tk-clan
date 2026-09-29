@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.86
+// @version      1.18.87
+// @release-note Карта сокровищ: исправлены зависания в окнах мини-игр на мобильном. Сражение теперь находит широкую кнопку атаки даже если игра рисует её как div/span, а системные кнопки Автокарты больше не перехватывают координатные клики по «Понятно» и кнопкам стоимости.
 // @release-note Карта сокровищ — Сражение: исправлен зависший предпросмотр. Фоновая модалка Золотых монет больше не перехватывает Автокарту; если окно Сражения уже открыто, Автокарта сама нажимает кнопку входа с ягодами и продолжает бой.
 // @release-note Автокарта: убрано ложное «закрываю Золотые монеты» на превью локаций. Сражение: «Понятно/OK» теперь жёстко блокирует выход до загрузки поля.
 // @release-note 28.09 · Интерфейс: у герба плавающей кнопки убран чёрный квадрат. Чёрный фон исходного JPG теперь вырезается в прозрачность мягкой маской прямо в браузере.
@@ -32,7 +33,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.86';
+  const BUILD_VERSION = '1.18.87';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3660,6 +3661,8 @@
   const HK_BATTLE_VISIBLE_POINT_TRUTH_REV='battle-visible-point-truth-20260929-r1';
   const HK_BATTLE_INTRO_HARD_GATE_REV='battle-intro-hard-gate-20260929-r1';
   const HK_BATTLE_PREVIEW_RESUME_REV='battle-preview-resume-20260929-r1';
+  const HK_MINIGAME_OVERLAY_PASSTHROUGH_REV='minigame-overlay-pass-through-20260929-r1';
+  const HK_BATTLE_ACTION_MODAL_DIV_REV='battle-action-modal-div-20260929-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -20140,7 +20143,7 @@
       if (!root) return false;
       const rr=root.getBoundingClientRect?.();
       if (!rr) return false;
-      return dispatchBattleTapAt(
+      return dispatchMinigameOverlaySafeTapAt(
         rr.left+rr.width/2,
         rr.top+rr.height*0.86,
         'lights-confirm-cost-fallback-'+slot
@@ -20258,11 +20261,11 @@
         if (!root) return changed;
         if (!changed) { await new Promise(r=>setTimeout(r,80)); continue; }
         const ack=lightsAcknowledgeButton(root);
-        if (ack && dispatchBattleTap(ack,'lights-understood-after-change-'+slot)) {
+        if (ack && dispatchBattleOverlaySafeTap(ack,'lights-understood-after-change-'+slot)) {
           await new Promise(r=>setTimeout(r,180)); continue;
         }
         const close=lightsModalCloseButton(root);
-        if (close && dispatchBattleTap(close,'lights-close-after-change-'+slot)) {
+        if (close && dispatchBattleOverlaySafeTap(close,'lights-close-after-change-'+slot)) {
           await new Promise(r=>setTimeout(r,180)); continue;
         }
         recordDiagnostic('lights-modal-drain-wait',{revision:HK_LIGHTS_STRICT_MODAL_REV,slot,reason:'strict-dialog-has-no-safe-dismiss'});
@@ -20278,11 +20281,11 @@
         const root=lightsModalRoot();
         if (!root) return true;
         const ack=lightsAcknowledgeButton(root);
-        if (ack && dispatchBattleTap(ack,'lights-clear-stale-ack-'+slot)) {
+        if (ack && dispatchBattleOverlaySafeTap(ack,'lights-clear-stale-ack-'+slot)) {
           await new Promise(r=>setTimeout(r,220)); continue;
         }
         const close=lightsModalCloseButton(root);
-        if (close && dispatchBattleTap(close,'lights-clear-stale-close-'+slot)) {
+        if (close && dispatchBattleOverlaySafeTap(close,'lights-clear-stale-close-'+slot)) {
           await new Promise(r=>setTimeout(r,220)); continue;
         }
         recordDiagnostic('lights-stale-modal-blocked',{revision:HK_LIGHTS_STRICT_MODAL_REV,slot,reason:'no-safe-dismiss'});
@@ -20392,7 +20395,7 @@
           );
 
           if (!acknowledged && ackButton.isConnected) {
-            const sent=dispatchBattleTap(ackButton,'lights-confirm-ack-fallback-'+slot);
+            const sent=dispatchBattleOverlaySafeTap(ackButton,'lights-confirm-ack-fallback-'+slot);
             if (sent) acknowledged=await waitDeviceNeutralCondition(ackAccepted,1300,60);
           }
 
@@ -20586,7 +20589,7 @@
           return {ok:true,claimed:false,reason:'reward-not-visible'};
         }
 
-        if (!dispatchBattleTap(reward,'lights-final-reward-open')) {
+        if (!dispatchBattleOverlaySafeTap(reward,'lights-final-reward-open')) {
           return {ok:false,claimed:false,reason:'reward-open-tap-failed'};
         }
 
@@ -20615,7 +20618,7 @@
         text:clean(claim.innerText||claim.textContent||'').trim().slice(0,80)
       });
 
-      if (!dispatchBattleTap(claim,'lights-final-reward-claim-bottom-action')) {
+      if (!dispatchBattleOverlaySafeTap(claim,'lights-final-reward-claim-bottom-action')) {
         return {ok:false,claimed:false,reason:'reward-claim-tap-failed'};
       }
 
@@ -20626,7 +20629,7 @@
 
       let acknowledged=false;
       if (result.ack) {
-        if (!dispatchBattleTap(result.ack,'lights-final-reward-understood')) {
+        if (!dispatchBattleOverlaySafeTap(result.ack,'lights-final-reward-understood')) {
           return {ok:false,claimed:true,reason:'reward-ack-tap-failed'};
         }
         acknowledged=true;
@@ -21111,29 +21114,84 @@
 
     function battleActionButton(expectedCost) {
       const costText=String(expectedCost ?? '');
-      const candidates=[...document.querySelectorAll('button,[role="button"],a')]
-        .filter(element=>element && element!==battleAutoToggle && element.id!=='hkBattleAutoToggle')
-        .filter(element=>!element.disabled && visible(element))
-        .map(element=>{
-          const text=clean(element.innerText||element.textContent||'');
-          const images=[...element.querySelectorAll?.('img')||[]]
-            .map(img=>String(img.alt||'')+' '+String(img.src||'')).join(' ');
-          const rect=element.getBoundingClientRect?.() || {width:0,height:0,top:0};
-          let score=0;
-          if (text===costText) score+=100;
-          else if (costText && new RegExp('(?:^|\s)'+costText+'(?:\s|$)').test(text)) score+=35;
-          if (/sword|attack|fight|weapon|blade|меч|атак/i.test(images+' '+text)) score+=50;
-          if (rect.width>=120 && rect.height>=36) score+=10;
-          if (rect.top>window.innerHeight*0.45) score+=5;
-          if (/закрыть|close|×|✕|назад|back/i.test(text)) score-=200;
-          return {element,text,score};
-        })
-        .filter(row=>row.score>0)
-        .sort((a,b)=>b.score-a.score);
-      return candidates[0]?.element || null;
+      if (!costText) return null;
+      const costPattern=new RegExp('(?:^|\\s)'+costText+'(?:\\s|$)');
+      const overlays=new Set(battleUiOverlays());
+
+      const raw=[...document.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>
+          element &&
+          !overlays.has(element) &&
+          !element.disabled &&
+          element.getAttribute?.('aria-disabled')!=='true' &&
+          visible(element)
+        );
+
+      const rows=[];
+      const seen=new Set();
+      for (const element of raw) {
+        let target=element;
+        let node=element;
+        for (let depth=0;node && depth<6;depth++,node=node.parentElement) {
+          if (overlays.has(node)) break;
+          if (!visible(node)) continue;
+          let actionable=false;
+          try {
+            const style=getComputedStyle(node);
+            actionable=
+              node.matches?.('button,[role="button"],a,[onclick]') ||
+              !!node.onclick ||
+              style.cursor==='pointer';
+          } catch (_) {}
+          if (actionable) {
+            target=node;
+            break;
+          }
+        }
+        if (!target || seen.has(target) || overlays.has(target)) continue;
+        seen.add(target);
+
+        const text=clean(target.innerText||target.textContent||'').trim();
+        const images=[...target.querySelectorAll?.('img')||[]]
+          .map(img=>String(img.alt||'')+' '+String(img.src||'')).join(' ');
+        const rect=target.getBoundingClientRect?.() || {width:0,height:0,top:0,left:0};
+        const cx=rect.left+rect.width/2;
+        const cy=rect.top+rect.height/2;
+        const viewportArea=Math.max(1,window.innerWidth*window.innerHeight);
+        const area=Math.max(0,rect.width*rect.height);
+
+        let score=0;
+        if (text===costText) score+=240;
+        else if (costPattern.test(text)) score+=110;
+        if (/sword|attack|fight|weapon|blade|меч|атак/i.test(images+' '+text)) score+=150;
+        if (rect.width>=window.innerWidth*0.28 && rect.width<=window.innerWidth*0.86) score+=90;
+        if (rect.height>=36 && rect.height<=150) score+=80;
+        if (cy>=window.innerHeight*0.55) score+=80;
+        if (Math.abs(cx-window.innerWidth/2)<=window.innerWidth*0.30) score+=60;
+        if (area>viewportArea*0.22) score-=420;
+        if (text.length>120) score-=260;
+        if (/закрыть|close|×|✕|назад|back|понятно|got it|understood/i.test(text)) score-=700;
+
+        rows.push({element:target,text,score,area,rect});
+      }
+
+      rows.sort((a,b)=>b.score-a.score || b.area-a.area);
+      const best=rows.find(row=>row.score>=240) || null;
+      if (best) {
+        recordDiagnostic('battle-action-button-found',{
+          revision:HK_BATTLE_ACTION_MODAL_DIV_REV,
+          expectedCost:Number(expectedCost),
+          text:best.text.slice(0,80),
+          score:best.score,
+          tag:best.element.tagName||'',
+          width:Math.round(best.rect.width||0),
+          height:Math.round(best.rect.height||0)
+        });
+      }
+      return best?.element || null;
     }
 
-    function waitBattleActionButton(expectedCost,runId,timeoutMs=2500) {
+    function waitBattleActionButton(expectedCost,runId,timeoutMs=4200) {
       return new Promise(resolve=>{
         const started=Date.now();
         const poll=()=>{
@@ -21253,6 +21311,27 @@
       } finally {
         saved.forEach(row=>{ row.element.style.pointerEvents=row.pointerEvents; });
       }
+    }
+
+    function dispatchMinigameOverlaySafeTapAt(x,y,label='minigame-overlay-safe-tap-at') {
+      const px=Math.max(1,Math.min(window.innerWidth-1,Number(x)||1));
+      const py=Math.max(1,Math.min(window.innerHeight-1,Number(y)||1));
+      const leaf=battleElementFromPointIgnoringOverlays(px,py,null);
+      if (!leaf) return false;
+      const options={bubbles:true,cancelable:true,clientX:px,clientY:py,screenX:px,screenY:py,button:0,buttons:1,pointerId:1,pointerType:'touch',isPrimary:true};
+      try { leaf.dispatchEvent(new PointerEvent('pointerdown',options)); } catch (_) {}
+      try { leaf.dispatchEvent(new MouseEvent('mousedown',{...options,buttons:1})); } catch (_) {}
+      try { leaf.dispatchEvent(new PointerEvent('pointerup',{...options,buttons:0})); } catch (_) {}
+      try { leaf.dispatchEvent(new MouseEvent('mouseup',{...options,buttons:0})); } catch (_) {}
+      try { leaf.click?.(); } catch (_) {}
+      recordDiagnostic('minigame-overlay-safe-tap',{
+        revision:HK_MINIGAME_OVERLAY_PASSTHROUGH_REV,
+        label,
+        x:Math.round(px),
+        y:Math.round(py),
+        tag:leaf.tagName||''
+      });
+      return true;
     }
 
     function battleElementInViewport(element) {
@@ -26405,6 +26484,8 @@
       battleVisiblePointTruthRevision:HK_BATTLE_VISIBLE_POINT_TRUTH_REV,
       battleIntroHardGateRevision:HK_BATTLE_INTRO_HARD_GATE_REV,
       battlePreviewResumeRevision:HK_BATTLE_PREVIEW_RESUME_REV,
+      minigameOverlayPassthroughRevision:HK_MINIGAME_OVERLAY_PASSTHROUGH_REV,
+      battleActionModalDivRevision:HK_BATTLE_ACTION_MODAL_DIV_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
