@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.84
+// @version      1.18.85
+// @release-note Автокарта: убрано ложное «закрываю Золотые монеты» на превью локаций. Сражение: «Понятно/OK» теперь жёстко блокирует выход до загрузки поля.
 // @release-note 28.09 · Интерфейс: у герба плавающей кнопки убран чёрный квадрат. Чёрный фон исходного JPG теперь вырезается в прозрачность мягкой маской прямо в браузере.
 // @release-note Тайный торговец: «Золотые монеты» теперь блокируются по итоговому товару (cur_gold/название/иконка), а не только по lotId. Если запрещённое окно каким-либо образом уже открылось и даже сохранилось после возврата на Карту сокровищ, Автокарта закрывает его как приоритетный stale-overlay, сбрасывает зависшее состояние и только потом продолжает маршрут.
 // @release-note Сражение: убран ошибочный запрет на атаки нижних рядов на больших экранах. Если центр карточки врага реально видим и elementFromPoint подтверждает, что клик попадает именно в неё, атака разрешается независимо от процента высоты экрана. Прокрутка выполняется только когда цель вне viewport или реально перекрыта нижней панелью.
@@ -30,7 +31,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.84';
+  const BUILD_VERSION = '1.18.85';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3649,12 +3650,14 @@
   const HK_FISHING_MODAL_BUDGET_REV='fishing-modal-budget-ownership-20260928-r1';
   const HK_TRADER_GOLD_SKIP_REV='trader-gold-currency-skip-20260928-r1';
   const HK_TRADER_GOLD_STALE_MODAL_REV='trader-gold-stale-modal-reset-20260929-r1';
+  const HK_TRADER_GOLD_EXACT_MODAL_REV='trader-gold-exact-purchase-modal-20260929-r1';
   const HK_CHEST_KEY_OFFER_REV='chest-key-offer-buy-20260928-r1';
   const HK_CHEST_VISIBLE_CLAIM_REV='chest-visible-claim-priority-20260928-r1';
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
   const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
   const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
   const HK_BATTLE_VISIBLE_POINT_TRUTH_REV='battle-visible-point-truth-20260929-r1';
+  const HK_BATTLE_INTRO_HARD_GATE_REV='battle-intro-hard-gate-20260929-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -17876,6 +17879,7 @@
     let intervalId = null;
     let initialTimerId = null;
     let battleAutoRunning = false;
+    let battleIntroGateUntil = 0;
     let battleAutoRunId = 0;
     let battleAutoToggle = null;
     let battleInsufficientExitNotBefore = 0;
@@ -19136,7 +19140,7 @@
       return element;
     }
 
-    function traderForbiddenGoldModalRoot() {
+    function traderForbiddenGoldModalRootLegacy() {
       const candidates=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
         .filter(visible)
         .map(element=>{
@@ -19155,6 +19159,28 @@
         .filter(row=>row.rect.width<=window.innerWidth*0.99 && row.rect.height<=window.innerHeight*0.98)
         .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height);
       return candidates[0]?.element || null;
+    }
+
+    function traderForbiddenGoldModalRoot() {
+      const title=/^(?:Золотые\s+монеты|Golden\s+Coins|Gold\s+Coins)$/i;
+      const purchase=/(?:Покупка\s+повышает\s+репутацию\s+у\s+торговца|Purchase.{0,80}(?:reputation|standing).{0,80}(?:trader|merchant))/i;
+      const rows=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
+        .filter(visible)
+        .map(element=>{
+          const rect=element.getBoundingClientRect?.();
+          const raw=String(element.innerText||element.textContent||'');
+          const lines=raw.split(/\n+/).map(v=>clean(v).trim()).filter(Boolean);
+          return {
+            element,
+            rect,
+            exactTitle:lines.some(line=>title.test(line)),
+            purchaseText:purchase.test(clean(raw))
+          };
+        })
+        .filter(row=>row.rect && row.rect.width>=Math.min(240,window.innerWidth*0.35) && row.rect.height>=180)
+        .filter(row=>row.exactTitle && row.purchaseText)
+        .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height);
+      return rows[0]?.element || null;
     }
 
     function traderForbiddenGoldCloseButton(root=traderForbiddenGoldModalRoot()) {
@@ -25072,6 +25098,7 @@
       if (!element || !visible(element) || !autoMapEnabled()) return false;
 
       if (/(?:leave|exit)/i.test(String(label||''))) {
+        if (battleIntroModalRoot() || battleIntroTransitionLocked()) { autoMapStatus('сражение → жду поле'); return false; }
         const battleGate=battleExitState();
         if (battleGate.inBattle && !battleGate.allowed) {
           recordDiagnostic('battle-exit-guard',{
@@ -25225,7 +25252,7 @@
       return ok;
     }
 
-    function battleIntroModalRoot() {
+    function battleIntroModalRootLegacy() {
       const rows=[...document.querySelectorAll('[role="dialog"],[class*="modal"],[class*="popup"],div')]
         .filter(element=>visible(element))
         .filter(element=>{
@@ -25246,6 +25273,41 @@
       return rows[0]?.element || null;
     }
 
+    function battleIntroModalRoot() {
+      const direct=battleIntroModalRootLegacy();
+      if (direct) {
+        battleIntroGateUntil=Math.max(battleIntroGateUntil,Date.now()+5000);
+        return direct;
+      }
+
+      const exactAck=/^(?:Понятно|Got it|Understood|OK|Okay)$/i;
+      let battleContext=battleRawContextPresent();
+      try { battleContext=battleContext || !!battleFairState(); } catch (_) {}
+      if (!battleContext) return null;
+
+      const rows=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
+        .filter(visible)
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const ack=[...element.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+            .find(child=>exactAck.test(clean(child.innerText||child.textContent||'').trim()) && visible(child));
+          const rect=element.getBoundingClientRect?.() || {width:0,height:0};
+          return {element,text,ack,rect,area:rect.width*rect.height};
+        })
+        .filter(row=>row.ack)
+        .filter(row=>!/Сундук победителя|Victory chest|Winner chest|Ключ сокровищ|Treasure key|Золотые монеты|Golden Coins|Gold Coins/i.test(row.text))
+        .filter(row=>row.rect.width>=Math.min(220,window.innerWidth*0.30) && row.rect.height>=100)
+        .sort((a,b)=>a.area-b.area);
+
+      const root=rows[0]?.element || null;
+      if (root) battleIntroGateUntil=Math.max(battleIntroGateUntil,Date.now()+5000);
+      return root;
+    }
+
+    function battleIntroTransitionLocked() {
+      return Date.now()<battleIntroGateUntil;
+    }
+
     function battleIntroAcknowledgeButton(root=battleIntroModalRoot()) {
       if (!root) return null;
       const exact=/^(?:Понятно|Got it|Understood|OK|Okay)$/i;
@@ -25263,7 +25325,8 @@
     }
 
     async function runBattleIntroAcknowledge() {
-      if (!battleAutoEnabled() || battleAutoRunning) return false;
+      if ((!battleAutoEnabled() && !autoMapEnabled()) || battleAutoRunning) return false;
+      if (autoMapEnabled() && !battleAutoEnabled()) setBattleAutoEnabled(true);
       const root=battleIntroModalRoot();
       const button=battleIntroAcknowledgeButton(root);
       if (!root || !button) return false;
@@ -25283,6 +25346,7 @@
         while (Date.now()-started<2200) {
           if (runId!==battleAutoRunId || !battleAutoEnabled()) return false;
           if (!battleIntroAcknowledgeButton()) {
+            battleIntroGateUntil=Date.now()+2600;
             lastSignature='';
             recordDiagnostic('battle-intro-ack-complete',{
               revision:HK_BATTLE_REWARD_STATE_MACHINE_REV,
@@ -25395,6 +25459,7 @@
     }
 
     function autoMapCurrentModuleComplete() {
+      if (battleIntroModalRoot() || battleIntroTransitionLocked()) return false;
       const signature=getSignature();
       if (signature.startsWith('LIGHTS|')) return !lightsShouldAuto();
       if (signature.startsWith('FISHING|')) return !fishingTarget();
@@ -25407,6 +25472,7 @@
 
     async function autoMapHandleExitOrContinue() {
       if (autoMapModulesRunning()) return false;
+      if (battleIntroModalRoot() || battleIntroTransitionLocked()) { autoMapStatus('сражение → жду поле'); return false; }
       const signature=getSignature();
       if (signature.startsWith('BATTLE') && !battleFinalRewardClaimed) return false;
       const exit=autoMapExitButton();
@@ -25495,6 +25561,25 @@
         } finally {
           if (blockedRunId===autoMapRunId) autoMapRunning=false;
         }
+      }
+
+      const introHardGate=battleIntroModalRoot();
+      if (introHardGate) {
+        if (!battleAutoEnabled()) setBattleAutoEnabled(true);
+        if (!battleAutoRunning) {
+          autoMapStatus('сражение → понятно',{revision:HK_BATTLE_INTRO_HARD_GATE_REV});
+          return await runBattleIntroAcknowledge();
+        }
+        return false;
+      }
+      if (battleIntroTransitionLocked()) {
+        const sig=getSignature();
+        if (!sig.startsWith('BATTLE')) {
+          autoMapStatus('сражение → загружаю поле',{revision:HK_BATTLE_INTRO_HARD_GATE_REV});
+          setTimeout(()=>void runAutoMapTick('battle-intro-transition'),120);
+          return false;
+        }
+        battleIntroGateUntil=0;
       }
 
       // A leave-confirmation modal can survive a redraw/retry. It is always
@@ -26192,12 +26277,14 @@
       fishingModalBudgetRevision:HK_FISHING_MODAL_BUDGET_REV,
       traderGoldSkipRevision:HK_TRADER_GOLD_SKIP_REV,
       traderGoldStaleModalRevision:HK_TRADER_GOLD_STALE_MODAL_REV,
+      traderGoldExactModalRevision:HK_TRADER_GOLD_EXACT_MODAL_REV,
       chestKeyOfferRevision:HK_CHEST_KEY_OFFER_REV,
       chestVisibleClaimRevision:HK_CHEST_VISIBLE_CLAIM_REV,
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
       battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
       battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
       battleVisiblePointTruthRevision:HK_BATTLE_VISIBLE_POINT_TRUTH_REV,
+      battleIntroHardGateRevision:HK_BATTLE_INTRO_HARD_GATE_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
