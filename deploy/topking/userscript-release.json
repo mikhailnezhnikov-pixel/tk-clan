@@ -5,7 +5,6 @@
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.95.battle-intro-exit-loop.candidate.user.js",
   "primary_marker": "battle-intro-overlay-ack-20260930-r1",
   "preserve_markers": [
-    "battle-complete-exit-loop-20260930-r1",
     "battle-open-modal-confirm-20260930-r1",
     "chest-exhausted-exit-20260930-r1",
     "chest-phase-order-20260929-r1",
