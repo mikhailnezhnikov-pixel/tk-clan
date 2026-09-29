@@ -5,7 +5,6 @@
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.90.automation-toggle-guard.candidate.user.js",
   "primary_marker": "automation-toggle-trusted-input-20260929-r1",
   "preserve_markers": [
-    "coordinate-overlay-guard-20260929-r1",
     "treasure-map-quiet-gate-20260929-r1",
     "stale-modal-shell-close-20260929-r1",
     "treasure-transaction-gate-20260929-r1",
