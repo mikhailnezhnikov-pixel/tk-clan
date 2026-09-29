@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.93
+// @version      1.18.94
+// @release-note Карта сокровищ: Охота за сундуками больше не зависает на недоступном оставшемся сундуке — если раскопки завершены, доступных сундуков/ключей для покупки нет, комната считается исчерпанной и Автокарта нажимает выход. Сражение: уже открытая карточка противника теперь имеет абсолютный приоритет — Автобой подтверждает нижнюю кнопку стоимости прямо в открытой модалке, не требуя видимости заголовка Сражение под затемнением.
 // @release-note Охота за сундуками: введён жёсткий порядок — сначала раскопать все видимые клетки с красным флагом, затем открыть найденные сундуки, и только после этого переходить к ключам/пост-действиям и возврату на карту. Видимая раскопка теперь важнее backend is_bought. Если подтверждение клика не изменило ни конкретный lot, ни баланс, hard-gate безопасно откатывается как неотправленная транзакция вместо вечного «жду подтверждение».
 // @release-note Карта сокровищ: восстановление зависаний по полевым отчётам — бой дожимает открытую карточку бойца, выход из Лабиринта/Сражения подтверждается device-neutral с retry, выкуп найденного ключа подтверждается по фактической смене модалки, карта сама прокручивает активную ячейку в видимую область перед нажатием.
 // @release-note Карта сокровищ: исправлены ложные состояния боя на Сокровищнице/готовой карте; окна полученного ключа теперь всегда подтверждаются как чек, а не повторно трактуются как покупка; левый коридор Сокровищницы имеет собственный hard-gate «Понятно».
@@ -39,7 +40,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.93';
+  const BUILD_VERSION = '1.18.94';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3663,6 +3664,8 @@
   const HK_CHEST_VISIBLE_CLAIM_REV='chest-visible-claim-priority-20260928-r1';
   const HK_CHEST_PHASE_ORDER_REV='chest-phase-order-20260929-r1';
   const HK_CHEST_UNCOMMITTED_RETRY_REV='chest-uncommitted-retry-20260929-r1';
+  const HK_CHEST_EXHAUSTED_EXIT_REV='chest-exhausted-exit-20260930-r1';
+  const HK_BATTLE_OPEN_MODAL_CONFIRM_REV='battle-open-modal-confirm-20260930-r1';
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
   const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
   const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
@@ -21175,7 +21178,7 @@
 
     function battleEnemyModalActionButton(expectedCost) {
       const costText=String(expectedCost ?? '');
-      if (!costText || !battleScreenVisiblyCurrent()) return null;
+      if (!costText) return null;
       const exactCost=new RegExp('(?:^|\\s)'+costText+'(?:\\s|$)');
 
       const roots=[...document.querySelectorAll(
@@ -21233,6 +21236,105 @@
         });
       }
       return best?.element || null;
+    }
+
+    function battleEnemyModalRoot() {
+      const roots=[...document.querySelectorAll(
+        '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div'
+      )]
+        .filter(visible)
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          return {element,text,rect,area:rect.width*rect.height};
+        })
+        .filter(row=>/МОЖНО\s+ОТЫСКАТЬ|CAN\s+BE\s+FOUND/i.test(row.text))
+        .filter(row=>row.rect.width>=Math.min(260,window.innerWidth*0.40) && row.rect.height>=220)
+        .filter(row=>row.rect.width<=window.innerWidth*0.99 && row.rect.height<=window.innerHeight*0.98)
+        .sort((a,b)=>a.area-b.area);
+      return roots[0]?.element || null;
+    }
+
+    async function battleConfirmAlreadyOpenEnemyModal(expectedCost,runId,beforeSignature=null) {
+      const root=battleEnemyModalRoot();
+      if (!root) return {handled:false,success:false,reason:'no-modal'};
+
+      const action=battleEnemyModalActionButton(expectedCost);
+      if (!action) {
+        recordDiagnostic('battle-open-modal-confirm-wait',{
+          revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
+          expectedCost:Number(expectedCost),
+          reason:'action-missing'
+        });
+        return {handled:true,success:false,reason:'action-missing'};
+      }
+
+      const before=beforeSignature===null ? getSignature() : beforeSignature;
+      const beforeSwords=Number(getBattleAttack());
+      const ready=await battleScrollTargetIntoViewportAsync(
+        action,
+        'battle-open-modal-confirm-'+String(expectedCost),
+        runId
+      );
+      if (!ready) {
+        recordDiagnostic('battle-open-modal-confirm-stop',{
+          revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
+          expectedCost:Number(expectedCost),
+          reason:'action-not-clickable'
+        });
+        return {handled:true,success:false,reason:'action-not-clickable'};
+      }
+
+      let sent=dispatchBattleOverlaySafeTap(action,'battle-open-modal-confirm');
+      if (!sent && root.isConnected) {
+        const rr=root.getBoundingClientRect?.();
+        if (rr && rr.width>0 && rr.height>0) {
+          for (const fraction of [0.91,0.87,0.94]) {
+            if (runId!==battleAutoRunId || !battleAutoEnabled()) {
+              return {handled:true,success:false,reason:'cancelled'};
+            }
+            sent=dispatchBattleOverlaySafeTapAt(
+              rr.left+rr.width/2,
+              rr.top+rr.height*fraction,
+              'battle-open-modal-confirm-fallback-'+String(fraction)
+            );
+            if (sent) break;
+          }
+        }
+      }
+      if (!sent) {
+        return {handled:true,success:false,reason:'tap-failed'};
+      }
+
+      const started=Date.now();
+      while (Date.now()-started<4400) {
+        if (runId!==battleAutoRunId || !battleAutoEnabled()) {
+          return {handled:true,success:false,reason:'cancelled'};
+        }
+        const currentRoot=battleEnemyModalRoot();
+        const currentSwords=Number(getBattleAttack());
+        const currentSignature=getSignature();
+        if (!currentRoot || currentRoot!==root || currentSignature!==before ||
+            (Number.isFinite(beforeSwords) && Number.isFinite(currentSwords) && currentSwords!==beforeSwords)) {
+          recordDiagnostic('battle-open-modal-confirm-complete',{
+            revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
+            expectedCost:Number(expectedCost),
+            modalClosed:!currentRoot || currentRoot!==root,
+            signatureChanged:currentSignature!==before,
+            swordsBefore:beforeSwords,
+            swordsAfter:currentSwords
+          });
+          return {handled:true,success:true,reason:'accepted'};
+        }
+        await new Promise(resolve=>setTimeout(resolve,90));
+      }
+
+      recordDiagnostic('battle-open-modal-confirm-stop',{
+        revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
+        expectedCost:Number(expectedCost),
+        reason:'no-state-change'
+      });
+      return {handled:true,success:false,reason:'no-state-change'};
     }
 
     function battleActionButton(expectedCost) {
@@ -21902,15 +22004,37 @@
         }
 
         const dependency=keyOffers[0] || null;
+        if (dependency) {
+          return {
+            phase:'chest-key',
+            pending:chestRows.length,
+            affordable:0,
+            target:{...dependency,phase:'chest-key'},
+            rows,
+            diggingRows,
+            chestRows,
+            keyOffers,
+            exhausted:false
+          };
+        }
+
+        // A visible chest may remain on the board even though the player has no
+        // matching key and the room offers no affordable way to obtain one.
+        // That is not unfinished actionable work. Waiting here forever blocks
+        // the entire Treasure Map. Once digging is finished and no chest/key
+        // action can be performed, hand the room back to AutoMap so it can exit.
         return {
-          phase:dependency?'chest-key':'chest',
-          pending:chestRows.length,
+          phase:'done',
+          pending:0,
           affordable:0,
-          target:dependency ? {...dependency,phase:'chest-key'} : null,
+          target:null,
           rows,
           diggingRows,
           chestRows,
-          keyOffers
+          keyOffers,
+          exhausted:true,
+          exhaustedChestCount:chestRows.length,
+          reason:'no-affordable-chest-or-key'
         };
       }
 
@@ -22894,6 +23018,33 @@
           return false;
         }
         const expectedCost=battleCostForElement(element);
+
+        // If the enemy card is already open (the exact state shown on mobile
+        // after AutoMap enters the room), confirming its cost button outranks
+        // trying to click the obscured board card again.
+        const preOpened=await battleConfirmAlreadyOpenEnemyModal(expectedCost,runId);
+        if (preOpened.handled) {
+          if (!preOpened.success) {
+            recordDiagnostic('battle-auto-stop',{
+              revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
+              reason:'open-modal-confirm-failed',
+              detail:preOpened.reason,
+              slot,
+              expectedCost
+            });
+            return false;
+          }
+          await new Promise(resolve=>setTimeout(resolve,BATTLE_AUTO_SETTLE_MS));
+          await dismissBattleRewardIfPresent(runId);
+          recordDiagnostic('battle-auto-step-complete',{
+            revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
+            slot,
+            expectedCost,
+            source:'already-open-modal'
+          });
+          return true;
+        }
+
         const targetProbe=battleElementTapProbe(element);
         if (!targetProbe.ready) {
           recordDiagnostic('battle-auto-stop',{
@@ -22928,6 +23079,29 @@
         });
 
         // The actual attack is a second mobile tap on the cost/action button.
+        const directModal=await battleConfirmAlreadyOpenEnemyModal(expectedCost,runId,before);
+        if (directModal.handled) {
+          if (!directModal.success) {
+            recordDiagnostic('battle-auto-stop',{
+              revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
+              reason:'attack-modal-confirm-failed',
+              detail:directModal.reason,
+              slot,
+              expectedCost
+            });
+            return false;
+          }
+          await new Promise(resolve=>setTimeout(resolve,BATTLE_AUTO_SETTLE_MS));
+          await dismissBattleRewardIfPresent(runId);
+          recordDiagnostic('battle-auto-step-complete',{
+            revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
+            slot,
+            expectedCost,
+            source:'opened-modal'
+          });
+          return true;
+        }
+
         const actionButton=await waitBattleActionButton(expectedCost,runId);
         if (!actionButton) {
           recordDiagnostic('battle-auto-stop',{
@@ -27223,8 +27397,7 @@
             lastSignature='';
             setTimeout(checkPuzzle,20);
           } else if (work.pending>0) {
-            // Strict order: never leave the room or jump to a chest while an
-            // earlier phase still has visible unfinished work.
+            // Strict order remains for actually actionable earlier phases.
             autoMapStatus(
               work.phase==='dig' ? 'раскопка · жду ресурс' : 'сундук · жду ресурс',
               {
@@ -27235,7 +27408,23 @@
             );
             setTimeout(()=>void runAutoMapTick('chest-phase-wait'),720);
           } else {
-            await autoMapHandleExitOrContinue();
+            if (work.exhausted) {
+              recordDiagnostic('treasure-chest-exhausted-exit',{
+                revision:HK_CHEST_EXHAUSTED_EXIT_REV,
+                reason:String(work.reason||''),
+                skippedUnaffordable:Number(work.exhaustedChestCount||0),
+                diggingPending:work.diggingRows.length,
+                keyOffers:work.keyOffers.length
+              });
+              autoMapStatus('сундуки → выход',{
+                revision:HK_CHEST_EXHAUSTED_EXIT_REV,
+                skippedUnaffordable:Number(work.exhaustedChestCount||0)
+              });
+            }
+            const left=await autoMapHandleExitOrContinue();
+            if (!left) {
+              setTimeout(()=>void runAutoMapTick('chest-exhausted-exit-retry'),560);
+            }
           }
           return true;
         }
@@ -27561,6 +27750,8 @@
       chestVisibleClaimRevision:HK_CHEST_VISIBLE_CLAIM_REV,
       chestPhaseOrderRevision:HK_CHEST_PHASE_ORDER_REV,
       chestUncommittedRetryRevision:HK_CHEST_UNCOMMITTED_RETRY_REV,
+      chestExhaustedExitRevision:HK_CHEST_EXHAUSTED_EXIT_REV,
+      battleOpenModalConfirmRevision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
       battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
       battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
