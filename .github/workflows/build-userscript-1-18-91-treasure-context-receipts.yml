@@ -77,7 +77,7 @@ jobs:
           from pathlib import Path
           path=Path('deploy/topking/userscript-release.json')
           m=json.loads(path.read_text(encoding='utf-8'))
-          if m.get('target_version') != '1.18.90':
+          if m.get('target_version') not in ('1.18.90','1.18.91'):
               raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
           preserve=[]
           for marker in [
