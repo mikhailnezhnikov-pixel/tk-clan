@@ -51,10 +51,8 @@ rep(old_gold,new_gold,"foreground gold guard")
 anchor="    function autoMapTreasureKeyModalRoot() {"
 helper=r'''    function autoMapBattlePreviewRoot() {
       if (!treasureGuideScreenVisible()) return null;
-      const battleTitle=/(?:^|
-)s*(?:Сражение|Battle)s*(?:
-|$)/i;
-      const previewCopy=/(?:Можноs+отыскать|Cans+bes+found|Yous+cans+find)/i;
+      const battleTitle=/(?:Сражение|Battle)/i;
+      const previewCopy=/(?:Можно отыскать|Can be found|You can find)/i;
       const rows=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
         .filter(visible)
         .map(element=>{
