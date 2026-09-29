@@ -171,12 +171,22 @@ if "treasure-key-battle-handoff-20260928-r1" in s:
         raise SystemExit("battle reward confirmation regressed to raw click")
 
     intro=section("async function runBattleIntroAcknowledge","async function autoMapSkipBattleWithoutFight")
-    for marker in [
-        "dispatchBattleTap(button,'battle-intro-ack')",
-        "setTimeout(checkPuzzle,80)",
-    ]:
-        if marker not in intro:
-            raise SystemExit(f"battle intro acknowledgement broken: {marker}")
+    if "battle-intro-overlay-ack-20260930-r1" in s:
+        for marker in [
+            "dispatchMinigameOverlaySafeTapAt(",
+            "deviceNeutralActivate(",
+            "waitDeviceNeutralCondition(accepted",
+            "battle-intro-ack-retry",
+        ]:
+            if marker not in intro:
+                raise SystemExit(f"battle intro overlay acknowledgement broken: {marker}")
+    else:
+        for marker in [
+            "dispatchBattleTap(button,'battle-intro-ack')",
+            "setTimeout(checkPuzzle,80)",
+        ]:
+            if marker not in intro:
+                raise SystemExit(f"battle intro acknowledgement broken: {marker}")
 
     victory=section("async function runBattleVictoryClaim","async function runBattleAuto")
     if "battle-reward-state-machine-20260928-r1" in s:
@@ -375,14 +385,26 @@ if "battle-activated-final-reward-exit-20260928-r1" in s:
             raise SystemExit(f"battle activated exit gate broken: {marker}")
 
     tick=section("async function runAutoMapTick","function setAutoMapEnabled")
-    for marker in [
+    required=[
         "battleRecoverFinalRewardClaimed('automap-preflight')",
         "battleAutoRunId+=1",
         "battleAutoRunning=false",
         "battle-activated-stale-runner-release",
-        "autoMapHandleExitOrContinue()",
         "battle-activated-exit-retry",
-    ]:
+    ]
+    if "battle-complete-exit-loop-20260930-r1" in s:
+        required += ["autoMapRecoverCompletedBattleExit('automap-activated-reward')"]
+        helper=section("async function autoMapRecoverCompletedBattleExit","function autoMapModalPrimaryButton")
+        for marker in [
+            "dispatchMinigameOverlaySafeTapAt(",
+            "treasureGuideScreenVisible()",
+            "battle-complete-exit-retry",
+        ]:
+            if marker not in helper:
+                raise SystemExit(f"battle completed-exit loop broken: {marker}")
+    else:
+        required += ["autoMapHandleExitOrContinue()"]
+    for marker in required:
         if marker not in tick:
             raise SystemExit(f"battle activated AutoMap exit handoff broken: {marker}")
 
