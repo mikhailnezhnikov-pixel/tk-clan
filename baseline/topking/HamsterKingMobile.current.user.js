@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.88
+// @version      1.18.89
+// @release-note Автокарта: после возврата на карту введено окно тишины — новая ячейка не нажимается, пока карта не постоит без модалок 1.4 секунды. Зависшие окна (включая яйцо торговца) закрываются по внешней оболочке модалки и подтверждённому исчезновению.
 // @release-note Карта сокровищ: введены жёсткие транзакционные барьеры. Старая модалка всегда закрывается до новой клетки; бой прокручивает к врагу и к кнопке атаки даже ниже экрана; сундуки не переходят к следующему lot без подтверждения изменения/награды; найденный ключ блокирует любой модуль до завершения.
 // @release-note Карта сокровищ: исправлены зависания в окнах мини-игр на мобильном. Сражение теперь находит широкую кнопку атаки даже если игра рисует её как div/span, а системные кнопки Автокарты больше не перехватывают координатные клики по «Понятно» и кнопкам стоимости.
 // @release-note Карта сокровищ — Сражение: исправлен зависший предпросмотр. Фоновая модалка Золотых монет больше не перехватывает Автокарту; если окно Сражения уже открыто, Автокарта сама нажимает кнопку входа с ягодами и продолжает бой.
@@ -34,7 +35,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.88';
+  const BUILD_VERSION = '1.18.89';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3669,6 +3670,8 @@
   const HK_CHEST_LOT_HARD_GATE_REV='chest-lot-hard-gate-20260929-r1';
   const HK_TREASURE_KEY_GLOBAL_GATE_REV='treasure-key-global-gate-20260929-r1';
   const HK_BATTLE_OFFSCREEN_ACTION_REV='battle-offscreen-action-scroll-20260929-r1';
+  const HK_MAP_QUIET_GATE_REV='treasure-map-quiet-gate-20260929-r1';
+  const HK_STALE_MODAL_SHELL_CLOSE_REV='stale-modal-shell-close-20260929-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -23899,6 +23902,7 @@
     const AUTO_MAP_MODAL_TIMEOUT_MS=2600;
     const AUTO_MAP_SETTLE_TIMEOUT_MS=5200;
     const AUTO_MAP_MAX_ACTIONS=240;
+    const AUTO_MAP_QUIET_MS=1400;
     const AUTO_MAP_TXN_PHASES=['IDLE','TARGET_FOUND','CARD_OPENED','ACTION_CONFIRMED','SERVER_UI_STATE_CHANGED','REWARD_CLEARED','ROOM_COMPLETE','EXIT_CONFIRMED','MAP_VISIBLE','NEXT_CELL'];
     let autoMapRunning=false;
     let autoMapRunId=0;
@@ -23914,6 +23918,7 @@
     let autoMapNoActiveSince=0;
     let autoMapReturnNotBefore=0;
     let autoMapTxn={phase:'IDLE',lotId:'',label:'',updatedAt:Date.now()};
+    let autoMapMapQuietSince=0;
 
     function autoMapTxnSet(phase,data={}) {
       const next=String(phase||'IDLE');
@@ -23925,6 +23930,9 @@
         label:String(data.label ?? previous?.label ?? ''),
         updatedAt:Date.now()
       };
+      if (['TARGET_FOUND','CARD_OPENED','ACTION_CONFIRMED','SERVER_UI_STATE_CHANGED','ROOM_COMPLETE','EXIT_CONFIRMED'].includes(next)) {
+        autoMapMapQuietSince=0;
+      }
       recordDiagnostic('treasure-transaction-phase',{
         revision:HK_TREASURE_TXN_GATE_REV,
         from:String(previous?.phase||''),
@@ -23941,10 +23949,50 @@
     }
 
     function autoMapTxnMarkMapVisible(source='map-visible') {
-      if (!treasureGuideScreenVisible()) return false;
-      if (autoMapMiniGameForeground()) return false;
-      if (treasureModalRoot(null)) return false;
-      autoMapTxnSet('MAP_VISIBLE',{source,lotId:'',label:''});
+      if (!treasureGuideScreenVisible()) {
+        autoMapMapQuietSince=0;
+        return false;
+      }
+      if (autoMapMiniGameForeground()) {
+        autoMapMapQuietSince=0;
+        return false;
+      }
+      if (treasureModalRoot(null)) {
+        autoMapMapQuietSince=0;
+        return false;
+      }
+
+      const now=Date.now();
+      if (!autoMapMapQuietSince) {
+        autoMapMapQuietSince=now;
+        autoMapStatus('карта · жду окна',{
+          revision:HK_MAP_QUIET_GATE_REV,
+          quietMs:AUTO_MAP_QUIET_MS
+        });
+        recordDiagnostic('treasure-map-quiet-start',{
+          revision:HK_MAP_QUIET_GATE_REV,
+          source,
+          quietMs:AUTO_MAP_QUIET_MS
+        });
+        return false;
+      }
+
+      const quietFor=now-autoMapMapQuietSince;
+      if (quietFor<AUTO_MAP_QUIET_MS) {
+        autoMapStatus('карта · стабилизация',{
+          revision:HK_MAP_QUIET_GATE_REV,
+          quietFor,
+          remainingMs:AUTO_MAP_QUIET_MS-quietFor
+        });
+        return false;
+      }
+
+      autoMapTxnSet('MAP_VISIBLE',{source,lotId:'',label:'',quietFor});
+      recordDiagnostic('treasure-map-quiet-complete',{
+        revision:HK_MAP_QUIET_GATE_REV,
+        source,
+        quietFor
+      });
       return true;
     }
 
@@ -24397,56 +24445,100 @@
       return candidates[0]?.el || null;
     }
 
+    function autoMapModalShell(root) {
+      if (!root) return {root:null,close:null};
+      const vw=Math.max(1,window.innerWidth), vh=Math.max(1,window.innerHeight);
+      const rows=[];
+      let node=root;
+      for (let depth=0;node && depth<10;depth++,node=node.parentElement) {
+        if (!visible(node)) continue;
+        const rect=node.getBoundingClientRect?.();
+        if (!rect || rect.width<220 || rect.height<140) continue;
+        if (rect.width>vw*0.99 || rect.height>vh*0.98) continue;
+        const close=autoMapModalCloseButton(node);
+        rows.push({root:node,close,rect,depth,area:rect.width*rect.height});
+      }
+      const withClose=rows.filter(row=>row.close)
+        .sort((a,b)=>b.depth-a.depth || b.area-a.area)[0];
+      if (withClose) return withClose;
+      const outer=rows.sort((a,b)=>b.area-a.area)[0];
+      return outer || {root,close:null};
+    }
+
     async function autoMapCloseLingeringModal(reason='stale-modal') {
       if (autoMapMiniGameForeground()) return false;
-      const root=treasureModalRoot(null);
-      if (!root) return false;
-      let close=autoMapModalCloseButton(root);
-      let tapped=false;
+      const inner=treasureModalRoot(null);
+      if (!inner) return false;
+
+      autoMapMapQuietSince=0;
+      const shellInfo=autoMapModalShell(inner);
+      const root=shellInfo.root || inner;
+      let close=shellInfo.close || autoMapModalCloseButton(root);
+      const accepted=()=> {
+        const current=treasureModalRoot(null);
+        return !current || !visible(current);
+      };
+
+      let ok=false;
       if (close) {
-        tapped=dispatchAutoMapTap(close,'close-'+reason);
-      } else {
-        const rr=root.getBoundingClientRect?.();
-        if (rr && rr.width>0 && rr.height>0) {
-          tapped=dispatchMinigameOverlaySafeTapAt(
-            rr.right-Math.max(18,Math.min(30,rr.width*0.05)),
-            rr.top+Math.max(18,Math.min(30,rr.height*0.06)),
-            'close-corner-'+reason
+        try {
+          ok=await deviceNeutralActivate(
+            close,
+            'stale-modal-shell-close-'+reason,
+            accepted,
+            1500
           );
+        } catch (_) {}
+        if (!ok && close.isConnected) {
+          const sent=dispatchMinigameOverlaySafeTapAt(
+            close.getBoundingClientRect().left+close.getBoundingClientRect().width/2,
+            close.getBoundingClientRect().top+close.getBoundingClientRect().height/2,
+            'stale-modal-close-safe-'+reason
+          );
+          if (sent) {
+            try { ok=await waitDeviceNeutralCondition(accepted,1500,70); } catch (_) {}
+          }
         }
       }
-      if (!tapped) {
-        autoMapStatus('жду окно',{reason});
+
+      if (!ok && root?.isConnected) {
+        const rr=root.getBoundingClientRect?.();
+        if (rr && rr.width>0 && rr.height>0) {
+          for (const fx of [0.965,0.94,0.91]) {
+            const x=rr.left+rr.width*fx;
+            const y=rr.top+Math.max(18,Math.min(34,rr.height*0.055));
+            const sent=dispatchMinigameOverlaySafeTapAt(
+              x,y,'stale-modal-shell-corner-'+String(fx)+'-'+reason
+            );
+            if (sent) {
+              try { ok=await waitDeviceNeutralCondition(accepted,900,70); } catch (_) {}
+              if (ok) break;
+            }
+          }
+        }
+      }
+
+      if (!ok) {
+        autoMapStatus('жду закрытие окна',{
+          reason,
+          revision:HK_STALE_MODAL_SHELL_CLOSE_REV
+        });
+        recordDiagnostic('treasure-stale-modal-hard-gate-block',{
+          revision:HK_STALE_MODAL_SHELL_CLOSE_REV,
+          reason,
+          hasClose:!!close
+        });
         return false;
       }
 
       autoMapLastActionAt=Date.now();
-      recordDiagnostic('treasure-auto-map-modal-close',{
-        revision:HK_STALE_MODAL_HARD_GATE_REV,
-        reason
+      autoMapMapQuietSince=0;
+      recordDiagnostic('treasure-stale-modal-hard-gate-clear',{
+        revision:HK_STALE_MODAL_SHELL_CLOSE_REV,
+        reason,
+        hasClose:!!close
       });
-
-      const started=Date.now();
-      while (Date.now()-started<2600) {
-        if (!autoMapEnabled()) return false;
-        const current=treasureModalRoot(null);
-        if (!current || current!==root) {
-          recordDiagnostic('treasure-stale-modal-hard-gate-clear',{
-            revision:HK_STALE_MODAL_HARD_GATE_REV,
-            reason,
-            elapsedMs:Date.now()-started
-          });
-          return true;
-        }
-        await new Promise(resolve=>setTimeout(resolve,90));
-      }
-
-      autoMapStatus('жду закрытие окна',{reason});
-      recordDiagnostic('treasure-stale-modal-hard-gate-block',{
-        revision:HK_STALE_MODAL_HARD_GATE_REV,
-        reason
-      });
-      return false;
+      return true;
     }
 
     function autoMapJourneyButton() {
@@ -26219,7 +26311,11 @@
       }
 
       if (treasureGuideScreenVisible() && !autoMapMiniGameForeground() && !treasureModalRoot(null)) {
-        autoMapTxnMarkMapVisible('tick-preflight');
+        const mapReady=autoMapTxnMarkMapVisible('tick-preflight');
+        if (!mapReady) {
+          setTimeout(()=>void runAutoMapTick('map-quiet-gate'),180);
+          return false;
+        }
       }
 
       if (Date.now()<autoMapRetryNotBefore) {
@@ -26846,6 +26942,8 @@
       chestLotHardGateRevision:HK_CHEST_LOT_HARD_GATE_REV,
       treasureKeyGlobalGateRevision:HK_TREASURE_KEY_GLOBAL_GATE_REV,
       battleOffscreenActionRevision:HK_BATTLE_OFFSCREEN_ACTION_REV,
+      mapQuietGateRevision:HK_MAP_QUIET_GATE_REV,
+      staleModalShellCloseRevision:HK_STALE_MODAL_SHELL_CLOSE_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
