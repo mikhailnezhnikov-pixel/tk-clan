@@ -335,3 +335,5 @@ jobs:
             /tmp/public.js \
             /tmp/source.sha \
             /tmp/candidate.sha
+
+# trigger 1.18.86 battle preview resume
