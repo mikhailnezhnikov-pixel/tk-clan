@@ -134,3 +134,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
+
+# retrigger after key-ack verifier update
