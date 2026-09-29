@@ -5,6 +5,7 @@ on:
     paths:
       - 'deploy/topking/patch_treasure_exit_battle_confirm_1_18_94.py'
       - 'deploy/topking/verify_treasure_exit_battle_confirm_contract.py'
+      - 'deploy/topking/verify_treasure_chest_phase_order_contract.py'
       - '.github/workflows/build-userscript-1-18-94-treasure-exit-battle-confirm.yml'
   workflow_dispatch:
 
