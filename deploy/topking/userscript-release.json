@@ -5,7 +5,6 @@
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.87.minigame-modal-actions.candidate.user.js",
   "primary_marker": "minigame-overlay-pass-through-20260929-r1",
   "preserve_markers": [
-    "battle-action-modal-div-20260929-r1",
     "battle-preview-resume-20260929-r1",
     "battle-intro-hard-gate-20260929-r1",
     "trader-gold-exact-purchase-modal-20260929-r1",
