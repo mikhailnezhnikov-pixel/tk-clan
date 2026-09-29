@@ -78,6 +78,7 @@ old_fallback=r'''      const exactAck=/^(?:Понятно|Got it|Understood|OK|O
       if (!battleContext) return null;
 '''
 new_fallback=r'''      const exactAck=/^(?:Понятно|Got it|Understood|OK|Okay)$/i;
+      // Exact visible battle title contract: Сражение|Battle.
       // Stale battle lots remain mounted while Treasury/Lights/Map are current.
       // Never classify a generic "Понятно" as battle unless the visible page
       // itself is the battle room.
