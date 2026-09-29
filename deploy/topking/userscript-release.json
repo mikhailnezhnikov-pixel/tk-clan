@@ -1,10 +1,17 @@
 {
   "schema": 1,
-  "source_version": "1.18.90",
-  "target_version": "1.18.91",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.91.treasure-context-receipts.candidate.user.js",
-  "primary_marker": "battle-context-foreground-20260929-r1",
+  "source_version": "1.18.91",
+  "target_version": "1.18.92",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.92.treasure-recovery.candidate.user.js",
+  "primary_marker": "treasure-map-target-scroll-20260929-r1",
   "preserve_markers": [
+    "treasure-exit-confirm-retry-20260929-r1",
+    "battle-modal-action-recovery-20260929-r1",
+    "treasure-key-purchase-activation-20260929-r1",
+    "battle-context-foreground-20260929-r1",
+    "treasure-key-receipt-priority-20260929-r1",
+    "treasury-corridor-ack-20260929-r1",
+    "treasure-map-dominates-stale-minigame-20260929-r1",
     "automation-toggle-trusted-input-20260929-r1",
     "coordinate-overlay-guard-20260929-r1",
     "treasure-map-quiet-gate-20260929-r1",
@@ -163,6 +170,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-91-treasure-context-receipts-live-status.txt",
-  "commit_message": "fix: isolate treasure room context in userscript 1.18.91"
+  "audit_status_path": "audit/hk-userscript-1-18-92-treasure-recovery-live-status.txt",
+  "commit_message": "fix: recover treasure map stalls in userscript 1.18.92"
 }
