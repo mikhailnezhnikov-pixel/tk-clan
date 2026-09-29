@@ -1,10 +1,15 @@
 {
   "schema": 1,
-  "source_version": "1.18.86",
-  "target_version": "1.18.87",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.87.minigame-modal-actions.candidate.user.js",
-  "primary_marker": "minigame-overlay-pass-through-20260929-r1",
+  "source_version": "1.18.87",
+  "target_version": "1.18.88",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.88.treasure-transaction-gates.candidate.user.js",
+  "primary_marker": "treasure-transaction-gate-20260929-r1",
   "preserve_markers": [
+    "treasure-stale-modal-hard-gate-20260929-r1",
+    "chest-lot-hard-gate-20260929-r1",
+    "treasure-key-global-gate-20260929-r1",
+    "battle-offscreen-action-scroll-20260929-r1",
+    "battle-action-modal-div-20260929-r1",
     "battle-preview-resume-20260929-r1",
     "battle-intro-hard-gate-20260929-r1",
     "trader-gold-exact-purchase-modal-20260929-r1",
@@ -13,6 +18,7 @@
     "battle-egg-one-berry-buy-20260928-r1",
     "lights-confirm-ack-before-board-reward-gate-20260928-r1",
     "treasure-automap-module-ownership-20260927-r1",
+    "minigame-overlay-pass-through-20260929-r1",
     "trader-gold-stale-modal-reset-20260929-r1",
     "clan-crest-transparent-mask-20260928-r1",
     "trader-gold-currency-skip-20260928-r1",
@@ -152,6 +158,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-87-minigame-modal-actions-live-status.txt",
-  "commit_message": "fix: stabilize mobile minigame modal actions in userscript 1.18.87"
+  "audit_status_path": "audit/hk-userscript-1-18-88-treasure-transaction-gates-live-status.txt",
+  "commit_message": "fix: enforce treasure transaction gates in userscript 1.18.88"
 }
