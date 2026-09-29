@@ -1,0 +1,54 @@
+name: Inspect Disk Hotspots Fast
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-disk-hotspots-fast.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+
+      - name: Inspect disk hotspots
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 bash -s <<'REMOTE'
+          set -u
+          echo "FAST_DISK_INSPECT=1"
+          df -h /
+          echo "JOURNAL_USAGE"
+          journalctl --disk-usage 2>&1 || true
+          echo "TOP_VAR_LOG"
+          find /var/log -xdev -type f -printf '%s %p\n' 2>/dev/null | sort -nr | head -30 || true
+          echo "TOP_OPT"
+          find /opt -xdev -type f -size +20M -printf '%s %p\n' 2>/dev/null | sort -nr | head -30 || true
+          echo "TOP_ROOT"
+          find /root -xdev -type f -size +20M -printf '%s %p\n' 2>/dev/null | sort -nr | head -30 || true
+          echo "VAR_LIB_CHILDREN"
+          du -sx --block-size=1M /var/lib/* 2>/dev/null | sort -nr | head -25 || true
+          echo "VAR_CACHE_CHILDREN"
+          du -sx --block-size=1M /var/cache/* 2>/dev/null | sort -nr | head -25 || true
+          echo "OPT_CHILDREN"
+          du -sx --block-size=1M /opt/* 2>/dev/null | sort -nr | head -25 || true
+          REMOTE
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
