@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.85
+// @version      1.18.86
+// @release-note Карта сокровищ — Сражение: исправлен зависший предпросмотр. Фоновая модалка Золотых монет больше не перехватывает Автокарту; если окно Сражения уже открыто, Автокарта сама нажимает кнопку входа с ягодами и продолжает бой.
 // @release-note Автокарта: убрано ложное «закрываю Золотые монеты» на превью локаций. Сражение: «Понятно/OK» теперь жёстко блокирует выход до загрузки поля.
 // @release-note 28.09 · Интерфейс: у герба плавающей кнопки убран чёрный квадрат. Чёрный фон исходного JPG теперь вырезается в прозрачность мягкой маской прямо в браузере.
 // @release-note Тайный торговец: «Золотые монеты» теперь блокируются по итоговому товару (cur_gold/название/иконка), а не только по lotId. Если запрещённое окно каким-либо образом уже открылось и даже сохранилось после возврата на Карту сокровищ, Автокарта закрывает его как приоритетный stale-overlay, сбрасывает зависшее состояние и только потом продолжает маршрут.
@@ -31,7 +32,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.85';
+  const BUILD_VERSION = '1.18.86';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3658,6 +3659,7 @@
   const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
   const HK_BATTLE_VISIBLE_POINT_TRUTH_REV='battle-visible-point-truth-20260929-r1';
   const HK_BATTLE_INTRO_HARD_GATE_REV='battle-intro-hard-gate-20260929-r1';
+  const HK_BATTLE_PREVIEW_RESUME_REV='battle-preview-resume-20260929-r1';
   const HK_BATTLE_AUTOMAP_FULL_CLEAR_REV='battle-automap-full-clear-20260927-r1';
   const HK_BATTLE_STRICT_EXIT_REV='battle-strict-exit-gate-20260927-r1';
   const HK_BATTLE_RAW_CONTEXT_REV='battle-raw-context-mobile-tap-20260927-r1';
@@ -19179,6 +19181,23 @@
         })
         .filter(row=>row.rect && row.rect.width>=Math.min(240,window.innerWidth*0.35) && row.rect.height>=180)
         .filter(row=>row.exactTitle && row.purchaseText)
+        // A stale trader modal can remain mounted behind the current Treasure Map
+        // preview. Geometry alone is not enough: only the frontmost modal may own
+        // AutoMap. This prevents a hidden Gold Coins window from blocking Battle.
+        .filter(row=>{
+          const r=row.rect;
+          const points=[
+            [r.left+r.width*0.50,r.top+r.height*0.50],
+            [r.left+r.width*0.35,r.top+r.height*0.68],
+            [r.left+r.width*0.65,r.top+r.height*0.68]
+          ];
+          return points.some(([x,y])=>{
+            const px=Math.max(1,Math.min(window.innerWidth-1,x));
+            const py=Math.max(1,Math.min(window.innerHeight-1,y));
+            const top=document.elementFromPoint(px,py);
+            return !!top && (top===row.element || row.element.contains(top));
+          });
+        })
         .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height);
       return rows[0]?.element || null;
     }
@@ -24848,6 +24867,95 @@
       return candidates[0]?.element || null;
     }
 
+    function autoMapBattlePreviewRoot() {
+      if (!treasureGuideScreenVisible()) return null;
+      const battleTitle=/(?:Сражение|Battle)/i;
+      const previewCopy=/(?:Можно отыскать|Can be found|You can find)/i;
+      const rows=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
+        .filter(visible)
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
+          const action=autoMapModalPrimaryButton(element,null);
+          const points=[
+            [rect.left+rect.width*0.50,rect.top+rect.height*0.50],
+            [rect.left+rect.width*0.50,rect.top+rect.height*0.78]
+          ];
+          const foreground=points.some(([x,y])=>{
+            const px=Math.max(1,Math.min(window.innerWidth-1,x));
+            const py=Math.max(1,Math.min(window.innerHeight-1,y));
+            const top=document.elementFromPoint(px,py);
+            return !!top && (top===element || element.contains(top));
+          });
+          return {element,text,rect,action,foreground,area:rect.width*rect.height};
+        })
+        .filter(row=>row.foreground)
+        .filter(row=>row.rect.width>=Math.min(280,window.innerWidth*0.38) && row.rect.height>=220)
+        .filter(row=>battleTitle.test(row.text) && previewCopy.test(row.text))
+        .filter(row=>row.action)
+        .filter(row=>!/Сундук победителя|Victory chest|Winner chest|Понятно|Got it|Understood/i.test(row.text))
+        .sort((a,b)=>a.area-b.area);
+      return rows[0]?.element || null;
+    }
+
+    async function autoMapResumeBattlePreview(root=autoMapBattlePreviewRoot()) {
+      if (!autoMapEnabled() || !root) return false;
+      const action=autoMapModalPrimaryButton(root,null);
+      if (!action) {
+        autoMapStatus('сражение → жду кнопку входа',{
+          revision:HK_BATTLE_PREVIEW_RESUME_REV
+        });
+        return false;
+      }
+
+      await autoMapWaitActionGap();
+      if (!autoMapEnabled() || !root.isConnected) return false;
+
+      const before=autoMapStateFingerprint();
+      const runId=autoMapRunId;
+      autoMapActionCount+=1;
+      autoMapLastActionAt=Date.now();
+      autoMapStatus('сражение → запускаю',{
+        revision:HK_BATTLE_PREVIEW_RESUME_REV,
+        text:clean(action.innerText||action.textContent||'').trim().slice(0,40)
+      });
+
+      if (!dispatchAutoMapTap(action,'battle-preview-start')) {
+        autoMapRetryNotBefore=Date.now()+500;
+        return false;
+      }
+
+      const started=Date.now();
+      while (Date.now()-started<4500) {
+        if (runId!==autoMapRunId || !autoMapEnabled()) return false;
+        const intro=battleIntroModalRoot();
+        const sig=getSignature();
+        if (intro || sig.startsWith('BATTLE') || !autoMapBattlePreviewRoot() || autoMapStateFingerprint()!==before) {
+          autoMapRetryNotBefore=0;
+          autoMapCurrentLot='';
+          lastSignature='';
+          recordDiagnostic('battle-preview-resumed',{
+            revision:HK_BATTLE_PREVIEW_RESUME_REV,
+            intro:!!intro,
+            signature:sig.slice(0,120)
+          });
+          setTimeout(()=>{
+            checkPuzzle();
+            void runAutoMapTick('battle-preview-resumed');
+          },120);
+          return true;
+        }
+        await new Promise(resolve=>setTimeout(resolve,90));
+      }
+
+      autoMapRetryNotBefore=Date.now()+650;
+      autoMapStatus('сражение → жду вход',{
+        revision:HK_BATTLE_PREVIEW_RESUME_REV
+      });
+      setTimeout(()=>void runAutoMapTick('battle-preview-retry'),760);
+      return false;
+    }
+
     function autoMapTreasureKeyModalRoot() {
       // Do not bind the automation to a specific rarity. The event currently
       // shows titles such as "Обычный ключ сокровищ" and "Необычный ключ
@@ -25560,6 +25668,17 @@
           return !!closed;
         } finally {
           if (blockedRunId===autoMapRunId) autoMapRunning=false;
+        }
+      }
+
+      const openBattlePreview=autoMapBattlePreviewRoot();
+      if (openBattlePreview) {
+        autoMapRunning=true;
+        const previewRunId=autoMapRunId;
+        try {
+          return await autoMapResumeBattlePreview(openBattlePreview);
+        } finally {
+          if (previewRunId===autoMapRunId) autoMapRunning=false;
         }
       }
 
@@ -26285,6 +26404,7 @@
       battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
       battleVisiblePointTruthRevision:HK_BATTLE_VISIBLE_POINT_TRUTH_REV,
       battleIntroHardGateRevision:HK_BATTLE_INTRO_HARD_GATE_REV,
+      battlePreviewResumeRevision:HK_BATTLE_PREVIEW_RESUME_REV,
       battleAutoMapFullClearRevision:HK_BATTLE_AUTOMAP_FULL_CLEAR_REV,
       battleStrictExitRevision:HK_BATTLE_STRICT_EXIT_REV,
       battleRawContextRevision:HK_BATTLE_RAW_CONTEXT_REV,
