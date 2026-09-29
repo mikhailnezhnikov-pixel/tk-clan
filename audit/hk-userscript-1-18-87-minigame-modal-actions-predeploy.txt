@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_87_MINIGAME_MODAL_ACTIONS_PREDEPLOY=PASS
+source_version=1.18.86
+target_version=1.18.87
+battle_div_action_button=ENABLED
+hk_overlay_point_passthrough=ENABLED
+battle_action_wait_ms=4200
+minigame_modal_actions_contract=PASS
+syntax=PASS
+base_sha256=346ea0854b77a5c5dfacfb3b0b74dcc1d2909eeafd12fc086537f856ea1afe6c
+candidate_sha256=98701dff0bbe3103e33b6d69d0bc93bd1157e43ceb193f5d717ff0dc6a1c565f
