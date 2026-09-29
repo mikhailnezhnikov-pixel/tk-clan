@@ -25024,7 +25024,7 @@
 
     function autoMapTreasuryCorridorModalRoot() {
       if (!autoMapTreasuryScreenVisible()) return null;
-      const title=/(?:Левый|Средний|Правый)s+коридор|(?:Left|Middle|Right)s+corridor/i;
+      const title=/(?:Левый|Средний|Правый)\\s+коридор|(?:Left|Middle|Right)\\s+corridor/i;
       const rows=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
         .filter(visible)
         .map(element=>{
