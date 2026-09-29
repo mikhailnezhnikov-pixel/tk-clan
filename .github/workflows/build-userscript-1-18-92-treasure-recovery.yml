@@ -1,0 +1,140 @@
+name: Build Userscript 1.18.92 Treasure Recovery
+
+on:
+  push:
+    paths:
+      - 'deploy/topking/patch_treasure_recovery_1_18_92.py'
+      - 'deploy/topking/verify_treasure_recovery_contract.py'
+      - '.github/workflows/build-userscript-1-18-92-treasure-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-topking-userscript
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build candidate
+        run: |
+          set -euo pipefail
+          base=baseline/topking/HamsterKingMobile.current.user.js
+          sha256sum "$base" | awk '{print $1}' > /tmp/base.sha
+          cp "$base" /tmp/HamsterKingMobile.user.js
+
+          grep -Fq "// @version      1.18.91" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-context-foreground-20260929-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasury-corridor-ack-20260929-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/patch_treasure_recovery_1_18_92.py /tmp/HamsterKingMobile.user.js
+
+          node --check /tmp/HamsterKingMobile.user.js
+          grep -Fq "// @version      1.18.92" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-map-target-scroll-20260929-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-exit-confirm-retry-20260929-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "battle-modal-action-recovery-20260929-r1" /tmp/HamsterKingMobile.user.js
+          grep -Fq "treasure-key-purchase-activation-20260929-r1" /tmp/HamsterKingMobile.user.js
+
+          python3 deploy/topking/verify_treasure_autopilot_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_resume_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_outer_modal_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_lights_map6_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_key_ack_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_viewport_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_chest_fast_pacing_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_treasury_loop_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_full_clear_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_battle_achievement_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_automation_toggle_guard_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_context_receipts_contract.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/verify_treasure_recovery_contract.py /tmp/HamsterKingMobile.user.js
+
+          sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
+
+      - name: Publish candidate
+        run: |
+          set -euo pipefail
+          candidate=deploy/topking/HamsterKingMobile.1.18.92.treasure-recovery.candidate.user.js
+          audit=audit/hk-userscript-1-18-92-treasure-recovery-predeploy.txt
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          test "$(sha256sum baseline/topking/HamsterKingMobile.current.user.js | awk '{print $1}')" = "$(cat /tmp/base.sha)"
+          cp /tmp/HamsterKingMobile.user.js "$candidate"
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('deploy/topking/userscript-release.json')
+          m=json.loads(path.read_text(encoding='utf-8'))
+          if m.get('target_version') != '1.18.91':
+              raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
+          preserve=[]
+          for marker in [
+              'battle-context-foreground-20260929-r1',
+              'treasure-key-receipt-priority-20260929-r1',
+              'treasury-corridor-ack-20260929-r1',
+              'treasure-map-dominates-stale-minigame-20260929-r1',
+              'automation-toggle-trusted-input-20260929-r1',
+              'coordinate-overlay-guard-20260929-r1',
+              'treasure-map-quiet-gate-20260929-r1',
+              'stale-modal-shell-close-20260929-r1',
+              'treasure-transaction-gate-20260929-r1',
+              'chest-lot-hard-gate-20260929-r1',
+              'treasure-key-global-gate-20260929-r1',
+              'battle-offscreen-action-scroll-20260929-r1',
+              m.get('primary_marker'),
+              *m.get('preserve_markers', [])
+          ]:
+              if marker and marker not in preserve:
+                  preserve.append(marker)
+          out={
+              'schema':1,
+              'source_version':'1.18.91',
+              'target_version':'1.18.92',
+              'candidate_path':'deploy/topking/HamsterKingMobile.1.18.92.treasure-recovery.candidate.user.js',
+              'primary_marker':'treasure-map-target-scroll-20260929-r1',
+              'preserve_markers':[
+                  'treasure-exit-confirm-retry-20260929-r1',
+                  'battle-modal-action-recovery-20260929-r1',
+                  'treasure-key-purchase-activation-20260929-r1',
+                  *preserve
+              ],
+              'audit_status_path':'audit/hk-userscript-1-18-92-treasure-recovery-live-status.txt',
+              'commit_message':'fix: recover treasure map stalls in userscript 1.18.92',
+          }
+          path.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          {
+            echo "USERSCRIPT_1_18_92_TREASURE_RECOVERY_PREDEPLOY=PASS"
+            echo "source_version=1.18.91"
+            echo "target_version=1.18.92"
+            echo "map_target_scroll=ENABLED"
+            echo "exit_confirm_retry=ENABLED"
+            echo "battle_modal_action_recovery=ENABLED"
+            echo "treasure_key_purchase_activation=ENABLED"
+            echo "syntax=PASS"
+            echo "base_sha256=$(cat /tmp/base.sha)"
+            echo "candidate_sha256=$(cat /tmp/candidate.sha)"
+          } > "$audit"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$candidate" deploy/topking/userscript-release.json "$audit"
+          git commit -m "build: prepare userscript 1.18.92 treasure recovery"
+          git push origin HEAD:main
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/HamsterKingMobile.user.js /tmp/base.sha /tmp/candidate.sha
