@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_90_AUTOMATION_TOGGLE_GUARD_PREDEPLOY=PASS
+source_version=1.18.89
+target_version=1.18.90
+trusted_toggle_input=ENABLED
+coordinate_overlay_guard=ENABLED
+chest_fallback_overlay_safe=ENABLED
+lights_toggle_protection=ENABLED
+syntax=PASS
+base_sha256=3c252e86c27b8c7adf39558b237ef54ced7630745ce6470b0d1d9347a23f6ecb
+candidate_sha256=9e61091362546a1817e72f8908efbd34c9d59bcf9c883de636f53351e3ffae86
