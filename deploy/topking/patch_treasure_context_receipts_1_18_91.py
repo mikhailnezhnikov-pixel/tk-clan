@@ -235,7 +235,8 @@ rep(get_anchor,get_insert,"map dominance signature")
 map_pre=r'''      if (treasureGuideScreenVisible() && !autoMapMiniGameForeground() && !treasureModalRoot(null)) {
         const mapReady=autoMapTxnMarkMapVisible('tick-preflight');
 '''
-map_new=r'''      if (treasureGuideScreenVisible() && (autoMapMapIsForeground() || autoMapJourneyButton()) && !treasureModalRoot(null)) {
+map_new=r'''      const completedMapButtonPreflight=treasureGuideScreenVisible()?autoMapJourneyButton():null;
+      if (treasureGuideScreenVisible() && (autoMapMapIsForeground() || !!completedMapButtonPreflight) && !treasureModalRoot(null)) {
         if (!battleScreenVisiblyCurrent()) {
           battleIntroGateUntil=0;
           if (battleAutoRunning) {
