@@ -58,3 +58,5 @@ for marker in [
         raise SystemExit("preserved behavior missing: "+marker)
 
 print("MAP_PREVIEW_BATTLE_INTRO_CONTRACT=PASS")
+
+# trigger build 1.18.85
