@@ -6,6 +6,10 @@ on:
         description: Restart existing service to recover SQLite connections
         type: boolean
         default: false
+      deploy:
+        description: Deploy audit correction and run Telegram signature regressions
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -39,6 +43,40 @@ jobs:
           status=$(curl -sS --max-time 20 -o /tmp/cabinet-response.json -w '%{http_code}' -H 'Origin: https://tk-clan.ru' -H 'Content-Type: application/json' --data '{"telegram":{}}' https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet/login)
           cat /tmp/cabinet-response.json
           test "$status" = 401
+      - name: Deploy minimal audit correction and verify live auth
+        if: inputs.deploy
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          live=/opt/hamsterking-license/server.py
+          candidate=$(mktemp /opt/hamsterking-license/server.cabinet-candidate.XXXXXX.py)
+          cp "$live" "$candidate"
+          original=$(sha256sum "$live" | cut -d ' ' -f1)
+          python3 /tmp/cabinet_auth.py --mode test --source "$candidate"
+          python3 /tmp/cabinet_auth.py --mode patch --source "$candidate"
+          python3 -m py_compile "$candidate"
+          python3 /tmp/cabinet_auth.py --mode test --source "$candidate"
+          test "$original" = "$(sha256sum "$live" | cut -d ' ' -f1)"
+          backup="$live.bak.cabinet-auth.$(date +%Y%m%d-%H%M%S)"
+          cp -a "$live" "$backup"
+          rollback() {
+            cp -a "$backup" "$live"
+            systemctl restart hamsterking-license.service
+            echo CABINET_AUTH_ROLLBACK=PASS
+          }
+          trap rollback ERR
+          cp "$candidate" "$live"
+          systemctl restart hamsterking-license.service
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS --max-time 5 http://127.0.0.1:8787/health >/dev/null; then break; fi
+            sleep 1
+          done
+          systemctl is-active --quiet hamsterking-license.service
+          python3 /tmp/cabinet_auth.py --mode verify
+          trap - ERR
+          echo CABINET_AUTH_DEPLOY=PASS
+          REMOTE
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking"
