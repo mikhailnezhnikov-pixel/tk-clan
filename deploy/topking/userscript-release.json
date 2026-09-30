@@ -179,5 +179,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-96-battle-modal-trader-map-live-status.txt",
-  "commit_message": "fix: prioritize open battle modal and buy trader maps in userscript 1.18.96"
+  "commit_message": "fix: prioritize open battle modal and buy trader maps in userscript 1.18.96",
+  "manual_trigger": "1.18.96-battle-modal-trader-map-r1"
 }
