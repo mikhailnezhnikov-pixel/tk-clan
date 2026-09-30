@@ -5,7 +5,6 @@
   "candidate_path": "deploy/topking/HamsterKingMobile.1.18.96.battle-modal-trader-map.candidate.user.js",
   "primary_marker": "battle-open-modal-priority-20260930-r1",
   "preserve_markers": [
-    "trader-map-modal-approval-20260930-r1",
     "battle-intro-overlay-ack-20260930-r1",
     "battle-complete-exit-loop-20260930-r1",
     "battle-open-modal-confirm-20260930-r1",
@@ -180,5 +179,5 @@
   ],
   "audit_status_path": "audit/hk-userscript-1-18-96-battle-modal-trader-map-live-status.txt",
   "commit_message": "fix: prioritize open battle modal and buy trader maps in userscript 1.18.96",
-  "manual_trigger": "1.18.96-battle-modal-trader-map-r1"
+  "manual_trigger": "1.18.96-battle-modal-trader-map-r2"
 }
