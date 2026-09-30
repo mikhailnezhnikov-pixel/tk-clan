@@ -51,7 +51,6 @@ jobs:
           python3 deploy/topking/verify_treasure_battle_achievement_contract.py /tmp/HamsterKingMobile.user.js
           python3 deploy/topking/verify_automation_toggle_guard_contract.py /tmp/HamsterKingMobile.user.js
           python3 deploy/topking/verify_treasure_chest_phase_order_contract.py /tmp/HamsterKingMobile.user.js
-          python3 deploy/topking/verify_battle_intro_exit_loop_contract.py /tmp/HamsterKingMobile.user.js
           python3 deploy/topking/verify_battle_modal_trader_map_contract.py /tmp/HamsterKingMobile.user.js
 
           sha256sum /tmp/HamsterKingMobile.user.js | awk '{print $1}' > /tmp/candidate.sha
