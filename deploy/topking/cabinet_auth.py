@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sqlite3
 import urllib.request
 
 source = Path('/opt/hamsterking-license/server.py').read_text()
@@ -26,8 +27,26 @@ except Exception as exc:
     print('getMe_error', type(exc).__name__)
 usage = os.statvfs('/var/lib/hamsterking-license')
 print('disk_available_bytes', usage.f_bavail * usage.f_frsize)
+db_path = env.get(b'HK_LICENSE_DB', b'/var/lib/hamsterking-license/licenses.db').decode()
+for suffix in ('', '-wal', '-shm'):
+    path = Path(db_path + suffix)
+    print('database_file', suffix or 'main', path.exists(), path.stat().st_size if path.exists() else 0)
+for fd in Path(f'/proc/{pid}/fd').iterdir():
+    try:
+        target = os.readlink(fd)
+        if db_path in target:
+            print('database_open_fd', target)
+    except OSError:
+        pass
+try:
+    db = sqlite3.connect('file:' + db_path + '?mode=ro', uri=True, timeout=5)
+    print('database_read', db.execute('SELECT count(*) FROM clan_members').fetchone()[0])
+    print('database_journal', db.execute('PRAGMA journal_mode').fetchone()[0])
+    db.close()
+except sqlite3.Error as exc:
+    print('database_read_error', str(exc))
 logs = subprocess.check_output(['journalctl', '-u', 'hamsterking-license.service', '--since', '-15 min', '--no-pager', '-n', '150'], text=True)
 for line in logs.splitlines():
     # Only standard exception classes; never dump request bodies or credentials.
-    if 'sqlite3.' in line or 'NameError:' in line or 'TypeError:' in line:
+    if 'sqlite3.' in line or 'NameError:' in line or 'TypeError:' in line or 'File "/opt/hamsterking-license/server.py"' in line:
         print('service_exception', line.split('python', 1)[-1][-250:])
