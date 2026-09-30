@@ -91,7 +91,7 @@ for marker in [
     if marker not in run:
         raise SystemExit("runBattle hard gate contract missing: "+marker)
 
-exports=s[s.find("window.hkCore"):s.find("window.hkCore")+50000]
+exports=s
 for marker in [
     "traderMapModalRevision:HK_TRADER_MAP_MODAL_REV",
     "battleOpenModalPriorityRevision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV",
