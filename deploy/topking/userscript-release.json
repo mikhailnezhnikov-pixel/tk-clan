@@ -1,10 +1,13 @@
 {
   "schema": 1,
-  "source_version": "1.18.94",
-  "target_version": "1.18.95",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.95.battle-intro-exit-loop.candidate.user.js",
-  "primary_marker": "battle-intro-overlay-ack-20260930-r1",
+  "source_version": "1.18.95",
+  "target_version": "1.18.96",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.96.battle-modal-trader-map.candidate.user.js",
+  "primary_marker": "battle-open-modal-priority-20260930-r1",
   "preserve_markers": [
+    "trader-map-modal-approval-20260930-r1",
+    "battle-intro-overlay-ack-20260930-r1",
+    "battle-complete-exit-loop-20260930-r1",
     "battle-open-modal-confirm-20260930-r1",
     "chest-exhausted-exit-20260930-r1",
     "chest-phase-order-20260929-r1",
@@ -175,6 +178,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-95-battle-intro-exit-loop-live-status.txt",
-  "commit_message": "fix: acknowledge battle intro and retry completed exit in userscript 1.18.95"
+  "audit_status_path": "audit/hk-userscript-1-18-96-battle-modal-trader-map-live-status.txt",
+  "commit_message": "fix: prioritize open battle modal and buy trader maps in userscript 1.18.96"
 }
