@@ -1,6 +1,11 @@
 name: Cabinet Telegram auth
 on:
   workflow_dispatch:
+    inputs:
+      restart:
+        description: Restart existing service to recover SQLite connections
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -25,6 +30,15 @@ jobs:
           set -euo pipefail
           scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new deploy/topking/cabinet_auth.py root@89.125.1.71:/tmp/cabinet_auth.py
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 /tmp/cabinet_auth.py'
+      - name: Recover existing service connections
+        if: inputs.restart
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'systemctl restart hamsterking-license.service && systemctl is-active --quiet hamsterking-license.service'
+          curl --retry 5 --retry-delay 2 --retry-all-errors -fsS --max-time 15 https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet/config
+          status=$(curl -sS --max-time 20 -o /tmp/cabinet-response.json -w '%{http_code}' -H 'Origin: https://tk-clan.ru' -H 'Content-Type: application/json' --data '{"telegram":{}}' https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet/login)
+          cat /tmp/cabinet-response.json
+          test "$status" = 401
       - name: Cleanup
         if: always()
         run: rm -f "$HOME/.ssh/topking"

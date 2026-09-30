@@ -10,7 +10,7 @@ import urllib.request
 source = Path('/opt/hamsterking-license/server.py').read_text()
 tree = ast.parse(source)
 for node in tree.body:
-    if isinstance(node, ast.FunctionDef) and node.name in ('verify_telegram_login', 'audit', 'db_session'):
+    if isinstance(node, ast.FunctionDef) and node.name in ('verify_telegram_login', 'audit', 'db_session', 'connect'):
         print(ast.get_source_segment(source, node))
 pid = subprocess.check_output(['systemctl', 'show', 'hamsterking-license.service', '-p', 'MainPID', '--value'], text=True).strip()
 env = dict(item.split(b'=', 1) for item in Path(f'/proc/{pid}/environ').read_bytes().split(b'\0') if b'=' in item)
@@ -28,6 +28,10 @@ except Exception as exc:
 usage = os.statvfs('/var/lib/hamsterking-license')
 print('disk_available_bytes', usage.f_bavail * usage.f_frsize)
 db_path = env.get(b'HK_LICENSE_DB', b'/var/lib/hamsterking-license/licenses.db').decode()
+print('service_uid', Path(f'/proc/{pid}/status').read_text().split('Uid:', 1)[1].splitlines()[0].strip())
+for path in (Path(db_path).parent, Path(db_path)):
+    stat = path.stat()
+    print('database_permissions', str(path), stat.st_uid, stat.st_gid, oct(stat.st_mode & 0o777))
 for suffix in ('', '-wal', '-shm'):
     path = Path(db_path + suffix)
     print('database_file', suffix or 'main', path.exists(), path.stat().st_size if path.exists() else 0)
