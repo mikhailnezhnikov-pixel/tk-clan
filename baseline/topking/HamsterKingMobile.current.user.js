@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.95
+// @version      1.18.96
+// @release-note Сражение: открытая карточка бойца «МОЖНО ОТЫСКАТЬ» теперь является жёстким приоритетом — Автобой восстанавливает нижнюю кнопку стоимости прямо из модалки до пересчёта поля и запрещает выход/пропуск, пока карточка не подтверждена. Тайный торговец: Карта сокровищ добавлена в подтверждаемый whitelist модалок, поэтому выбранная карта действительно покупается.
 // @release-note Сражение: стартовое окно «Сражение → Понятно» теперь определяется по самой модалке и боевому DOM, а не по заголовку страницы под затемнением; подтверждение проходит сквозь HK-оверлеи. После взятого сундука победителя введён отдельный цикл выхода: открыть «Покинуть локацию», подтвердить 10 и считать выход завершённым только после фактического возврата на карту; если окно закрылось, а бой остался, выход повторяется.
 // @release-note Карта сокровищ: Охота за сундуками больше не зависает на недоступном оставшемся сундуке — если раскопки завершены, доступных сундуков/ключей для покупки нет, комната считается исчерпанной и Автокарта нажимает выход. Сражение: уже открытая карточка противника теперь имеет абсолютный приоритет — Автобой подтверждает нижнюю кнопку стоимости прямо в открытой модалке, не требуя видимости заголовка Сражение под затемнением.
 // @release-note Охота за сундуками: введён жёсткий порядок — сначала раскопать все видимые клетки с красным флагом, затем открыть найденные сундуки, и только после этого переходить к ключам/пост-действиям и возврату на карту. Видимая раскопка теперь важнее backend is_bought. Если подтверждение клика не изменило ни конкретный lot, ни баланс, hard-gate безопасно откатывается как неотправленная транзакция вместо вечного «жду подтверждение».
@@ -41,7 +42,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.95';
+  const BUILD_VERSION = '1.18.96';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3661,6 +3662,7 @@
   const HK_TRADER_GOLD_SKIP_REV='trader-gold-currency-skip-20260928-r1';
   const HK_TRADER_GOLD_STALE_MODAL_REV='trader-gold-stale-modal-reset-20260929-r1';
   const HK_TRADER_GOLD_EXACT_MODAL_REV='trader-gold-exact-purchase-modal-20260929-r1';
+  const HK_TRADER_MAP_MODAL_REV='trader-map-modal-approval-20260930-r1';
   const HK_CHEST_KEY_OFFER_REV='chest-key-offer-buy-20260928-r1';
   const HK_CHEST_VISIBLE_CLAIM_REV='chest-visible-claim-priority-20260928-r1';
   const HK_CHEST_PHASE_ORDER_REV='chest-phase-order-20260929-r1';
@@ -3669,6 +3671,7 @@
   const HK_BATTLE_OPEN_MODAL_CONFIRM_REV='battle-open-modal-confirm-20260930-r1';
   const HK_BATTLE_INTRO_OVERLAY_ACK_REV='battle-intro-overlay-ack-20260930-r1';
   const HK_BATTLE_COMPLETE_EXIT_LOOP_REV='battle-complete-exit-loop-20260930-r1';
+  const HK_BATTLE_OPEN_MODAL_PRIORITY_REV='battle-open-modal-priority-20260930-r1';
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
   const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
   const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
@@ -19193,6 +19196,7 @@
       return /вкусняшк.*питом|лакомств.*питом|pet\s*(?:treat|snack)/i.test(text) ||
         /(?:необычн|обычн|редк|эпическ|легендарн).*ключ\s+сокровищ|treasure\s+key/i.test(text) ||
         /походн.*припас|провизия\s+для\s+путешеств|travel\s+provision|hiking\s+suppl/i.test(text) ||
+        /карта\s+сокровищ|treasure\s+map/i.test(text) ||
         /смена\s+навыка\s+питомца|замена\s+навыка\s+питомца|pet\s+skill\s+(?:change|replace)/i.test(text);
     }
 
@@ -21179,10 +21183,11 @@
       return match ? Number(match[1]) : null;
     }
 
-    function battleEnemyModalActionButton(expectedCost) {
-      const costText=String(expectedCost ?? '');
-      if (!costText) return null;
-      const exactCost=new RegExp('(?:^|\\s)'+costText+'(?:\\s|$)');
+    function battleEnemyModalActionButton(expectedCost=null) {
+      const numericExpected=Number(expectedCost);
+      const hasExpected=Number.isFinite(numericExpected) && numericExpected>0;
+      const costText=hasExpected ? String(numericExpected) : '';
+      const exactCost=hasExpected ? new RegExp('(?:^|\\s)'+costText+'(?:\\s|$)') : null;
 
       const roots=[...document.querySelectorAll(
         '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div'
@@ -21202,6 +21207,7 @@
       if (!root) return null;
       const rr=root.getBoundingClientRect?.();
       if (!rr) return null;
+      const centerX=rr.left+rr.width/2;
 
       const rows=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
         .filter(element=>element && !element.disabled && visible(element))
@@ -21216,16 +21222,34 @@
               getComputedStyle(element).cursor==='pointer';
           } catch (_) {}
           const cx=rect.left+rect.width/2;
+          const numericMatch=text.match(/(?:^|\\s)(\\d{1,4})(?:\\s|$)/);
+          const inferredCost=numericMatch ? Number(numericMatch[1]) : null;
           let score=0;
-          if (text===costText) score+=520;
-          else if (exactCost.test(text) && text.length<=16) score+=260;
+
+          if (hasExpected) {
+            if (text===costText) score+=520;
+            else if (exactCost.test(text) && text.length<=16) score+=260;
+          } else if (Number.isFinite(inferredCost) && inferredCost>0) {
+            score+=330;
+          }
+
           if (rect.top>=rr.top+rr.height*0.60) score+=220;
-          if (Math.abs(cx-(rr.left+rr.width/2))<=rr.width*0.32) score+=150;
+          if (Math.abs(cx-centerX)<=rr.width*0.32) score+=150;
           if (rect.width>=rr.width*0.28 && rect.width<=rr.width*0.90) score+=110;
           if (rect.height>=34 && rect.height<=150) score+=90;
           if (actionable) score+=120;
+
+          // Without a known board cost, only the wide lower-centre numeric
+          // control can own the attack. This excludes x1/x6 reward counters.
+          if (!hasExpected) {
+            if (!Number.isFinite(inferredCost) || inferredCost<=0) score-=1200;
+            if (rect.top<rr.top+rr.height*0.66) score-=900;
+            if (Math.abs(cx-centerX)>rr.width*0.28) score-=900;
+            if (rect.width<rr.width*0.34) score-=900;
+          }
+
           if (/закрыть|close|×|✕|назад|back|понятно|got it|understood/i.test(text)) score-=900;
-          return {element,score,rect,text};
+          return {element,score,rect,text,inferredCost};
         })
         .filter(row=>row.score>=650)
         .sort((a,b)=>b.score-a.score || b.rect.width*b.rect.height-a.rect.width*a.rect.height);
@@ -21233,12 +21257,22 @@
       const best=rows[0] || null;
       if (best) {
         recordDiagnostic('battle-modal-action-recovered',{
-          revision:HK_BATTLE_MODAL_ACTION_RECOVERY_REV,
-          expectedCost:Number(expectedCost),
+          revision:hasExpected ? HK_BATTLE_MODAL_ACTION_RECOVERY_REV : HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
+          expectedCost:hasExpected ? numericExpected : null,
+          inferredCost:Number.isFinite(best.inferredCost)?best.inferredCost:null,
           text:best.text.slice(0,80)
         });
       }
       return best?.element || null;
+    }
+
+    function battleEnemyModalActionCost(element) {
+      if (!element) return null;
+      const text=clean(element.innerText||element.textContent||'').trim();
+      const values=[...text.matchAll(/(?:^|\\s)(\\d{1,4})(?=\\s|$)/g)]
+        .map(match=>Number(match[1]))
+        .filter(value=>Number.isFinite(value) && value>0);
+      return values.length ? values[values.length-1] : null;
     }
 
     function battleEnemyModalRoot() {
@@ -21262,11 +21296,14 @@
       const root=battleEnemyModalRoot();
       if (!root) return {handled:false,success:false,reason:'no-modal'};
 
-      const action=battleEnemyModalActionButton(expectedCost);
+      const numericExpected=Number(expectedCost);
+      const hasExpected=Number.isFinite(numericExpected) && numericExpected>0;
+      const action=battleEnemyModalActionButton(hasExpected?numericExpected:null);
+      const resolvedCost=hasExpected ? numericExpected : battleEnemyModalActionCost(action);
       if (!action) {
         recordDiagnostic('battle-open-modal-confirm-wait',{
-          revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
-          expectedCost:Number(expectedCost),
+          revision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
+          expectedCost:hasExpected?numericExpected:null,
           reason:'action-missing'
         });
         return {handled:true,success:false,reason:'action-missing'};
@@ -21276,13 +21313,14 @@
       const beforeSwords=Number(getBattleAttack());
       const ready=await battleScrollTargetIntoViewportAsync(
         action,
-        'battle-open-modal-confirm-'+String(expectedCost),
+        'battle-open-modal-confirm-'+String(resolvedCost??'auto'),
         runId
       );
       if (!ready) {
         recordDiagnostic('battle-open-modal-confirm-stop',{
-          revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
-          expectedCost:Number(expectedCost),
+          revision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
+          expectedCost:hasExpected?numericExpected:null,
+          resolvedCost,
           reason:'action-not-clickable'
         });
         return {handled:true,success:false,reason:'action-not-clickable'};
@@ -21320,24 +21358,69 @@
         if (!currentRoot || currentRoot!==root || currentSignature!==before ||
             (Number.isFinite(beforeSwords) && Number.isFinite(currentSwords) && currentSwords!==beforeSwords)) {
           recordDiagnostic('battle-open-modal-confirm-complete',{
-            revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
-            expectedCost:Number(expectedCost),
+            revision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
+            expectedCost:hasExpected?numericExpected:null,
+            resolvedCost,
             modalClosed:!currentRoot || currentRoot!==root,
             signatureChanged:currentSignature!==before,
             swordsBefore:beforeSwords,
             swordsAfter:currentSwords
           });
-          return {handled:true,success:true,reason:'accepted'};
+          return {handled:true,success:true,reason:'accepted',resolvedCost};
         }
         await new Promise(resolve=>setTimeout(resolve,90));
       }
 
       recordDiagnostic('battle-open-modal-confirm-stop',{
-        revision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
-        expectedCost:Number(expectedCost),
+        revision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
+        expectedCost:hasExpected?numericExpected:null,
+        resolvedCost,
         reason:'no-state-change'
       });
       return {handled:true,success:false,reason:'no-state-change'};
+    }
+
+    async function runBattleOpenEnemyModalRecovery(source='battle-hard-gate') {
+      if (!battleAutoEnabled() || battleAutoRunning) return false;
+      const root=battleEnemyModalRoot();
+      if (!root) return false;
+
+      battleAutoRunning=true;
+      const runId=++battleAutoRunId;
+      try {
+        const action=battleEnemyModalActionButton(null);
+        const inferredCost=battleEnemyModalActionCost(action);
+        recordDiagnostic('battle-open-modal-priority-start',{
+          revision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
+          source,
+          inferredCost
+        });
+
+        const result=await battleConfirmAlreadyOpenEnemyModal(inferredCost,runId);
+        if (!result.success) {
+          recordDiagnostic('battle-open-modal-priority-stop',{
+            revision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
+            source,
+            reason:result.reason,
+            inferredCost
+          });
+          return false;
+        }
+
+        await new Promise(resolve=>setTimeout(resolve,BATTLE_AUTO_SETTLE_MS));
+        await dismissBattleRewardIfPresent(runId);
+        battleInsufficientExitNotBefore=Date.now()+900;
+        recordDiagnostic('battle-open-modal-priority-complete',{
+          revision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
+          source,
+          resolvedCost:result.resolvedCost??inferredCost
+        });
+        return true;
+      } finally {
+        if (runId===battleAutoRunId) battleAutoRunning=false;
+        lastSignature='';
+        setTimeout(checkPuzzle,180);
+      }
     }
 
     function battleActionButton(expectedCost) {
@@ -23751,6 +23834,7 @@
       const enemies=board.filter(enemy=>enemy!==null);
       const swords=getBattleAttack();
       const eggOffer=battleEggOfferTarget();
+      const enemyModalPending=!!battleEnemyModalRoot();
       const activatedSettled=battleRecoverFinalRewardClaimed('exit-state');
       const rewardConfirmPending=battleRewardConfirmOnlyPending();
       const rewardPending=!!battleVictoryElement() || !!battleVictoryModalRoot() || rewardConfirmPending;
@@ -23772,6 +23856,17 @@
           enemies:enemies.length,
           attackable:0,
           claimedAt:battleFinalRewardClaimedAt
+        };
+      }
+
+      if (enemyModalPending) {
+        return {
+          inBattle:true,
+          allowed:false,
+          reason:'enemy-modal-pending',
+          swords,
+          enemies:enemies.length,
+          attackable:0
         };
       }
 
@@ -24233,6 +24328,22 @@
         autoMapStatus('сражение',{
           revision:HK_BATTLE_STRICT_EXIT_REV
         });
+      }
+
+      // A visible enemy card is an unfinished attack transaction. Recover it
+      // before reading board state or deciding that no legal attack remains.
+      // This is the exact intermittent mobile state where the old runner could
+      // fall through to the insufficient-swords exit path and skip the fight.
+      if (battleEnemyModalRoot()) {
+        if (autoMapEnabled()) {
+          autoMapStatus('сражение → подтверждаю бой',{
+            revision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV
+          });
+        }
+        if (battleAutoEnabled() && !battleAutoRunning) {
+          void runBattleOpenEnemyModalRecovery('run-battle-hard-gate');
+        }
+        return true;
       }
 
       const eggOffer=battleEggOfferTarget();
@@ -27993,6 +28104,7 @@
       traderGoldSkipRevision:HK_TRADER_GOLD_SKIP_REV,
       traderGoldStaleModalRevision:HK_TRADER_GOLD_STALE_MODAL_REV,
       traderGoldExactModalRevision:HK_TRADER_GOLD_EXACT_MODAL_REV,
+      traderMapModalRevision:HK_TRADER_MAP_MODAL_REV,
       chestKeyOfferRevision:HK_CHEST_KEY_OFFER_REV,
       chestVisibleClaimRevision:HK_CHEST_VISIBLE_CLAIM_REV,
       chestPhaseOrderRevision:HK_CHEST_PHASE_ORDER_REV,
@@ -28001,6 +28113,7 @@
       battleOpenModalConfirmRevision:HK_BATTLE_OPEN_MODAL_CONFIRM_REV,
       battleIntroOverlayAckRevision:HK_BATTLE_INTRO_OVERLAY_ACK_REV,
       battleCompleteExitLoopRevision:HK_BATTLE_COMPLETE_EXIT_LOOP_REV,
+      battleOpenModalPriorityRevision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
       battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
       battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
