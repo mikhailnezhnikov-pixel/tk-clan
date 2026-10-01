@@ -1,17 +1,19 @@
 {
   "schema": 1,
-  "source_version": "1.18.99",
-  "target_version": "1.18.100",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.100.battle-mobile-price.candidate.user.js",
-  "primary_marker": "battle-mobile-price-action-20261001-r1",
+  "source_version": "1.18.100",
+  "target_version": "1.18.101",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.101.battle-bottom-hud.candidate.user.js",
+  "primary_marker": "battle-bottom-hud-status-20261001-r1",
   "preserve_markers": [
+    "battle-mobile-price-action-20261001-r1",
+    "battle-single-tap-until-receipt-20261001-r1",
+    "battle-no-premature-exit-20261001-r1",
     "treasury-intro-mobile-ack-20261001-r1",
     "treasury-battle-foreground-handoff-20261001-r1",
     "leave-modal-foreground-truth-20261001-r1",
     "exit-map-proof-20261001-r1",
     "battle-open-modal-priority-20260930-r1",
     "trader-map-modal-approval-20260930-r1",
-    "battle-no-premature-exit-20261001-r1",
     "battle-intro-overlay-ack-20260930-r1",
     "battle-complete-exit-loop-20260930-r1",
     "battle-open-modal-confirm-20260930-r1",
@@ -184,7 +186,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-100-battle-mobile-price-live-status.txt",
-  "commit_message": "fix: recognize mobile battle price and prevent repeat taps in userscript 1.18.100",
-  "manual_trigger": "1.18.100-mobile-battle-price-r1"
+  "audit_status_path": "audit/hk-userscript-1-18-101-battle-bottom-hud-live-status.txt",
+  "commit_message": "fix: move battle controls to bottom corners and target full buy button in 1.18.101"
 }

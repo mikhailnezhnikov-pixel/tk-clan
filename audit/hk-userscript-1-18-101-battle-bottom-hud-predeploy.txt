@@ -1,0 +1,17 @@
+USERSCRIPT_1_18_101_BOTTOM_HUD_PREDEPLOY=PASS
+source_version=1.18.100
+target_version=1.18.101
+battle_exit_live_enemy_guard=PASS
+battle_exit_cost_10_preconfirm_guard=PASS
+battle_attack_receipt=PASS
+mobile_price_1_2_swords=PASS
+mobile_hud_clearance=PASS
+bottom_left_map_status=PASS
+bottom_right_battle_button=PASS
+full_purchase_button_1_2_4_swords=PASS
+pending_attack_single_tap=PASS
+stale_board_guard=PASS
+spinner_recovery_bounded=PASS
+syntax=PASS
+source_sha256=65d029951acabb76ede7d892dddbd587ba36f6369bc366d680c9a1962ec96871
+candidate_sha256=653b8fe9a7404ec1e31284e7111dad95fce41a24e6a7c40ebdad05cac5b15efa
