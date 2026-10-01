@@ -182,5 +182,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-98-treasury-intro-handoff-live-status.txt",
-  "commit_message": "fix: recover Treasury intro and stale battle handoff in userscript 1.18.98"
+  "commit_message": "fix: recover Treasury intro and stale battle handoff in userscript 1.18.98",
+  "manual_trigger": "1.18.98-treasury-intro-handoff-r1"
 }
