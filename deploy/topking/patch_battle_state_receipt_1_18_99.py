@@ -434,21 +434,21 @@ confirm=r'''    async function battleConfirmAlreadyOpenEnemyModal(expectedCost,r
 '''
 between(start,end,confirm,"verify real attack receipt")
 
-# Never allow cost detection to select a disabled purchase under a spinner.
-rep("""        .filter(element=>element && !element.disabled && visible(element))
-        .map(element=>{
-          const text=clean(element.innerText||element.textContent||'').trim();
-          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
-          let actionable=false;""",
-    """        .filter(element=>
+# Only strengthen this selector in the enemy modal, not unrelated earlier selectors.
+selector_start=s.find("    function battleEnemyModalActionButton(")
+selector_end=s.find("    function battleEnemyModalActionCost(",selector_start)
+if selector_start<0 or selector_end<0:
+    raise SystemExit("enemy modal action selector missing")
+selector=s[selector_start:selector_end]
+target=".filter(element=>element && !element.disabled && visible(element))"
+updated=""".filter(element=>
           element && !element.disabled &&
           element.getAttribute?.('aria-disabled')!=='true' && visible(element)
-        )
-        .map(element=>{
-          const text=clean(element.innerText||element.textContent||'').trim();
-          const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
-          let actionable=false;""",
-    "prevent disabled attack target",count=1)
+        )"""
+if selector.count(target)!=1:
+    raise SystemExit("enemy modal action filter does not match")
+s=s[:selector_start]+selector.replace(target,updated,1)+s[selector_end:]
+
 
 revexport="      treasuryBattleHandoffRevision:HK_TREASURY_BATTLE_HANDOFF_REV,"
 rep(revexport,revexport+"\n      battleNoPrematureExitRevision:HK_BATTLE_NO_PREMATURE_EXIT_REV,\n      battleAttackReceiptRevision:HK_BATTLE_ATTACK_RECEIPT_REV,","revision export")
