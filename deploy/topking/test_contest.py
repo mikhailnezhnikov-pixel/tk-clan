@@ -99,22 +99,9 @@ class ContestTests(unittest.TestCase):
         self.now=START+1800
         t=self.token(10000000);self.call('answer',t,stage=1,answer='key 1')
         self.assertEqual(self.call('state',t)['my_place'],1)
-    def test_generated_draft_private_solutions_and_closed_schedule(self):
-        self.assertCode('forbidden','admin/generate')
-        generated=self.call('admin/generate',self.owner_token)
-        self.assertFalse(generated['admin_config']['armed'])
-        self.assertEqual(generated['phase'],'draft')
-        solutions=[x['solution'] for x in generated['admin_config']['stages']]
-        self.assertTrue(all(solutions))
-        self.register(self.owner_token,'test')
-        for i,answer in enumerate(solutions):
-            self.assertTrue(self.call('answer',self.owner_token,mode='test',stage=i,answer=answer)['correct'])
-        self.assertNotIn('admin_config',self.c.handle('GET','status'))
-        self.assertNotIn('stages',self.c.handle('GET','status'))
     def test_pausing_does_not_unlock_tasks_after_start(self):
         self.now=START
         self.call('admin/pause',self.owner_token,paused=True)
-        self.assertCode('configuration_locked','admin/generate',self.owner_token)
         self.assertCode('configuration_locked','admin/config',self.owner_token,stages=self.tasks)
 
 if __name__=='__main__':unittest.main()

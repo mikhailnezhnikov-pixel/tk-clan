@@ -37,6 +37,13 @@ class Contest:
                     seq INTEGER PRIMARY KEY AUTOINCREMENT, mode TEXT NOT NULL, tid TEXT NOT NULL,
                     stage INTEGER NOT NULL, submitted_ns INTEGER NOT NULL, UNIQUE(mode,tid,stage));
                 CREATE INDEX IF NOT EXISTS solve_ranking ON solves(mode,stage,submitted_ns,seq);
+                CREATE TABLE IF NOT EXISTS checkpoints (
+                    mode TEXT NOT NULL, tid TEXT NOT NULL, stage INTEGER NOT NULL,
+                    point INTEGER NOT NULL, submitted_ns INTEGER NOT NULL,
+                    PRIMARY KEY(mode,tid,stage,point));
+                CREATE TABLE IF NOT EXISTS point_attempts (
+                    mode TEXT NOT NULL, tid TEXT NOT NULL, stage INTEGER NOT NULL, point INTEGER NOT NULL,
+                    last_at REAL NOT NULL, PRIMARY KEY(mode,tid,stage,point));
                 CREATE TABLE IF NOT EXISTS attempts (
                     mode TEXT NOT NULL, tid TEXT NOT NULL, stage INTEGER NOT NULL,
                     count INTEGER NOT NULL, last_at REAL NOT NULL, PRIMARY KEY(mode,tid,stage));
@@ -102,52 +109,6 @@ class Contest:
     def ready(self, cfg):
         return len(cfg['stages'])==3 and all(x['prompt'].strip() and x['digest'] for x in cfg['stages'])
 
-    def generate_draft(self, cfg):
-        import itertools
-        import secrets
-        rng=secrets.SystemRandom()
-        grid=[[rng.randrange(1,10) for _ in range(8)] for _ in range(8)]
-        y=x=0; total=grid[0][0];directions=[]
-        for _ in range(24):
-            options=[(dy,dx,name) for dy,dx,name in ((0,1,'вправо'),(0,-1,'влево'),(1,0,'вниз'),(-1,0,'вверх')) if 0<=y+dy<8 and 0<=x+dx<8]
-            dy,dx,name=rng.choice(options);y+=dy;x+=dx;total+=grid[y][x];directions.append(name)
-        grid_text='\n'.join(' '.join(map(str,row)) for row in grid)
-        path='\n'.join(f'{i+1}. {name} на 1 клетку' for i,name in enumerate(directions))
-        prompt1=('Первый ключ — маршрут хранителя.\n\nНа карте 8 строк и 8 столбцов. Первая строка сверху, первый столбец слева. Старт — верхняя левая клетка.\n\n'+grid_text+'\n\nВыполните маршрут:\n'+path+'\n\nСложите число стартовой клетки и числа всех 24 клеток, в которые вы пришли. Если клетка посещена повторно, её число снова прибавляется. Умножьте сумму на 7 и прибавьте 13. Ответ — полученное целое число, без других слов. Сохраните его: он понадобится в финале.')
-        answer1=str(total*7+13)
-        names=['Альфа','Бета','Гамма','Дельта','Эпсилон']
-        permutation=list(range(1,6));rng.shuffle(permutation)
-        candidates=[]
-        for a in range(5):
-            for b in range(a+1,5):
-                if permutation[a]<permutation[b]:
-                    candidates.append((f'{names[a]} стоит левее, чем {names[b]}.',lambda p,a=a,b=b:p[a]<p[b]))
-                else:
-                    candidates.append((f'{names[b]} стоит левее, чем {names[a]}.',lambda p,a=a,b=b:p[b]<p[a]))
-                dist=abs(permutation[a]-permutation[b])
-                candidates.append((f'Между {names[a]} и {names[b]} ровно {dist-1} сундуков.',lambda p,a=a,b=b,d=dist:abs(p[a]-p[b])==d))
-        rng.shuffle(candidates);solutions=list(itertools.permutations(range(1,6)));clues=[]
-        for text,predicate in candidates:
-            filtered=[p for p in solutions if predicate(p)]
-            if len(filtered)<len(solutions):
-                clues.append(text);solutions=filtered
-            if len(solutions)==1:break
-        assert solutions==[tuple(permutation)]
-        answer2=''.join(map(str,permutation))
-        prompt2=('Второй ключ — пять сундуков.\n\nСундуки стоят в один ряд и пронумерованы от 1 до 5 слева направо. У каждого один хранитель: Альфа, Бета, Гамма, Дельта и Эпсилон. Каждый хранитель встречается ровно один раз. Все подсказки верны:\n\n'+'\n'.join(f'{i+1}. {clue}' for i,clue in enumerate(clues))+'\n\nВ ответе укажите пять номеров БЕЗ пробелов в порядке: Альфа, Бета, Гамма, Дельта, Эпсилон. Например, 12345 означает, что Альфа у первого сундука, Бета у второго и так далее. Сохраните ответ для финала.')
-        alphabet='АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'
-        words=['КОРОНА','СОКРОВИЩЕ','ХРАНИТЕЛЬ','ПОБЕДА','АЛМАЗ','КЛЮЧ','СУНДУК','ЗАМOК'.replace('O','О')]
-        rng.shuffle(words);answer3=' '.join(words[:4])
-        shift=(int(answer1)+sum((i+1)*n for i,n in enumerate(permutation)))%len(alphabet)
-        encrypted=''.join(alphabet[(alphabet.index(c)+shift)%len(alphabet)] if c in alphabet else c for c in answer3)
-        prompt3=('Финальный ключ — королевский шифр.\n\nИспользуйте свои ответы первых двух этапов.\n1. Возьмите число первого этапа.\n2. Пять цифр второго этапа умножьте соответственно на 1, 2, 3, 4 и 5, затем сложите произведения.\n3. Сложите результаты пунктов 1 и 2. Остаток от деления этой суммы на 32 — сдвиг шифра.\n\nАлфавит из 32 букв (без Ё):\n'+alphabet+'\n\nЗашифрованная фраза:\n'+encrypted+'\n\nДля расшифровки сдвиньте каждую букву НАЗАД на вычисленное число позиций. При выходе за начало продолжайте с конца алфавита. Пробелы сохраняются. Ответ — четыре расшифрованных слова в исходном порядке.')
-        prompts=[prompt1,prompt2,prompt3];answers=[answer1,answer2,answer3]
-        titles=['Маршрут хранителя','Пять сундуков','Королевский шифр']
-        cfg['stages']=[dict(title=titles[i],prompt=prompts[i],offset=i*1800,digest=self.digest(i,answers[i]),
-                            solution=answers[i]) for i in range(3)]
-        cfg['armed']=False
-        return cfg
-
     def phase(self, cfg):
         now=self.clock()
         if cfg['paused']:
@@ -190,8 +151,15 @@ class Contest:
             a=attempts.get(i)
             item=dict(index=i,title=x['title'],opens_at=opens,released=released,solved=i in solved,
                       retry_at=(a['last_at']+cfg['cooldown']) if a else 0)
-            if released or owner:
+            prior=all(j in solved for j in range(i))
+            item['unlocked']=released and prior
+            if item['unlocked'] or owner:
                 item['prompt']=x['prompt']
+                done={r['point'] for r in db.execute('SELECT point FROM checkpoints WHERE mode=? AND tid=? AND stage=?',(mode,tid,i))}
+                item['points']=[dict(index=j,title=q['title'],solved=j in done,
+                    prompt=q['prompt'] if all(k in done for k in range(j)) else '',
+                    unlocked=all(k in done for k in range(j))) for j,q in enumerate(x.get('points',[]))]
+                item['final_unlocked']=len(done)==3 if x.get('points') else True
             result['stages'].append(item)
         ranks=self.ranking(db,mode)
         own=next((r for r in ranks if r['tid']==tid),None)
@@ -237,18 +205,6 @@ class Contest:
                 return dict(ok=True,token=self.token(candidate))
             if not identity:
                 raise ContestError('unauthorized',401)
-            if action=='admin/generate' and method=='POST':
-                if not owner:
-                    raise ContestError('forbidden',403)
-                db.execute('BEGIN IMMEDIATE')
-                cfg=self.config(db)
-                if cfg['armed'] and self.clock()>=cfg['start_at']:
-                    raise ContestError('configuration_locked',409)
-                cfg=self.generate_draft(cfg)
-                db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
-                for table in ('entrants','solves','attempts'):
-                    db.execute('DELETE FROM '+table+' WHERE mode=?',('test',))
-                return self.state(db,cfg,identity,'test')
             if action=='admin/config' and method=='POST':
                 if not owner:
                     raise ContestError('forbidden',403)
@@ -271,7 +227,7 @@ class Contest:
                         raise ContestError('invalid_stage')
                     updated.append(dict(title=title or 'Этап '+str(i+1),prompt=prompt,offset=offset,
                                         digest=self.digest(i,answer) if answer else cfg['stages'][i]['digest'],
-                                        solution=answer if answer else cfg['stages'][i].get('solution','')))
+                                        solution=answer if answer else cfg['stages'][i].get('solution',''),points=cfg['stages'][i].get('points',[])))
                 if updated[0]['offset']!=0 or updated[1]['offset']<1200 or updated[2]['offset']<updated[1]['offset']+1200:
                     raise ContestError('stage_interval_too_short')
                 start=int(body.get('start_at',cfg['start_at']))
@@ -298,7 +254,7 @@ class Contest:
                 if not owner:
                     raise ContestError('forbidden',403)
                 db.execute('BEGIN IMMEDIATE')
-                for table in ('entrants','solves','attempts'):
+                for table in ('entrants','solves','attempts','checkpoints','point_attempts'):
                     db.execute('DELETE FROM '+table+' WHERE mode=?',('test',))
                 return dict(ok=True)
             if mode=='test' and not owner:
@@ -309,9 +265,22 @@ class Contest:
                 # Contest tokens don't confer cabinet permissions. Check read-only membership.
                 if not self.cabinet_identity('id:'+str(identity['id'])):
                     raise ContestError('members_only',403)
+            if action=='material' and method=='POST':
+                bundle=json.loads((Path(__file__).parent/'contest_material.json').read_text(encoding='utf-8'))
+                kind=body.get('kind')
+                if kind not in ('items','recipes','map'):
+                    raise ContestError('not_found',404)
+                if not owner:
+                    completed={r['stage'] for r in db.execute('SELECT stage FROM solves WHERE mode=? AND tid=?',(mode,str(identity['id'])))}
+                    if kind=='map' and (1 not in completed or self.clock()<cfg['start_at']+cfg['stages'][2]['offset']):
+                        raise ContestError('previous_stage_required',409)
+                    if kind=='items' and 1 not in completed:
+                        for item in bundle['items']:
+                            item.pop('note',None)
+                return dict(ok=True,material=bundle[kind])
             if action=='state' and method=='POST':
                 return self.state(db,cfg,identity,mode)
-            if action not in ('register','answer') or method!='POST':
+            if action not in ('register','answer','checkpoint') or method!='POST':
                 raise ContestError('not_found',404)
             db.execute('BEGIN IMMEDIATE')
             cfg=self.config(db)
@@ -349,6 +318,29 @@ class Contest:
                 return dict(ok=True,correct=True,already_solved=True,state=self.state(db,cfg,identity,mode))
             if any(i not in solved for i in range(stage)):
                 raise ContestError('previous_stage_required',409)
+            points=cfg['stages'][stage].get('points',[])
+            done={r['point'] for r in db.execute('SELECT point FROM checkpoints WHERE mode=? AND tid=? AND stage=?',(mode,tid,stage))}
+            if action=='checkpoint':
+                point=body.get('point')
+                if type(point) is not int or point not in range(len(points)):
+                    raise ContestError('invalid_checkpoint')
+                if point in done:
+                    return dict(ok=True,correct=True,already_solved=True,state=self.state(db,cfg,identity,mode))
+                if any(j not in done for j in range(point)):
+                    raise ContestError('previous_checkpoint_required',409)
+                previous=db.execute('SELECT last_at FROM point_attempts WHERE mode=? AND tid=? AND stage=? AND point=?',(mode,tid,stage,point)).fetchone()
+                if previous and self.clock()<previous['last_at']+cfg['cooldown']:
+                    raise ContestError('wait_before_retry',429)
+                answer=str(body.get('answer',''))
+                if not answer.strip() or len(answer)>500:
+                    raise ContestError('invalid_answer')
+                correct=hmac.compare_digest(self.digest(f'{stage}.{point}',answer),points[point]['digest'])
+                db.execute('INSERT INTO point_attempts VALUES(?,?,?,?,?) ON CONFLICT(mode,tid,stage,point) DO UPDATE SET last_at=excluded.last_at',(mode,tid,stage,point,self.clock()))
+                if correct:
+                    db.execute('INSERT INTO checkpoints VALUES(?,?,?,?,?)',(mode,tid,stage,point,time.time_ns()))
+                return dict(ok=True,correct=correct,state=self.state(db,cfg,identity,mode))
+            if points and len(done)!=3:
+                raise ContestError('checkpoints_required',409)
             a=db.execute('SELECT * FROM attempts WHERE mode=? AND tid=? AND stage=?',(mode,tid,stage)).fetchone()
             now=self.clock()
             if a and now<a['last_at']+cfg['cooldown']:
@@ -388,11 +380,6 @@ def install(server):
             return None
         return dict(id=tid,first_name=row['first_name'],member=True)
     contest=Contest(path,server['SIGNING_SECRET'],server['verify_telegram_login'],read_only_identity)
-    with contest.db() as db:
-        cfg=contest.config(db)
-        if cfg['owner_id'] and not any(x['prompt'] for x in cfg['stages']):
-            cfg=contest.generate_draft(cfg)
-            db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
     def dispatch(handler):
         parsed=urlsplit(handler.path)
         if not parsed.path.startswith(PREFIX):
