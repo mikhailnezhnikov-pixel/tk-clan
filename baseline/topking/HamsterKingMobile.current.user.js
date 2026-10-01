@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.96
+// @version      1.18.97
+// @release-note Сражения: окно выхода распознаётся только как реальный передний диалог с отдельной кнопкой 10, а не по надписи «Покинуть локацию» на странице и цифрам в кошельке. Подтверждение выхода считается успешным только после реального возврата на карту. Ложные клики и преждевременный переход к следующей клетке заблокированы.
 // @release-note Сражение: открытая карточка бойца «МОЖНО ОТЫСКАТЬ» теперь является жёстким приоритетом — Автобой восстанавливает нижнюю кнопку стоимости прямо из модалки до пересчёта поля и запрещает выход/пропуск, пока карточка не подтверждена. Тайный торговец: Карта сокровищ добавлена в подтверждаемый whitelist модалок, поэтому выбранная карта действительно покупается.
 // @release-note Сражение: стартовое окно «Сражение → Понятно» теперь определяется по самой модалке и боевому DOM, а не по заголовку страницы под затемнением; подтверждение проходит сквозь HK-оверлеи. После взятого сундука победителя введён отдельный цикл выхода: открыть «Покинуть локацию», подтвердить 10 и считать выход завершённым только после фактического возврата на карту; если окно закрылось, а бой остался, выход повторяется.
 // @release-note Карта сокровищ: Охота за сундуками больше не зависает на недоступном оставшемся сундуке — если раскопки завершены, доступных сундуков/ключей для покупки нет, комната считается исчерпанной и Автокарта нажимает выход. Сражение: уже открытая карточка противника теперь имеет абсолютный приоритет — Автобой подтверждает нижнюю кнопку стоимости прямо в открытой модалке, не требуя видимости заголовка Сражение под затемнением.
@@ -42,7 +43,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.96';
+  const BUILD_VERSION = '1.18.97';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3672,6 +3673,8 @@
   const HK_BATTLE_INTRO_OVERLAY_ACK_REV='battle-intro-overlay-ack-20260930-r1';
   const HK_BATTLE_COMPLETE_EXIT_LOOP_REV='battle-complete-exit-loop-20260930-r1';
   const HK_BATTLE_OPEN_MODAL_PRIORITY_REV='battle-open-modal-priority-20260930-r1';
+  const HK_LEAVE_MODAL_TRUTH_REV='leave-modal-foreground-truth-20261001-r1';
+  const HK_EXIT_MAP_PROOF_REV='exit-map-proof-20261001-r1';
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
   const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
   const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
@@ -25780,18 +25783,71 @@
       ].join('|');
     }
 
+    function autoMapReturnMapConfirmed() {
+      // The game may leave the underlying "Карта сокровищ" title mounted while
+      // a room is open. Only its real foreground cards / journey control prove
+      // that exit succeeded. A modal redraw or signature change never does.
+      if (!treasureGuideScreenVisible()) return false;
+      if (battleScreenVisiblyCurrent()) return false;
+      if (autoMapMiniGameForeground()) return false;
+      if (autoMapMapIsForeground()) return true;
+      const journey=autoMapJourneyButton();
+      return !!journey && autoMapElementIsForeground(journey);
+    }
+
     function autoMapLeaveModalRoot() {
-      const roots=[...document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div')]
+      const vw=Math.max(1,window.innerWidth);
+      const vh=Math.max(1,window.innerHeight);
+      const roots=[...document.querySelectorAll(
+        '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div'
+      )]
         .filter(visible)
         .map(element=>{
+          const rect=element.getBoundingClientRect?.();
+          if (!rect || rect.width<Math.min(240,vw*0.48) || rect.height<150 ||
+              rect.width>vw*0.94 || rect.height>vh*0.90) return null;
+
+          const cx=rect.left+rect.width/2;
+          const cy=rect.top+rect.height/2;
+          if (Math.abs(cx-vw/2)>vw*0.23 || Math.abs(cy-vh/2)>vh*0.25) return null;
+
+          // In 1.18.96 the unrestricted div fallback could interpret the
+          // battle screen plus "101K" resources as a leave confirmation.
+          // A real confirmation has its own price action, not a substring 10
+          // in the resource bar or a page-level Leave location button.
           const text=clean(element.innerText||element.textContent||'').trim();
-          const rect=element.getBoundingClientRect?.() || {width:0,height:0};
-          return {element,text,rect,area:rect.width*rect.height};
+          if (!/Покинуть локацию|Leave location|Exit location/i.test(text)) return null;
+
+          const actionRows=[...element.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+            .filter(child=>child && child!==element && !child.disabled && visible(child))
+            .map(child=>{
+              const value=clean(child.innerText||child.textContent||'').trim();
+              const r=child.getBoundingClientRect?.()||{width:0,height:0,top:0,left:0};
+              return {child,value,r};
+            });
+          const price=actionRows.some(row=>
+            /^(?:10|10\s*(?:ягод(?:ы)?|berries|berry))$/i.test(row.value) &&
+            row.r.top>=rect.top+rect.height*0.44 &&
+            row.r.width>=rect.width*0.23 &&
+            row.r.height>=28
+          );
+          if (!price) return null;
+
+          const hasBack=actionRows.some(row=>/^(?:Назад|Back|Отмена|Cancel)$/i.test(row.value));
+          const hasPrompt=/(?:Продолжить\?|Continue\?|Вы уверены|Are you sure)/i.test(text);
+          const explicit=element.matches?.(
+            '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"]'
+          );
+          if (!explicit && !hasPrompt && !hasBack) return null;
+
+          const top=battleElementFromPointIgnoringOverlays(cx,cy,null);
+          if (!top || (top!==element && !element.contains(top))) return null;
+
+          return {element,rect,area:rect.width*rect.height,explicit:!!explicit};
         })
-        .filter(row=>/Покинуть локацию|Leave location|Exit location/i.test(row.text))
-        .filter(row=>/Продолжить\?|Continue\?|10|Назад|Back/i.test(row.text))
-        .filter(row=>row.rect.width>=Math.min(260,window.innerWidth*0.50) && row.rect.height>=180)
-        .sort((a,b)=>a.area-b.area);
+        .filter(Boolean)
+        .sort((a,b)=>b.explicit-a.explicit || a.area-b.area);
+
       return roots[0]?.element || null;
     }
 
@@ -25919,7 +25975,7 @@
       autoMapLastActionAt=Date.now();
       const leaveAccepted=()=> {
         const current=autoMapLeaveModalRoot();
-        return !current || current!==modal || autoMapStateFingerprint()!==before;
+        return autoMapReturnMapConfirmed() || !current || current!==modal;
       };
 
       let leaveConfirmed=false;
@@ -25962,24 +26018,29 @@
       const started=Date.now();
       while (Date.now()-started<4500) {
         if (!autoMapEnabled()) return false;
-        if (!autoMapLeaveModalRoot()) {
-          if (treasureGuideScreenVisible() || autoMapStateFingerprint()!==before) {
-            autoMapRetryNotBefore=0;
-            autoMapCurrentLot='';
-            lastSignature='';
-            autoMapReturnNotBefore=Date.now()+300;
-            recordDiagnostic('leave-modal-confirm-complete',{
-              revision:HK_TREASURY_LEFT_PATH_REV,
-              source,
-              result:'closed'
-            });
-            setTimeout(()=>void runAutoMapTick('leave-modal-confirm-complete'),360);
-            return true;
-          }
+        if (autoMapReturnMapConfirmed()) {
+          autoMapRetryNotBefore=0;
+          autoMapCurrentLot='';
+          lastSignature='';
+          autoMapReturnNotBefore=Date.now()+300;
+          recordDiagnostic('leave-modal-confirm-complete',{
+            revision:HK_EXIT_MAP_PROOF_REV,
+            source,
+            result:'map-foreground-confirmed'
+          });
+          setTimeout(()=>void runAutoMapTick('leave-modal-confirm-complete'),360);
+          return true;
         }
         await new Promise(resolve=>setTimeout(resolve,90));
       }
 
+      recordDiagnostic('leave-modal-return-not-confirmed',{
+        revision:HK_EXIT_MAP_PROOF_REV,
+        source,
+        modalStillOpen:!!autoMapLeaveModalRoot(),
+        battleTitle:battleScreenVisiblyCurrent()
+      });
+      autoMapStatus('выход → жду карту',{revision:HK_EXIT_MAP_PROOF_REV,source});
       autoMapRetryNotBefore=Date.now()+800;
       setTimeout(()=>void runAutoMapTick('leave-modal-still-in-room'),900);
       return false;
@@ -25989,7 +26050,7 @@
       if (!autoMapEnabled()) return false;
       if (!battleRecoverFinalRewardClaimed(source) && !battleFinalRewardClaimed) return false;
 
-      const roomGone=()=>treasureGuideScreenVisible();
+      const roomGone=()=>autoMapReturnMapConfirmed();
       const attempts=3;
 
       for (let attempt=1;attempt<=attempts;attempt++) {
@@ -26658,14 +26719,24 @@
           autoMapBackoff(error,'tap-http-error');
           return false;
         }
-        modal=treasureModalRoot(null);
+        modal=/(?:leave|exit)/i.test(String(label||''))
+          ? autoMapLeaveModalRoot()
+          : treasureModalRoot(null);
         if (modal) {
           autoMapTxnSet('CARD_OPENED',{label:String(label||''),lotId:autoMapCurrentLot});
           break;
         }
         if (autoMapStateFingerprint()!==before) {
-          autoMapTxnSet('SERVER_UI_STATE_CHANGED',{label:String(label||''),lotId:autoMapCurrentLot,mode:'direct'});
-          return true;
+          if (/(?:leave|exit)/i.test(String(label||''))) {
+            if (autoMapReturnMapConfirmed()) {
+              autoMapTxnSet('SERVER_UI_STATE_CHANGED',{label:String(label||''),lotId:autoMapCurrentLot,mode:'map-confirmed'});
+              return true;
+            }
+            // This may be the just-opened leave dialog; keep waiting for it.
+          } else {
+            autoMapTxnSet('SERVER_UI_STATE_CHANGED',{label:String(label||''),lotId:autoMapCurrentLot,mode:'direct'});
+            return true;
+          }
         }
         await new Promise(resolve=>setTimeout(resolve,80));
       }
@@ -26693,8 +26764,10 @@
       const actionDeadline=Date.now()+1800;
       while (Date.now()<actionDeadline) {
         if (runId!==autoMapRunId || !autoMapEnabled()) return false;
-        action=autoMapModalPrimaryButton(modal,costHint);
-        if (!action) {
+        action=/(?:leave|exit)/i.test(String(label||''))
+          ? autoMapLeaveConfirmButton(modal,10)
+          : autoMapModalPrimaryButton(modal,costHint);
+        if (!action && !/(?:leave|exit)/i.test(String(label||''))) {
           const centered=treasureCenteredModalRoot();
           if (centered && centered!==modal) {
             const centeredAction=autoMapModalPrimaryButton(centered,costHint);
@@ -26778,7 +26851,10 @@
           autoMapBackoff(error,'confirm-http-error');
           return false;
         }
-        if (autoMapStateFingerprint()!==before) {
+        if (
+          (/(?:leave|exit)/i.test(String(label||'')) && autoMapReturnMapConfirmed()) ||
+          (!/(?:leave|exit)/i.test(String(label||'')) && autoMapStateFingerprint()!==before)
+        ) {
           autoMapTxnSet('SERVER_UI_STATE_CHANGED',{label:String(label||''),lotId:autoMapCurrentLot});
           await minigameHumanPause('settle',{module:'auto-map',label});
           return true;
@@ -28114,6 +28190,8 @@
       battleIntroOverlayAckRevision:HK_BATTLE_INTRO_OVERLAY_ACK_REV,
       battleCompleteExitLoopRevision:HK_BATTLE_COMPLETE_EXIT_LOOP_REV,
       battleOpenModalPriorityRevision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
+      leaveModalTruthRevision:HK_LEAVE_MODAL_TRUTH_REV,
+      exitMapProofRevision:HK_EXIT_MAP_PROOF_REV,
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
       battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
       battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
