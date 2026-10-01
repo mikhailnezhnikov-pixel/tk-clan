@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.97
+// @version      1.18.98
+// @release-note Сокровищница: восстановление вступительного окна с пустой кнопкой на мобильных, перенос индикатора автокарты с кнопки, подтверждение входа до выбора пути. Смена комнаты сбрасывает устаревший бой и прекращает повторные попытки выхода из уже покинутого сражения.
 // @release-note Сражения: окно выхода распознаётся только как реальный передний диалог с отдельной кнопкой 10, а не по надписи «Покинуть локацию» на странице и цифрам в кошельке. Подтверждение выхода считается успешным только после реального возврата на карту. Ложные клики и преждевременный переход к следующей клетке заблокированы.
 // @release-note Сражение: открытая карточка бойца «МОЖНО ОТЫСКАТЬ» теперь является жёстким приоритетом — Автобой восстанавливает нижнюю кнопку стоимости прямо из модалки до пересчёта поля и запрещает выход/пропуск, пока карточка не подтверждена. Тайный торговец: Карта сокровищ добавлена в подтверждаемый whitelist модалок, поэтому выбранная карта действительно покупается.
 // @release-note Сражение: стартовое окно «Сражение → Понятно» теперь определяется по самой модалке и боевому DOM, а не по заголовку страницы под затемнением; подтверждение проходит сквозь HK-оверлеи. После взятого сундука победителя введён отдельный цикл выхода: открыть «Покинуть локацию», подтвердить 10 и считать выход завершённым только после фактического возврата на карту; если окно закрылось, а бой остался, выход повторяется.
@@ -43,7 +44,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.97';
+  const BUILD_VERSION = '1.18.98';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3675,6 +3676,8 @@
   const HK_BATTLE_OPEN_MODAL_PRIORITY_REV='battle-open-modal-priority-20260930-r1';
   const HK_LEAVE_MODAL_TRUTH_REV='leave-modal-foreground-truth-20261001-r1';
   const HK_EXIT_MAP_PROOF_REV='exit-map-proof-20261001-r1';
+  const HK_TREASURY_INTRO_REV='treasury-intro-mobile-ack-20261001-r1';
+  const HK_TREASURY_BATTLE_HANDOFF_REV='treasury-battle-foreground-handoff-20261001-r1';
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
   const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
   const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
@@ -24794,6 +24797,11 @@
       const background=enabled?'#38c85a':'#292929';
       const color=enabled?'#071b0a':'#fff';
       const borderColor=enabled?'#d8ffe0':'rgba(255,255,255,.8)';
+      const treasuryIntro=autoMapTreasuryIntroModalRoot();
+      const hudBottom=treasuryIntro?'auto':'202px';
+      const hudTop=treasuryIntro?'85px':'auto';
+      if (autoMapToggle.style.bottom!==hudBottom) autoMapToggle.style.bottom=hudBottom;
+      if (autoMapToggle.style.top!==hudTop) autoMapToggle.style.top=hudTop;
       if (autoMapToggle.style.display!==display) autoMapToggle.style.display=display;
       if (autoMapToggle.textContent!==label) autoMapToggle.textContent=label;
       if (autoMapToggle.style.background!==background) autoMapToggle.style.background=background;
@@ -25540,6 +25548,164 @@
       return ok;
     }
 
+    function autoMapTreasuryForeground() {
+      if (battleScreenVisiblyCurrent()) return false;
+      return [...document.querySelectorAll('h1,h2,h3,[role="heading"],header,div,span')]
+        .filter(visible)
+        .filter(element=>/^(?:Сокровищница|Treasury)$/i.test(
+          clean(element.innerText||element.textContent||'').trim()
+        ))
+        .some(autoMapElementIsForeground);
+    }
+
+    function autoMapTreasuryIntroAction(root) {
+      if (!root) return null;
+      const rr=root.getBoundingClientRect?.();
+      if (!rr || rr.width<=0 || rr.height<=0) return null;
+      const cx=rr.left+rr.width/2;
+      const candidates=[...root.querySelectorAll('button,[role="button"],a,[onclick],div,span')]
+        .filter(element=>
+          element && element!==root && element!==autoMapToggle &&
+          element.isConnected && !element.disabled &&
+          element.getAttribute?.('aria-disabled')!=='true' && visible(element)
+        )
+        .map(element=>{
+          const text=clean(element.innerText||element.textContent||'').trim();
+          const rect=element.getBoundingClientRect?.() ||
+            {left:0,top:0,width:0,height:0};
+          let interactive=false,blocked=false;
+          try {
+            const style=getComputedStyle(element);
+            blocked=style.pointerEvents==='none';
+            interactive=element.matches?.('button,[role="button"],a,[onclick]') ||
+              !!element.onclick || style.cursor==='pointer';
+          } catch (_) {}
+          if (blocked || !interactive) return null;
+          if (/(?:Закрыть|Close|Назад|Back|×|✕)/i.test(text)) return null;
+          if (rect.top<rr.top+rr.height*0.55 ||
+              rect.width<rr.width*0.30 || rect.width>rr.width*0.93 ||
+              rect.height<30 || rect.height>rr.height*0.26 ||
+              Math.abs(rect.left+rect.width/2-cx)>rr.width*0.22) return null;
+          const area=rect.width*rect.height;
+          const score=
+            (element.matches?.('button,[role="button"],a')?180:0) +
+            (/(?:Понятно|Продолжить|Войти|Открыть|Got it|Continue|Enter|Open)/i.test(text)?100:0) +
+            (rect.top>=rr.top+rr.height*0.62?90:0) +
+            (text.length<=30?50:0);
+          return {element,score,area};
+        })
+        .filter(Boolean)
+        .sort((a,b)=>b.score-a.score || a.area-b.area);
+      return candidates[0]?.element || null;
+    }
+
+    function autoMapTreasuryIntroModalRoot() {
+      if (!autoMapTreasuryForeground()) return null;
+      const vw=Math.max(1,window.innerWidth);
+      const vh=Math.max(1,window.innerHeight);
+      const rows=[...document.querySelectorAll(
+        '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="popup"],[class*="dialog"],div'
+      )]
+        .filter(visible)
+        .map(element=>{
+          const rect=element.getBoundingClientRect?.();
+          if (!rect || rect.width<Math.min(220,vw*0.35) || rect.height<180 ||
+              rect.width>vw*0.94 || rect.height>vh*0.88) return null;
+          const cx=rect.left+rect.width/2;
+          const cy=rect.top+rect.height/2;
+          if (Math.abs(cx-vw/2)>vw*0.24 ||
+              Math.abs(cy-vh/2)>vh*0.27) return null;
+          const text=clean(element.innerText||element.textContent||'').trim();
+          if (/(?:Левый|Средний|Правый)\s+коридор|(?:Left|Middle|Right)\s+corridor|Сундук\s+победителя|Victory\s+chest/i.test(text)) return null;
+          const title=[...element.querySelectorAll('h1,h2,h3,[role="heading"],strong,b,div,span')]
+            .filter(visible)
+            .find(child=>
+              child!==element &&
+              /^(?:Сокровищница|Treasury)$/i.test(
+                clean(child.innerText||child.textContent||'').trim()
+              ) &&
+              child.getBoundingClientRect?.().top<=rect.top+rect.height*0.64
+            );
+          if (!title) return null;
+          const foreground=[0.43,0.72].some(y=>{
+            const top=battleElementFromPointIgnoringOverlays(
+              cx,rect.top+rect.height*y,null
+            );
+            return !!top && (top===element || element.contains(top));
+          });
+          if (!foreground) return null;
+          return {element,area:rect.width*rect.height,action:!!autoMapTreasuryIntroAction(element)};
+        })
+        .filter(Boolean)
+        .sort((a,b)=>Number(b.action)-Number(a.action) || a.area-b.area);
+      return rows[0]?.element || null;
+    }
+
+    async function autoMapAcknowledgeTreasuryIntro(source='treasury-intro') {
+      if (!autoMapEnabled()) return false;
+      const root=autoMapTreasuryIntroModalRoot();
+      if (!root) return false;
+      const action=autoMapTreasuryIntroAction(root);
+      if (!action) {
+        autoMapStatus('сокровищница → жду кнопку',{
+          revision:HK_TREASURY_INTRO_REV,source
+        });
+        recordDiagnostic('treasury-intro-action-missing',{
+          revision:HK_TREASURY_INTRO_REV,
+          source
+        });
+        setTimeout(()=>void runAutoMapTick('treasury-intro-button-retry'),650);
+        return false;
+      }
+
+      autoMapStatus('сокровищница → подтверждаю вход',{
+        revision:HK_TREASURY_INTRO_REV,source
+      });
+      await autoMapWaitActionGap();
+      if (!autoMapEnabled() || !root.isConnected) return false;
+      const accepted=()=>!autoMapTreasuryIntroModalRoot();
+      const rect=action.getBoundingClientRect?.();
+      recordDiagnostic('treasury-intro-confirm-target',{
+        revision:HK_TREASURY_INTRO_REV,source,
+        text:clean(action.innerText||action.textContent||'').slice(0,50),
+        left:Math.round(rect?.left||0),top:Math.round(rect?.top||0),
+        width:Math.round(rect?.width||0),height:Math.round(rect?.height||0)
+      });
+      autoMapLastActionAt=Date.now();
+      let confirmed=false;
+      try {
+        confirmed=await deviceNeutralActivate(
+          action,'treasury-intro-ack-'+source,accepted,1500
+        );
+      } catch (_) {}
+      if (!confirmed && action.isConnected && rect?.width>0 && rect?.height>0) {
+        const pointX=rect.left+rect.width/2;
+        const pointY=rect.top+rect.height/2;
+        const top=battleElementFromPointIgnoringOverlays(pointX,pointY,action);
+        if (battlePointBelongsToElement(action,top)) {
+          const sent=dispatchMinigameOverlaySafeTapAt(
+            pointX,pointY,'treasury-intro-center-'+source
+          );
+          if (sent) confirmed=await waitDeviceNeutralCondition(accepted,1500,70);
+        }
+      }
+
+      recordDiagnostic('treasury-intro-acknowledged',{
+        revision:HK_TREASURY_INTRO_REV,source,success:!!confirmed
+      });
+      if (confirmed) {
+        lastSignature='';
+        autoMapRetryNotBefore=0;
+        setTimeout(()=>void runAutoMapTick('treasury-intro-acknowledged'),200);
+      } else {
+        autoMapStatus('сокровищница → жду подтверждение',{
+          revision:HK_TREASURY_INTRO_REV,source
+        });
+        setTimeout(()=>void runAutoMapTick('treasury-intro-ack-retry'),700);
+      }
+      return !!confirmed;
+    }
+
     function autoMapTreasuryCorridorModalRoot() {
       if (!autoMapTreasuryScreenVisible()) return null;
       const title=/(?:Левый|Средний|Правый)\\s+коридор|(?:Left|Middle|Right)\\s+corridor/i;
@@ -25784,6 +25950,7 @@
     }
 
     function autoMapReturnMapConfirmed() {
+      if (autoMapTreasuryForeground()) return false;
       // The game may leave the underlying "Карта сокровищ" title mounted while
       // a room is open. Only its real foreground cards / journey control prove
       // that exit succeeded. A modal redraw or signature change never does.
@@ -26051,10 +26218,27 @@
       if (!battleRecoverFinalRewardClaimed(source) && !battleFinalRewardClaimed) return false;
 
       const roomGone=()=>autoMapReturnMapConfirmed();
+      const treasuryHandoff=()=>autoMapTreasuryForeground();
+      const handoff=()=>{
+        if (!treasuryHandoff()) return false;
+        battleFinalRewardClaimed=false;
+        battleFinalRewardClaimedAt=0;
+        autoMapRetryNotBefore=0;
+        lastSignature='';
+        autoMapStatus('сокровищница → вход',{
+          revision:HK_TREASURY_BATTLE_HANDOFF_REV,source
+        });
+        recordDiagnostic('battle-exit-treasury-handoff',{
+          revision:HK_TREASURY_BATTLE_HANDOFF_REV,source
+        });
+        setTimeout(()=>void runAutoMapTick('battle-handoff-treasury'),120);
+        return true;
+      };
       const attempts=3;
 
       for (let attempt=1;attempt<=attempts;attempt++) {
         if (!autoMapEnabled()) return false;
+        if (handoff()) return true;
         if (roomGone()) {
           autoMapRetryNotBefore=0;
           autoMapCurrentLot='';
@@ -26104,6 +26288,7 @@
 
           const modalDeadline=Date.now()+2200;
           while (Date.now()<modalDeadline && autoMapEnabled()) {
+            if (handoff()) return true;
             if (roomGone()) return true;
             modal=autoMapLeaveModalRoot();
             if (modal) break;
@@ -26155,6 +26340,7 @@
 
         const leaveDeadline=Date.now()+3600;
         while (Date.now()<leaveDeadline && autoMapEnabled()) {
+          if (handoff()) return true;
           if (roomGone()) {
             autoMapRetryNotBefore=0;
             autoMapCurrentLot='';
@@ -27318,6 +27504,31 @@
         }
       }
 
+      const treasuryForeground=autoMapTreasuryForeground();
+      if (treasuryForeground) {
+        const interrupted=autoMapCancelStaleRunners('treasury-foreground-handoff');
+        if (battleFinalRewardClaimed || battleIntroGateUntil) {
+          battleFinalRewardClaimed=false;
+          battleFinalRewardClaimedAt=0;
+          battleIntroGateUntil=0;
+          lastSignature='';
+        }
+        if (interrupted.length) recordDiagnostic('treasury-foreground-handoff',{
+          revision:HK_TREASURY_BATTLE_HANDOFF_REV,
+          interrupted,source
+        });
+        const treasuryIntro=autoMapTreasuryIntroModalRoot();
+        if (treasuryIntro) {
+          autoMapRunning=true;
+          const introRunId=autoMapRunId;
+          try {
+            return await autoMapAcknowledgeTreasuryIntro('tick-preflight');
+          } finally {
+            if (introRunId===autoMapRunId) autoMapRunning=false;
+          }
+        }
+      }
+
       const treasuryCorridorModal=autoMapTreasuryCorridorModalRoot();
       if (treasuryCorridorModal) {
         autoMapRunning=true;
@@ -27934,6 +28145,7 @@
       if (realMapForeground || completedMapForeground) {
         return 'NONE';
       }
+      if (autoMapTreasuryForeground()) return 'NONE';
       const lightsReward=lightsRewardElement();
       if (lightsReward) return 'LIGHTS|REWARD|mf_fairlot_lights_out_reward_slot';
       const lights = [...document.querySelectorAll('[data-lot-id^="mf_fairlot_lights_out_sl"]')].filter(visible);
@@ -27987,6 +28199,11 @@
 
     function checkPuzzle() {
       ensureAutoMapToggle();
+
+      if (autoMapEnabled() && !autoMapRunning && autoMapTreasuryIntroModalRoot()) {
+        void runAutoMapTick('treasury-intro-overlay');
+        return;
+      }
 
       const forbiddenGoldModal=traderForbiddenGoldModalRoot();
       if (forbiddenGoldModal) {
@@ -28192,6 +28409,8 @@
       battleOpenModalPriorityRevision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
       leaveModalTruthRevision:HK_LEAVE_MODAL_TRUTH_REV,
       exitMapProofRevision:HK_EXIT_MAP_PROOF_REV,
+      treasuryIntroRevision:HK_TREASURY_INTRO_REV,
+      treasuryBattleHandoffRevision:HK_TREASURY_BATTLE_HANDOFF_REV,
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
       battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
       battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
