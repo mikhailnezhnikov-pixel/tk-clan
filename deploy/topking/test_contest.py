@@ -57,7 +57,37 @@ class ContestTests(unittest.TestCase):
         self.now=START+3600
         self.assertEqual(self.call('answer',stage=2,answer='key 2')['state']['my_completed'],3)
         self.now=START+7200
-        self.assertCode('contest_not_open','answer',stage=2,answer='key 2')
+        self.assertCode('contest_hidden','answer',stage=2,answer='key 2')
+    def test_archive_hides_contest_and_preserves_owner_results(self):
+        self.now=START
+        self.register()
+        self.call('answer',stage=0,answer='key 0')
+        tables=('entrants','solves','checkpoints','attempts')
+        with self.c.db() as db:
+            before=tuple(db.execute('SELECT COUNT(*) FROM '+name+' WHERE mode=?',('live',)).fetchone()[0] for name in tables)
+            cfg=self.c.config(db);cfg['archived']=True
+            db.execute('UPDATE settings SET value=?',(json.dumps(cfg),))
+        public=self.c.handle('GET','status')
+        self.assertEqual(public['phase'],'archived')
+        self.assertFalse(public['visible'])
+        self.assertNotIn('leaderboard',public)
+        participant=self.c.handle('GET','status',self.token())
+        self.assertFalse(participant['visible'])
+        self.assertNotIn('stages',participant)
+        self.assertCode('contest_hidden','state')
+        self.assertCode('contest_hidden','material',kind='items')
+        self.assertCode('contest_hidden','register',player_id='new',nickname='New')
+        self.assertCode('contest_hidden','answer',stage=0,answer='key 0')
+        self.assertCode('contest_hidden','login',telegram=dict(id='11111111',signed=True))
+        owner_state=self.c.handle('GET','status',self.owner_token)
+        self.assertTrue(owner_state['visible'])
+        self.assertTrue(owner_state['owner'])
+        self.assertEqual(owner_state['leaderboard'][0]['player_id'],'game-1')
+        self.assertEqual(owner_state['leaderboard'][0]['completed'],1)
+        with self.c.db() as db:
+            after=tuple(db.execute('SELECT COUNT(*) FROM '+name+' WHERE mode=?',('live',)).fetchone()[0] for name in tables)
+        self.assertEqual(before,after)
+
     def test_test_isolation_and_reset(self):
         self.register(self.owner_token,'test')
         self.call('answer',self.owner_token,mode='test',stage=0,answer='key 0')
