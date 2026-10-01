@@ -1,0 +1,28 @@
+name: Read contest winners
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read final rankings only
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+          trap 'rm -f "$HOME/.ssh/topking"' EXIT
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'python3 -' <<'PY'
+          import sqlite3,json,subprocess
+          from pathlib import Path
+          pid=subprocess.check_output(['systemctl','show','hamsterking-license.service','-p','MainPID','--value'],text=True).strip()
+          env=dict(x.split(b'=',1) for x in Path('/proc/'+pid+'/environ').read_bytes().split(b'\0') if b'=' in x)
+          main=env.get(b'HK_LICENSE_DB',b'/var/lib/hamsterking-license/licenses.db').decode()
+          path=Path(main).parent/'contest.db'
+          db=sqlite3.connect('file:'+str(path)+'?mode=ro',uri=True);db.row_factory=sqlite3.Row
+          rows=db.execute("SELECT e.player_id,e.nickname,COUNT(s.stage) AS completed,MAX(s.submitted_ns) AS finish,MAX(s.seq) AS seq FROM entrants e JOIN solves s ON s.mode=e.mode AND s.tid=e.tid WHERE e.mode='live' GROUP BY e.tid HAVING COUNT(s.stage)=3 ORDER BY finish,seq LIMIT 3").fetchall()
+          for i,r in enumerate(rows,1):print('WINNER '+json.dumps(dict(place=i,player_id=r['player_id'],nickname=r['nickname']),ensure_ascii=False))
+          PY
