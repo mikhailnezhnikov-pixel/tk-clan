@@ -229,7 +229,13 @@ if "treasure-key-battle-handoff-20260928-r1" in s:
         ]:
             if marker not in run_battle:
                 raise SystemExit(f"stale battle DOM guard broken: {marker}")
-        if "battleFinalRewardClaimed=false;" in run_battle:
+        if "battle-no-premature-exit-20261001-r1" in s:
+            if "if (battleFinalRewardClaimed && enemies.some(enemy=>" not in run_battle or (
+                run_battle.find("battle-stale-reward-cleared-before-attack") >
+                run_battle.find("battle-stale-dom-after-reward")
+            ):
+                raise SystemExit("live affordable fighter must invalidate stale reward before exit")
+        elif "battleFinalRewardClaimed=false;" in run_battle:
             raise SystemExit("stale battle DOM guard broken: runBattle resets claimed state")
 
         intro_root=section("function battleIntroModalRoot","async function runBattleIntroAcknowledge")
