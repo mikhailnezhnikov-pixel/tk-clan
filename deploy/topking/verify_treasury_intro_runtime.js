@@ -89,6 +89,7 @@ state.battle=false;
     autoMapTreasuryForeground:()=>true,
     autoMapReturnMapConfirmed:()=>false,
     battleRecoverFinalRewardClaimed:()=>true,
+    battleExitState:()=>({inBattle:true,allowed:true,reason:'final-reward-activated'}),
     autoMapExitButton:()=>{exitTaps++;return null;},
     autoMapStatus:label=>{if(label==='сокровищница → вход') handoffs++;},
     recordDiagnostic:()=>{},
