@@ -434,6 +434,106 @@ confirm=r'''    async function battleConfirmAlreadyOpenEnemyModal(expectedCost,r
 '''
 between(start,end,confirm,"verify real attack receipt")
 
+# A mobile purchase button can remain a spinner after an unacknowledged
+# request. Wait for the backend first; after 15 s of identical board/swords,
+# close only the actual enemy popup (never a paid exit modal) and rescan.
+# Bound recovery to two closures per unchanged server state.
+stall=r'''    const battleOpenModalStall={
+      key:'',since:0,retries:0,nextAllowed:0
+    };
+
+    async function battleRecoverStalledEnemyModal(source='attack-not-accepted') {
+      const root=battleEnemyModalRoot();
+      if (!root || !battleAutoEnabled()) return false;
+      const key=String(getBattleAttack())+'|'+
+        getBattleBoard().filter(Boolean)
+          .map(enemy=>String(enemy.lotId||enemy.slot+':'+enemy.hp))
+          .sort().join('|');
+      const now=Date.now();
+      if (key!==battleOpenModalStall.key) {
+        battleOpenModalStall.key=key;
+        battleOpenModalStall.since=now;
+        battleOpenModalStall.retries=0;
+        battleOpenModalStall.nextAllowed=0;
+      }
+      if (now<battleOpenModalStall.nextAllowed ||
+          now-battleOpenModalStall.since<15000) {
+        autoMapStatus('сражение → жду ответ',{
+          revision:HK_BATTLE_ATTACK_RECEIPT_REV,source
+        });
+        return false;
+      }
+      if (minigameRecentHttpError(0,5000)) {
+        battleOpenModalStall.nextAllowed=now+3500;
+        return false;
+      }
+      if (battleOpenModalStall.retries>=2) {
+        autoMapStatus('сражение → требуется проверка',{
+          revision:HK_BATTLE_ATTACK_RECEIPT_REV,source
+        });
+        recordDiagnostic('battle-modal-stall-recovery-exhausted',{
+          revision:HK_BATTLE_ATTACK_RECEIPT_REV,source,key
+        });
+        return false;
+      }
+      const rr=root.getBoundingClientRect?.();
+      if (!rr) return false;
+      const close=[...root.querySelectorAll(
+        'button,[role="button"],a,[onclick],div,span'
+      )]
+        .filter(element=>element && !element.disabled && visible(element))
+        .map(element=>{
+          const rect=element.getBoundingClientRect?.();
+          const text=clean(element.innerText||element.textContent||'').trim();
+          return {element,rect,text};
+        })
+        .filter(row=>
+          row.rect &&
+          /^(?:×|✕|Закрыть|Close)$/i.test(row.text) &&
+          row.rect.width>0 && row.rect.width<=70 &&
+          row.rect.height>0 && row.rect.height<=70 &&
+          row.rect.top<rr.top+rr.height*0.42 &&
+          row.rect.left>rr.left+rr.width*0.65
+        )
+        .sort((a,b)=>a.rect.width*a.rect.height-b.rect.width*b.rect.height)[0]?.element;
+      if (!close) return false;
+      const sent=dispatchBattleOverlaySafeTap(close,'battle-stalled-modal-close');
+      if (!sent) return false;
+      battleOpenModalStall.retries+=1;
+      battleOpenModalStall.since=Date.now();
+      battleOpenModalStall.nextAllowed=Date.now()+1500;
+      battleInsufficientExitNotBefore=Date.now()+2500;
+      lastSignature='';
+      recordDiagnostic('battle-modal-stall-recover',{
+        revision:HK_BATTLE_ATTACK_RECEIPT_REV,source,
+        retries:battleOpenModalStall.retries
+      });
+      setTimeout(checkPuzzle,1600);
+      return true;
+    }
+
+'''
+rep("    async function runBattleOpenEnemyModalRecovery(source='battle-hard-gate') {",
+    stall+"    async function runBattleOpenEnemyModalRecovery(source='battle-hard-gate') {",
+    "bounded enemy modal stale recovery")
+rep("""        if (!result.success) {
+          recordDiagnostic('battle-open-modal-priority-stop',{""",
+    """        if (!result.success) {
+          await battleRecoverStalledEnemyModal(result.reason);
+          recordDiagnostic('battle-open-modal-priority-stop',{""",
+    "stalled enemy modal hook")
+rep("""        await new Promise(resolve=>setTimeout(resolve,BATTLE_AUTO_SETTLE_MS));
+        await dismissBattleRewardIfPresent(runId);
+        battleInsufficientExitNotBefore=Date.now()+900;
+        recordDiagnostic('battle-open-modal-priority-complete',{""",
+    """        battleOpenModalStall.key='';
+        battleOpenModalStall.since=0;
+        await new Promise(resolve=>setTimeout(resolve,BATTLE_AUTO_SETTLE_MS));
+        await dismissBattleRewardIfPresent(runId);
+        battleInsufficientExitNotBefore=Date.now()+900;
+        recordDiagnostic('battle-open-modal-priority-complete',{""",
+    "reset stall after verified attack")
+
 # Only strengthen this selector in the enemy modal, not unrelated earlier selectors.
 selector_start=s.find("    function battleEnemyModalActionButton(")
 selector_end=s.find("    function battleEnemyModalActionCost(",selector_start)
