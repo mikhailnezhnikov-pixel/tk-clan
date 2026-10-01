@@ -47,5 +47,8 @@ class CheckpointTests(unittest.TestCase):
     def test_mobile_answer_case_and_semicolon_spacing(self):
         self.assertEqual(self.c.digest('0.0','Т; М; Б; БОД'),self.c.digest('0.0','т;м;б;бод'))
         self.assertEqual(self.c.digest('1.2','А; 5'),self.c.digest('1.2','а ;5'))
+        for answer in ('Т М Б БОД','тмббод','Т; М; Б; БОД'):
+            self.assertEqual(self.c.digest('0.0','Т; М; Б; БОД'),self.c.digest('0.0',answer))
+        self.assertNotEqual(self.c.digest('0.0','Т М Б БОД'),self.c.digest('0.0','Т Б М БОД'))
 
 if __name__=='__main__':unittest.main()

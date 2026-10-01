@@ -104,7 +104,7 @@ class Contest:
 
     def normalize(self, answer):
         value=' '.join(unicodedata.normalize('NFKC',str(answer)).casefold().replace('ё','е').split())
-        return re.sub(r'\s*;\s*',';',value)
+        return re.sub(r'[\s;]+','',value)
 
     def digest(self, stage, answer):
         return hmac.new(self.secret, ('contest-answer:'+str(stage)+':'+self.normalize(answer)).encode(),hashlib.sha256).hexdigest()
@@ -442,9 +442,13 @@ def install(server):
             cfg=contest.config(db)
             if contest.clock()<cfg['start_at'] and db.execute("SELECT COUNT(*) FROM entrants WHERE mode='live'").fetchone()[0]==0:
                 content=json.loads(content_path.read_text(encoding='utf-8'))
-                # Approved prelaunch final-task update; other answers and progress stay intact.
-                cfg['stages'][2]['prompt']=content[2]['prompt']
-                cfg['stages'][2]['digest']=contest.digest(2,content[2]['answer'])
+                # Refresh approved wording and digests before launch; preserve participant progress.
+                for i, stage in enumerate(content):
+                    cfg['stages'][i]['prompt']=stage['prompt']
+                    cfg['stages'][i]['digest']=contest.digest(i,stage['answer'])
+                    for j, point in enumerate(stage['points']):
+                        cfg['stages'][i]['points'][j]['prompt']=point['prompt']
+                        cfg['stages'][i]['points'][j]['digest']=contest.digest(f'{i}.{j}',point['answer'])
                 db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
     def dispatch(handler):
         parsed=urlsplit(handler.path)
