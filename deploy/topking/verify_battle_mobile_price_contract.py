@@ -60,12 +60,25 @@ if "result.reason!=='no-server-state-change'" not in run:
 
 battleHud=section('function updateBattleAutoToggle(isBattle = null) {','function ensureBattleAutoToggle(')
 mapHud=section('function updateAutoMapToggle(showOverride=null) {','function ensureAutoMapToggle()')
-for marker in ["const battleHudTop=enemyModalOpen?'132px':'auto';",
-               "const battleHudBottom=enemyModalOpen?'auto':'154px';"]:
-    if marker not in battleHud:raise SystemExit('battle HUD blocks mobile action: '+marker)
-for marker in ["const hudBottom=(treasuryIntro||enemyModalOpen)?'auto':'202px';",
-               "const hudTop=(treasuryIntro||enemyModalOpen)?'85px':'auto';"]:
-    if marker not in mapHud:raise SystemExit('map HUD blocks mobile action: '+marker)
+if 'battle-bottom-hud-status-20261001-r1' in s:
+    for marker in [
+        "battleAutoToggle.style.bottom='calc(env(safe-area-inset-bottom, 0px) + 8px)'",
+        "battleAutoToggle.style.right='8px'",
+    ]:
+        if marker not in battleHud:raise SystemExit('right bottom battle toggle missing: '+marker)
+    for marker in [
+        "autoMapToggle.style.bottom='calc(env(safe-area-inset-bottom, 0px) + 8px)'",
+        "autoMapToggle.style.left='8px'",
+        "autoMapLastStatus?'\\n'+autoMapLastStatus",
+    ]:
+        if marker not in mapHud:raise SystemExit('left bottom map status missing: '+marker)
+else:
+    for marker in ["const battleHudTop=enemyModalOpen?'132px':'auto';",
+                   "const battleHudBottom=enemyModalOpen?'auto':'154px';"]:
+        if marker not in battleHud:raise SystemExit('battle HUD blocks mobile action: '+marker)
+    for marker in ["const hudBottom=(treasuryIntro||enemyModalOpen)?'auto':'202px';",
+                   "const hudTop=(treasuryIntro||enemyModalOpen)?'85px':'auto';"]:
+        if marker not in mapHud:raise SystemExit('map HUD blocks mobile action: '+marker)
 
 exitGate=section('function battleExitState() {','function battleLeaveBackButton(')
 for marker in [
