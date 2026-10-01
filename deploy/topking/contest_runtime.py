@@ -196,10 +196,12 @@ class Contest:
                 done={r['point'] for r in db.execute('SELECT point FROM checkpoints WHERE mode=? AND tid=? AND stage=?',(mode,tid,i))}
                 item['points']=[dict(index=j,title=q['title'],solved=j in done,
                     prompt=q['prompt'] if all(k in done for k in range(j)) else '',
+                    prompt_en=q.get('prompt_en','') if all(k in done for k in range(j)) else '',
                     unlocked=all(k in done for k in range(j))) for j,q in enumerate(x.get('points',[]))]
                 item['final_unlocked']=len(done)==3 if x.get('points') else True
                 if item['final_unlocked']:
                     item['prompt']=x['prompt']
+                    item['prompt_en']=x.get('prompt_en','')
             result['stages'].append(item)
         ranks=self.ranking(db,mode)
         own=next((r for r in ranks if r['tid']==tid),None)
@@ -460,10 +462,12 @@ def install(server):
                 # Refresh approved wording and digests before launch; preserve participant progress.
                 for i, stage in enumerate(content):
                     cfg['stages'][i]['prompt']=stage['prompt']
+                    cfg['stages'][i]['prompt_en']=stage.get('prompt_en','')
                     cfg['stages'][i]['digest']=contest.digest(i,stage['answer'])
                     for j, point in enumerate(stage['points']):
                         cfg['stages'][i]['points'][j]['title']=point['title']
                         cfg['stages'][i]['points'][j]['prompt']=point['prompt']
+                        cfg['stages'][i]['points'][j]['prompt_en']=point.get('prompt_en','')
                         cfg['stages'][i]['points'][j]['digest']=contest.digest(f'{i}.{j}',point['answer'])
                 db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
     def dispatch(handler):
