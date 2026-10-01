@@ -37,7 +37,7 @@ class ContestTests(unittest.TestCase):
         self.assertTrue(self.c.handle('GET','status',self.owner_token)['owner'])
         self.assertCode('forbidden','state',mode='test')
         self.assertCode('forbidden','admin/reset-test')
-        self.assertCode('contest_hidden','login',telegram=dict(id='11111111',signed=True))
+        self.assertTrue(self.call('login',telegram=dict(id='11111111',signed=True))['token'])
         for raw in ('id:11111111',self.token()[:-1]+'x','ct1.bad.bad'):
             self.assertIsNone(self.c.identity(raw))
     def test_schedule_order_wrong_retry_and_duplicate(self):

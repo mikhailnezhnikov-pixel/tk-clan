@@ -52,7 +52,7 @@ show('waiting-room',data.phase==='scheduled');
 const logged=!!data.stages||data.authenticated;show('account-panel',!!token);
 show('login-panel',!logged);if(!logged)mountLogin();
 show('owner-panel',data.owner&&logged);show('rules',data.visible&&logged);show('register-panel',logged&&!data.entrant&&(test||data.phase==='open'||data.registration_open));show('competition',logged&&!!data.entrant&&!!data.stages);
-if(!logged){$('stages').textContent='';$('ranking').textContent='';return;}
+show('registered-waiting',!!data.entrant&&!data.stages);if(!logged){$('stages').textContent='';$('ranking').textContent='';return;}
 if(data.owner){drawAdmin(data);$('test-mode').checked=test;}
 show('registered-waiting',!!data.entrant&&!data.stages);if(!data.stages||!data.entrant)return;
 $('speed-place').textContent=data.my_speed_place?'Место по скорости: '+data.my_speed_place:'Пройдите первый этап, чтобы войти в гонку';
