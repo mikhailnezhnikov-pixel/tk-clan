@@ -185,5 +185,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-100-battle-mobile-price-live-status.txt",
-  "commit_message": "fix: recognize mobile battle price and prevent repeat taps in userscript 1.18.100"
+  "commit_message": "fix: recognize mobile battle price and prevent repeat taps in userscript 1.18.100",
+  "manual_trigger": "1.18.100-mobile-battle-price-r1"
 }
