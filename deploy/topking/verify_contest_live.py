@@ -11,7 +11,7 @@ def request(action,body=None,method=None):
         raw=r.read()
         return r.status,dict(r.headers),json.loads(raw) if raw else {}
 code,headers,data=request('status')
-assert code==200 and data['visible'] is True and data['phase']=='scheduled' and data['start_at']==1790861400,(code,data)
+assert code==200 and data['visible'] is True and data['phase'] in ('scheduled','open') and data['start_at']==1790861400,(code,data)
 assert 'stages' not in data and 'leaderboard' not in data and 'admin_config' not in data
 assert headers.get('Access-Control-Allow-Origin')=='https://tk-clan.ru',headers
 print('LIVE_PUBLIC_TIMER_ONLY=PASS; no tasks, answers, or rating exposed')

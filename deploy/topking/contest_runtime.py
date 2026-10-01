@@ -457,6 +457,15 @@ def install(server):
     if content_path.exists():
         with contest.write_lock,contest.db() as db:
             cfg=contest.config(db)
+            if contest.clock()>=cfg['start_at']:
+                content=json.loads(content_path.read_text(encoding='utf-8'))
+                for i, stage in enumerate(content):
+                    if cfg['stages'][i]['prompt']==stage['prompt']:
+                        cfg['stages'][i]['prompt_en']=stage.get('prompt_en','')
+                    for j, point in enumerate(stage['points']):
+                        if cfg['stages'][i]['points'][j]['prompt']==point['prompt']:
+                            cfg['stages'][i]['points'][j]['prompt_en']=point.get('prompt_en','')
+                db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
             if contest.clock()<cfg['start_at'] and db.execute("SELECT COUNT(*) FROM checkpoints WHERE mode='live'").fetchone()[0]==0 and db.execute("SELECT COUNT(*) FROM solves WHERE mode='live'").fetchone()[0]==0:
                 content=json.loads(content_path.read_text(encoding='utf-8'))
                 # Refresh approved wording and digests before launch; preserve participant progress.
