@@ -6,6 +6,7 @@ on:
       - 'deploy/topking/patch_treasury_intro_handoff_1_18_98.py'
       - 'deploy/topking/verify_treasury_intro_handoff_contract.py'
       - 'deploy/topking/verify_treasury_intro_runtime.js'
+      - 'deploy/topking/verify_leave_modal_foreground_runtime.js'
       - '.github/workflows/build-userscript-1-18-98-treasury-intro-handoff.yml'
   workflow_dispatch:
 
@@ -78,7 +79,6 @@ jobs:
               raise SystemExit(f"unexpected current release target: {m.get('target_version')}")
           preserve=[]
           for marker in [
-              'treasury-battle-foreground-handoff-20261001-r1' if False else '',
               'leave-modal-foreground-truth-20261001-r1',
               'exit-map-proof-20261001-r1',
               'battle-open-modal-priority-20260930-r1',
