@@ -36,6 +36,36 @@ class CheckpointTests(unittest.TestCase):
             self.assertTrue(self.call('answer',stage=i,answer='final')['correct'])
         self.assertEqual(self.call('state')['my_completed'],3)
         with self.c.db() as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM checkpoints').fetchone()[0],9)
+    def test_partial_checkpoint_ranking_and_stage_priority(self):
+        initial=self.call('state')
+        self.assertIsNone(initial['my_place'])
+        self.assertEqual(initial['leaderboard'],[])
+        other=self.c.token(dict(id='22222222'))
+        self.c.handle('POST','register',other,dict(player_id='fixture-two',nickname='Second'))
+        self.assertEqual(self.call('state')['leaderboard'],[])
+        first=self.call('checkpoint',stage=0,point=0,answer='answer-0')['state']
+        self.assertEqual((first['my_place'],first['my_completed'],first['my_checkpoints']),(1,0,1))
+        self.assertEqual(first['leaderboard'][0]['checkpoints'],1)
+        self.assertEqual(first['speed_leaderboard'],[])
+        self.c.handle('POST','checkpoint',other,dict(stage=0,point=0,answer='answer-0'))
+        second=self.c.handle('POST','checkpoint',other,dict(stage=0,point=1,answer='answer-1'))['state']
+        self.assertEqual((second['leaderboard'][0]['nickname'],second['leaderboard'][0]['checkpoints']),('Second',2))
+        self.assertEqual(second['ranked_total'],2)
+        self.c.handle('POST','checkpoint',other,dict(stage=0,point=2,answer='answer-2'))
+        completed=self.c.handle('POST','answer',other,dict(stage=0,answer='final'))['state']
+        self.assertEqual((completed['leaderboard'][0]['completed'],completed['leaderboard'][0]['checkpoints']),(1,0))
+        self.assertEqual(len(completed['speed_leaderboard']),1)
+        self.call('checkpoint',stage=0,point=1,answer='answer-1')
+        self.call('checkpoint',stage=0,point=2,answer='answer-2')
+        tied=self.call('answer',stage=0,answer='final')['state']
+        self.assertEqual(tied['leaderboard'][0]['nickname'],'Second')
+        next_point=self.call('checkpoint',stage=1,point=0,answer='answer-0')['state']
+        self.assertEqual((next_point['my_place'],next_point['my_completed'],next_point['my_checkpoints']),(1,1,1))
+        self.assertEqual(next_point['leaderboard'][0]['nickname'],'Participant')
+        with self.c.db() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM solves').fetchone()[0],2)
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM checkpoints').fetchone()[0],7)
+
     def test_wrong_answer_cooldown_and_persistent_progress(self):
         self.assertFalse(self.call('checkpoint',stage=0,point=0,answer='wrong')['correct'])
         self.blocked('wait_before_retry','checkpoint',stage=0,point=0,answer='answer-0')

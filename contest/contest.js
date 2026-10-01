@@ -41,6 +41,12 @@ return `<section class="card quest-card quest-${i}"><span class="quest-number">$
 }).join('');
 if(focus!==undefined)$('stages').querySelector(`[data-stage-form="${focus}"] input`)?.focus();
 }
+const progressText=x=>{
+const completed=Math.max(0,Math.min(3,Number(x.completed)||0)),points=Math.max(0,Math.min(3,Number(x.checkpoints)||0));
+if(completed===3)return '3 / 3 · все этапы пройдены';
+if(points)return `${completed} / 3 · этап ${completed+1}: ${points}/3 контрольных точек`;
+return `${completed} / 3 · этап ${completed} пройден`;
+};
 const duration=ms=>{const n=Math.max(0,Math.floor(ms/1000));return [Math.floor(n/3600),Math.floor(n/60)%60,n%60].map(x=>String(x).padStart(2,'0')).join(':');};
 let timerReceived=0;
 function tick(){if(state){const remaining=Math.max(0,(state.start_at-state.server_at-(performance.now()-timerReceived)/1000)*1000);$('launch-countdown').textContent=duration(remaining); }if(!state?.timings)return;const now=state.server_at+(performance.now()-timerReceived)/1000;let total=0;$('stage-timers').innerHTML=state.timings.map((t,i)=>{const elapsed=t.finished_at!==null&&t.finished_at!==undefined?t.elapsed_ms:t.started_at===null?0:Math.max(0,((state.mode==='live'?Math.min(now,state.end_at):now)-t.started_at)*1000);total+=elapsed;return `<div class="timer-chip"><span>Этап ${i+1} ${t.finished_at?'✓':''}</span><b>${duration(elapsed)}</b></div>`;}).join('');$('total-timer').textContent=duration(total);}
@@ -59,11 +65,11 @@ $('speed-place').textContent=data.my_speed_place?'Место по скорост
 $('speed-ranking').innerHTML=(data.speed_leaderboard||[]).map(x=>`<tr><td>${x.place}</td><td>${safe(x.nickname)}</td><td>${x.completed} / 3</td><td>${duration(x.elapsed_ms)}</td></tr>`).join('')||'<tr><td colspan="4">Гонка начинается!</td></tr>';
 $('fastest-player').textContent=data.fastest_finalist?'⚡ Лидер: '+data.fastest_finalist.nickname+' · '+duration(data.fastest_finalist.elapsed_ms):'Первый финалист ещё впереди';
 $('participant').textContent=data.entrant.nickname+' · '+data.entrant.player_id;
-$('my-position').textContent=data.my_place?`Вы сейчас на ${data.my_place}-м месте · пройдено ${data.my_completed} из 3 этапов`:'Пока нет места в рейтинге. Решите первый этап.';
+$('my-position').textContent=data.my_place?`Вы сейчас на ${data.my_place}-м месте · ${progressText({completed:data.my_completed,checkpoints:data.my_checkpoints})}`:'Пока нет места в рейтинге. Пройдите первую контрольную точку.';
 $('mode-note').textContent=test?'Тестовый режим: результаты не участвуют в основном конкурсе.':'Место обновляется по мере прохождения этапов участниками.';
 drawStages(data);
-$('ranking').innerHTML=data.leaderboard.length?data.leaderboard.map(x=>`<tr><td>${x.place}</td><td>${safe(x.nickname)}</td><td>${x.completed} / 3</td></tr>`).join(''):'<tr><td colspan="3">Первые результаты скоро появятся.</td></tr>';
-$('count').textContent=data.total+' участников';$('rating-note').textContent=data.ranked_total>100?'Показаны первые 100 мест. Ваше место отображается выше.':'';
+$('ranking').innerHTML=data.leaderboard.length?data.leaderboard.map(x=>`<tr><td>${x.place}</td><td>${safe(x.nickname)}</td><td>${progressText(x)}</td></tr>`).join(''):'<tr><td colspan="3">Первые результаты скоро появятся.</td></tr>';
+$('count').textContent=data.ranked_total+' в рейтинге · '+data.total+' зарегистрировано';$('rating-note').textContent=data.ranked_total>100?'Показаны первые 100 мест. Ваше место отображается выше.':'';
 }
 async function refresh(){if(pending||document.hidden)return;
 try{const data=await request('status',null,'GET');if(data.tester){test=true;render(await request('state',{mode:'test'}));}else if(data.owner){test=$('test-mode').checked;render(await request('state',{mode:test?'test':'live'}));}else if(data.visible&&token){test=false;render(await request('state',{mode:'live'}));}else render(data);$('global-error').textContent='';}catch(e){message('global-error',e.message,true);}}

@@ -136,13 +136,34 @@ class Contest:
         return 'open' if now<cfg['end_at'] else 'finished'
 
     def ranking(self, db, mode):
-        rows=db.execute('''SELECT e.tid,e.nickname,e.player_id,COUNT(s.stage) AS completed,
-                   MAX(s.submitted_ns) AS last_ns,MAX(s.seq) AS last_seq
-                   FROM entrants e JOIN solves s ON s.mode=e.mode AND s.tid=e.tid
-                   WHERE e.mode=? GROUP BY e.tid,e.nickname,e.player_id
-                   ORDER BY completed DESC,last_ns ASC,last_seq ASC''',(mode,)).fetchall()
-        return [dict(place=i+1,nickname=r['nickname'],player_id=r['player_id'],completed=r['completed'],
-                     tid=r['tid']) for i,r in enumerate(rows)]
+        # A completed stage supersedes its three checkpoints.
+        rows=db.execute('''SELECT e.tid,e.nickname,e.player_id,
+                   COALESCE(s.completed,0) AS completed,
+                   COALESCE(p.checkpoints,0) AS checkpoints,
+                   COALESCE(p.last_ns,s.last_ns) AS last_ns,
+                   s.last_seq AS last_seq
+                   FROM entrants e
+                   LEFT JOIN (
+                       SELECT mode,tid,COUNT(*) AS completed,
+                              MAX(submitted_ns) AS last_ns,MAX(seq) AS last_seq
+                       FROM solves GROUP BY mode,tid
+                   ) s ON s.mode=e.mode AND s.tid=e.tid
+                   LEFT JOIN (
+                       SELECT c.mode,c.tid,COUNT(*) AS checkpoints,
+                              MAX(c.submitted_ns) AS last_ns
+                       FROM checkpoints c
+                       WHERE NOT EXISTS (
+                           SELECT 1 FROM solves done
+                           WHERE done.mode=c.mode AND done.tid=c.tid AND done.stage=c.stage
+                       )
+                       GROUP BY c.mode,c.tid
+                   ) p ON p.mode=e.mode AND p.tid=e.tid
+                   WHERE e.mode=? AND
+                         (COALESCE(s.completed,0)>0 OR COALESCE(p.checkpoints,0)>0)
+                   ORDER BY completed DESC,checkpoints DESC,last_ns ASC,last_seq ASC,e.tid ASC''',(mode,)).fetchall()
+        return [dict(place=i+1,nickname=r['nickname'],player_id=r['player_id'],
+                     completed=r['completed'],checkpoints=r['checkpoints'],tid=r['tid'])
+                for i,r in enumerate(rows)]
 
     def timings(self, db, cfg, mode, tid):
         entrant=db.execute('SELECT created_at FROM entrants WHERE mode=? AND tid=?',(mode,tid)).fetchone()
@@ -159,7 +180,7 @@ class Contest:
         return result
 
     def speed_ranking(self,db,cfg,mode):
-        ranks=self.ranking(db,mode)
+        ranks=[row for row in self.ranking(db,mode) if row['completed']>0]
         for row in ranks:
             timings=self.timings(db,cfg,mode,row['tid'])
             row['elapsed_ms']=sum(t['elapsed_ms'] for t in timings if t['finished_at'] is not None)
@@ -217,6 +238,7 @@ class Contest:
         own=next((r for r in ranks if r['tid']==tid),None)
         result['my_place']=own['place'] if own else None
         result['my_completed']=len(solved)
+        result['my_checkpoints']=own['checkpoints'] if own else 0
         result['timings']=self.timings(db,cfg,mode,tid)
         speed=self.speed_ranking(db,cfg,mode)
         result['speed_leaderboard']=[{k:v for k,v in r.items() if k!='tid'} for r in speed[:100]]
