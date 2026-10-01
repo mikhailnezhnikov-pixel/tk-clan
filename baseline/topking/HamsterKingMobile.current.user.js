@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.99
+// @version      1.18.100
+// @release-note Сражения: исправлено распознавание стоимости 1–2 меча в открытой карточке бойца. Переключатели автокарты/автобоя больше не перекрывают кнопку атаки. Если нажатие отправлено, повторная оплата блокируется до фактического изменения игрового состояния.
 // @release-note Сражение: доступный боец и незакрытая карточка блокируют выход за 10 ягод даже при старом флаге награды. Атака подтверждается только реальным изменением мечей/лотов или появлением награды, а не перерисовкой модалки. Перед каждым выходом проверяется актуальное поле.
 // @release-note Сокровищница: восстановление вступительного окна с пустой кнопкой на мобильных, перенос индикатора автокарты с кнопки, подтверждение входа до выбора пути. Смена комнаты сбрасывает устаревший бой и прекращает повторные попытки выхода из уже покинутого сражения.
 // @release-note Сражения: окно выхода распознаётся только как реальный передний диалог с отдельной кнопкой 10, а не по надписи «Покинуть локацию» на странице и цифрам в кошельке. Подтверждение выхода считается успешным только после реального возврата на карту. Ложные клики и преждевременный переход к следующей клетке заблокированы.
@@ -45,7 +46,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.99';
+  const BUILD_VERSION = '1.18.100';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3681,6 +3682,8 @@
   const HK_TREASURY_BATTLE_HANDOFF_REV='treasury-battle-foreground-handoff-20261001-r1';
   const HK_BATTLE_NO_PREMATURE_EXIT_REV='battle-no-premature-exit-20261001-r1';
   const HK_BATTLE_ATTACK_RECEIPT_REV='battle-attack-state-receipt-20261001-r1';
+  const HK_BATTLE_MOBILE_PRICE_REV='battle-mobile-price-action-20261001-r1';
+  const HK_BATTLE_SINGLE_TAP_REV='battle-single-tap-until-receipt-20261001-r1';
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
   const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
   const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
@@ -17996,6 +17999,11 @@
       battleAutoToggle.textContent=enabled ? either('Автобой: ВКЛ','Auto battle: ON') : either('Автобой: ВЫКЛ','Auto battle: OFF');
       battleAutoToggle.style.background=enabled ? '#40c85a' : '#2b2b2b';
       battleAutoToggle.style.color=enabled ? '#071b0a' : '#fff';
+      const enemyModalOpen=!!battleEnemyModalRoot();
+      const battleHudTop=enemyModalOpen?'132px':'auto';
+      const battleHudBottom=enemyModalOpen?'auto':'154px';
+      if (battleAutoToggle.style.top!==battleHudTop) battleAutoToggle.style.top=battleHudTop;
+      if (battleAutoToggle.style.bottom!==battleHudBottom) battleAutoToggle.style.bottom=battleHudBottom;
       if (isBattle !== null) battleAutoToggle.style.display=isBattle ? 'block' : 'none';
     }
 
@@ -21234,7 +21242,7 @@
               getComputedStyle(element).cursor==='pointer';
           } catch (_) {}
           const cx=rect.left+rect.width/2;
-          const numericMatch=text.match(/(?:^|\\s)(\\d{1,4})(?:\\s|$)/);
+          const numericMatch=text.match(/(?:^|\s)(\d{1,4})(?:\s|$)/);
           const inferredCost=numericMatch ? Number(numericMatch[1]) : null;
           let score=0;
 
@@ -21281,7 +21289,7 @@
     function battleEnemyModalActionCost(element) {
       if (!element) return null;
       const text=clean(element.innerText||element.textContent||'').trim();
-      const values=[...text.matchAll(/(?:^|\\s)(\\d{1,4})(?=\\s|$)/g)]
+      const values=[...text.matchAll(/(?:^|\s)(\d{1,4})(?=\s|$)/g)]
         .map(match=>Number(match[1]))
         .filter(value=>Number.isFinite(value) && value>0);
       return values.length ? values[values.length-1] : null;
@@ -21304,6 +21312,10 @@
       return roots[0]?.element || null;
     }
 
+    const battleAttackPending={
+      key:'',sentAt:0
+    };
+
     async function battleConfirmAlreadyOpenEnemyModal(expectedCost,runId,beforeSignature=null) {
       const root=battleEnemyModalRoot();
       if (!root) return {handled:false,success:false,reason:'no-modal'};
@@ -21313,6 +21325,22 @@
       const beforeSwords=getBattleAttack();
       const beforeBoard=getBattleBoard().filter(Boolean)
         .map(enemy=>String(enemy.lotId||enemy.slot+':'+enemy.hp)).sort().join('|');
+      const transactionKey=String(beforeSwords)+'|'+beforeBoard;
+      if (battleAttackPending.key && battleAttackPending.key!==transactionKey) {
+        battleAttackPending.key='';
+        battleAttackPending.sentAt=0;
+      }
+      if (battleAttackPending.key===transactionKey) {
+        autoMapStatus('сражение → жду подтверждение удара',{
+          revision:HK_BATTLE_SINGLE_TAP_REV
+        });
+        recordDiagnostic('battle-attack-repeat-prevented',{
+          revision:HK_BATTLE_SINGLE_TAP_REV,
+          expectedCost:hasExpected?numericExpected:null,
+          pendingMs:Date.now()-battleAttackPending.sentAt
+        });
+        return {handled:true,success:false,reason:'awaiting-server-receipt'};
+      }
       let action=null,elapsed=Date.now();
       while (Date.now()-elapsed<2200) {
         if (runId!==battleAutoRunId || !battleAutoEnabled()) {
@@ -21348,6 +21376,13 @@
       if (!dispatchBattleOverlaySafeTap(action,'battle-open-modal-confirm')) {
         return {handled:true,success:false,reason:'tap-failed'};
       }
+      battleAttackPending.key=transactionKey;
+      battleAttackPending.sentAt=Date.now();
+      recordDiagnostic('battle-attack-dispatched-once',{
+        revision:HK_BATTLE_SINGLE_TAP_REV,
+        expectedCost:hasExpected?numericExpected:null,
+        resolvedCost
+      });
 
       const started=Date.now();
       while (Date.now()-started<5000) {
@@ -21362,6 +21397,8 @@
         const enemyStateChanged=afterBoard!==beforeBoard;
         const rewardArrived=!!battleVictoryElement() || !!battleVictoryModalRoot();
         if (swordSpent || enemyStateChanged || (rewardArrived && !battleEnemyModalRoot())) {
+          battleAttackPending.key='';
+          battleAttackPending.sentAt=0;
           recordDiagnostic('battle-attack-receipt-verified',{
             revision:HK_BATTLE_ATTACK_RECEIPT_REV,
             expectedCost:hasExpected?numericExpected:null,
@@ -21373,10 +21410,14 @@
         }
         await new Promise(resolve=>setTimeout(resolve,90));
       }
+      autoMapStatus('сражение → жду подтверждение удара',{
+        revision:HK_BATTLE_SINGLE_TAP_REV
+      });
       recordDiagnostic('battle-attack-receipt-pending',{
         revision:HK_BATTLE_ATTACK_RECEIPT_REV,
         expectedCost:hasExpected?numericExpected:null,
-        resolvedCost,reason:'no-server-state-change'
+        resolvedCost,reason:'no-server-state-change',
+        resendBlocked:!!battleAttackPending.key
       });
       return {handled:true,success:false,reason:'no-server-state-change'};
     }
@@ -21388,6 +21429,12 @@
     async function battleRecoverStalledEnemyModal(source='attack-not-accepted') {
       const root=battleEnemyModalRoot();
       if (!root || !battleAutoEnabled()) return false;
+      if (battleAttackPending.key) {
+        autoMapStatus('сражение → жду подтверждение удара',{
+          revision:HK_BATTLE_SINGLE_TAP_REV,source
+        });
+        return false;
+      }
       const key=String(getBattleAttack())+'|'+
         getBattleBoard().filter(Boolean)
           .map(enemy=>String(enemy.lotId||enemy.slot+':'+enemy.hp))
@@ -21473,7 +21520,10 @@
 
         const result=await battleConfirmAlreadyOpenEnemyModal(inferredCost,runId);
         if (!result.success) {
-          await battleRecoverStalledEnemyModal(result.reason);
+          if (result.reason!=='awaiting-server-receipt' &&
+              result.reason!=='no-server-state-change') {
+            await battleRecoverStalledEnemyModal(result.reason);
+          }
           recordDiagnostic('battle-open-modal-priority-stop',{
             revision:HK_BATTLE_OPEN_MODAL_PRIORITY_REV,
             source,
@@ -24868,8 +24918,9 @@
       const color=enabled?'#071b0a':'#fff';
       const borderColor=enabled?'#d8ffe0':'rgba(255,255,255,.8)';
       const treasuryIntro=autoMapTreasuryIntroModalRoot();
-      const hudBottom=treasuryIntro?'auto':'202px';
-      const hudTop=treasuryIntro?'85px':'auto';
+      const enemyModalOpen=!!battleEnemyModalRoot();
+      const hudBottom=(treasuryIntro||enemyModalOpen)?'auto':'202px';
+      const hudTop=(treasuryIntro||enemyModalOpen)?'85px':'auto';
       if (autoMapToggle.style.bottom!==hudBottom) autoMapToggle.style.bottom=hudBottom;
       if (autoMapToggle.style.top!==hudTop) autoMapToggle.style.top=hudTop;
       if (autoMapToggle.style.display!==display) autoMapToggle.style.display=display;
@@ -28578,6 +28629,8 @@
       treasuryBattleHandoffRevision:HK_TREASURY_BATTLE_HANDOFF_REV,
       battleNoPrematureExitRevision:HK_BATTLE_NO_PREMATURE_EXIT_REV,
       battleAttackReceiptRevision:HK_BATTLE_ATTACK_RECEIPT_REV,
+      battleMobilePriceRevision:HK_BATTLE_MOBILE_PRICE_REV,
+      battleSingleTapRevision:HK_BATTLE_SINGLE_TAP_REV,
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
       battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
       battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
