@@ -9,6 +9,16 @@ def rep(old,new,label,count=1):
     if count_found!=count: raise SystemExit(f"{label}: expected {count}, got {count_found}")
     s=s.replace(old,new,count)
 
+def rep_in_battle(old,new,label):
+    global s
+    begin=s.find("    function ensureBattleAutoToggle(isBattle) {")
+    end=s.find("    function chestAutoEnabled() {",begin)
+    if begin<0 or end<0:raise SystemExit(label+": function boundary unavailable")
+    chunk=s[begin:end]
+    actual=chunk.count(old)
+    if actual!=1:raise SystemExit(f"{label}: expected 1 in battle control, got {actual}")
+    s=s[:begin]+chunk.replace(old,new,1)+s[end:]
+
 rep("// @version      1.18.100",
     "// @version      1.18.101\n// @release-note Автокарта и автобой: две компактные кнопки снизу слева/справа со статусом внутри кнопки карты. В карточке бойца нажатие адресовано полноценной кнопке, а не вложенной цифре; неподтверждённые удары не оплачиваются повторно.",
     "version")
@@ -77,7 +87,7 @@ rep("""      const enemyModalOpen=!!battleEnemyModalRoot();
       battleAutoToggle.style.right='8px';""",
 "battle fixed bottom-right")
 
-rep("""          right:'14px',
+rep_in_battle("""          right:'14px',
           bottom:'154px',
           zIndex:'2147483646',
           border:'2px solid rgba(255,255,255,.75)',
