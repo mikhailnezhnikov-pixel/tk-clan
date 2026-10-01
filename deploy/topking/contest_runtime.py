@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import re
+import secrets
 import sqlite3
 import time
 import threading
@@ -29,6 +30,7 @@ class Contest:
         with self.db() as db:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
+                CREATE TABLE IF NOT EXISTS access_codes (digest TEXT PRIMARY KEY, tid TEXT NOT NULL, player_id TEXT NOT NULL, created_at REAL NOT NULL, revoked INTEGER NOT NULL DEFAULT 0);
                 CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS entrants (
                     mode TEXT NOT NULL, tid TEXT NOT NULL, player_id TEXT NOT NULL, nickname TEXT NOT NULL,
@@ -78,6 +80,7 @@ class Contest:
     def token(self, identity):
         doc = dict(scope='tk-contest-v1', id=str(identity['id']), exp=int(self.clock())+43200,
                    name=str(identity.get('first_name',''))[:100])
+        if identity.get('code_digest'):doc.update(code_digest=identity['code_digest'],player_id=identity['player_id'])
         payload = base64.urlsafe_b64encode(json.dumps(doc).encode()).decode().rstrip('=')
         signature = hmac.new(self.secret, ('contest-session:'+payload).encode(), hashlib.sha256).hexdigest()
         return 'ct1.'+payload+'.'+signature
@@ -96,6 +99,12 @@ class Contest:
             doc = json.loads(base64.urlsafe_b64decode(payload+'='*(-len(payload)%4)))
             if doc.get('scope')!='tk-contest-v1' or doc['exp']<=self.clock():
                 return None
+            if doc.get('code_digest'):
+                with self.db() as db:
+                    row=db.execute('SELECT * FROM access_codes WHERE digest=? AND revoked=0',(doc['code_digest'],)).fetchone()
+                    cfg=self.config(db)
+                    if not row or row['tid']!=doc['id'] or row['player_id']!=doc.get('player_id') or self.clock()>=cfg['end_at'] or doc['id']==cfg['owner_id']:return None
+                return doc
             if not re.fullmatch(r'[1-9][0-9]{4,19}', str(doc['id'])):
                 return None
             return doc
@@ -183,6 +192,7 @@ class Contest:
         solved={r['stage'] for r in db.execute('SELECT stage FROM solves WHERE mode=? AND tid=?',(mode,tid))}
         attempts={r['stage']:r for r in db.execute('SELECT * FROM attempts WHERE mode=? AND tid=?',(mode,tid))}
         result['entrant']=dict(entrant) if entrant else None
+        if identity.get('code_digest'):result['bound_player_id']=identity['player_id']
         result['stages']=[]
         for i,x in enumerate(cfg['stages']):
             opens=cfg['start_at']+x['offset']
@@ -242,6 +252,29 @@ class Contest:
             if tester: mode='test'
             if method=='GET' and action=='status':
                 return self.state(db,cfg,identity,'test' if tester else 'live')
+            if method=='POST' and action=='code-login':
+                if cfg['audience']!='all' or self.phase(cfg) not in ('scheduled','open'):
+                    raise ContestError('contest_hidden',404)
+                raw=str(body.get('code','')).strip()
+                signature=hmac.new(self.secret,('contest-code:'+raw).encode(),hashlib.sha256).hexdigest()
+                row=db.execute('SELECT * FROM access_codes WHERE digest=? AND revoked=0',(signature,)).fetchone()
+                if not row or row['tid']==cfg['owner_id'] or self.clock()>=cfg['end_at']:
+                    raise ContestError('invalid_access_code',401)
+                return dict(ok=True,token=self.token(dict(id=row['tid'],player_id=row['player_id'],code_digest=signature)))
+            if method=='POST' and action=='admin/issue-code':
+                if not owner:raise ContestError('forbidden',403)
+                if cfg['audience']!='all' or self.phase(cfg) not in ('scheduled','open'):
+                    raise ContestError('contest_not_open',409)
+                player_id=str(body.get('player_id','')).strip()
+                if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}',player_id):raise ContestError('invalid_participant')
+                row=db.execute("SELECT tid FROM entrants WHERE mode='live' AND player_id=?",(player_id,)).fetchone()
+                tid=row['tid'] if row else 'code:'+player_id
+                if tid==cfg['owner_id']:raise ContestError('forbidden',403)
+                raw=secrets.token_urlsafe(18)
+                signature=hmac.new(self.secret,('contest-code:'+raw).encode(),hashlib.sha256).hexdigest()
+                db.execute('UPDATE access_codes SET revoked=1 WHERE player_id=?',(player_id,))
+                db.execute('INSERT INTO access_codes(digest,tid,player_id,created_at) VALUES(?,?,?,?)',(signature,tid,player_id,self.clock()))
+                return dict(ok=True,code=raw,player_id=player_id)
             if method=='POST' and action=='login':
                 candidate=self.verify_login(body.get('telegram'))
                 if not candidate:
@@ -309,6 +342,7 @@ class Contest:
                 for table in ('entrants','solves','attempts','checkpoints','point_attempts'):
                     db.execute('DELETE FROM '+table+' WHERE mode=?',('test',))
                 return dict(ok=True)
+            if identity.get('code_digest'):mode='live'
             if mode=='test' and not owner and not tester:
                 raise ContestError('forbidden',403)
             if not owner and not tester and self.phase(cfg) not in ('open','finished') and not (self.phase(cfg)=='scheduled' and action in ('state','register')):
@@ -358,6 +392,7 @@ class Contest:
             if action=='register':
                 player_id=str(body.get('player_id','')).strip()
                 nickname=str(body.get('nickname','')).strip()
+                if identity.get('code_digest') and player_id!=identity['player_id']:raise ContestError('invalid_participant')
                 if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}',player_id) or not 2<=len(nickname)<=60:
                     raise ContestError('invalid_participant')
                 old=db.execute('SELECT * FROM entrants WHERE mode=? AND tid=?',(mode,tid)).fetchone()
@@ -495,7 +530,7 @@ def install(server):
                 if handler.headers.get('Origin','') not in server['CABINET_ORIGINS']:
                     raise ContestError('origin_not_allowed',403)
                 ip=handler.client_ip()
-                if action=='login' and not server['rate_allowed']('contest-login:'+ip,30,900):
+                if action in ('login','code-login') and not server['rate_allowed']('contest-login:'+ip,30,900):
                     raise ContestError('rate_limited',429)
                 body=handler.read_json(48000 if action=='admin/config' else 8192)
             else:

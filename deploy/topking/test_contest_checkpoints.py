@@ -61,6 +61,28 @@ class CheckpointTests(unittest.TestCase):
         self.assertFalse(self.c.handle('GET','status',token)['tester'])
         with self.assertRaises(ContestError):self.c.handle('POST','state',token,dict(mode='test'))
 
+    def test_personal_code_security_and_progress(self):
+        with self.c.db() as db:
+            cfg=self.c.config(db);cfg['owner_id']='552583086';db.execute('UPDATE settings SET value=?',(json.dumps(cfg),))
+        owner=self.c.token(dict(id='552583086'))
+        self.call('checkpoint',stage=0,point=0,answer='answer-0')
+        code=self.c.handle('POST','admin/issue-code',owner,dict(player_id='fixture'))['code']
+        token=self.c.handle('POST','code-login','',dict(code=code))['token']
+        state=self.c.handle('POST','state',token,{})
+        self.assertFalse(state['owner']);self.assertNotIn('admin_config',state)
+        self.assertTrue(state['stages'][0]['points'][0]['solved'])
+        with self.assertRaises(ContestError):self.c.handle('POST','admin/issue-code',token,dict(player_id='other'))
+        self.c.handle('POST','admin/issue-code',owner,dict(player_id='fixture'))
+        self.assertIsNone(self.c.identity(token))
+        newcode=self.c.handle('POST','admin/issue-code',owner,dict(player_id='new-player'))['code']
+        guest=self.c.handle('POST','code-login','',dict(code=newcode))['token']
+        with self.assertRaises(ContestError):self.c.handle('POST','register',guest,dict(player_id='wrong',nickname='Guest'))
+        self.c.handle('POST','register',guest,dict(player_id='new-player',nickname='Guest'))
+        self.assertEqual(self.c.handle('POST','state',guest,{})['entrant']['player_id'],'new-player')
+        with self.c.db() as db:self.assertNotIn(newcode,str([dict(x) for x in db.execute('SELECT * FROM access_codes')]))
+        self.now=START+7200
+        self.assertIsNone(self.c.identity(guest))
+
     def test_mobile_answer_case_and_semicolon_spacing(self):
         self.assertEqual(self.c.digest('0.0','Т; М; Б; БОД'),self.c.digest('0.0','т;м;б;бод'))
         self.assertEqual(self.c.digest('1.2','А; 5'),self.c.digest('1.2','а ;5'))
