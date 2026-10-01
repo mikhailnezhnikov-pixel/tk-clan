@@ -10,7 +10,8 @@ def part(a,b):
     if j<0: raise SystemExit("missing section end "+b)
     return s[i:j]
 
-current_version="1.18.100" if "battle-single-tap-until-receipt-20261001-r1" in s else "1.18.99"
+current_version=("1.18.101" if "battle-bottom-hud-status-20261001-r1" in s else
+                 "1.18.100" if "battle-single-tap-until-receipt-20261001-r1" in s else "1.18.99")
 for marker in [
     "// @version      "+current_version,
     "const BUILD_VERSION = '"+current_version+"';",
