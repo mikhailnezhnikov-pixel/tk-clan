@@ -1,0 +1,9 @@
+USERSCRIPT_1_18_97_LEAVE_DIALOG_MAP_PROOF_PREDEPLOY=PASS
+source_version=1.18.96
+target_version=1.18.97
+leave_modal_ghost_rejection=PASS
+exit_requires_map_foreground=PASS
+mobile_fixture_tests=PASS
+syntax=PASS
+base_sha256=2d8010f6aab733e878c117f4621fa57d850473448e1f86f7dc540252c46bc69c
+candidate_sha256=284453ae5afbe9951c55450e6c04c148ce9c1e902cbfcb398dcaa7a5c2ac0bc1
