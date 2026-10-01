@@ -15,7 +15,10 @@ with c.db() as db:
     assert c.ready(cfg) and all(len(s.get('points',[]))==3 for s in cfg['stages']),'Incomplete content'
     if time.time()>=START:
         assert cfg['armed'] and cfg['start_at']==START,'Refuse a new late launch'
-        print('EXISTING_SCHEDULE_PRESERVED=PASS')
+        # Archive settings only; retain the complete registration and results DB.
+        cfg['archived']=True
+        db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
+        print('CONTEST_ARCHIVED=PASS; schedule and participant records preserved')
         sys.exit(0)
     assert db.execute("SELECT COUNT(*) FROM solves WHERE mode='live'").fetchone()[0]==0,'Live solves exist'
     content=json.loads(Path('/opt/hamsterking-license/contest_content.json').read_text(encoding='utf-8'))
