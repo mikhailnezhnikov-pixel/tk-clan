@@ -23,6 +23,26 @@ rep("const BUILD_VERSION = '1.18.98';","const BUILD_VERSION = '1.18.99';","build
 revision="  const HK_TREASURY_BATTLE_HANDOFF_REV='treasury-battle-foreground-handoff-20261001-r1';"
 rep(revision,revision+"\n  const HK_BATTLE_NO_PREMATURE_EXIT_REV='battle-no-premature-exit-20261001-r1';\n  const HK_BATTLE_ATTACK_RECEIPT_REV='battle-attack-state-receipt-20261001-r1';","revisions")
 
+# A completed fair document is authoritative even when every enemy was
+# purchased. Falling back to still-mounted enemy DOM after the fair reports
+# zero survivors makes a fully cleared room look perpetually attackable.
+board_start=s.find("    function getBattleBoard() {")
+board_end=s.find("    function battleEggOfferCost(",board_start)
+if board_start<0 or board_end<0:
+    raise SystemExit("battle board section missing")
+board=s[board_start:board_end]
+old_loop="      for (const row of battleFairSlots()) {"
+if board.count(old_loop)!=1 or board.count("      if (fairEnemies>0) {")!=1:
+    raise SystemExit("battle board fair anchors changed")
+board=board.replace(
+    "      let fairEnemies=0;",
+    "      let fairEnemies=0;\n      const currentFairSlots=battleFairSlots();",1
+).replace(old_loop,"      for (const row of currentFairSlots) {",1
+).replace("      if (fairEnemies>0) {",
+    "      if (fairEnemies>0 || currentFairSlots.length>0) {",1
+)
+s=s[:board_start]+board+s[board_end:]
+
 # The final chest can be visually Activated in an old mounted node; it is
 # weaker evidence than the live attackable fair board / open enemy dialog.
 old=r'''    function battleRecoverFinalRewardClaimed(source='visual-activated') {
