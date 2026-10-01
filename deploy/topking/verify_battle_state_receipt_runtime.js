@@ -52,8 +52,10 @@ vm.runInContext(boardCode,fairEnv);
 assert.equal(vm.runInContext('getBattleBoard().filter(Boolean).length',fairEnv),0,
   'purchased fair slots must beat stale DOM enemies');
 
-const confirm=section('    async function battleConfirmAlreadyOpenEnemyModal(',
-  '    const battleOpenModalStall=');
+const confirmStart=s.includes('battle-single-tap-until-receipt-20261001-r1')
+  ? '    const battleAttackPending='
+  : '    async function battleConfirmAlreadyOpenEnemyModal(';
+const confirm=section(confirmStart,'    const battleOpenModalStall=');
 function confirmCase({redraw=false,spend=false,spinner=false}={}){
   let clock=0,clicks=0;
   const first={isConnected:true},second={isConnected:true},action={
@@ -81,17 +83,29 @@ function confirmCase({redraw=false,spend=false,spinner=false}={}){
     battleVictoryElement:()=>null,
     battleVictoryModalRoot:()=>null,
     setTimeout:callback=>callback(),
+    autoMapStatus:()=>{},
     recordDiagnostic:()=>{},
     HK_BATTLE_ATTACK_RECEIPT_REV:'battle-attack-state-receipt-20261001-r1',
+    HK_BATTLE_SINGLE_TAP_REV:'battle-single-tap-until-receipt-20261001-r1',
   };
   vm.createContext(env);
   vm.runInContext(confirm,env);
-  return env.battleConfirmAlreadyOpenEnemyModal(1,1).then(result=>({result,clicks}));
+  return env.battleConfirmAlreadyOpenEnemyModal(1,1).then(async result=>{
+    let repeat=null;
+    if (redraw && s.includes('battle-single-tap-until-receipt-20261001-r1')) {
+      repeat=await env.battleConfirmAlreadyOpenEnemyModal(1,1);
+    }
+    return {result,clicks,repeat};
+  });
 }
 (async()=>{
   const redraw=await confirmCase({redraw:true});
   assert.equal(redraw.result.success,false,'modal re-render alone does not prove an attack');
   assert.equal(redraw.clicks,1,'do not double-tap a pending attack');
+  if (s.includes('battle-single-tap-until-receipt-20261001-r1')) {
+    assert.equal(redraw.repeat.reason,'awaiting-server-receipt',
+      'unconfirmed payment must not be resent on next tick');
+  }
   const paid=await confirmCase({spend:true});
   assert.equal(paid.result.success,true,'actual sword debit proves accepted attack');
   assert.equal(paid.clicks,1,'single attack must tap once');
