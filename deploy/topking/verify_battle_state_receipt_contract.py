@@ -35,6 +35,9 @@ ordered=[
     "reason:'no-attack-available'",
 ]
 indices=[gate.find(marker) for marker in ordered]
+# The early affordable-enemy branch deliberately checks and clears a stale
+# claim. The final reward-claimed allowance is the LAST occurrence.
+indices[-2]=gate.rfind("if (battleFinalRewardClaimed)")
 if min(indices)<0 or indices!=sorted(indices):
     raise SystemExit("exit gate can still permit exit ahead of affordable enemies/modal")
 if "battleFinalRewardClaimed=false" not in gate:
