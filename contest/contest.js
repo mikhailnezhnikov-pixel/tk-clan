@@ -3,7 +3,7 @@ const API='https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet/contest/';
 const KEY='tk_clan_contest_session';
 const $=id=>document.getElementById(id);
 const safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let token=localStorage.getItem(KEY)||localStorage.getItem('tk_clan_cabinet_session')||'';
+let token=localStorage.getItem(KEY)||(localStorage.getItem(KEY+'_signed_out')?'':localStorage.getItem('tk_clan_cabinet_session'))||'';
 let state=null,test=false,pending=false,adminDirty=false,loginMounted=false,stageSignature='';
 const errors={rate_limited:'Слишком много запросов. Подождите минуту.',checkpoints_required:'Сначала пройдите три мини-этапа.',previous_checkpoint_required:'Сначала пройдите предыдущую контрольную точку.',invalid_checkpoint:'Эта контрольная точка недоступна.',unauthorized:'Войдите через Telegram.',forbidden:'Этот раздел доступен только владельцу.',contest_hidden:'Конкурс пока закрыт.',contest_not_open:'Приём ответов сейчас закрыт.',invalid_telegram_login:'Не удалось подтвердить вход. Повторите вход через Telegram.',invalid_participant:'Проверьте игровой ID и ник: ник должен содержать от 2 до 60 символов.',player_already_registered:'Этот игровой ID уже зарегистрирован.',registration_locked:'Регистрация уже сохранена; игровой ID и ник нельзя изменить.',registration_required:'Сначала зарегистрируйтесь.',stage_not_open:'Этот этап ещё не открыт.',previous_stage_required:'Сначала решите предыдущий этап.',wait_before_retry:'Подождите 30 секунд между попытками.',configuration_locked:'После старта задания менять нельзя.',three_stages_required:'Нужны три этапа.',stage_interval_too_short:'Первый этап открывается на старте; между этапами должно быть не меньше 20 минут.',invalid_deadline:'Окончание должно быть позже открытия третьего этапа.',not_ready_or_start_passed:'Заполните все задания и ответы. Время старта должно быть в будущем.',members_only:'Для этого конкурса нужен действующий доступ к кабинету TK Clan.',temporarily_unavailable:'Сервис временно недоступен. Попробуйте ещё раз.',invalid_answer:'Введите ответ длиной до 500 символов.'};
 const show=(id,yes)=>$(id).classList.toggle('hidden',!yes);
@@ -20,7 +20,7 @@ async function mountLogin(){
 if(loginMounted)return;loginMounted=true;
 try{const response=await fetch(API.replace(/contest\/$/,'config'),{cache:'no-store'});const cfg=await response.json();
 if(!cfg.enabled||!cfg.bot_username)throw new Error('Вход временно недоступен.');
-window.tkContestLogin=async user=>{try{const result=await request('login',{telegram:user});token=result.token;localStorage.setItem(KEY,token);await refresh();}catch(e){message('login-error',e.message,true);}};
+window.tkContestLogin=async user=>{try{const result=await request('login',{telegram:user});token=result.token;localStorage.removeItem(KEY+'_signed_out');localStorage.setItem(KEY,token);await refresh();}catch(e){message('login-error',e.message,true);}};
 const script=document.createElement('script');script.src='https://telegram.org/js/telegram-widget.js?22';script.async=true;script.dataset.telegramLogin=cfg.bot_username;script.dataset.size='large';script.dataset.onauth='tkContestLogin(user)';script.dataset.userpic='false';$('telegram-login').appendChild(script);
 }catch(e){loginMounted=false;message('login-error',e.message,true);}}
 function drawAdmin(data){if(adminDirty)return;const cfg=data.admin_config;if(!cfg)return;
@@ -49,7 +49,7 @@ function render(data){state=data;timerReceived=performance.now();tick();
 const phaseText={draft:'Закрытое тестирование',scheduled:'Начало '+date(data.start_at)+' по Москве',open:'Конкурс открыт · окончание '+date(data.end_at)+' по Москве',finished:'Приём ответов завершён',paused:'Конкурс приостановлен'};
 $('phase').textContent=phaseText[data.phase]||'Конкурс закрыт';
 show('waiting-room',data.phase==='scheduled');
-const logged=!!data.stages;
+const logged=!!data.stages;show('account-panel',!!token);
 const testLink=new URLSearchParams(location.search).get('test')==='1';show('login-panel',!logged&&(data.phase!=='scheduled'||testLink));if(!logged&&(data.phase!=='scheduled'||testLink))mountLogin();
 show('owner-panel',data.owner&&logged);show('rules',data.visible&&logged);show('register-panel',logged&&!data.entrant&&(test||data.phase==='open'));show('competition',logged&&!!data.entrant);
 if(!logged){$('stages').textContent='';$('ranking').textContent='';return;}
@@ -78,6 +78,6 @@ const data=await request('admin/config',{stages,start_at:timestamp($('start-at')
 $('test-mode').addEventListener('change',()=>{test=$('test-mode').checked;refresh();});
 $('reset-test').addEventListener('click',async()=>{if(!confirm('Очистить только ваши тестовые ответы? Настоящие результаты сохранятся.'))return;try{await request('admin/reset-test');await refresh();}catch(e){message('admin-message',e.message,true);}});
 $('pause').addEventListener('click',async()=>{try{await request('admin/pause',{paused:state.phase!=='paused'});adminDirty=false;await refresh();}catch(e){message('admin-message',e.message,true);}});
-$('logout').addEventListener('click',()=>{localStorage.removeItem(KEY);token='';test=false;refresh();});
+$('logout').addEventListener('click',()=>{localStorage.removeItem(KEY);localStorage.setItem(KEY+'_signed_out','1');token='';test=false;refresh();});
 setInterval(refresh,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});refresh();
 })();
