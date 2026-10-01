@@ -1,46 +1,22 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>Конкурс — TK Clan</title>
-<link rel="stylesheet" href="../assets/public.css">
-<link rel="stylesheet" href="contest.css?v=20261001-5">
-  <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
-  <link rel="apple-touch-icon" href="../assets/brand/topking-clan-crest.png">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Конкурс завершён — Top King</title>
+<link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{min-height:100dvh;display:grid;place-items:center;margin:0;padding:24px;color:#f7f0df;background:radial-gradient(ellipse at top,#263657,#111624 72%)}
+main{max-width:620px;width:100%;padding:48px 32px;text-align:center;border:1px solid #a88b55;border-radius:24px;background:linear-gradient(140deg,#283b5b,#322843);box-shadow:0 22px 60px #0005}
+img{width:86px;height:86px;object-fit:contain}
+h1{margin:20px 0 12px;color:#ffdb90;font-size:clamp(27px,5vw,39px)}
+p{font-size:17px;line-height:1.6;color:#e2e1e7}
+a{display:inline-block;margin-top:16px;padding:13px 21px;border:1px solid #ddbb70;border-radius:12px;color:#211706;background:#ffdb90;font-weight:750;text-decoration:none}
+a:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media(max-width:560px){main{padding:32px 21px}}
+</style>
 </head>
-<body class="tk-main-theme">
-<header class="site-header"><a class="brand" href="../" aria-label="Top King"><img class="tk-clan-crest" src="../assets/brand/topking-clan-crest.png" alt="Top King"></a><nav class="nav" aria-label="Основная навигация"></nav></header>
-<nav class="mobile-nav" data-mobile-nav></nav>
-<main class="contest-shell">
-<section class="hero"><p class="eyebrow">TK CLAN · 01 ОКТЯБРЯ 2026</p><h1>Королевская сокровищница</h1>
-<p>Три игровых этапа. Три призовых места. Пройди испытания Hamster King и поднимись в рейтинге.</p>
-<div class="prizes"><span>🥇 5 000 алмазов</span><span>🥈 2 750 алмазов</span><span>🥉 VIP</span></div>
-<div id="account-panel" class="actions hidden"><span>Telegram: вход сохранён</span><button id="logout" type="button" class="secondary">Выйти / сменить аккаунт</button></div>
-<p id="phase" role="status">Проверяем доступ…</p></section>
-<section id="waiting-room" class="card hidden"><p class="eyebrow">ДО ОТКРЫТИЯ СОКРОВИЩНИЦЫ</p><strong id="launch-countdown" style="font-size:clamp(36px,8vw,72px);color:#ffe096">00:00:00</strong><p>Старт — 1 октября в 16:30 по Москве.</p><p>Этапы открываются в 16:30, 17:00 и 17:30 по Москве. Задания и материалы станут доступны по расписанию. Страница обновится автоматически.</p></section>
-<section id="registered-waiting" class="card hidden"><h2>Вы зарегистрированы ✓</h2><p>Ваш игровой ID и ник сохранены. Первый этап откроется автоматически в 16:30 по Москве. До старта задания и материалы закрыты.</p></section>
-<section id="login-panel" class="card hidden"><h2>Вход через Telegram</h2><p id="login-note">Войдите через Telegram и зарегистрируйтесь заранее. Задания откроются по расписанию.</p><form id="code-login-form"><label>Личный код от организатора<input name="code" autocomplete="off" required maxlength="100"></label><button type="submit">Войти по коду</button></form><p id="code-login-error" class="message" role="alert"></p><p class="muted">Или войдите через Telegram:</p><div id="telegram-login"></div><p id="login-error" class="message" role="alert"></p></section>
-<section id="owner-panel" class="card hidden"><div class="section-heading"><h2>Управление конкурсом</h2><span class="badge">Только владелец</span></div>
-<p>Закрытое тестирование доступно только вам. Тестовые ответы не попадут в настоящий рейтинг.</p>
-<form id="issue-code-form"><label>Игровой ID для выдачи кода<input name="player_id" required maxlength="80"></label><button type="submit">Создать личный код</button></form><p id="issued-code" class="message" role="status"></p>
-<p id="registration-stats" class="position" aria-live="polite">Загружаем статистику регистраций…</p>
-<label class="switch"><input type="checkbox" id="test-mode" checked> Тестовый режим</label>
-<div class="actions"><button id="reset-test" type="button" class="secondary">Очистить тестовые ответы</button><button id="pause" type="button" class="secondary">Приостановить конкурс</button></div>
-<details id="settings"><summary>Задания и расписание</summary>
-<form id="config-form"><div class="form-row"><label>Начало, Москва<input id="start-at" type="datetime-local" required></label><label>Окончание, Москва<input id="end-at" type="datetime-local" required></label></div>
-<label>Кто участвует<select id="audience"><option value="all">Любой игрок с Telegram</option><option value="members">Только пользователи кабинета TK Clan</option></select></label>
-<div id="stage-editors"></div>
-<label class="switch"><input type="checkbox" id="armed"> Открыть автоматически по расписанию</label>
-<p class="muted">Перед включением проверьте задания в тестовом режиме. После старта менять задания и ответы нельзя.</p>
-<button type="submit">Сохранить задания и расписание</button><p id="admin-message" class="message" role="status"></p></form></details></section>
-<section id="register-panel" class="card hidden"><h2>Участие в конкурсе</h2><p>Укажите игровой ID и ник. После регистрации их нельзя изменить. Перед выдачей приза организатор проверит принадлежность аккаунта.</p>
-<form id="register-form"><div class="form-row"><label>Игровой ID<input name="player_id" maxlength="80" autocomplete="off" required></label><label>Ник в игре<input name="nickname" minlength="2" maxlength="60" required></label></div><button type="submit">Участвовать</button><p id="register-message" class="message" role="status"></p></form></section>
-<div id="competition" class="hidden"><section class="card"><div class="section-heading"><h2 id="participant">Ваш прогресс</h2></div><p id="my-position" class="position" aria-live="polite"></p><div class="timer-board"><div><span class="eyebrow">ВАШЕ ВРЕМЯ ПОИСКА</span><strong id="total-timer">00:00:00</strong><span id="speed-place"></span></div><div id="stage-timers" class="stage-timers"></div></div><p class="muted">Сумма времени трёх этапов. Ожидание открытия следующего этапа не учитывается. Таймер начинается, когда этап доступен вам, даже если страница закрыта.</p><p id="mode-note" class="muted"></p></section>
-<p><a href="materials.html">Предметы, рецепты и конкурсная карта →</a></p>
-<section id="stages" class="stage-list"></section>
-<section class="card speed-card"><div class="section-heading"><h2>⚡ Гонка за VIP</h2></div><p>Самый быстрый участник определяется среди завершивших все три этапа по сумме времени прохождения.</p><p id="fastest-player" class="position"></p><div class="table-scroll"><table><thead><tr><th>Место</th><th>Игрок</th><th>Этапы</th><th>Время</th></tr></thead><tbody id="speed-ranking"></tbody></table></div><p class="muted">Поощрительный приз за минимальную сумму времени — VIP. Основные призовые места определяются порядком завершения конкурса.</p></section><section class="card"><div class="section-heading"><h2>🏆 Основной рейтинг</h2><span id="count" class="badge"></span></div><p class="muted">Участник появляется после первой контрольной точки. Выше — больше завершённых этапов, затем пройденных точек текущего этапа. При равенстве решает время последнего верного ответа. Место может измениться.</p><div class="table-scroll"><table><thead><tr><th>Место</th><th>Игрок</th><th>Этапы и контрольные точки</th></tr></thead><tbody id="ranking"></tbody></table></div><p id="rating-note" class="muted"></p></section></div>
-<section id="rules" class="card hidden"><h2>Как участвовать</h2><ol><li>Решайте этапы по порядку. Они открываются одновременно для всех по расписанию.</li><li>Отправляйте ответы здесь. Ответы в чате и личных сообщениях не принимаются.</li><li>После неверного ответа следующая попытка доступна через 30 секунд.</li><li>Один Telegram-аккаунт и один игровой ID — одна регистрация.</li><li>Победители — первые три участника, правильно завершившие все три этапа. При совпадении времени решает порядок приёма ответов сервером.</li></ol></section>
-<p id="global-error" class="message" role="alert"></p>
-</main><script src="contest.js?v=20261001-12"></script><script src="../assets/site-nav.js?v=20260920-11"></script>
-<script src="language.js?v=20261001-2"></script></body></html>
-
+<body><main><img src="../assets/brand/topking-clan-crest.png" alt="Top King"><h1>Конкурс завершён</h1><p>«Королевская сокровищница» закрыта. Приём ответов и регистрация завершены. Спасибо всем участникам!</p><a href="../">На главную Top King</a></main></body>
+</html>
