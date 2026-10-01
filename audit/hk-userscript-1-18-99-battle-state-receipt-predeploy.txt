@@ -1,0 +1,11 @@
+USERSCRIPT_1_18_99_BATTLE_STATE_RECEIPT_PREDEPLOY=PASS
+source_version=1.18.98
+target_version=1.18.99
+battle_exit_live_enemy_guard=PASS
+battle_exit_cost_10_preconfirm_guard=PASS
+battle_attack_receipt=PASS
+stale_board_guard=PASS
+spinner_recovery_bounded=PASS
+syntax=PASS
+source_sha256=08dc7f939fd293ebaff4e5cadc41ec7e1e93cffcebe145ce4e5634fbf28ab6ab
+candidate_sha256=18276c7debb470a86e4cc1a2f95c71b0955c183434f8f4ddcec8859521f24745
