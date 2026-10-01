@@ -1,0 +1,88 @@
+name: Deploy private contest
+on:
+  workflow_dispatch:
+    inputs:
+      owner_id:
+        description: Confirmed Telegram user ID of contest owner
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: deploy-topking-backend
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate isolated contest
+        run: |
+          python3 deploy/topking/test_contest.py
+          node --check contest/contest.js
+          node --check assets/site-nav.js
+      - name: Install private contest with rollback
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+          OWNER_ID: ${{ inputs.owner_id }}
+        run: |
+          set -euo pipefail
+          [[ "$OWNER_ID" =~ ^[1-9][0-9]{4,19}$ ]]
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+          trap 'rm -f "$HOME/.ssh/topking"' EXIT
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new deploy/topking/{contest_runtime.py,patch_contest.py,provision_contest.py,test_contest.py,verify_contest_live.py,cabinet_auth.py} root@89.125.1.71:/tmp/
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "bash -s -- '$OWNER_ID'" <<'REMOTE'
+          set -euo pipefail
+          owner_id="$1"
+          live=/opt/hamsterking-license/server.py
+          module=/opt/hamsterking-license/contest_runtime.py
+          candidate=$(mktemp /opt/hamsterking-license/server.contest.XXXXXX.py)
+          original=$(sha256sum "$live" | cut -d ' ' -f1)
+          cp "$live" "$candidate"
+          python3 /tmp/patch_contest.py "$candidate"
+          python3 -m py_compile "$candidate" /tmp/contest_runtime.py
+          python3 /tmp/cabinet_auth.py --mode test --source "$candidate"
+          python3 /tmp/test_contest.py
+          test "$original" = "$(sha256sum "$live" | cut -d ' ' -f1)"
+          snapshot=$(mktemp /tmp/contest-permissions.XXXXXX)
+          python3 - "$snapshot" <<'PY'
+          import hashlib,json,sqlite3,sys
+          with sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True) as db:
+              rows={t:db.execute('SELECT * FROM '+t+' ORDER BY 1').fetchall() for t in ('clan_members','licenses')}
+          open(sys.argv[1],'w').write(hashlib.sha256(json.dumps(rows,sort_keys=True,default=str).encode()).hexdigest())
+          PY
+          backup="$live.bak.contest.$(date +%Y%m%d-%H%M%S)"
+          cp -a "$live" "$backup"
+          module_backup=''
+          if test -f "$module"; then module_backup="$backup.module"; cp -a "$module" "$module_backup"; fi
+          rollback() {
+            cp -a "$backup" "$live"
+            if test -n "$module_backup"; then cp -a "$module_backup" "$module"; fi
+            systemctl restart hamsterking-license.service
+            echo CONTEST_ROLLBACK=PASS
+          }
+          trap rollback ERR
+          install -m 644 /tmp/contest_runtime.py "$module"
+          python3 /tmp/provision_contest.py "$owner_id"
+          cp "$candidate" "$live"
+          systemctl restart hamsterking-license.service
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS --max-time 5 http://127.0.0.1:8787/health >/dev/null; then break; fi
+            sleep 2
+          done
+          systemctl is-active --quiet hamsterking-license.service
+          python3 /tmp/verify_contest_live.py
+          python3 - "$snapshot" <<'PY'
+          import hashlib,json,sqlite3,sys
+          with sqlite3.connect('file:/var/lib/hamsterking-license/licenses.db?mode=ro',uri=True) as db:
+              rows={t:db.execute('SELECT * FROM '+t+' ORDER BY 1').fetchall() for t in ('clan_members','licenses')}
+          assert open(sys.argv[1]).read()==hashlib.sha256(json.dumps(rows,sort_keys=True,default=str).encode()).hexdigest(),'Permissions changed'
+          print('MEMBERSHIP_AND_LICENSES_UNCHANGED=PASS')
+          PY
+          trap - ERR
+          rm -f "$snapshot" "$candidate"
+          echo PRIVATE_CONTEST_DEPLOY=PASS
+          REMOTE

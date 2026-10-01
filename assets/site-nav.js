@@ -5,6 +5,24 @@
     fa:{home:'خانه',information:'راهنمای بازی',treasure:'نقشه گنج',announcements:'اخبار بازی',recipes:'دستورها',calculators:'محاسبه‌گرها',maps:'نقشه‌ها','mini-game':'مینی‌گیم',wars:'جنگ‌های قبیله‌ای',ratings:'رتبه‌بندی',feedback:'بازخورد',cabinet:'پنل اعضا',game:'بازی',clan:'قبیله',contact:'ارتباط'}
   };
   const items=[['home',''],['information','information/'],['treasure','treasure-map/'],['announcements','news/'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/'],['mini-game','mini-game/'],['wars','wars/'],['ratings','ratings/'],['feedback','feedback/'],['cabinet','cabinet/']];
+  let contestVisible=false;
+  async function refreshContestNavigation(){
+    const token=localStorage.getItem('tk_clan_contest_session')||localStorage.getItem('tk_clan_cabinet_session')||'';
+    const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),8000);
+    try{
+      const response=await fetch('https://hk-license.89.125.1.71.sslip.io/api/v1/cabinet/contest/status',{cache:'no-store',signal:controller.signal,headers:token?{Authorization:'Bearer '+token}:{}});
+      const data=response.ok?await response.json():{};
+      contestVisible=Boolean(data.visible);
+    }catch(_){contestVisible=false}finally{clearTimeout(timeout)}
+    document.querySelectorAll('[data-site-nav="contest"]').forEach(x=>x.remove());
+    if(!contestVisible)return;
+    document.querySelectorAll('nav.nav,nav.mobile-nav,.mobile-links').forEach(node=>{
+      const link=document.createElement('a');link.href=href('contest/');link.textContent='Конкурс';link.dataset.siteNav='contest';
+      if(current()==='contest')link.classList.add('active');
+      const login=node.querySelector('[data-site-nav="cabinet"]');
+      node.insertBefore(link,login||null);
+    });
+  }
   const desktopGroups=[
     {label:'game',items:[['information','information/'],['treasure','treasure-map/'],['announcements','news/'],['recipes','recipes/'],['calculators','calculators/'],['maps','maps/'],['mini-game','mini-game/']]},
     {label:'clan',items:[['wars','wars/'],['ratings','ratings/']]},
@@ -386,6 +404,7 @@
     portalMobileMenus();
     wireDesktopGroups();
     wireGeneratedMenu();
+    refreshContestNavigation();
   }
   function sendSiteAnalytics(){
     if(document.documentElement.dataset.tkAnalyticsSent==='1')return;
@@ -435,4 +454,6 @@
   }
   document.addEventListener('tk-language-change',render);
   window.addEventListener('tk-language-change',render);
+  setInterval(()=>{if(!document.hidden)refreshContestNavigation()},30000);
+  window.addEventListener('storage',refreshContestNavigation);
 })();

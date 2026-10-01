@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Конкурс — TK Clan</title>
+<link rel="stylesheet" href="../assets/public.css">
+<link rel="stylesheet" href="contest.css?v=20261001-1">
+</head>
+<body class="tk-main-theme">
+<header class="site-header"><a class="brand" href="../">TK Clan</a><nav class="nav" aria-label="Основная навигация"></nav></header>
+<nav class="mobile-nav" data-mobile-nav></nav>
+<main class="contest-shell">
+<section class="hero"><p class="eyebrow">TK CLAN · 01 ОКТЯБРЯ 2026</p><h1>Королевская сокровищница</h1>
+<p>Три этапа. Три призовых места. Найди ключи и поднимись в рейтинге.</p>
+<div class="prizes"><span>🥇 5 000 алмазов</span><span>🥈 2 750 алмазов</span><span>🥉 VIP</span></div>
+<p id="phase" role="status">Проверяем доступ…</p></section>
+<section id="login-panel" class="card hidden"><h2>Вход через Telegram</h2><p id="login-note">Войдите, чтобы открыть конкурс.</p><div id="telegram-login"></div><p id="login-error" class="message" role="alert"></p></section>
+<section id="owner-panel" class="card hidden"><div class="section-heading"><h2>Управление конкурсом</h2><span class="badge">Только владелец</span></div>
+<p>Закрытое тестирование доступно только вам. Тестовые ответы не попадут в настоящий рейтинг.</p>
+<label class="switch"><input type="checkbox" id="test-mode" checked> Тестовый режим</label>
+<div class="actions"><button id="generate" type="button" class="secondary">Подготовить три задания</button><button id="reset-test" type="button" class="secondary">Очистить тестовые ответы</button><button id="pause" type="button" class="secondary">Приостановить конкурс</button></div>
+<details id="settings"><summary>Задания и расписание</summary>
+<form id="config-form"><div class="form-row"><label>Начало, Якутск<input id="start-at" type="datetime-local" required></label><label>Окончание, Якутск<input id="end-at" type="datetime-local" required></label></div>
+<label>Кто участвует<select id="audience"><option value="all">Любой игрок с Telegram</option><option value="members">Только пользователи кабинета TK Clan</option></select></label>
+<div id="stage-editors"></div>
+<label class="switch"><input type="checkbox" id="armed"> Открыть автоматически по расписанию</label>
+<p class="muted">Перед включением проверьте задания в тестовом режиме. После старта менять задания и ответы нельзя.</p>
+<button type="submit">Сохранить задания и расписание</button><p id="admin-message" class="message" role="status"></p></form></details></section>
+<section id="register-panel" class="card hidden"><h2>Участие в конкурсе</h2><p>Укажите игровой ID и ник. После регистрации их нельзя изменить. Перед выдачей приза организатор проверит принадлежность аккаунта.</p>
+<form id="register-form"><div class="form-row"><label>Игровой ID<input name="player_id" maxlength="80" autocomplete="off" required></label><label>Ник в игре<input name="nickname" minlength="2" maxlength="60" required></label></div><button type="submit">Участвовать</button><p id="register-message" class="message" role="status"></p></form></section>
+<div id="competition" class="hidden"><section class="card"><div class="section-heading"><h2 id="participant">Ваш прогресс</h2><button id="logout" type="button" class="secondary">Выйти</button></div><p id="my-position" class="position" aria-live="polite"></p><p id="mode-note" class="muted"></p></section>
+<section id="stages" class="stage-list"></section>
+<section class="card"><div class="section-heading"><h2>Рейтинг</h2><span id="count" class="badge"></span></div><p class="muted">Выше — участники с большим числом пройденных этапов. При равенстве решает время последнего верного ответа. Место может измениться.</p><div class="table-scroll"><table><thead><tr><th>Место</th><th>Игрок</th><th>Этапы</th></tr></thead><tbody id="ranking"></tbody></table></div><p id="rating-note" class="muted"></p></section></div>
+<section id="rules" class="card hidden"><h2>Как участвовать</h2><ol><li>Решайте этапы по порядку. Они открываются одновременно для всех по расписанию.</li><li>Отправляйте ответы здесь. Ответы в чате и личных сообщениях не принимаются.</li><li>После неверного ответа следующая попытка доступна через 30 секунд.</li><li>Один Telegram-аккаунт и один игровой ID — одна регистрация.</li><li>Победители — первые три участника, правильно завершившие все три этапа. При совпадении времени решает порядок приёма ответов сервером.</li></ol></section>
+<p id="global-error" class="message" role="alert"></p>
+</main><script src="contest.js?v=20261001-1"></script><script src="../assets/site-nav.js?v=20261001-contest-1"></script>
+</body></html>
