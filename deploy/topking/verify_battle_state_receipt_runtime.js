@@ -43,6 +43,7 @@ const boardCode=section('    function getBattleBoard() {','    function battleEg
 const fairEnv={
   BATTLE_SIZE:12,BATTLE_FIRST_SLOT:1,
   battleFairSlots:()=>[{shop_lot_id:'mf_treasurelot_enemy_type_01_1_sl1',is_bought:true}],
+  HK_BATTLE_FULL_STATE_REV:'battle-full-fair-state-20260928-r1',
   recordDiagnostic:()=>{},
   document:{querySelectorAll:()=>{throw Error('DOM fallback is forbidden when fair reports purchased slots');}},
 };
