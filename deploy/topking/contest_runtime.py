@@ -102,6 +102,10 @@ class Contest:
         except (ValueError, KeyError, TypeError, json.JSONDecodeError):
             return None
 
+    def tester(self, identity, cfg):
+        # Explicit temporary contest-only access; expires at public start.
+        return bool(identity and str(identity['id'])=='6814491765' and self.clock()<cfg['start_at'])
+
     def normalize(self, answer):
         value=' '.join(unicodedata.normalize('NFKC',str(answer)).casefold().replace('ё','е').split())
         return re.sub(r'[\s;]+','',value)
@@ -157,12 +161,13 @@ class Contest:
     def state(self, db, cfg, identity, mode):
         owner=self.owner(identity,cfg)
         phase=self.phase(cfg)
-        visible=owner or phase in ('scheduled','open','finished')
+        tester=self.tester(identity,cfg)
+        visible=owner or tester or phase in ('scheduled','open','finished')
         result=dict(ok=True,visible=visible,owner=owner,phase=phase,server_at=self.clock(),
-                    start_at=cfg['start_at'],end_at=cfg['end_at'],mode=mode,ready=self.ready(cfg))
+                    start_at=cfg['start_at'],end_at=cfg['end_at'],mode=mode,ready=self.ready(cfg),tester=tester)
         if not visible:
             return result
-        if not owner and phase=='scheduled':
+        if not owner and not tester and phase=='scheduled':
             # Public waiting room contains no stage metadata or private materials.
             return result
         if not identity:
@@ -224,16 +229,19 @@ class Contest:
         with self.db() as db:
             cfg=self.config(db)
             owner=self.owner(identity,cfg)
+            tester=self.tester(identity,cfg)
+            if tester: mode='test'
             if method=='GET' and action=='status':
-                return self.state(db,cfg,identity,'live')
+                return self.state(db,cfg,identity,'test' if tester else 'live')
             if method=='POST' and action=='login':
                 candidate=self.verify_login(body.get('telegram'))
                 if not candidate:
                     raise ContestError('invalid_telegram_login',401)
                 is_owner=self.owner(candidate,cfg)
-                if not is_owner and self.phase(cfg) not in ('open','finished'):
+                is_tester=self.tester(candidate,cfg)
+                if not is_owner and not is_tester and self.phase(cfg) not in ('open','finished'):
                     raise ContestError('contest_hidden',404)
-                if not is_owner and cfg['audience']=='members':
+                if not is_owner and not is_tester and cfg['audience']=='members':
                     # An existing cabinet session is required; do not add to its allowlist.
                     if not self.cabinet_identity('id:'+str(candidate['id'])):
                         raise ContestError('members_only',403)
@@ -292,11 +300,11 @@ class Contest:
                 for table in ('entrants','solves','attempts','checkpoints','point_attempts'):
                     db.execute('DELETE FROM '+table+' WHERE mode=?',('test',))
                 return dict(ok=True)
-            if mode=='test' and not owner:
+            if mode=='test' and not owner and not tester:
                 raise ContestError('forbidden',403)
-            if not owner and self.phase(cfg) not in ('open','finished'):
+            if not owner and not tester and self.phase(cfg) not in ('open','finished'):
                 raise ContestError('contest_hidden',404)
-            if cfg['audience']=='members' and not owner and not identity.get('member'):
+            if cfg['audience']=='members' and not owner and not tester and not identity.get('member'):
                 # Contest tokens don't confer cabinet permissions. Check read-only membership.
                 if not self.cabinet_identity('id:'+str(identity['id'])):
                     raise ContestError('members_only',403)
@@ -314,7 +322,7 @@ class Contest:
                     raise ContestError('not_found',404)
                 if not owner:
                     completed={r['stage'] for r in db.execute('SELECT stage FROM solves WHERE mode=? AND tid=?',(mode,str(identity['id'])))}
-                    if kind in ('map','maps') and (1 not in completed or self.clock()<cfg['start_at']+cfg['stages'][2]['offset']):
+                    if kind in ('map','maps') and (1 not in completed or (mode!='test' and self.clock()<cfg['start_at']+cfg['stages'][2]['offset'])):
                         raise ContestError('previous_stage_required',409)
                     if kind=='items' and 1 not in completed:
                         for item in selected_items:

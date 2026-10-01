@@ -44,6 +44,23 @@ class CheckpointTests(unittest.TestCase):
         state=c2.handle('POST','state',self.token,{})
         self.assertTrue(state['stages'][0]['points'][0]['solved'])
         self.assertFalse(state['stages'][0]['final_unlocked'])
+    def test_temporary_tester_isolated_and_not_admin(self):
+        self.now=START-60
+        token=self.c.token(dict(id='6814491765'))
+        state=self.c.handle('GET','status',token)
+        self.assertTrue(state['tester']);self.assertFalse(state['owner'])
+        self.assertNotIn('admin_config',state)
+        self.c.handle('POST','register',token,dict(mode='live',player_id='tester',nickname='Tester'))
+        with self.c.db() as db:
+            self.assertEqual(db.execute("SELECT mode FROM entrants WHERE tid='6814491765'").fetchone()['mode'],'test')
+        for action in ('admin/pause','admin/reset-test','admin/config'):
+            with self.assertRaises(ContestError) as caught:self.c.handle('POST',action,token,{})
+            self.assertEqual(caught.exception.code,'forbidden')
+        with self.assertRaises(ContestError):self.c.handle('POST','state',self.token,dict(mode='test'))
+        self.now=START
+        self.assertFalse(self.c.handle('GET','status',token)['tester'])
+        with self.assertRaises(ContestError):self.c.handle('POST','state',token,dict(mode='test'))
+
     def test_mobile_answer_case_and_semicolon_spacing(self):
         self.assertEqual(self.c.digest('0.0','Т; М; Б; БОД'),self.c.digest('0.0','т;м;б;бод'))
         self.assertEqual(self.c.digest('1.2','А; 5'),self.c.digest('1.2','а ;5'))
