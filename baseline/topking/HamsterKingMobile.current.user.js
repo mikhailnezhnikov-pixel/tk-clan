@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         Hamster King Mobile
 // @namespace    hamsterking.local
-// @version      1.18.100
+// @version      1.18.101
+// @release-note Автокарта и автобой: две компактные кнопки снизу слева/справа со статусом внутри кнопки карты. В карточке бойца нажатие адресовано полноценной кнопке, а не вложенной цифре; неподтверждённые удары не оплачиваются повторно.
 // @release-note Сражения: исправлено распознавание стоимости 1–2 меча в открытой карточке бойца. Переключатели автокарты/автобоя больше не перекрывают кнопку атаки. Если нажатие отправлено, повторная оплата блокируется до фактического изменения игрового состояния.
 // @release-note Сражение: доступный боец и незакрытая карточка блокируют выход за 10 ягод даже при старом флаге награды. Атака подтверждается только реальным изменением мечей/лотов или появлением награды, а не перерисовкой модалки. Перед каждым выходом проверяется актуальное поле.
 // @release-note Сокровищница: восстановление вступительного окна с пустой кнопкой на мобильных, перенос индикатора автокарты с кнопки, подтверждение входа до выбора пути. Смена комнаты сбрасывает устаревший бой и прекращает повторные попытки выхода из уже покинутого сражения.
@@ -46,7 +47,7 @@
 
 (() => {
   'use strict';
-  const BUILD_VERSION = '1.18.100';
+  const BUILD_VERSION = '1.18.101';
   const HK_USERSCRIPT_UPDATE_META_REV = 'userscript-update-metadata-20260924-r1';
   const HK_RUNTIME_TAKEOVER_REV = 'runtime-takeover-20260925-r6-version-aware';
   const HK_CORE_REVISION = 'core-20260921-r27-businesses-runner-canon';
@@ -3684,6 +3685,8 @@
   const HK_BATTLE_ATTACK_RECEIPT_REV='battle-attack-state-receipt-20261001-r1';
   const HK_BATTLE_MOBILE_PRICE_REV='battle-mobile-price-action-20261001-r1';
   const HK_BATTLE_SINGLE_TAP_REV='battle-single-tap-until-receipt-20261001-r1';
+  const HK_BOTTOM_HUD_REV='battle-bottom-hud-status-20261001-r1';
+  const HK_ENEMY_ACTION_PARENT_REV='battle-enemy-action-parent-20261001-r1';
   const HK_BATTLE_FULL_STATE_REV='battle-full-fair-state-20260928-r1';
   const HK_BATTLE_EGG_BERRY_REV='battle-egg-one-berry-buy-20260928-r1';
   const HK_BATTLE_TARGET_SCROLL_REV='battle-target-safe-scroll-20260928-r1';
@@ -17997,13 +18000,15 @@
       if (!battleAutoToggle) return;
       const enabled=battleAutoEnabled();
       battleAutoToggle.textContent=enabled ? either('Автобой: ВКЛ','Auto battle: ON') : either('Автобой: ВЫКЛ','Auto battle: OFF');
+      battleAutoToggle.title=enabled?'Автобой включён':'Автобой выключен';
       battleAutoToggle.style.background=enabled ? '#40c85a' : '#2b2b2b';
       battleAutoToggle.style.color=enabled ? '#071b0a' : '#fff';
-      const enemyModalOpen=!!battleEnemyModalRoot();
-      const battleHudTop=enemyModalOpen?'132px':'auto';
-      const battleHudBottom=enemyModalOpen?'auto':'154px';
-      if (battleAutoToggle.style.top!==battleHudTop) battleAutoToggle.style.top=battleHudTop;
-      if (battleAutoToggle.style.bottom!==battleHudBottom) battleAutoToggle.style.bottom=battleHudBottom;
+      // The status is on the left. Keep this control on the right, well
+      // below the centre of any enemy purchase modal.
+      battleAutoToggle.style.top='auto';
+      battleAutoToggle.style.bottom='calc(env(safe-area-inset-bottom, 0px) + 8px)';
+      battleAutoToggle.style.left='auto';
+      battleAutoToggle.style.right='8px';
       if (isBattle !== null) battleAutoToggle.style.display=isBattle ? 'block' : 'none';
     }
 
@@ -18014,15 +18019,17 @@
         battleAutoToggle.type='button';
         Object.assign(battleAutoToggle.style,{
           position:'fixed',
-          right:'14px',
-          bottom:'154px',
+          right:'8px',
+          bottom:'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+          maxWidth:'45vw',
           zIndex:'2147483646',
           border:'2px solid rgba(255,255,255,.75)',
-          borderRadius:'18px',
-          padding:'8px 11px',
-          fontSize:'12px',
+          borderRadius:'14px',
+          padding:'6px 8px',
+          fontSize:'11px',
           fontWeight:'900',
-          lineHeight:'1',
+          lineHeight:'1.12',
+          whiteSpace:'normal',
           boxShadow:'0 4px 14px rgba(0,0,0,.55)',
           WebkitTapHighlightColor:'transparent',
           touchAction:'manipulation'
@@ -21232,6 +21239,23 @@
           element.getAttribute?.('aria-disabled')!=='true' && visible(element)
         )
         .map(element=>{
+          // The visible cost may be a tiny inner span. Prefer its nearest real
+          // button / interactive ancestor within the same enemy dialog.
+          let target=element;
+          for (let node=element,depth=0;node && node!==root && depth<6;
+               node=node.parentElement,depth++) {
+            if (root.contains && !root.contains(node)) break;
+            let interactive=false;
+            try {
+              interactive=node.matches?.('button,[role="button"],a,[onclick]') ||
+                !!node.onclick || getComputedStyle(node).cursor==='pointer';
+            } catch (_) {}
+            if (interactive) { target=node; break; }
+          }
+          element=target;
+          if (element.disabled || element.getAttribute?.('aria-disabled')==='true') {
+            return {element,score:-9999,rect:{width:0,height:0}};
+          }
           const text=clean(element.innerText||element.textContent||'').trim();
           const rect=element.getBoundingClientRect?.() || {left:0,top:0,width:0,height:0};
           let actionable=false;
@@ -21257,7 +21281,7 @@
           if (Math.abs(cx-centerX)<=rr.width*0.32) score+=150;
           if (rect.width>=rr.width*0.28 && rect.width<=rr.width*0.90) score+=110;
           if (rect.height>=34 && rect.height<=150) score+=90;
-          if (actionable) score+=120;
+          if (actionable) score+=250;
 
           // Without a known board cost, only the wide lower-centre numeric
           // control can own the attack. This excludes x1/x6 reward counters.
@@ -24912,17 +24936,16 @@
         : (!!showOverride && treasureEventContextVisible());
       const display=show?'block':'none';
       const label=enabled
-        ? 'Автокарта: ВКЛ'+(autoMapLastStatus?' · '+autoMapLastStatus:'')
+        ? 'Автокарта: ВКЛ'+(autoMapLastStatus?'\n'+autoMapLastStatus:'')
         : 'Автокарта: ВЫКЛ';
+      autoMapToggle.title=autoMapLastStatus||'Автокарта';
       const background=enabled?'#38c85a':'#292929';
       const color=enabled?'#071b0a':'#fff';
       const borderColor=enabled?'#d8ffe0':'rgba(255,255,255,.8)';
-      const treasuryIntro=autoMapTreasuryIntroModalRoot();
-      const enemyModalOpen=!!battleEnemyModalRoot();
-      const hudBottom=(treasuryIntro||enemyModalOpen)?'auto':'202px';
-      const hudTop=(treasuryIntro||enemyModalOpen)?'85px':'auto';
-      if (autoMapToggle.style.bottom!==hudBottom) autoMapToggle.style.bottom=hudBottom;
-      if (autoMapToggle.style.top!==hudTop) autoMapToggle.style.top=hudTop;
+      autoMapToggle.style.top='auto';
+      autoMapToggle.style.bottom='calc(env(safe-area-inset-bottom, 0px) + 8px)';
+      autoMapToggle.style.left='8px';
+      autoMapToggle.style.right='auto';
       if (autoMapToggle.style.display!==display) autoMapToggle.style.display=display;
       if (autoMapToggle.textContent!==label) autoMapToggle.textContent=label;
       if (autoMapToggle.style.background!==background) autoMapToggle.style.background=background;
@@ -24941,15 +24964,19 @@
       autoMapToggle.type='button';
       Object.assign(autoMapToggle.style,{
         position:'fixed',
-        right:'14px',
-        bottom:'202px',
+        left:'8px',
+        right:'auto',
+        bottom:'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+        maxWidth:'46vw',
         zIndex:'2147483646',
         border:'2px solid rgba(255,255,255,.8)',
-        borderRadius:'18px',
-        padding:'8px 11px',
-        fontSize:'12px',
+        borderRadius:'14px',
+        padding:'6px 8px',
+        fontSize:'10px',
         fontWeight:'900',
-        lineHeight:'1',
+        lineHeight:'1.15',
+        whiteSpace:'pre-line',
+        overflowWrap:'anywhere',
         boxShadow:'0 4px 14px rgba(0,0,0,.55)',
         WebkitTapHighlightColor:'transparent',
         touchAction:'manipulation'
@@ -28631,6 +28658,8 @@
       battleAttackReceiptRevision:HK_BATTLE_ATTACK_RECEIPT_REV,
       battleMobilePriceRevision:HK_BATTLE_MOBILE_PRICE_REV,
       battleSingleTapRevision:HK_BATTLE_SINGLE_TAP_REV,
+      bottomHudRevision:HK_BOTTOM_HUD_REV,
+      battleEnemyActionParentRevision:HK_ENEMY_ACTION_PARENT_REV,
       battleFullStateRevision:HK_BATTLE_FULL_STATE_REV,
       battleEggBerryRevision:HK_BATTLE_EGG_BERRY_REV,
       battleTargetScrollRevision:HK_BATTLE_TARGET_SCROLL_REV,
