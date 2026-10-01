@@ -187,5 +187,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-101-battle-bottom-hud-live-status.txt",
-  "commit_message": "fix: move battle controls to bottom corners and target full buy button in 1.18.101"
+  "commit_message": "fix: move battle controls to bottom corners and target full buy button in 1.18.101",
+  "manual_trigger": "1.18.101-bottom-hud-enemy-button-r1"
 }
