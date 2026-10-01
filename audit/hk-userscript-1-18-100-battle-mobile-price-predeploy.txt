@@ -1,0 +1,14 @@
+USERSCRIPT_1_18_100_BATTLE_MOBILE_PRICE_PREDEPLOY=PASS
+source_version=1.18.99
+target_version=1.18.100
+battle_exit_live_enemy_guard=PASS
+battle_exit_cost_10_preconfirm_guard=PASS
+battle_attack_receipt=PASS
+mobile_price_1_2_swords=PASS
+mobile_hud_clearance=PASS
+pending_attack_single_tap=PASS
+stale_board_guard=PASS
+spinner_recovery_bounded=PASS
+syntax=PASS
+source_sha256=18276c7debb470a86e4cc1a2f95c71b0955c183434f8f4ddcec8859521f24745
+candidate_sha256=65d029951acabb76ede7d892dddbd587ba36f6369bc366d680c9a1962ec96871
