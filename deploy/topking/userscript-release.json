@@ -1,10 +1,12 @@
 {
   "schema": 1,
-  "source_version": "1.18.96",
-  "target_version": "1.18.97",
-  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.97.leave-dialog-map-proof.candidate.user.js",
-  "primary_marker": "leave-modal-foreground-truth-20261001-r1",
+  "source_version": "1.18.97",
+  "target_version": "1.18.98",
+  "candidate_path": "deploy/topking/HamsterKingMobile.1.18.98.treasury-intro-handoff.candidate.user.js",
+  "primary_marker": "treasury-intro-mobile-ack-20261001-r1",
   "preserve_markers": [
+    "leave-modal-foreground-truth-20261001-r1",
+    "exit-map-proof-20261001-r1",
     "battle-open-modal-priority-20260930-r1",
     "trader-map-modal-approval-20260930-r1",
     "battle-intro-overlay-ack-20260930-r1",
@@ -179,7 +181,6 @@
     "userscript-update-metadata-20260924-r1",
     "server-health-core-20260924-r1"
   ],
-  "audit_status_path": "audit/hk-userscript-1-18-97-leave-dialog-map-proof-live-status.txt",
-  "commit_message": "fix: verify actual leave dialog and map return in userscript 1.18.97",
-  "manual_trigger": "1.18.97-leave-dialog-map-proof-r1"
+  "audit_status_path": "audit/hk-userscript-1-18-98-treasury-intro-handoff-live-status.txt",
+  "commit_message": "fix: recover Treasury intro and stale battle handoff in userscript 1.18.98"
 }

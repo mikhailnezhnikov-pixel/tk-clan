@@ -1,0 +1,10 @@
+USERSCRIPT_1_18_98_TREASURY_INTRO_HANDOFF_PREDEPLOY=PASS
+source_version=1.18.97
+target_version=1.18.98
+treasury_intro_mobile=PASS
+blank_action_button=PASS
+battle_handoff=PASS
+treasury_hud_occlusion=PASS
+syntax=PASS
+source_sha256=284453ae5afbe9951c55450e6c04c148ce9c1e902cbfcb398dcaa7a5c2ac0bc1
+candidate_sha256=08dc7f939fd293ebaff4e5cadc41ec7e1e93cffcebe145ce4e5634fbf28ab6ab
