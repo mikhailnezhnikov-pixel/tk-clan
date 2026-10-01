@@ -18,6 +18,7 @@ with c.db() as db:
         # Archive settings only; retain the complete registration and results DB.
         cfg['archived']=True
         db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
+        db.commit()  # Persist before sys.exit; SystemExit bypasses the DB context's normal commit.
         print('CONTEST_ARCHIVED=PASS; schedule and participant records preserved')
         sys.exit(0)
     assert db.execute("SELECT COUNT(*) FROM solves WHERE mode='live'").fetchone()[0]==0,'Live solves exist'
