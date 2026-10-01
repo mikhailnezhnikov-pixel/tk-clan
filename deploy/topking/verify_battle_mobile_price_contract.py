@@ -11,8 +11,8 @@ def section(a,b):
     return s[i:j]
 
 required=[
-    '// @version      1.18.100',
-    "const BUILD_VERSION = '1.18.100';",
+    '// @version      '+('1.18.101' if 'battle-bottom-hud-status-20261001-r1' in s else '1.18.100'),
+    "const BUILD_VERSION = '"+('1.18.101' if 'battle-bottom-hud-status-20261001-r1' in s else '1.18.100')+"';",
     'battle-mobile-price-action-20261001-r1',
     'battle-single-tap-until-receipt-20261001-r1',
     'battle-no-premature-exit-20261001-r1',
