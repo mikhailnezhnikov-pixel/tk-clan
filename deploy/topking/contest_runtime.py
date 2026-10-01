@@ -6,6 +6,7 @@ import json
 import re
 import sqlite3
 import time
+import threading
 import unicodedata
 from contextlib import contextmanager
 from pathlib import Path
@@ -23,8 +24,10 @@ class ContestError(Exception):
 class Contest:
     def __init__(self, path, secret, verify_login, cabinet_identity, clock=time.time):
         self.path, self.secret = str(path), secret.encode()
+        self.write_lock=threading.RLock()
         self.verify_login, self.cabinet_identity, self.clock = verify_login, cabinet_identity, clock
         with self.db() as db:
+            db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS entrants (
@@ -203,6 +206,13 @@ class Contest:
         return result
 
     def handle(self, method, action, token='', body=None):
+        if method=='POST':
+            # Fair local write queue prevents SQLite lock starvation under bursts.
+            with self.write_lock:
+                return self._handle(method,action,token,body)
+        return self._handle(method,action,token,body)
+
+    def _handle(self, method, action, token='', body=None):
         body=body or {}
         if not isinstance(body,dict):
             raise ContestError('invalid_request')
