@@ -19,6 +19,7 @@ function gateCase({board=[{hp:1,slot:7}],swords=13,modal=false,claimed=true,reco
     battleRewardConfirmOnlyPending:()=>false,
     battleRecoverFinalRewardClaimed:()=>recovered,
     battleScreenVisiblyCurrent:()=>room,
+    HK_BATTLE_NO_PREMATURE_EXIT_REV:'battle-no-premature-exit-20261001-r1',
     recordDiagnostic:(name,data)=>diagnostics.push({name,data}),
   };
   vm.createContext(env);
@@ -96,5 +97,5 @@ function confirmCase({redraw=false,spend=false,spinner=false}={}){
   const loading=await confirmCase({spinner:true});
   assert.equal(loading.result.success,false,'price spinner without button cannot be clicked');
   assert.equal(loading.clicks,0,'no blind coordinate taps while price loads');
-  console.log('BATTLE_STATE_RECEIPT_RUNTIME=PASS (9 scenarios: attackable, modal, clear, insufficient, unknown, reward, fair, redraw, debit, spinner)');
+  console.log('BATTLE_STATE_RECEIPT_RUNTIME=PASS (10 scenarios: attackable, modal, clear, insufficient, unknown, reward, fair, redraw, debit, spinner)');
 })().catch(error=>{console.error(error);process.exitCode=1;});
