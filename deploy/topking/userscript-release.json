@@ -184,5 +184,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-99-battle-state-receipt-live-status.txt",
-  "commit_message": "fix: guard paid exits and verify battle attack receipt in userscript 1.18.99"
+  "commit_message": "fix: guard paid exits and verify battle attack receipt in userscript 1.18.99",
+  "manual_trigger": "1.18.99-battle-state-receipt-r1"
 }
