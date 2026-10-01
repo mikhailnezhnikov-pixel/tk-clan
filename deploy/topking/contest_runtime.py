@@ -183,12 +183,13 @@ class Contest:
             prior=all(j in solved for j in range(i))
             item['unlocked']=released and prior
             if item['unlocked'] or owner:
-                item['prompt']=x['prompt']
                 done={r['point'] for r in db.execute('SELECT point FROM checkpoints WHERE mode=? AND tid=? AND stage=?',(mode,tid,i))}
                 item['points']=[dict(index=j,title=q['title'],solved=j in done,
                     prompt=q['prompt'] if all(k in done for k in range(j)) else '',
                     unlocked=all(k in done for k in range(j))) for j,q in enumerate(x.get('points',[]))]
                 item['final_unlocked']=len(done)==3 if x.get('points') else True
+                if item['final_unlocked']:
+                    item['prompt']=x['prompt']
             result['stages'].append(item)
         ranks=self.ranking(db,mode)
         own=next((r for r in ranks if r['tid']==tid),None)

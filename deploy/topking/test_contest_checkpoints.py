@@ -29,8 +29,10 @@ class CheckpointTests(unittest.TestCase):
         self.assertNotIn('final-1',state);self.assertNotIn('secret-0-1',state);self.assertNotIn('digest',state)
         for i in range(3):
             for j in range(3):
+                self.assertNotIn('prompt',self.call('state')['stages'][i])
                 self.assertTrue(self.call('checkpoint',stage=i,point=j,answer=f'answer-{j}')['correct'])
                 self.assertTrue(self.call('checkpoint',stage=i,point=j,answer='wrong')['already_solved'])
+            self.assertEqual(self.call('state')['stages'][i]['prompt'],f'final-{i}')
             self.assertTrue(self.call('answer',stage=i,answer='final')['correct'])
         self.assertEqual(self.call('state')['my_completed'],3)
         with self.c.db() as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM checkpoints').fetchone()[0],9)
