@@ -10,9 +10,10 @@ def part(a,b):
     if j<0: raise SystemExit("missing section end "+b)
     return s[i:j]
 
+current_version="1.18.100" if "battle-single-tap-until-receipt-20261001-r1" in s else "1.18.99"
 for marker in [
-    "// @version      1.18.99",
-    "const BUILD_VERSION = '1.18.99';",
+    "// @version      "+current_version,
+    "const BUILD_VERSION = '"+current_version+"';",
     "battle-no-premature-exit-20261001-r1",
     "battle-attack-state-receipt-20261001-r1",
     "treasury-intro-mobile-ack-20261001-r1",
