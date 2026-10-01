@@ -63,6 +63,37 @@ for(const cost of [1,2]){
 }
 assert.equal(actionCase(2,{spinner:true}).chosen,null,'blank loading action must not be tapped');
 
+// Real mobile buy buttons often wrap a narrow price span. The ancestor must
+// win over the digit-only child; synthetic click targeting the span is brittle.
+if (s.includes('battle-enemy-action-parent-20261001-r1')) {
+  for(const cost of [1,2,4]) {
+    const digit=node('span',String(cost),{left:193,top:455,width:16,height:28});
+    const purchase=node('button','⚔ '+cost,buttonBounds,[digit]);
+    const reward=node('span','x1',rewardBounds);
+    const popup=node('div',heading,bounds,[reward,purchase,digit]);
+    digit.parentElement=purchase;
+    purchase.parentElement=popup;
+    reward.parentElement=popup;
+    popup.contains=child=>child===purchase||child===digit||child===reward;
+    const env={
+      document:{querySelectorAll:()=>[popup]},
+      window:{innerWidth:400,innerHeight:820},
+      visible:()=>true,
+      clean:v=>String(v??''),
+      getComputedStyle:e=>({cursor:e.tagName==='button'?'pointer':'default'}),
+      recordDiagnostic:()=>{},
+      HK_BATTLE_MODAL_ACTION_RECOVERY_REV:'legacy',
+      HK_BATTLE_OPEN_MODAL_PRIORITY_REV:'legacy'
+    };
+    vm.createContext(env);
+    vm.runInContext(actionCode,env);
+    assert.equal(env.battleEnemyModalActionButton(null),purchase,
+      'numeric inner span must be promoted to full buy button for '+cost+' swords');
+    assert.equal(env.battleEnemyModalActionCost(purchase),cost);
+  }
+}
+
+
 // The HUD overlays are temporarily relocated above the modal; after it
 // closes their normal bottom positions must be restored.
 const battleCode=section('    function updateBattleAutoToggle(isBattle = null) {',
@@ -87,16 +118,33 @@ vm.createContext(hudEnv);
 vm.runInContext(battleCode+autoCode,hudEnv);
 hudEnv.updateBattleAutoToggle(true);
 hudEnv.updateAutoMapToggle(true);
-assert.equal(battleHud.style.top,'132px');
-assert.equal(battleHud.style.bottom,'auto');
-assert.equal(mapHud.style.top,'85px');
-assert.equal(mapHud.style.bottom,'auto');
-modalOpen=false;
-hudEnv.updateBattleAutoToggle(true);
-hudEnv.updateAutoMapToggle(true);
-assert.equal(battleHud.style.top,'auto');
-assert.equal(battleHud.style.bottom,'154px');
-assert.equal(mapHud.style.top,'auto');
-assert.equal(mapHud.style.bottom,'202px');
+if(s.includes('battle-bottom-hud-status-20261001-r1')){
+  const bottom='calc(env(safe-area-inset-bottom, 0px) + 8px)';
+  assert.equal(battleHud.style.top,'auto');
+  assert.equal(battleHud.style.bottom,bottom);
+  assert.equal(battleHud.style.right,'8px');
+  assert.equal(mapHud.style.top,'auto');
+  assert.equal(mapHud.style.bottom,bottom);
+  assert.equal(mapHud.style.left,'8px');
+  assert.equal(mapHud.style.right,'auto');
+  assert(mapHud.textContent.includes('\nсражение'),'diagnostic status must remain visible');
+  modalOpen=false;
+  hudEnv.updateBattleAutoToggle(true);
+  hudEnv.updateAutoMapToggle(true);
+  assert.equal(battleHud.style.bottom,bottom,'right battle HUD must stay at bottom');
+  assert.equal(mapHud.style.bottom,bottom,'left map HUD must stay at bottom');
+}else{
+  assert.equal(battleHud.style.top,'132px');
+  assert.equal(battleHud.style.bottom,'auto');
+  assert.equal(mapHud.style.top,'85px');
+  assert.equal(mapHud.style.bottom,'auto');
+  modalOpen=false;
+  hudEnv.updateBattleAutoToggle(true);
+  hudEnv.updateAutoMapToggle(true);
+  assert.equal(battleHud.style.top,'auto');
+  assert.equal(battleHud.style.bottom,'154px');
+  assert.equal(mapHud.style.top,'auto');
+  assert.equal(mapHud.style.bottom,'202px');
+}
 
-console.log('BATTLE_MOBILE_PRICE_RUNTIME=PASS (1/2 swords, explicit cost, spinner, HUD relocation/restoration)');
+console.log('BATTLE_MOBILE_PRICE_RUNTIME=PASS (1/2/4 swords, nested action parent, spinner, bottom corner HUD and status)');
