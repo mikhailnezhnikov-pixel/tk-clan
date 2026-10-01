@@ -180,5 +180,6 @@
     "server-health-core-20260924-r1"
   ],
   "audit_status_path": "audit/hk-userscript-1-18-97-leave-dialog-map-proof-live-status.txt",
-  "commit_message": "fix: verify actual leave dialog and map return in userscript 1.18.97"
+  "commit_message": "fix: verify actual leave dialog and map return in userscript 1.18.97",
+  "manual_trigger": "1.18.97-leave-dialog-map-proof-r1"
 }
