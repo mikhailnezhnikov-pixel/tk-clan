@@ -7,6 +7,7 @@ on:
       - 'deploy/topking/verify_battle_state_receipt_contract.py'
       - 'deploy/topking/verify_battle_state_receipt_runtime.js'
       - 'deploy/topking/verify_treasury_intro_runtime.js'
+      - 'deploy/topking/verify_treasure_battle_full_clear_contract.py'
       - '.github/workflows/build-userscript-1-18-99-verified-battle-exits.yml'
   workflow_dispatch:
 
