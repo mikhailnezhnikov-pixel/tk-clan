@@ -404,9 +404,10 @@ if "battle-activated-final-reward-exit-20260928-r1" in s:
     if "battle-complete-exit-loop-20260930-r1" in s:
         required += ["autoMapRecoverCompletedBattleExit('automap-activated-reward')"]
         helper=section("async function autoMapRecoverCompletedBattleExit","function autoMapModalPrimaryButton")
+        map_proof="autoMapReturnMapConfirmed()" if "exit-map-proof-20261001-r1" in s else "treasureGuideScreenVisible()"
         for marker in [
             "dispatchMinigameOverlaySafeTapAt(",
-            "treasureGuideScreenVisible()",
+            map_proof,
             "battle-complete-exit-retry",
         ]:
             if marker not in helper:
