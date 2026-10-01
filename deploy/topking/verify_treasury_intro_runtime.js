@@ -63,7 +63,7 @@ const env={
   Date,
 };
 vm.createContext(env);
-vm.runInContext('let autoMapLastActionAt=0,lastSignature="",autoMapRetryNotBefore=0;\n'+core,env);
+vm.runInContext('const HK_TREASURY_INTRO_REV="treasury-intro-mobile-ack-20261001-r1"; let autoMapLastActionAt=0,lastSignature="",autoMapRetryNotBefore=0;\n'+core,env);
 assert.equal(env.autoMapTreasuryForeground(),true,'Treasury heading must be recognized');
 assert.equal(env.autoMapTreasuryIntroModalRoot(),root,'foreground intro must be recognized');
 assert.equal(env.autoMapTreasuryIntroAction(root),button,'blank lower button must be targeted');
@@ -94,7 +94,7 @@ state.battle=false;
     recordDiagnostic:()=>{},
   };
   vm.createContext(other);
-  vm.runInContext('let battleFinalRewardClaimed=true,battleFinalRewardClaimedAt=100,autoMapRetryNotBefore=900,lastSignature="BATTLE";\n'+exit,other);
+  vm.runInContext('const HK_TREASURY_BATTLE_HANDOFF_REV="treasury-battle-foreground-handoff-20261001-r1";let battleFinalRewardClaimed=true,battleFinalRewardClaimedAt=100,autoMapRetryNotBefore=900,lastSignature="BATTLE";\n'+exit,other);
   const handedOff=await other.autoMapRecoverCompletedBattleExit('fixture');
   assert.equal(handedOff,true,'battle exit coroutine must release to Treasury');
   assert.equal(exitTaps,0,'battle exit cannot keep clicking after Treasury appears');
