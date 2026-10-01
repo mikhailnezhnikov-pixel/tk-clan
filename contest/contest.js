@@ -49,12 +49,12 @@ function render(data){state=data;timerReceived=performance.now();tick();
 const phaseText={draft:'Закрытое тестирование',scheduled:'Начало '+date(data.start_at)+' по Москве',open:'Конкурс открыт · окончание '+date(data.end_at)+' по Москве',finished:'Приём ответов завершён',paused:'Конкурс приостановлен'};
 $('phase').textContent=phaseText[data.phase]||'Конкурс закрыт';
 show('waiting-room',data.phase==='scheduled');
-const logged=!!data.stages;show('account-panel',!!token);
-const testLink=new URLSearchParams(location.search).get('test')==='1';show('login-panel',!logged&&(data.phase!=='scheduled'||testLink));if(!logged&&(data.phase!=='scheduled'||testLink))mountLogin();
-show('owner-panel',data.owner&&logged);show('rules',data.visible&&logged);show('register-panel',logged&&!data.entrant&&(test||data.phase==='open'));show('competition',logged&&!!data.entrant);
+const logged=!!data.stages||data.authenticated;show('account-panel',!!token);
+show('login-panel',!logged);if(!logged)mountLogin();
+show('owner-panel',data.owner&&logged);show('rules',data.visible&&logged);show('register-panel',logged&&!data.entrant&&(test||data.phase==='open'||data.registration_open));show('competition',logged&&!!data.entrant&&!!data.stages);
 if(!logged){$('stages').textContent='';$('ranking').textContent='';return;}
 if(data.owner){drawAdmin(data);$('test-mode').checked=test;}
-if(!data.entrant)return;
+show('registered-waiting',!!data.entrant&&!data.stages);if(!data.stages||!data.entrant)return;
 $('speed-place').textContent=data.my_speed_place?'Место по скорости: '+data.my_speed_place:'Пройдите первый этап, чтобы войти в гонку';
 $('speed-ranking').innerHTML=(data.speed_leaderboard||[]).map(x=>`<tr><td>${x.place}</td><td>${safe(x.nickname)}</td><td>${x.completed} / 3</td><td>${duration(x.elapsed_ms)}</td></tr>`).join('')||'<tr><td colspan="4">Гонка начинается!</td></tr>';
 $('fastest-player').textContent=data.fastest_finalist?'⚡ Лидер: '+data.fastest_finalist.nickname+' · '+duration(data.fastest_finalist.elapsed_ms):'Первый финалист ещё впереди';
@@ -66,7 +66,7 @@ $('ranking').innerHTML=data.leaderboard.length?data.leaderboard.map(x=>`<tr><td>
 $('count').textContent=data.total+' участников';$('rating-note').textContent=data.ranked_total>100?'Показаны первые 100 мест. Ваше место отображается выше.':'';
 }
 async function refresh(){if(pending||document.hidden)return;
-try{const data=await request('status',null,'GET');if(data.tester){test=true;render(await request('state',{mode:'test'}));}else if(data.owner){test=$('test-mode').checked;render(await request('state',{mode:test?'test':'live'}));}else if(data.visible&&token&&data.phase!=='scheduled'){test=false;render(await request('state',{mode:'live'}));}else render(data);$('global-error').textContent='';}catch(e){message('global-error',e.message,true);}}
+try{const data=await request('status',null,'GET');if(data.tester){test=true;render(await request('state',{mode:'test'}));}else if(data.owner){test=$('test-mode').checked;render(await request('state',{mode:test?'test':'live'}));}else if(data.visible&&token){test=false;render(await request('state',{mode:'live'}));}else render(data);$('global-error').textContent='';}catch(e){message('global-error',e.message,true);}}
 $('register-form').addEventListener('submit',async e=>{e.preventDefault();if(pending)return;pending=true;try{const form=new FormData(e.target);render(await request('register',{mode:test?'test':'live',player_id:form.get('player_id'),nickname:form.get('nickname')}));}catch(err){message('register-message',err.message,true);}finally{pending=false;}});
 $('stages').addEventListener('submit',async e=>{const form=e.target.closest('[data-point-form]');if(!form)return;e.preventDefault();if(pending)return;pending=true;const stage=Number(form.dataset.pointForm),point=Number(form.dataset.point);try{const result=await request('checkpoint',{mode:test?'test':'live',stage,point,answer:new FormData(form).get('answer')});render(result.state);const target=$('point-message-'+stage+'-'+point);if(target){target.textContent=result.correct?'✓ Контрольная точка пройдена.':'Неправильный ответ, ищите дальше. Повторная попытка через 30 секунд.';}}catch(err){const target=$('point-message-'+stage+'-'+point);if(target)target.textContent=err.message;}finally{pending=false;}});
 $('stages').addEventListener('submit',async e=>{const form=e.target.closest('[data-stage-form]');if(!form)return;e.preventDefault();if(pending)return;pending=true;const stage=Number(form.dataset.stageForm),button=form.querySelector('button');button.disabled=true;

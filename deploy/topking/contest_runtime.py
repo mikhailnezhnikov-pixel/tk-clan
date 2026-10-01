@@ -168,7 +168,12 @@ class Contest:
         if not visible:
             return result
         if not owner and not tester and phase=='scheduled':
-            # Public waiting room contains no stage metadata or private materials.
+            # Pre-registration exposes only this participant's identity, never tasks.
+            result['registration_open']=True
+            result['authenticated']=bool(identity)
+            if identity:
+                row=db.execute('SELECT nickname,player_id FROM entrants WHERE mode=? AND tid=?',(mode,str(identity['id']))).fetchone()
+                result['entrant']=dict(row) if row else None
             return result
         if not identity:
             result['login_required']=True
@@ -239,7 +244,7 @@ class Contest:
                     raise ContestError('invalid_telegram_login',401)
                 is_owner=self.owner(candidate,cfg)
                 is_tester=self.tester(candidate,cfg)
-                if not is_owner and not is_tester and self.phase(cfg) not in ('open','finished'):
+                if not is_owner and not is_tester and self.phase(cfg) not in ('scheduled','open','finished'):
                     raise ContestError('contest_hidden',404)
                 if not is_owner and not is_tester and cfg['audience']=='members':
                     # An existing cabinet session is required; do not add to its allowlist.
@@ -302,7 +307,7 @@ class Contest:
                 return dict(ok=True)
             if mode=='test' and not owner and not tester:
                 raise ContestError('forbidden',403)
-            if not owner and not tester and self.phase(cfg) not in ('open','finished'):
+            if not owner and not tester and self.phase(cfg) not in ('open','finished') and not (self.phase(cfg)=='scheduled' and action in ('state','register')):
                 raise ContestError('contest_hidden',404)
             if cfg['audience']=='members' and not owner and not tester and not identity.get('member'):
                 # Contest tokens don't confer cabinet permissions. Check read-only membership.
@@ -343,7 +348,7 @@ class Contest:
                 raise ContestError('not_found',404)
             db.execute('BEGIN IMMEDIATE')
             cfg=self.config(db)
-            if mode=='live' and self.phase(cfg)!='open':
+            if mode=='live' and self.phase(cfg)!='open' and not (action=='register' and self.phase(cfg)=='scheduled'):
                 raise ContestError('contest_not_open',409)
             tid=str(identity['id'])
             if action=='register':
