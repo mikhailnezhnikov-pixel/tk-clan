@@ -6,6 +6,7 @@ on:
       - 'deploy/topking/patch_leave_modal_map_proof_1_18_97.py'
       - 'deploy/topking/verify_leave_modal_map_proof_contract.py'
       - 'deploy/topking/verify_leave_modal_foreground_runtime.js'
+      - 'deploy/topking/verify_treasure_battle_full_clear_contract.py'
       - '.github/workflows/build-userscript-1-18-97-leave-dialog-map-proof.yml'
   workflow_dispatch:
 
