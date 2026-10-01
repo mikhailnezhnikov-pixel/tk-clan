@@ -43,7 +43,7 @@ jobs:
           grep -Fq "battle-open-modal-priority-20260930-r1" /tmp/HamsterKingMobile.user.js
           grep -Fq "trader-map-modal-approval-20260930-r1" /tmp/HamsterKingMobile.user.js
 
-          python3 deploy/topking/patch_battle_state_receipt_1_18_100.py /tmp/HamsterKingMobile.user.js
+          python3 deploy/topking/patch_battle_mobile_price_1_18_100.py /tmp/HamsterKingMobile.user.js
           node --check /tmp/HamsterKingMobile.user.js
           node deploy/topking/verify_battle_mobile_price_runtime.js /tmp/HamsterKingMobile.user.js
           python3 deploy/topking/verify_battle_mobile_price_contract.py /tmp/HamsterKingMobile.user.js
