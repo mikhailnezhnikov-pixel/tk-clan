@@ -309,6 +309,7 @@ class Contest:
                 bundle=self._material_cache
                 kind=body.get('kind')
                 selected_items=[dict(x) for x in bundle['items']] if kind=='items' else None
+                selected_recipes=json.loads(json.dumps(bundle['recipes'])) if kind=='recipes' else None
                 if kind not in ('items','recipes','map','maps'):
                     raise ContestError('not_found',404)
                 if not owner:
@@ -318,12 +319,16 @@ class Contest:
                     if kind=='items' and 1 not in completed:
                         for item in selected_items:
                             item.pop('note',None)
+                    if kind=='recipes' and 1 not in completed:
+                        for recipe in selected_recipes:
+                            for component in recipe.get('components',[]):
+                                component.pop('note',None)
                 if kind=='map':
                     key=body.get('key','')
                     if key not in bundle['map_data']:
                         raise ContestError('not_found',404)
                     return dict(ok=True,material=bundle['map_data'][key])
-                return dict(ok=True,material=selected_items if kind=='items' else bundle[kind])
+                return dict(ok=True,material=selected_items if kind=='items' else selected_recipes if kind=='recipes' else bundle[kind])
             if action=='state' and method=='POST':
                 return self.state(db,cfg,identity,mode)
             if action not in ('register','answer','checkpoint') or method!='POST':

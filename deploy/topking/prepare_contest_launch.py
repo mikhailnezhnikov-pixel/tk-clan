@@ -15,6 +15,9 @@ with c.db() as db:
     assert c.ready(cfg) and all(len(s.get('points',[]))==3 for s in cfg['stages']),'Incomplete content'
     assert time.time()<START,'Start already passed; refuse late launch'
     assert db.execute("SELECT COUNT(*) FROM entrants WHERE mode='live'").fetchone()[0]==0,'Live entries exist'
+    content=json.loads(Path('/opt/hamsterking-license/contest_content.json').read_text(encoding='utf-8'))
+    # Apply only the approved wording, retaining answers, progress and schedule.
+    cfg['stages'][2]['points'][0]['prompt']=content[2]['points'][0]['prompt']
     cfg.update(start_at=START,end_at=START+7200,armed=True,paused=False)
     assert [s['offset'] for s in cfg['stages']]==[0,1800,3600]
     db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
