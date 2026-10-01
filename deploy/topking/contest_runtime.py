@@ -436,6 +436,16 @@ def install(server):
     if needs_content and (Path(__file__).parent/'contest_content.json').exists():
         from load_contest_content import load
         load(contest)
+    content_path=Path(__file__).parent/'contest_content.json'
+    if content_path.exists():
+        with contest.write_lock,contest.db() as db:
+            cfg=contest.config(db)
+            if contest.clock()<cfg['start_at'] and db.execute("SELECT COUNT(*) FROM entrants WHERE mode='live'").fetchone()[0]==0:
+                content=json.loads(content_path.read_text(encoding='utf-8'))
+                # Approved prelaunch final-task update; other answers and progress stay intact.
+                cfg['stages'][2]['prompt']=content[2]['prompt']
+                cfg['stages'][2]['digest']=contest.digest(2,content[2]['answer'])
+                db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
     def dispatch(handler):
         parsed=urlsplit(handler.path)
         if not parsed.path.startswith(PREFIX):
