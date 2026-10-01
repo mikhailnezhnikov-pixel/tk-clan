@@ -380,6 +380,11 @@ def install(server):
             return None
         return dict(id=tid,first_name=row['first_name'],member=True)
     contest=Contest(path,server['SIGNING_SECRET'],server['verify_telegram_login'],read_only_identity)
+    with contest.db() as db:
+        needs_content=not any(s.get('points') for s in contest.config(db)['stages'])
+    if needs_content and (Path(__file__).parent/'contest_content.json').exists():
+        from load_contest_content import load
+        load(contest)
     def dispatch(handler):
         parsed=urlsplit(handler.path)
         if not parsed.path.startswith(PREFIX):

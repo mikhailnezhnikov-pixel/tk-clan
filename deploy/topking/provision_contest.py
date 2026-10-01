@@ -26,4 +26,8 @@ with c.db() as db:
     # They never enter the repository, workflow inputs, or logs.
     db.execute('UPDATE settings SET value=? WHERE id=1',(json.dumps(cfg),))
 os.chown(path,uid,gid);os.chmod(path,0o600)
+for name in ('contest_content.json','contest_material.json'):
+    content=Path('/opt/hamsterking-license')/name
+    if content.exists():
+        os.chown(content,uid,gid);os.chmod(content,0o600)
 print('CONTEST_OWNER_PROVISIONED=PASS; draft mode; separate database')

@@ -20,7 +20,9 @@ jobs:
       - name: Validate isolated contest
         run: |
           python3 deploy/topking/test_contest.py
+          python3 deploy/topking/test_contest_checkpoints.py
           node --check contest/contest.js
+          node --check contest/materials.js
           node --check assets/site-nav.js
       - name: Install private contest with rollback
         env:
@@ -33,7 +35,7 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
           trap 'rm -f "$HOME/.ssh/topking"' EXIT
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new deploy/topking/{contest_runtime.py,patch_contest.py,provision_contest.py,test_contest.py,verify_contest_live.py,cabinet_auth.py} root@89.125.1.71:/tmp/
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new deploy/topking/{contest_runtime.py,patch_contest.py,provision_contest.py,test_contest.py,test_contest_checkpoints.py,verify_contest_live.py,cabinet_auth.py,load_contest_content.py,decrypt_contest_payload.py,contest_payload.encrypted.json} root@89.125.1.71:/tmp/
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "bash -s -- '$OWNER_ID'" <<'REMOTE'
           set -euo pipefail
           owner_id="$1"
@@ -46,6 +48,9 @@ jobs:
           python3 -m py_compile "$candidate" /tmp/contest_runtime.py
           python3 /tmp/cabinet_auth.py --mode test --source "$candidate"
           python3 /tmp/test_contest.py
+          python3 /tmp/test_contest_checkpoints.py
+          private_content=$(mktemp -d /tmp/contest-content.XXXXXX)
+          python3 /tmp/decrypt_contest_payload.py /tmp/contest_payload.encrypted.json "$private_content"
           test "$original" = "$(sha256sum "$live" | cut -d ' ' -f1)"
           snapshot=$(mktemp /tmp/contest-permissions.XXXXXX)
           python3 - "$snapshot" <<'PY'
@@ -66,6 +71,9 @@ jobs:
           }
           trap rollback ERR
           install -m 644 /tmp/contest_runtime.py "$module"
+          install -m 644 /tmp/load_contest_content.py /opt/hamsterking-license/load_contest_content.py
+          install -m 600 "$private_content/contest_content.json" /opt/hamsterking-license/contest_content.json
+          install -m 600 "$private_content/contest_material.json" /opt/hamsterking-license/contest_material.json
           python3 /tmp/provision_contest.py "$owner_id"
           cp "$candidate" "$live"
           systemctl restart hamsterking-license.service
@@ -83,6 +91,7 @@ jobs:
           print('MEMBERSHIP_AND_LICENSES_UNCHANGED=PASS')
           PY
           trap - ERR
-          rm -f "$snapshot" "$candidate"
+          rm -f "$snapshot" "$candidate" "$private_content/contest_content.json" "$private_content/contest_material.json"
+          rmdir "$private_content"
           echo PRIVATE_CONTEST_DEPLOY=PASS
           REMOTE
