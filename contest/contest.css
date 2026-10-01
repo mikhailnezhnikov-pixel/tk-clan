@@ -22,3 +22,5 @@ body:not(.tk-main-theme){font-family:Inter,Arial,sans-serif;background:radial-gr
 .copy-item-name{border:0;box-shadow:none;background:none;color:inherit;padding:0;text-align:left;font-size:inherit;line-height:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px}
 
 .recipe-cell{min-height:115px}.recipe-cell img{width:86px;height:86px}@media(max-width:600px){.recipe-cell{min-height:100px}.recipe-cell img{width:72px;height:72px}}
+
+.instruction-line{margin:0 0 12px;line-height:1.75}.instruction-line:last-child{margin-bottom:0}.instruction-number{display:inline-grid;place-items:center;min-width:25px;height:25px;margin-right:5px;border:1px solid #9ceaf480;border-radius:8px;background:#09283966;color:#baf4ff;font-weight:800}.instruction-key{color:#ffe29a;background:#08172855;padding:1px 5px;border-radius:5px;white-space:nowrap}.instruction-format{display:inline-block;color:#ffe29a;border-bottom:1px dotted #ffe29a;font-weight:800}.stage-prompt strong{font-weight:800}
