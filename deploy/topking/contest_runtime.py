@@ -126,6 +126,8 @@ class Contest:
         return len(cfg['stages'])==3 and all(x['prompt'].strip() and x['digest'] for x in cfg['stages'])
 
     def phase(self, cfg):
+        if cfg.get('archived'):
+            return 'archived'
         now=self.clock()
         if cfg['paused']:
             return 'paused'
@@ -192,7 +194,7 @@ class Contest:
         owner=self.owner(identity,cfg)
         phase=self.phase(cfg)
         tester=self.tester(identity,cfg)
-        visible=owner or tester or phase in ('scheduled','open','finished')
+        visible=owner or tester or phase in ('scheduled','open')
         result=dict(ok=True,visible=visible,owner=owner,phase=phase,server_at=self.clock(),
                     start_at=cfg['start_at'],end_at=cfg['end_at'],mode=mode,ready=self.ready(cfg),tester=tester)
         if not visible:
@@ -303,7 +305,7 @@ class Contest:
                     raise ContestError('invalid_telegram_login',401)
                 is_owner=self.owner(candidate,cfg)
                 is_tester=self.tester(candidate,cfg)
-                if not is_owner and not is_tester and self.phase(cfg) not in ('scheduled','open','finished'):
+                if not is_owner and not is_tester and self.phase(cfg) not in ('scheduled','open'):
                     raise ContestError('contest_hidden',404)
                 if not is_owner and not is_tester and cfg['audience']=='members':
                     # An existing cabinet session is required; do not add to its allowlist.
@@ -367,7 +369,7 @@ class Contest:
             if identity.get('code_digest'):mode='live'
             if mode=='test' and not owner and not tester:
                 raise ContestError('forbidden',403)
-            if not owner and not tester and self.phase(cfg) not in ('open','finished') and not (self.phase(cfg)=='scheduled' and action in ('state','register')):
+            if not owner and not tester and self.phase(cfg)!='open' and not (self.phase(cfg)=='scheduled' and action in ('state','register')):
                 raise ContestError('contest_hidden',404)
             if cfg['audience']=='members' and not owner and not tester and not identity.get('member'):
                 # Contest tokens don't confer cabinet permissions. Check read-only membership.
