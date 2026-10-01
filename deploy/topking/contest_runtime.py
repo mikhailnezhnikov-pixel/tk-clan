@@ -214,6 +214,8 @@ class Contest:
         result['ranked_total']=len(ranks)
         result['total']=db.execute('SELECT COUNT(*) FROM entrants WHERE mode=?',(mode,)).fetchone()[0]
         if owner:
+            rows=db.execute("SELECT COUNT(*) AS total,COALESCE(SUM(created_at < ?),0) AS before_start FROM entrants WHERE mode='live'",(cfg['start_at'],)).fetchone()
+            result['registration_stats']=dict(total=rows['total'],before_start=rows['before_start'],after_start=rows['total']-rows['before_start'])
             result['admin_config']={k:v for k,v in cfg.items() if k not in ('owner_id','stages')}
             result['admin_config']['stages']=[dict(title=x['title'],prompt=x['prompt'],offset=x['offset'],has_answer=bool(x['digest']),solution=x.get('solution','')) for x in cfg['stages']]
         return result

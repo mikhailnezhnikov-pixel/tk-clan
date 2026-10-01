@@ -22,6 +22,7 @@
 <section id="login-panel" class="card hidden"><h2>Вход через Telegram</h2><p id="login-note">Войдите через Telegram и зарегистрируйтесь заранее. Задания откроются по расписанию.</p><div id="telegram-login"></div><p id="login-error" class="message" role="alert"></p></section>
 <section id="owner-panel" class="card hidden"><div class="section-heading"><h2>Управление конкурсом</h2><span class="badge">Только владелец</span></div>
 <p>Закрытое тестирование доступно только вам. Тестовые ответы не попадут в настоящий рейтинг.</p>
+<p id="registration-stats" class="position" aria-live="polite">Загружаем статистику регистраций…</p>
 <label class="switch"><input type="checkbox" id="test-mode" checked> Тестовый режим</label>
 <div class="actions"><button id="reset-test" type="button" class="secondary">Очистить тестовые ответы</button><button id="pause" type="button" class="secondary">Приостановить конкурс</button></div>
 <details id="settings"><summary>Задания и расписание</summary>
@@ -39,6 +40,6 @@
 <section class="card speed-card"><div class="section-heading"><h2>⚡ Гонка за VIP</h2></div><p>Самый быстрый участник определяется среди завершивших все три этапа по сумме времени прохождения.</p><p id="fastest-player" class="position"></p><div class="table-scroll"><table><thead><tr><th>Место</th><th>Игрок</th><th>Этапы</th><th>Время</th></tr></thead><tbody id="speed-ranking"></tbody></table></div><p class="muted">Поощрительный приз за минимальную сумму времени — VIP. Основные призовые места определяются порядком завершения конкурса.</p></section><section class="card"><div class="section-heading"><h2>🏆 Основной рейтинг</h2><span id="count" class="badge"></span></div><p class="muted">Выше — участники с большим числом пройденных этапов. При равенстве решает время последнего верного ответа. Место может измениться.</p><div class="table-scroll"><table><thead><tr><th>Место</th><th>Игрок</th><th>Этапы</th></tr></thead><tbody id="ranking"></tbody></table></div><p id="rating-note" class="muted"></p></section></div>
 <section id="rules" class="card hidden"><h2>Как участвовать</h2><ol><li>Решайте этапы по порядку. Они открываются одновременно для всех по расписанию.</li><li>Отправляйте ответы здесь. Ответы в чате и личных сообщениях не принимаются.</li><li>После неверного ответа следующая попытка доступна через 30 секунд.</li><li>Один Telegram-аккаунт и один игровой ID — одна регистрация.</li><li>Победители — первые три участника, правильно завершившие все три этапа. При совпадении времени решает порядок приёма ответов сервером.</li></ol></section>
 <p id="global-error" class="message" role="alert"></p>
-</main><script src="contest.js?v=20261001-8"></script><script src="../assets/site-nav.js?v=20260920-11"></script>
+</main><script src="contest.js?v=20261001-9"></script><script src="../assets/site-nav.js?v=20260920-11"></script>
 </body></html>
 
