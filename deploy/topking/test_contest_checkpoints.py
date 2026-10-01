@@ -42,5 +42,8 @@ class CheckpointTests(unittest.TestCase):
         state=c2.handle('POST','state',self.token,{})
         self.assertTrue(state['stages'][0]['points'][0]['solved'])
         self.assertFalse(state['stages'][0]['final_unlocked'])
+    def test_mobile_answer_case_and_semicolon_spacing(self):
+        self.assertEqual(self.c.digest('0.0','Т; М; Б; БОД'),self.c.digest('0.0','т;м;б;бод'))
+        self.assertEqual(self.c.digest('1.2','А; 5'),self.c.digest('1.2','а ;5'))
 
 if __name__=='__main__':unittest.main()

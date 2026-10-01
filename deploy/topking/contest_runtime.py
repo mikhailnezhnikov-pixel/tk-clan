@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 PREFIX = '/api/v1/cabinet/contest/'
-START = 1790856000  # 2026-10-01 21:00 Asia/Yakutsk
+START = 1790861400  # 2026-10-01 16:30 Europe/Moscow / 22:30 Asia/Yakutsk
 
 
 class ContestError(Exception):
@@ -48,6 +48,8 @@ class Contest:
                     mode TEXT NOT NULL, tid TEXT NOT NULL, stage INTEGER NOT NULL,
                     count INTEGER NOT NULL, last_at REAL NOT NULL, PRIMARY KEY(mode,tid,stage));
             ''')
+            if 'created_at' not in {r[1] for r in db.execute('PRAGMA table_info(entrants)')}:
+                db.execute('ALTER TABLE entrants ADD COLUMN created_at REAL NOT NULL DEFAULT 0')
             cfg = dict(owner_id='', armed=False, paused=False, start_at=START,
                        end_at=START+7200, audience='all', cooldown=30,
                        stages=[dict(title='Этап '+str(i+1), prompt='', offset=i*1800, digest='') for i in range(3)])
@@ -101,7 +103,8 @@ class Contest:
             return None
 
     def normalize(self, answer):
-        return ' '.join(unicodedata.normalize('NFKC',str(answer)).casefold().replace('ё','е').split())
+        value=' '.join(unicodedata.normalize('NFKC',str(answer)).casefold().replace('ё','е').split())
+        return re.sub(r'\s*;\s*',';',value)
 
     def digest(self, stage, answer):
         return hmac.new(self.secret, ('contest-answer:'+str(stage)+':'+self.normalize(answer)).encode(),hashlib.sha256).hexdigest()
@@ -128,13 +131,39 @@ class Contest:
         return [dict(place=i+1,nickname=r['nickname'],player_id=r['player_id'],completed=r['completed'],
                      tid=r['tid']) for i,r in enumerate(rows)]
 
+    def timings(self, db, cfg, mode, tid):
+        entrant=db.execute('SELECT created_at FROM entrants WHERE mode=? AND tid=?',(mode,tid)).fetchone()
+        registered=entrant['created_at'] if entrant else self.clock()
+        finishes={r['stage']:r['submitted_ns']/1e9 for r in db.execute('SELECT stage,submitted_ns FROM solves WHERE mode=? AND tid=?',(mode,tid))}
+        result=[]
+        for i,stage in enumerate(cfg['stages']):
+            start=registered if mode=='test' else cfg['start_at']+stage['offset']
+            if i:
+                start=max(start,finishes.get(i-1,float('inf')))
+            active=start<=self.clock()
+            end=finishes.get(i,min(self.clock(),cfg['end_at']) if mode=='live' else self.clock())
+            result.append(dict(started_at=start if active else None,finished_at=finishes.get(i),elapsed_ms=max(0,round((end-start)*1000)) if active else 0))
+        return result
+
+    def speed_ranking(self,db,cfg,mode):
+        ranks=self.ranking(db,mode)
+        for row in ranks:
+            timings=self.timings(db,cfg,mode,row['tid'])
+            row['elapsed_ms']=sum(t['elapsed_ms'] for t in timings if t['finished_at'] is not None)
+        ranks.sort(key=lambda r:(-r['completed'],r['elapsed_ms'],r['place']))
+        for i,r in enumerate(ranks):r['place']=i+1
+        return ranks
+
     def state(self, db, cfg, identity, mode):
         owner=self.owner(identity,cfg)
         phase=self.phase(cfg)
-        visible=owner or phase in ('open','finished')
+        visible=owner or phase in ('scheduled','open','finished')
         result=dict(ok=True,visible=visible,owner=owner,phase=phase,server_at=self.clock(),
                     start_at=cfg['start_at'],end_at=cfg['end_at'],mode=mode,ready=self.ready(cfg))
         if not visible:
+            return result
+        if not owner and phase=='scheduled':
+            # Public waiting room contains no stage metadata or private materials.
             return result
         if not identity:
             result['login_required']=True
@@ -165,6 +194,11 @@ class Contest:
         own=next((r for r in ranks if r['tid']==tid),None)
         result['my_place']=own['place'] if own else None
         result['my_completed']=len(solved)
+        result['timings']=self.timings(db,cfg,mode,tid)
+        speed=self.speed_ranking(db,cfg,mode)
+        result['speed_leaderboard']=[{k:v for k,v in r.items() if k!='tid'} for r in speed[:100]]
+        result['my_speed_place']=next((r['place'] for r in speed if r['tid']==tid),None)
+        result['fastest_finalist']=next(({k:v for k,v in r.items() if k!='tid'} for r in speed if r['completed']==3),None)
         result['leaderboard']=[{k:v for k,v in r.items() if k!='tid'} for r in ranks[:100]]
         result['ranked_total']=len(ranks)
         result['total']=db.execute('SELECT COUNT(*) FROM entrants WHERE mode=?',(mode,)).fetchone()[0]
@@ -266,18 +300,29 @@ class Contest:
                 if not self.cabinet_identity('id:'+str(identity['id'])):
                     raise ContestError('members_only',403)
             if action=='material' and method=='POST':
-                bundle=json.loads((Path(__file__).parent/'contest_material.json').read_text(encoding='utf-8'))
+                material_path=Path(__file__).parent/'contest_material.json'
+                stamp=material_path.stat().st_mtime_ns
+                if getattr(self,'_material_stamp',None)!=stamp:
+                    self._material_cache=json.loads(material_path.read_text(encoding='utf-8'))
+                    self._material_stamp=stamp
+                bundle=self._material_cache
                 kind=body.get('kind')
-                if kind not in ('items','recipes','map'):
+                selected_items=[dict(x) for x in bundle['items']] if kind=='items' else None
+                if kind not in ('items','recipes','map','maps'):
                     raise ContestError('not_found',404)
                 if not owner:
                     completed={r['stage'] for r in db.execute('SELECT stage FROM solves WHERE mode=? AND tid=?',(mode,str(identity['id'])))}
-                    if kind=='map' and (1 not in completed or self.clock()<cfg['start_at']+cfg['stages'][2]['offset']):
+                    if kind in ('map','maps') and (1 not in completed or self.clock()<cfg['start_at']+cfg['stages'][2]['offset']):
                         raise ContestError('previous_stage_required',409)
                     if kind=='items' and 1 not in completed:
-                        for item in bundle['items']:
+                        for item in selected_items:
                             item.pop('note',None)
-                return dict(ok=True,material=bundle[kind])
+                if kind=='map':
+                    key=body.get('key','')
+                    if key not in bundle['map_data']:
+                        raise ContestError('not_found',404)
+                    return dict(ok=True,material=bundle['map_data'][key])
+                return dict(ok=True,material=selected_items if kind=='items' else bundle[kind])
             if action=='state' and method=='POST':
                 return self.state(db,cfg,identity,mode)
             if action not in ('register','answer','checkpoint') or method!='POST':
@@ -296,7 +341,7 @@ class Contest:
                 if old and (old['player_id']!=player_id or old['nickname']!=nickname):
                     raise ContestError('registration_locked',409)
                 try:
-                    db.execute('INSERT OR IGNORE INTO entrants VALUES(?,?,?,?)',(mode,tid,player_id,nickname))
+                    db.execute('INSERT OR IGNORE INTO entrants(mode,tid,player_id,nickname,created_at) VALUES(?,?,?,?,?)',(mode,tid,player_id,nickname,self.clock()))
                     registered=db.execute('SELECT * FROM entrants WHERE mode=? AND tid=?',(mode,tid)).fetchone()
                     if not registered:
                         raise ContestError('player_already_registered',409)
@@ -392,6 +437,11 @@ def install(server):
         action=parsed.path[len(PREFIX):]
         token=handler.headers.get('Authorization','').removeprefix('Bearer ').strip()
         try:
+            ip=handler.client_ip()
+            if not server['rate_allowed']('contest-requests:'+ip,180,60):
+                raise ContestError('rate_limited',429)
+            if token and not server['rate_allowed']('contest-session:'+hashlib.sha256(token.encode()).hexdigest(),60,60):
+                raise ContestError('rate_limited',429)
             if handler.command=='POST':
                 if handler.headers.get('Origin','') not in server['CABINET_ORIGINS']:
                     raise ContestError('origin_not_allowed',403)

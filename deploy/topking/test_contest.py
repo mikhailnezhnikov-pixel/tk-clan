@@ -33,7 +33,7 @@ class ContestTests(unittest.TestCase):
         return self.call('register',token,mode=mode,player_id=pid,nickname='Игрок '+pid)
     def test_hidden_and_owner_only(self):
         state=self.c.handle('GET','status')
-        self.assertFalse(state['visible']);self.assertNotIn('stages',state);self.assertNotIn('leaderboard',state)
+        self.assertTrue(state['visible']);self.assertEqual(state['phase'],'scheduled');self.assertNotIn('stages',state);self.assertNotIn('leaderboard',state)
         self.assertTrue(self.c.handle('GET','status',self.owner_token)['owner'])
         self.assertCode('forbidden','state',mode='test')
         self.assertCode('forbidden','admin/reset-test')

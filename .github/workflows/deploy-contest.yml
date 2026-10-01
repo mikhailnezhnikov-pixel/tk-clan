@@ -21,6 +21,8 @@ jobs:
         run: |
           python3 deploy/topking/test_contest.py
           python3 deploy/topking/test_contest_checkpoints.py
+          python3 -m unittest discover -s deploy/topking -p test_contest_timing.py
+          python3 deploy/topking/test_contest_waiting.py
           node --check contest/contest.js
           node --check contest/materials.js
           node --check assets/site-nav.js
@@ -35,7 +37,7 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
           chmod 600 "$HOME/.ssh/topking"
           trap 'rm -f "$HOME/.ssh/topking"' EXIT
-          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new deploy/topking/{contest_runtime.py,patch_contest.py,provision_contest.py,test_contest.py,test_contest_checkpoints.py,verify_contest_live.py,cabinet_auth.py,load_contest_content.py,decrypt_contest_payload.py,contest_payload.encrypted.json} root@89.125.1.71:/tmp/
+          scp -q -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new deploy/topking/{contest_runtime.py,patch_contest.py,provision_contest.py,test_contest.py,test_contest_checkpoints.py,verify_contest_live.py,prepare_contest_launch.py,cabinet_auth.py,load_contest_content.py,decrypt_contest_payload.py,contest_payload.encrypted.json} root@89.125.1.71:/tmp/
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@89.125.1.71 "bash -s -- '$OWNER_ID'" <<'REMOTE'
           set -euo pipefail
           owner_id="$1"
@@ -82,6 +84,7 @@ jobs:
             sleep 2
           done
           systemctl is-active --quiet hamsterking-license.service
+          python3 /tmp/prepare_contest_launch.py "$owner_id"
           python3 /tmp/verify_contest_live.py
           python3 - "$snapshot" <<'PY'
           import hashlib,json,sqlite3,sys
