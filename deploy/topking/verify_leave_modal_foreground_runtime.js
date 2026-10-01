@@ -34,6 +34,7 @@ function test(root,map={title:false,room:false,cards:false,journey:false}) {
     clean:value=>String(value??''),
     battleElementFromPointIgnoringOverlays:()=>children[0]||root,
     treasureGuideScreenVisible:()=>map.title,
+    autoMapTreasuryForeground:()=>false,
     battleScreenVisiblyCurrent:()=>map.room,
     autoMapMiniGameForeground:()=>map.room,
     autoMapMapIsForeground:()=>map.cards,
