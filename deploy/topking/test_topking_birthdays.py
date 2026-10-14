@@ -33,6 +33,11 @@ class Birthdays(unittest.TestCase):
         return birth.handle_command(cmd, text or cmd, chat or self.chat,
                                     user or self.user, self.send, 17)
 
+    def test_birthday_database_private_permissions(self):
+        conn = birth._connect()
+        conn.close()
+        self.assertEqual(birth.DB_FILE.stat().st_mode & 0o777, 0o600)
+
     def test_create_update_delete_own_date(self):
         self.assertTrue(self.command("/birthday", "/birthday 02.10"))
         self.assertIn("02.10", self.messages[-1][1])
