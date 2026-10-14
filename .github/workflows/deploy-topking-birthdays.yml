@@ -82,14 +82,15 @@ jobs:
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71 "SOURCE_SHA='$SOURCE_SHA' PATCH_SHA='$PATCH_SHA' MODULE_SHA='$MODULE_SHA' bash -se" <<'REMOTE'
           set -Eeuo pipefail
+          umask 077
           cd /opt/hamsterking-license
           server=server.py
           module=topking_birthdays.py
-          db=birthdays.sqlite3
+          db=/var/lib/hamsterking-license/birthdays.sqlite3
           stamp="$(date -u +%Y%m%d-%H%M%S)"
           backup_server="server.py.bak.birthday.$stamp"
           backup_module="topking_birthdays.py.bak.$stamp"
-          backup_db="birthdays.sqlite3.bak.$stamp"
+          backup_db="/var/lib/hamsterking-license/birthdays.sqlite3.bak.$stamp"
           module_existed=0
           installed=0
           rollback() {
@@ -111,7 +112,7 @@ jobs:
           systemctl is-active --quiet hamsterking-license.service
           service_user="$(systemctl show hamsterking-license.service -p User --value)"
           if [ -n "$service_user" ] && [ "$service_user" != "root" ]; then
-            runuser -u "$service_user" -- test -w /opt/hamsterking-license
+            runuser -u "$service_user" -- test -w /var/lib/hamsterking-license
           fi
           test "$(sha256sum "$server" | cut -d' ' -f1)" = "$SOURCE_SHA"
           test "$(sha256sum /tmp/topking-birthday-server-stage.py | cut -d' ' -f1)" = "$PATCH_SHA"
@@ -141,7 +142,7 @@ jobs:
           test -s "$db"
           python3 - <<'PY'
           import sqlite3
-          with sqlite3.connect('birthdays.sqlite3') as db:
+          with sqlite3.connect('/var/lib/hamsterking-license/birthdays.sqlite3') as db:
               names={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
               assert {'topking_birthdays','topking_birthday_deliveries'} <= names
           PY
