@@ -1,0 +1,50 @@
+TOPKING_BIRTHDAY_PROBE=PASS
+server_sha256=42247a0fd77f3910a9988a8b724796d11f400a17f48e6792b4c9cf0ce93eeced
+server_lines=8469
+birthday_existing=False
+telegram_function_names_and_lines:
+  229-235 db_session
+  1879-1908 verify_telegram_login
+  5370-5371 telegram_application_language_buttons
+  5374-5379 telegram_application_prompt
+  5382-5393 telegram_api
+  5396-5406 telegram_send
+  5409-5411 telegram_answer_callback
+  5415-5423 ensure_telegram_delivery_schema
+  5426-5437 telegram_delivery_target
+  5440-5451 save_telegram_delivery_target
+  5454-5460 telegram_can_configure_delivery
+  5463-5474 telegram_state
+  5477-5484 save_telegram_state
+  5487-5489 clear_telegram_state
+  5492-5505 telegram_summary
+  5508-5521 telegram_confirm
+  5524-5534 start_telegram_flow
+  5537-5573 submit_telegram_flow
+  5576-5755 handle_telegram_update
+anchors:
+  def telegram_api(: 1
+  def telegram_send(: 1
+  def handle_telegram_update(: 1
+  def telegram_poll(: 0
+  def telegram_poll_loop(: 0
+  TELEGRAM_GROUP_SILENCE_V2: 1
+  TELEGRAM_APPLICATION_TOPIC_V1: 1
+  def db_session(: 1
+  def utc_now(: 1
+  if __name__ == "__main__":: 1
+  def main(: 0
+telegram_loop_patterns:
+  telegram_poll_loop(: 0
+  telegram_poll_once(: 0
+  telegram_poll(: 0
+  handle_telegram_update(: 2
+  threading.Thread(: 0
+  Thread(: 0
+  time.sleep(: 0
+  Event().wait(: 0
+  asyncio.run(: 0
+  telegram_worker(: 0
+service_status:
+  active
+  Python 3.12.3
