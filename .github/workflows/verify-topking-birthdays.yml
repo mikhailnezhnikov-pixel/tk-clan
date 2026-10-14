@@ -40,9 +40,11 @@ jobs:
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/birthday-current-server.py
           cp /tmp/birthday-current-server.py /tmp/birthday-patched-server.py
-          cp deploy/topking/topking_birthdays.py /tmp/topking_birthdays.py
+          cp deploy/topking/topking_birthdays.py /tmp/topking_birthdays.py /tmp/contest_runtime.py
           python3 deploy/topking/patch_topking_birthdays.py /tmp/birthday-patched-server.py
           python3 -m py_compile /tmp/birthday-patched-server.py /tmp/topking_birthdays.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/contest_runtime.py /tmp/contest_runtime.py
           python3 /tmp/birthday-patched-server.py --self-test
           python3 - <<'PY'
           from pathlib import Path
