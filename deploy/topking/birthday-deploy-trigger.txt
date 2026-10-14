@@ -1,3 +1,5 @@
 Deploy TopKing birthday integration after verified offline tests and read-only live patch checks.
 Authorized: 2026-10-14, Asia/Yakutsk.
 Rollback on failed service health.
+
+Retry guarded deployment using verified /var/lib/hamsterking-license state storage; first preflight correctly blocked read-only app directory.
