@@ -34,6 +34,7 @@ jobs:
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
             user="$(systemctl show hamsterking-license.service -p User --value)"
             printf "service_user=%s\n" "${user:-root}"
+            systemctl show hamsterking-license.service -p StateDirectory -p WorkingDirectory -p ProtectSystem -p ReadWritePaths -p DynamicUser
             stat -c "app_dir_owner=%U:%G mode=%a" /opt/hamsterking-license
             if [ -n "$user" ] && [ "$user" != root ]; then
               runuser -u "$user" -- test -w /opt/hamsterking-license && echo "service_user_can_write_app_dir=yes" || echo "service_user_can_write_app_dir=no"
@@ -68,6 +69,12 @@ jobs:
           out.append('telegram_loop_patterns:')
           for k in ['telegram_poll_loop(', 'telegram_poll_once(', 'telegram_poll(', 'handle_telegram_update(', 'threading.Thread(', 'Thread(', 'time.sleep(', 'Event().wait(', 'asyncio.run(', 'telegram_worker(']:
               out.append(f'  {k}: {s.count(k)}')
+          out.append('db_path_assignment_structure:')
+          for n in ast.walk(tree):
+              if isinstance(n,(ast.Assign,ast.AnnAssign)):
+                  targets=n.targets if isinstance(n,ast.Assign) else [n.target]
+                  if any(isinstance(t,ast.Name) and t.id in ('DB_PATH','DATABASE_PATH','DATA_DIR','DB_FILE') for t in targets):
+                      out.append('  '+ast.unparse(n)[:240])
           out.append('telegram_update_structure:')
           for n in fn:
               if n.name=='handle_telegram_update':
