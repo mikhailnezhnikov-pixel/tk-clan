@@ -70,7 +70,7 @@ class Birthdays(unittest.TestCase):
 
     def test_full_list_not_15_and_telegram_chunks(self):
         for i in range(52):
-            user = {"id": 1000+i, "first_name": "Игрок" + str(i)}
+            user = {"id": 1000+i, "first_name": "Игрок" + str(i) + "-" + "ОченьДлинноеИмя" * 6}
             self.command("/birthday", "/birthday 15.10", user=user)
         self.messages.clear()
         self.command("/birthdays")
