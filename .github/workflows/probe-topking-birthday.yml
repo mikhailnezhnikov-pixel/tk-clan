@@ -55,6 +55,20 @@ jobs:
           out.append('telegram_loop_patterns:')
           for k in ['telegram_poll_loop(', 'telegram_poll_once(', 'telegram_poll(', 'handle_telegram_update(', 'threading.Thread(', 'Thread(', 'time.sleep(', 'Event().wait(', 'asyncio.run(', 'telegram_worker(']:
               out.append(f'  {k}: {s.count(k)}')
+          out.append('telegram_update_structure:')
+          for n in fn:
+              if n.name=='handle_telegram_update':
+                  lines=s.splitlines()
+                  for i in range(n.lineno-1,min(n.end_lineno,n.lineno+75)):
+                      line=lines[i]
+                      if any(w in line for w in ('def handle_', 'message =', 'chat =', 'telegram_id', 'chat_id', 'command =', 'if command', 'if chat.', 'if text.', 'if text ', 'GROUP_SILENCE', 'if callback', 'return', 'if not rate_allowed')):
+                          out.append(f'  {i+1}: {line[:140]}')
+          out.append('server_entrypoint_structure:')
+          lines=s.splitlines()
+          for i in range(max(0,len(lines)-130),len(lines)):
+              line=lines[i]
+              if any(w in line for w in ('__main__', 'serve_forever', 'Thread', 'thread', 'telegram', 'if ', 'while ', 'def ', 'start(', 'main(', 'server_close', 'shutdown', 'httpd', 'HTTPServer', 'TCPServer', 'asyncio', 'sleep(')):
+                  out.append(f'  {i+1}: {line[:145]}')
           out.append('service_status:')
           out.extend('  '+x for x in Path('/tmp/birthday-server-status.txt').read_text().splitlines())
           Path('audit/topking-birthday-probe.txt').write_text('\n'.join(out)+'\n')
