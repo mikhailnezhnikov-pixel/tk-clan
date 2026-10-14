@@ -1,0 +1,9 @@
+TOPKING_BIRTHDAY_PREDEPLOY=PASS
+ssh_read_only=PASS
+offline_tests=PASS
+live_source_patch=PASS
+live_server_ast_guard=PASS
+existing_telegram_handlers_preserved=PASS
+service_mutations=NONE
+source_sha256=42247a0fd77f3910a9988a8b724796d11f400a17f48e6792b4c9cf0ce93eeced
+patched_sha256=4ccf8033261e509cfbc86076d37b2381d63513389f21ce4ac1ee2b3566eaf4e1
