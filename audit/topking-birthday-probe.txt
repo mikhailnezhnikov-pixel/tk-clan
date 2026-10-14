@@ -45,6 +45,77 @@ telegram_loop_patterns:
   Event().wait(: 0
   asyncio.run(: 0
   telegram_worker(: 0
+telegram_update_structure:
+  5576: def handle_telegram_update(update: object) -> None:
+  5585:             return
+  5589:     message = (callback or {}).get("message") if callback else update.get("message")
+  5590:     user = (callback or {}).get("from") if callback else (message or {}).get("from")
+  5592:         return
+  5593:     chat = message.get("chat") or {}
+  5594:     telegram_id, chat_id = str(user.get("id", "")), str(chat.get("id", ""))
+  5595:     if not TELEGRAM_ID_RE.fullmatch(telegram_id) or not chat_id:
+  5596:         return
+  5597:     if not rate_allowed(f"telegram-update:{telegram_id}", 30, 60):
+  5598:         return
+  5600:     if callback:
+  5604:     command = text.split(None, 1)[0].lower() if text.startswith("/") else ""
+  5605:     command = command.split("@", 1)[0]
+  5606:     if command == "/setapplications":
+  5607:         if not telegram_can_configure_delivery(telegram_id):
+  5608:             telegram_send(chat_id, "⛔ Недостаточно прав для настройки темы заявок.",
+  5610:             return
+  5612:         if chat.get("type") != "supergroup" or thread_id is None:
+  5613:             telegram_send(chat_id,
+  5615:             return
+  5616:         save_telegram_delivery_target("application", chat_id, int(thread_id), telegram_id)
+  5617:         telegram_send(chat_id,
+  5620:         return
+  5622:     if command == "/setfeedback":
+  5623:         if not telegram_can_configure_delivery(telegram_id):
+  5624:             telegram_send(chat_id, "⛔ Недостаточно прав для настройки темы обратной связи.",
+  5626:             return
+  5628:         if chat.get("type") != "supergroup" or thread_id is None:
+  5629:             telegram_send(chat_id,
+  5631:             return
+  5632:         save_telegram_delivery_target("feedback", chat_id, int(thread_id), telegram_id)
+  5633:         telegram_send(chat_id,
+  5636:         return
+  5638:     if command == "/setclanshop":
+  5639:         if not telegram_can_configure_delivery(telegram_id):
+  5640:             telegram_send(chat_id, "⛔ Недостаточно прав для настройки темы Clan Shop.",
+  5642:             return
+  5644:         if chat.get("type") != "supergroup" or thread_id is None:
+  5645:             telegram_send(chat_id,
+  5647:             return
+  5648:         save_telegram_delivery_target("clan_shop", chat_id, int(thread_id), telegram_id)
+  5649:         telegram_send(chat_id,
+server_entrypoint_structure:
+  8340:         assert next(row for row in pit_rows if row["pit_type"] == "normal")["players"] == 2
+  8372:         assert next(row for row in clan["players"] if row["nickname"] == "Owner renamed")["total"] == 22
+  8393: if __name__ == "__main__":
+  8394:     if "--self-test" in os.sys.argv:
+  8396:     elif "--import-recipes" in os.sys.argv:
+  8404:     elif "--delete-historical-recipes" in os.sys.argv:
+  8410:     elif "--anonymize-contributors" in os.sys.argv:
+  8413:     elif "--merge-map-duplicates" in os.sys.argv:
+  8416:     elif "--import-hk-maps-index" in os.sys.argv:
+  8417:         if len(os.sys.argv) < 3:
+  8422:     elif "--import-hk-map-points" in os.sys.argv:
+  8423:         if len(os.sys.argv) < 3:
+  8428:     elif "--import-hk-authorized-map" in os.sys.argv:
+  8429:         if len(os.sys.argv) < 3:
+  8432:         opener = gzip.open if os.sys.argv[2].endswith(".gz") else open
+  8435:     elif "--link-hk-map-area" in os.sys.argv:
+  8436:         if len(os.sys.argv) < 3:
+  8439:         print(json.dumps(link_hk_map_area(os.sys.argv[2], os.sys.argv[3] if len(os.sys.argv) > 3 else "")))
+  8440:     elif "--import-hk-map-room-knowledge" in os.sys.argv:
+  8441:         if len(os.sys.argv) < 4:
+  8446:     elif "--link-hk-map-points" in os.sys.argv:
+  8447:         if len(os.sys.argv) < 4:
+  8452:     elif "--import-kokkaras-map" in os.sys.argv:
+  8453:         if len(os.sys.argv) < 3:
+  8459:         if not ADMIN_HASH or not SIGNING_SECRET:
+  8462:         ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
 service_status:
   active
   Python 3.12.3
