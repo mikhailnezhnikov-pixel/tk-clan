@@ -1,0 +1,46 @@
+name: Register TopKing Birthday Telegram Menu
+on:
+  push:
+    paths:
+      - '.github/workflows/register-topking-birthday-commands.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Configure existing SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Merge birthday commands into existing Telegram menus
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd /opt/hamsterking-license
+          test -f topking_birthdays.py
+          python3 - <<'PY'
+          import ast, json, os, re, urllib.request
+          from pathlib import Path
+          src=Path("server.py").read_text()
+          tree=ast.parse(src)
+          for n in ast.walk(tree):
+              if isinstance(n,ast.Assign):
+                  for target in n.targets:
+                      if isinstance(target,ast.Name) and "TOKEN" in target.id and ("TELEGRAM" in target.id or "BOT" in target.id):
+                          print("TOKEN_VARIABLE_NAME="+target.id)
+              if isinstance(n,ast.FunctionDef) and n.name=="telegram_api":
+                  print("TELEGRAM_API_FUNCTION_PRESENT=yes")
+          PY
+          REMOTE
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
