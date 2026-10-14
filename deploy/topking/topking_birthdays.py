@@ -236,6 +236,8 @@ def start_birthday_scheduler(send):
     with _start_lock:
         if _started:
             return
+        db = _connect()  # Ensure persistent storage is ready before service starts.
+        db.close()
         def worker():
             while True:
                 try:
