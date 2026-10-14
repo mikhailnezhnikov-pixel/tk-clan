@@ -41,9 +41,20 @@ jobs:
           cp deploy/topking/topking_birthdays.py /tmp/topking_birthdays.py
           python3 deploy/topking/patch_topking_birthdays.py /tmp/birthday-patched-server.py
           python3 -m py_compile /tmp/birthday-patched-server.py /tmp/topking_birthdays.py
-          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
-            root@89.125.1.71:/opt/hamsterking-license/contest_runtime.py /tmp/contest_runtime.py
-          python3 /tmp/birthday-patched-server.py --self-test
+          # Full server self-test requires live contest database paths. Do not
+          # execute it outside its environment or mutate the production DB.
+          python3 - <<'PY'
+          import ast,difflib
+          from pathlib import Path
+          a=Path('/tmp/birthday-current-server.py').read_text()
+          b=Path('/tmp/birthday-patched-server.py').read_text()
+          before={n.name for n in ast.walk(ast.parse(a)) if isinstance(n,ast.FunctionDef)}
+          after={n.name for n in ast.walk(ast.parse(b)) if isinstance(n,ast.FunctionDef)}
+          assert before==after,'existing function definitions changed'
+          edits=[op for op in difflib.SequenceMatcher(None,a.splitlines(),b.splitlines(),autojunk=False).get_opcodes() if op[0]!='equal']
+          assert len(edits)==2 and all(op[0]=='insert' for op in edits),edits
+          print('LIVE_SERVER_AST_AND_EXACT_TWO_INSERTIONS=PASS')
+          PY
           python3 - <<'PY'
           from pathlib import Path
           import hashlib
@@ -58,7 +69,7 @@ jobs:
           out.write_text('SOURCE_SHA='+hashlib.sha256(original.encode()).hexdigest()+'\n'
                          'PATCH_SHA='+hashlib.sha256(patched.encode()).hexdigest()+'\n'
                          'MODULE_SHA='+hashlib.sha256(Path('/tmp/topking_birthdays.py').read_bytes()).hexdigest()+'\n')
-          print('PATCH_AND_SERVER_SELFTEST=PASS')
+          print('PATCH_AND_AST_GUARD=PASS')
           PY
       - name: Deploy with backups and automatic rollback
         run: |
