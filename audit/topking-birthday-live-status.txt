@@ -1,0 +1,9 @@
+TOPKING_BIRTHDAY_LIVE=PASS
+server_backup=PASS
+service_active=PASS
+live_exact_match=PASS
+yakutsk_0900_scheduler=INSTALLED
+commands=5
+no_real_group_message_sent=TRUE
+server_sha256=4ccf8033261e509cfbc86076d37b2381d63513389f21ce4ac1ee2b3566eaf4e1
+module_sha256=c010a5588de5718918eb55f5eb59b0b4e244ec055f31513165a2ed9d09019a58
