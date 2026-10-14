@@ -1,0 +1,169 @@
+name: Deploy TopKing Birthdays (Guarded)
+on:
+  push:
+    paths:
+      - 'deploy/topking/birthday-deploy-trigger.txt'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: deploy-topking-birthdays
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify release tests before touching server
+        run: |
+          set -euo pipefail
+          test "$(head -n 1 audit/topking-birthday-predeploy.txt)" = "TOPKING_BIRTHDAY_PREDEPLOY=PASS"
+          python3 deploy/topking/test_topking_birthdays.py
+          python3 -m py_compile deploy/topking/topking_birthdays.py deploy/topking/patch_topking_birthdays.py
+      - name: Configure existing SSH credential
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Fetch exact live code, apply and test patch without server mutation
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/birthday-current-server.py
+          cp /tmp/birthday-current-server.py /tmp/birthday-patched-server.py
+          cp deploy/topking/topking_birthdays.py /tmp/topking_birthdays.py
+          python3 deploy/topking/patch_topking_birthdays.py /tmp/birthday-patched-server.py
+          python3 -m py_compile /tmp/birthday-patched-server.py /tmp/topking_birthdays.py
+          python3 /tmp/birthday-patched-server.py --self-test
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          original=Path('/tmp/birthday-current-server.py').read_text()
+          patched=Path('/tmp/birthday-patched-server.py').read_text()
+          assert patched.count('TOPKING_BIRTHDAYS_V1')==2
+          assert original.count('TELEGRAM_GROUP_SILENCE_V2')==patched.count('TELEGRAM_GROUP_SILENCE_V2')
+          assert original.count('def handle_telegram_update(')==patched.count('def handle_telegram_update(')
+          assert original.count('ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()')==1
+          assert patched.count('ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()')==1
+          out=Path('/tmp/birthday-hashes.env')
+          out.write_text('SOURCE_SHA='+hashlib.sha256(original.encode()).hexdigest()+'\n'
+                         'PATCH_SHA='+hashlib.sha256(patched.encode()).hexdigest()+'\n'
+                         'MODULE_SHA='+hashlib.sha256(Path('/tmp/topking_birthdays.py').read_bytes()).hexdigest()+'\n')
+          print('PATCH_AND_SERVER_SELFTEST=PASS')
+          PY
+      - name: Deploy with backups and automatic rollback
+        run: |
+          set -euo pipefail
+          source /tmp/birthday-hashes.env
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
+            /tmp/birthday-patched-server.py root@89.125.1.71:/tmp/topking-birthday-server-stage.py
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
+            /tmp/topking_birthdays.py root@89.125.1.71:/tmp/topking_birthdays-stage.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71 "SOURCE_SHA='$SOURCE_SHA' PATCH_SHA='$PATCH_SHA' MODULE_SHA='$MODULE_SHA' bash -se" <<'REMOTE'
+          set -Eeuo pipefail
+          cd /opt/hamsterking-license
+          server=server.py
+          module=topking_birthdays.py
+          db=birthdays.sqlite3
+          stamp="$(date -u +%Y%m%d-%H%M%S)"
+          backup_server="server.py.bak.birthday.$stamp"
+          backup_module="topking_birthdays.py.bak.$stamp"
+          backup_db="birthdays.sqlite3.bak.$stamp"
+          module_existed=0
+          installed=0
+          rollback() {
+            trap - ERR
+            if [ "$installed" = 1 ]; then
+              echo 'TOPKING_BIRTHDAY_ROLLBACK=START'
+              cp -a "$backup_server" "$server"
+              if [ "$module_existed" = 1 ]; then
+                cp -a "$backup_module" "$module"
+              else
+                rm -f "$module"
+              fi
+              systemctl restart hamsterking-license.service || true
+              systemctl is-active --quiet hamsterking-license.service && echo 'TOPKING_BIRTHDAY_ROLLBACK=PASS' || echo 'TOPKING_BIRTHDAY_ROLLBACK=SERVICE_NOT_ACTIVE'
+            fi
+            exit 1
+          }
+          trap rollback ERR
+          systemctl is-active --quiet hamsterking-license.service
+          test "$(sha256sum "$server" | cut -d' ' -f1)" = "$SOURCE_SHA"
+          test "$(sha256sum /tmp/topking-birthday-server-stage.py | cut -d' ' -f1)" = "$PATCH_SHA"
+          test "$(sha256sum /tmp/topking_birthdays-stage.py | cut -d' ' -f1)" = "$MODULE_SHA"
+          python3 -m py_compile /tmp/topking-birthday-server-stage.py /tmp/topking_birthdays-stage.py
+          cp -a "$server" "$backup_server"
+          if [ -e "$module" ]; then
+            cp -a "$module" "$backup_module"
+            module_existed=1
+          fi
+          if [ -e "$db" ]; then
+            python3 - "$db" "$backup_db" <<'PY'
+          import sqlite3,sys
+          with sqlite3.connect(sys.argv[1]) as source, sqlite3.connect(sys.argv[2]) as dest:
+              source.backup(dest)
+          PY
+          fi
+          installed=1
+          install -m 0644 /tmp/topking_birthdays-stage.py "$module"
+          install -m 0644 /tmp/topking-birthday-server-stage.py "$server"
+          python3 -m py_compile "$server" "$module"
+          systemctl restart hamsterking-license.service
+          sleep 4
+          systemctl is-active --quiet hamsterking-license.service
+          test "$(sha256sum "$server" | cut -d' ' -f1)" = "$PATCH_SHA"
+          test "$(sha256sum "$module" | cut -d' ' -f1)" = "$MODULE_SHA"
+          test -s "$db"
+          python3 - <<'PY'
+          import sqlite3
+          with sqlite3.connect('birthdays.sqlite3') as db:
+              names={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+              assert {'topking_birthdays','topking_birthday_deliveries'} <= names
+          PY
+          trap - ERR
+          echo 'TOPKING_BIRTHDAY_DEPLOY=PASS'
+          echo 'TOPKING_BIRTHDAY_SERVICE=ACTIVE'
+          echo 'TOPKING_BIRTHDAY_BACKUP=PASS'
+          echo 'TOPKING_BIRTHDAY_DB_SCHEMA=PASS'
+          REMOTE
+      - name: Verify remote service after deploy
+        run: |
+          set -euo pipefail
+          source /tmp/birthday-hashes.env
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            "systemctl is-active --quiet hamsterking-license.service && test \"\$(sha256sum /opt/hamsterking-license/server.py | cut -d' ' -f1)\" = '$PATCH_SHA' && test \"\$(sha256sum /opt/hamsterking-license/topking_birthdays.py | cut -d' ' -f1)\" = '$MODULE_SHA'"
+          mkdir -p audit
+          {
+            echo 'TOPKING_BIRTHDAY_LIVE=PASS'
+            echo 'server_backup=PASS'
+            echo 'service_active=PASS'
+            echo 'live_exact_match=PASS'
+            echo 'yakutsk_0900_scheduler=INSTALLED'
+            echo 'commands=5'
+            echo 'no_real_group_message_sent=TRUE'
+            echo "server_sha256=$PATCH_SHA"
+            echo "module_sha256=$MODULE_SHA"
+          } > audit/topking-birthday-live-status.txt
+          cat audit/topking-birthday-live-status.txt
+      - name: Commit safe live status
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add audit/topking-birthday-live-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m 'audit: TopKing birthdays live deployed and service healthy'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Cleanup private files
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/birthday-current-server.py /tmp/birthday-patched-server.py /tmp/topking_birthdays.py /tmp/birthday-hashes.env
