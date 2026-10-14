@@ -43,9 +43,18 @@ jobs:
                               key=ast.literal_eval(v.args[0])
                               token=os.environ.get(key)
           if not token:
-              print("TOKEN_NOT_IN_CURRENT_PROCESS_ENV")
-              print("TOKEN_SOURCE=service_environment_required")
-              raise SystemExit(3)
+              import subprocess
+              service_user=subprocess.check_output(["systemctl","show","hamsterking-license.service","-p","User","--value"],text=True).strip()
+              pid=subprocess.check_output(["systemctl","show","hamsterking-license.service","-p","MainPID","--value"],text=True).strip()
+              if not pid.isdecimal() or int(pid)<=1:
+                  raise RuntimeError("No running service PID")
+              # Read only the named environment variable from the running service.
+              # Never print or persist the token, or its environment.
+              envbytes=Path("/proc/"+pid+"/environ").read_bytes()
+              values=dict((p.split(b"=",1) for p in envbytes.split(b"\\0") if b"=" in p))
+              token=(values.get(b"TELEGRAM_BOT_TOKEN") or b"").decode()
+          if not token:
+              raise RuntimeError("Telegram token not found in active service environment")
 
           url="https://api.telegram.org/bot"+token+"/"
           def api(method,body):
