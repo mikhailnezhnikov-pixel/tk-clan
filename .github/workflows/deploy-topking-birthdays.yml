@@ -51,7 +51,7 @@ jobs:
           before={n.name for n in ast.walk(ast.parse(a)) if isinstance(n,ast.FunctionDef)}
           after={n.name for n in ast.walk(ast.parse(b)) if isinstance(n,ast.FunctionDef)}
           assert before==after,'existing function definitions changed'
-          edits=[op for op in difflib.SequenceMatcher(None,a.splitlines(),b.splitlines(),autojunk=False).get_opcodes() if op[0]!='equal']
+          edits=[op for op in difflib.SequenceMatcher(None,a.splitlines(),b.splitlines(),autojunk=True).get_opcodes() if op[0]!='equal']
           assert len(edits)==2 and all(op[0]=='insert' for op in edits),edits
           print('LIVE_SERVER_AST_AND_EXACT_TWO_INSERTIONS=PASS')
           PY
