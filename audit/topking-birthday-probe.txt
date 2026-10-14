@@ -116,6 +116,13 @@ server_entrypoint_structure:
   8453:         if len(os.sys.argv) < 3:
   8459:         if not ADMIN_HASH or not SIGNING_SECRET:
   8462:         ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+deployment_preflight:
+  service_user=hamsterking-license
+  app_dir_owner=root:root mode=755
+  service_user_can_write_app_dir=no
+  live_sha256=42247a0fd77f3910a9988a8b724796d11f400a17f48e6792b4c9cf0ce93eeced
+  module_exists=no
+  db_exists=no
 service_status:
   active
   Python 3.12.3
