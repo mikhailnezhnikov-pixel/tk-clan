@@ -1,0 +1,50 @@
+name: Probe TopKing Birthday State Directory
+on:
+  push:
+    paths:
+      - '.github/workflows/probe-topking-birthday-state.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Read only storage and service settings
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new root@89.125.1.71 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          systemctl is-active hamsterking-license.service
+          systemctl show hamsterking-license.service -p User -p Group -p StateDirectory -p WorkingDirectory -p ProtectSystem -p ReadWritePaths -p DynamicUser
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          s=Path("/opt/hamsterking-license/server.py").read_text()
+          tree=ast.parse(s)
+          for n in ast.walk(tree):
+              if isinstance(n,(ast.Assign,ast.AnnAssign)):
+                  targets=n.targets if isinstance(n,ast.Assign) else [n.target]
+                  if any(isinstance(t,ast.Name) and t.id in ("DB_PATH","DATABASE_PATH","DATA_DIR","DB_FILE") for t in targets):
+                      print("DB_CONFIG:",ast.unparse(n)[:240])
+          PY
+          for dir in /var/lib/hamsterking-license /var/lib/hamsterking /opt/hamsterking-license; do
+            if test -d "$dir"; then
+              stat -c 'dir=%n owner=%U:%G mode=%a' "$dir"
+              runuser -u hamsterking-license -- test -w "$dir" && echo "service_writable=$dir" || true
+            fi
+          done
+          REMOTE
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking"
