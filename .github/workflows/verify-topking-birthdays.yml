@@ -1,0 +1,82 @@
+name: Verify TopKing Birthdays (Read Only)
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-topking-birthdays.yml'
+      - 'deploy/topking/topking_birthdays.py'
+      - 'deploy/topking/patch_topking_birthdays.py'
+      - 'deploy/topking/test_topking_birthdays.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: verify-topking-birthdays
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run offline birthday regression suite
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy/topking/topking_birthdays.py deploy/topking/patch_topking_birthdays.py deploy/topking/test_topking_birthdays.py
+          python3 deploy/topking/test_topking_birthdays.py
+      - name: Configure SSH for read-only source fetch
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Fetch and dry-run patch on exact current live source
+        run: |
+          set -euo pipefail
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/birthday-current-server.py
+          cp /tmp/birthday-current-server.py /tmp/birthday-patched-server.py
+          cp deploy/topking/topking_birthdays.py /tmp/topking_birthdays.py
+          python3 deploy/topking/patch_topking_birthdays.py /tmp/birthday-patched-server.py
+          python3 -m py_compile /tmp/birthday-patched-server.py /tmp/topking_birthdays.py
+          python3 /tmp/birthday-patched-server.py --self-test
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          a=Path('/tmp/birthday-current-server.py').read_text()
+          b=Path('/tmp/birthday-patched-server.py').read_text()
+          assert b.count('TOPKING_BIRTHDAYS_V1')==2
+          assert b.count('if command == "/setapplications":')==a.count('if command == "/setapplications":')
+          assert b.count('TELEGRAM_GROUP_SILENCE_V2')==a.count('TELEGRAM_GROUP_SILENCE_V2')
+          assert b.count('ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()')==1
+          assert len(b)>len(a)
+          out=['TOPKING_BIRTHDAY_PREDEPLOY=PASS',
+               'ssh_read_only=PASS',
+               'offline_tests=PASS',
+               'live_source_patch=PASS',
+               'live_server_self_test=PASS',
+               'existing_telegram_handlers_preserved=PASS',
+               'service_mutations=NONE',
+               'source_sha256='+hashlib.sha256(a.encode()).hexdigest(),
+               'patched_sha256='+hashlib.sha256(b.encode()).hexdigest()]
+          Path('audit/topking-birthday-predeploy.txt').write_text('\n'.join(out)+'\n')
+          print('\n'.join(out))
+          PY
+      - name: Commit non-sensitive verification status
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add audit/topking-birthday-predeploy.txt
+          if ! git diff --cached --quiet; then
+            git commit -m 'audit: birthday predeployment tests and live patch pass'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/birthday-current-server.py /tmp/birthday-patched-server.py /tmp/topking_birthdays.py
