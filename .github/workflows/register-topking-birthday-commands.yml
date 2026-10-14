@@ -28,17 +28,58 @@ jobs:
           cd /opt/hamsterking-license
           test -f topking_birthdays.py
           python3 - <<'PY'
-          import ast, json, os, re, urllib.request
+          import ast, json, os, urllib.request, urllib.error
           from pathlib import Path
+
           src=Path("server.py").read_text()
           tree=ast.parse(src)
+          token=None
           for n in ast.walk(tree):
               if isinstance(n,ast.Assign):
-                  for target in n.targets:
-                      if isinstance(target,ast.Name) and "TOKEN" in target.id and ("TELEGRAM" in target.id or "BOT" in target.id):
-                          print("TOKEN_VARIABLE_NAME="+target.id)
-              if isinstance(n,ast.FunctionDef) and n.name=="telegram_api":
-                  print("TELEGRAM_API_FUNCTION_PRESENT=yes")
+                  if any(isinstance(t,ast.Name) and t.id=="TELEGRAM_BOT_TOKEN" for t in n.targets):
+                      v=n.value
+                      if isinstance(v,ast.Call) and isinstance(v.func,ast.Attribute) and v.func.attr=="get":
+                          if isinstance(v.func.value,ast.Attribute) and v.func.value.attr=="environ" and v.args:
+                              key=ast.literal_eval(v.args[0])
+                              token=os.environ.get(key)
+          if not token:
+              print("TOKEN_NOT_IN_CURRENT_PROCESS_ENV")
+              print("TOKEN_SOURCE=service_environment_required")
+              raise SystemExit(3)
+
+          url="https://api.telegram.org/bot"+token+"/"
+          def api(method,body):
+              request=urllib.request.Request(url+method,data=json.dumps(body).encode(),headers={"Content-Type":"application/json"})
+              with urllib.request.urlopen(request,timeout=20) as resp:
+                  result=json.load(resp)
+              if not result.get("ok"):
+                  raise RuntimeError("Telegram API "+method+" failed: "+str(result.get("error_code")))
+              return result["result"]
+
+          birthday=[
+              {"command":"birthday","description":"Добавить или изменить дату рождения"},
+              {"command":"mybirthday","description":"Моя дата рождения"},
+              {"command":"birthdays","description":"Все дни рождения клана"},
+              {"command":"deletebirthday","description":"Удалить свою дату рождения"},
+              {"command":"birthdayhelp","description":"Помощь по дням рождения"},
+          ]
+          scopes=[
+              {"type":"default"},
+              {"type":"all_group_chats"},
+              {"type":"all_chat_administrators"},
+          ]
+          # Existing commands are retained in each scope, not replaced.
+          for scope in scopes:
+              original=api("getMyCommands",{"scope":scope})
+              merged=[item for item in original if item.get("command") not in {b["command"] for b in birthday}]
+              merged+=birthday
+              if len(merged)>100:
+                  raise RuntimeError("Telegram menu capacity exceeded")
+              api("setMyCommands",{"scope":scope,"commands":merged})
+              observed=api("getMyCommands",{"scope":scope})
+              if not all(any(item.get("command")==b["command"] for item in observed) for b in birthday):
+                  raise RuntimeError("Telegram menu verification failed")
+              print("TELEGRAM_MENU_"+scope["type"].upper()+"=PASS existing="+str(len(original))+" total="+str(len(observed)))
           PY
           REMOTE
       - name: Cleanup
