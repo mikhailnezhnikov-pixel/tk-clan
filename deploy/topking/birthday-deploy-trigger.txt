@@ -1,0 +1,3 @@
+Deploy TopKing birthday integration after verified offline tests and read-only live patch checks.
+Authorized: 2026-10-14, Asia/Yakutsk.
+Rollback on failed service health.
