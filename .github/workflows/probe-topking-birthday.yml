@@ -1,0 +1,76 @@
+name: Probe TopKing Birthday Integration
+on:
+  push:
+    paths:
+      - '.github/workflows/probe-topking-birthday.yml'
+      - 'deploy/topking/birthday-probe-trigger.txt'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up existing SSH credential
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.TOPKING_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/topking"
+          chmod 600 "$HOME/.ssh/topking"
+      - name: Probe server and download current code read-only
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
+            'systemctl is-active hamsterking-license.service; test -r /opt/hamsterking-license/server.py; python3 --version' > /tmp/birthday-server-status.txt
+          scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
+            root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/birthday-live-server.py
+          python3 -m py_compile /tmp/birthday-live-server.py
+      - name: Write safe structural report without credentials or private data
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          python3 - <<'PY'
+          import ast,hashlib
+          from pathlib import Path
+          s=Path('/tmp/birthday-live-server.py').read_text()
+          tree=ast.parse(s)
+          fn=[n for n in ast.walk(tree) if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))]
+          names=sorted((n.lineno,n.end_lineno,n.name) for n in fn if any(k in n.name.lower() for k in ('telegram','bot','poll','schedule','tick','worker','background','main','service','db_session')))
+          keys=['def telegram_api(', 'def telegram_send(', 'def handle_telegram_update(', 'def telegram_poll(', 'def telegram_poll_loop(', 'TELEGRAM_GROUP_SILENCE_V2', 'TELEGRAM_APPLICATION_TOPIC_V1', 'def db_session(', 'def utc_now(', 'if __name__ == "__main__":', 'def main(']
+          out=['TOPKING_BIRTHDAY_PROBE=PASS',
+               'server_sha256='+hashlib.sha256(s.encode()).hexdigest(),
+               'server_lines='+str(len(s.splitlines())),
+               'birthday_existing='+str('TOPKING_BIRTHDAYS_V1' in s),
+               'telegram_function_names_and_lines:']
+          out.extend(f'  {start}-{end} {name}' for start,end,name in names)
+          out.append('anchors:')
+          out.extend(f'  {k}: {s.count(k)}' for k in keys)
+          out.append('telegram_loop_patterns:')
+          for k in ['telegram_poll_loop(', 'telegram_poll_once(', 'telegram_poll(', 'handle_telegram_update(', 'threading.Thread(', 'Thread(', 'time.sleep(', 'Event().wait(', 'asyncio.run(', 'telegram_worker(']:
+              out.append(f'  {k}: {s.count(k)}')
+          out.append('service_status:')
+          out.extend('  '+x for x in Path('/tmp/birthday-server-status.txt').read_text().splitlines())
+          Path('audit/topking-birthday-probe.txt').write_text('\n'.join(out)+'\n')
+          print('\n'.join(out))
+          PY
+      - name: Commit safe structural report
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add audit/topking-birthday-probe.txt
+          if ! git diff --cached --quiet; then
+            git commit -m 'audit: inspect live TopKing birthday integration anchors'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Cleanup private files
+        if: always()
+        run: rm -f "$HOME/.ssh/topking" /tmp/birthday-live-server.py /tmp/birthday-server-status.txt
