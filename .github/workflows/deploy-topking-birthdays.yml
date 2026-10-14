@@ -109,6 +109,10 @@ jobs:
           }
           trap rollback ERR
           systemctl is-active --quiet hamsterking-license.service
+          service_user="$(systemctl show hamsterking-license.service -p User --value)"
+          if [ -n "$service_user" ] && [ "$service_user" != "root" ]; then
+            runuser -u "$service_user" -- test -w /opt/hamsterking-license
+          fi
           test "$(sha256sum "$server" | cut -d' ' -f1)" = "$SOURCE_SHA"
           test "$(sha256sum /tmp/topking-birthday-server-stage.py | cut -d' ' -f1)" = "$PATCH_SHA"
           test "$(sha256sum /tmp/topking_birthdays-stage.py | cut -d' ' -f1)" = "$MODULE_SHA"
