@@ -45,6 +45,9 @@ telegram_loop_patterns:
   Event().wait(: 0
   asyncio.run(: 0
   telegram_worker(: 0
+db_path_assignment_structure:
+  DB_PATH = os.environ.get('HK_LICENSE_DB', '/var/lib/hamsterking-license/licenses.db')
+  DB_PATH = os.path.join(folder, 'test.db')
 telegram_update_structure:
   5576: def handle_telegram_update(update: object) -> None:
   5585:             return
@@ -118,6 +121,11 @@ server_entrypoint_structure:
   8462:         ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
 deployment_preflight:
   service_user=hamsterking-license
+  WorkingDirectory=/opt/hamsterking-license
+  DynamicUser=no
+  ReadWritePaths=/var/lib/hamsterking-license
+  ProtectSystem=strict
+  StateDirectory=
   app_dir_owner=root:root mode=755
   service_user_can_write_app_dir=no
   live_sha256=42247a0fd77f3910a9988a8b724796d11f400a17f48e6792b4c9cf0ce93eeced
