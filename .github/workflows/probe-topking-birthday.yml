@@ -28,9 +28,22 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new root@89.125.1.71 \
-            'systemctl is-active hamsterking-license.service; test -r /opt/hamsterking-license/server.py; python3 --version' > /tmp/birthday-server-status.txt
+            'systemctl is-active hamsterking-license.service; test -r /opt/hamsterking-license/server.py; python3 --version' > /tmp/birthday-server-status.txt /tmp/birthday-server-permissions.txt
           scp -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new \
             root@89.125.1.71:/opt/hamsterking-license/server.py /tmp/birthday-live-server.py
+          ssh -i "$HOME/.ssh/topking" -o BatchMode=yes -o ConnectTimeout=18 -o StrictHostKeyChecking=accept-new root@89.125.1.71 '
+            user="$(systemctl show hamsterking-license.service -p User --value)"
+            printf "service_user=%s\n" "${user:-root}"
+            stat -c "app_dir_owner=%U:%G mode=%a" /opt/hamsterking-license
+            if [ -n "$user" ] && [ "$user" != root ]; then
+              runuser -u "$user" -- test -w /opt/hamsterking-license && echo "service_user_can_write_app_dir=yes" || echo "service_user_can_write_app_dir=no"
+            else
+              echo "service_user_can_write_app_dir=yes"
+            fi
+            sha256sum /opt/hamsterking-license/server.py | cut -d" " -f1 | sed "s/^/live_sha256=/"
+            test -e /opt/hamsterking-license/topking_birthdays.py && echo "module_exists=yes" || echo "module_exists=no"
+            test -e /opt/hamsterking-license/birthdays.sqlite3 && echo "db_exists=yes" || echo "db_exists=no"
+          ' > /tmp/birthday-server-permissions.txt
           python3 -m py_compile /tmp/birthday-live-server.py
       - name: Write safe structural report without credentials or private data
         run: |
@@ -69,6 +82,8 @@ jobs:
               line=lines[i]
               if any(w in line for w in ('__main__', 'serve_forever', 'Thread', 'thread', 'telegram', 'if ', 'while ', 'def ', 'start(', 'main(', 'server_close', 'shutdown', 'httpd', 'HTTPServer', 'TCPServer', 'asyncio', 'sleep(')):
                   out.append(f'  {i+1}: {line[:145]}')
+          out.append('deployment_preflight:')
+          out.extend('  '+x for x in Path('/tmp/birthday-server-permissions.txt').read_text().splitlines())
           out.append('service_status:')
           out.extend('  '+x for x in Path('/tmp/birthday-server-status.txt').read_text().splitlines())
           Path('audit/topking-birthday-probe.txt').write_text('\n'.join(out)+'\n')
