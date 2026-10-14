@@ -16,7 +16,7 @@ import threading
 import time as clock
 
 YAKUTSK = ZoneInfo("Asia/Yakutsk")
-DB_FILE = Path(__file__).with_name("birthdays.sqlite3")
+DB_FILE = Path("/var/lib/hamsterking-license/birthdays.sqlite3")
 LOG = logging.getLogger("topking.birthdays")
 _COMMANDS = frozenset(("/birthday", "/mybirthday", "/birthdays",
                        "/deletebirthday", "/birthdayhelp"))
