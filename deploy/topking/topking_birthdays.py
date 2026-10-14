@@ -8,6 +8,7 @@ from html import escape
 from pathlib import Path
 from zoneinfo import ZoneInfo
 import logging
+import os
 import random
 import re
 import sqlite3
@@ -34,6 +35,13 @@ _start_lock = threading.Lock()
 
 
 def _connect():
+    # New birthday data must not become world-readable in the web app directory.
+    try:
+        fd = os.open(str(DB_FILE), os.O_CREAT | os.O_EXCL | os.O_RDWR, 0o600)
+    except FileExistsError:
+        pass
+    else:
+        os.close(fd)
     conn = sqlite3.connect(str(DB_FILE), timeout=30)
     conn.execute("PRAGMA busy_timeout=30000")
     conn.execute("PRAGMA journal_mode=WAL")
