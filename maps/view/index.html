@@ -20,6 +20,8 @@ body{font-family:Inter,Arial,sans-serif;color:#eef2f7;overflow:hidden}
 </style>
 <style>
 .quickfilters{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}.quickfilters button,#collapse-panel{min-height:32px;padding:6px 9px;border:1px solid #665537;border-radius:9px;background:#29251e;color:#edd18d;cursor:pointer}.hud.is-collapsed .filters,.hud.is-collapsed .quickfilters,.hud.is-collapsed .tools,.hud.is-collapsed .legend{display:none}.panel-toggle{display:flex;justify-content:flex-end;margin-top:7px}.maplibregl-popup-content{background:#171a20;color:#eee;border:1px solid #665537;border-radius:12px;padding:14px;white-space:pre-line;font:13px/1.5 system-ui}.maplibregl-popup-close-button{color:#eee;font-size:18px}
+#hud{top:82px;max-height:calc(100dvh - 98px);font-family:system-ui,sans-serif}#hud .title{font:700 22px/1.2 system-ui,sans-serif;margin:0;overflow-wrap:anywhere}#hud .status{font:400 12px/1.4 system-ui,sans-serif}#hud .eyebrow{font:700 10px/1.4 system-ui,sans-serif;letter-spacing:1px}#hud .filter{padding:8px 9px;border-radius:9px}#hud .filter span{font:600 12px/1.3 system-ui,sans-serif}#hud .head-main{min-width:0}#hud .panel-toggle{background:#11131a}#hud.is-collapsed{max-height:150px}
+@media(max-width:760px){#hud{top:78px;left:8px;width:min(340px,calc(100vw - 16px));max-height:55dvh;padding:11px}#hud .title{font-size:19px}#hud .filters{gap:5px}#hud .filter{padding:7px}#hud .filter span{font-size:11px}}
 </style>
   <link rel="icon" type="image/png" href="../../assets/brand/topking-clan-crest.png">
   <link rel="apple-touch-icon" href="../../assets/brand/topking-clan-crest.png">
