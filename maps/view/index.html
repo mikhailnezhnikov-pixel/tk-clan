@@ -39,7 +39,7 @@ const DOTS={'NULL':'#8b8b80','0':'#ff5c5c','1':'#ffd84a','2':'#ff9a3d','3':'#c23
 let map=null,payload=null,mode='points',selected=new Set(),fitBoundsValue=null;
 function fail(title,text){document.getElementById('error-title').textContent=title;document.getElementById('error-text').textContent=text;document.getElementById('error').classList.remove('hidden')}
 async function fetchData(){
-  if(!/^hk_[a-z0-9]+$/.test(key))throw new Error('invalid_key');
+  if(!/^(?:hk_[a-z0-9]+|canonical:[A-Za-z0-9_-]{1,128})$/.test(key))throw new Error('invalid_key');
   const token=localStorage.getItem(TOKEN_KEY)||'';
   if(token){
     const r=await fetch(API+'/cabinet/maps/data?key='+encodeURIComponent(key),{headers:{Authorization:'Bearer '+token},cache:'no-store'});
