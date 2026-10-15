@@ -18,6 +18,9 @@ body{font-family:Inter,Arial,sans-serif;color:#eef2f7;overflow:hidden}
 .maplibregl-ctrl-group{background:rgba(17,10,2,.93)!important;border:1px solid #8b6b2d!important}.maplibregl-ctrl-group button{background-color:transparent!important}.maplibregl-ctrl-icon{filter:invert(91%) sepia(28%) saturate(708%) hue-rotate(351deg) brightness(104%) contrast(94%)}
 @media(max-width:600px){.hud{top:8px;left:8px;width:calc(100vw - 16px);max-height:48dvh;padding:11px}.filters{grid-template-columns:repeat(2,1fr)}.filter{padding:8px}.filter span{font-size:11px}.title{font-size:18px}}
 </style>
+<style>
+.quickfilters{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}.quickfilters button,#collapse-panel{min-height:32px;padding:6px 9px;border:1px solid #665537;border-radius:9px;background:#29251e;color:#edd18d;cursor:pointer}.hud.is-collapsed .filters,.hud.is-collapsed .quickfilters,.hud.is-collapsed .tools,.hud.is-collapsed .legend{display:none}.panel-toggle{display:flex;justify-content:flex-end;margin-top:7px}.maplibregl-popup-content{background:#171a20;color:#eee;border:1px solid #665537;border-radius:12px;padding:14px;white-space:pre-line;font:13px/1.5 system-ui}.maplibregl-popup-close-button{color:#eee;font-size:18px}
+</style>
   <link rel="icon" type="image/png" href="../../assets/brand/topking-clan-crest.png">
   <link rel="apple-touch-icon" href="../../assets/brand/topking-clan-crest.png">
 </head>
@@ -26,8 +29,10 @@ body{font-family:Inter,Arial,sans-serif;color:#eef2f7;overflow:hidden}
 <section id="hud" class="hud">
   <div class="head"><div class="head-main"><p class="eyebrow">TOP KING · HK MAP</p><h1 id="title" class="title">Карта</h1><p id="status" class="status">Загрузка…</p></div><a id="back" class="back" href="../../cabinet/?tab=maps" aria-label="Назад к картам">←</a></div>
   <div id="filters" class="filters"></div>
+  <div class="quickfilters" aria-label="Выбрать число комнат"><button data-only="1">Только 1</button><button data-only="2">Только 2</button><button data-only="3">Только 3</button><button data-only="4">Только 4</button><button data-only="5">Только 5</button><button data-only="6">Только 6</button></div>
   <div class="tools"><button id="show-all" type="button">Подсветить всё</button><button id="fit" type="button">Вся карта</button></div>
   <div id="legend" class="legend">Цвет здания — исходный цвет карты. Кристаллы включают подсветку поверх здания.</div>
+  <div class="panel-toggle"><button id="collapse-panel" aria-expanded="true">Скрыть фильтры</button></div>
 </section>
 <section id="error" class="error hidden"><div class="error-card"><h1 id="error-title">Карта недоступна</h1><p id="error-text"></p><a href="../../cabinet/?tab=maps">← Вернуться к картам</a></div></section>
 <script src="../moscow-20-19/vendor/maplibre-gl.js?v=4.7.1"></script>
@@ -38,16 +43,21 @@ const LABELS={'NULL':'Не исслед.','0':'0 крист.','1':'1 крист.
 const DOTS={'NULL':'#8b8b80','0':'#ff5c5c','1':'#ffd84a','2':'#ff9a3d','3':'#c238ff','4':'#35e875','5':'#55d7ff','6':'#5ad6c7','7':'#f0f0f0'};
 let map=null,payload=null,mode='points',selected=new Set(),fitBoundsValue=null;
 function fail(title,text){document.getElementById('error-title').textContent=title;document.getElementById('error-text').textContent=text;document.getElementById('error').classList.remove('hidden')}
+async function mapResponse(url,options={}){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
+  try{const r=await fetch(url,{...options,signal:controller.signal});return {ok:r.ok,status:r.status,data:await r.json()};}
+  finally{clearTimeout(timer);}
+}
 async function fetchData(){
   if(!/^(?:hk_[a-z0-9]+|canonical:[A-Za-z0-9_-]{1,128})$/.test(key))throw new Error('invalid_key');
   const token=localStorage.getItem(TOKEN_KEY)||'';
   if(token){
-    const r=await fetch(API+'/cabinet/maps/data?key='+encodeURIComponent(key),{headers:{Authorization:'Bearer '+token},cache:'no-store'});
-    if(r.ok)return{data:await r.json(),mode:'private'};
+    const r=await mapResponse(API+'/cabinet/maps/data?key='+encodeURIComponent(key),{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+    if(r.ok)return{data:r.data,mode:'private'};
     if(![401,403,404].includes(r.status))throw new Error('private_'+r.status);
   }
-  const r=await fetch(API+'/public/maps/data?key='+encodeURIComponent(key),{cache:'no-store'});
-  if(r.ok)return{data:await r.json(),mode:'public'};
+  const r=await mapResponse(API+'/public/maps/data?key='+encodeURIComponent(key),{cache:'no-store'});
+  if(r.ok)return{data:r.data,mode:'public'};
   if([403,404].includes(r.status))throw new Error('not_available');
   throw new Error('public_'+r.status);
 }
@@ -99,6 +109,12 @@ function renderFull(full){
     m.addLayer({id:'roads-shadow',type:'line',source:'roads',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1F1E1F','line-width':['+',['get','width'],4.8],'line-opacity':.95}});
     m.addLayer({id:'roads-main',type:'line',source:'roads',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#5F616D','line-width':['get','width'],'line-opacity':.96}});
     m.addLayer({id:'buildings-base',type:'fill',source:'buildings',paint:{'fill-color':['get','base_color'],'fill-opacity':.95}});
+    m.on('click','buildings-base',event=>{
+      const p=event.features?.[0]?.properties||{};
+      const lines=['Здание: '+String(p.building_id||event.features?.[0]?.id||'—'),'Кристальные комнаты: '+(p.crystals==null?'не исследовано':String(p.crystals))];
+      if(p.building_generator)lines.push('Тип: '+String(p.building_generator));
+      new maplibregl.Popup().setLngLat(event.lngLat).setText(lines.join('\n')).addTo(m);
+    });
     m.addLayer({id:'buildings-edge-shadow',type:'line',source:'buildings',paint:{'line-color':'#342f32','line-width':['interpolate',['linear'],['zoom'],14,.35,16,.55,18,.85,20,1.15],'line-opacity':.78}});
     m.addLayer({id:'buildings-edge-light',type:'line',source:'buildings',paint:{'line-color':'#7b7469','line-width':['interpolate',['linear'],['zoom'],14,.15,16,.25,18,.38,20,.55],'line-opacity':.28}});
     m.addLayer({id:'buildings-highlight-glow',type:'fill',source:'buildings',filter:crystalFilter(),paint:{'fill-color':'#000','fill-opacity':.04}});
@@ -137,7 +153,7 @@ function pointSchematicColorExpression(){
 function refreshPointHighlight(){
   if(!map)return;
   const filter=crystalFilter();
-  ['schematic-highlight','schematic-outline'].forEach(id=>map.getLayer(id)&&map.setFilter(id,filter));
+  ['schematic-highlight','schematic-outline','schematic-point-highlight'].forEach(id=>map.getLayer(id)&&map.setFilter(id,filter));
 }
 function renderPoints(data){
   mode='points';
@@ -146,7 +162,8 @@ function renderPoints(data){
   pts.forEach(p=>{const k=p[2]<0?'NULL':String(p[2]);if(k in counts)counts[k]++});
   selected.clear();
   document.getElementById('filters').innerHTML=CRYSTALS.map(v=>'<label class="filter"><span><input type="checkbox" value="'+v+'"><i class="dot" style="background:'+DOTS[v]+'"></i>'+LABELS[v]+'</span><b class="count">'+(counts[v]||0).toLocaleString('ru-RU')+'</b></label>').join('');
-  const features=pointSchematicFeatures(pts);
+  // Coordinates without footprints are points, not invented buildings.
+  const features=pts.map((p,i)=>({type:'Feature',id:i,geometry:{type:'Point',coordinates:[p[0],p[1]]},properties:{crystals:p[2],crystals_key:p[2]<0?'NULL':String(p[2]),investment:p[3]}}));
   const collection={type:'FeatureCollection',features};
   const m=newMap(baseStyle('#423F42'));
   document.querySelectorAll('#filters input').forEach(input=>input.addEventListener('change',()=>{input.checked?selected.add(input.value):selected.delete(input.value);refreshPointHighlight()}));
@@ -158,12 +175,14 @@ function renderPoints(data){
     m.addLayer({id:'schematic-edge',type:'line',source:'schematic-buildings',paint:{'line-color':['case',['get','investment'],'#e8bd5c','#817a70'],'line-width':['case',['get','investment'],1.8,.7],'line-opacity':.9}});
     m.addLayer({id:'schematic-highlight',type:'fill',source:'schematic-buildings',filter:crystalFilter(),paint:{'fill-pattern':'hk-selected-stripes','fill-opacity':.58}});
     m.addLayer({id:'schematic-outline',type:'line',source:'schematic-buildings',filter:crystalFilter(),paint:{'line-color':'#fff4be','line-width':['interpolate',['linear'],['zoom'],12,.8,16,1.35,19,2.1],'line-opacity':.96}});
+    m.addLayer({id:'schematic-points',type:'circle',source:'schematic-buildings',paint:{'circle-radius':4,'circle-color':pointSchematicColorExpression(),'circle-stroke-color':'#252830','circle-stroke-width':1}});
+    m.addLayer({id:'schematic-point-highlight',type:'circle',source:'schematic-buildings',filter:crystalFilter(),paint:{'circle-radius':6,'circle-color':'rgba(0,0,0,0)','circle-stroke-color':'#fff4be','circle-stroke-width':2}});
     if(features.length){
       const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
       fitBoundsValue=[[Math.min(...xs),Math.min(...ys)],[Math.max(...xs),Math.max(...ys)]];
       m.fitBounds(fitBoundsValue,{padding:28,maxZoom:17.2,duration:0});
     }
-    document.getElementById('status').textContent=features.length.toLocaleString('ru-RU')+' игровых зданий · игровой схематичный режим';
+    document.getElementById('status').textContent=features.length.toLocaleString('ru-RU')+' точек зданий · контуры ещё не получены';
   });
 }
 (async()=>{try{
@@ -174,6 +193,16 @@ function renderPoints(data){
 }catch(e){console.error(e);if(e.message==='not_available')fail('Карта закрыта','Эта карта ещё не опубликована или у вашей учётной записи нет доступа к закрытому разделу карт.');else if(e.message==='invalid_key')fail('Неверная ссылка','В ссылке отсутствует корректный идентификатор карты.');else fail('Не удалось загрузить карту','Сервер карты временно недоступен. Попробуйте обновить страницу позже.')}})();
 document.getElementById('show-all').onclick=()=>{const all=selected.size===CRYSTALS.length;selected=all?new Set():new Set(CRYSTALS);document.querySelectorAll('#filters input').forEach(x=>x.checked=!all);if(mode==='full')refreshFullHighlight();else refreshPointHighlight()};
 document.getElementById('fit').onclick=()=>{if(map&&fitBoundsValue)map.fitBounds(fitBoundsValue,{padding:35,duration:250})};
+document.querySelectorAll('[data-only]').forEach(button=>button.onclick=()=>{
+  selected=new Set([button.dataset.only]);
+  document.querySelectorAll('#filters input').forEach(input=>input.checked=selected.has(input.value));
+  if(mode==='full')refreshFullHighlight();else refreshPointHighlight();
+});
+document.getElementById('collapse-panel').onclick=event=>{
+  const collapsed=document.getElementById('hud').classList.toggle('is-collapsed');
+  event.currentTarget.setAttribute('aria-expanded',String(!collapsed));
+  event.currentTarget.textContent=collapsed?'Показать фильтры':'Скрыть фильтры';
+};
 </script>
 <script src="../../assets/site-nav.js?v=20260920-11"></script>
 </body>
