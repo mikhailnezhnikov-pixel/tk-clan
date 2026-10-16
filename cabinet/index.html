@@ -622,7 +622,8 @@
         <article class="card cab-card">
           <h2>Активность клана</h2>
           <p id="activity-notice" class="muted"></p>
-          <label>Неделя (любой день) <input id="activity-week" type="date"></label>
+          <label>Год <select id="activity-year" aria-label="Год отчёта"></select></label>
+          <label>Неделя <select id="activity-week" aria-label="Номер недели"></select></label>
           <button type="button" id="activity-refresh">Обновить</button>
           <label>Минимум очков за неделю <input id="activity-min" type="number" min="0" placeholder="Не задан"></label>
           <p class="muted">В ячейке: вклад в навыки / куплено очков навыков клана. HK 1.18.160+ автоматически получает обе истории раз в сутки после 20:00 по Якутску при работающем скрипте. Если игра была закрыта — при следующем запуске. При 429 сбор откладывается минимум на час. Открывать и прокручивать историю не требуется. Множитель учитывается: ×15 + 3 покупки по 1 = 18. Личные очки навыков не включаются. «—» — нет данных; * — полнота недели не подтверждена. Отчёт за неделю: понедельник–воскресенье.</p>
@@ -2301,28 +2302,57 @@
 
   let activityData=null;
   const activityToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Yakutsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  function activityWeekMonday(year,number){
+    const jan4=new Date(Date.UTC(year,0,4));
+    jan4.setUTCDate(4-((jan4.getUTCDay()+6)%7)+(number-1)*7);
+    return jan4.toISOString().slice(0,10);
+  }
+  function activityWeekIdentity(day){
+    const d=new Date(day+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+3-((d.getUTCDay()+6)%7));
+    const year=d.getUTCFullYear();
+    return {year,number:1+Math.floor((Date.parse(day+'T00:00:00Z')-Date.parse(activityWeekMonday(year,1)+'T00:00:00Z'))/604800000)};
+  }
+  function activityWeekOptions(){
+    const year=Number($('activity-year').value),week=$('activity-week'),selected=week.value;
+    const count=activityWeekIdentity(year+'-12-28').number;
+    week.innerHTML=Array.from({length:count},(_,i)=>{
+      const monday=activityWeekMonday(year,i+1),end=new Date(monday+'T00:00:00Z');end.setUTCDate(end.getUTCDate()+6);
+      return '<option value="'+monday+'">'+(i+1)+'-я неделя · '+monday+' — '+end.toISOString().slice(0,10)+'</option>';
+    }).join('');
+    if([...week.options].some(o=>o.value===selected))week.value=selected;
+  }
+  function activityInitWeeks(){
+    if($('activity-year').options.length)return;
+    const current=activityWeekIdentity(activityToday());
+    $('activity-year').innerHTML=Array.from({length:11},(_,i)=>current.year-5+i).map(y=>'<option value="'+y+'">'+y+'</option>').join('');
+    $('activity-year').value=String(current.year);activityWeekOptions();
+    $('activity-week').value=activityWeekMonday(current.year,current.number);
+  }
   async function loadActivity(){
-    const week=$('activity-week'); if(!week.value)week.value=activityToday();
+    activityInitWeeks();const week=$('activity-week');
     try{
       activityData=await request('/activity?week='+encodeURIComponent(week.value));
       $('activity-notice').textContent=activityData.notice;
-      $('activity-head').innerHTML='<tr><th>Участник</th>'+activityData.days.map(d=>'<th>'+safe(d)+'</th>').join('')+'<th>Вклад / куплено очков клана · известный итог</th></tr>';
+      $('activity-head').innerHTML='<tr><th>Участник</th><th>Вклад в навыки за неделю</th><th>Куплено очков клана за неделю</th><th>Статус данных</th></tr>';
       $('activity-body').innerHTML=activityData.players.map(p=>{
         let points=0,ksp=0,known=0,kspKnown=0;
-        const cells=activityData.days.map(d=>{const r=p.days[d];if(r?.points!=null){points+=r.points;known++;}if(r?.ksp!=null){ksp+=r.ksp;kspKnown++;}return '<td>'+(r?.points??'—')+(r?.partial?'*':'')+' / '+(r?.ksp??'—')+(r?.purchase_partial?'*':'')+(r?.adjustments?' · изменения '+r.adjustments:'')+'</td>';}).join('');
-        return '<tr><td>'+safe(p.nickname)+'</td>'+cells+'<td>'+(known?points:'Нет данных')+' / '+(kspKnown?ksp:'Нет данных')+'<small> · данные: '+known+'/7 дней; * история неполная</small></td></tr>';
+        const rows=activityData.days.map(d=>p.days[d]);
+        let adjustments=0;
+        for(const r of rows){if(r?.points!=null){points+=r.points;known++;}if(r?.ksp!=null){ksp+=r.ksp;kspKnown++;}adjustments+=r?.adjustments||0;}
+        const partial=known<7||kspKnown<7||rows.some(r=>r?.partial||r?.purchase_partial);
+        return '<tr><td>'+safe(p.nickname)+'</td><td>'+(known?points:'Нет данных')+(adjustments?'<small> · изменения '+adjustments+'</small>':'')+'</td><td>'+(kspKnown?ksp:'Нет данных')+'</td><td>'+(partial?'По загруженной истории; полнота недели не подтверждена':'Полная неделя')+'</td></tr>';
       }).join('');
       $('activity-editor').hidden=!activityData.can_manage;
       $('activity-player').innerHTML=activityData.players.map(p=>'<option value="'+safe(p.player_id)+'">'+safe(p.nickname)+'</option>').join('');
       $('activity-day').value=activityToday();
-      $('activity-message').textContent='Загружено участников: '+activityData.players.length;
+      $('activity-message').textContent=activityWeekIdentity(activityData.week).number+'-я неделя '+$('activity-year').value+' · '+activityData.days[0]+' — '+activityData.days[6]+'. Участников: '+activityData.players.length;
     }catch(e){$('activity-message').textContent='Не удалось загрузить активность: '+e.message;}
   }
   function activityReport(reminders=false){
     if(!activityData)return;
     const raw=$('activity-min').value,minimum=raw===''?null:Number(raw);
     if(reminders&&(minimum===null||!Number.isFinite(minimum)||minimum<0)){$('activity-message').textContent='Укажите минимум очков за неделю.';return;}
-    const lines=[(reminders?'Напоминания':'Вклад в навыки клана')+' · '+activityData.days[0]+' — '+activityData.days[6],'Источник: история навыков игры / ручной учёт. История может быть неполной; пропуски не считаются нулями.'];
+    const lines=[(reminders?'Напоминания':'Недельный отчёт клана')+' · '+activityWeekIdentity(activityData.week).number+'-я неделя '+activityWeekIdentity(activityData.week).year+' · '+activityData.days[0]+' — '+activityData.days[6],'Источник: история навыков игры / ручной учёт. История может быть неполной; пропуски не считаются нулями.'];
     let incomplete=0;
     for(const p of activityData.players){
       const rows=activityData.days.map(d=>p.days[d]);
@@ -2330,12 +2360,14 @@
       const points=rows.reduce((n,r)=>n+(r?.points??0),0),ksp=rows.reduce((n,r)=>n+(r?.ksp??0),0);
       if(known<7||rows.some(r=>r?.partial))incomplete++;
       if(reminders&&(known<7||rows.some(r=>r?.partial)||points>=minimum))continue;
-      lines.push(p.nickname+': '+(known?points:'нет данных')+' (вклад в навыки); куплено очков клана '+(rows.some(r=>r?.ksp!=null)?ksp:'нет данных')+(rows.some(r=>r?.purchase_partial)?' (по загруженной истории)':'')+'; данные '+known+'/7 дней');
+      lines.push(p.nickname+': '+(known?points:'нет данных')+' (вклад в навыки за неделю); куплено очков клана '+(rows.some(r=>r?.ksp!=null)?ksp:'нет данных')+' (по загруженной истории)');
     }
     if(reminders&&incomplete)lines.push('Не оценены из-за неполных данных: '+incomplete+'.');
     $('activity-preview').value=lines.join('\n');
   }
   $('activity-refresh').onclick=loadActivity;
+  $('activity-year').onchange=()=>{activityWeekOptions();void loadActivity();};
+  $('activity-week').onchange=()=>{void loadActivity();};
   $('activity-report').onclick=()=>activityReport(false);
   $('activity-remind').onclick=()=>activityReport(true);
   $('activity-copy').onclick=async()=>{try{await navigator.clipboard.writeText($('activity-preview').value);$('activity-message').textContent='Текст скопирован.';}catch{$('activity-message').textContent='Скопируйте текст из предпросмотра вручную.';}};
