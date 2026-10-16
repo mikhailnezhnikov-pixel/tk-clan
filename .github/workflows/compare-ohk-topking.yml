@@ -1,0 +1,58 @@
+name: Read-only TopKing Feature Comparison
+on:
+  push:
+    paths:
+      - '.github/workflows/compare-ohk-topking.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect latest TopKing userscript without mutations
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,hashlib,json
+          paths=[
+            Path('deploy/topking/HamsterKingMobile.1.18.101.battle-bottom-hud.candidate.user.js'),
+            Path('baseline/topking/HamsterKingMobile.current.user.js')]
+          for path in paths:
+            s=path.read_text(encoding='utf-8')
+            print('FILE',str(path),'BYTES',len(s.encode()),'SHA256',hashlib.sha256(s.encode()).hexdigest())
+            print('HEADER',repr(s[:850]))
+          s=paths[0].read_text(encoding='utf-8')
+          lines=s.splitlines()
+          terms={
+            'crystal_event':'crystal_events_num|premEvents|showPrem',
+            'crystal_room':'room_count|buildingRooms|building_rooms|crystals',
+            'map_share':'MAP_API_BASE|/maps/list|/maps/detail|/maps/submit|maps-shared|sharedKnowledge',
+            'map_geometry':'MapLibre|maplibre|mapboxgl|GeoJSON|geojson|map.getLayer|setLayoutProperty|reactFiber',
+            'network_hooks':'XMLHttpRequest.prototype|\.fetch\s*=|unsafeWindow\.fetch|originalFetch|fetchHook|addEventListener\(\x27load',
+            'auth':'GM_getValue|GM_setValue|GM_xmlhttpRequest|@connect|@updateURL|@downloadURL',
+            'queues':'retry|Retry|backoff|queue|Queue|pending|receipt|Receipt|acknowledge',
+            'diagnostics':'reportError|errorLog|diagnostic|Diagnostic|status|STATUS',
+            'rumors':'RUMOR_API_BASE|runDailyRumors|rumors/search|Rumors Hunter|rumorsShared',
+            'shop':'runShop|shop|trader|Trader|exchange|Exchange',
+            'battle':'battle|Battle|autoFight|attack',
+            'version':'@version|checkUpdate|updateURL|latestVersion',
+            'city':'city_id|area_id|invest_building_list|invest_count'
+          }
+          for category,pat in terms.items():
+            hits=[(i+1,line.strip()[:200]) for i,line in enumerate(lines) if re.search(pat,line,re.I)]
+            print('\nCATEGORY',category,'TOTAL',len(hits))
+            if category in ['battle','shop','diagnostics','queues','city']:
+              hits=[h for h in hits if re.search(r'function|const\s+\w+\s*=|/api/|@|\bclass\b|\breturn\b',h[1])][:22]
+            else: hits=hits[:32]
+            for i,line in hits:print('  L',i,line)
+          names=[]
+          for i,line in enumerate(lines):
+            if re.search(r'(?:async\s+)?function\s+\w+|\bclass\s+\w+',line):
+              if re.search(r'map|crystal|rumor|shop|trade|battle|fetch|retry|queue|error|log|diagnostic|update|room|research|upload|share',line,re.I):
+                names.append((i+1,line.strip()[:145]))
+          print('\nSELECTED_FUNCTIONS',len(names))
+          for i,line in names[:180]:print('  L',i,line)
+          PY
