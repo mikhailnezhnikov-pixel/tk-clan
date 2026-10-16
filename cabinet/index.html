@@ -608,6 +608,7 @@
           <button class="cab-tab active" type="button" data-cab-tab="overview">Обзор</button>
           <button class="cab-tab" type="button" data-cab-tab="players">Статистика</button>
           <button class="cab-tab" type="button" data-cab-tab="clan-shop">Clan Shop</button>
+          <button class="cab-tab" type="button" data-cab-tab="activity">Активность</button>
         </div>
         <div class="cab-tab-group" data-cab-group="sections">
           <span class="cab-tab-group-label">Разделы</span>
@@ -617,6 +618,30 @@
         </div>
       </nav>
 
+      <section class="cab-panel" data-cab-panel="activity" hidden>
+        <article class="card cab-card">
+          <h2>Активность клана</h2>
+          <p id="activity-notice" class="muted"></p>
+          <label>Неделя (любой день) <input id="activity-week" type="date"></label>
+          <button type="button" id="activity-refresh">Обновить</button>
+          <label>Минимум очков за неделю <input id="activity-min" type="number" min="0" placeholder="Не задан"></label>
+          <p class="muted">В ячейке: очки активности / покупки KSP за день. «—» означает отсутствие данных. Просмотр доступен участникам кабинета; ввод — владельцу.</p>
+          <div style="overflow:auto"><table><thead id="activity-head"></thead><tbody id="activity-body"></tbody></table></div>
+          <fieldset id="activity-editor" hidden><legend>Ручной ввод за день (не накопительный итог)</legend>
+            <select id="activity-player" aria-label="Участник"></select>
+            <input id="activity-day" type="date" aria-label="День">
+            <input id="activity-points" type="number" min="0" placeholder="Очки за день">
+            <input id="activity-ksp" type="number" min="0" placeholder="Покупки KSP за день">
+            <button type="button" id="activity-save">Сохранить</button>
+          </fieldset>
+          <p id="activity-message" role="status"></p>
+          <button type="button" id="activity-report">Сформировать отчёт</button>
+          <button type="button" id="activity-remind">Кому напомнить</button>
+          <button type="button" id="activity-copy">Скопировать текст</button>
+          <button type="button" disabled title="Telegram-группа ещё не настроена">Опубликовать в TG — не настроено</button>
+          <textarea id="activity-preview" readonly rows="12" style="width:100%;margin-top:12px" aria-label="Предпросмотр отчёта"></textarea>
+        </article>
+      </section>
       <section class="cab-panel dashboard-grid" data-cab-panel="overview">
         <article class="card cab-card">
           <div class="accountline">
@@ -2274,6 +2299,52 @@
     loadSiteStats(true);
   });
 
+  let activityData=null;
+  const activityToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Yakutsk',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  async function loadActivity(){
+    const week=$('activity-week'); if(!week.value)week.value=activityToday();
+    try{
+      activityData=await request('/activity?week='+encodeURIComponent(week.value));
+      $('activity-notice').textContent=activityData.notice;
+      $('activity-head').innerHTML='<tr><th>Участник</th>'+activityData.days.map(d=>'<th>'+safe(d)+'</th>').join('')+'<th>Очки / KSP · известный итог</th></tr>';
+      $('activity-body').innerHTML=activityData.players.map(p=>{
+        let points=0,ksp=0,known=0;
+        const cells=activityData.days.map(d=>{const r=p.days[d];if(r?.points!=null){points+=r.points;known++;}if(r?.ksp!=null)ksp+=r.ksp;return '<td>'+(r?.points??'—')+' / '+(r?.ksp??'—')+'</td>';}).join('');
+        return '<tr><td>'+safe(p.nickname)+'</td>'+cells+'<td>'+points+' / '+ksp+'<small> · очки: '+known+'/7 дней</small></td></tr>';
+      }).join('');
+      $('activity-editor').hidden=!activityData.can_manage;
+      $('activity-player').innerHTML=activityData.players.map(p=>'<option value="'+safe(p.player_id)+'">'+safe(p.nickname)+'</option>').join('');
+      $('activity-day').value=activityToday();
+      $('activity-message').textContent='Загружено участников: '+activityData.players.length;
+    }catch(e){$('activity-message').textContent='Не удалось загрузить активность: '+e.message;}
+  }
+  function activityReport(reminders=false){
+    if(!activityData)return;
+    const raw=$('activity-min').value,minimum=raw===''?null:Number(raw);
+    if(reminders&&(minimum===null||!Number.isFinite(minimum)||minimum<0)){$('activity-message').textContent='Укажите минимум очков за неделю.';return;}
+    const lines=[(reminders?'Напоминания':'Активность клана')+' · '+activityData.days[0]+' — '+activityData.days[6],'Источник: ручной учёт. Пропуски не считаются нулями.'];
+    let incomplete=0;
+    for(const p of activityData.players){
+      const rows=activityData.days.map(d=>p.days[d]);
+      const known=rows.filter(r=>r?.points!=null).length;
+      const points=rows.reduce((n,r)=>n+(r?.points??0),0),ksp=rows.reduce((n,r)=>n+(r?.ksp??0),0);
+      if(known<7)incomplete++;
+      if(reminders&&(known<7||points>=minimum))continue;
+      lines.push(p.nickname+': '+points+' очк.; KSP '+ksp+'; данные '+known+'/7 дней');
+    }
+    if(reminders&&incomplete)lines.push('Не оценены из-за неполных данных: '+incomplete+'.');
+    $('activity-preview').value=lines.join('\n');
+  }
+  $('activity-refresh').onclick=loadActivity;
+  $('activity-report').onclick=()=>activityReport(false);
+  $('activity-remind').onclick=()=>activityReport(true);
+  $('activity-copy').onclick=async()=>{try{await navigator.clipboard.writeText($('activity-preview').value);$('activity-message').textContent='Текст скопирован.';}catch{$('activity-message').textContent='Скопируйте текст из предпросмотра вручную.';}};
+  $('activity-save').onclick=async()=>{
+    const player=activityData?.players.find(p=>p.player_id===$('activity-player').value);if(!player)return;
+    const button=$('activity-save');button.disabled=true;
+    try{await request('/activity/set',{method:'POST',body:JSON.stringify({...player,day:$('activity-day').value,points:$('activity-points').value,ksp:$('activity-ksp').value})});await loadActivity();}
+    catch(e){$('activity-message').textContent='Не сохранено: '+e.message;}finally{button.disabled=false;}
+  };
   function setCabTab(name,syncUrl=true){
     document.querySelectorAll('[data-cab-tab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.cabTab===name));
     document.querySelectorAll('[data-cab-panel]').forEach(panel=>panel.hidden=panel.dataset.cabPanel!==name);
@@ -2289,6 +2360,7 @@
       loadMapsIndex();
     }
     if(name==='clan-shop')loadClanShop();
+    if(name==='activity')loadActivity();
     if(name==='site-stats')loadSiteStats();
   }
 
@@ -2790,6 +2862,7 @@
       if(requested==='maps'&&currentMapsAccess)setCabTab('maps',false);
       else if(requested==='players')setCabTab('players',false);
       else if(requested==='clan-shop')setCabTab('clan-shop',false);
+      else if(requested==='activity')setCabTab('activity',false);
     }
   }
 
