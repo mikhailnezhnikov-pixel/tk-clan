@@ -2365,17 +2365,17 @@
       if(reminders){
         if(ksp>=minimum)continue;
         listed++;
-        lines.push(p.nickname+': учтено покупок '+ksp+' из '+minimum+'; до порога '+(minimum-ksp)+(purchaseIncomplete?' — проверить историю: полнота недели не подтверждена':' — напомнить о покупке'));
+        lines.push(p.nickname+'\n🛒 Куплено: '+ksp+' / '+minimum+'\n❗ Не хватает: '+(minimum-ksp)+(purchaseIncomplete?'\n⚠️ Полнота истории не подтверждена — проверить перед напоминанием.':''));
         continue;
       }
-      lines.push(p.nickname+': '+(known?points:'нет данных')+' (вклад в навыки за неделю); куплено очков клана '+(rows.some(r=>r?.ksp!=null)?ksp:'нет данных')+' (по загруженной истории)');
+      lines.push(p.nickname+'\nВклад в навыки: '+(known?points:'нет данных')+'\n🛒 Куплено: '+(rows.some(r=>r?.ksp!=null)?ksp:'нет данных')+' (по загруженной истории)');
     }
     if(reminders){
       if(!listed)lines.push('По загруженной истории все участники достигли порога покупок.');
       if(incomplete)lines.push('Неполная история отмечена отдельно: это кандидаты для проверки, а не подтверждённые недоплаты. 0 означает отсутствие учтённых покупок, не доказанное отсутствие покупок в игре.');
       $('activity-message').textContent='Ниже порога покупок: '+listed+'. Список сформирован ниже.';
     }
-    $('activity-preview').value=lines.join('\n');
+    $('activity-preview').value=lines.join('\n\n');
   }
   $('activity-refresh').onclick=loadActivity;
   $('activity-publish').onclick=async()=>{
