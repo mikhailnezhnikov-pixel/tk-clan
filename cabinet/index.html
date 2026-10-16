@@ -625,7 +625,7 @@
           <label>Неделя (любой день) <input id="activity-week" type="date"></label>
           <button type="button" id="activity-refresh">Обновить</button>
           <label>Минимум очков за неделю <input id="activity-min" type="number" min="0" placeholder="Не задан"></label>
-          <p class="muted">В ячейке: очки активности / покупки KSP за день. «—» означает отсутствие данных. Просмотр доступен участникам кабинета; ввод — владельцу.</p>
+          <p class="muted">В ячейке: положительный вклад в навыки / покупки KSP за день. Источник навыков: игра → Кланы → История → Навыки при запущенном HK. «—» означает отсутствие данных, не ноль. История может быть неполной.</p>
           <div style="overflow:auto"><table><thead id="activity-head"></thead><tbody id="activity-body"></tbody></table></div>
           <fieldset id="activity-editor" hidden><legend>Ручной ввод за день (не накопительный итог)</legend>
             <select id="activity-player" aria-label="Участник"></select>
@@ -2308,9 +2308,9 @@
       $('activity-notice').textContent=activityData.notice;
       $('activity-head').innerHTML='<tr><th>Участник</th>'+activityData.days.map(d=>'<th>'+safe(d)+'</th>').join('')+'<th>Очки / KSP · известный итог</th></tr>';
       $('activity-body').innerHTML=activityData.players.map(p=>{
-        let points=0,ksp=0,known=0;
-        const cells=activityData.days.map(d=>{const r=p.days[d];if(r?.points!=null){points+=r.points;known++;}if(r?.ksp!=null)ksp+=r.ksp;return '<td>'+(r?.points??'—')+' / '+(r?.ksp??'—')+'</td>';}).join('');
-        return '<tr><td>'+safe(p.nickname)+'</td>'+cells+'<td>'+points+' / '+ksp+'<small> · очки: '+known+'/7 дней</small></td></tr>';
+        let points=0,ksp=0,known=0,kspKnown=0;
+        const cells=activityData.days.map(d=>{const r=p.days[d];if(r?.points!=null){points+=r.points;known++;}if(r?.ksp!=null){ksp+=r.ksp;kspKnown++;}return '<td>'+(r?.points??'—')+(r?.partial?'*':'')+' / '+(r?.ksp??'—')+(r?.adjustments?' · изменения '+r.adjustments:'')+'</td>';}).join('');
+        return '<tr><td>'+safe(p.nickname)+'</td>'+cells+'<td>'+(known?points:'Нет данных')+' / '+(kspKnown?ksp:'Нет данных')+'<small> · данные: '+known+'/7 дней; * история неполная</small></td></tr>';
       }).join('');
       $('activity-editor').hidden=!activityData.can_manage;
       $('activity-player').innerHTML=activityData.players.map(p=>'<option value="'+safe(p.player_id)+'">'+safe(p.nickname)+'</option>').join('');
@@ -2322,15 +2322,15 @@
     if(!activityData)return;
     const raw=$('activity-min').value,minimum=raw===''?null:Number(raw);
     if(reminders&&(minimum===null||!Number.isFinite(minimum)||minimum<0)){$('activity-message').textContent='Укажите минимум очков за неделю.';return;}
-    const lines=[(reminders?'Напоминания':'Активность клана')+' · '+activityData.days[0]+' — '+activityData.days[6],'Источник: ручной учёт. Пропуски не считаются нулями.'];
+    const lines=[(reminders?'Напоминания':'Вклад в навыки клана')+' · '+activityData.days[0]+' — '+activityData.days[6],'Источник: история навыков игры / ручной учёт. История может быть неполной; пропуски не считаются нулями.'];
     let incomplete=0;
     for(const p of activityData.players){
       const rows=activityData.days.map(d=>p.days[d]);
       const known=rows.filter(r=>r?.points!=null).length;
       const points=rows.reduce((n,r)=>n+(r?.points??0),0),ksp=rows.reduce((n,r)=>n+(r?.ksp??0),0);
-      if(known<7)incomplete++;
-      if(reminders&&(known<7||points>=minimum))continue;
-      lines.push(p.nickname+': '+points+' очк.; KSP '+ksp+'; данные '+known+'/7 дней');
+      if(known<7||rows.some(r=>r?.partial))incomplete++;
+      if(reminders&&(known<7||rows.some(r=>r?.partial)||points>=minimum))continue;
+      lines.push(p.nickname+': '+(known?points:'нет данных')+' (вклад в навыки); KSP '+(rows.some(r=>r?.ksp!=null)?ksp:'нет данных')+'; данные '+known+'/7 дней');
     }
     if(reminders&&incomplete)lines.push('Не оценены из-за неполных данных: '+incomplete+'.');
     $('activity-preview').value=lines.join('\n');
