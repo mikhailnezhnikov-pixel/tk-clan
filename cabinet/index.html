@@ -2343,8 +2343,8 @@
         return '<tr><td>'+safe(p.nickname)+'</td><td>'+(known?points:'Нет данных')+(adjustments?'<small> · изменения '+adjustments+'</small>':'')+'</td><td>'+(kspKnown?ksp:'Нет данных')+'</td><td>'+(partial?'По загруженной истории; полнота недели не подтверждена':'Полная неделя')+'</td></tr>';
       }).join('');
       $('activity-editor').hidden=!activityData.can_manage;
-      $('activity-publish').disabled=!activityData.telegram_ready||!activityData.can_manage;
-      $('activity-publish').title=!activityData.telegram_ready?'Тема Telegram ещё не настроена':!activityData.can_manage?'Публикация доступна владельцу кабинета':'Публикация в настроенную тему группы';
+      $('activity-publish').disabled=!activityData.telegram_ready||!activityData.can_publish;
+      $('activity-publish').title=!activityData.telegram_ready?'Тема Telegram ещё не настроена':!activityData.can_publish?'Публикация доступна владельцу и участникам с полным доступом':'Публикация в настроенную тему группы';
       $('activity-player').innerHTML=activityData.players.map(p=>'<option value="'+safe(p.player_id)+'">'+safe(p.nickname)+'</option>').join('');
       $('activity-day').value=activityToday();
       $('activity-message').textContent=activityWeekIdentity(activityData.week).number+'-я неделя '+$('activity-year').value+' · '+activityData.days[0]+' — '+activityData.days[6]+'. Участников: '+activityData.players.length;
@@ -2379,7 +2379,7 @@
   }
   $('activity-refresh').onclick=loadActivity;
   $('activity-publish').onclick=async()=>{
-    if(!activityData?.telegram_ready||!activityData?.can_manage)return;
+    if(!activityData?.telegram_ready||!activityData?.can_publish)return;
     if(!$('activity-preview').value.trim())activityReport(false);
     const text=$('activity-preview').value.trim();
     if(!text)return;
