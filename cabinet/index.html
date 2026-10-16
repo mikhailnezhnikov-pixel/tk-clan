@@ -625,7 +625,7 @@
           <label>Неделя (любой день) <input id="activity-week" type="date"></label>
           <button type="button" id="activity-refresh">Обновить</button>
           <label>Минимум очков за неделю <input id="activity-min" type="number" min="0" placeholder="Не задан"></label>
-          <p class="muted">В ячейке: положительный вклад в навыки / покупки KSP за день. Источник навыков: игра → Кланы → История → Навыки при запущенном HK. «—» означает отсутствие данных, не ноль. История может быть неполной.</p>
+          <p class="muted">В ячейке: вклад в навыки / куплено очков навыков клана. Источник: игра → Кланы → История → Навыки и Магазин при запущенном HK. Множитель учитывается: ×15 + 3 покупки по 1 = 18. Личные очки навыков не включаются. «—» — нет данных; * — история может быть неполной. Отчёт за неделю: понедельник–воскресенье.</p>
           <div style="overflow:auto"><table><thead id="activity-head"></thead><tbody id="activity-body"></tbody></table></div>
           <fieldset id="activity-editor" hidden><legend>Ручной ввод за день (не накопительный итог)</legend>
             <select id="activity-player" aria-label="Участник"></select>
@@ -2306,10 +2306,10 @@
     try{
       activityData=await request('/activity?week='+encodeURIComponent(week.value));
       $('activity-notice').textContent=activityData.notice;
-      $('activity-head').innerHTML='<tr><th>Участник</th>'+activityData.days.map(d=>'<th>'+safe(d)+'</th>').join('')+'<th>Очки / KSP · известный итог</th></tr>';
+      $('activity-head').innerHTML='<tr><th>Участник</th>'+activityData.days.map(d=>'<th>'+safe(d)+'</th>').join('')+'<th>Вклад / куплено очков клана · известный итог</th></tr>';
       $('activity-body').innerHTML=activityData.players.map(p=>{
         let points=0,ksp=0,known=0,kspKnown=0;
-        const cells=activityData.days.map(d=>{const r=p.days[d];if(r?.points!=null){points+=r.points;known++;}if(r?.ksp!=null){ksp+=r.ksp;kspKnown++;}return '<td>'+(r?.points??'—')+(r?.partial?'*':'')+' / '+(r?.ksp??'—')+(r?.adjustments?' · изменения '+r.adjustments:'')+'</td>';}).join('');
+        const cells=activityData.days.map(d=>{const r=p.days[d];if(r?.points!=null){points+=r.points;known++;}if(r?.ksp!=null){ksp+=r.ksp;kspKnown++;}return '<td>'+(r?.points??'—')+(r?.partial?'*':'')+' / '+(r?.ksp??'—')+(r?.purchase_partial?'*':'')+(r?.adjustments?' · изменения '+r.adjustments:'')+'</td>';}).join('');
         return '<tr><td>'+safe(p.nickname)+'</td>'+cells+'<td>'+(known?points:'Нет данных')+' / '+(kspKnown?ksp:'Нет данных')+'<small> · данные: '+known+'/7 дней; * история неполная</small></td></tr>';
       }).join('');
       $('activity-editor').hidden=!activityData.can_manage;
@@ -2330,7 +2330,7 @@
       const points=rows.reduce((n,r)=>n+(r?.points??0),0),ksp=rows.reduce((n,r)=>n+(r?.ksp??0),0);
       if(known<7||rows.some(r=>r?.partial))incomplete++;
       if(reminders&&(known<7||rows.some(r=>r?.partial)||points>=minimum))continue;
-      lines.push(p.nickname+': '+(known?points:'нет данных')+' (вклад в навыки); KSP '+(rows.some(r=>r?.ksp!=null)?ksp:'нет данных')+'; данные '+known+'/7 дней');
+      lines.push(p.nickname+': '+(known?points:'нет данных')+' (вклад в навыки); куплено очков клана '+(rows.some(r=>r?.ksp!=null)?ksp:'нет данных')+(rows.some(r=>r?.purchase_partial)?' (по загруженной истории)':'')+'; данные '+known+'/7 дней');
     }
     if(reminders&&incomplete)lines.push('Не оценены из-за неполных данных: '+incomplete+'.');
     $('activity-preview').value=lines.join('\n');
