@@ -56,3 +56,28 @@ jobs:
           print('\nSELECTED_FUNCTIONS',len(names))
           for i,line in names[:180]:print('  L',i,line)
           PY
+      - name: Inspect precise matching code paths
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          lines=Path('deploy/topking/HamsterKingMobile.1.18.101.battle-bottom-hud.candidate.user.js').read_text().splitlines()
+          spans=[
+            (1801,1830,'room metrics'),
+            (2040,2100,'building study and shared maps'),
+            (2580,2615,'exploration investments'),
+            (4800,4895,'network hooks'),
+            (11095,11155,'shop rate limit'),
+            (13360,13410,'server api retries'),
+            (13465,13492,'map shared settings'),
+            (13605,13685,'shared map prefetch'),
+            (13705,13760,'map upload'),
+            (11515,11540,'rumor server'),
+            (12105,12145,'rumor progress'),
+          ]
+          for a,b,title in spans:
+            print('=== '+title+' '+str(a)+'-'+str(b)+' ===')
+            for i in range(a,b+1):
+              line=lines[i-1]
+              if 'Authorization' in line or 'Bearer ' in line or 'TOKEN=' in line: continue
+              print(str(i)+': '+line[:240])
+          PY
