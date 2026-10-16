@@ -639,7 +639,7 @@
           <button type="button" id="activity-report">Сформировать отчёт</button>
           <button type="button" id="activity-remind">Кому напомнить</button>
           <button type="button" id="activity-copy">Скопировать текст</button>
-          <button type="button" disabled title="Telegram-группа ещё не настроена">Опубликовать в TG — не настроено</button>
+          <button type="button" id="activity-publish" disabled>Опубликовать в TG</button>
           <textarea id="activity-preview" readonly rows="12" style="width:100%;margin-top:12px" aria-label="Предпросмотр отчёта"></textarea>
         </article>
       </section>
@@ -2343,6 +2343,8 @@
         return '<tr><td>'+safe(p.nickname)+'</td><td>'+(known?points:'Нет данных')+(adjustments?'<small> · изменения '+adjustments+'</small>':'')+'</td><td>'+(kspKnown?ksp:'Нет данных')+'</td><td>'+(partial?'По загруженной истории; полнота недели не подтверждена':'Полная неделя')+'</td></tr>';
       }).join('');
       $('activity-editor').hidden=!activityData.can_manage;
+      $('activity-publish').disabled=!activityData.telegram_ready||!activityData.can_manage;
+      $('activity-publish').title=!activityData.telegram_ready?'Тема Telegram ещё не настроена':!activityData.can_manage?'Публикация доступна владельцу кабинета':'Публикация в настроенную тему группы';
       $('activity-player').innerHTML=activityData.players.map(p=>'<option value="'+safe(p.player_id)+'">'+safe(p.nickname)+'</option>').join('');
       $('activity-day').value=activityToday();
       $('activity-message').textContent=activityWeekIdentity(activityData.week).number+'-я неделя '+$('activity-year').value+' · '+activityData.days[0]+' — '+activityData.days[6]+'. Участников: '+activityData.players.length;
@@ -2376,6 +2378,18 @@
     $('activity-preview').value=lines.join('\n');
   }
   $('activity-refresh').onclick=loadActivity;
+  $('activity-publish').onclick=async()=>{
+    if(!activityData?.telegram_ready||!activityData?.can_manage)return;
+    if(!$('activity-preview').value.trim())activityReport(false);
+    const text=$('activity-preview').value.trim();
+    if(!text)return;
+    if(text.length>12000){$('activity-message').textContent='Отчёт длиннее 12000 символов. Сократите текст перед публикацией.';return;}
+    if(!confirm('Опубликовать текст из предпросмотра в теме Telegram группы Top King?'))return;
+    const button=$('activity-publish');button.disabled=true;
+    try{await request('/activity/publish',{method:'POST',body:JSON.stringify({text})});$('activity-message').textContent='Отчёт опубликован в теме Telegram.';}
+    catch(e){$('activity-message').textContent='Публикация не подтверждена: '+e.message;}
+    finally{button.disabled=false;}
+  };
   $('activity-year').onchange=()=>{activityWeekOptions();void loadActivity();};
   $('activity-week').onchange=()=>{void loadActivity();};
   $('activity-report').onclick=()=>activityReport(false);
