@@ -172,9 +172,15 @@
     .hkmap-tools{display:flex;align-items:center;gap:10px;margin:16px 0 12px}
     .hkmap-tools input{width:min(460px,100%);min-width:0}
     .hkmap-count{color:var(--muted);font-size:12px;white-space:nowrap}
-    .hkmap-table-wrap{overflow:auto;max-height:68vh;border:1px solid rgba(255,255,255,.09);border-radius:16px;background:rgba(8,11,16,.48)}
-    .hkmap-table{width:100%;min-width:1250px;border-collapse:collapse;font-variant-numeric:tabular-nums}
-    .hkmap-table th,.hkmap-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.065);text-align:right;white-space:nowrap;font-size:12px}
+    .hkmap-table-wrap{overflow:visible;border:1px solid rgba(255,255,255,.09);border-radius:12px;background:rgba(8,11,16,.48)}
+    .hkmap-table{width:100%;table-layout:fixed;border-collapse:collapse;font-variant-numeric:tabular-nums}
+    .hkmap-table th,.hkmap-table td{padding:6px 3px;border-bottom:1px solid rgba(255,255,255,.065);text-align:right;white-space:normal;overflow-wrap:anywhere;font-size:10px;line-height:1.35}
+    .hkmap-table th:first-child{width:13%}.hkmap-table th:nth-last-child(-n+2){width:8%}
+    .hkmap-table .hkmap-open{font-size:10px;padding:4px}.hkmap-table .hkmap-progress{font-size:10px;padding:3px}
+    .hkmap-authors{position:relative;margin-top:2px;font-size:9px;text-align:left}
+    .hkmap-authors summary{cursor:pointer;color:#aebbc9;white-space:nowrap}
+    .hkmap-authors div{position:absolute;top:100%;left:0;z-index:20;width:min(420px,70vw);box-sizing:border-box;padding:10px;border:1px solid #495361;border-radius:8px;background:#141a23;color:#dde4ed;font-size:12px;line-height:1.7;white-space:normal;overflow-wrap:anywhere;box-shadow:0 6px 20px #0008}
+    .hkmap-pages{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0;font-size:12px}.hkmap-pages button{padding:5px 10px}
     .hkmap-table th{position:sticky;top:0;z-index:2;background:#0d1118;color:#c7a75f;cursor:pointer;user-select:none}
     .hkmap-table th:first-child,.hkmap-table td:first-child{text-align:left}
     .hkmap-table th[data-sort-direction="asc"]:after{content:" ▲";color:#ffe0a0}
@@ -907,28 +913,29 @@
             <span id="hkmap-count" class="hkmap-count"></span>
           </div>
           <p id="hkmap-message" class="message" role="status" aria-live="polite"></p>
+          <div id="hkmap-pages" class="hkmap-pages"></div>
 
           <div class="hkmap-table-wrap">
             <table class="hkmap-table">
               <thead>
                 <tr>
-                  <th data-hkmap-sort="city">City</th>
+                  <th data-hkmap-sort="city">Город</th>
                   <th data-hkmap-sort="grid">Y:X</th>
-                  <th data-hkmap-sort="invest">Invest</th>
-                  <th data-hkmap-sort="buildings">Buildings</th>
-                  <th data-hkmap-sort="unknown">Unknown</th>
+                  <th data-hkmap-sort="invest" title="Инвестиционные здания">Инв.</th>
+                  <th data-hkmap-sort="buildings">Здания</th>
+                  <th data-hkmap-sort="unknown" title="Не исследовано">Неизв.</th>
                   <th data-hkmap-sort="c0">0</th>
                   <th data-hkmap-sort="c1">1</th>
                   <th data-hkmap-sort="c2">2</th>
                   <th data-hkmap-sort="c3">3</th>
                   <th data-hkmap-sort="c4">4</th>
                   <th data-hkmap-sort="c5">5</th>
-                  <th data-hkmap-sort="eventBuildings">Buildings with events</th>
-                  <th data-hkmap-sort="totalEvents">Total crystal events</th>
-                  <th data-hkmap-sort="progress">Progress</th>
-                  <th data-hkmap-sort="score" data-sort-direction="desc">Score</th>
-                  <th>Доступ к карте</th>
-                  <th>Публикация</th>
+                  <th data-hkmap-sort="eventBuildings" title="Здания с кристальными комнатами">С ◆</th>
+                  <th data-hkmap-sort="totalEvents" title="Всего кристальных комнат">Всего ◆</th>
+                  <th data-hkmap-sort="progress">Прогр.</th>
+                  <th data-hkmap-sort="score" data-sort-direction="desc">Балл</th>
+                  <th>Карта</th>
+                  <th>Публ.</th>
                 </tr>
               </thead>
               <tbody id="hkmap-body"></tbody>
@@ -1433,11 +1440,13 @@
     }
   }
 
+  let hkMapsPage=0,hkMapsLastQuery='';
   function renderMapsIndex(){
     const body=$('hkmap-body');
     if(!body)return;
     const source=hkMapsData();
     const query=String($('hkmap-search')?.value||'').trim().toLowerCase();
+    if(query!==hkMapsLastQuery){hkMapsPage=0;hkMapsLastQuery=query;}
     const filtered=source.filter(map=>{
       if(!query)return true;
       return (map.city+' '+map.grid+' '+(map.canonical_grid||'')+' '+map.key+' '+(map.source_label||'')).toLowerCase().includes(query);
@@ -1463,7 +1472,9 @@
       }
     });
 
-    body.innerHTML=filtered.map(map=>{
+    const pageSize=12,pages=Math.max(1,Math.ceil(filtered.length/pageSize));hkMapsPage=Math.max(0,Math.min(hkMapsPage,pages-1));
+    $('hkmap-pages').innerHTML='<button type="button" data-hkmap-page="-1" '+(!hkMapsPage?'disabled':'')+'>←</button><span>Страница '+(hkMapsPage+1)+' / '+pages+'</span><button type="button" data-hkmap-page="1" '+(hkMapsPage>=pages-1?'disabled':'')+'>→</button>';
+    body.innerHTML=filtered.slice(hkMapsPage*pageSize,(hkMapsPage+1)*pageSize).map(map=>{
       const opened=hkMapOpenKey===map.key;
       const sourceKind=String(map.source_kind||'website');
       const sourceLabel=String(map.source_label||'Сайт');
@@ -1485,7 +1496,7 @@
           : (map.published?'<span class="hkmap-published">На сайте</span>':'<span class="hkmap-private">Закрыта</span>'));
       const progressClass=Number(map.progress)===100?' ready':'';
       const mergedVariants=Math.max(1,Number(map.localized_variant_count||1));
-      const sourceBadge='<small style="display:block;margin-top:3px;opacity:.7">'+safe(sourceLabel)+(mergedVariants>1?' · объединено источников: '+mergedVariants:'')+'</small>';
+      const sourceBadge='<details class="hkmap-authors"><summary>Считали ▾</summary><div>'+safe(sourceLabel)+(mergedVariants>1?' · объединено источников: '+mergedVariants:'')+'</div></details>';
       return '<tr class="hkmap-row access-'+safe(accessState)+(opened?' is-open':'')+'" data-hkmap-key="'+safe(map.key)+'">'+
         '<td><strong>'+safe(map.city)+'</strong>'+sourceBadge+'</td>'+
         '<td>'+safe(map.grid)+(map.canonical_grid&&map.canonical_grid!==map.grid?'<small style="display:block;opacity:.65">X:Y '+safe(map.canonical_grid)+'</small>':'')+'</td>'+
@@ -1511,9 +1522,11 @@
   }
 
   document.addEventListener('click',event=>{
+    const page=event.target.closest('[data-hkmap-page]');if(page){hkMapsPage+=Number(page.dataset.hkmapPage);renderMapsIndex();return;}
     if(event.target.closest('[data-hkmap-access-control]'))event.stopPropagation();
     const sort=event.target.closest('[data-hkmap-sort]');
     if(sort){
+      hkMapsPage=0;
       const key=sort.dataset.hkmapSort;
       if(hkMapsSort.key===key)hkMapsSort.dir*=-1;
       else hkMapsSort={key,dir:key==='city'||key==='grid'?1:-1};
@@ -1521,7 +1534,7 @@
       return;
     }
     const row=event.target.closest('[data-hkmap-key]');
-    if(row&&!event.target.closest('a,.hkmap-open,.hkmap-toggle,input')){
+    if(row&&!event.target.closest('a,.hkmap-open,.hkmap-toggle,input,.hkmap-authors')){
       hkMapOpenKey=hkMapOpenKey===row.dataset.hkmapKey?'':row.dataset.hkmapKey;
       renderMapsIndex();
     }
