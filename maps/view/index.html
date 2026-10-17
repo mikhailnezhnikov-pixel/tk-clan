@@ -130,7 +130,8 @@ function renderFull(full){
     document.getElementById('status').textContent=game.toLocaleString('ru-RU')+' игровых зданий · полный контурный режим';
   });
 }
-function decodePoints(flat){let lng=0,lat=0;const out=[];for(let i=0;i+2<(flat||[]).length;i+=3){lng+=Number(flat[i])||0;lat+=Number(flat[i+1])||0;const flag=Number(flat[i+2])||0;const investment=Boolean(flag&0x08);const crystals=flag&0x07;out.push([lng/1e5,lat/1e5,crystals,investment])}return out}
+// IMPORT_INVESTMENT_SENTINEL_R2: packed 7 is an investment, not seven rooms.
+function decodePoints(flat){let lng=0,lat=0;const out=[];for(let i=0;i+2<(flat||[]).length;i+=3){lng+=Number(flat[i])||0;lat+=Number(flat[i+1])||0;const flag=Number(flat[i+2])||0;const raw=flag&0x07;const investment=Boolean(flag&0x08)||raw===7;const crystals=raw===7?null:raw;out.push([lng/1e5,lat/1e5,crystals,investment])}return out}
 function pointSchematicFeatures(pts){
   if(!pts.length)return[];
   const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
@@ -145,7 +146,7 @@ function pointSchematicFeatures(pts){
     const hx=halfLon*(1+wobble),hy=halfLat*(1-wobble*.6);
     return {type:'Feature',id:i,geometry:{type:'Polygon',coordinates:[[
       [lon-hx,lat-hy],[lon+hx,lat-hy],[lon+hx,lat+hy],[lon-hx,lat+hy],[lon-hx,lat-hy]
-    ]]},properties:{crystals,crystals_key:crystals<0?'NULL':String(crystals),investment}};
+    ]]},properties:{crystals,crystals_key:crystals==null||crystals<0?'NULL':String(crystals),investment}};
   });
 }
 function pointSchematicColorExpression(){
@@ -161,11 +162,11 @@ function renderPoints(data){
   mode='points';
   document.getElementById('legend').textContent='Игровая схема построена только по данным Hamster King. Обычная уличная карта отключена; при наличии полного контурного пакета он включается автоматически.';
   const pts=decodePoints(data.points||[]),counts=Object.fromEntries(CRYSTALS.map(v=>[v,0]));
-  pts.forEach(p=>{const k=p[2]<0?'NULL':String(p[2]);if(k in counts)counts[k]++});
+  pts.forEach(p=>{const k=p[2]==null||p[2]<0?'NULL':String(p[2]);if(k in counts)counts[k]++});
   selected.clear();
   document.getElementById('filters').innerHTML=CRYSTALS.map(v=>'<label class="filter"><span><input type="checkbox" value="'+v+'"><i class="dot" style="background:'+DOTS[v]+'"></i>'+LABELS[v]+'</span><b class="count">'+(counts[v]||0).toLocaleString('ru-RU')+'</b></label>').join('');
   // Coordinates without footprints are points, not invented buildings.
-  const features=pts.map((p,i)=>({type:'Feature',id:i,geometry:{type:'Point',coordinates:[p[0],p[1]]},properties:{crystals:p[2],crystals_key:p[2]<0?'NULL':String(p[2]),investment:p[3]}}));
+  const features=pts.map((p,i)=>({type:'Feature',id:i,geometry:{type:'Point',coordinates:[p[0],p[1]]},properties:{crystals:p[2],crystals_key:p[2]==null||p[2]<0?'NULL':String(p[2]),investment:p[3]}}));
   const collection={type:'FeatureCollection',features};
   const m=newMap(baseStyle('#423F42'));
   document.querySelectorAll('#filters input').forEach(input=>input.addEventListener('change',()=>{input.checked?selected.add(input.value):selected.delete(input.value);refreshPointHighlight()}));
