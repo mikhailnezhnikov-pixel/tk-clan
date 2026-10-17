@@ -174,7 +174,8 @@
     .hkmap-count{color:var(--muted);font-size:12px;white-space:nowrap}
     .hkmap-table-wrap{overflow:visible;border:1px solid rgba(255,255,255,.09);border-radius:12px;background:rgba(8,11,16,.48)}
     .hkmap-table{width:100%;table-layout:fixed;border-collapse:collapse;font-variant-numeric:tabular-nums}
-    .hkmap-table th,.hkmap-table td{padding:6px 3px;border-bottom:1px solid rgba(255,255,255,.065);text-align:right;white-space:normal;overflow-wrap:anywhere;font-size:10px;line-height:1.35}
+    .hkmap-table th,.hkmap-table td{padding:6px 3px;border-bottom:1px solid rgba(255,255,255,.065);text-align:right;white-space:nowrap;overflow-wrap:normal;font-size:10px;line-height:1.35}
+    .hkmap-table td:first-child{white-space:normal}
     .hkmap-table th:first-child{width:13%}.hkmap-table th:nth-last-child(-n+2){width:8%}
     .hkmap-table .hkmap-open{font-size:10px;padding:4px}.hkmap-table .hkmap-progress{font-size:10px;padding:3px}
     .hkmap-authors{position:relative;margin-top:2px;font-size:9px;text-align:left}
@@ -567,6 +568,26 @@
     .site-analytics-day:hover::after{content:attr(data-label);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:5px 7px;border-radius:7px;background:#111722;color:#fff;font-size:11px;z-index:3}
     @media(max-width:760px){.site-analytics-grid{grid-template-columns:1fr 1fr}.site-analytics-kpi:last-child{grid-column:1/-1}.site-analytics-layout{grid-template-columns:1fr}.site-analytics-bar{grid-template-columns:minmax(80px,1fr) minmax(70px,1.5fr) auto}}
     @media(max-width:430px){.site-analytics-grid{grid-template-columns:1fr}.site-analytics-kpi:last-child{grid-column:auto}}
+    /* MOBILE_MAP_CARDS_R1: readable values instead of 17 squeezed columns. */
+    @media(max-width:680px){
+      .cab-tabs{position:static;display:flex;flex-direction:column;gap:4px;padding:5px;margin-bottom:12px}
+      .cab-tab-group{display:flex;gap:3px;padding:3px;overflow-x:auto}
+      .cab-tab-group-label{display:none}
+      .cab-tab{flex:1;min-width:60px;min-height:36px;padding:7px 4px;font-size:11px;white-space:nowrap}
+      .hkmap-table,.hkmap-table tbody{display:block;width:100%}
+      .hkmap-table thead{display:none}
+      .hkmap-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px;border-bottom:1px solid #ffffff20}
+      .hkmap-table .hkmap-row td{display:flex;flex-direction:column;align-items:flex-start;min-width:0;padding:0;border:0;text-align:left;font-size:14px;line-height:1.4;white-space:nowrap;overflow-wrap:normal}
+      .hkmap-row td:before{content:attr(data-label);font-size:10px;color:#b7a77e;line-height:1.4;white-space:normal}
+      .hkmap-table .hkmap-row td:first-child{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;white-space:normal;font-size:15px}
+      .hkmap-row td:first-child:before{display:none}
+      .hkmap-row td:first-child strong{overflow-wrap:normal}
+      .hkmap-table .hkmap-open{font-size:12px;padding:6px 8px;white-space:nowrap}
+      .hkmap-table .hkmap-progress{font-size:12px;padding:4px 6px}
+      .hkmap-table .hkmap-toggle{font-size:11px;white-space:normal}
+      .hkmap-authors{font-size:11px}.hkmap-authors div{left:auto;right:0;width:min(300px,80vw)}
+      .hkmap-detail,.hkmap-detail>td{display:block;width:100%;box-sizing:border-box}
+    }
     @media(prefers-reduced-motion:reduce){.loading{animation:none}.expand-mark{transition:none}}
   </style>
   <link rel="icon" type="image/png" href="../assets/brand/topking-clan-crest.png">
@@ -1498,18 +1519,18 @@
       const mergedVariants=Math.max(1,Number(map.localized_variant_count||1));
       const sourceBadge='<details class="hkmap-authors"><summary>Считали ▾</summary><div>'+safe(sourceLabel)+(mergedVariants>1?' · объединено источников: '+mergedVariants:'')+'</div></details>';
       return '<tr class="hkmap-row access-'+safe(accessState)+(opened?' is-open':'')+'" data-hkmap-key="'+safe(map.key)+'">'+
-        '<td><strong>'+safe(map.city)+'</strong>'+sourceBadge+'</td>'+
-        '<td>'+safe(map.grid)+(map.canonical_grid&&map.canonical_grid!==map.grid?'<small style="display:block;opacity:.65">X:Y '+safe(map.canonical_grid)+'</small>':'')+'</td>'+
-        '<td>'+formatNumber(map.invest)+'</td>'+
-        '<td>'+formatNumber(map.buildings)+'</td>'+
-        '<td>'+formatNumber(map.unknown)+'</td>'+
-        map.crystals.map(value=>'<td>'+formatNumber(value)+'</td>').join('')+
-        '<td>'+formatNumber(map.eventBuildings)+'</td>'+
-        '<td>'+formatNumber(map.totalEvents)+'</td>'+
-        '<td><span class="hkmap-progress'+progressClass+'">'+Number(map.progress).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%</span></td>'+
-        '<td><strong>'+formatNumber(map.score)+'</strong></td>'+
-        '<td>'+openControl+'</td>'+
-        '<td>'+publishControl+'</td>'+
+        '<td data-label="Город"><strong>'+safe(map.city)+'</strong>'+sourceBadge+'</td>'+
+        '<td data-label="Координаты">'+safe(map.grid)+(map.canonical_grid&&map.canonical_grid!==map.grid?'<small style="display:block;opacity:.65">X:Y '+safe(map.canonical_grid)+'</small>':'')+'</td>'+
+        '<td data-label="Инвестиции">'+formatNumber(map.invest)+'</td>'+
+        '<td data-label="Здания">'+formatNumber(map.buildings)+'</td>'+
+        '<td data-label="Не исследовано">'+formatNumber(map.unknown)+'</td>'+
+        map.crystals.map((value,index)=>'<td data-label="'+index+' ◆">'+formatNumber(value)+'</td>').join('')+
+        '<td data-label="Здания с ◆">'+formatNumber(map.eventBuildings)+'</td>'+
+        '<td data-label="Всего комнат ◆">'+formatNumber(map.totalEvents)+'</td>'+
+        '<td data-label="Исследовано"><span class="hkmap-progress'+progressClass+'">'+Number(map.progress).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%</span></td>'+
+        '<td data-label="Рейтинг"><strong>'+formatNumber(map.score)+'</strong></td>'+
+        '<td data-label="Карта">'+openControl+'</td>'+
+        '<td data-label="Публикация">'+publishControl+'</td>'+
       '</tr>'+
       (opened
         ? '<tr class="hkmap-detail"><td colspan="17"><div class="hkmap-detail-box">'+
