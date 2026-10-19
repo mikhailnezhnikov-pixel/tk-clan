@@ -41,7 +41,7 @@ body{font-family:Inter,Arial,sans-serif;color:#eef2f7;overflow:hidden}
 <script>
 const API='https://hk-license.89.125.1.71.sslip.io/api/v1',TOKEN_KEY='tk_clan_cabinet_session',key=new URLSearchParams(location.search).get('key')||'';
 const CRYSTALS=['NULL','0','1','2','3','4','5','6','7'];
-const LABELS={'NULL':'Не исслед.','0':'0 крист.','1':'1 крист.','2':'2 крист.','3':'3 крист.','4':'4 крист.','5':'5 крист.','6':'6 крист.','7':'7 крист.'};
+const LABELS={'NULL':'Не исслед.','0':'0 💎','1':'1 💎','2':'2 💎','3':'3 💎','4':'4 💎','5':'5 💎','6':'6 💎','7':'7 💎'};
 const DOTS={'NULL':'#8b8b80','0':'#ff5c5c','1':'#ffd84a','2':'#ff9a3d','3':'#c238ff','4':'#35e875','5':'#55d7ff','6':'#5ad6c7','7':'#f0f0f0'};
 let map=null,payload=null,mode='points',selected=new Set(),fitBoundsValue=null;
 function fail(title,text){document.getElementById('error-title').textContent=title;document.getElementById('error-text').textContent=text;document.getElementById('error').classList.remove('hidden')}
