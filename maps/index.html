@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080b11">
 <title>Интерактивные карты — Top King</title>
-<meta name="description" content="Общедоступные интерактивные карты Hamster King с фильтром по городам и сортировкой по количеству кристальных комнат.">
+<meta name="description" content="Общедоступные интерактивные карты Hamster King с фильтром по городам и сортировкой по сумме алмазов: 120 за кристальную комнату.">
 <link rel="stylesheet" href="../assets/public.css?v=20260924-backdrop4">
 <link rel="icon" href="../assets/brand/topking-clan-crest.png">
 <style>
@@ -11,7 +11,7 @@
 </style></head>
 <body>
 <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="../" aria-label="Top King"><img class="tk-clan-crest" src="../assets/brand/topking-clan-crest.png" alt="Top King"></a><nav class="nav"><a href="../">Главная</a><a class="active" href="./">Карты</a><a href="../cabinet/">Личный кабинет</a></nav></div></header>
-<main><header class="shell page-head"><p class="eyebrow">HAMSTER KING</p><h1>Интерактивные карты</h1><p class="lead">Только карты, опубликованные для общего доступа. По умолчанию — сначала районы с наибольшим количеством кристальных комнат.</p></header>
+<main><header class="shell page-head"><p class="eyebrow">HAMSTER KING</p><h1>Интерактивные карты</h1><p class="lead">Только карты, опубликованные для общего доступа. Сначала районы с наибольшей суммой алмазов: каждая кристальная комната даёт 120 💎.</p></header>
 <section class="shell content"><div class="map-controls">
 <label>Город<select id="map-city"><option value="">Все города</option></select></label>
 <label>Сортировка<select id="map-sort"><option value="diamonds-desc">💎 От большего к меньшему</option><option value="diamonds-asc">💎 От меньшего к большему</option><option value="city">По городам</option></select></label>
@@ -22,6 +22,9 @@ const MAPS_API='https://hk-license.89.125.1.71.sslip.io/api/v1/public/maps';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=value=>Number(value||0).toLocaleString('ru-RU');
 let publicMaps=[];
+function diamondReward(map){
+  return Math.max(0,Number(map.total_rooms)||0)*120;
+}
 function interactiveMap(map){
   if(!map.published||map.interactive!==true)return false;
   try{const url=new URL(map.open_url,location.href);return url.origin===location.origin&&url.pathname.startsWith('/maps/view/')}catch{return false}
@@ -34,8 +37,8 @@ function sortedMaps(maps,city,order){
 }
 function renderMaps(){
   const maps=sortedMaps(publicMaps,document.getElementById('map-city').value,document.getElementById('map-sort').value);
-  document.getElementById('maps-status').textContent='Показано '+fmt(maps.length)+' из '+fmt(publicMaps.length)+' карт · 💎 — кристальные комнаты';
-  document.getElementById('published-maps').innerHTML=maps.map(map=>'<a class="card map-card" href="'+esc(map.open_url)+'"><h2>'+esc(map.city)+' <span class="map-grid">'+esc(map.grid)+'</span></h2><div class="map-diamonds">💎 '+fmt(map.total_rooms)+'</div><div class="map-meta"><span>'+fmt(map.buildings)+' зданий</span><span>Исследовано '+Number(map.progress||0).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%</span></div><span class="map-open">Открыть карту →</span></a>').join('')||'<p class="map-empty">Нет опубликованных интерактивных карт для этого города.</p>';
+  document.getElementById('maps-status').textContent='Показано '+fmt(maps.length)+' из '+fmt(publicMaps.length)+' карт · 💎 — награда по известным комнатам';
+  document.getElementById('published-maps').innerHTML=maps.map(map=>'<a class="card map-card" href="'+esc(map.open_url)+'"><h2>'+esc(map.city)+' <span class="map-grid">'+esc(map.grid)+'</span></h2><div class="map-diamonds">💎 '+fmt(diamondReward(map))+'</div><div class="map-meta"><span>'+fmt(map.total_rooms)+' кристальных комнат</span><span>'+fmt(map.buildings)+' зданий</span><span>Исследовано '+Number(map.progress||0).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%</span></div><span class="map-open">Открыть карту →</span></a>').join('')||'<p class="map-empty">Нет опубликованных интерактивных карт для этого города.</p>';
 }
 document.getElementById('map-city').addEventListener('change',renderMaps);
 document.getElementById('map-sort').addEventListener('change',renderMaps);
