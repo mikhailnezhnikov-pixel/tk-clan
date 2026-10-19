@@ -1510,9 +1510,7 @@
         : (openUrl
           ? '<span class="hkmap-open is-locked" title="Доступ к этой карте ещё не выдан">🔒 Закрыта</span>'
           : '<span class="hkmap-open is-unavailable" title="'+(hasWebsite?'Визуализация карты пока недоступна':'У района нет отдельной website-визуализации')+'">Нет карты</span>');
-      const publishControl=!hasWebsite
-        ? '<span class="hkmap-private">Только скрипт</span>'
-        : (hkMapsCanManage
+      const publishControl=(hkMapsCanManage
           ? '<label class="hkmap-toggle"><input type="checkbox" data-hkmap-publish="'+safe(map.website_key||map.key)+'" '+(map.published?'checked ':'')+(!openUrl?'disabled ':'')+'>'+(!openUrl?'нет карты':'на сайте')+'</label>'
           : (map.published?'<span class="hkmap-published">На сайте</span>':'<span class="hkmap-private">Закрыта</span>'));
       const progressClass=Number(map.progress)===100?' ready':'';
