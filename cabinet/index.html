@@ -830,17 +830,25 @@
             <select id="clanshop-sort" class="clanshop-sort" aria-label="Сортировка итогового списка">
               <option value="total_asc">Всего получено ↑</option>
               <option value="total_desc">Всего получено ↓</option>
+              <option value="idols_asc">Шары за всё время ↑</option>
+              <option value="businesses_asc">Бизнесы за всё время ↑</option>
               <option value="current_asc">Эта неделя ↑</option>
               <option value="name_asc">Имя А–Я</option>
             </select>
             <div id="clanshop-manager-actions" class="clanshop-actions hidden">
               <span id="clanshop-published" class="clanshop-published"></span>
               <button id="clanshop-publish" class="button primary" type="button">Опубликовать</button>
+              <button id="clanshop-report" class="button" type="button">Проверить покупки этой недели</button>
             </div>
           </div>
 
           <div id="clanshop-topic-warning" class="clanshop-topic-warning hidden"></div>
           <p id="clanshop-message" class="message" role="status" aria-live="polite"></p>
+          <section id="clanshop-report-preview" class="hidden">
+            <h3>Предпросмотр отчёта в Telegram</h3>
+            <pre id="clanshop-report-text" style="white-space:pre-wrap"></pre>
+            <button id="clanshop-report-send" class="button primary" type="button">Отправить в тему Clan Shop</button>
+          </section>
 
           <section id="clanshop-final-list">
             <h3 class="clanshop-final-title">Итоговый список <span id="clanshop-final-count" class="clanshop-final-count"></span></h3>
@@ -867,9 +875,9 @@
                 <p>История фиксируется по личному игровому ID каждого покупателя. Общий счётчик Clan Shop используется только для проверки полноты данных и не создаёт отдельную строку игрока.</p>
               </div>
               <div class="clanshop-periods" role="group" aria-label="Период истории покупок">
-                <button class="clanshop-period active" type="button" data-clanshop-period="week">Неделя</button>
-                <button class="clanshop-period" type="button" data-clanshop-period="month">Месяц</button>
-                <button class="clanshop-period" type="button" data-clanshop-period="6m">6 месяцев</button>
+                <button class="clanshop-period active" type="button" data-clanshop-period="week">Текущая неделя</button>
+                <button class="clanshop-period" type="button" data-clanshop-period="month">4 недели</button>
+                <button class="clanshop-period" type="button" data-clanshop-period="6m">26 недель</button>
                 <button class="clanshop-period" type="button" data-clanshop-period="all">Всё время</button>
               </div>
             </div>
@@ -1740,7 +1748,7 @@
     return clanShopNicknameKey(item?.nickname)===uniqueNickname?'display_nickname':'';
   }
 
-  function clanShopPlayerActualTotals(row,weekStart=clanShopLatestActualWeek()){
+  function clanShopPlayerActualTotals(row,weekStart=clanShopCurrentWeekStart()){
     if(!weekStart)return {idol_orbs:0,splus_businesses:0,total:0,week_start:''};
     const rows=Array.isArray(clanShopHistory)?clanShopHistory:[];
     const exact={idol_orbs:0,splus_businesses:0};
@@ -1765,7 +1773,7 @@
   function clanShopPlayerCumulativeTotals(row,beforeWeek=''){
     const rows=Array.isArray(clanShopHistory)?clanShopHistory:[];
     const weeks=[...new Set(rows.map(item=>String(item?.week_start||'')).filter(Boolean))]
-      .filter(week=>!beforeWeek||week<beforeWeek)
+      .filter(week=>clanShopHistoryWeekMatches(week,{start:null,end:clanShopHistoryWindow().end})&&(!beforeWeek||week<beforeWeek))
       .sort();
     return weeks.reduce((result,week)=>{
       const totals=clanShopPlayerActualTotals(row,week);
@@ -1786,9 +1794,7 @@
   }
 
   function clanShopCurrentWeekStart(){
-    // Показываем именно неделю фактических покупок. Плановая неделя списка
-    // может быть следующей и не должна обнулять факт на текущей неделе.
-    return clanShopLatestActualWeek();
+    return new Date(clanShopHistoryWindow().end).toISOString().slice(0,10);
   }
 
   function clanShopPreviousWeekStart(){
@@ -1821,8 +1827,10 @@
       '<div class="clanshop-player-head"><strong>'+safe(row.nickname||'—')+'</strong>'+accessBadge+
       '<span class="clanshop-actual-badge'+factClass+'">Всего: <b>'+cumulative.total+'</b> '+clanShopLotWord(cumulative.total)+'</span></div>'+
       '<div class="clanshop-history-lines">'+
+        '<div class="clanshop-history-line"><span class="clanshop-history-label">Эта неделя <small>'+safe(clanShopWeekLabel(currentWeek))+'</small></span>'+
+          '<span>Шары <b>'+(clanShopHistoryLoaded?current.idol_orbs:'—')+'</b></span><span>S+ <b>'+(clanShopHistoryLoaded?current.splus_businesses:'—')+'</b></span></div>'+
         '<div class="clanshop-history-line">'+
-          '<span class="clanshop-history-label">Накопительно</span>'+
+          '<span class="clanshop-history-label">Всего за сохранённую историю</span>'+
           '<span class="clanshop-history-stat">S+ <b>'+cumulative.splus_businesses+'</b></span>'+
           '<span class="clanshop-history-stat">Шары <b>'+cumulative.idol_orbs+'</b></span>'+
         '</div>'+
@@ -1881,8 +1889,9 @@
         const bCurrent=clanShopPlayerActualTotals(b,week);
         const aTotal=clanShopPlayerCumulativeTotals(a);
         const bTotal=clanShopPlayerCumulativeTotals(b);
-        const valueA=sortMode==='current_asc'?aCurrent.total:aTotal.total;
-        const valueB=sortMode==='current_asc'?bCurrent.total:bTotal.total;
+        const metric=sortMode==='idols_asc'?'idol_orbs':sortMode==='businesses_asc'?'splus_businesses':'total';
+        const valueA=sortMode==='current_asc'?aCurrent.total:aTotal[metric];
+        const valueB=sortMode==='current_asc'?bCurrent.total:bTotal[metric];
         const direction=sortMode==='total_desc'?-1:1;
         return (valueA-valueB)*direction
           || (aTotal.splus_businesses-bTotal.splus_businesses)*direction
@@ -1965,33 +1974,45 @@
       if(data.can_manage){
         return '<tr data-clanshop-player="'+safe(row.player_key)+'">'+rank+
           '<td>'+player+'</td>'+
-          '<td><select class="clanshop-select" data-clanshop-field="idol_orbs" data-player-key="'+safe(row.player_key)+'">'+clanShopOptionList(row.idol_orbs)+'</select></td>'+
-          '<td><select class="clanshop-select" data-clanshop-field="splus_businesses" data-player-key="'+safe(row.player_key)+'">'+clanShopOptionList(row.splus_businesses)+'</select></td>'+
+          '<td><select class="clanshop-select" data-clanshop-field="idol_orbs" data-player-key="'+safe(row.player_key)+'">'+clanShopOptionList(row.idol_orbs)+'</select>'+clanShopPlanFactHtml(row,'idol_orbs')+'</td>'+
+          '<td><select class="clanshop-select" data-clanshop-field="splus_businesses" data-player-key="'+safe(row.player_key)+'">'+clanShopOptionList(row.splus_businesses)+'</select>'+clanShopPlanFactHtml(row,'splus_businesses')+'</td>'+
         '</tr>';
       }
       return '<tr>'+rank+'<td>'+player+'</td>'+
-        '<td><span class="clanshop-qty">'+Number(row.idol_orbs||0)+'</span></td>'+
-        '<td><span class="clanshop-qty">'+Number(row.splus_businesses||0)+'</span></td></tr>';
+        '<td><span class="clanshop-qty">'+Number(row.idol_orbs||0)+'</span>'+clanShopPlanFactHtml(row,'idol_orbs')+'</td>'+
+        '<td><span class="clanshop-qty">'+Number(row.splus_businesses||0)+'</span>'+clanShopPlanFactHtml(row,'splus_businesses')+'</td></tr>';
     }).join('')||'<tr><td colspan="4" class="muted">Участники клана пока не загружены.</td></tr>';
   }
 
-  function clanShopHistoryRows(){
+  function clanShopPlanFactHtml(row,kind){
+    const week=String(clanShopData?.window?.week_start||'');
+    const total=clanShopPlayerCumulativeTotals(row)[kind];
+    if(!clanShopHistoryLoaded)return '<div class="clanshop-note">История ещё не загружена</div>';
+    const actual=clanShopPlayerActualTotals(row,week)[kind];
+    const remaining=Math.max(0,Number(row[kind]||0)-actual);
+    return '<div class="clanshop-note">Факт за неделю плана: <b>'+actual+'</b> · Осталось подтвердить: <b>'+remaining+'</b><br>Всего куплено: <b>'+total+'</b></div>';
+  }
+
+  function clanShopHistoryWindow(now=Date.now()){
+    // Game cycles start on Monday in Moscow; never anchor a period to stored data.
+    const day=new Date(now+3*60*60*1000);
+    day.setUTCHours(0,0,0,0);
+    day.setUTCDate(day.getUTCDate()-(day.getUTCDay()+6)%7);
+    const end=day.getTime();
+    const weeks={week:1,month:4,'6m':26}[clanShopHistoryPeriod];
+    return {start:weeks?end-(weeks-1)*7*86400000:null,end};
+  }
+
+  function clanShopHistoryWeekMatches(week,window){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(week||'')))return false;
+    const date=new Date(week+'T00:00:00Z').getTime();
+    return Number.isFinite(date)&&date<=window.end&&(window.start===null||date>=window.start);
+  }
+
+  function clanShopHistoryRows(window=clanShopHistoryWindow()){
     const rows=Array.isArray(clanShopHistory)?clanShopHistory:[];
     if(!rows.length)return [];
-    const dates=rows.map(row=>new Date(String(row.week_start||'')+'T00:00:00Z')).filter(date=>!Number.isNaN(date.getTime()));
-    if(!dates.length)return [];
-    const latest=new Date(Math.max(...dates.map(date=>date.getTime())));
-    let start=null;
-    if(clanShopHistoryPeriod==='week')start=new Date(latest);
-    else if(clanShopHistoryPeriod==='month'){start=new Date(latest);start.setUTCDate(start.getUTCDate()-30)}
-    else if(clanShopHistoryPeriod==='6m'){start=new Date(latest);start.setUTCDate(start.getUTCDate()-183)}
-    return rows.filter(row=>{
-      if(!start)return true;
-      const date=new Date(String(row.week_start||'')+'T00:00:00Z');
-      if(Number.isNaN(date.getTime()))return false;
-      if(clanShopHistoryPeriod==='week')return date.getTime()===latest.getTime();
-      return date>=start&&date<=latest;
-    });
+    return rows.filter(row=>clanShopHistoryWeekMatches(row.week_start,window));
   }
 
   function clanShopWeekLabel(weekStart){
@@ -2025,19 +2046,10 @@
     return {nickname:matchedName&&(!rawName||numericOnly)?matchedName:(rawName||matchedName||pid||'—'),unattributed:false,cabinetAccess};
   }
 
-  function clanShopHistoryCoverageTotals(){
+  function clanShopHistoryCoverageTotals(window=clanShopHistoryWindow()){
     const entries=Object.entries(clanShopHistoryCoverage||{}).sort((a,b)=>a[0].localeCompare(b[0]));
     if(!entries.length)return {shared:{idol_orbs:0,splus_businesses:0},identified:{idol_orbs:0,splus_businesses:0},pending:{idol_orbs:0,splus_businesses:0}};
-    const latest=new Date(entries[entries.length-1][0]+'T00:00:00Z');
-    const start=new Date(latest);
-    if(clanShopHistoryPeriod==='month')start.setUTCDate(start.getUTCDate()-30);
-    else if(clanShopHistoryPeriod==='6m')start.setUTCDate(start.getUTCDate()-183);
-    const selected=entries.filter(([week])=>{
-      if(clanShopHistoryPeriod==='all')return true;
-      const date=new Date(week+'T00:00:00Z');
-      if(clanShopHistoryPeriod==='week')return date.getTime()===latest.getTime();
-      return date>=start&&date<=latest;
-    });
+    const selected=entries.filter(([week])=>clanShopHistoryWeekMatches(week,window));
     const total={shared:{idol_orbs:0,splus_businesses:0},identified:{idol_orbs:0,splus_businesses:0},pending:{idol_orbs:0,splus_businesses:0}};
     selected.forEach(([,value])=>{
       ['shared','identified','pending'].forEach(group=>{
@@ -2054,7 +2066,8 @@
     });
     const body=$('clanshop-history-body');
     if(!body)return;
-    const rows=clanShopHistoryRows().filter(row=>!row?.is_unattributed && !String(row?.player_key||'').startsWith('unattributed:'));
+    const historyWindow=clanShopHistoryWindow();
+    const rows=clanShopHistoryRows(historyWindow).filter(row=>!row?.is_unattributed && !String(row?.player_key||'').startsWith('unattributed:'));
     const grouped=new Map();
     rows.forEach(row=>{
       const identity=clanShopHistoryIdentity(row);
@@ -2081,7 +2094,7 @@
       const totalB=b.idol_orbs+b.splus_businesses,totalA=a.idol_orbs+a.splus_businesses;
       return totalB-totalA||a.nickname.localeCompare(b.nickname,'ru');
     });
-    const coverage=clanShopHistoryCoverageTotals();
+    const coverage=clanShopHistoryCoverageTotals(historyWindow);
     const idolTotal=Number(coverage.shared.idol_orbs||0) || players.reduce((sum,row)=>sum+row.idol_orbs,0);
     const businessTotal=Number(coverage.shared.splus_businesses||0) || players.reduce((sum,row)=>sum+row.splus_businesses,0);
     $('clanshop-history-idols').textContent=idolTotal;
@@ -2269,6 +2282,36 @@
     }finally{
       if(button)button.disabled=false;
       renderClanShop();
+    }
+  });
+
+  let clanShopReportText='';
+  $('clanshop-report')?.addEventListener('click',async()=>{
+    const button=$('clanshop-report');
+    if(!clanShopData?.can_manage)return;
+    button.disabled=true;
+    $('clanshop-report-send').disabled=true;
+    clanShopReportText='';
+    try{
+      const report=await request('/clan-shop/report',{method:'POST',body:'{}'});
+      clanShopReportText=report.text;
+      // Render Telegram HTML as plain readable text, never insert server names as HTML.
+      $('clanshop-report-text').textContent=report.text.replace(/<\/?b>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+      $('clanshop-report-preview').classList.remove('hidden');
+      $('clanshop-report-send').disabled=false;
+    }catch{setMessage('clanshop-message','Не удалось подготовить отчёт.','bad')}
+    finally{button.disabled=false}
+  });
+  $('clanshop-report-send')?.addEventListener('click',async()=>{
+    if(!clanShopData?.can_manage||!clanShopReportText)return;
+    const button=$('clanshop-report-send');button.disabled=true;
+    try{
+      await request('/clan-shop/report',{method:'POST',body:JSON.stringify({send:true,expected_text:clanShopReportText})});
+      clanShopReportText='';
+      setMessage('clanshop-message','Отчёт отправлен в Telegram.','good');
+    }catch(error){
+      clanShopReportText='';
+      setMessage('clanshop-message',error.code==='report_changed'?'Данные изменились. Заново подготовьте и проверьте отчёт.':'Не удалось отправить отчёт. Заново подготовьте предпросмотр.','bad');
     }
   });
 
