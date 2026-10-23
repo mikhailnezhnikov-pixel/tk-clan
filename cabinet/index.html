@@ -1822,22 +1822,26 @@
     const accessBadge=accessKnown
       ? '<span class="clanshop-access-badge'+(row.cabinet_access?'':' no-access')+'">'+(row.cabinet_access?'ЛК':'без ЛК')+'</span>'
       : '';
-    const previousLabel=previousWeek?clanShopWeekLabel(previousWeek):'предыдущая неделя';
+    const pastWeeks=[...new Set((Array.isArray(clanShopHistory)?clanShopHistory:[])
+      .filter(item=>clanShopHistoryMatchesPlayer(row,item)&&clanShopHistoryWeekMatches(item.week_start,{start:null,end:clanShopHistoryWindow().end})&&String(item.week_start)<currentWeek)
+      .map(item=>String(item.week_start)))].sort().reverse();
+    const pastHtml=pastWeeks.map(week=>{
+      const totals=clanShopPlayerActualTotals(row,week);
+      return '<div class="clanshop-history-line"><span class="clanshop-history-label">'+safe(clanShopWeekLabel(week))+'</span>'+
+        '<span>Шары <b>'+totals.idol_orbs+'</b></span><span>S+ <b>'+totals.splus_businesses+'</b></span></div>';
+    }).join('');
     return '<div class="clanshop-player">'+
-      '<div class="clanshop-player-head"><strong>'+safe(row.nickname||'—')+'</strong>'+accessBadge+
-      '<span class="clanshop-actual-badge'+factClass+'">Всего: <b>'+cumulative.total+'</b> '+clanShopLotWord(cumulative.total)+'</span></div>'+
+      '<div class="clanshop-player-head"><strong>'+safe(row.nickname||'—')+'</strong>'+accessBadge+'</div>'+
       '<div class="clanshop-history-lines">'+
         '<div class="clanshop-history-line"><span class="clanshop-history-label">Эта неделя <small>'+safe(clanShopWeekLabel(currentWeek))+'</small></span>'+
           '<span>Шары <b>'+(clanShopHistoryLoaded?current.idol_orbs:'—')+'</b></span><span>S+ <b>'+(clanShopHistoryLoaded?current.splus_businesses:'—')+'</b></span></div>'+
+        '<details><summary class="clanshop-history-label">Прошлые недели · Шары '+(clanShopHistoryLoaded?beforeCurrent.idol_orbs:'—')+' · S+ '+(clanShopHistoryLoaded?beforeCurrent.splus_businesses:'—')+'</summary>'+
+          (pastHtml||'<div class="clanshop-note">'+(clanShopHistoryLoaded?'Сохранённых покупок за прошлые недели нет.':'История ещё не загружена.')+'</div>')+'</details>'+
         '<div class="clanshop-history-line">'+
           '<span class="clanshop-history-label">Всего за сохранённую историю</span>'+
-          '<span class="clanshop-history-stat">S+ <b>'+cumulative.splus_businesses+'</b></span>'+
           '<span class="clanshop-history-stat">Шары <b>'+cumulative.idol_orbs+'</b></span>'+
-        '</div>'+
-        '<div class="clanshop-history-line">'+
-          '<span class="clanshop-history-label">Прошлая неделя <small>'+safe(previousLabel)+'</small></span>'+
-          '<span class="clanshop-history-stat">S+ <b>'+previous.splus_businesses+'</b></span>'+
-          '<span class="clanshop-history-stat">Шары <b>'+previous.idol_orbs+'</b></span>'+
+          '<span class="clanshop-history-stat">S+ <b>'+cumulative.splus_businesses+'</b></span>'+
+          '<span class="clanshop-actual-badge'+factClass+'"><b>'+cumulative.total+'</b> '+clanShopLotWord(cumulative.total)+'</span>'+
         '</div>'+
       '</div>'+
     '</div>';
