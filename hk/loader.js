@@ -6,7 +6,9 @@
     {name:'pages',url:'https://tk-clan.ru/baseline/topking/HamsterKingMobile.current.user.js'}
   ];
   const LOCK_KEY='__HK_BOOKMARKLET_RUNTIME__';
-  const LOADER_REV='loader-20260926-r25-fallback';
+  const LOADER_REV='loader-20261025-r26-version-check';
+  const MIN_CORE_VERSION='1.18.242';
+  let expectedVersion=MIN_CORE_VERSION,updateVerified=false;
   const EXPECTED_CORE_REV='core-20260921-r27-businesses-runner-canon';
   const ATTEMPTS=[
     {source:0,timeoutMs:3500},
@@ -23,8 +25,15 @@
   function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
   function badge(){let el=document.getElementById('tk-hk-loader-badge');if(!el){el=document.createElement('div');el.id='tk-hk-loader-badge';el.style.cssText='position:fixed;right:16px;bottom:20px;z-index:2147483647;max-width:min(360px,calc(100vw - 32px));padding:11px 14px;border-radius:13px;background:#17130d;color:#f4cf75;border:1px solid #b68a35;font:700 13px/1.3 Arial,sans-serif;box-shadow:0 8px 28px #0009;cursor:default';(document.body||document.documentElement).appendChild(el)}return el}
   function setBadge(text,state='loading'){const el=badge();el.textContent=text;el.style.borderColor=state==='ok'?'#3aa978':state==='bad'?'#bd5361':'#b68a35';el.style.color=state==='ok'?'#a7f3cf':state==='bad'?'#ffd0d5':'#f4cf75';return el}
-  function report(){const payload={schema:'topking-hk-loader-diagnostic-v3',loaderRevision:LOADER_REV,expectedCoreRevision:EXPECTED_CORE_REV,coreSources:CORE_SOURCES.map(x=>({name:x.name,url:x.url})),startedAt:runtime.startedAt||new Date().toISOString(),exportedAt:new Date().toISOString(),page:{origin:location.origin,pathname:location.pathname},browser:{userAgent:navigator.userAgent,language:navigator.language,onLine:navigator.onLine},viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio||1},core:{version:window.__HK_MOBILE_VERSION__||'',revision:window.__HK_MOBILE_REVISION__||window.__HK_MOBILE_RUNTIME__?.revision||'',active:!!window.__HK_MOBILE_RUNTIME__?.active},events:runtime.events};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`HK_loader_diagnostic_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200)}
-  function coreIsCurrent(){const core=window.__HK_MOBILE_RUNTIME__;return !!(core?.active&&core.revision===EXPECTED_CORE_REV)}
+  function report(){const payload={schema:'topking-hk-loader-diagnostic-v3',loaderRevision:LOADER_REV,expectedCoreRevision:EXPECTED_CORE_REV,expectedVersion,updateVerified,coreSources:CORE_SOURCES.map(x=>({name:x.name,url:x.url})),startedAt:runtime.startedAt||new Date().toISOString(),exportedAt:new Date().toISOString(),page:{origin:location.origin,pathname:location.pathname},browser:{userAgent:navigator.userAgent,language:navigator.language,onLine:navigator.onLine},viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio||1},core:{version:window.__HK_MOBILE_VERSION__||'',revision:window.__HK_MOBILE_REVISION__||window.__HK_MOBILE_RUNTIME__?.revision||'',active:!!window.__HK_MOBILE_RUNTIME__?.active},events:runtime.events};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`HK_loader_diagnostic_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200)}
+  function versionAtLeast(actual,required){if(!/^\d+\.\d+\.\d+$/.test(String(actual||''))||!/^\d+\.\d+\.\d+$/.test(String(required||'')))return false;const a=actual.split('.').map(Number),b=required.split('.').map(Number);for(let i=0;i<3;i++){if(a[i]!==b[i])return a[i]>b[i];}return true;}
+  function coreIsCurrent(){const core=window.__HK_MOBILE_RUNTIME__;return !!(core?.active&&core.revision===EXPECTED_CORE_REV&&versionAtLeast(core.version,expectedVersion))}
+  async function checkLatestVersion(){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4000);
+    try{const response=await fetch('https://hk-license.89.125.1.71.sslip.io/health?t='+Date.now(),{cache:'no-store',credentials:'omit',signal:controller.signal});if(!response.ok)throw new Error('HTTP '+response.status);const data=await response.json();if(!data.ok||!versionAtLeast(data.latest_version,MIN_CORE_VERSION))throw new Error('invalid-latest-version');expectedVersion=data.latest_version;updateVerified=true;record('update-checked',{expectedVersion});}
+    catch(error){record('update-check-unavailable',{error:error?.message||error});}
+    finally{clearTimeout(timer);}
+  }
   function purgeLegacyUi(){
     try{document.getElementById('hk-mobile-root')?.remove()}catch{}
     try{document.getElementById('hk-bootstrap-button')?.remove()}catch{}
@@ -72,10 +81,12 @@
     runtime.startedAt=new Date().toISOString();runtime.events=[];record('start',{loaderRevision:LOADER_REV,expectedCoreRevision:EXPECTED_CORE_REV});
     if(location.hostname!==HOST){setBadge('HK · откройте Hamster King','bad');alert('Откройте https://app.hamsterking.games и нажмите закладку HK ещё раз.');return}
 
+    setBadge('HK · проверяю версию…');
+    await checkLatestVersion();
     if(coreIsCurrent()){
       record('core-current',{version:window.__HK_MOBILE_RUNTIME__.version||'',revision:window.__HK_MOBILE_RUNTIME__.revision||''});
       try{window.__HK_MOBILE_RUNTIME__.open?.()}catch{}
-      setBadge('HK · актуальная версия уже запущена','ok');
+      setBadge(updateVerified?'HK · актуальная версия '+window.__HK_MOBILE_RUNTIME__.version+' уже запущена':'HK · '+window.__HK_MOBILE_RUNTIME__.version+' · проверка обновления недоступна','ok');
       setTimeout(()=>badge().remove(),1600);
       return;
     }
@@ -100,6 +111,7 @@
         const core=window.__HK_MOBILE_RUNTIME__;
         if(!core?.active)throw new Error('core-loaded-without-active-runtime');
         if(core.revision!==EXPECTED_CORE_REV)throw new Error(`core-revision-mismatch:${core.revision||'missing'}`);
+        if(!versionAtLeast(core.version,expectedVersion))throw new Error('core-version-outdated:'+String(core.version||'missing'));
         window.__HK_LOADER_CORE_REVISION__=EXPECTED_CORE_REV;
         window.__HK_LOADER_CORE_SOURCE__=source.name;
         record('load-success',{attempt:i+1,source:source.name,durationMs:Math.round(performance.now()-started),version:core.version||'',revision:core.revision||''});
@@ -125,4 +137,4 @@
   if(runtime.active&&runtime.promise)return;
   runtime.active=true;window[LOCK_KEY]=runtime;
   runtime.promise=start().finally(()=>{runtime.active=false;runtime.promise=null});
-})().catch?.(()=>{});
+})();
