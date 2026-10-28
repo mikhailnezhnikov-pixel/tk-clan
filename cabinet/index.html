@@ -1150,6 +1150,7 @@
     if(!response.ok)throw Object.assign(new Error(data.error||'request_failed'),{status:response.status,code:data.error});
     return data;
   }
+  window.hkRewardQueueRequest=request;
 
   function setMessage(id,text='',kind=''){
     const el=$(id);if(!el)return;
@@ -2496,6 +2497,7 @@
     }
     if(name==='clan-shop')loadClanShop();
     if(name==='activity')loadActivity();
+    if(name==='rewards')window.hkRewardQueue?.open();
     if(name==='site-stats')loadSiteStats();
   }
 
@@ -2998,6 +3000,7 @@
       else if(requested==='players')setCabTab('players',false);
       else if(requested==='clan-shop')setCabTab('clan-shop',false);
       else if(requested==='activity')setCabTab('activity',false);
+      else if(requested==='rewards')setCabTab('rewards',false);
     }
   }
 
@@ -3130,6 +3133,7 @@
     try{showDashboard(await request('/dashboard'))}catch{}
   },60000);
 </script>
+<script src="rewards.js?v=20261027-1"></script>
 <script src="../assets/cabinet-i18n.js?v=20260920-11"></script>
 <script src="../assets/site-nav.js?v=20260920-11"></script>
 </body>
