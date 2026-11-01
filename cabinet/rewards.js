@@ -35,8 +35,10 @@
   function render(){
     const rows=data.rows,editable=data.can_manage&&!busy,unmatched=rows.filter(r=>r.score_source!=='statistics').length;
     $('rq-counts').textContent='Игроков по статистике: '+(data.roster_count??'—')+' · В очереди: '+rows.filter(r=>r.status==='waiting').length+' · Получено: '+rows.filter(r=>r.status==='received').length+' · Отказ: '+rows.filter(r=>r.status==='refused').length+(unmatched?' · Не сопоставлено: '+unmatched:'');
-    $('rq-topic').textContent='Telegram: тема '+(data.target.thread_id||'не выбрана')+'. '+(data.can_manage?'Порядок меняется кнопками «Поднять / Опустить».':'Редактирование и публикация доступны КЛ и участникам с полным доступом.');
+    $('rq-topic').textContent='Telegram: тема '+(data.target.thread_id||'не выбрана')+'. '+(data.can_manage?'Порядок меняется кнопками «Поднять / Опустить».':'Редактирование и публикация доступны КЛ и участникам с полным доступом.')+(data.statistics_at?' Статистика от '+new Date(data.statistics_at*1000).toLocaleString('ru-RU')+'.':'');
     $('rq-rows').innerHTML=rows.map((r,i)=>filter!=='all'&&r.status!==filter?'':renderRow(r,i,editable)).join('');
+    const archived=data.archived_rows||[];
+    if(archived.length)$('rq-rows').innerHTML+='<details><summary>Архив / не сопоставлены: '+archived.length+' · не входят в очередь и публикацию</summary>'+archived.map(r=>'<p>'+escape(r.name)+' — '+escape(labels[r.status]||r.status)+' · '+escape(r.archive_reason==='duplicate'?'Повторная запись':'Нет подтверждённого соответствия текущей статистике')+'</p>').join('')+'</details>';
     $('rq-kind').innerHTML='<option value="">Выберите группу</option>'+data.targets.map(t=>'<option value="'+escape(t.kind)+'" '+(data.target.kind===t.kind?'selected':'')+'>'+escape(({clan_shop:'Группа клана',clan_activity:'Группа активности',application:'Группа заявок',feedback:'Группа обратной связи'})[t.kind]||t.kind)+' ('+escape(t.chat_id)+')</option>').join('');
     $('rq-thread').value=data.target.thread_id||'';$('rq-preview').value=data.preview;controls();
   }
