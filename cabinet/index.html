@@ -847,7 +847,7 @@
           <section id="clanshop-report-preview" class="hidden">
             <h3>Предпросмотр отчёта в Telegram</h3>
             <pre id="clanshop-report-text" style="white-space:pre-wrap"></pre>
-            <button id="clanshop-report-send" class="button primary" type="button">Отправить в тему Clan Shop</button>
+            <button id="clanshop-report-send" class="button primary" type="button">Опубликовать отчёт в тему 27927</button>
           </section>
 
           <section id="clanshop-final-list">
@@ -2129,7 +2129,7 @@
       const identified=Number(coverage.identified.idol_orbs||0)+Number(coverage.identified.splus_businesses||0);
       const shared=Number(coverage.shared.idol_orbs||0)+Number(coverage.shared.splus_businesses||0);
       message.textContent=shared>identified
-        ? 'По игрокам зафиксировано '+identified+' из '+shared+' покупок. Остальные появятся после получения личного счётчика аккаунта покупателя.'
+        ? 'По игрокам зафиксировано '+identified+' из '+shared+' покупок. Остальные появятся после получения истории игры или личных счётчиков. Нет записи — не значит, что игрок не купил.'
         : players.length?'Нажмите на игрока, чтобы раскрыть покупки по неделям.':'';
     }
   }
@@ -2309,6 +2309,7 @@
   });
   $('clanshop-report-send')?.addEventListener('click',async()=>{
     if(!clanShopData?.can_manage||!clanShopReportText)return;
+    if(!confirm('Опубликовать этот отчёт в указанную тему группы — 27927?'))return;
     const button=$('clanshop-report-send');button.disabled=true;
     try{
       await request('/clan-shop/report',{method:'POST',body:JSON.stringify({send:true,expected_text:clanShopReportText})});
